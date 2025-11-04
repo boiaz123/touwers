@@ -229,15 +229,26 @@ class GameplayState {
                 ctx.stroke();
             } else {
                 // Draw preview tower centered on mouse cursor when placement is invalid
+                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+                const towerSize = gridSize * 2; // 2x2 cells
+
                 ctx.fillStyle = 'rgba(255, 100, 100, 0.5)';
                 ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
                 ctx.lineWidth = 2;
                 
-                ctx.beginPath();
-                const towerRadius = scale ? 30 * scale.scaleX : 30;
-                ctx.arc(this.mouseX, this.mouseY, towerRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+                // Draw a rectangle representing the tower footprint, centered on the cursor
+                ctx.fillRect(
+                    this.mouseX - towerSize / 2,
+                    this.mouseY - towerSize / 2,
+                    towerSize,
+                    towerSize
+                );
+                ctx.strokeRect(
+                    this.mouseX - towerSize / 2,
+                    this.mouseY - towerSize / 2,
+                    towerSize,
+                    towerSize
+                );
                 
                 // Add a crosshair at mouse position when placement is invalid
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
