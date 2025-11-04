@@ -1,10 +1,10 @@
-export class BasicTower {
+export class CannonTower {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.range = 120;
-        this.damage = 20;
-        this.fireRate = 1; // shots per second
+        this.range = 100;
+        this.damage = 50;
+        this.fireRate = 0.5; // shots per second
         this.cooldown = 0;
         this.target = null;
     }
@@ -43,28 +43,32 @@ export class BasicTower {
     
     render(ctx) {
         // Tower base
-        ctx.fillStyle = '#4CAF50';
+        ctx.fillStyle = '#8B4513';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Cannon barrel
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(this.x - 3, this.y - 12, 6, 20);
         
         // Tower top
-        ctx.fillStyle = '#2E7D32';
+        ctx.fillStyle = '#654321';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
         ctx.fill();
         
-        // Range indicator (when selected or debugging)
+        // Range indicator
         if (this.target) {
-            ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
             
             // Shooting line
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
             ctx.lineTo(this.target.x, this.target.y);
@@ -74,12 +78,12 @@ export class BasicTower {
     
     static getInfo() {
         return {
-            name: 'Basic Tower',
-            description: 'A reliable defensive structure with moderate damage and range.',
-            damage: '20',
-            range: '120',
-            fireRate: '1.0/sec',
-            cost: 50
+            name: 'Cannon Tower',
+            description: 'Heavy artillery with high damage but slow fire rate.',
+            damage: '50',
+            range: '100',
+            fireRate: '0.5/sec',
+            cost: 100
         };
     }
 }

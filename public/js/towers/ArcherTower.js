@@ -1,10 +1,10 @@
-export class BasicTower {
+export class ArcherTower {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.range = 120;
-        this.damage = 20;
-        this.fireRate = 1; // shots per second
+        this.range = 140;
+        this.damage = 15;
+        this.fireRate = 1.5; // shots per second
         this.cooldown = 0;
         this.target = null;
     }
@@ -43,27 +43,37 @@ export class BasicTower {
     
     render(ctx) {
         // Tower base
-        ctx.fillStyle = '#4CAF50';
+        ctx.fillStyle = '#8B4513';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tower top
-        ctx.fillStyle = '#2E7D32';
+        // Archer platform
+        ctx.fillStyle = '#DEB887';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
         ctx.fill();
         
-        // Range indicator (when selected or debugging)
+        // Bow (simple representation)
         if (this.target) {
-            ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
+            const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 8, angle - 0.3, angle + 0.3);
+            ctx.stroke();
+        }
+        
+        // Range indicator
+        if (this.target) {
+            ctx.strokeStyle = 'rgba(222, 184, 135, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
             
-            // Shooting line
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+            // Arrow
+            ctx.strokeStyle = 'rgba(160, 82, 45, 0.6)';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
@@ -74,12 +84,12 @@ export class BasicTower {
     
     static getInfo() {
         return {
-            name: 'Basic Tower',
-            description: 'A reliable defensive structure with moderate damage and range.',
-            damage: '20',
-            range: '120',
-            fireRate: '1.0/sec',
-            cost: 50
+            name: 'Archer Tower',
+            description: 'Fast-firing tower with good range but lower damage.',
+            damage: '15',
+            range: '140',
+            fireRate: '1.5/sec',
+            cost: 75
         };
     }
 }

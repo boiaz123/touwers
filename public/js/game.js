@@ -14,38 +14,6 @@ class GameplayState {
         this.towerManager = new TowerManager(this.gameState);
         this.enemyManager = new EnemyManager(this.level.path);
         this.selectedTowerType = null;
-        
-        // Tower information database
-        this.towerInfo = {
-            'basic': {
-                name: 'Basic Tower',
-                description: 'A reliable defensive structure with moderate damage and range.',
-                damage: '20',
-                range: '120',
-                fireRate: '1.0/sec'
-            },
-            'cannon': {
-                name: 'Cannon Tower',
-                description: 'Heavy artillery with high damage but slow fire rate.',
-                damage: '50',
-                range: '100',
-                fireRate: '0.5/sec'
-            },
-            'archer': {
-                name: 'Archer Tower',
-                description: 'Fast-firing tower with good range but lower damage.',
-                damage: '15',
-                range: '140',
-                fireRate: '1.5/sec'
-            },
-            'magic': {
-                name: 'Magic Tower',
-                description: 'Mystical tower that pierces armor and slows enemies.',
-                damage: '30',
-                range: '110',
-                fireRate: '0.8/sec'
-            }
-        };
     }
     
     enter() {
@@ -90,7 +58,7 @@ class GameplayState {
     }
     
     showTowerInfo(towerType) {
-        const info = this.towerInfo[towerType];
+        const info = this.towerManager.getTowerInfo(towerType);
         if (!info) return;
         
         const infoPanel = document.getElementById('tower-info');
