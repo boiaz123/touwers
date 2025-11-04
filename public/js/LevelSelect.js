@@ -7,16 +7,74 @@ export class LevelSelect {
             { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false }
         ];
         this.selectedLevel = 0;
+        this.hoveredLevel = -1;
+        this.hoveredStartButton = false;
     }
     
     enter() {
         // Hide game UI
         document.getElementById('ui').style.display = 'none';
+        this.setupMouseListeners();
     }
     
     exit() {
         // Show game UI
         document.getElementById('ui').style.display = 'flex';
+        this.removeMouseListeners();
+    }
+    
+    setupMouseListeners() {
+        this.mouseMoveHandler = (e) => this.handleMouseMove(e);
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+    }
+    
+    removeMouseListeners() {
+        if (this.mouseMoveHandler) {
+            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
+    }
+    
+    handleMouseMove(e) {
+        const rect = this.stateManager.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const cardWidth = 300;
+        const cardHeight = 150;
+        const startY = 200;
+        const spacing = 180;
+        const cardX = this.stateManager.canvas.width / 2 - cardWidth / 2;
+        
+        this.hoveredLevel = -1;
+        this.hoveredStartButton = false;
+        
+        this.levels.forEach((level, index) => {
+            const cardY = startY + index * spacing;
+            
+            if (level.unlocked && 
+                x >= cardX && x <= cardX + cardWidth && 
+                y >= cardY && y <= cardY + cardHeight) {
+                
+                this.hoveredLevel = index;
+                
+                // Check if hovering over start button for selected level
+                if (index === this.selectedLevel) {
+                    const buttonX = cardX + cardWidth / 2 - 50; // Center the 100px wide button
+                    const buttonY = cardY + 100;
+                    const buttonWidth = 100;
+                    const buttonHeight = 30;
+                    
+                    if (x >= buttonX && x <= buttonX + buttonWidth && 
+                        y >= buttonY && y <= buttonY + buttonHeight) {
+                        this.hoveredStartButton = true;
+                    }
+                }
+            }
+        });
+        
+        // Update cursor style
+        this.stateManager.canvas.style.cursor = 
+            (this.hoveredLevel !== -1 || this.hoveredStartButton) ? 'pointer' : 'default';
     }
     
     render(ctx) {
@@ -48,12 +106,24 @@ export class LevelSelect {
             const x = canvas.width / 2 - cardWidth / 2;
             const y = startY + index * spacing;
             
-            // Card background
-            ctx.fillStyle = level.unlocked ? 
-                (index === this.selectedLevel ? '#3a2a1f' : '#2a1a0f') : 
-                '#1a1a1a';
-            ctx.strokeStyle = level.unlocked ? '#d4af37' : '#666';
-            ctx.lineWidth = 2;
+            // Card background with hover effect
+            let cardColor = '#2a1a0f';
+            let borderColor = '#d4af37';
+            
+            if (level.unlocked) {
+                if (index === this.selectedLevel) {
+                    cardColor = '#3a2a1f';
+                } else if (index === this.hoveredLevel) {
+                    cardColor = '#352217';
+                }
+            } else {
+                cardColor = '#1a1a1a';
+                borderColor = '#666';
+            }
+            
+            ctx.fillStyle = cardColor;
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = level.unlocked && index === this.hoveredLevel ? 3 : 2;
             ctx.fillRect(x, y, cardWidth, cardHeight);
             ctx.strokeRect(x, y, cardWidth, cardHeight);
             
@@ -70,13 +140,27 @@ export class LevelSelect {
                               level.difficulty === 'Medium' ? '#FFC107' : '#F44336';
                 ctx.fillText(level.difficulty, x + cardWidth / 2, y + 80);
                 
-                // Start button
+                // Start button for selected level
                 if (index === this.selectedLevel) {
-                    ctx.fillStyle = '#4CAF50';
-                    ctx.fillRect(x + 100, y + 100, 100, 30);
+                    const buttonX = x + cardWidth / 2 - 50; // Center the button
+                    const buttonY = y + 100;
+                    const buttonWidth = 100;
+                    const buttonHeight = 30;
+                    
+                    // Button background with hover effect
+                    ctx.fillStyle = this.hoveredStartButton ? '#45a049' : '#4CAF50';
+                    ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                    
+                    // Button border
+                    ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
+                    ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
+                    ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                    
+                    // Button text
                     ctx.fillStyle = '#fff';
-                    ctx.font = '16px serif';
-                    ctx.fillText('START', x + cardWidth / 2, y + 120);
+                    ctx.font = 'bold 16px serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('START', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
                 }
             } else {
                 // Locked indicator
@@ -109,9 +193,14 @@ export class LevelSelect {
                 y >= cardY && y <= cardY + cardHeight) {
                 
                 if (index === this.selectedLevel) {
-                    // Start button area
-                    if (x >= cardX + 100 && x <= cardX + 200 && 
-                        y >= cardY + 100 && y <= cardY + 130) {
+                    // Check start button area with corrected positioning
+                    const buttonX = cardX + cardWidth / 2 - 50; // Center the button
+                    const buttonY = cardY + 100;
+                    const buttonWidth = 100;
+                    const buttonHeight = 30;
+                    
+                    if (x >= buttonX && x <= buttonX + buttonWidth && 
+                        y >= buttonY && y <= buttonY + buttonHeight) {
                         this.stateManager.changeState('game');
                     }
                 } else {
