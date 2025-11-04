@@ -189,52 +189,47 @@ class GameplayState {
             const towerType = this.towerManager.towerTypes[this.selectedTowerType];
             const scale = ctx.canvas.levelScale;
             
-            // Always show preview at mouse position
             const canPlace = this.hoveredGridCell !== null;
-            ctx.fillStyle = canPlace && this.gameState.canAfford(towerType.cost) ? 
-                'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
+            const canAfford = this.gameState.canAfford(towerType.cost);
             
-            // Calculate scaled grid size for 2x2 hover indicator
-            const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
-            const towerSize = gridSize * 2; // 2x2 cells
-            
-            // Use mouse position for preview, but snap to grid if valid placement
-            let previewX = this.mouseX;
-            let previewY = this.mouseY;
-            
+            // Draw grid highlight only when over valid placement area
             if (canPlace) {
-                // Convert grid center to screen coordinates for snapped preview
-                previewX = scale ? 
+                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+                const towerSize = gridSize * 2; // 2x2 cells
+                
+                // Convert grid center to screen coordinates for grid highlight
+                const gridScreenX = scale ? 
                     this.hoveredGridCell.x * scale.scaleX + scale.offsetX : 
                     this.hoveredGridCell.x;
-                previewY = scale ? 
+                const gridScreenY = scale ? 
                     this.hoveredGridCell.y * scale.scaleY + scale.offsetY : 
                     this.hoveredGridCell.y;
                 
                 // Draw grid highlight
+                ctx.fillStyle = canAfford ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
                 ctx.fillRect(
-                    previewX - towerSize / 2,
-                    previewY - towerSize / 2,
+                    gridScreenX - towerSize / 2,
+                    gridScreenY - towerSize / 2,
                     towerSize,
                     towerSize
                 );
             }
             
-            // Draw preview tower centered on mouse or snapped position
-            ctx.fillStyle = canPlace && this.gameState.canAfford(towerType.cost) ? 
+            // Always draw preview tower centered on mouse cursor
+            ctx.fillStyle = canPlace && canAfford ? 
                 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 100, 100, 0.5)';
-            ctx.strokeStyle = canPlace && this.gameState.canAfford(towerType.cost) ? 
+            ctx.strokeStyle = canPlace && canAfford ? 
                 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
             ctx.lineWidth = 2;
             
             ctx.beginPath();
             const towerRadius = scale ? 30 * scale.scaleX : 30;
-            ctx.arc(previewX, previewY, towerRadius, 0, Math.PI * 2);
+            ctx.arc(this.mouseX, this.mouseY, towerRadius, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             
-            // Add a crosshair at mouse position when not snapped
-            if (!canPlace) {
+            // Add a crosshair at mouse position when placement is invalid
+            if (!canPlace || !canAfford) {
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.lineWidth = 1;
                 const crossSize = 10;
