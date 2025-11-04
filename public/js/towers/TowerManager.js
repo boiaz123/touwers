@@ -5,10 +5,7 @@ export class TowerManager {
         this.gameState = gameState;
         this.towers = [];
         this.towerTypes = {
-            'basic': { class: BasicTower, cost: 50 },
-            'cannon': { class: BasicTower, cost: 100 }, // Using BasicTower for now
-            'archer': { class: BasicTower, cost: 75 },  // Using BasicTower for now
-            'magic': { class: BasicTower, cost: 150 }   // Using BasicTower for now
+            'basic': { class: BasicTower, cost: 50 }
         };
     }
     
