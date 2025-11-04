@@ -12,16 +12,18 @@ export class LevelSelect {
     }
     
     enter() {
-        // Hide game UI
-        document.getElementById('stats-bar').style.display = 'none';
-        document.getElementById('tower-sidebar').style.display = 'none';
+        // Hide game UI when in level select
+        const statsBar = document.getElementById('stats-bar');
+        const sidebar = document.getElementById('tower-sidebar');
+        
+        if (statsBar) statsBar.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+        
         this.setupMouseListeners();
     }
     
     exit() {
-        // Show game UI
-        document.getElementById('stats-bar').style.display = 'flex';
-        document.getElementById('tower-sidebar').style.display = 'flex';
+        // UI will be shown by the next state (game state)
         this.removeMouseListeners();
     }
     

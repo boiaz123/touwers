@@ -23,6 +23,13 @@ export class StartScreen {
     }
     
     enter() {
+        // Hide game UI when in start screen
+        const statsBar = document.getElementById('stats-bar');
+        const sidebar = document.getElementById('tower-sidebar');
+        
+        if (statsBar) statsBar.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+        
         this.animationTime = 0;
         this.showContinue = false;
         this.titleOpacity = 0;

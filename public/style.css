@@ -25,7 +25,7 @@ body {
 #stats-bar {
     background: linear-gradient(135deg, #2a1a0f, #3a2a1f);
     padding: 8px 15px;
-    display: none; /* Hidden initially */
+    display: flex; /* Changed from none to flex */
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid #d4af37;
@@ -64,7 +64,7 @@ body {
     width: 120px;
     background: linear-gradient(180deg, #2a1a0f, #1a0f0a);
     border-left: 2px solid #d4af37;
-    display: none; /* Hidden initially */
+    display: flex; /* Changed from none to flex */
     flex-direction: column;
     padding: 10px 5px;
     flex-shrink: 0;

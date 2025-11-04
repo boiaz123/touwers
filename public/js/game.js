@@ -17,12 +17,24 @@ class GameplayState {
     }
     
     enter() {
+        // Ensure UI is visible
+        document.getElementById('stats-bar').style.display = 'flex';
+        document.getElementById('tower-sidebar').style.display = 'flex';
+        
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
     }
     
+    exit() {
+        // Clean up event listeners when leaving game state
+        this.removeEventListeners();
+    }
+    
     setupEventListeners() {
+        // Remove existing listeners first to avoid duplicates
+        this.removeEventListeners();
+        
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.selectTower(e.currentTarget);
@@ -37,6 +49,13 @@ class GameplayState {
                 e.preventDefault();
                 this.showTowerInfo(e.currentTarget.dataset.type);
             });
+        });
+    }
+    
+    removeEventListeners() {
+        // Clean up event listeners
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
         });
     }
     
