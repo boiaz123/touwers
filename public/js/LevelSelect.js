@@ -13,13 +13,15 @@ export class LevelSelect {
     
     enter() {
         // Hide game UI
-        document.getElementById('ui').style.display = 'none';
+        document.getElementById('stats-bar').style.display = 'none';
+        document.getElementById('tower-sidebar').style.display = 'none';
         this.setupMouseListeners();
     }
     
     exit() {
         // Show game UI
-        document.getElementById('ui').style.display = 'flex';
+        document.getElementById('stats-bar').style.display = 'flex';
+        document.getElementById('tower-sidebar').style.display = 'flex';
         this.removeMouseListeners();
     }
     

@@ -8,17 +8,49 @@
 </head>
 <body>
     <div id="game-container">
-        <div id="ui">
+        <!-- Stats bar at the top -->
+        <div id="stats-bar">
             <div id="stats">
-                <span>Health: <span id="health">20</span></span>
-                <span>Gold: <span id="gold">100</span></span>
-                <span>Wave: <span id="wave">1</span></span>
+                <span class="stat-item">❤️ <span id="health">20</span></span>
+                <span class="stat-item">💰 <span id="gold">100</span></span>
+                <span class="stat-item">🌊 <span id="wave">1</span></span>
             </div>
-            <div id="tower-selection">
-                <button class="tower-btn" data-type="basic">Basic Tower ($50)</button>
+            <div id="wave-status">
+                <span class="stat-item" id="enemies-remaining">Enemies: 0</span>
             </div>
         </div>
-        <canvas id="gameCanvas"></canvas>
+
+        <!-- Game area with canvas and sidebar -->
+        <div id="game-area">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- C&C Style Tower Sidebar -->
+            <div id="tower-sidebar">
+                <div id="tower-grid">
+                    <button class="tower-btn" data-type="basic" data-cost="50" data-name="Basic Tower">
+                        <div class="tower-icon">🏰</div>
+                        <div class="tower-cost">$50</div>
+                    </button>
+                    <button class="tower-btn" data-type="cannon" data-cost="100" data-name="Cannon Tower">
+                        <div class="tower-icon">💣</div>
+                        <div class="tower-cost">$100</div>
+                    </button>
+                    <button class="tower-btn" data-type="archer" data-cost="75" data-name="Archer Tower">
+                        <div class="tower-icon">🏹</div>
+                        <div class="tower-cost">$75</div>
+                    </button>
+                    <button class="tower-btn" data-type="magic" data-cost="150" data-name="Magic Tower">
+                        <div class="tower-icon">🔮</div>
+                        <div class="tower-cost">$150</div>
+                    </button>
+                </div>
+                
+                <div id="tower-info">
+                    <div class="info-title">Select a Tower</div>
+                    <div class="info-stats">Click on a tower button to see its stats and build it on the battlefield.</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/game.js"></script>

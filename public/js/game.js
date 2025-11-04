@@ -14,6 +14,38 @@ class GameplayState {
         this.towerManager = new TowerManager(this.gameState);
         this.enemyManager = new EnemyManager(this.level.path);
         this.selectedTowerType = null;
+        
+        // Tower information database
+        this.towerInfo = {
+            'basic': {
+                name: 'Basic Tower',
+                description: 'A reliable defensive structure with moderate damage and range.',
+                damage: '20',
+                range: '120',
+                fireRate: '1.0/sec'
+            },
+            'cannon': {
+                name: 'Cannon Tower',
+                description: 'Heavy artillery with high damage but slow fire rate.',
+                damage: '50',
+                range: '100',
+                fireRate: '0.5/sec'
+            },
+            'archer': {
+                name: 'Archer Tower',
+                description: 'Fast-firing tower with good range but lower damage.',
+                damage: '15',
+                range: '140',
+                fireRate: '1.5/sec'
+            },
+            'magic': {
+                name: 'Magic Tower',
+                description: 'Mystical tower that pierces armor and slows enemies.',
+                damage: '30',
+                range: '110',
+                fireRate: '0.8/sec'
+            }
+        };
     }
     
     enter() {
@@ -25,11 +57,52 @@ class GameplayState {
     setupEventListeners() {
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-                e.target.classList.add('selected');
-                this.selectedTowerType = e.target.dataset.type;
+                this.selectTower(e.currentTarget);
+            });
+            
+            // Show tower info on hover/touch
+            btn.addEventListener('mouseenter', (e) => {
+                this.showTowerInfo(e.currentTarget.dataset.type);
+            });
+            
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.showTowerInfo(e.currentTarget.dataset.type);
             });
         });
+    }
+    
+    selectTower(btn) {
+        const towerType = btn.dataset.type;
+        const cost = parseInt(btn.dataset.cost);
+        
+        // Check if player can afford this tower
+        if (!this.gameState.canAfford(cost)) {
+            return;
+        }
+        
+        // Update selection
+        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        this.selectedTowerType = towerType;
+        
+        this.showTowerInfo(towerType);
+    }
+    
+    showTowerInfo(towerType) {
+        const info = this.towerInfo[towerType];
+        if (!info) return;
+        
+        const infoPanel = document.getElementById('tower-info');
+        infoPanel.innerHTML = `
+            <div class="info-title">${info.name}</div>
+            <div class="info-stats">
+                <div>Damage: ${info.damage}</div>
+                <div>Range: ${info.range}</div>
+                <div>Rate: ${info.fireRate}</div>
+            </div>
+            <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
+        `;
     }
     
     handleClick(x, y) {
@@ -83,6 +156,18 @@ class GameplayState {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = this.gameState.gold;
         document.getElementById('wave').textContent = this.gameState.wave;
+        document.getElementById('enemies-remaining').textContent = 
+            `Enemies: ${this.enemyManager.enemies.length}`;
+        
+        // Update tower button states based on available gold
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const cost = parseInt(btn.dataset.cost);
+            if (this.gameState.canAfford(cost)) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        });
     }
 }
 
@@ -106,8 +191,12 @@ class Game {
     }
     
     resizeCanvas() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 60;
+        const gameArea = document.getElementById('game-area');
+        const sidebar = document.getElementById('tower-sidebar');
+        const sidebarWidth = sidebar ? sidebar.offsetWidth : 0;
+        
+        this.canvas.width = window.innerWidth - sidebarWidth;
+        this.canvas.height = window.innerHeight - 50; // Account for stats bar
     }
     
     setupEventListeners() {
