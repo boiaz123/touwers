@@ -1,24 +1,4 @@
-# Node modules
 node_modules/
-
-# Logs
-*.log
-npm-debug.log*
-
-# Environment variables
 .env
-.env.local
-
-# OS files
+*.log
 .DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build outputs
-dist/
-build/
