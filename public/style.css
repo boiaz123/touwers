@@ -9,60 +9,44 @@ body {
     background: #1a1a1a;
     color: white;
     overflow: hidden;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    touch-action: manipulation;
 }
 
 #game-container {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 #ui {
     background: #2a2a2a;
-    padding: 8px;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    min-height: 60px;
-    position: relative;
 }
 
 #stats {
     display: flex;
-    gap: 15px;
-    font-size: 14px;
+    gap: 20px;
 }
 
 #tower-selection {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .tower-btn {
-    padding: 10px 16px;
+    padding: 8px 16px;
     background: #4a4a4a;
     color: white;
     border: 2px solid #6a6a6a;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    min-height: 44px; /* Minimum touch target size */
-    min-width: 44px;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
 }
 
-.tower-btn:hover, .tower-btn:active {
+.tower-btn:hover {
     background: #5a5a5a;
 }
 
@@ -75,261 +59,4 @@ body {
     flex: 1;
     background: #0a0a0a;
     cursor: crosshair;
-    touch-action: none;
-    display: block;
-}
-
-/* Menu Styles */
-.menu-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.menu-screen.hidden {
-    display: none;
-}
-
-.menu-container {
-    text-align: center;
-    padding: 20px;
-    max-width: 90%;
-    width: 600px;
-}
-
-.game-title {
-    font-size: 4rem;
-    font-weight: bold;
-    color: #4CAF50;
-    margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.game-subtitle {
-    font-size: 1.5rem;
-    color: #ccc;
-    margin-bottom: 40px;
-}
-
-.menu-title {
-    font-size: 2.5rem;
-    color: #4CAF50;
-    margin-bottom: 30px;
-}
-
-.menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    align-items: center;
-}
-
-.menu-btn {
-    padding: 15px 30px;
-    font-size: 1.2rem;
-    border: 2px solid #4CAF50;
-    background: transparent;
-    color: #4CAF50;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 200px;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.menu-btn:hover, .menu-btn:active {
-    background: #4CAF50;
-    color: #1a1a1a;
-    transform: translateY(-2px);
-}
-
-.menu-btn.primary {
-    background: #4CAF50;
-    color: #1a1a1a;
-}
-
-.menu-btn.primary:hover, .menu-btn.primary:active {
-    background: #45a049;
-    border-color: #45a049;
-}
-
-.level-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
-    gap: 10px;
-    margin-bottom: 30px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.level-btn {
-    aspect-ratio: 1;
-    border: 2px solid #6a6a6a;
-    background: #3a3a3a;
-    color: white;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: bold;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.level-btn:hover, .level-btn:active {
-    background: #4CAF50;
-    border-color: #4CAF50;
-    color: #1a1a1a;
-    transform: scale(1.05);
-}
-
-.level-number {
-    pointer-events: none;
-}
-
-#game-container.hidden {
-    display: none;
-}
-
-.back-to-menu {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 8px 16px;
-    background: #f44336;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.back-to-menu:hover, .back-to-menu:active {
-    background: #d32f2f;
-}
-
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-    #ui {
-        flex-direction: column;
-        gap: 8px;
-        padding: 10px;
-        min-height: 80px;
-    }
-    
-    #stats {
-        font-size: 12px;
-        gap: 10px;
-        order: 2;
-    }
-    
-    #tower-selection {
-        order: 1;
-        justify-content: center;
-        width: 100%;
-    }
-    
-    .tower-btn {
-        padding: 12px 18px;
-        font-size: 12px;
-        flex: 1;
-        max-width: 150px;
-    }
-    
-    .game-title {
-        font-size: 3rem;
-    }
-    
-    .menu-title {
-        font-size: 2rem;
-    }
-    
-    .menu-btn {
-        padding: 12px 24px;
-        font-size: 1rem;
-        min-width: 180px;
-    }
-    
-    .level-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 8px;
-    }
-    
-    .level-btn {
-        font-size: 0.9rem;
-    }
-}
-
-/* Very small screens */
-@media (max-width: 480px) {
-    #ui {
-        padding: 8px;
-        min-height: 70px;
-    }
-    
-    #stats {
-        font-size: 11px;
-        gap: 8px;
-    }
-    
-    .tower-btn {
-        padding: 10px 12px;
-        font-size: 11px;
-    }
-    
-    .game-title {
-        font-size: 2.5rem;
-    }
-    
-    .menu-title {
-        font-size: 1.5rem;
-    }
-    
-    .menu-btn {
-        padding: 10px 20px;
-        font-size: 0.9rem;
-        min-width: 160px;
-    }
-    
-    .level-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 6px;
-    }
-    
-    .level-btn {
-        font-size: 0.8rem;
-    }
-}
-
-/* Landscape mobile */
-@media (max-height: 500px) and (orientation: landscape) {
-    #ui {
-        flex-direction: row;
-        min-height: 50px;
-        padding: 5px 10px;
-    }
-    
-    #stats {
-        font-size: 12px;
-    }
-    
-    .tower-btn {
-        padding: 8px 12px;
-        font-size: 12px;
-    }
 }
