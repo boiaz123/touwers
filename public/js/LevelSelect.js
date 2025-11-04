@@ -16,8 +16,14 @@ export class LevelSelect {
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
         
-        if (statsBar) statsBar.style.display = 'none';
-        if (sidebar) sidebar.style.display = 'none';
+        if (statsBar) {
+            statsBar.style.display = 'none';
+            console.log('LevelSelect: Stats bar hidden');
+        }
+        if (sidebar) {
+            sidebar.style.display = 'none';
+            console.log('LevelSelect: Sidebar hidden');
+        }
         
         this.setupMouseListeners();
     }

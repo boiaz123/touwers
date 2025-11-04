@@ -162,6 +162,10 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        // Detect and apply UI scaling based on screen resolution
+        this.applyUIScaling();
+        
         this.resizeCanvas();
         
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
@@ -177,17 +181,51 @@ class Game {
         this.gameLoop(0);
     }
     
+    applyUIScaling() {
+        const width = window.screen.width;
+        const height = window.screen.height;
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Calculate effective resolution
+        const effectiveWidth = width * dpr;
+        const effectiveHeight = height * dpr;
+        
+        // Add scaling class to body based on resolution
+        document.body.classList.remove('scale-1x', 'scale-1-5x', 'scale-2x', 'scale-2-5x');
+        
+        if (effectiveWidth >= 7680 || effectiveHeight >= 4320) {
+            // 8K+ displays
+            document.body.classList.add('scale-2-5x');
+        } else if (effectiveWidth >= 3840 || effectiveHeight >= 2160) {
+            // 4K displays
+            document.body.classList.add('scale-2x');
+        } else if (effectiveWidth >= 2560 || effectiveHeight >= 1440) {
+            // 1440p+ displays
+            document.body.classList.add('scale-1-5x');
+        } else {
+            // 1080p and below
+            document.body.classList.add('scale-1x');
+        }
+    }
+    
     resizeCanvas() {
         const gameArea = document.getElementById('game-area');
         const sidebar = document.getElementById('tower-sidebar');
-        const sidebarWidth = sidebar ? sidebar.offsetWidth : 0;
+        const statsBar = document.getElementById('stats-bar');
+        
+        // Only account for visible UI elements
+        const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
+        const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
         this.canvas.width = window.innerWidth - sidebarWidth;
-        this.canvas.height = window.innerHeight - 50; // Account for stats bar
+        this.canvas.height = window.innerHeight - statsBarHeight;
     }
     
     setupEventListeners() {
-        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('resize', () => {
+            this.applyUIScaling();
+            this.resizeCanvas();
+        });
         
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();

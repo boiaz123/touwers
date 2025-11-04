@@ -23,12 +23,18 @@ export class StartScreen {
     }
     
     enter() {
-        // Hide game UI when in start screen
+        // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
         
-        if (statsBar) statsBar.style.display = 'none';
-        if (sidebar) sidebar.style.display = 'none';
+        if (statsBar) {
+            statsBar.style.display = 'none';
+            console.log('StartScreen: Stats bar hidden');
+        }
+        if (sidebar) {
+            sidebar.style.display = 'none';
+            console.log('StartScreen: Sidebar hidden');
+        }
         
         this.animationTime = 0;
         this.showContinue = false;
