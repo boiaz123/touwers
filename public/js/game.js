@@ -193,10 +193,6 @@ class GameplayState {
             const canPlace = this.hoveredGridCell !== null;
             const canAfford = this.gameState.canAfford(towerType.cost);
             
-            // Always center the tower preview exactly on the mouse cursor
-            const towerCenterX = this.mouseX;
-            const towerCenterY = this.mouseY;
-            
             // Draw grid highlight centered on grid-aligned position when valid
             if (canPlace) {
                 const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
@@ -218,32 +214,41 @@ class GameplayState {
                     towerSize,
                     towerSize
                 );
-            }
-            
-            // Draw preview tower centered exactly on mouse cursor
-            ctx.fillStyle = canPlace && canAfford ? 
-                'rgba(255, 255, 255, 0.7)' : 'rgba(255, 100, 100, 0.5)';
-            ctx.strokeStyle = canPlace && canAfford ? 
-                'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
-            ctx.lineWidth = 2;
-            
-            ctx.beginPath();
-            const towerRadius = scale ? 30 * scale.scaleX : 30;
-            ctx.arc(towerCenterX, towerCenterY, towerRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            
-            // Add a crosshair at mouse position when placement is invalid
-            if (!canPlace || !canAfford) {
+                
+                // Draw preview tower centered on the grid-aligned position
+                ctx.fillStyle = canAfford ? 
+                    'rgba(255, 255, 255, 0.7)' : 'rgba(255, 100, 100, 0.5)';
+                ctx.strokeStyle = canAfford ? 
+                    'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                const towerRadius = scale ? 30 * scale.scaleX : 30;
+                ctx.arc(gridScreenX, gridScreenY, towerRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                // Draw preview tower centered on mouse cursor when placement is invalid
+                ctx.fillStyle = 'rgba(255, 100, 100, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                const towerRadius = scale ? 30 * scale.scaleX : 30;
+                ctx.arc(this.mouseX, this.mouseY, towerRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Add a crosshair at mouse position when placement is invalid
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.lineWidth = 1;
                 const crossSize = 10;
                 
                 ctx.beginPath();
-                ctx.moveTo(towerCenterX - crossSize, towerCenterY);
-                ctx.lineTo(towerCenterX + crossSize, towerCenterY);
-                ctx.moveTo(towerCenterX, towerCenterY - crossSize);
-                ctx.lineTo(towerCenterX, towerCenterY + crossSize);
+                ctx.moveTo(this.mouseX - crossSize, this.mouseY);
+                ctx.lineTo(this.mouseX + crossSize, this.mouseY);
+                ctx.moveTo(this.mouseX, this.mouseY - crossSize);
+                ctx.lineTo(this.mouseX, this.mouseY + crossSize);
                 ctx.stroke();
             }
         }
