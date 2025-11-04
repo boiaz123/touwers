@@ -192,11 +192,12 @@ class GameplayState {
             const canPlace = this.hoveredGridCell !== null;
             const canAfford = this.gameState.canAfford(towerType.cost);
             
+            // Calculate grid size and tower size
+            const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+            const towerSize = gridSize * 2; // 2x2 cells
+            
             // Draw grid highlight only when over valid placement area
             if (canPlace) {
-                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
-                const towerSize = gridSize * 2; // 2x2 cells
-                
                 // Convert grid center to screen coordinates for grid highlight
                 const gridScreenX = scale ? 
                     this.hoveredGridCell.x * scale.scaleX + scale.offsetX : 
@@ -205,7 +206,7 @@ class GameplayState {
                     this.hoveredGridCell.y * scale.scaleY + scale.offsetY : 
                     this.hoveredGridCell.y;
                 
-                // Draw grid highlight
+                // Draw grid highlight centered on the 2x2 area
                 ctx.fillStyle = canAfford ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
                 ctx.fillRect(
                     gridScreenX - towerSize / 2,
@@ -215,7 +216,36 @@ class GameplayState {
                 );
             }
             
-            // Always draw preview tower centered on mouse cursor
+            // Calculate the center position for 2x2 grid at mouse cursor
+            // Snap mouse position to the center of a 2x2 grid area
+            let towerCenterX, towerCenterY;
+            
+            if (scale) {
+                // Convert mouse screen coordinates to world coordinates
+                const worldMouseX = (this.mouseX - scale.offsetX) / scale.scaleX;
+                const worldMouseY = (this.mouseY - scale.offsetY) / scale.scaleY;
+                
+                // Calculate which 2x2 grid area the mouse is in
+                const gridX = Math.floor(worldMouseX / level.gridSize);
+                const gridY = Math.floor(worldMouseY / level.gridSize);
+                
+                // Calculate the center of the 2x2 grid area (between 4 grid cells)
+                const worldCenterX = (gridX + 0.5) * level.gridSize + level.gridSize / 2;
+                const worldCenterY = (gridY + 0.5) * level.gridSize + level.gridSize / 2;
+                
+                // Convert back to screen coordinates
+                towerCenterX = worldCenterX * scale.scaleX + scale.offsetX;
+                towerCenterY = worldCenterY * scale.scaleY + scale.offsetY;
+            } else {
+                // No scaling - calculate directly
+                const gridX = Math.floor(this.mouseX / level.gridSize);
+                const gridY = Math.floor(this.mouseY / level.gridSize);
+                
+                towerCenterX = (gridX + 0.5) * level.gridSize + level.gridSize / 2;
+                towerCenterY = (gridY + 0.5) * level.gridSize + level.gridSize / 2;
+            }
+            
+            // Draw preview tower centered on the calculated 2x2 center position
             ctx.fillStyle = canPlace && canAfford ? 
                 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 100, 100, 0.5)';
             ctx.strokeStyle = canPlace && canAfford ? 
@@ -224,7 +254,7 @@ class GameplayState {
             
             ctx.beginPath();
             const towerRadius = scale ? 30 * scale.scaleX : 30;
-            ctx.arc(this.mouseX, this.mouseY, towerRadius, 0, Math.PI * 2);
+            ctx.arc(towerCenterX, towerCenterY, towerRadius, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             
@@ -235,10 +265,10 @@ class GameplayState {
                 const crossSize = 10;
                 
                 ctx.beginPath();
-                ctx.moveTo(this.mouseX - crossSize, this.mouseY);
-                ctx.lineTo(this.mouseX + crossSize, this.mouseY);
-                ctx.moveTo(this.mouseX, this.mouseY - crossSize);
-                ctx.lineTo(this.mouseX, this.mouseY + crossSize);
+                ctx.moveTo(towerCenterX - crossSize, towerCenterY);
+                ctx.lineTo(towerCenterX + crossSize, towerCenterY);
+                ctx.moveTo(towerCenterX, towerCenterY - crossSize);
+                ctx.lineTo(towerCenterX, towerCenterY + crossSize);
                 ctx.stroke();
             }
         }
