@@ -5,7 +5,7 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Times New Roman', serif;
     background: #1a1a1a;
     color: white;
     overflow: hidden;
@@ -18,12 +18,13 @@ body {
 }
 
 #ui {
-    background: #2a2a2a;
+    background: linear-gradient(135deg, #2a1a0f, #3a2a1f);
     padding: 10px;
-    display: flex;
+    display: none; /* Hidden initially */
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+    border-bottom: 2px solid #d4af37;
 }
 
 #stats {
@@ -38,21 +39,26 @@ body {
 
 .tower-btn {
     padding: 8px 16px;
-    background: #4a4a4a;
-    color: white;
-    border: 2px solid #6a6a6a;
+    background: linear-gradient(135deg, #4a3a2f, #5a4a3f);
+    color: #d4af37;
+    border: 2px solid #8b7355;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
+    font-family: serif;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
 }
 
 .tower-btn:hover {
-    background: #5a5a5a;
+    background: linear-gradient(135deg, #5a4a3f, #6a5a4f);
+    border-color: #d4af37;
 }
 
 .tower-btn.selected {
-    border-color: #4CAF50;
-    background: #3a5a3a;
+    border-color: #d4af37;
+    background: linear-gradient(135deg, #3a5a3a, #4a6a4a);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
 }
 
 #gameCanvas {
