@@ -10,6 +10,11 @@ export class LevelManager {
         };
         this.currentLevel = null;
         this.currentLevelNumber = 1;
+        this.ctx = null; // Store canvas context for coordinate conversion
+    }
+    
+    setContext(ctx) {
+        this.ctx = ctx;
     }
     
     loadLevel(levelNumber) {
@@ -50,23 +55,33 @@ export class LevelManager {
     
     canPlaceTower(x, y) {
         if (!this.currentLevel) return false;
-        return this.currentLevel.canPlaceTower(x, y);
+        return this.currentLevel.canPlaceTower(x, y, this.ctx);
     }
     
     placeTower(x, y) {
         if (!this.currentLevel) return false;
         
-        if (this.currentLevel.occupyGridCell(x, y)) {
-            return this.currentLevel.getGridCenterPosition(x, y);
+        if (this.currentLevel.occupyGridCell(x, y, this.ctx)) {
+            return this.currentLevel.getGridCenterPosition(x, y, this.ctx);
         }
         return false;
     }
     
     getPath() {
-        return this.currentLevel ? this.currentLevel.worldPath : [];
+        if (!this.currentLevel || !this.ctx) return [];
+        
+        // Convert world path to screen coordinates
+        const scale = this.ctx.canvas.levelScale;
+        if (!scale) return this.currentLevel.worldPath;
+        
+        return this.currentLevel.worldPath.map(point => ({
+            x: point.x * scale.scaleX + scale.offsetX,
+            y: point.y * scale.scaleY + scale.offsetY
+        }));
     }
     
     render(ctx) {
+        this.setContext(ctx);
         if (this.currentLevel) {
             this.currentLevel.render(ctx);
         }

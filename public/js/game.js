@@ -57,8 +57,8 @@ class GameplayState {
             const y = e.clientY - rect.top;
             
             const level = this.levelManager.getCurrentLevel();
-            if (level && level.canPlaceTower(x, y)) {
-                this.hoveredGridCell = level.getGridCenterPosition(x, y);
+            if (level && level.canPlaceTower(x, y, this.stateManager.ctx)) {
+                this.hoveredGridCell = level.getGridCenterPosition(x, y, this.stateManager.ctx);
             } else {
                 this.hoveredGridCell = null;
             }
@@ -185,22 +185,27 @@ class GameplayState {
         if (this.hoveredGridCell && this.selectedTowerType) {
             const level = this.levelManager.getCurrentLevel();
             const towerType = this.towerManager.towerTypes[this.selectedTowerType];
+            const scale = ctx.canvas.levelScale;
             
             ctx.fillStyle = this.gameState.canAfford(towerType.cost) ? 
                 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
             
+            // Calculate scaled grid size for hover indicator
+            const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+            
             ctx.fillRect(
-                this.hoveredGridCell.x - level.gridSize / 2,
-                this.hoveredGridCell.y - level.gridSize / 2,
-                level.gridSize,
-                level.gridSize
+                this.hoveredGridCell.x - gridSize / 2,
+                this.hoveredGridCell.y - gridSize / 2,
+                gridSize,
+                gridSize
             );
             
             // Draw preview tower
             if (this.gameState.canAfford(towerType.cost)) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.beginPath();
-                ctx.arc(this.hoveredGridCell.x, this.hoveredGridCell.y, 15, 0, Math.PI * 2);
+                const towerRadius = scale ? 15 * scale.scaleX : 15;
+                ctx.arc(this.hoveredGridCell.x, this.hoveredGridCell.y, towerRadius, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -289,30 +294,32 @@ class Game {
         const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
         const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
-        // Set canvas size to accommodate the larger map
+        // Calculate available space
         const availableWidth = window.innerWidth - sidebarWidth;
         const availableHeight = window.innerHeight - statsBarHeight;
         
-        // Level is 40x30 cells at 40px each = 1600x1200 pixels
-        const levelWidth = 40 * 40; // 1600px
-        const levelHeight = 30 * 40; // 1200px
+        // Set canvas to fill available space exactly
+        this.canvas.width = availableWidth;
+        this.canvas.height = availableHeight;
         
-        // Scale canvas to fit the level while maintaining aspect ratio
-        const scaleX = availableWidth / levelWidth;
-        const scaleY = availableHeight / levelHeight;
-        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 1:1
+        // Store scaling information for level rendering
+        this.canvas.levelScale = {
+            scaleX: availableWidth / (40 * 40), // 40 cols * 40px grid size
+            scaleY: availableHeight / (30 * 40), // 30 rows * 40px grid size
+            offsetX: 0,
+            offsetY: 0
+        };
         
-        this.canvas.width = Math.max(availableWidth, levelWidth);
-        this.canvas.height = Math.max(availableHeight, levelHeight);
+        // Use uniform scaling to maintain aspect ratio
+        const uniformScale = Math.min(this.canvas.levelScale.scaleX, this.canvas.levelScale.scaleY);
+        this.canvas.levelScale.scaleX = uniformScale;
+        this.canvas.levelScale.scaleY = uniformScale;
         
-        // If the level is larger than available space, we might need scrolling
-        // For now, just use the available space
-        if (this.canvas.width > availableWidth) {
-            this.canvas.width = availableWidth;
-        }
-        if (this.canvas.height > availableHeight) {
-            this.canvas.height = availableHeight;
-        }
+        // Center the level in the canvas
+        const scaledLevelWidth = 40 * 40 * uniformScale;
+        const scaledLevelHeight = 30 * 40 * uniformScale;
+        this.canvas.levelScale.offsetX = (availableWidth - scaledLevelWidth) / 2;
+        this.canvas.levelScale.offsetY = (availableHeight - scaledLevelHeight) / 2;
     }
     
     setupEventListeners() {

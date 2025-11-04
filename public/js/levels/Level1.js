@@ -2,9 +2,9 @@ export class Level1 {
     constructor() {
         this.name = "The King's Road";
         this.difficulty = "Easy";
-        this.gridSize = 40; // Size of each grid cell
-        this.cols = 40; // Number of columns (doubled from 20)
-        this.rows = 30; // Number of rows (doubled from 15)
+        this.gridSize = 40; // Base grid size
+        this.cols = 40;
+        this.rows = 30;
         
         // Grid where 0 = buildable, 1 = path, 2 = occupied by tower
         this.grid = this.createGrid();
@@ -82,40 +82,199 @@ export class Level1 {
         }));
     }
     
-    canPlaceTower(worldX, worldY) {
-        const gridX = Math.floor(worldX / this.gridSize);
-        const gridY = Math.floor(worldY / this.gridSize);
+    getScaledGridSize(ctx) {
+        if (ctx.canvas.levelScale) {
+            return this.gridSize * ctx.canvas.levelScale.scaleX;
+        }
+        return this.gridSize;
+    }
+    
+    getScaledPosition(x, y, ctx) {
+        if (ctx.canvas.levelScale) {
+            return {
+                x: x * ctx.canvas.levelScale.scaleX + ctx.canvas.levelScale.offsetX,
+                y: y * ctx.canvas.levelScale.scaleY + ctx.canvas.levelScale.offsetY
+            };
+        }
+        return { x, y };
+    }
+    
+    worldToScaledCoords(worldX, worldY, ctx) {
+        const scaled = this.getScaledPosition(worldX, worldY, ctx);
+        return scaled;
+    }
+    
+    canPlaceTower(worldX, worldY, ctx = null) {
+        // Convert screen coordinates to world coordinates if scaling is applied
+        let actualX = worldX;
+        let actualY = worldY;
+        
+        if (ctx && ctx.canvas.levelScale) {
+            actualX = (worldX - ctx.canvas.levelScale.offsetX) / ctx.canvas.levelScale.scaleX;
+            actualY = (worldY - ctx.canvas.levelScale.offsetY) / ctx.canvas.levelScale.scaleY;
+        }
+        
+        const gridX = Math.floor(actualX / this.gridSize);
+        const gridY = Math.floor(actualY / this.gridSize);
         
         if (gridX < 0 || gridX >= this.cols || gridY < 0 || gridY >= this.rows) {
             return false;
         }
         
-        return this.grid[gridY][gridX] === 0; // Only buildable on empty cells
+        return this.grid[gridY][gridX] === 0;
     }
     
-    occupyGridCell(worldX, worldY) {
-        const gridX = Math.floor(worldX / this.gridSize);
-        const gridY = Math.floor(worldY / this.gridSize);
+    occupyGridCell(worldX, worldY, ctx = null) {
+        // Convert screen coordinates to world coordinates if scaling is applied
+        let actualX = worldX;
+        let actualY = worldY;
         
-        if (this.canPlaceTower(worldX, worldY)) {
-            this.grid[gridY][gridX] = 2; // Mark as occupied
+        if (ctx && ctx.canvas.levelScale) {
+            actualX = (worldX - ctx.canvas.levelScale.offsetX) / ctx.canvas.levelScale.scaleX;
+            actualY = (worldY - ctx.canvas.levelScale.offsetY) / ctx.canvas.levelScale.scaleY;
+        }
+        
+        if (this.canPlaceTower(worldX, worldY, ctx)) {
+            const gridX = Math.floor(actualX / this.gridSize);
+            const gridY = Math.floor(actualY / this.gridSize);
+            this.grid[gridY][gridX] = 2;
             return true;
         }
         return false;
     }
     
-    getGridCenterPosition(worldX, worldY) {
-        const gridX = Math.floor(worldX / this.gridSize);
-        const gridY = Math.floor(worldY / this.gridSize);
+    getGridCenterPosition(worldX, worldY, ctx = null) {
+        // Convert screen coordinates to world coordinates if scaling is applied
+        let actualX = worldX;
+        let actualY = worldY;
         
-        return {
-            x: gridX * this.gridSize + this.gridSize / 2,
-            y: gridY * this.gridSize + this.gridSize / 2
-        };
+        if (ctx && ctx.canvas.levelScale) {
+            actualX = (worldX - ctx.canvas.levelScale.offsetX) / ctx.canvas.levelScale.scaleX;
+            actualY = (worldY - ctx.canvas.levelScale.offsetY) / ctx.canvas.levelScale.scaleY;
+        }
+        
+        const gridX = Math.floor(actualX / this.gridSize);
+        const gridY = Math.floor(actualY / this.gridSize);
+        
+        const worldCenterX = gridX * this.gridSize + this.gridSize / 2;
+        const worldCenterY = gridY * this.gridSize + this.gridSize / 2;
+        
+        // Convert back to screen coordinates if scaling is applied
+        if (ctx && ctx.canvas.levelScale) {
+            return {
+                x: worldCenterX * ctx.canvas.levelScale.scaleX + ctx.canvas.levelScale.offsetX,
+                y: worldCenterY * ctx.canvas.levelScale.scaleY + ctx.canvas.levelScale.offsetY
+            };
+        }
+        
+        return { x: worldCenterX, y: worldCenterY };
     }
     
     render(ctx) {
-        // Draw grid background
+        const scale = ctx.canvas.levelScale;
+        if (!scale) {
+            this.renderUnscaled(ctx);
+            return;
+        }
+        
+        // Save context state
+        ctx.save();
+        
+        // Apply scaling and offset
+        ctx.translate(scale.offsetX, scale.offsetY);
+        ctx.scale(scale.scaleX, scale.scaleY);
+        
+        // Clear the scaled area
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
+        
+        // Draw grid lines (subtle, every 2 cells)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1 / scale.scaleX; // Adjust line width for scaling
+        
+        for (let col = 0; col <= this.cols; col += 2) {
+            ctx.beginPath();
+            ctx.moveTo(col * this.gridSize, 0);
+            ctx.lineTo(col * this.gridSize, this.rows * this.gridSize);
+            ctx.stroke();
+        }
+        
+        for (let row = 0; row <= this.rows; row += 2) {
+            ctx.beginPath();
+            ctx.moveTo(0, row * this.gridSize);
+            ctx.lineTo(this.cols * this.gridSize, row * this.gridSize);
+            ctx.stroke();
+        }
+        
+        // Draw path cells
+        ctx.fillStyle = '#444';
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 1) {
+                    ctx.fillRect(
+                        col * this.gridSize,
+                        row * this.gridSize,
+                        this.gridSize,
+                        this.gridSize
+                    );
+                }
+            }
+        }
+        
+        // Draw path border
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2 / scale.scaleX;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        
+        if (this.worldPath.length > 0) {
+            ctx.moveTo(this.worldPath[0].x, this.worldPath[0].y);
+            for (let i = 1; i < this.worldPath.length; i++) {
+                ctx.lineTo(this.worldPath[i].x, this.worldPath[i].y);
+            }
+        }
+        ctx.stroke();
+        
+        // Draw buildable area indicators
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.05)';
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 0) {
+                    ctx.fillRect(
+                        col * this.gridSize + 1,
+                        row * this.gridSize + 1,
+                        this.gridSize - 2,
+                        this.gridSize - 2
+                    );
+                }
+            }
+        }
+        
+        // Draw start and end markers
+        if (this.worldPath.length > 0) {
+            const markerSize = 8 / scale.scaleX;
+            
+            // Start marker
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.arc(this.worldPath[0].x, this.worldPath[0].y, markerSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // End marker
+            const endPoint = this.worldPath[this.worldPath.length - 1];
+            ctx.fillStyle = '#F44336';
+            ctx.beginPath();
+            ctx.arc(endPoint.x, endPoint.y, markerSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Restore context state
+        ctx.restore();
+    }
+    
+    renderUnscaled(ctx) {
+        // Fallback for when no scaling is available
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
         
@@ -138,7 +297,7 @@ export class Level1 {
             ctx.stroke();
         }
         
-        // Draw path
+        // Draw path cells
         ctx.fillStyle = '#444';
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
@@ -153,14 +312,13 @@ export class Level1 {
             }
         }
         
-        // Draw path border for better visibility
+        // Draw path border
         ctx.strokeStyle = '#666';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         
-        // Draw the path as a continuous line
         if (this.worldPath.length > 0) {
             ctx.moveTo(this.worldPath[0].x, this.worldPath[0].y);
             for (let i = 1; i < this.worldPath.length; i++) {
@@ -169,7 +327,7 @@ export class Level1 {
         }
         ctx.stroke();
         
-        // Draw buildable area indicators (less prominent for larger map)
+        // Draw buildable area indicators
         ctx.fillStyle = 'rgba(76, 175, 80, 0.05)';
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
