@@ -2,23 +2,33 @@ export class Level {
     constructor(levelManager) {
         this.levelManager = levelManager;
         this.path = [];
-        this.updateLevel();
+        // Don't call updateLevel here since levels might not be loaded yet
     }
     
     updateLevel() {
+        console.log('Updating level...');
         const currentLevelData = this.levelManager.getCurrentLevel();
+        console.log('Current level data:', currentLevelData);
+        
         if (currentLevelData) {
             this.updatePathForSize(800, 600, currentLevelData);
+        } else {
+            console.warn('No level data found, using default path');
+            this.path = this.generateDefaultPath(800, 600);
         }
+        
+        console.log('Updated path:', this.path);
     }
     
     updatePathForSize(width, height, levelData = null) {
         const currentLevelData = levelData || this.levelManager.getCurrentLevel();
         if (currentLevelData && currentLevelData.generatePath) {
             this.path = currentLevelData.generatePath(width, height);
+            console.log('Generated path from level data:', this.path);
         } else {
             // Fallback to default path
             this.path = this.generateDefaultPath(width, height);
+            console.log('Using default path:', this.path);
         }
     }
     
@@ -45,8 +55,14 @@ export class Level {
     }
     
     render(ctx) {
+        if (!this.path || this.path.length === 0) {
+            console.warn('No path to render');
+            return;
+        }
+        
         const canvas = ctx.canvas;
-        const lineWidth = Math.max(30, Math.min(canvas.width, canvas.height) * 0.05);
+        const dpr = window.devicePixelRatio || 1;
+        const lineWidth = Math.max(30, Math.min(canvas.width / dpr, canvas.height / dpr) * 0.05);
         
         ctx.strokeStyle = '#444';
         ctx.lineWidth = lineWidth;
@@ -58,7 +74,7 @@ export class Level {
         for (let i = 1; i < this.path.length; i++) {
             ctx.lineTo(this.path[i].x, this.path[i].y);
         }
-        ctx.lineTo(canvas.width / (window.devicePixelRatio || 1), this.path[this.path.length - 1].y);
+        ctx.lineTo(canvas.width / dpr, this.path[this.path.length - 1].y);
         ctx.stroke();
     }
 }

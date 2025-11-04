@@ -12,27 +12,63 @@ class Game {
         
         this.gameState = new GameState();
         this.levelManager = new LevelManager();
-        this.level = new Level(this.levelManager);
+        this.level = null; // Initialize as null until levels are loaded
         this.towerManager = new TowerManager(this.gameState);
-        this.enemyManager = new EnemyManager(this.level.path);
+        this.enemyManager = null; // Initialize as null until level is ready
         
         this.selectedTowerType = null;
         this.lastTime = 0;
         this.isMobile = this.detectMobile();
         this.gameRunning = false;
+        this.gameLoopRunning = false;
         
-        // Initialize menu system
+        // Initialize the system
+        this.initialize();
+    }
+    
+    async initialize() {
+        console.log('Initializing game...');
+        
+        // Load all levels first
+        await this.levelManager.loadAllLevels();
+        
+        // Now create level and enemy manager
+        this.level = new Level(this.levelManager);
+        this.enemyManager = new EnemyManager(this.level.path);
+        
+        // Initialize menu system after everything is loaded
         this.menuManager = new MenuManager(this);
         
         this.setupEventListeners();
         this.resizeCanvas();
+        
+        console.log('Game initialized successfully');
     }
     
-    startLevel(levelNumber) {
+    async startLevel(levelNumber) {
+        console.log('Starting level:', levelNumber);
+        
+        // Ensure levels are loaded
+        await this.levelManager.waitForLevelsLoaded();
+        
         // Set the specific level
         this.levelManager.setLevel(levelNumber);
+        
+        // Make sure level exists
+        if (!this.level) {
+            this.level = new Level(this.levelManager);
+        }
+        
         this.level.updateLevel();
-        this.enemyManager.updatePath(this.level.path);
+        
+        console.log('Level path:', this.level.path);
+        
+        // Update enemy manager with new path
+        if (!this.enemyManager) {
+            this.enemyManager = new EnemyManager(this.level.path);
+        } else {
+            this.enemyManager.updatePath(this.level.path);
+        }
         
         // Reset game state for new level
         this.gameState = new GameState();
@@ -49,7 +85,12 @@ class Game {
             this.gameLoop(0);
         }
         
-        this.startWave();
+        // Start first wave after a short delay
+        setTimeout(() => {
+            this.startWave();
+        }, 500);
+        
+        console.log('Level started successfully');
     }
     
     resetGame() {
@@ -215,7 +256,7 @@ class Game {
     }
     
     render() {
-        if (!this.gameRunning) return;
+        if (!this.gameRunning || !this.level || !this.enemyManager) return;
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         

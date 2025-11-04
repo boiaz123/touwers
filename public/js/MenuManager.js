@@ -117,10 +117,43 @@ export class MenuManager {
         }
     }
     
-    startGame(level = 1) {
+    async startGame(level = 1) {
+        console.log('Starting game with level:', level);
+        
+        // Show loading message
+        this.showLoadingMessage();
+        
+        // Wait for levels to be loaded
+        await this.game.levelManager.waitForLevelsLoaded();
+        
         this.selectedLevel = level;
-        this.game.startLevel(level);
+        await this.game.startLevel(level);
         this.showScreen('game');
+    }
+    
+    showLoadingMessage() {
+        // Hide all screens
+        document.querySelectorAll('.menu-screen').forEach(screen => {
+            screen.classList.add('hidden');
+        });
+        document.getElementById('game-container').classList.add('hidden');
+        
+        // Create loading screen if it doesn't exist
+        let loadingScreen = document.getElementById('loadingScreen');
+        if (!loadingScreen) {
+            loadingScreen = document.createElement('div');
+            loadingScreen.id = 'loadingScreen';
+            loadingScreen.className = 'menu-screen';
+            loadingScreen.innerHTML = `
+                <div class="menu-container">
+                    <h2 class="menu-title">Loading...</h2>
+                    <p>Preparing your game</p>
+                </div>
+            `;
+            document.body.appendChild(loadingScreen);
+        }
+        
+        loadingScreen.classList.remove('hidden');
     }
     
     returnToMenu() {
