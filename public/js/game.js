@@ -1,6 +1,6 @@
 import { TowerManager } from './towers/TowerManager.js';
 import { EnemyManager } from './enemies/EnemyManager.js';
-import { Level } from './Level.js';
+import { LevelManager } from './LevelManager.js';
 import { GameState } from './GameState.js';
 import { GameStateManager } from './GameStateManager.js';
 import { StartScreen } from './StartScreen.js';
@@ -10,13 +10,24 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
-        this.level = new Level();
+        this.levelManager = new LevelManager();
         this.towerManager = new TowerManager(this.gameState);
-        this.enemyManager = new EnemyManager(this.level.path);
+        this.enemyManager = null;
         this.selectedTowerType = null;
+        this.hoveredGridCell = null;
     }
     
     enter() {
+        // Load the first level
+        if (!this.levelManager.loadLevel(1)) {
+            console.error('Failed to load level 1');
+            this.stateManager.changeState('start');
+            return;
+        }
+        
+        // Initialize enemy manager with the level's path
+        this.enemyManager = new EnemyManager(this.levelManager.getPath());
+        
         // Ensure UI is visible
         document.getElementById('stats-bar').style.display = 'flex';
         document.getElementById('tower-sidebar').style.display = 'flex';
@@ -24,11 +35,41 @@ class GameplayState {
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
+        
+        // Setup mouse move for grid highlighting
+        this.setupMouseMove();
     }
     
     exit() {
-        // Clean up event listeners when leaving game state
         this.removeEventListeners();
+        this.removeMouseMove();
+    }
+    
+    setupMouseMove() {
+        this.mouseMoveHandler = (e) => {
+            if (!this.selectedTowerType) {
+                this.hoveredGridCell = null;
+                return;
+            }
+            
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const level = this.levelManager.getCurrentLevel();
+            if (level && level.canPlaceTower(x, y)) {
+                this.hoveredGridCell = level.getGridCenterPosition(x, y);
+            } else {
+                this.hoveredGridCell = null;
+            }
+        };
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+    }
+    
+    removeMouseMove() {
+        if (this.mouseMoveHandler) {
+            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
     }
     
     setupEventListeners() {
@@ -95,8 +136,12 @@ class GameplayState {
     handleClick(x, y) {
         if (!this.selectedTowerType) return;
         
-        if (this.towerManager.placeTower(this.selectedTowerType, x, y)) {
-            this.updateUI();
+        const placementResult = this.levelManager.placeTower(x, y);
+        if (placementResult) {
+            if (this.towerManager.placeTower(this.selectedTowerType, placementResult.x, placementResult.y)) {
+                this.updateUI();
+                this.hoveredGridCell = null;
+            }
         }
     }
     
@@ -134,9 +179,36 @@ class GameplayState {
     }
     
     render(ctx) {
-        this.level.render(ctx);
+        this.levelManager.render(ctx);
+        
+        // Draw hover indicator
+        if (this.hoveredGridCell && this.selectedTowerType) {
+            const level = this.levelManager.getCurrentLevel();
+            const towerType = this.towerManager.towerTypes[this.selectedTowerType];
+            
+            ctx.fillStyle = this.gameState.canAfford(towerType.cost) ? 
+                'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
+            
+            ctx.fillRect(
+                this.hoveredGridCell.x - level.gridSize / 2,
+                this.hoveredGridCell.y - level.gridSize / 2,
+                level.gridSize,
+                level.gridSize
+            );
+            
+            // Draw preview tower
+            if (this.gameState.canAfford(towerType.cost)) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.hoveredGridCell.x, this.hoveredGridCell.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
         this.towerManager.render(ctx);
-        this.enemyManager.render(ctx);
+        if (this.enemyManager) {
+            this.enemyManager.render(ctx);
+        }
     }
     
     updateUI() {
