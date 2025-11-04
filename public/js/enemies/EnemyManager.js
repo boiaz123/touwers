@@ -10,6 +10,14 @@ export class EnemyManager {
         this.spawnInterval = 1; // seconds between spawns
     }
     
+    updatePath(newPath) {
+        this.path = newPath;
+        // Update existing enemies to use new path
+        this.enemies.forEach(enemy => {
+            enemy.updatePath(newPath);
+        });
+    }
+    
     spawnWave(waveNumber, count) {
         this.spawning = true;
         this.spawnQueue = [];

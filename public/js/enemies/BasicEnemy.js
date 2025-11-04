@@ -10,6 +10,15 @@ export class BasicEnemy {
         this.reachedEnd = false;
     }
     
+    updatePath(newPath) {
+        this.path = newPath;
+        // Reset position to start of new path
+        this.currentPathIndex = 0;
+        this.x = newPath[0].x;
+        this.y = newPath[0].y;
+        this.reachedEnd = false;
+    }
+    
     update(deltaTime) {
         if (this.reachedEnd) return;
         
