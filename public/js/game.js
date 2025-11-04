@@ -49,9 +49,19 @@ class GameplayState {
     }
     
     enter() {
+        // Show game UI elements
+        document.getElementById('stats-bar').style.display = 'flex';
+        document.getElementById('tower-sidebar').style.display = 'flex';
+        
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
+    }
+    
+    exit() {
+        // Hide game UI when leaving
+        document.getElementById('stats-bar').style.display = 'none';
+        document.getElementById('tower-sidebar').style.display = 'none';
     }
     
     setupEventListeners() {
@@ -175,7 +185,6 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.resizeCanvas();
         
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
         
@@ -184,9 +193,13 @@ class Game {
         this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
         this.stateManager.addState('game', new GameplayState(this.stateManager));
         
+        // Start with start screen
+        this.stateManager.changeState('start');
+        
         this.lastTime = 0;
         
         this.setupEventListeners();
+        this.resizeCanvas();
         this.gameLoop(0);
     }
     
