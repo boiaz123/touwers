@@ -65,6 +65,17 @@ export class EnemyManager {
     }
     
     render(ctx) {
-        this.enemies.forEach(enemy => enemy.render(ctx));
+        const scale = ctx.canvas.levelScale;
+        
+        this.enemies.forEach(enemy => {
+            if (scale) {
+                // Convert enemy world coordinates to screen coordinates
+                const screenX = enemy.x * scale.scaleX + scale.offsetX;
+                const screenY = enemy.y * scale.scaleY + scale.offsetY;
+                enemy.render(ctx, screenX, screenY, scale.scaleX);
+            } else {
+                enemy.render(ctx, enemy.x, enemy.y, 1);
+            }
+        });
     }
 }

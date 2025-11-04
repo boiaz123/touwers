@@ -7,6 +7,7 @@ export class BasicTower {
         this.fireRate = 1; // shots per second
         this.cooldown = 0;
         this.target = null;
+        this.size = 80; // Tower takes 2x2 grid cells (2 * 40px)
     }
     
     update(deltaTime, enemies) {
@@ -41,33 +42,66 @@ export class BasicTower {
         }
     }
     
-    render(ctx) {
-        // Tower base
+    render(ctx, screenX, screenY, scale = 1) {
+        const size = this.size * scale;
+        const halfSize = size / 2;
+        
+        // Tower base (stone foundation)
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
+        
+        // Tower walls
+        ctx.fillStyle = '#A0895F';
+        ctx.fillRect(screenX - halfSize + 4 * scale, screenY - halfSize + 4 * scale, 
+                    size - 8 * scale, size - 8 * scale);
+        
+        // Corner stones
+        const cornerSize = 8 * scale;
+        ctx.fillStyle = '#6B5B47';
+        // Top-left corner
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, cornerSize, cornerSize);
+        // Top-right corner
+        ctx.fillRect(screenX + halfSize - cornerSize, screenY - halfSize, cornerSize, cornerSize);
+        // Bottom-left corner
+        ctx.fillRect(screenX - halfSize, screenY + halfSize - cornerSize, cornerSize, cornerSize);
+        // Bottom-right corner
+        ctx.fillRect(screenX + halfSize - cornerSize, screenY + halfSize - cornerSize, cornerSize, cornerSize);
+        
+        // Central keep
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+        ctx.arc(screenX, screenY, 20 * scale, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tower top
+        // Tower flag
         ctx.fillStyle = '#2E7D32';
+        ctx.fillRect(screenX - 2 * scale, screenY - 35 * scale, 4 * scale, 15 * scale);
+        
+        // Flag
+        ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        ctx.moveTo(screenX + 2 * scale, screenY - 35 * scale);
+        ctx.lineTo(screenX + 15 * scale, screenY - 30 * scale);
+        ctx.lineTo(screenX + 2 * scale, screenY - 25 * scale);
         ctx.fill();
         
-        // Range indicator (when selected or debugging)
+        // Range indicator when targeting
         if (this.target) {
             ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, this.range * scale, 0, Math.PI * 2);
             ctx.stroke();
             
-            // Shooting line
+            // Shooting line to scaled target position
+            const targetScreenX = this.target.x;
+            const targetScreenY = this.target.y;
+            
             ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * scale;
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
-            ctx.lineTo(this.target.x, this.target.y);
+            ctx.moveTo(screenX, screenY);
+            ctx.lineTo(targetScreenX, targetScreenY);
             ctx.stroke();
         }
     }

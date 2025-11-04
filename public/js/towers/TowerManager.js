@@ -32,7 +32,19 @@ export class TowerManager {
     }
     
     render(ctx) {
-        this.towers.forEach(tower => tower.render(ctx));
+        // Get scale information for proper rendering
+        const scale = ctx.canvas.levelScale;
+        
+        this.towers.forEach(tower => {
+            if (scale) {
+                // Convert tower world coordinates to screen coordinates
+                const screenX = tower.x * scale.scaleX + scale.offsetX;
+                const screenY = tower.y * scale.scaleY + scale.offsetY;
+                tower.render(ctx, screenX, screenY, scale.scaleX);
+            } else {
+                tower.render(ctx, tower.x, tower.y, 1);
+            }
+        });
     }
     
     getTowerInfo(type) {

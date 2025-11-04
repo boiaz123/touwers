@@ -7,6 +7,7 @@ export class ArcherTower {
         this.fireRate = 1.5; // shots per second
         this.cooldown = 0;
         this.target = null;
+        this.size = 80; // Tower takes 2x2 grid cells
     }
     
     update(deltaTime, enemies) {
@@ -41,42 +42,58 @@ export class ArcherTower {
         }
     }
     
-    render(ctx) {
-        // Tower base
+    render(ctx, screenX, screenY, scale = 1) {
+        const size = this.size * scale;
+        const halfSize = size / 2;
+        
+        // Tower base (wooden platform)
         ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
+        
+        // Wooden supports
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, 6 * scale, size);
+        ctx.fillRect(screenX + halfSize - 6 * scale, screenY - halfSize, 6 * scale, size);
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, size, 6 * scale);
+        ctx.fillRect(screenX - halfSize, screenY + halfSize - 6 * scale, size, 6 * scale);
         
         // Archer platform
         ctx.fillStyle = '#DEB887';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        ctx.arc(screenX, screenY, 18 * scale, 0, Math.PI * 2);
         ctx.fill();
         
-        // Bow (simple representation)
+        // Archer figure (simple)
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(screenX - 3 * scale, screenY - 8 * scale, 6 * scale, 16 * scale);
+        
+        // Bow (if targeting)
         if (this.target) {
-            const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+            const angle = Math.atan2(this.target.y - screenY, this.target.x - screenX);
             ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 3 * scale;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, 8, angle - 0.3, angle + 0.3);
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(angle);
+            ctx.arc(0, 0, 12 * scale, -0.3, 0.3);
+            ctx.restore();
             ctx.stroke();
         }
         
-        // Range indicator
+        // Range indicator when targeting
         if (this.target) {
             ctx.strokeStyle = 'rgba(222, 184, 135, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, this.range * scale, 0, Math.PI * 2);
             ctx.stroke();
             
             // Arrow
             ctx.strokeStyle = 'rgba(160, 82, 45, 0.6)';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2 * scale;
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
+            ctx.moveTo(screenX, screenY);
             ctx.lineTo(this.target.x, this.target.y);
             ctx.stroke();
         }

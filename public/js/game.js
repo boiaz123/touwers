@@ -181,7 +181,7 @@ class GameplayState {
     render(ctx) {
         this.levelManager.render(ctx);
         
-        // Draw hover indicator
+        // Draw hover indicator for 2x2 tower placement
         if (this.hoveredGridCell && this.selectedTowerType) {
             const level = this.levelManager.getCurrentLevel();
             const towerType = this.towerManager.towerTypes[this.selectedTowerType];
@@ -190,22 +190,31 @@ class GameplayState {
             ctx.fillStyle = this.gameState.canAfford(towerType.cost) ? 
                 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
             
-            // Calculate scaled grid size for hover indicator
+            // Calculate scaled grid size for 2x2 hover indicator
             const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+            const towerSize = gridSize * 2; // 2x2 cells
+            
+            // Convert world coordinates to screen coordinates
+            const screenX = scale ? 
+                this.hoveredGridCell.x * scale.scaleX + scale.offsetX : 
+                this.hoveredGridCell.x;
+            const screenY = scale ? 
+                this.hoveredGridCell.y * scale.scaleY + scale.offsetY : 
+                this.hoveredGridCell.y;
             
             ctx.fillRect(
-                this.hoveredGridCell.x - gridSize / 2,
-                this.hoveredGridCell.y - gridSize / 2,
-                gridSize,
-                gridSize
+                screenX - towerSize / 2,
+                screenY - towerSize / 2,
+                towerSize,
+                towerSize
             );
             
             // Draw preview tower
             if (this.gameState.canAfford(towerType.cost)) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
                 ctx.beginPath();
-                const towerRadius = scale ? 15 * scale.scaleX : 15;
-                ctx.arc(this.hoveredGridCell.x, this.hoveredGridCell.y, towerRadius, 0, Math.PI * 2);
+                const towerRadius = scale ? 30 * scale.scaleX : 30;
+                ctx.arc(screenX, screenY, towerRadius, 0, Math.PI * 2);
                 ctx.fill();
             }
         }

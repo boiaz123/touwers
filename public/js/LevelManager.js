@@ -68,16 +68,10 @@ export class LevelManager {
     }
     
     getPath() {
-        if (!this.currentLevel || !this.ctx) return [];
+        if (!this.currentLevel) return [];
         
-        // Convert world path to screen coordinates
-        const scale = this.ctx.canvas.levelScale;
-        if (!scale) return this.currentLevel.worldPath;
-        
-        return this.currentLevel.worldPath.map(point => ({
-            x: point.x * scale.scaleX + scale.offsetX,
-            y: point.y * scale.scaleY + scale.offsetY
-        }));
+        // Return world coordinates directly - enemies will be rendered with scaling
+        return this.currentLevel.worldPath;
     }
     
     render(ctx) {

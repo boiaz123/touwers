@@ -117,11 +117,21 @@ export class Level1 {
         const gridX = Math.floor(actualX / this.gridSize);
         const gridY = Math.floor(actualY / this.gridSize);
         
-        if (gridX < 0 || gridX >= this.cols || gridY < 0 || gridY >= this.rows) {
+        // Check if tower (2x2) can fit
+        if (gridX < 0 || gridX >= this.cols - 1 || gridY < 0 || gridY >= this.rows - 1) {
             return false;
         }
         
-        return this.grid[gridY][gridX] === 0;
+        // Check all 4 cells for 2x2 tower placement
+        for (let dy = 0; dy < 2; dy++) {
+            for (let dx = 0; dx < 2; dx++) {
+                if (this.grid[gridY + dy][gridX + dx] !== 0) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
     }
     
     occupyGridCell(worldX, worldY, ctx = null) {
@@ -137,7 +147,13 @@ export class Level1 {
         if (this.canPlaceTower(worldX, worldY, ctx)) {
             const gridX = Math.floor(actualX / this.gridSize);
             const gridY = Math.floor(actualY / this.gridSize);
-            this.grid[gridY][gridX] = 2;
+            
+            // Occupy all 4 cells for 2x2 tower
+            for (let dy = 0; dy < 2; dy++) {
+                for (let dx = 0; dx < 2; dx++) {
+                    this.grid[gridY + dy][gridX + dx] = 2;
+                }
+            }
             return true;
         }
         return false;
@@ -156,17 +172,11 @@ export class Level1 {
         const gridX = Math.floor(actualX / this.gridSize);
         const gridY = Math.floor(actualY / this.gridSize);
         
-        const worldCenterX = gridX * this.gridSize + this.gridSize / 2;
-        const worldCenterY = gridY * this.gridSize + this.gridSize / 2;
+        // Center of 2x2 grid area
+        const worldCenterX = (gridX + 0.5) * this.gridSize + this.gridSize / 2;
+        const worldCenterY = (gridY + 0.5) * this.gridSize + this.gridSize / 2;
         
-        // Convert back to screen coordinates if scaling is applied
-        if (ctx && ctx.canvas.levelScale) {
-            return {
-                x: worldCenterX * ctx.canvas.levelScale.scaleX + ctx.canvas.levelScale.offsetX,
-                y: worldCenterY * ctx.canvas.levelScale.scaleY + ctx.canvas.levelScale.offsetY
-            };
-        }
-        
+        // Don't convert back to screen coordinates - return world coordinates
         return { x: worldCenterX, y: worldCenterY };
     }
     

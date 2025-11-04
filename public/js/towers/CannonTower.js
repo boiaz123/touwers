@@ -7,6 +7,7 @@ export class CannonTower {
         this.fireRate = 0.5; // shots per second
         this.cooldown = 0;
         this.target = null;
+        this.size = 80; // Tower takes 2x2 grid cells
     }
     
     update(deltaTime, enemies) {
@@ -41,36 +42,54 @@ export class CannonTower {
         }
     }
     
-    render(ctx) {
-        // Tower base
+    render(ctx, screenX, screenY, scale = 1) {
+        const size = this.size * scale;
+        const halfSize = size / 2;
+        
+        // Tower base (stone platform)
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
+        
+        // Cannon platform
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
+        ctx.arc(screenX, screenY, 25 * scale, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Cannon barrel direction
+        const angle = this.target ? 
+            Math.atan2(this.target.y - screenY, this.target.x - screenX) : 0;
         
         // Cannon barrel
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(this.x - 3, this.y - 12, 6, 20);
+        ctx.save();
+        ctx.translate(screenX, screenY);
+        ctx.rotate(angle);
+        ctx.fillRect(-5 * scale, -8 * scale, 35 * scale, 16 * scale);
+        ctx.restore();
         
-        // Tower top
+        // Cannon wheels
         ctx.fillStyle = '#654321';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.arc(screenX - 15 * scale, screenY + 15 * scale, 8 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(screenX + 15 * scale, screenY + 15 * scale, 8 * scale, 0, Math.PI * 2);
         ctx.fill();
         
-        // Range indicator
+        // Range indicator when targeting
         if (this.target) {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(screenX, screenY, this.range * scale, 0, Math.PI * 2);
             ctx.stroke();
             
             // Shooting line
             ctx.strokeStyle = 'rgba(255, 165, 0, 0.7)';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 3 * scale;
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
+            ctx.moveTo(screenX, screenY);
             ctx.lineTo(this.target.x, this.target.y);
             ctx.stroke();
         }

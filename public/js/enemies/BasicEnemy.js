@@ -62,31 +62,41 @@ export class BasicEnemy {
         return this.health <= 0;
     }
     
-    render(ctx) {
+    render(ctx, screenX = null, screenY = null, scale = 1) {
+        // Use provided screen coordinates or fall back to world coordinates
+        const renderX = screenX !== null ? screenX : this.x;
+        const renderY = screenY !== null ? screenY : this.y;
+        const radius = 12 * scale;
+        
         // Enemy body
         ctx.fillStyle = '#F44336';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.arc(renderX, renderY, radius, 0, Math.PI * 2);
         ctx.fill();
         
         // Enemy border
         ctx.strokeStyle = '#D32F2F';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * scale;
         ctx.stroke();
         
         // Health bar background
+        const barWidth = 30 * scale;
+        const barHeight = 5 * scale;
+        const barX = renderX - barWidth / 2;
+        const barY = renderY - 22 * scale;
+        
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(this.x - 15, this.y - 22, 30, 5);
+        ctx.fillRect(barX, barY, barWidth, barHeight);
         
         // Health bar
         const healthPercent = this.health / this.maxHealth;
         ctx.fillStyle = healthPercent > 0.6 ? '#4CAF50' : 
                        healthPercent > 0.3 ? '#FFC107' : '#F44336';
-        ctx.fillRect(this.x - 15, this.y - 22, 30 * healthPercent, 5);
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
         
         // Health bar border
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(this.x - 15, this.y - 22, 30, 5);
+        ctx.lineWidth = 1 * scale;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
     }
 }
