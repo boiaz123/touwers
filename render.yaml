@@ -2,6 +2,6 @@ services:
   - type: web
     name: touwers
     env: node
-    buildCommand: cd $RENDER_GIT_REPO_DIR && npm install
-    startCommand: cd $RENDER_GIT_REPO_DIR && npm start
+    buildCommand: npm install
+    startCommand: npm start
     healthCheckPath: /
