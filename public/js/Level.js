@@ -21,6 +21,8 @@ export class Level {
     }
     
     updatePathForSize(width, height, levelData = null) {
+        console.log('updatePathForSize called with:', width, height);
+        
         const currentLevelData = levelData || this.levelManager.getCurrentLevel();
         if (currentLevelData && currentLevelData.generatePath) {
             this.path = currentLevelData.generatePath(width, height);
@@ -29,6 +31,12 @@ export class Level {
             // Fallback to default path
             this.path = this.generateDefaultPath(width, height);
             console.log('Using default path:', this.path);
+        }
+        
+        // Ensure path has valid coordinates
+        if (this.path.length === 0) {
+            console.error('Generated path is empty!');
+            this.path = this.generateDefaultPath(width, height);
         }
     }
     
@@ -60,9 +68,10 @@ export class Level {
             return;
         }
         
+        console.log('Rendering path with', this.path.length, 'points');
+        
         const canvas = ctx.canvas;
-        const dpr = window.devicePixelRatio || 1;
-        const lineWidth = Math.max(30, Math.min(canvas.width / dpr, canvas.height / dpr) * 0.05);
+        const lineWidth = Math.max(20, Math.min(canvas.width, canvas.height) * 0.03);
         
         ctx.strokeStyle = '#444';
         ctx.lineWidth = lineWidth;
@@ -74,7 +83,17 @@ export class Level {
         for (let i = 1; i < this.path.length; i++) {
             ctx.lineTo(this.path[i].x, this.path[i].y);
         }
-        ctx.lineTo(canvas.width / dpr, this.path[this.path.length - 1].y);
+        // Extend path to edge of screen
+        const lastPoint = this.path[this.path.length - 1];
+        ctx.lineTo(canvas.width, lastPoint.y);
         ctx.stroke();
+        
+        // Debug: Draw path points
+        ctx.fillStyle = '#ff0000';
+        for (let i = 0; i < this.path.length; i++) {
+            ctx.beginPath();
+            ctx.arc(this.path[i].x, this.path[i].y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }

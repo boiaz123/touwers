@@ -45,6 +45,34 @@ class Game {
         console.log('Game initialized successfully');
     }
     
+    resizeCanvas() {
+        if (!this.canvas) return;
+        
+        const ui = document.getElementById('ui');
+        const uiHeight = ui ? ui.offsetHeight : 60;
+        
+        // Set canvas size to match container
+        const rect = this.canvas.getBoundingClientRect();
+        const width = window.innerWidth;
+        const height = window.innerHeight - uiHeight;
+        
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        
+        console.log('Canvas resized to:', width, 'x', height);
+        
+        // Update level path to fit new canvas size if level exists
+        if (this.level && this.level.path) {
+            this.level.updatePathForSize(width, height);
+            if (this.enemyManager) {
+                this.enemyManager.updatePath(this.level.path);
+            }
+            console.log('Updated path after resize:', this.level.path);
+        }
+    }
+    
     async startLevel(levelNumber) {
         console.log('Starting level:', levelNumber);
         
@@ -59,16 +87,14 @@ class Game {
             this.level = new Level(this.levelManager);
         }
         
-        this.level.updateLevel();
+        // Update level and get proper canvas dimensions
+        const rect = this.canvas.getBoundingClientRect();
+        const width = rect.width || window.innerWidth;
+        const height = rect.height || (window.innerHeight - 60);
         
-        console.log('Level path:', this.level.path);
+        this.level.updatePathForSize(width, height);
         
-        // Update enemy manager with new path
-        if (!this.enemyManager) {
-            this.enemyManager = new EnemyManager(this.level.path);
-        } else {
-            this.enemyManager.updatePath(this.level.path);
-        }
+        console.log('Level path after update:', this.level.path);
         
         // Reset game state for new level
         this.gameState = new GameState();
@@ -104,29 +130,6 @@ class Game {
     detectMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                window.matchMedia('(max-width: 768px)').matches;
-    }
-    
-    resizeCanvas() {
-        const ui = document.getElementById('ui');
-        const uiHeight = ui.offsetHeight;
-        
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - uiHeight;
-        
-        // Scale for high DPI displays
-        const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
-        
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
-        
-        this.ctx.scale(dpr, dpr);
-        
-        // Update level path to fit new canvas size
-        this.level.updatePathForSize(rect.width, rect.height);
-        this.enemyManager.updatePath(this.level.path);
     }
     
     setupEventListeners() {
@@ -235,13 +238,18 @@ class Game {
             this.updateUI();
         }
         
+        // Check if wave is complete
         if (this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
-            if (this.gameState.wave >= 5) {
-                // Progress to next level every 5 waves
+            // Only progress after multiple waves, not immediately
+            if (this.gameState.wave >= 3) {
+                // Progress to next level every 3 waves
                 if (this.level.nextLevel()) {
                     this.gameState.wave = 1;
+                    // Update canvas dimensions before updating path
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.level.updatePathForSize(rect.width, rect.height);
                     this.enemyManager.updatePath(this.level.path);
-                    alert(`Level ${this.levelManager.getLevelNumber()} unlocked!`);
+                    alert(`Level ${this.levelManager.getLevelNumber()} completed! Moving to next level.`);
                 } else {
                     alert('Congratulations! You completed all levels!');
                     this.menuManager.returnToMenu();
@@ -260,7 +268,13 @@ class Game {
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.level.render(this.ctx);
+        // Add debug info
+        if (this.level.path && this.level.path.length > 0) {
+            this.level.render(this.ctx);
+        } else {
+            console.warn('No path to render in level');
+        }
+        
         this.towerManager.render(this.ctx);
         this.enemyManager.render(this.ctx);
     }

@@ -5,9 +5,20 @@ export class BasicEnemy {
         this.maxHealth = health;
         this.speed = speed;
         this.currentPathIndex = 0;
-        this.x = path[0].x;
-        this.y = path[0].y;
+        
+        // Ensure we have a valid starting position
+        if (path && path.length > 0) {
+            this.x = path[0].x;
+            this.y = path[0].y;
+        } else {
+            console.error('Enemy created with invalid path:', path);
+            this.x = 0;
+            this.y = 0;
+        }
+        
         this.reachedEnd = false;
+        
+        console.log('Enemy created at:', this.x, this.y);
     }
     
     updatePath(newPath) {

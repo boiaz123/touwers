@@ -63,34 +63,47 @@ export class MenuManager {
     }
     
     setupEventListeners() {
-        // Start menu buttons
-        document.getElementById('startGameBtn').addEventListener('click', () => {
-            this.startGame(1);
-        });
-        
-        document.getElementById('levelSelectBtn').addEventListener('click', () => {
-            this.showScreen('levelSelect');
-        });
-        
-        // Level select buttons
-        document.querySelectorAll('.level-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const level = parseInt(e.target.closest('.level-btn').dataset.level);
-                this.startGame(level);
+        // Delay event listener setup to ensure elements exist
+        setTimeout(() => {
+            // Start menu buttons
+            const startBtn = document.getElementById('startGameBtn');
+            const levelSelectBtn = document.getElementById('levelSelectBtn');
+            const backBtn = document.getElementById('backToMenuBtn');
+            
+            if (startBtn) {
+                startBtn.addEventListener('click', () => {
+                    this.startGame(1);
+                });
+            }
+            
+            if (levelSelectBtn) {
+                levelSelectBtn.addEventListener('click', () => {
+                    this.showScreen('levelSelect');
+                });
+            }
+            
+            // Level select buttons
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const level = parseInt(e.target.closest('.level-btn').dataset.level);
+                    this.startGame(level);
+                });
             });
-        });
-        
-        document.getElementById('backToMenuBtn').addEventListener('click', () => {
-            this.showScreen('start');
-        });
-        
-        // Touch events for mobile
-        document.querySelectorAll('.menu-btn, .level-btn').forEach(btn => {
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                btn.click();
+            
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
+                    this.showScreen('start');
+                });
+            }
+            
+            // Touch events for mobile
+            document.querySelectorAll('.menu-btn, .level-btn').forEach(btn => {
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    btn.click();
+                });
             });
-        });
+        }, 100);
     }
     
     showScreen(screenName) {
@@ -118,17 +131,23 @@ export class MenuManager {
     }
     
     async startGame(level = 1) {
-        console.log('Starting game with level:', level);
+        console.log('MenuManager: Starting game with level:', level);
         
         // Show loading message
         this.showLoadingMessage();
         
-        // Wait for levels to be loaded
-        await this.game.levelManager.waitForLevelsLoaded();
-        
-        this.selectedLevel = level;
-        await this.game.startLevel(level);
-        this.showScreen('game');
+        try {
+            // Wait for levels to be loaded
+            await this.game.levelManager.waitForLevelsLoaded();
+            
+            this.selectedLevel = level;
+            await this.game.startLevel(level);
+            this.showScreen('game');
+        } catch (error) {
+            console.error('Error starting game:', error);
+            alert('Failed to start game. Please try again.');
+            this.showScreen('start');
+        }
     }
     
     showLoadingMessage() {
