@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Touwers - Tower Defense</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui">
+            <div id="stats">
+                <span>Health: <span id="health">20</span></span>
+                <span>Gold: <span id="gold">100</span></span>
+                <span>Wave: <span id="wave">1</span></span>
+            </div>
+            <div id="tower-selection">
+                <button class="tower-btn" data-type="basic">Basic Tower ($50)</button>
+            </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>
