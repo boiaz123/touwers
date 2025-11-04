@@ -342,9 +342,7 @@ body {
 }
 
 /* Resolution-based scaling classes */
-.scale-1x {
-    /* Default scaling for 1080p and below */
-}
+/* .scale-1x is the default scaling for 1080p and below - no additional styles needed */
 
 .scale-1-5x #stats-bar {
     padding: 12px 20px;

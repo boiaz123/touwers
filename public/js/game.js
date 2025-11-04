@@ -289,8 +289,30 @@ class Game {
         const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
         const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
-        this.canvas.width = window.innerWidth - sidebarWidth;
-        this.canvas.height = window.innerHeight - statsBarHeight;
+        // Set canvas size to accommodate the larger map
+        const availableWidth = window.innerWidth - sidebarWidth;
+        const availableHeight = window.innerHeight - statsBarHeight;
+        
+        // Level is 40x30 cells at 40px each = 1600x1200 pixels
+        const levelWidth = 40 * 40; // 1600px
+        const levelHeight = 30 * 40; // 1200px
+        
+        // Scale canvas to fit the level while maintaining aspect ratio
+        const scaleX = availableWidth / levelWidth;
+        const scaleY = availableHeight / levelHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 1:1
+        
+        this.canvas.width = Math.max(availableWidth, levelWidth);
+        this.canvas.height = Math.max(availableHeight, levelHeight);
+        
+        // If the level is larger than available space, we might need scrolling
+        // For now, just use the available space
+        if (this.canvas.width > availableWidth) {
+            this.canvas.width = availableWidth;
+        }
+        if (this.canvas.height > availableHeight) {
+            this.canvas.height = availableHeight;
+        }
     }
     
     setupEventListeners() {
