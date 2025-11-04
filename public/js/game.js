@@ -60,6 +60,7 @@ class GameplayState {
             
             const level = this.levelManager.getCurrentLevel();
             if (level && level.canPlaceTower(this.mouseX, this.mouseY, this.stateManager.ctx)) {
+                // Store the actual placement position (grid-aligned center)
                 this.hoveredGridCell = level.getGridCenterPosition(this.mouseX, this.mouseY, this.stateManager.ctx);
             } else {
                 this.hoveredGridCell = null;
@@ -192,16 +193,15 @@ class GameplayState {
             const canPlace = this.hoveredGridCell !== null;
             const canAfford = this.gameState.canAfford(towerType.cost);
             
-            // Calculate grid size and tower size
-            const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
-            const towerSize = gridSize * 2; // 2x2 cells
-            
             // Always center the tower preview exactly on the mouse cursor
             const towerCenterX = this.mouseX;
             const towerCenterY = this.mouseY;
             
-            // Draw grid highlight only when over valid placement area
+            // Draw grid highlight centered on grid-aligned position when valid
             if (canPlace) {
+                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
+                const towerSize = gridSize * 2; // 2x2 cells
+                
                 // Convert grid center to screen coordinates for grid highlight
                 const gridScreenX = scale ? 
                     this.hoveredGridCell.x * scale.scaleX + scale.offsetX : 
