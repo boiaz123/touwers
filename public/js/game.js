@@ -1,6 +1,6 @@
 import { TowerManager } from './towers/TowerManager.js';
 import { EnemyManager } from './enemies/EnemyManager.js';
-import { LevelManager } from './LevelManager.js';
+import { Level } from './Level.js';
 import { GameState } from './GameState.js';
 import { GameStateManager } from './GameStateManager.js';
 import { StartScreen } from './StartScreen.js';
@@ -10,26 +10,13 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
-        this.levelManager = new LevelManager();
+        this.level = new Level();
         this.towerManager = new TowerManager(this.gameState);
-        this.enemyManager = null;
+        this.enemyManager = new EnemyManager(this.level.path);
         this.selectedTowerType = null;
-        this.hoveredGridCell = null;
-        this.mouseX = 0;
-        this.mouseY = 0;
     }
     
     enter() {
-        // Load the first level
-        if (!this.levelManager.loadLevel(1)) {
-            console.error('Failed to load level 1');
-            this.stateManager.changeState('start');
-            return;
-        }
-        
-        // Initialize enemy manager with the level's path
-        this.enemyManager = new EnemyManager(this.levelManager.getPath());
-        
         // Ensure UI is visible
         document.getElementById('stats-bar').style.display = 'flex';
         document.getElementById('tower-sidebar').style.display = 'flex';
@@ -37,42 +24,11 @@ class GameplayState {
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
-        
-        // Setup mouse move for grid highlighting
-        this.setupMouseMove();
     }
     
     exit() {
+        // Clean up event listeners when leaving game state
         this.removeEventListeners();
-        this.removeMouseMove();
-    }
-    
-    setupMouseMove() {
-        this.mouseMoveHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
-            
-            if (!this.selectedTowerType) {
-                this.hoveredGridCell = null;
-                return;
-            }
-            
-            const level = this.levelManager.getCurrentLevel();
-            if (level && level.canPlaceTower(this.mouseX, this.mouseY, this.stateManager.ctx)) {
-                // Store the actual placement position (grid-aligned center)
-                this.hoveredGridCell = level.getGridCenterPosition(this.mouseX, this.mouseY, this.stateManager.ctx);
-            } else {
-                this.hoveredGridCell = null;
-            }
-        };
-        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-    }
-    
-    removeMouseMove() {
-        if (this.mouseMoveHandler) {
-            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-        }
     }
     
     setupEventListeners() {
@@ -139,12 +95,8 @@ class GameplayState {
     handleClick(x, y) {
         if (!this.selectedTowerType) return;
         
-        const placementResult = this.levelManager.placeTower(x, y);
-        if (placementResult) {
-            if (this.towerManager.placeTower(this.selectedTowerType, placementResult.x, placementResult.y)) {
-                this.updateUI();
-                this.hoveredGridCell = null;
-            }
+        if (this.towerManager.placeTower(this.selectedTowerType, x, y)) {
+            this.updateUI();
         }
     }
     
@@ -182,92 +134,9 @@ class GameplayState {
     }
     
     render(ctx) {
-        this.levelManager.render(ctx);
-        
-        // Draw hover indicator for 2x2 tower placement
-        if (this.selectedTowerType) {
-            const level = this.levelManager.getCurrentLevel();
-            const towerType = this.towerManager.towerTypes[this.selectedTowerType];
-            const scale = ctx.canvas.levelScale;
-            
-            const canPlace = this.hoveredGridCell !== null;
-            const canAfford = this.gameState.canAfford(towerType.cost);
-            
-            // Draw grid highlight centered on grid-aligned position when valid
-            if (canPlace) {
-                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
-                const towerSize = gridSize * 2; // 2x2 cells
-                
-                // Convert grid center to screen coordinates for grid highlight
-                const gridScreenX = scale ? 
-                    this.hoveredGridCell.x * scale.scaleX + scale.offsetX : 
-                    this.hoveredGridCell.x;
-                const gridScreenY = scale ? 
-                    this.hoveredGridCell.y * scale.scaleY + scale.offsetY : 
-                    this.hoveredGridCell.y;
-                
-                // Draw grid highlight centered on the 2x2 area
-                ctx.fillStyle = canAfford ? 'rgba(76, 175, 80, 0.3)' : 'rgba(244, 67, 54, 0.3)';
-                ctx.fillRect(
-                    gridScreenX - towerSize / 2,
-                    gridScreenY - towerSize / 2,
-                    towerSize,
-                    towerSize
-                );
-                
-                // Draw preview tower centered on the grid-aligned position
-                ctx.fillStyle = canAfford ? 
-                    'rgba(255, 255, 255, 0.7)' : 'rgba(255, 100, 100, 0.5)';
-                ctx.strokeStyle = canAfford ? 
-                    'rgba(255, 255, 255, 0.9)' : 'rgba(255, 100, 100, 0.7)';
-                ctx.lineWidth = 2;
-                
-                ctx.beginPath();
-                const towerRadius = scale ? 30 * scale.scaleX : 30;
-                ctx.arc(gridScreenX, gridScreenY, towerRadius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-            } else {
-                // Draw preview tower centered on mouse cursor when placement is invalid
-                const gridSize = scale ? level.gridSize * scale.scaleX : level.gridSize;
-                const towerSize = gridSize * 2; // 2x2 cells
-
-                ctx.fillStyle = 'rgba(255, 100, 100, 0.5)';
-                ctx.strokeStyle = 'rgba(255, 100, 100, 0.7)';
-                ctx.lineWidth = 2;
-                
-                // Draw a rectangle representing the tower footprint, centered on the cursor
-                ctx.fillRect(
-                    this.mouseX - towerSize / 2,
-                    this.mouseY - towerSize / 2,
-                    towerSize,
-                    towerSize
-                );
-                ctx.strokeRect(
-                    this.mouseX - towerSize / 2,
-                    this.mouseY - towerSize / 2,
-                    towerSize,
-                    towerSize
-                );
-                
-                // Add a crosshair at mouse position when placement is invalid
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.lineWidth = 1;
-                const crossSize = 10;
-                
-                ctx.beginPath();
-                ctx.moveTo(this.mouseX - crossSize, this.mouseY);
-                ctx.lineTo(this.mouseX + crossSize, this.mouseY);
-                ctx.moveTo(this.mouseX, this.mouseY - crossSize);
-                ctx.lineTo(this.mouseX, this.mouseY + crossSize);
-                ctx.stroke();
-            }
-        }
-        
+        this.level.render(ctx);
         this.towerManager.render(ctx);
-        if (this.enemyManager) {
-            this.enemyManager.render(ctx);
-        }
+        this.enemyManager.render(ctx);
     }
     
     updateUI() {
@@ -348,32 +217,8 @@ class Game {
         const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
         const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
-        // Calculate available space
-        const availableWidth = window.innerWidth - sidebarWidth;
-        const availableHeight = window.innerHeight - statsBarHeight;
-        
-        // Set canvas to fill available space exactly
-        this.canvas.width = availableWidth;
-        this.canvas.height = availableHeight;
-        
-        // Store scaling information for level rendering
-        this.canvas.levelScale = {
-            scaleX: availableWidth / (40 * 40), // 40 cols * 40px grid size
-            scaleY: availableHeight / (30 * 40), // 30 rows * 40px grid size
-            offsetX: 0,
-            offsetY: 0
-        };
-        
-        // Use uniform scaling to maintain aspect ratio
-        const uniformScale = Math.min(this.canvas.levelScale.scaleX, this.canvas.levelScale.scaleY);
-        this.canvas.levelScale.scaleX = uniformScale;
-        this.canvas.levelScale.scaleY = uniformScale;
-        
-        // Center the level in the canvas
-        const scaledLevelWidth = 40 * 40 * uniformScale;
-        const scaledLevelHeight = 30 * 40 * uniformScale;
-        this.canvas.levelScale.offsetX = (availableWidth - scaledLevelWidth) / 2;
-        this.canvas.levelScale.offsetY = (availableHeight - scaledLevelHeight) / 2;
+        this.canvas.width = window.innerWidth - sidebarWidth;
+        this.canvas.height = window.innerHeight - statsBarHeight;
     }
     
     setupEventListeners() {

@@ -1,10 +1,11 @@
-import { LevelManager } from './LevelManager.js';
-
 export class LevelSelect {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.levelManager = new LevelManager();
-        this.levels = this.levelManager.getLevelList();
+        this.levels = [
+            { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true },
+            { name: 'Goblin Valley', difficulty: 'Medium', unlocked: false },
+            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false }
+        ];
         this.selectedLevel = 0;
         this.hoveredLevel = -1;
         this.hoveredStartButton = false;

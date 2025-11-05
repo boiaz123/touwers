@@ -8,7 +8,6 @@ export class MagicTower {
         this.cooldown = 0;
         this.target = null;
         this.animationTime = 0;
-        this.size = 80; // Tower takes 2x2 grid cells
     }
     
     update(deltaTime, enemies) {
@@ -48,47 +47,29 @@ export class MagicTower {
         }
     }
     
-    render(ctx, screenX, screenY, scale = 1) {
-        const size = this.size * scale;
-        const halfSize = size / 2;
-        
-        // Tower base (mystical stone)
-        ctx.fillStyle = '#2E1A47';
-        ctx.fillRect(screenX - halfSize, screenY - halfSize, size, size);
-        
-        // Magical runes on base
-        ctx.strokeStyle = '#8A2BE2';
-        ctx.lineWidth = 2 * scale;
-        ctx.beginPath();
-        // Draw runic patterns
-        ctx.moveTo(screenX - halfSize + 10 * scale, screenY - halfSize + 10 * scale);
-        ctx.lineTo(screenX + halfSize - 10 * scale, screenY + halfSize - 10 * scale);
-        ctx.moveTo(screenX + halfSize - 10 * scale, screenY - halfSize + 10 * scale);
-        ctx.lineTo(screenX - halfSize + 10 * scale, screenY + halfSize - 10 * scale);
-        ctx.stroke();
-        
-        // Crystal tower
+    render(ctx) {
+        // Tower base
         ctx.fillStyle = '#4B0082';
         ctx.beginPath();
-        ctx.arc(screenX, screenY, 20 * scale, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic crystal (animated)
         const pulse = 0.8 + 0.2 * Math.sin(this.animationTime * 4);
         ctx.fillStyle = `rgba(138, 43, 226, ${pulse})`;
         ctx.beginPath();
-        ctx.arc(screenX, screenY, 12 * scale, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic sparkles
-        for (let i = 0; i < 6; i++) {
-            const angle = (this.animationTime * 2 + i * Math.PI / 3) % (Math.PI * 2);
-            const sparkleX = screenX + Math.cos(angle) * 25 * scale;
-            const sparkleY = screenY + Math.sin(angle) * 25 * scale;
+        for (let i = 0; i < 4; i++) {
+            const angle = (this.animationTime * 2 + i * Math.PI / 2) % (Math.PI * 2);
+            const sparkleX = this.x + Math.cos(angle) * 12;
+            const sparkleY = this.y + Math.sin(angle) * 12;
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.beginPath();
-            ctx.arc(sparkleX, sparkleY, 2 * scale, 0, Math.PI * 2);
+            ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
             ctx.fill();
         }
         
@@ -97,20 +78,20 @@ export class MagicTower {
             ctx.strokeStyle = 'rgba(138, 43, 226, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(screenX, screenY, this.range * scale, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
             
             // Magic beam
             ctx.strokeStyle = 'rgba(138, 43, 226, 0.8)';
-            ctx.lineWidth = 3 * scale;
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.moveTo(screenX, screenY);
+            ctx.moveTo(this.x, this.y);
             ctx.lineTo(this.target.x, this.target.y);
             ctx.stroke();
             
             // Beam glow
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 1 * scale;
+            ctx.lineWidth = 1;
             ctx.stroke();
         }
     }
