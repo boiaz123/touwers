@@ -382,46 +382,111 @@ export class Level1 {
         ctx.translate(scale.offsetX, scale.offsetY);
         ctx.scale(scale.scaleX, scale.scaleY);
         
-        // Clear the scaled area
-        ctx.fillStyle = '#0a0a0a';
+        // Clear with grass base color
+        ctx.fillStyle = '#2d5016'; // Dark grass green
         ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
         
-        // Draw grid lines (subtle, every 4 cells for larger grid)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'; // More subtle for larger grid
-        ctx.lineWidth = 1 / scale.scaleX; // Adjust line width for scaling
+        // Draw grass texture pattern
+        this.drawGrassTexture(ctx, scale);
         
-        for (let col = 0; col <= this.cols; col += 4) { // Every 4 cells instead of 2
+        // Draw more visible grid lines with natural colors
+        ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)'; // Brown earth color
+        ctx.lineWidth = 1 / scale.scaleX;
+        
+        // Draw all grid lines for better visibility
+        for (let col = 0; col <= this.cols; col++) {
             ctx.beginPath();
             ctx.moveTo(col * this.gridSize, 0);
             ctx.lineTo(col * this.gridSize, this.rows * this.gridSize);
             ctx.stroke();
         }
         
-        for (let row = 0; row <= this.rows; row += 4) { // Every 4 cells instead of 2
+        for (let row = 0; row <= this.rows; row++) {
             ctx.beginPath();
             ctx.moveTo(0, row * this.gridSize);
             ctx.lineTo(this.cols * this.gridSize, row * this.gridSize);
             ctx.stroke();
         }
         
-        // Draw path cells
-        ctx.fillStyle = '#444';
+        // Draw buildable grass areas with slight variations
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 0) {
+                    // Create grass color variations
+                    const variation = (Math.sin(row * 0.5) * Math.cos(col * 0.3)) * 0.1;
+                    const grassR = Math.floor(45 + variation * 20);
+                    const grassG = Math.floor(80 + variation * 30);
+                    const grassB = Math.floor(22 + variation * 10);
+                    
+                    ctx.fillStyle = `rgb(${grassR}, ${grassG}, ${grassB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 1,
+                        row * this.gridSize + 1,
+                        this.gridSize - 2,
+                        this.gridSize - 2
+                    );
+                    
+                    // Add subtle grass details
+                    if ((row + col) % 3 === 0) {
+                        ctx.fillStyle = 'rgba(60, 120, 30, 0.3)';
+                        ctx.fillRect(
+                            col * this.gridSize + this.gridSize * 0.2,
+                            row * this.gridSize + this.gridSize * 0.2,
+                            this.gridSize * 0.6,
+                            this.gridSize * 0.6
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Draw path cells with dirt road appearance
+        ctx.fillStyle = '#8B4513'; // Saddle brown for dirt road
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 if (this.grid[row][col] === 1) {
+                    // Base dirt color
                     ctx.fillRect(
                         col * this.gridSize,
                         row * this.gridSize,
                         this.gridSize,
                         this.gridSize
                     );
+                    
+                    // Add dirt texture
+                    const dirtVariation = (Math.sin(row * 1.2) * Math.cos(col * 0.8)) * 0.15;
+                    const dirtR = Math.floor(139 + dirtVariation * 40);
+                    const dirtG = Math.floor(69 + dirtVariation * 30);
+                    const dirtB = Math.floor(19 + dirtVariation * 20);
+                    
+                    ctx.fillStyle = `rgb(${dirtR}, ${dirtG}, ${dirtB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 2,
+                        row * this.gridSize + 2,
+                        this.gridSize - 4,
+                        this.gridSize - 4
+                    );
+                    
+                    // Add small rocks/pebbles on path
+                    if ((row * col) % 7 === 0) {
+                        ctx.fillStyle = 'rgba(105, 105, 105, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(
+                            col * this.gridSize + this.gridSize * 0.3 + (row % 3) * 3,
+                            row * this.gridSize + this.gridSize * 0.7 + (col % 3) * 3,
+                            2 / scale.scaleX,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
                 }
             }
         }
         
-        // Draw path border
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2 / scale.scaleX;
+        // Draw path border with worn edges
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3 / scale.scaleX;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -434,93 +499,147 @@ export class Level1 {
         }
         ctx.stroke();
         
-        // Draw buildable area indicators (less visible for larger grid)
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.03)'; // More subtle
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === 0) {
-                    ctx.fillRect(
-                        col * this.gridSize + 1,
-                        row * this.gridSize + 1,
-                        this.gridSize - 2,
-                        this.gridSize - 2
-                    );
-                }
-            }
-        }
-        
-        // Draw vegetation with adjusted sizes for smaller grid cells
+        // Draw vegetation with enhanced appearance
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this.vegetation.forEach(veg => {
             const worldX = veg.col * this.gridSize + this.gridSize / 2 + veg.offsetX;
             const worldY = veg.row * this.gridSize + this.gridSize / 2 + veg.offsetY;
             
+            // Add shadow for vegetation
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             if (veg.size === 2) {
-                // Large vegetation (2x2) - adjusted for smaller grid
-                ctx.font = `${24 / scale.scaleX}px serif`; // Reduced from 32
-                ctx.fillStyle = '#000';
-                ctx.fillText(veg.type, worldX + 1, worldY + 1); // Shadow
-                ctx.fillStyle = this.getVegetationColor(veg.type);
-                ctx.fillText(veg.type, worldX, worldY);
+                ctx.font = `${24 / scale.scaleX}px serif`;
+                ctx.fillText(veg.type, worldX + 2, worldY + 2);
             } else {
-                // Small vegetation (1x1) - adjusted for smaller grid
-                ctx.font = `${16 / scale.scaleX}px serif`; // Reduced from 20
-                ctx.fillStyle = '#000';
-                ctx.fillText(veg.type, worldX + 1, worldY + 1); // Shadow
-                ctx.fillStyle = this.getVegetationColor(veg.type);
-                ctx.fillText(veg.type, worldX, worldY);
+                ctx.font = `${16 / scale.scaleX}px serif`;
+                ctx.fillText(veg.type, worldX + 1, worldY + 1);
             }
+            
+            // Draw vegetation with enhanced colors
+            ctx.fillStyle = this.getVegetationColor(veg.type);
+            ctx.fillText(veg.type, worldX, worldY);
         });
         
-        // Draw start and end markers
+        // Draw start and end markers with enhanced appearance
         if (this.worldPath.length > 0) {
-            const markerSize = 6 / scale.scaleX; // Reduced from 8 for smaller grid
+            const markerSize = 8 / scale.scaleX;
             
-            // Start marker
+            // Start marker with glow
+            ctx.shadowColor = '#4CAF50';
+            ctx.shadowBlur = 10 / scale.scaleX;
             ctx.fillStyle = '#4CAF50';
             ctx.beginPath();
             ctx.arc(this.worldPath[0].x, this.worldPath[0].y, markerSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // End marker
+            // Add start text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${10 / scale.scaleX}px serif`;
+            ctx.fillText('START', this.worldPath[0].x, this.worldPath[0].y - 20 / scale.scaleX);
+            
+            // End marker with glow
             const endPoint = this.worldPath[this.worldPath.length - 1];
+            ctx.shadowColor = '#F44336';
+            ctx.shadowBlur = 10 / scale.scaleX;
             ctx.fillStyle = '#F44336';
             ctx.beginPath();
             ctx.arc(endPoint.x, endPoint.y, markerSize, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Add end text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.fillText('END', endPoint.x, endPoint.y - 20 / scale.scaleX);
         }
         
         // Restore context state
         ctx.restore();
     }
     
+    drawGrassTexture(ctx, scale) {
+        // Add random grass blade texture
+        ctx.strokeStyle = 'rgba(60, 120, 30, 0.2)';
+        ctx.lineWidth = 1 / scale.scaleX;
+        
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * this.cols * this.gridSize;
+            const y = Math.random() * this.rows * this.gridSize;
+            const gridX = Math.floor(x / this.gridSize);
+            const gridY = Math.floor(y / this.gridSize);
+            
+            // Only draw on buildable areas
+            if (gridY >= 0 && gridY < this.rows && gridX >= 0 && gridX < this.cols && 
+                this.grid[gridY][gridX] === 0) {
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + (Math.random() - 0.5) * 4, y - Math.random() * 6);
+                ctx.stroke();
+            }
+        }
+    }
+    
     renderUnscaled(ctx) {
-        // Fallback for when no scaling is available
-        ctx.fillStyle = '#0a0a0a';
+        // Clear with grass base color
+        ctx.fillStyle = '#2d5016';
         ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
         
-        // Draw grid lines (subtle, every 4 cells for larger grid)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        // Draw grass texture pattern
+        this.drawGrassTextureUnscaled(ctx);
+        
+        // Draw more visible grid lines
+        ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
         ctx.lineWidth = 1;
         
-        // Only draw grid lines every 4 cells to reduce visual clutter
-        for (let col = 0; col <= this.cols; col += 4) {
+        // Draw all grid lines
+        for (let col = 0; col <= this.cols; col++) {
             ctx.beginPath();
             ctx.moveTo(col * this.gridSize, 0);
             ctx.lineTo(col * this.gridSize, this.rows * this.gridSize);
             ctx.stroke();
         }
         
-        for (let row = 0; row <= this.rows; row += 4) {
+        for (let row = 0; row <= this.rows; row++) {
             ctx.beginPath();
             ctx.moveTo(0, row * this.gridSize);
             ctx.lineTo(this.cols * this.gridSize, row * this.gridSize);
             ctx.stroke();
         }
         
-        // Draw path cells
-        ctx.fillStyle = '#444';
+        // Draw buildable grass areas with variations
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 0) {
+                    const variation = (Math.sin(row * 0.5) * Math.cos(col * 0.3)) * 0.1;
+                    const grassR = Math.floor(45 + variation * 20);
+                    const grassG = Math.floor(80 + variation * 30);
+                    const grassB = Math.floor(22 + variation * 10);
+                    
+                    ctx.fillStyle = `rgb(${grassR}, ${grassG}, ${grassB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 1,
+                        row * this.gridSize + 1,
+                        this.gridSize - 2,
+                        this.gridSize - 2
+                    );
+                    
+                    if ((row + col) % 3 === 0) {
+                        ctx.fillStyle = 'rgba(60, 120, 30, 0.3)';
+                        ctx.fillRect(
+                            col * this.gridSize + this.gridSize * 0.2,
+                            row * this.gridSize + this.gridSize * 0.2,
+                            this.gridSize * 0.6,
+                            this.gridSize * 0.6
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Draw path cells with dirt appearance
+        ctx.fillStyle = '#8B4513';
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 if (this.grid[row][col] === 1) {
@@ -530,13 +649,39 @@ export class Level1 {
                         this.gridSize,
                         this.gridSize
                     );
+                    
+                    const dirtVariation = (Math.sin(row * 1.2) * Math.cos(col * 0.8)) * 0.15;
+                    const dirtR = Math.floor(139 + dirtVariation * 40);
+                    const dirtG = Math.floor(69 + dirtVariation * 30);
+                    const dirtB = Math.floor(19 + dirtVariation * 20);
+                    
+                    ctx.fillStyle = `rgb(${dirtR}, ${dirtG}, ${dirtB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 2,
+                        row * this.gridSize + 2,
+                        this.gridSize - 4,
+                        this.gridSize - 4
+                    );
+                    
+                    if ((row * col) % 7 === 0) {
+                        ctx.fillStyle = 'rgba(105, 105, 105, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(
+                            col * this.gridSize + this.gridSize * 0.3 + (row % 3) * 3,
+                            row * this.gridSize + this.gridSize * 0.7 + (col % 3) * 3,
+                            2,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
                 }
             }
         }
         
-        // Draw path border
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2;
+        // Draw path border with worn edges
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -548,21 +693,6 @@ export class Level1 {
             }
         }
         ctx.stroke();
-        
-        // Draw buildable area indicators
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.03)';
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === 0) {
-                    ctx.fillRect(
-                        col * this.gridSize + 1,
-                        row * this.gridSize + 1,
-                        this.gridSize - 2,
-                        this.gridSize - 2
-                    );
-                }
-            }
-        }
         
         // Draw vegetation with adjusted sizes
         ctx.textAlign = 'center';
@@ -602,6 +732,27 @@ export class Level1 {
             ctx.beginPath();
             ctx.arc(endPoint.x, endPoint.y, 6, 0, Math.PI * 2); // Reduced from 8
             ctx.fill();
+        }
+    }
+    
+    drawGrassTextureUnscaled(ctx) {
+        ctx.strokeStyle = 'rgba(60, 120, 30, 0.2)';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * this.cols * this.gridSize;
+            const y = Math.random() * this.rows * this.gridSize;
+            const gridX = Math.floor(x / this.gridSize);
+            const gridY = Math.floor(y / this.gridSize);
+            
+            if (gridY >= 0 && gridY < this.rows && gridX >= 0 && gridX < this.cols && 
+                this.grid[gridY][gridX] === 0) {
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + (Math.random() - 0.5) * 4, y - Math.random() * 6);
+                ctx.stroke();
+            }
         }
     }
     
@@ -730,46 +881,111 @@ export class Level1 {
         ctx.translate(scale.offsetX, scale.offsetY);
         ctx.scale(scale.scaleX, scale.scaleY);
         
-        // Clear the scaled area
-        ctx.fillStyle = '#0a0a0a';
+        // Clear with grass base color
+        ctx.fillStyle = '#2d5016'; // Dark grass green
         ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
         
-        // Draw grid lines (subtle, every 4 cells for larger grid)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)'; // More subtle for larger grid
-        ctx.lineWidth = 1 / scale.scaleX; // Adjust line width for scaling
+        // Draw grass texture pattern
+        this.drawGrassTexture(ctx, scale);
         
-        for (let col = 0; col <= this.cols; col += 4) { // Every 4 cells instead of 2
+        // Draw more visible grid lines with natural colors
+        ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)'; // Brown earth color
+        ctx.lineWidth = 1 / scale.scaleX;
+        
+        // Draw all grid lines for better visibility
+        for (let col = 0; col <= this.cols; col++) {
             ctx.beginPath();
             ctx.moveTo(col * this.gridSize, 0);
             ctx.lineTo(col * this.gridSize, this.rows * this.gridSize);
             ctx.stroke();
         }
         
-        for (let row = 0; row <= this.rows; row += 4) { // Every 4 cells instead of 2
+        for (let row = 0; row <= this.rows; row++) {
             ctx.beginPath();
             ctx.moveTo(0, row * this.gridSize);
             ctx.lineTo(this.cols * this.gridSize, row * this.gridSize);
             ctx.stroke();
         }
         
-        // Draw path cells
-        ctx.fillStyle = '#444';
+        // Draw buildable grass areas with slight variations
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 0) {
+                    // Create grass color variations
+                    const variation = (Math.sin(row * 0.5) * Math.cos(col * 0.3)) * 0.1;
+                    const grassR = Math.floor(45 + variation * 20);
+                    const grassG = Math.floor(80 + variation * 30);
+                    const grassB = Math.floor(22 + variation * 10);
+                    
+                    ctx.fillStyle = `rgb(${grassR}, ${grassG}, ${grassB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 1,
+                        row * this.gridSize + 1,
+                        this.gridSize - 2,
+                        this.gridSize - 2
+                    );
+                    
+                    // Add subtle grass details
+                    if ((row + col) % 3 === 0) {
+                        ctx.fillStyle = 'rgba(60, 120, 30, 0.3)';
+                        ctx.fillRect(
+                            col * this.gridSize + this.gridSize * 0.2,
+                            row * this.gridSize + this.gridSize * 0.2,
+                            this.gridSize * 0.6,
+                            this.gridSize * 0.6
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Draw path cells with dirt road appearance
+        ctx.fillStyle = '#8B4513'; // Saddle brown for dirt road
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 if (this.grid[row][col] === 1) {
+                    // Base dirt color
                     ctx.fillRect(
                         col * this.gridSize,
                         row * this.gridSize,
                         this.gridSize,
                         this.gridSize
                     );
+                    
+                    // Add dirt texture
+                    const dirtVariation = (Math.sin(row * 1.2) * Math.cos(col * 0.8)) * 0.15;
+                    const dirtR = Math.floor(139 + dirtVariation * 40);
+                    const dirtG = Math.floor(69 + dirtVariation * 30);
+                    const dirtB = Math.floor(19 + dirtVariation * 20);
+                    
+                    ctx.fillStyle = `rgb(${dirtR}, ${dirtG}, ${dirtB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 2,
+                        row * this.gridSize + 2,
+                        this.gridSize - 4,
+                        this.gridSize - 4
+                    );
+                    
+                    // Add small rocks/pebbles on path
+                    if ((row * col) % 7 === 0) {
+                        ctx.fillStyle = 'rgba(105, 105, 105, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(
+                            col * this.gridSize + this.gridSize * 0.3 + (row % 3) * 3,
+                            row * this.gridSize + this.gridSize * 0.7 + (col % 3) * 3,
+                            2 / scale.scaleX,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
                 }
             }
         }
         
-        // Draw path border
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2 / scale.scaleX;
+        // Draw path border with worn edges
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3 / scale.scaleX;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -782,93 +998,147 @@ export class Level1 {
         }
         ctx.stroke();
         
-        // Draw buildable area indicators (less visible for larger grid)
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.03)'; // More subtle
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === 0) {
-                    ctx.fillRect(
-                        col * this.gridSize + 1,
-                        row * this.gridSize + 1,
-                        this.gridSize - 2,
-                        this.gridSize - 2
-                    );
-                }
-            }
-        }
-        
-        // Draw vegetation with adjusted sizes for smaller grid cells
+        // Draw vegetation with enhanced appearance
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this.vegetation.forEach(veg => {
             const worldX = veg.col * this.gridSize + this.gridSize / 2 + veg.offsetX;
             const worldY = veg.row * this.gridSize + this.gridSize / 2 + veg.offsetY;
             
+            // Add shadow for vegetation
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             if (veg.size === 2) {
-                // Large vegetation (2x2) - adjusted for smaller grid
-                ctx.font = `${24 / scale.scaleX}px serif`; // Reduced from 32
-                ctx.fillStyle = '#000';
-                ctx.fillText(veg.type, worldX + 1, worldY + 1); // Shadow
-                ctx.fillStyle = this.getVegetationColor(veg.type);
-                ctx.fillText(veg.type, worldX, worldY);
+                ctx.font = `${24 / scale.scaleX}px serif`;
+                ctx.fillText(veg.type, worldX + 2, worldY + 2);
             } else {
-                // Small vegetation (1x1) - adjusted for smaller grid
-                ctx.font = `${16 / scale.scaleX}px serif`; // Reduced from 20
-                ctx.fillStyle = '#000';
-                ctx.fillText(veg.type, worldX + 1, worldY + 1); // Shadow
-                ctx.fillStyle = this.getVegetationColor(veg.type);
-                ctx.fillText(veg.type, worldX, worldY);
+                ctx.font = `${16 / scale.scaleX}px serif`;
+                ctx.fillText(veg.type, worldX + 1, worldY + 1);
             }
+            
+            // Draw vegetation with enhanced colors
+            ctx.fillStyle = this.getVegetationColor(veg.type);
+            ctx.fillText(veg.type, worldX, worldY);
         });
         
-        // Draw start and end markers
+        // Draw start and end markers with enhanced appearance
         if (this.worldPath.length > 0) {
-            const markerSize = 6 / scale.scaleX; // Reduced from 8 for smaller grid
+            const markerSize = 8 / scale.scaleX;
             
-            // Start marker
+            // Start marker with glow
+            ctx.shadowColor = '#4CAF50';
+            ctx.shadowBlur = 10 / scale.scaleX;
             ctx.fillStyle = '#4CAF50';
             ctx.beginPath();
             ctx.arc(this.worldPath[0].x, this.worldPath[0].y, markerSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // End marker
+            // Add start text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${10 / scale.scaleX}px serif`;
+            ctx.fillText('START', this.worldPath[0].x, this.worldPath[0].y - 20 / scale.scaleX);
+            
+            // End marker with glow
             const endPoint = this.worldPath[this.worldPath.length - 1];
+            ctx.shadowColor = '#F44336';
+            ctx.shadowBlur = 10 / scale.scaleX;
             ctx.fillStyle = '#F44336';
             ctx.beginPath();
             ctx.arc(endPoint.x, endPoint.y, markerSize, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Add end text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.fillText('END', endPoint.x, endPoint.y - 20 / scale.scaleX);
         }
         
         // Restore context state
         ctx.restore();
     }
     
+    drawGrassTexture(ctx, scale) {
+        // Add random grass blade texture
+        ctx.strokeStyle = 'rgba(60, 120, 30, 0.2)';
+        ctx.lineWidth = 1 / scale.scaleX;
+        
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * this.cols * this.gridSize;
+            const y = Math.random() * this.rows * this.gridSize;
+            const gridX = Math.floor(x / this.gridSize);
+            const gridY = Math.floor(y / this.gridSize);
+            
+            // Only draw on buildable areas
+            if (gridY >= 0 && gridY < this.rows && gridX >= 0 && gridX < this.cols && 
+                this.grid[gridY][gridX] === 0) {
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + (Math.random() - 0.5) * 4, y - Math.random() * 6);
+                ctx.stroke();
+            }
+        }
+    }
+    
     renderUnscaled(ctx) {
-        // Fallback for when no scaling is available
-        ctx.fillStyle = '#0a0a0a';
+        // Clear with grass base color
+        ctx.fillStyle = '#2d5016';
         ctx.fillRect(0, 0, this.cols * this.gridSize, this.rows * this.gridSize);
         
-        // Draw grid lines (subtle, every 4 cells for larger grid)
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        // Draw grass texture pattern
+        this.drawGrassTextureUnscaled(ctx);
+        
+        // Draw more visible grid lines
+        ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
         ctx.lineWidth = 1;
         
-        // Only draw grid lines every 4 cells to reduce visual clutter
-        for (let col = 0; col <= this.cols; col += 4) {
+        // Draw all grid lines
+        for (let col = 0; col <= this.cols; col++) {
             ctx.beginPath();
             ctx.moveTo(col * this.gridSize, 0);
             ctx.lineTo(col * this.gridSize, this.rows * this.gridSize);
             ctx.stroke();
         }
         
-        for (let row = 0; row <= this.rows; row += 4) {
+        for (let row = 0; row <= this.rows; row++) {
             ctx.beginPath();
             ctx.moveTo(0, row * this.gridSize);
             ctx.lineTo(this.cols * this.gridSize, row * this.gridSize);
             ctx.stroke();
         }
         
-        // Draw path cells
-        ctx.fillStyle = '#444';
+        // Draw buildable grass areas with variations
+        for (let row = 0; row < this.rows; row++) {
+            for (let col = 0; col < this.cols; col++) {
+                if (this.grid[row][col] === 0) {
+                    const variation = (Math.sin(row * 0.5) * Math.cos(col * 0.3)) * 0.1;
+                    const grassR = Math.floor(45 + variation * 20);
+                    const grassG = Math.floor(80 + variation * 30);
+                    const grassB = Math.floor(22 + variation * 10);
+                    
+                    ctx.fillStyle = `rgb(${grassR}, ${grassG}, ${grassB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 1,
+                        row * this.gridSize + 1,
+                        this.gridSize - 2,
+                        this.gridSize - 2
+                    );
+                    
+                    if ((row + col) % 3 === 0) {
+                        ctx.fillStyle = 'rgba(60, 120, 30, 0.3)';
+                        ctx.fillRect(
+                            col * this.gridSize + this.gridSize * 0.2,
+                            row * this.gridSize + this.gridSize * 0.2,
+                            this.gridSize * 0.6,
+                            this.gridSize * 0.6
+                        );
+                    }
+                }
+            }
+        }
+        
+        // Draw path cells with dirt appearance
+        ctx.fillStyle = '#8B4513';
         for (let row = 0; row < this.rows; row++) {
             for (let col = 0; col < this.cols; col++) {
                 if (this.grid[row][col] === 1) {
@@ -878,13 +1148,39 @@ export class Level1 {
                         this.gridSize,
                         this.gridSize
                     );
+                    
+                    const dirtVariation = (Math.sin(row * 1.2) * Math.cos(col * 0.8)) * 0.15;
+                    const dirtR = Math.floor(139 + dirtVariation * 40);
+                    const dirtG = Math.floor(69 + dirtVariation * 30);
+                    const dirtB = Math.floor(19 + dirtVariation * 20);
+                    
+                    ctx.fillStyle = `rgb(${dirtR}, ${dirtG}, ${dirtB})`;
+                    ctx.fillRect(
+                        col * this.gridSize + 2,
+                        row * this.gridSize + 2,
+                        this.gridSize - 4,
+                        this.gridSize - 4
+                    );
+                    
+                    if ((row * col) % 7 === 0) {
+                        ctx.fillStyle = 'rgba(105, 105, 105, 0.6)';
+                        ctx.beginPath();
+                        ctx.arc(
+                            col * this.gridSize + this.gridSize * 0.3 + (row % 3) * 3,
+                            row * this.gridSize + this.gridSize * 0.7 + (col % 3) * 3,
+                            2,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
                 }
             }
         }
         
-        // Draw path border
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2;
+        // Draw path border with worn edges
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -896,21 +1192,6 @@ export class Level1 {
             }
         }
         ctx.stroke();
-        
-        // Draw buildable area indicators
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.03)';
-        for (let row = 0; row < this.rows; row++) {
-            for (let col = 0; col < this.cols; col++) {
-                if (this.grid[row][col] === 0) {
-                    ctx.fillRect(
-                        col * this.gridSize + 1,
-                        row * this.gridSize + 1,
-                        this.gridSize - 2,
-                        this.gridSize - 2
-                    );
-                }
-            }
-        }
         
         // Draw vegetation with adjusted sizes
         ctx.textAlign = 'center';
@@ -950,6 +1231,27 @@ export class Level1 {
             ctx.beginPath();
             ctx.arc(endPoint.x, endPoint.y, 6, 0, Math.PI * 2); // Reduced from 8
             ctx.fill();
+        }
+    }
+    
+    drawGrassTextureUnscaled(ctx) {
+        ctx.strokeStyle = 'rgba(60, 120, 30, 0.2)';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < 200; i++) {
+            const x = Math.random() * this.cols * this.gridSize;
+            const y = Math.random() * this.rows * this.gridSize;
+            const gridX = Math.floor(x / this.gridSize);
+            const gridY = Math.floor(y / this.gridSize);
+            
+            if (gridY >= 0 && gridY < this.rows && gridX >= 0 && gridX < this.cols && 
+                this.grid[gridY][gridX] === 0) {
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + (Math.random() - 0.5) * 4, y - Math.random() * 6);
+                ctx.stroke();
+            }
         }
     }
 }
