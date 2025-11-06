@@ -28,6 +28,12 @@ export class Level {
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {
+        // Ensure we have valid canvas dimensions
+        if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) {
+            console.warn('Level: Invalid canvas dimensions, skipping initialization');
+            return;
+        }
+        
         // Always reinitialize if canvas size changed significantly
         const sizeChangeThreshold = 50; // pixels
         const sizeChanged = !this.lastCanvasWidth || 
@@ -544,8 +550,15 @@ export class Level {
     }
     
     render(ctx) {
-        // Initialize grid for current canvas size if needed
-        this.initializeForCanvas(ctx.canvas.width, ctx.canvas.height);
+        // Only initialize if we have valid canvas dimensions
+        if (ctx.canvas.width > 0 && ctx.canvas.height > 0) {
+            this.initializeForCanvas(ctx.canvas.width, ctx.canvas.height);
+        }
+        
+        // Only render if properly initialized
+        if (!this.isInitialized) {
+            return;
+        }
         
         // Render grass background first
         this.renderGrassBackground(ctx);

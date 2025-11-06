@@ -11,6 +11,12 @@ export class StartScreen {
     }
     
     initParticles() {
+        // Ensure we have valid canvas dimensions before initializing particles
+        if (!this.stateManager.canvas.width || !this.stateManager.canvas.height) {
+            console.warn('StartScreen: Canvas dimensions not available, skipping particle initialization');
+            return;
+        }
+        
         console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.particles = [];
         for (let i = 0; i < 50; i++) {
@@ -27,9 +33,6 @@ export class StartScreen {
     
     enter() {
         console.log('StartScreen: enter called');
-        
-        // Initialize particles when entering (canvas size is known)
-        this.initParticles();
         
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
@@ -55,6 +58,9 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         
+        // Initialize particles when entering (canvas size should be known by now)
+        this.initParticles();
+        
         console.log('StartScreen: enter completed');
     }
     
@@ -77,19 +83,26 @@ export class StartScreen {
             this.continueOpacity = Math.min(1, (this.animationTime - 5) / 1);
         }
         
-        // Update particles
-        this.particles.forEach(particle => {
-            particle.y += particle.speed * deltaTime;
-            if (particle.y > this.stateManager.canvas.height) {
-                particle.y = -10;
-                particle.x = Math.random() * this.stateManager.canvas.width;
-            }
-        });
+        // Update particles only if they exist
+        if (this.particles.length > 0) {
+            this.particles.forEach(particle => {
+                particle.y += particle.speed * deltaTime;
+                if (particle.y > this.stateManager.canvas.height) {
+                    particle.y = -10;
+                    particle.x = Math.random() * this.stateManager.canvas.width;
+                }
+            });
+        }
     }
     
     render(ctx) {
         try {
             const canvas = this.stateManager.canvas;
+            
+            // Don't render if canvas isn't ready
+            if (!canvas.width || !canvas.height) {
+                return;
+            }
             
             // Dark medieval background
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -98,15 +111,17 @@ export class StartScreen {
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Render particles (falling embers)
-            ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
-            this.particles.forEach(particle => {
-                ctx.globalAlpha = particle.opacity;
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.globalAlpha = 1;
+            // Render particles (falling embers) only if they exist
+            if (this.particles.length > 0) {
+                ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
+                this.particles.forEach(particle => {
+                    ctx.globalAlpha = particle.opacity;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+            }
             
             // Title
             ctx.textAlign = 'center';

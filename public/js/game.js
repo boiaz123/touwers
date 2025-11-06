@@ -383,8 +383,13 @@ class Game {
         this.canvas.width = window.innerWidth - sidebarWidth;
         this.canvas.height = window.innerHeight - statsBarHeight;
         
-        // If in game state and canvas size changed significantly, update the level and enemy manager
-        if (this.stateManager.currentState === 'game' && this.stateManager.states.game) {
+        // Only update game elements if we're in the game state and the state manager is initialized
+        if (this.stateManager && 
+            this.stateManager.currentState === 'game' && 
+            this.stateManager.states.game && 
+            this.stateManager.states.game.level &&
+            this.stateManager.states.game.level.isInitialized) {
+            
             const gameState = this.stateManager.states.game;
             const sizeChangeThreshold = 50;
             
