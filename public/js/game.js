@@ -112,7 +112,8 @@ class GameplayState {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        this.level.setPlacementPreview(x, y, true);
+        // Pass towerManager for proper placement validation in preview
+        this.level.setPlacementPreview(x, y, true, this.towerManager);
     }
     
     selectTower(btn) {
@@ -153,7 +154,8 @@ class GameplayState {
         
         const { gridX, gridY } = this.level.screenToGrid(x, y);
         
-        if (this.level.canPlaceTower(gridX, gridY)) {
+        // Pass towerManager to check for tower overlaps
+        if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
             const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
             
             if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {

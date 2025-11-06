@@ -9,8 +9,6 @@ export class BasicTower {
         this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
-        // Scale tower size based on grid
-        this.size = 15;
     }
     
     update(deltaTime, enemies) {
@@ -46,19 +44,24 @@ export class BasicTower {
     }
     
     render(ctx) {
-        // Auto-scale tower size based on screen resolution
-        const baseSize = Math.max(10, Math.min(25, ctx.canvas.width / 80));
+        // Calculate tower size based on grid cell size (2x2 cells)
+        // Get cell size from canvas dimensions - use same calculation as Level.js
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        const cellSize = Math.floor(16 * scaleFactor);
+        const towerSize = cellSize * 2; // 2x2 cells
+        const radius = towerSize * 0.4; // Tower fills most of the 2x2 area
         
         // Tower base
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
         ctx.fill();
         
         // Tower top
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize * 0.67, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius * 0.67, 0, Math.PI * 2);
         ctx.fill();
         
         // Range indicator (when selected or debugging)

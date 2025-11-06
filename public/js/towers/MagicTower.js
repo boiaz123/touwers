@@ -50,32 +50,36 @@ export class MagicTower {
     }
     
     render(ctx) {
-        // Auto-scale tower size based on screen resolution
-        const baseSize = Math.max(12, Math.min(26, ctx.canvas.width / 75));
+        // Calculate tower size based on grid cell size (2x2 cells)
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        const cellSize = Math.floor(16 * scaleFactor);
+        const towerSize = cellSize * 2;
+        const radius = towerSize * 0.4;
         
         // Tower base
         ctx.fillStyle = '#4B0082';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic crystal (animated)
         const pulse = 0.8 + 0.2 * Math.sin(this.animationTime * 4);
         ctx.fillStyle = `rgba(138, 43, 226, ${pulse})`;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize * 0.5, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic sparkles
         for (let i = 0; i < 4; i++) {
             const angle = (this.animationTime * 2 + i * Math.PI / 2) % (Math.PI * 2);
-            const sparkleDistance = baseSize * 0.75;
+            const sparkleDistance = radius * 0.75;
             const sparkleX = this.x + Math.cos(angle) * sparkleDistance;
             const sparkleY = this.y + Math.sin(angle) * sparkleDistance;
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.beginPath();
-            ctx.arc(sparkleX, sparkleY, Math.max(1, baseSize * 0.125), 0, Math.PI * 2);
+            ctx.arc(sparkleX, sparkleY, Math.max(1, radius * 0.125), 0, Math.PI * 2);
             ctx.fill();
         }
         

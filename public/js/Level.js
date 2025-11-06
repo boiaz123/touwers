@@ -116,7 +116,8 @@ export class Level {
     
     markPathCells() {
         // Mark path and surrounding cells as occupied to prevent tower placement
-        const pathWidthCells = Math.max(3, Math.floor(60 / this.cellSize)); // Scale path width with cell size
+        // Reduced exclusion zone - only mark the actual path plus 1 cell buffer
+        const pathWidthCells = Math.max(1, Math.floor(30 / this.cellSize)); // Reduced from 60 to 30
         
         for (let i = 0; i < this.path.length - 1; i++) {
             const start = this.path[i];
@@ -135,7 +136,7 @@ export class Level {
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
                 
-                // Mark cells around the path
+                // Mark cells around the path with smaller buffer
                 for (let offsetX = -pathWidthCells; offsetX <= pathWidthCells; offsetX++) {
                     for (let offsetY = -pathWidthCells; offsetY <= pathWidthCells; offsetY++) {
                         const cellX = gridX + offsetX;
@@ -153,7 +154,7 @@ export class Level {
         return gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight;
     }
     
-    canPlaceTower(gridX, gridY) {
+    canPlaceTower(gridX, gridY, towerManager = null) {
         // Check if a 2x2 tower can be placed at this grid position
         for (let x = gridX; x < gridX + this.towerSize; x++) {
             for (let y = gridY; y < gridY + this.towerSize; y++) {
@@ -162,6 +163,12 @@ export class Level {
                 }
             }
         }
+        
+        // Also check if there's already a tower at this position
+        if (towerManager && towerManager.isTowerPositionOccupied(gridX, gridY)) {
+            return false;
+        }
+        
         return true;
     }
     
@@ -417,14 +424,15 @@ export class Level {
     }
     
     renderPath(ctx) {
-        const pathWidth = Math.max(40, Math.min(80, this.cellSize * 3));
+        // Reduced path width to match the smaller exclusion zone
+        const pathWidth = Math.max(30, Math.min(60, this.cellSize * 2)); // Reduced from 3x to 2x cellSize
         
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
         // Path outer shadow
         ctx.strokeStyle = 'rgba(45, 31, 22, 0.8)';
-        ctx.lineWidth = pathWidth + 12;
+        ctx.lineWidth = pathWidth + 8; // Reduced from +12
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -436,7 +444,7 @@ export class Level {
         
         // Path base (dark dirt)
         ctx.strokeStyle = '#5d4e37';
-        ctx.lineWidth = pathWidth + 4;
+        ctx.lineWidth = pathWidth + 3; // Reduced from +4
         ctx.beginPath();
         ctx.moveTo(this.path[0].x, this.path[0].y);
         for (let i = 1; i < this.path.length; i++) {
@@ -595,7 +603,7 @@ export class Level {
         
         // Highlight valid placement areas when tower is selected
         if (this.showPlacementPreview && this.previewGridX !== undefined && this.previewGridY !== undefined) {
-            const canPlace = this.canPlaceTower(this.previewGridX, this.previewGridY);
+            const canPlace = this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
             ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
             
             const size = this.towerSize * this.cellSize;
@@ -618,8 +626,9 @@ export class Level {
         }
     }
     
-    setPlacementPreview(screenX, screenY, show = true) {
+    setPlacementPreview(screenX, screenY, show = true, towerManager = null) {
         this.showPlacementPreview = show;
+        this.previewTowerManager = towerManager;
         if (show) {
             const { gridX, gridY } = this.screenToGrid(screenX, screenY);
             this.previewGridX = gridX;

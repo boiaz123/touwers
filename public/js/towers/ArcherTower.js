@@ -44,19 +44,23 @@ export class ArcherTower {
     }
     
     render(ctx) {
-        // Auto-scale tower size based on screen resolution
-        const baseSize = Math.max(10, Math.min(25, ctx.canvas.width / 80));
+        // Calculate tower size based on grid cell size (2x2 cells)
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        const cellSize = Math.floor(16 * scaleFactor);
+        const towerSize = cellSize * 2;
+        const radius = towerSize * 0.4;
         
         // Tower base
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
         ctx.fill();
         
         // Archer platform
         ctx.fillStyle = '#DEB887';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize * 0.67, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, radius * 0.67, 0, Math.PI * 2);
         ctx.fill();
         
         // Bow (simple representation)
@@ -65,7 +69,7 @@ export class ArcherTower {
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, baseSize * 0.53, angle - 0.3, angle + 0.3);
+            ctx.arc(this.x, this.y, radius * 0.53, angle - 0.3, angle + 0.3);
             ctx.stroke();
         }
         
