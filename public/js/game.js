@@ -15,22 +15,37 @@ class GameplayState {
         // Don't initialize EnemyManager here - will do it in enter()
         this.enemyManager = null;
         this.selectedTowerType = null;
+        console.log('GameplayState constructor completed');
     }
     
     enter() {
+        console.log('GameplayState: entering');
+        
         // Ensure UI is visible
-        document.getElementById('stats-bar').style.display = 'flex';
-        document.getElementById('tower-sidebar').style.display = 'flex';
+        const statsBar = document.getElementById('stats-bar');
+        const sidebar = document.getElementById('tower-sidebar');
+        
+        if (statsBar) {
+            statsBar.style.display = 'flex';
+            console.log('GameplayState: Stats bar shown');
+        }
+        if (sidebar) {
+            sidebar.style.display = 'flex';
+            console.log('GameplayState: Sidebar shown');
+        }
         
         // Initialize level for current canvas size first
+        console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
         
         // Now create enemy manager with the properly initialized path
+        console.log('GameplayState: Creating enemy manager with path:', this.level.path);
         this.enemyManager = new EnemyManager(this.level.path);
         
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
+        console.log('GameplayState: enter completed');
     }
     
     exit() {
@@ -200,24 +215,52 @@ class GameplayState {
 
 class Game {
     constructor() {
+        console.log('Game: Starting initialization');
+        
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        if (!this.canvas || !this.ctx) {
+            console.error('Failed to get canvas or context');
+            return;
+        }
+        
+        console.log('Game: Canvas found, size will be set');
         
         // Detect and apply UI scaling based on screen resolution
         this.applyUIScaling();
         
         this.resizeCanvas();
+        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
         
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
+        console.log('Game: GameStateManager created');
         
         // Add states
-        this.stateManager.addState('start', new StartScreen(this.stateManager));
-        this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
-        this.stateManager.addState('game', new GameplayState(this.stateManager));
+        try {
+            this.stateManager.addState('start', new StartScreen(this.stateManager));
+            console.log('Game: StartScreen state added');
+            
+            this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
+            console.log('Game: LevelSelect state added');
+            
+            this.stateManager.addState('game', new GameplayState(this.stateManager));
+            console.log('Game: GameplayState added');
+        } catch (error) {
+            console.error('Error creating states:', error);
+            return;
+        }
         
         this.lastTime = 0;
         
         this.setupEventListeners();
+        console.log('Game: Event listeners set up');
+        
+        // Start with the start screen
+        console.log('Game: Starting with start screen');
+        this.stateManager.changeState('start');
+        
+        console.log('Game: Starting game loop');
         this.gameLoop(0);
     }
     
@@ -276,16 +319,26 @@ class Game {
     }
     
     gameLoop(currentTime) {
-        const deltaTime = (currentTime - this.lastTime) / 1000;
+        const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000); // Cap at 60fps
         this.lastTime = currentTime;
         
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        this.stateManager.update(deltaTime);
-        this.stateManager.render();
+        try {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.stateManager.update(deltaTime);
+            this.stateManager.render();
+        } catch (error) {
+            console.error('Error in game loop:', error);
+        }
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-new Game();
+// Add error handling for the initialization
+try {
+    console.log('Starting game initialization');
+    new Game();
+} catch (error) {
+    console.error('Failed to initialize game:', error);
+}

@@ -7,10 +7,12 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         this.particles = [];
-        this.initParticles();
+        console.log('StartScreen: constructor called');
     }
     
     initParticles() {
+        console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
+        this.particles = [];
         for (let i = 0; i < 50; i++) {
             this.particles.push({
                 x: Math.random() * this.stateManager.canvas.width,
@@ -20,9 +22,15 @@ export class StartScreen {
                 opacity: Math.random() * 0.5 + 0.1
             });
         }
+        console.log('StartScreen: Particles initialized:', this.particles.length);
     }
     
     enter() {
+        console.log('StartScreen: enter called');
+        
+        // Initialize particles when entering (canvas size is known)
+        this.initParticles();
+        
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -30,10 +38,15 @@ export class StartScreen {
         if (statsBar) {
             statsBar.style.display = 'none';
             console.log('StartScreen: Stats bar hidden');
+        } else {
+            console.warn('StartScreen: Stats bar element not found');
         }
+        
         if (sidebar) {
             sidebar.style.display = 'none';
             console.log('StartScreen: Sidebar hidden');
+        } else {
+            console.warn('StartScreen: Sidebar element not found');
         }
         
         this.animationTime = 0;
@@ -41,6 +54,8 @@ export class StartScreen {
         this.titleOpacity = 0;
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
+        
+        console.log('StartScreen: enter completed');
     }
     
     update(deltaTime) {
@@ -73,59 +88,64 @@ export class StartScreen {
     }
     
     render(ctx) {
-        const canvas = this.stateManager.canvas;
-        
-        // Dark medieval background
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#1a0f0a');
-        gradient.addColorStop(1, '#0a0505');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Render particles (falling embers)
-        ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
-        this.particles.forEach(particle => {
-            ctx.globalAlpha = particle.opacity;
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        ctx.globalAlpha = 1;
-        
-        // Title
-        ctx.textAlign = 'center';
-        ctx.globalAlpha = this.titleOpacity;
-        
-        // Title shadow
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 80px serif';
-        ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 2 - 50 + 3);
-        
-        // Title main
-        ctx.fillStyle = '#d4af37';
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 2;
-        ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
-        ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
-        
-        // Subtitle
-        ctx.globalAlpha = this.subtitleOpacity;
-        ctx.font = 'italic 24px serif';
-        ctx.fillStyle = '#c9a876';
-        ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
-        
-        // Continue message
-        if (this.showContinue) {
-            ctx.globalAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
-            ctx.font = '20px serif';
-            ctx.fillStyle = '#fff';
-            ctx.fillText('Press to Continue', canvas.width / 2, canvas.height / 2 + 120);
+        try {
+            const canvas = this.stateManager.canvas;
+            
+            // Dark medieval background
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#1a0f0a');
+            gradient.addColorStop(1, '#0a0505');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Render particles (falling embers)
+            ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
+            this.particles.forEach(particle => {
+                ctx.globalAlpha = particle.opacity;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // Title
+            ctx.textAlign = 'center';
+            ctx.globalAlpha = this.titleOpacity;
+            
+            // Title shadow
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 80px serif';
+            ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 2 - 50 + 3);
+            
+            // Title main
+            ctx.fillStyle = '#d4af37';
+            ctx.strokeStyle = '#8b7355';
+            ctx.lineWidth = 2;
+            ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
+            
+            // Subtitle
+            ctx.globalAlpha = this.subtitleOpacity;
+            ctx.font = 'italic 24px serif';
+            ctx.fillStyle = '#c9a876';
+            ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
+            
+            // Continue message
+            if (this.showContinue) {
+                ctx.globalAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
+                ctx.font = '20px serif';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('Press to Continue', canvas.width / 2, canvas.height / 2 + 120);
+            }
+            
+            ctx.globalAlpha = 1;
+        } catch (error) {
+            console.error('StartScreen render error:', error);
         }
-        
-        ctx.globalAlpha = 1;
     }
     
     handleClick() {
+        console.log('StartScreen: Click detected, showContinue:', this.showContinue);
         if (this.showContinue) {
             this.stateManager.changeState('levelSelect');
         }

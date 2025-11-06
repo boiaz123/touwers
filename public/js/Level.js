@@ -1,4 +1,4 @@
-export class Level3 {
+export class Level {
     constructor() {
         // Grid configuration - will be calculated based on screen size
         this.gridWidth = 70;
