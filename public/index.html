@@ -9,7 +9,7 @@
 <body>
     <div id="game-container">
         <!-- Stats bar at the top -->
-        <div id="stats-bar">
+        <div id="stats-bar" style="display: none;">
             <div id="stats">
                 <span class="stat-item">❤️ <span id="health">20</span></span>
                 <span class="stat-item">💰 <span id="gold">100</span></span>
@@ -25,7 +25,7 @@
             <canvas id="gameCanvas"></canvas>
             
             <!-- C&C Style Tower Sidebar -->
-            <div id="tower-sidebar">
+            <div id="tower-sidebar" style="display: none;">
                 <div id="tower-grid">
                     <button class="tower-btn" data-type="basic" data-cost="50" data-name="Basic Tower">
                         <div class="tower-icon">🏰</div>
@@ -53,6 +53,11 @@
         </div>
     </div>
 
+    <script>
+        // Debug logging
+        console.log('HTML: Script tag reached');
+        console.log('HTML: Document ready state:', document.readyState);
+    </script>
     <script type="module" src="js/game.js"></script>
 </body>
 </html>

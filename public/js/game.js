@@ -221,8 +221,16 @@ class GameplayState {
 
 class Game {
     constructor() {
+        console.log('Game: Initializing...');
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        if (!this.canvas || !this.ctx) {
+            console.error('Game: Failed to get canvas or context');
+            return;
+        }
+        
+        console.log('Game: Canvas and context obtained');
         
         // Detect and apply UI scaling based on screen resolution
         this.applyUIScaling();
@@ -236,10 +244,18 @@ class Game {
         this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
         this.stateManager.addState('game', new GameplayState(this.stateManager));
         
+        console.log('Game: States added');
+        
+        // Initialize with start state
+        this.stateManager.changeState('start');
+        console.log('Game: Changed to start state');
+        
         this.lastTime = 0;
         
         this.setupEventListeners();
         this.gameLoop(0);
+        
+        console.log('Game: Initialization complete');
     }
     
     applyUIScaling() {
@@ -305,13 +321,28 @@ class Game {
         const deltaTime = (currentTime - this.lastTime) / 1000;
         this.lastTime = currentTime;
         
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear the canvas with a dark background
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        this.stateManager.update(deltaTime);
-        this.stateManager.render();
+        try {
+            this.stateManager.update(deltaTime);
+            this.stateManager.render();
+        } catch (error) {
+            console.error('Game: Error in game loop:', error);
+        }
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-new Game();
+// Ensure DOM is loaded before starting the game
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, starting game...');
+        new Game();
+    });
+} else {
+    console.log('DOM already loaded, starting game...');
+    new Game();
+}
