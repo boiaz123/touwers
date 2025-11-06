@@ -12,7 +12,8 @@ class GameplayState {
         this.gameState = new GameState();
         this.level = new Level();
         this.towerManager = new TowerManager(this.gameState, this.level);
-        this.enemyManager = new EnemyManager(this.level.path);
+        // Don't initialize EnemyManager here - will do it in enter()
+        this.enemyManager = null;
         this.selectedTowerType = null;
     }
     
@@ -20,6 +21,12 @@ class GameplayState {
         // Ensure UI is visible
         document.getElementById('stats-bar').style.display = 'flex';
         document.getElementById('tower-sidebar').style.display = 'flex';
+        
+        // Initialize level for current canvas size first
+        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        
+        // Now create enemy manager with the properly initialized path
+        this.enemyManager = new EnemyManager(this.level.path);
         
         this.setupEventListeners();
         this.updateUI();

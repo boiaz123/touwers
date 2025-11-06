@@ -1,4 +1,4 @@
-export class Level {
+export class Level3 {
     constructor() {
         // Grid configuration - will be calculated based on screen size
         this.gridWidth = 70;
@@ -9,8 +9,11 @@ export class Level {
         // Track occupied grid cells (for tower placement)
         this.occupiedCells = new Set();
         
-        // Will be set when canvas size is known
-        this.path = [];
+        // Initialize with a default path that will be overridden
+        this.path = [
+            { x: 0, y: 300 },
+            { x: 800, y: 300 }
+        ];
         this.isInitialized = false;
     }
     
