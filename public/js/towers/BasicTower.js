@@ -42,29 +42,46 @@ export class BasicTower {
     }
     
     render(ctx) {
+        // Tower foundation (2x2 area)
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(this.x - 30, this.y - 30, 60, 60);
+        
+        // Tower foundation border
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x - 30, this.y - 30, 60, 60);
+        
         // Tower base
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 20, 0, Math.PI * 2);
         ctx.fill();
         
         // Tower top
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
         ctx.fill();
         
-        // Range indicator (when selected or debugging)
+        // Tower center core
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Range indicator (when targeting)
         if (this.target) {
-            ctx.strokeStyle = 'rgba(76, 175, 80, 0.2)';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
+            ctx.setLineDash([]);
             
             // Shooting line
-            ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
             ctx.lineTo(this.target.x, this.target.y);

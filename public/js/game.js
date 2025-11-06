@@ -1,6 +1,6 @@
 import { TowerManager } from './towers/TowerManager.js';
 import { EnemyManager } from './enemies/EnemyManager.js';
-import { Level } from './Level.js';
+import { Level1 } from './levels/Level1.js'; // Import Level1 instead of Level
 import { GameState } from './GameState.js';
 import { GameStateManager } from './GameStateManager.js';
 import { StartScreen } from './StartScreen.js';
@@ -10,10 +10,36 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
-        this.level = new Level();
-        this.towerManager = new TowerManager(this.gameState);
-        this.enemyManager = new EnemyManager(this.level.path);
+        this.level = new Level1(); // Use Level1 instead of Level
+        this.towerManager = new TowerManager(this.gameState, this.level); // Pass level reference
+        this.enemyManager = new EnemyManager(this.level.worldPath); // Use worldPath from Level1
         this.selectedTowerType = null;
+        
+        // Setup level scaling for proper rendering
+        this.setupLevelScaling();
+    }
+    
+    setupLevelScaling() {
+        const canvas = this.stateManager.canvas;
+        const levelWidth = this.level.cols * this.level.gridSize;
+        const levelHeight = this.level.rows * this.level.gridSize;
+        
+        // Calculate scale to fit level in canvas with some padding
+        const scaleX = (canvas.width - 40) / levelWidth;
+        const scaleY = (canvas.height - 40) / levelHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        
+        // Center the level
+        const offsetX = (canvas.width - levelWidth * scale) / 2;
+        const offsetY = (canvas.height - levelHeight * scale) / 2;
+        
+        // Store scaling info on canvas for level to use
+        canvas.levelScale = {
+            scaleX: scale,
+            scaleY: scale,
+            offsetX: offsetX,
+            offsetY: offsetY
+        };
     }
     
     enter() {
@@ -24,6 +50,9 @@ class GameplayState {
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
+        
+        // Update level scaling when entering
+        this.setupLevelScaling();
     }
     
     exit() {
@@ -95,7 +124,8 @@ class GameplayState {
     handleClick(x, y) {
         if (!this.selectedTowerType) return;
         
-        if (this.towerManager.placeTower(this.selectedTowerType, x, y)) {
+        // Pass the rendering context for proper coordinate conversion
+        if (this.towerManager.placeTower(this.selectedTowerType, x, y, this.stateManager.ctx)) {
             this.updateUI();
         }
     }
@@ -134,6 +164,9 @@ class GameplayState {
     }
     
     render(ctx) {
+        // Update scaling on each render in case window was resized
+        this.setupLevelScaling();
+        
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
@@ -219,6 +252,11 @@ class Game {
         
         this.canvas.width = window.innerWidth - sidebarWidth;
         this.canvas.height = window.innerHeight - statsBarHeight;
+        
+        // Update level scaling when canvas is resized
+        if (this.stateManager.states.game && this.stateManager.currentState === 'game') {
+            this.stateManager.states.game.setupLevelScaling();
+        }
     }
     
     setupEventListeners() {
