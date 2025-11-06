@@ -1,9 +1,9 @@
 export class Level {
     constructor() {
         // Grid configuration - will be calculated based on screen size
-        this.gridWidth = 50;
-        this.gridHeight = 30;
-        this.cellSize = 40;
+        this.gridWidth = 70;
+        this.gridHeight = 40;
+        this.cellSize = 20;
         this.towerSize = 2; // Towers occupy 2x2 cells
         
         // Track occupied grid cells (for tower placement)
