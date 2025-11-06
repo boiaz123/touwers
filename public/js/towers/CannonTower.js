@@ -4,18 +4,21 @@ export class CannonTower {
         this.y = y;
         this.gridX = gridX;
         this.gridY = gridY;
-        this.range = 100;
-        this.damage = 50;
-        this.fireRate = 0.5; // shots per second
+        this.range = 120; // Increased range for catapult
+        this.damage = 40; // Reduced per-target damage but AoE
+        this.splashRadius = 35; // AoE damage radius
+        this.fireRate = 0.4; // Slower fire rate for catapult
         this.cooldown = 0;
         this.target = null;
         
         // Animation properties
-        this.cannonAngle = 0;
-        this.recoilOffset = 0;
+        this.catapultAngle = 0;
+        this.armPosition = 0; // 0 = ready, 1 = loaded/pulled back, 2 = firing
+        this.armSpeed = 0;
         this.explosions = [];
-        this.cannonballs = [];
+        this.bombs = [];
         this.animationTime = 0;
+        this.loadingTime = 0;
         
         // Fixed random seed for consistent texture
         this.randomSeed = Math.random() * 1000;
@@ -23,38 +26,52 @@ export class CannonTower {
     
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.recoilOffset = Math.max(0, this.recoilOffset - deltaTime * 200);
         this.animationTime += deltaTime;
         
         this.target = this.findTarget(enemies);
         
-        // Update cannon angle to track target
+        // Update catapult arm animation
+        if (this.armPosition === 2) { // Firing
+            this.armSpeed += deltaTime * 15; // Acceleration
+            this.armPosition = Math.min(1, this.armPosition - this.armSpeed * deltaTime);
+            if (this.armPosition <= 0) {
+                this.armPosition = 0;
+                this.armSpeed = 0;
+            }
+        } else if (this.target && this.cooldown === 0) {
+            // Loading animation
+            this.loadingTime += deltaTime * 2;
+            this.armPosition = Math.min(1, this.loadingTime);
+            
+            if (this.armPosition >= 1) {
+                this.shoot();
+                this.cooldown = 1 / this.fireRate;
+                this.armPosition = 2; // Start firing animation
+                this.armSpeed = 0;
+                this.loadingTime = 0;
+            }
+        } else {
+            this.loadingTime = 0;
+            this.armPosition = Math.max(0, this.armPosition - deltaTime * 0.5);
+        }
+        
+        // Update catapult angle to track target
         if (this.target) {
             const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-            this.cannonAngle = targetAngle;
+            this.catapultAngle = targetAngle;
         }
         
-        if (this.target && this.cooldown === 0) {
-            this.shoot();
-            this.cooldown = 1 / this.fireRate;
-        }
-        
-        // Update cannonballs
-        this.cannonballs = this.cannonballs.filter(ball => {
-            ball.x += ball.vx * deltaTime;
-            ball.y += ball.vy * deltaTime;
-            ball.life -= deltaTime;
+        // Update bombs
+        this.bombs = this.bombs.filter(bomb => {
+            bomb.x += bomb.vx * deltaTime;
+            bomb.y += bomb.vy * deltaTime;
+            bomb.vy += 300 * deltaTime; // Gravity for realistic arc
+            bomb.rotation += bomb.rotationSpeed * deltaTime;
+            bomb.life -= deltaTime;
             
-            if (ball.life <= 0) {
-                // Create explosion
-                this.explosions.push({
-                    x: ball.x,
-                    y: ball.y,
-                    radius: 0,
-                    maxRadius: 40,
-                    life: 0.5,
-                    maxLife: 0.5
-                });
+            if (bomb.life <= 0) {
+                // Create explosion and deal AoE damage
+                this.explode(bomb.x, bomb.y, enemies);
                 return false;
             }
             return true;
@@ -85,23 +102,48 @@ export class CannonTower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
-            this.recoilOffset = 15;
+            // Calculate bomb trajectory with high arc
+            const dx = this.target.x - this.x;
+            const dy = this.target.y - this.y;
+            const distance = Math.hypot(dx, dy);
+            const bombSpeed = 250; // Slower than cannon for more realistic catapult
+            const arcHeight = distance * 0.3; // High arc for catapult
             
-            // Create cannonball
-            const cannonballSpeed = 300;
-            const distance = Math.hypot(this.target.x - this.x, this.target.y - this.y);
-            const lifetime = distance / cannonballSpeed;
-            
-            this.cannonballs.push({
-                x: this.x + Math.cos(this.cannonAngle) * 25,
-                y: this.y + Math.sin(this.cannonAngle) * 25,
-                vx: Math.cos(this.cannonAngle) * cannonballSpeed,
-                vy: Math.sin(this.cannonAngle) * cannonballSpeed,
-                life: lifetime,
-                maxLife: lifetime
+            this.bombs.push({
+                x: this.x + Math.cos(this.catapultAngle) * 30,
+                y: this.y + Math.sin(this.catapultAngle) * 30 - 20, // Start from catapult arm
+                vx: (dx / distance) * bombSpeed,
+                vy: (dy / distance) * bombSpeed - arcHeight,
+                rotation: 0,
+                rotationSpeed: Math.random() * 8 + 4,
+                life: distance / bombSpeed + 1.5,
+                targetX: this.target.x,
+                targetY: this.target.y
             });
         }
+    }
+    
+    explode(x, y, enemies) {
+        // Create visual explosion
+        this.explosions.push({
+            x: x,
+            y: y,
+            radius: 0,
+            maxRadius: this.splashRadius * 1.5,
+            life: 0.8,
+            maxLife: 0.8
+        });
+        
+        // Deal AoE damage to all enemies in range
+        enemies.forEach(enemy => {
+            const distance = Math.hypot(enemy.x - x, enemy.y - y);
+            if (distance <= this.splashRadius) {
+                // Damage falls off with distance
+                const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
+                const actualDamage = Math.floor(this.damage * damageFalloff);
+                enemy.takeDamage(actualDamage);
+            }
+        });
     }
     
     // Seeded random function for consistent textures
@@ -123,7 +165,7 @@ export class CannonTower {
         
         // Main fortress base (taller and more imposing)
         const baseSize = towerSize * 0.9;
-        const fortressHeight = towerSize * 0.3;
+        const fortressHeight = towerSize * 0.25;
         
         // Fortress foundation with improved 3D effect
         const stoneGradient = ctx.createLinearGradient(
@@ -147,9 +189,9 @@ export class CannonTower {
         ctx.strokeStyle = '#3A3A3A';
         ctx.lineWidth = 1;
         for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 3; j++) {
+            for (let j = 0; j < 2; j++) {
                 const blockX = this.x - baseSize/2 + (i + 0.5) * baseSize/5;
-                const blockY = this.y - fortressHeight + (j + 0.5) * fortressHeight/3;
+                const blockY = this.y - fortressHeight + (j + 0.5) * fortressHeight/2;
                 const blockSize = baseSize/6;
                 
                 // Use seeded random for consistent positioning
@@ -166,9 +208,9 @@ export class CannonTower {
             }
         }
         
-        // Corner towers with improved 3D effect and height
-        const cornerSize = baseSize * 0.15;
-        const cornerHeight = fortressHeight * 1.5;
+        // Corner towers (smaller for catapult base)
+        const cornerSize = baseSize * 0.12;
+        const cornerHeight = fortressHeight * 1.2;
         const offset = baseSize * 0.35;
         const corners3D = [
             {x: this.x - offset, y: this.y - fortressHeight},
@@ -180,7 +222,7 @@ export class CannonTower {
         corners3D.forEach((corner, index) => {
             // Tower shadow with proper depth
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(corner.x - cornerSize + 3, corner.y - cornerHeight + 3, cornerSize * 2, cornerHeight);
+            ctx.fillRect(corner.x - cornerSize + 2, corner.y - cornerHeight + 2, cornerSize * 2, cornerHeight);
             
             // Tower gradient with height
             const towerGradient = ctx.createLinearGradient(
@@ -200,192 +242,208 @@ export class CannonTower {
             
             // Tower crenellations at top
             ctx.fillStyle = '#8A8A8A';
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 3; i++) {
                 if (i % 2 === 0) {
-                    const merlonX = corner.x - cornerSize + (i * cornerSize/2);
+                    const merlonX = corner.x - cornerSize + (i * cornerSize);
                     const merlonY = corner.y - cornerHeight;
-                    ctx.fillRect(merlonX, merlonY - 8, cornerSize/2, 8);
-                    ctx.strokeRect(merlonX, merlonY - 8, cornerSize/2, 8);
+                    ctx.fillRect(merlonX, merlonY - 6, cornerSize, 6);
+                    ctx.strokeRect(merlonX, merlonY - 6, cornerSize, 6);
                 }
-            }
-            
-            // Arrow slits
-            ctx.fillStyle = '#000000';
-            for (let slit = 0; slit < 2; slit++) {
-                const slitY = corner.y - cornerHeight + (slit + 1) * cornerHeight/3;
-                ctx.fillRect(corner.x - 2, slitY - 6, 4, 12);
             }
         });
         
-        // Central cannon platform with increased height
-        const radius = towerSize * 0.22;
-        const platformHeight = fortressHeight * 0.3;
+        // Catapult platform
+        const platformRadius = towerSize * 0.2;
+        const platformHeight = fortressHeight * 0.2;
         const platformY = this.y - fortressHeight - platformHeight;
         
-        // Platform shadow with depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        // Platform shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
-        ctx.arc(this.x + 3, platformY + 3, radius + 3, 0, Math.PI * 2);
+        ctx.arc(this.x + 2, platformY + 2, platformRadius + 2, 0, Math.PI * 2);
         ctx.fill();
         
-        // Platform with stone texture and height
+        // Wooden platform
         const platformGradient = ctx.createRadialGradient(
-            this.x - radius * 0.4, platformY - radius * 0.4, 0,
-            this.x, platformY, radius
+            this.x - platformRadius * 0.3, platformY - platformRadius * 0.3, 0,
+            this.x, platformY, platformRadius
         );
-        platformGradient.addColorStop(0, '#B8B8B8');
-        platformGradient.addColorStop(0.5, '#8A8A8A');
-        platformGradient.addColorStop(0.8, '#696969');
-        platformGradient.addColorStop(1, '#2F2F2F');
+        platformGradient.addColorStop(0, '#DEB887');
+        platformGradient.addColorStop(0.7, '#CD853F');
+        platformGradient.addColorStop(1, '#8B7355');
         
         ctx.fillStyle = platformGradient;
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(this.x, platformY, radius, 0, Math.PI * 2);
+        ctx.arc(this.x, platformY, platformRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
-        // Platform side wall (3D cylinder effect)
+        // Catapult mechanism
+        ctx.save();
+        ctx.translate(this.x, platformY);
+        ctx.rotate(this.catapultAngle);
+        
+        // Catapult base frame
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3;
+        
+        // Base support beams (A-frame)
+        ctx.beginPath();
+        ctx.moveTo(-15, 10);
+        ctx.lineTo(0, -10);
+        ctx.lineTo(15, 10);
+        ctx.stroke();
+        
+        // Cross brace
+        ctx.beginPath();
+        ctx.moveTo(-8, 2);
+        ctx.lineTo(8, 2);
+        ctx.stroke();
+        
+        // Pivot point
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(0, -5, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Catapult arm (animated)
+        const armLength = platformRadius * 1.5;
+        const armAngle = -Math.PI/3 + this.armPosition * Math.PI/2; // Swings from back to front
+        const armEndX = Math.cos(armAngle) * armLength;
+        const armEndY = Math.sin(armAngle) * armLength - 5;
+        
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(armEndX, armEndY);
+        ctx.stroke();
+        
+        // Bucket at end of arm
+        ctx.fillStyle = '#2F2F2F';
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 2;
+        ctx.fillRect(armEndX - 4, armEndY - 3, 8, 6);
+        ctx.strokeRect(armEndX - 4, armEndY - 3, 8, 6);
+        
+        // Counterweight
+        const counterweightX = -Math.cos(armAngle) * armLength * 0.3;
+        const counterweightY = -Math.sin(armAngle) * armLength * 0.3 - 5;
+        
         ctx.fillStyle = '#696969';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
-        ctx.fillRect(this.x - radius, platformY, radius * 2, platformHeight);
-        ctx.strokeRect(this.x - radius, platformY, radius * 2, platformHeight);
+        ctx.fillRect(counterweightX - 6, counterweightY - 8, 12, 16);
+        ctx.strokeRect(counterweightX - 6, counterweightY - 8, 12, 16);
         
-        // Platform reinforcement rings
-        ctx.strokeStyle = '#4A4A4A';
+        // Tension ropes
+        ctx.strokeStyle = '#8B4513';
         ctx.lineWidth = 2;
-        for (let i = 1; i <= 2; i++) {
-            ctx.beginPath();
-            ctx.arc(this.x, platformY, radius * (0.4 + i * 0.25), 0, Math.PI * 2);
-            ctx.stroke();
-        }
-        
-        // Rotating cannon assembly (positioned on elevated platform)
-        ctx.save();
-        ctx.translate(this.x, platformY);
-        ctx.rotate(this.cannonAngle);
-        
-        // Cannon mount (with recoil and improved design)
-        ctx.fillStyle = '#3A3A3A';
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 3;
-        const mountRadius = radius * 0.5;
         ctx.beginPath();
-        ctx.arc(-this.recoilOffset, 0, mountRadius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-12, 8);
+        ctx.lineTo(counterweightX, counterweightY + 8);
         ctx.stroke();
         
-        // Heavy cannon barrel with improved proportions
-        const barrelLength = radius * 1.4;
-        const barrelWidth = radius * 0.3;
-        ctx.fillStyle = '#2A2A2A';
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
-        ctx.fillRect(-this.recoilOffset, -barrelWidth/2, barrelLength, barrelWidth);
-        ctx.strokeRect(-this.recoilOffset, -barrelWidth/2, barrelLength, barrelWidth);
+        ctx.beginPath();
+        ctx.moveTo(12, 8);
+        ctx.lineTo(counterweightX, counterweightY + 8);
+        ctx.stroke();
         
-        // Barrel reinforcement bands (fixed positions)
-        ctx.strokeStyle = '#606060';
-        ctx.lineWidth = 4;
-        for (let i = 1; i <= 3; i++) {
-            const bandX = -this.recoilOffset + (barrelLength * i / 4);
+        // Bomb in bucket (when loading)
+        if (this.armPosition > 0.1 && this.armPosition < 1.8) {
+            ctx.fillStyle = '#1A1A1A';
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(bandX, -barrelWidth/2);
-            ctx.lineTo(bandX, barrelWidth/2);
+            ctx.arc(armEndX, armEndY - 2, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Fuse
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(armEndX, armEndY - 5);
+            ctx.lineTo(armEndX - 2, armEndY - 8);
             ctx.stroke();
         }
-        
-        // Cannon muzzle
-        ctx.fillStyle = '#1A1A1A';
-        ctx.beginPath();
-        ctx.arc(-this.recoilOffset + barrelLength, 0, barrelWidth/3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Cannon wheels (improved 3D effect)
-        const wheelRadius = mountRadius * 0.7;
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#3E2723';
-        ctx.lineWidth = 2;
-        
-        [-wheelRadius * 1.2, wheelRadius * 1.2].forEach(wheelY => {
-            // Wheel shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.arc(-this.recoilOffset - mountRadius * 0.9 + 1, wheelY + 1, wheelRadius + 1, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Wheel body
-            ctx.fillStyle = '#8B4513';
-            ctx.beginPath();
-            ctx.arc(-this.recoilOffset - mountRadius * 0.9, wheelY, wheelRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            
-            // Wheel spokes (fixed positions)
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 3;
-            for (let spoke = 0; spoke < 8; spoke++) {
-                const spokeAngle = (spoke / 8) * Math.PI * 2;
-                ctx.beginPath();
-                ctx.moveTo(-this.recoilOffset - mountRadius * 0.9, wheelY);
-                ctx.lineTo(
-                    -this.recoilOffset - mountRadius * 0.9 + Math.cos(spokeAngle) * wheelRadius * 0.8,
-                    wheelY + Math.sin(spokeAngle) * wheelRadius * 0.8
-                );
-                ctx.stroke();
-            }
-            
-            // Wheel hub
-            ctx.fillStyle = '#2F2F2F';
-            ctx.beginPath();
-            ctx.arc(-this.recoilOffset - mountRadius * 0.9, wheelY, wheelRadius * 0.3, 0, Math.PI * 2);
-            ctx.fill();
-        });
         
         ctx.restore();
         
-        // Render cannonballs
-        this.cannonballs.forEach(ball => {
-            const alpha = ball.life / ball.maxLife;
-            ctx.fillStyle = `rgba(40, 40, 40, ${alpha})`;
-            ctx.strokeStyle = `rgba(20, 20, 20, ${alpha})`;
+        // Render flying bombs
+        this.bombs.forEach(bomb => {
+            ctx.save();
+            ctx.translate(bomb.x, bomb.y);
+            ctx.rotate(bomb.rotation);
+            
+            // Bomb body
+            ctx.fillStyle = '#1A1A1A';
+            ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(ball.x, ball.y, 4, 0, Math.PI * 2);
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             
-            // Cannonball trail smoke
-            ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.3})`;
+            // Sparkling fuse
+            ctx.strokeStyle = '#FF4500';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(ball.x - ball.vx * 0.01, ball.y - ball.vy * 0.01, 6, 0, Math.PI * 2);
+            ctx.moveTo(0, -5);
+            ctx.lineTo(-3, -8);
+            ctx.stroke();
+            
+            // Sparks from fuse
+            for (let i = 0; i < 3; i++) {
+                const sparkX = -3 + Math.random() * 2;
+                const sparkY = -8 + Math.random() * 2;
+                ctx.fillStyle = Math.random() < 0.5 ? '#FFD700' : '#FF4500';
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Smoke trail
+            ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+            ctx.beginPath();
+            ctx.arc(-bomb.vx * 0.02, -bomb.vy * 0.02, 8, 0, Math.PI * 2);
             ctx.fill();
+            
+            ctx.restore();
         });
         
-        // Render explosions
+        // Render explosions with improved effects
         this.explosions.forEach(explosion => {
             const alpha = explosion.life / explosion.maxLife;
             
-            // Explosion fire
+            // Multiple explosion layers for better effect
+            // Outer shockwave
+            ctx.strokeStyle = `rgba(255, 165, 0, ${alpha * 0.3})`;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(explosion.x, explosion.y, explosion.radius * 1.2, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Main explosion fire
             ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.8})`;
             ctx.beginPath();
-            ctx.arc(explosion.x, explosion.y, explosion.radius * 0.6, 0, Math.PI * 2);
+            ctx.arc(explosion.x, explosion.y, explosion.radius * 0.8, 0, Math.PI * 2);
             ctx.fill();
             
-            // Explosion flash
-            ctx.fillStyle = `rgba(255, 255, 0, ${alpha * 0.6})`;
+            // Inner explosion flash
+            ctx.fillStyle = `rgba(255, 255, 0, ${alpha * 0.9})`;
             ctx.beginPath();
-            ctx.arc(explosion.x, explosion.y, explosion.radius * 0.3, 0, Math.PI * 2);
+            ctx.arc(explosion.x, explosion.y, explosion.radius * 0.4, 0, Math.PI * 2);
             ctx.fill();
             
-            // Explosion shockwave
-            ctx.strokeStyle = `rgba(255, 165, 0, ${alpha * 0.4})`;
-            ctx.lineWidth = 3;
+            // Core white flash
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
             ctx.beginPath();
-            ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.arc(explosion.x, explosion.y, explosion.radius * 0.15, 0, Math.PI * 2);
+            ctx.fill();
         });
         
         // Range indicator
@@ -395,16 +453,25 @@ export class CannonTower {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
+            
+            // Show splash damage radius at target
+            ctx.strokeStyle = 'rgba(255, 100, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(this.target.x, this.target.y, this.splashRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
         }
     }
     
     static getInfo() {
         return {
-            name: 'Cannon Tower',
-            description: 'Heavy artillery with high damage but slow fire rate.',
-            damage: '50',
-            range: '100',
-            fireRate: '0.5/sec',
+            name: 'Catapult Tower',
+            description: 'Heavy artillery that hurls explosive bombs dealing area damage.',
+            damage: '40 (AoE)',
+            range: '120',
+            fireRate: '0.4/sec',
             cost: 100
         };
     }
