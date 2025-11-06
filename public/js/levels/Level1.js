@@ -58,7 +58,7 @@ export class Level1 {
         }
         
         // Horizontal segment going right
-        for (let col = 26; col <= 42; col++) {
+        for (let col = 26, colEnd = 42; col <= colEnd; col++) {
             pathCoords.push([30, col]);
         }
         
@@ -68,7 +68,7 @@ export class Level1 {
         }
         
         // Horizontal segment going right
-        for (let col = 43; col <= 58; col++) {
+        for (let col = 43, colEnd = 58; col <= colEnd; col++) {
             pathCoords.push([15, col]);
         }
         
@@ -369,11 +369,17 @@ export class Level1 {
     }
     
     render(ctx) {
+        console.log('Level1: Starting render');
         const scale = ctx.canvas.levelScale;
+        console.log('Level1: Scale info:', scale);
+        
         if (!scale) {
+            console.log('Level1: No scale, using unscaled render');
             this.renderUnscaled(ctx);
             return;
         }
+        
+        console.log('Level1: Using scaled render');
         
         // Save context state
         ctx.save();
@@ -382,11 +388,15 @@ export class Level1 {
         ctx.translate(scale.offsetX, scale.offsetY);
         ctx.scale(scale.scaleX, scale.scaleY);
         
+        console.log('Level1: Applied transforms');
+        
         // Draw grassy ground background
         this.drawGrassyGround(ctx, scale);
+        console.log('Level1: Drew grassy ground');
         
         // Draw visible grid lines
         this.drawGrid(ctx, scale);
+        console.log('Level1: Drew grid');
         
         // Draw path cells
         ctx.fillStyle = '#8B4513'; // Brown dirt path
@@ -402,6 +412,7 @@ export class Level1 {
                 }
             }
         }
+        console.log('Level1: Drew path cells');
         
         // Draw path border with stones
         ctx.strokeStyle = '#654321';
@@ -417,18 +428,23 @@ export class Level1 {
             }
         }
         ctx.stroke();
+        console.log('Level1: Drew path border');
         
         // Draw buildable area indicators (2x2 grid squares)
         this.drawBuildableAreas(ctx, scale);
+        console.log('Level1: Drew buildable areas');
         
         // Draw vegetation
         this.drawVegetation(ctx, scale);
+        console.log('Level1: Drew vegetation');
         
         // Draw start and end markers
         this.drawPathMarkers(ctx, scale);
+        console.log('Level1: Drew path markers');
         
         // Restore context state
         ctx.restore();
+        console.log('Level1: Render complete');
     }
     
     drawGrassyGround(ctx, scale) {
@@ -886,11 +902,17 @@ export class Level1 {
     }
     
     render(ctx) {
+        console.log('Level1: Starting render');
         const scale = ctx.canvas.levelScale;
+        console.log('Level1: Scale info:', scale);
+        
         if (!scale) {
+            console.log('Level1: No scale, using unscaled render');
             this.renderUnscaled(ctx);
             return;
         }
+        
+        console.log('Level1: Using scaled render');
         
         // Save context state
         ctx.save();
@@ -899,11 +921,15 @@ export class Level1 {
         ctx.translate(scale.offsetX, scale.offsetY);
         ctx.scale(scale.scaleX, scale.scaleY);
         
+        console.log('Level1: Applied transforms');
+        
         // Draw grassy ground background
         this.drawGrassyGround(ctx, scale);
+        console.log('Level1: Drew grassy ground');
         
         // Draw visible grid lines
         this.drawGrid(ctx, scale);
+        console.log('Level1: Drew grid');
         
         // Draw path cells
         ctx.fillStyle = '#8B4513'; // Brown dirt path
@@ -919,6 +945,7 @@ export class Level1 {
                 }
             }
         }
+        console.log('Level1: Drew path cells');
         
         // Draw path border with stones
         ctx.strokeStyle = '#654321';
@@ -934,18 +961,23 @@ export class Level1 {
             }
         }
         ctx.stroke();
+        console.log('Level1: Drew path border');
         
         // Draw buildable area indicators (2x2 grid squares)
         this.drawBuildableAreas(ctx, scale);
+        console.log('Level1: Drew buildable areas');
         
         // Draw vegetation
         this.drawVegetation(ctx, scale);
+        console.log('Level1: Drew vegetation');
         
         // Draw start and end markers
         this.drawPathMarkers(ctx, scale);
+        console.log('Level1: Drew path markers');
         
         // Restore context state
         ctx.restore();
+        console.log('Level1: Render complete');
     }
     
     drawGrassyGround(ctx, scale) {

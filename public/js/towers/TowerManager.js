@@ -46,7 +46,14 @@ export class TowerManager {
     }
     
     render(ctx) {
-        this.towers.forEach(tower => tower.render(ctx));
+        console.log(`Rendering ${this.towers.length} towers`); // Debug log
+        this.towers.forEach((tower, index) => {
+            try {
+                tower.render(ctx);
+            } catch (error) {
+                console.error(`Error rendering tower ${index}:`, error);
+            }
+        });
     }
     
     getTowerInfo(type) {

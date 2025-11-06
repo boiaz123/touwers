@@ -8,12 +8,16 @@ import { LevelSelect } from './LevelSelect.js';
 
 class GameplayState {
     constructor(stateManager) {
+        console.log('GameplayState: Initializing...');
         this.stateManager = stateManager;
         this.gameState = new GameState();
         this.level = new Level1(); // Use Level1 instead of Level
         this.towerManager = new TowerManager(this.gameState, this.level); // Pass level reference
         this.enemyManager = new EnemyManager(this.level.worldPath); // Use worldPath from Level1
         this.selectedTowerType = null;
+        
+        console.log('GameplayState: Level created with path length:', this.level.worldPath.length);
+        console.log('GameplayState: Level dimensions:', this.level.cols, 'x', this.level.rows);
         
         // Setup level scaling for proper rendering
         this.setupLevelScaling();
@@ -24,6 +28,9 @@ class GameplayState {
         const levelWidth = this.level.cols * this.level.gridSize;
         const levelHeight = this.level.rows * this.level.gridSize;
         
+        console.log('GameplayState: Setting up scaling for level size:', levelWidth, 'x', levelHeight);
+        console.log('GameplayState: Canvas size:', canvas.width, 'x', canvas.height);
+        
         // Calculate scale to fit level in canvas with some padding
         const scaleX = (canvas.width - 40) / levelWidth;
         const scaleY = (canvas.height - 40) / levelHeight;
@@ -32,6 +39,8 @@ class GameplayState {
         // Center the level
         const offsetX = (canvas.width - levelWidth * scale) / 2;
         const offsetY = (canvas.height - levelHeight * scale) / 2;
+        
+        console.log('GameplayState: Applied scale:', scale, 'offset:', offsetX, offsetY);
         
         // Store scaling info on canvas for level to use
         canvas.levelScale = {
@@ -43,9 +52,20 @@ class GameplayState {
     }
     
     enter() {
+        console.log('GameplayState: Entering game state');
+        
         // Ensure UI is visible
-        document.getElementById('stats-bar').style.display = 'flex';
-        document.getElementById('tower-sidebar').style.display = 'flex';
+        const statsBar = document.getElementById('stats-bar');
+        const sidebar = document.getElementById('tower-sidebar');
+        
+        if (statsBar) {
+            statsBar.style.display = 'flex';
+            console.log('GameplayState: Stats bar shown');
+        }
+        if (sidebar) {
+            sidebar.style.display = 'flex';
+            console.log('GameplayState: Sidebar shown');
+        }
         
         this.setupEventListeners();
         this.updateUI();
@@ -164,12 +184,20 @@ class GameplayState {
     }
     
     render(ctx) {
-        // Update scaling on each render in case window was resized
-        this.setupLevelScaling();
-        
-        this.level.render(ctx);
-        this.towerManager.render(ctx);
-        this.enemyManager.render(ctx);
+        try {
+            // Update scaling on each render in case window was resized
+            this.setupLevelScaling();
+            
+            // Clear canvas with a test color to verify rendering is working
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            this.level.render(ctx);
+            this.towerManager.render(ctx);
+            this.enemyManager.render(ctx);
+        } catch (error) {
+            console.error('GameplayState: Error during render:', error);
+        }
     }
     
     updateUI() {
