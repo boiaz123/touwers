@@ -4,15 +4,15 @@ export class CannonTower {
         this.y = y;
         this.gridX = gridX;
         this.gridY = gridY;
-        this.range = 120; // Increased range for catapult
-        this.damage = 40; // Reduced per-target damage but AoE
-        this.splashRadius = 35; // AoE damage radius
-        this.fireRate = 0.4; // Slower fire rate for catapult
+        this.range = 120;
+        this.damage = 40;
+        this.splashRadius = 35;
+        this.fireRate = 0.4;
         this.cooldown = 0;
         this.target = null;
         
         // Animation properties
-        this.catapultAngle = 0;
+        this.trebuchetAngle = 0;
         this.armPosition = 0; // 0 = ready, 1 = loaded/pulled back, 2 = firing
         this.armSpeed = 0;
         this.explosions = [];
@@ -30,9 +30,9 @@ export class CannonTower {
         
         this.target = this.findTarget(enemies);
         
-        // Update catapult arm animation
+        // Update trebuchet arm animation
         if (this.armPosition === 2) { // Firing
-            this.armSpeed += deltaTime * 12; // Acceleration
+            this.armSpeed += deltaTime * 10;
             this.armPosition = Math.max(0, this.armPosition - this.armSpeed * deltaTime);
             if (this.armPosition <= 0) {
                 this.armPosition = 0;
@@ -40,38 +40,40 @@ export class CannonTower {
             }
         } else if (this.target && this.cooldown === 0) {
             // Loading animation
-            this.loadingTime += deltaTime * 1.5;
+            this.loadingTime += deltaTime * 1.2;
             this.armPosition = Math.min(1, this.loadingTime);
             
             if (this.armPosition >= 1) {
                 this.shoot();
                 this.cooldown = 1 / this.fireRate;
-                this.armPosition = 2; // Start firing animation
+                this.armPosition = 2;
                 this.armSpeed = 0;
                 this.loadingTime = 0;
             }
         } else {
             this.loadingTime = 0;
-            this.armPosition = Math.max(0, this.armPosition - deltaTime * 0.5);
+            this.armPosition = Math.max(0, this.armPosition - deltaTime * 0.3);
         }
         
-        // Update catapult angle to track target
+        // Update trebuchet angle to track target
         if (this.target) {
             const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-            this.catapultAngle = targetAngle;
+            this.trebuchetAngle = targetAngle;
         }
         
         // Update fireballs
         this.fireballs = this.fireballs.filter(fireball => {
             fireball.x += fireball.vx * deltaTime;
             fireball.y += fireball.vy * deltaTime;
-            fireball.vy += 280 * deltaTime; // Gravity for realistic arc
+            fireball.vy += fireball.gravity * deltaTime;
             fireball.life -= deltaTime;
             fireball.flameAnimation += deltaTime * 8;
             
-            if (fireball.life <= 0) {
-                // Create explosion and deal AoE damage
-                this.explode(fireball.x, fireball.y, enemies);
+            // Check if fireball has reached target position or lifetime expired
+            if (fireball.life <= 0 || 
+                (fireball.life < fireball.maxLife * 0.5 && 
+                 Math.hypot(fireball.x - fireball.targetX, fireball.y - fireball.targetY) < 20)) {
+                this.explode(fireball.targetX, fireball.targetY, enemies);
                 return false;
             }
             return true;
@@ -102,20 +104,28 @@ export class CannonTower {
     
     shoot() {
         if (this.target) {
-            // Calculate fireball trajectory with high arc
+            // Calculate precise trajectory to hit target
             const dx = this.target.x - this.x;
             const dy = this.target.y - this.y;
             const distance = Math.hypot(dx, dy);
-            const fireballSpeed = 200; // Slower for more dramatic arc
-            const arcHeight = distance * 0.4; // High arc for catapult
+            
+            // Use ballistic trajectory calculation for accuracy
+            const gravity = 250;
+            const launchAngle = Math.PI / 6; // 30 degrees for optimal range
+            const initialSpeed = Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle));
+            
+            // Calculate flight time to reach target
+            const flightTime = distance / (initialSpeed * Math.cos(launchAngle));
             
             this.fireballs.push({
-                x: this.x + Math.cos(this.catapultAngle) * 25,
-                y: this.y + Math.sin(this.catapultAngle) * 25 - 30, // Start from catapult arm
-                vx: (dx / distance) * fireballSpeed,
-                vy: (dy / distance) * fireballSpeed - arcHeight,
+                x: this.x,
+                y: this.y - 25, // Start from trebuchet arm height
+                vx: (dx / distance) * initialSpeed * Math.cos(launchAngle),
+                vy: -initialSpeed * Math.sin(launchAngle), // Negative for upward
+                gravity: gravity,
                 flameAnimation: 0,
-                life: distance / fireballSpeed + 2,
+                life: flightTime,
+                maxLife: flightTime,
                 targetX: this.target.x,
                 targetY: this.target.y
             });
@@ -158,206 +168,237 @@ export class CannonTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // 3D cobblestone tower shadow
+        // 3D square tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.beginPath();
-        ctx.arc(this.x + 4, this.y + 4, towerSize * 0.4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(this.x - towerSize * 0.4 + 5, this.y - towerSize * 0.35 + 5, towerSize * 0.8, towerSize * 0.7);
         
-        // Main cobblestone tower structure
-        const towerRadius = towerSize * 0.4;
-        const towerHeight = towerSize * 0.6;
+        // Main square tower structure
+        const towerWidth = towerSize * 0.8;
+        const towerHeight = towerSize * 0.7;
         
-        // Cobblestone tower gradient (cylindrical with 3D effect)
-        const stoneGradient = ctx.createRadialGradient(
-            this.x - towerRadius * 0.3, this.y - towerHeight - towerRadius * 0.3, 0,
-            this.x, this.y - towerHeight/2, towerRadius
+        // Stone tower gradient (robust square design)
+        const stoneGradient = ctx.createLinearGradient(
+            this.x - towerWidth/2, this.y - towerHeight,
+            this.x + towerWidth/3, this.y
         );
-        stoneGradient.addColorStop(0, '#A9A9A9');
-        stoneGradient.addColorStop(0.4, '#808080');
+        stoneGradient.addColorStop(0, '#B8B8B8');
+        stoneGradient.addColorStop(0.3, '#969696');
         stoneGradient.addColorStop(0.7, '#696969');
         stoneGradient.addColorStop(1, '#2F2F2F');
         
         ctx.fillStyle = stoneGradient;
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight/2, towerRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
+        ctx.strokeRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
         
-        // Cobblestone texture with individual stones
+        // Stone block pattern
         ctx.strokeStyle = '#4A4A4A';
-        ctx.lineWidth = 1;
-        const stoneRows = 8;
-        const stoneCols = 12;
+        ctx.lineWidth = 2;
+        const blockRows = 6;
+        const blockCols = 4;
         
-        for (let row = 0; row < stoneRows; row++) {
-            for (let col = 0; col < stoneCols; col++) {
-                const angle = (col / stoneCols) * Math.PI * 2;
-                const radiusOffset = row * (towerRadius * 1.8 / stoneRows) - towerRadius * 0.9;
-                const currentRadius = Math.abs(radiusOffset);
+        for (let row = 0; row < blockRows; row++) {
+            for (let col = 0; col < blockCols; col++) {
+                // Offset every other row for realistic stone pattern
+                const offsetX = (row % 2) * (towerWidth / blockCols / 2);
+                const blockX = this.x - towerWidth/2 + offsetX + (col * towerWidth / blockCols);
+                const blockY = this.y - towerHeight + (row * towerHeight / blockRows);
+                const blockWidth = towerWidth / blockCols;
+                const blockHeight = towerHeight / blockRows;
                 
-                if (currentRadius < towerRadius) {
-                    const stoneX = this.x + Math.cos(angle) * currentRadius;
-                    const stoneY = this.y - towerHeight/2 + radiusOffset;
-                    
-                    // Use seeded random for consistent stone sizes
-                    const stoneSize = 3 + this.seededRandom(this.randomSeed + row * 17 + col * 13) * 3;
-                    const offsetX = (this.seededRandom(this.randomSeed + row * 19 + col * 23) - 0.5) * 2;
-                    const offsetY = (this.seededRandom(this.randomSeed + row * 29 + col * 31) - 0.5) * 2;
-                    
-                    // Draw individual cobblestone
-                    ctx.beginPath();
-                    ctx.arc(stoneX + offsetX, stoneY + offsetY, stoneSize, 0, Math.PI * 2);
-                    ctx.stroke();
+                if (blockX + blockWidth <= this.x + towerWidth/2) {
+                    ctx.strokeRect(blockX, blockY, blockWidth, blockHeight);
                 }
             }
         }
         
-        // Tower battlements (crenellations)
+        // Corner reinforcements
+        const cornerSize = towerWidth * 0.08;
         ctx.fillStyle = '#808080';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         
-        for (let i = 0; i < 12; i++) {
-            if (i % 2 === 0) {
-                const angle = (i / 12) * Math.PI * 2;
-                const battlementX = this.x + Math.cos(angle) * (towerRadius + 2);
-                const battlementY = this.y - towerHeight + Math.sin(angle) * (towerRadius + 2);
+        // Four corner reinforcements
+        for (let x = -1; x <= 1; x += 2) {
+            for (let y = 0; y <= 1; y++) {
+                const cornerX = this.x + x * (towerWidth/2 - cornerSize);
+                const cornerY = this.y - towerHeight + y * (towerHeight - cornerSize * 2);
                 
-                ctx.fillRect(battlementX - 4, battlementY - 8, 8, 12);
-                ctx.strokeRect(battlementX - 4, battlementY - 8, 8, 12);
+                ctx.fillRect(cornerX, cornerY, cornerSize, cornerSize * 2);
+                ctx.strokeRect(cornerX, cornerY, cornerSize, cornerSize * 2);
             }
         }
         
-        // Catapult platform on top
-        const platformY = this.y - towerHeight;
-        const platformRadius = towerRadius * 0.8;
-        
-        // Platform
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#5D4E37';
+        // Tower battlements (crenellations)
+        ctx.fillStyle = '#969696';
+        ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, platformY, platformRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
         
-        // Wooden planks on platform
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
+        const battlementCount = 6;
+        const battlementWidth = towerWidth / battlementCount;
+        
+        for (let i = 0; i < battlementCount; i++) {
+            if (i % 2 === 0) { // Every other battlement is raised
+                const battlementX = this.x - towerWidth/2 + i * battlementWidth;
+                const battlementY = this.y - towerHeight;
+                
+                ctx.fillRect(battlementX, battlementY - 12, battlementWidth, 12);
+                ctx.strokeRect(battlementX, battlementY - 12, battlementWidth, 12);
+            }
+        }
+        
+        // Trebuchet platform on top
+        const platformY = this.y - towerHeight - 5;
+        const platformWidth = towerWidth * 0.9;
+        const platformThickness = 8;
+        
+        // Wooden platform
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.fillRect(this.x - platformWidth/2, platformY - platformThickness, platformWidth, platformThickness);
+        ctx.strokeRect(this.x - platformWidth/2, platformY - platformThickness, platformWidth, platformThickness);
+        
+        // Platform planks
+        for (let i = 1; i < 5; i++) {
+            const plankX = this.x - platformWidth/2 + (i * platformWidth / 5);
             ctx.beginPath();
-            ctx.moveTo(this.x, platformY);
-            ctx.lineTo(this.x + Math.cos(angle) * platformRadius, platformY + Math.sin(angle) * platformRadius);
+            ctx.moveTo(plankX, platformY - platformThickness);
+            ctx.lineTo(plankX, platformY);
             ctx.stroke();
         }
         
-        // Catapult mechanism
+        // Trebuchet mechanism
         ctx.save();
         ctx.translate(this.x, platformY);
-        ctx.rotate(this.catapultAngle);
+        ctx.rotate(this.trebuchetAngle);
         
-        // Catapult base frame (more robust design)
-        ctx.fillStyle = '#8B4513';
+        // Trebuchet base (more robust A-frame)
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 6;
         
-        // Sturdy A-frame base
+        // Main support frame
         ctx.beginPath();
-        ctx.moveTo(-18, 12);
-        ctx.lineTo(0, -8);
-        ctx.lineTo(18, 12);
-        ctx.moveTo(-12, 4);
-        ctx.lineTo(12, 4);
+        ctx.moveTo(-25, 0);
+        ctx.lineTo(0, -20);
+        ctx.lineTo(25, 0);
         ctx.stroke();
         
-        // Base support
-        ctx.fillRect(-15, 8, 30, 8);
-        ctx.strokeRect(-15, 8, 30, 8);
+        // Cross braces
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(-15, -8);
+        ctx.lineTo(15, -8);
+        ctx.stroke();
         
-        // Pivot point (metal axle)
+        ctx.beginPath();
+        ctx.moveTo(-20, -4);
+        ctx.lineTo(20, -4);
+        ctx.stroke();
+        
+        // Pivot point (large axle)
         ctx.fillStyle = '#2F2F2F';
         ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, -3, 4, 0, Math.PI * 2);
+        ctx.arc(0, -15, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
-        // Catapult arm (animated)
-        const armLength = platformRadius;
-        const armAngle = -Math.PI/2.2 + this.armPosition * Math.PI/1.8; // Wider swing
-        const armEndX = Math.cos(armAngle) * armLength;
-        const armEndY = Math.sin(armAngle) * armLength - 3;
+        // Trebuchet arm (longer and more realistic)
+        const armLength = platformWidth * 0.6;
+        const shortArmLength = armLength * 0.3;
+        const armAngle = -Math.PI/2.5 + this.armPosition * Math.PI/1.5;
+        
+        // Long arm (throwing end)
+        const longArmEndX = Math.cos(armAngle) * armLength;
+        const longArmEndY = Math.sin(armAngle) * armLength - 15;
+        
+        // Short arm (counterweight end)
+        const shortArmEndX = -Math.cos(armAngle) * shortArmLength;
+        const shortArmEndY = -Math.sin(armAngle) * shortArmLength - 15;
         
         // Arm shaft
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 6;
         ctx.beginPath();
-        ctx.moveTo(0, -3);
-        ctx.lineTo(armEndX, armEndY);
+        ctx.moveTo(shortArmEndX, shortArmEndY);
+        ctx.lineTo(longArmEndX, longArmEndY);
         ctx.stroke();
         
-        // Bucket/cup at end of arm
-        ctx.fillStyle = '#2F2F2F';
-        ctx.strokeStyle = '#1A1A1A';
+        // Sling at end of long arm
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
         
-        // Draw bucket as a small arc
         ctx.save();
-        ctx.translate(armEndX, armEndY);
-        ctx.rotate(armAngle + Math.PI/6);
+        ctx.translate(longArmEndX, longArmEndY);
+        ctx.rotate(armAngle + Math.PI/8);
+        
+        // Sling pouch
         ctx.beginPath();
-        ctx.arc(0, 0, 6, 0, Math.PI);
+        ctx.arc(0, 8, 8, 0, Math.PI);
         ctx.stroke();
-        ctx.fillRect(-6, 0, 12, 3);
-        ctx.strokeRect(-6, 0, 12, 3);
+        ctx.fillRect(-8, 8, 16, 4);
+        ctx.strokeRect(-8, 8, 16, 4);
+        
+        // Sling ropes
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-8, 8);
+        ctx.lineTo(0, -5);
+        ctx.moveTo(8, 8);
+        ctx.lineTo(0, -5);
+        ctx.stroke();
+        
         ctx.restore();
         
-        // Counterweight (stone block)
-        const counterweightX = -Math.cos(armAngle) * armLength * 0.25;
-        const counterweightY = -Math.sin(armAngle) * armLength * 0.25 - 3;
-        
+        // Large counterweight
         ctx.fillStyle = '#696969';
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 2;
-        ctx.fillRect(counterweightX - 8, counterweightY - 10, 16, 20);
-        ctx.strokeRect(counterweightX - 8, counterweightY - 10, 16, 20);
+        ctx.lineWidth = 3;
+        
+        const counterweightSize = 20;
+        ctx.fillRect(shortArmEndX - counterweightSize/2, shortArmEndY - counterweightSize/2, 
+                     counterweightSize, counterweightSize * 1.5);
+        ctx.strokeRect(shortArmEndX - counterweightSize/2, shortArmEndY - counterweightSize/2, 
+                       counterweightSize, counterweightSize * 1.5);
         
         // Stone texture on counterweight
         ctx.strokeStyle = '#4A4A4A';
         ctx.lineWidth = 1;
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 2; j++) {
-                const stoneX = counterweightX - 6 + i * 4;
-                const stoneY = counterweightY - 8 + j * 8;
-                ctx.strokeRect(stoneX, stoneY, 4, 6);
+                const stoneX = shortArmEndX - 8 + i * 5;
+                const stoneY = shortArmEndY - 8 + j * 8;
+                ctx.strokeRect(stoneX, stoneY, 5, 7);
             }
         }
         
-        // Tension ropes
-        ctx.strokeStyle = '#8B4513';
+        // Support chains for counterweight
+        ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(-15, 10);
-        ctx.lineTo(counterweightX, counterweightY + 10);
-        ctx.stroke();
         
-        ctx.beginPath();
-        ctx.moveTo(15, 10);
-        ctx.lineTo(counterweightX, counterweightY + 10);
-        ctx.stroke();
+        // Chain links
+        for (let chain = -1; chain <= 1; chain += 2) {
+            const chainX = shortArmEndX + chain * 8;
+            ctx.beginPath();
+            ctx.moveTo(chainX, shortArmEndY - counterweightSize/2);
+            ctx.lineTo(chainX, shortArmEndY + counterweightSize);
+            ctx.stroke();
+        }
         
-        // Fireball in bucket (when loading)
+        // Fireball in sling (when loading)
         if (this.armPosition > 0.1 && this.armPosition < 1.9) {
             ctx.save();
-            ctx.translate(armEndX, armEndY);
-            ctx.rotate(armAngle + Math.PI/6);
+            ctx.translate(longArmEndX, longArmEndY);
+            ctx.rotate(armAngle + Math.PI/8);
             
-            // Fireball
-            const fireballRadius = 4;
-            const fireGradient = ctx.createRadialGradient(0, -2, 0, 0, -2, fireballRadius);
+            // Fireball in sling
+            const fireballRadius = 5;
+            const fireGradient = ctx.createRadialGradient(0, 6, 0, 0, 6, fireballRadius);
             fireGradient.addColorStop(0, '#FFFF00');
             fireGradient.addColorStop(0.3, '#FF8C00');
             fireGradient.addColorStop(0.7, '#FF4500');
@@ -365,18 +406,18 @@ export class CannonTower {
             
             ctx.fillStyle = fireGradient;
             ctx.beginPath();
-            ctx.arc(0, -2, fireballRadius, 0, Math.PI * 2);
+            ctx.arc(0, 6, fireballRadius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Flame flickers
-            for (let i = 0; i < 5; i++) {
-                const flameAngle = (i / 5) * Math.PI * 2;
-                const flameX = Math.cos(flameAngle) * (fireballRadius + 2);
-                const flameY = -2 + Math.sin(flameAngle) * (fireballRadius + 2);
+            // Flame effects
+            for (let i = 0; i < 6; i++) {
+                const flameAngle = (i / 6) * Math.PI * 2;
+                const flameX = Math.cos(flameAngle) * (fireballRadius + 3);
+                const flameY = 6 + Math.sin(flameAngle) * (fireballRadius + 3);
                 
-                ctx.fillStyle = `rgba(255, ${100 + Math.random() * 155}, 0, 0.6)`;
+                ctx.fillStyle = `rgba(255, ${100 + Math.random() * 155}, 0, 0.7)`;
                 ctx.beginPath();
-                ctx.arc(flameX, flameY, 1, 0, Math.PI * 2);
+                ctx.arc(flameX, flameY, 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
             
@@ -494,8 +535,8 @@ export class CannonTower {
     
     static getInfo() {
         return {
-            name: 'Catapult Tower',
-            description: 'Cobblestone tower with catapult that hurls explosive fireballs.',
+            name: 'Trebuchet Tower',
+            description: 'Robust stone tower with trebuchet that hurls accurate fireballs.',
             damage: '40 (AoE)',
             range: '120',
             fireRate: '0.4/sec',
