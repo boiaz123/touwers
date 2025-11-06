@@ -169,92 +169,171 @@ export class MagicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // Mystical base platform
-        const baseSize = towerSize * 0.85;
-        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, baseSize/2);
-        gradient.addColorStop(0, '#4B0082');
-        gradient.addColorStop(0.7, '#2E0A4F');
-        gradient.addColorStop(1, '#1A0A2E');
-        
-        ctx.fillStyle = gradient;
+        // 3D shadow
+        ctx.fillStyle = 'rgba(75, 0, 130, 0.4)';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize/2, 0, Math.PI * 2);
+        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.4, 0, Math.PI * 2);
         ctx.fill();
         
-        // Mystical circle border
-        ctx.strokeStyle = '#8A2BE2';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        // Mystical stone base (circular with crystalline edges)
+        const baseRadius = towerSize * 0.4;
         
-        // Inner magic circle
-        ctx.strokeStyle = `rgba(138, 43, 226, ${this.crystalPulse})`;
+        // Create mystical base with multiple layers for 3D effect
+        for (let layer = 3; layer >= 0; layer--) {
+            const layerRadius = baseRadius - layer * 3;
+            const layerHeight = layer * 2;
+            
+            const baseGradient = ctx.createRadialGradient(
+                this.x - layerRadius * 0.3, this.y - layerHeight - layerRadius * 0.3, 0,
+                this.x, this.y - layerHeight, layerRadius
+            );
+            baseGradient.addColorStop(0, layer === 0 ? `rgba(138, 43, 226, ${this.crystalPulse})` : '#6A5ACD');
+            baseGradient.addColorStop(0.7, layer === 0 ? '#8A2BE2' : '#483D8B');
+            baseGradient.addColorStop(1, '#2E0A4F');
+            
+            ctx.fillStyle = baseGradient;
+            ctx.strokeStyle = layer === 0 ? `rgba(138, 43, 226, ${this.crystalPulse})` : '#4B0082';
+            ctx.lineWidth = layer === 0 ? 3 : 1;
+            
+            // Draw crystalline base (hexagonal for magic feel)
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const x = this.x + Math.cos(angle) * layerRadius;
+                const y = this.y - layerHeight + Math.sin(angle) * layerRadius * 0.8;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        // Mystical rune circles on base
+        ctx.strokeStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`;
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, baseSize * 0.3, 0, Math.PI * 2);
-        ctx.stroke();
+        for (let i = 1; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, baseRadius * (0.3 + i * 0.25), 0, Math.PI * 2);
+            ctx.stroke();
+        }
         
-        // Render floating runes
+        // Render floating runes with 3D effect
         this.runePositions.forEach((rune, index) => {
             const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * 8;
             const runeAngle = this.runeRotation + rune.angle;
             const runeX = this.x + Math.cos(runeAngle) * rune.radius;
             const runeY = this.y + Math.sin(runeAngle) * rune.radius + floatY;
             
-            // Rune glow
-            const runeGlow = ctx.createRadialGradient(runeX, runeY, 0, runeX, runeY, 15);
-            runeGlow.addColorStop(0, `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`);
-            runeGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
-            ctx.fillStyle = runeGlow;
+            // Rune shadow
+            ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
             ctx.beginPath();
-            ctx.arc(runeX, runeY, 15, 0, Math.PI * 2);
+            ctx.arc(runeX + 2, runeY + 2, 8, 0, Math.PI * 2);
             ctx.fill();
             
-            // Rune symbol
+            // Rune glow with layers
+            for (let layer = 2; layer >= 0; layer--) {
+                const layerRadius = 15 - layer * 3;
+                const runeGlow = ctx.createRadialGradient(runeX, runeY, 0, runeX, runeY, layerRadius);
+                runeGlow.addColorStop(0, `rgba(138, 43, 226, ${this.crystalPulse * 0.8 / (layer + 1)})`);
+                runeGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
+                ctx.fillStyle = runeGlow;
+                ctx.beginPath();
+                ctx.arc(runeX, runeY, layerRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Rune symbol with glow
             ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
-            ctx.font = '16px serif';
+            ctx.strokeStyle = `rgba(138, 43, 226, ${this.crystalPulse})`;
+            ctx.lineWidth = 1;
+            ctx.font = 'bold 16px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.strokeText(rune.symbol, runeX, runeY);
             ctx.fillText(rune.symbol, runeX, runeY);
         });
         
-        // Central crystal tower
-        const crystalHeight = towerSize * 0.6;
-        const crystalWidth = towerSize * 0.2;
+        // Central crystal spire with multiple crystalline faces
+        const crystalHeight = towerSize * 0.8;
+        const crystalWidth = towerSize * 0.15;
         
-        // Crystal base
-        ctx.fillStyle = '#483D8B';
-        ctx.strokeStyle = '#6A5ACD';
-        ctx.lineWidth = 2;
-        ctx.fillRect(this.x - crystalWidth/2, this.y - crystalHeight/2, crystalWidth, crystalHeight);
-        ctx.strokeRect(this.x - crystalWidth/2, this.y - crystalHeight/2, crystalWidth, crystalHeight);
-        
-        // Crystal facets
-        ctx.strokeStyle = '#9370DB';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const facetY = this.y - crystalHeight/2 + (crystalHeight * i / 4);
+        // Crystal spire segments (tapering upward)
+        for (let segment = 0; segment < 4; segment++) {
+            const segmentHeight = crystalHeight / 4;
+            const segmentY = this.y - segmentHeight * (segment + 0.5);
+            const segmentWidth = crystalWidth * (1 - segment * 0.15);
+            
+            // Crystal segment gradient
+            const segmentGradient = ctx.createLinearGradient(
+                this.x - segmentWidth, segmentY - segmentHeight/2,
+                this.x + segmentWidth/2, segmentY + segmentHeight/2
+            );
+            segmentGradient.addColorStop(0, `rgba(255, 255, 255, ${this.crystalPulse * 0.8})`);
+            segmentGradient.addColorStop(0.3, `rgba(138, 43, 226, ${this.crystalPulse})`);
+            segmentGradient.addColorStop(0.7, `rgba(75, 0, 130, ${this.crystalPulse * 0.9})`);
+            segmentGradient.addColorStop(1, `rgba(47, 10, 79, ${this.crystalPulse * 0.7})`);
+            
+            ctx.fillStyle = segmentGradient;
+            ctx.strokeStyle = `rgba(138, 43, 226, ${this.crystalPulse})`;
+            ctx.lineWidth = 1;
+            
+            // Draw crystalline segment (diamond shape)
             ctx.beginPath();
-            ctx.moveTo(this.x - crystalWidth/2, facetY);
-            ctx.lineTo(this.x + crystalWidth/2, facetY);
+            ctx.moveTo(this.x, segmentY - segmentHeight/2); // Top
+            ctx.lineTo(this.x + segmentWidth, segmentY); // Right
+            ctx.lineTo(this.x, segmentY + segmentHeight/2); // Bottom
+            ctx.lineTo(this.x - segmentWidth, segmentY); // Left
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Crystal facets
+            ctx.strokeStyle = `rgba(200, 200, 255, ${this.crystalPulse * 0.5})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(this.x, segmentY - segmentHeight/2);
+            ctx.lineTo(this.x, segmentY + segmentHeight/2);
+            ctx.stroke();
+            
+            // Side facets
+            ctx.beginPath();
+            ctx.moveTo(this.x - segmentWidth, segmentY);
+            ctx.lineTo(this.x + segmentWidth, segmentY);
             ctx.stroke();
         }
         
-        // Crystal top (gem)
-        const gemSize = crystalWidth * 0.8;
-        const gemGradient = ctx.createRadialGradient(this.x, this.y - crystalHeight/2, 0, this.x, this.y - crystalHeight/2, gemSize);
-        gemGradient.addColorStop(0, `rgba(255, 255, 255, ${this.crystalPulse})`);
-        gemGradient.addColorStop(0.3, `rgba(138, 43, 226, ${this.crystalPulse})`);
-        gemGradient.addColorStop(1, `rgba(75, 0, 130, ${this.crystalPulse * 0.8})`);
+        // Crystal top orb with intense glow
+        const orbRadius = crystalWidth * 1.5;
+        const orbY = this.y - crystalHeight;
         
-        ctx.fillStyle = gemGradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - crystalHeight/2, gemSize, 0, Math.PI * 2);
-        ctx.fill();
+        // Multiple glow layers for intense effect
+        for (let layer = 3; layer >= 0; layer--) {
+            const glowRadius = orbRadius + layer * 8;
+            const orbGradient = ctx.createRadialGradient(orbY, orbY, 0, this.x, orbY, glowRadius);
+            orbGradient.addColorStop(0, `rgba(255, 255, 255, ${this.crystalPulse / (layer + 1)})`);
+            orbGradient.addColorStop(0.3, `rgba(138, 43, 226, ${this.crystalPulse * 0.8 / (layer + 1)})`);
+            orbGradient.addColorStop(1, 'rgba(138, 43, 226, 0)');
+            
+            ctx.fillStyle = orbGradient;
+            ctx.beginPath();
+            ctx.arc(this.x, orbY, glowRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
-        // Gem highlight
-        ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse * 0.6})`;
+        // Core crystal orb
+        const coreGradient = ctx.createRadialGradient(
+            this.x - orbRadius * 0.3, orbY - orbRadius * 0.3, 0,
+            this.x, orbY, orbRadius
+        );
+        coreGradient.addColorStop(0, `rgba(255, 255, 255, ${this.crystalPulse})`);
+        coreGradient.addColorStop(0.3, `rgba(138, 43, 226, ${this.crystalPulse})`);
+        coreGradient.addColorStop(1, `rgba(75, 0, 130, ${this.crystalPulse * 0.8})`);
+        
+        ctx.fillStyle = coreGradient;
         ctx.beginPath();
-        ctx.arc(this.x - gemSize * 0.3, this.y - crystalHeight/2 - gemSize * 0.3, gemSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(this.x, orbY, orbRadius, 0, Math.PI * 2);
         ctx.fill();
         
         // Render magic particles

@@ -108,35 +108,133 @@ export class CannonTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // Fortress base (larger square foundation)
-        const foundationSize = towerSize * 0.95;
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#3E2723';
-        ctx.lineWidth = 3;
-        ctx.fillRect(this.x - foundationSize/2, this.y - foundationSize/2, foundationSize, foundationSize);
-        ctx.strokeRect(this.x - foundationSize/2, this.y - foundationSize/2, foundationSize, foundationSize);
+        // 3D fortress shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(this.x - towerSize * 0.45 + 4, this.y - towerSize * 0.45 + 4, towerSize * 0.9, towerSize * 0.9);
         
-        // Fortress corner towers
-        const cornerSize = foundationSize * 0.15;
-        const offset = foundationSize * 0.4;
-        ctx.fillStyle = '#5D4E37';
+        // Main fortress base (irregular stone structure)
+        const baseSize = towerSize * 0.9;
+        
+        // Stone foundation with 3D effect
+        const stoneGradient = ctx.createLinearGradient(
+            this.x - baseSize/2, this.y - baseSize/2,
+            this.x + baseSize/4, this.y + baseSize/4
+        );
+        stoneGradient.addColorStop(0, '#708090');
+        stoneGradient.addColorStop(0.5, '#5A5A5A');
+        stoneGradient.addColorStop(1, '#2F2F2F');
+        
+        ctx.fillStyle = stoneGradient;
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 3;
+        
+        // Draw irregular fortress outline
+        ctx.beginPath();
         const corners = [
+            {x: -baseSize * 0.45, y: -baseSize * 0.45},
+            {x: baseSize * 0.45, y: -baseSize * 0.4},
+            {x: baseSize * 0.4, y: baseSize * 0.45},
+            {x: -baseSize * 0.4, y: baseSize * 0.45}
+        ];
+        
+        ctx.moveTo(this.x + corners[0].x, this.y + corners[0].y);
+        corners.forEach((corner, index) => {
+            // Add some irregularity to make it look more natural
+            const variance = 3;
+            const x = this.x + corner.x + (Math.random() - 0.5) * variance;
+            const y = this.y + corner.y + (Math.random() - 0.5) * variance;
+            ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Stone blocks texture
+        ctx.strokeStyle = '#3E3E3E';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                const blockX = this.x - baseSize/2 + (i + 0.5) * baseSize/4;
+                const blockY = this.y - baseSize/2 + (j + 0.5) * baseSize/4;
+                const blockSize = baseSize/5;
+                
+                // Irregular stone blocks
+                ctx.strokeRect(
+                    blockX - blockSize/2 + Math.random() * 2 - 1,
+                    blockY - blockSize/2 + Math.random() * 2 - 1,
+                    blockSize + Math.random() * 4 - 2,
+                    blockSize + Math.random() * 4 - 2
+                );
+            }
+        }
+        
+        // Corner towers with 3D effect
+        const cornerSize = baseSize * 0.12;
+        const offset = baseSize * 0.32;
+        const corners3D = [
             {x: this.x - offset, y: this.y - offset},
             {x: this.x + offset, y: this.y - offset},
             {x: this.x - offset, y: this.y + offset},
             {x: this.x + offset, y: this.y + offset}
         ];
         
-        corners.forEach(corner => {
-            ctx.fillRect(corner.x - cornerSize/2, corner.y - cornerSize/2, cornerSize, cornerSize);
-            ctx.strokeRect(corner.x - cornerSize/2, corner.y - cornerSize/2, cornerSize, cornerSize);
+        corners3D.forEach(corner => {
+            // Tower shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.arc(corner.x + 2, corner.y + 2, cornerSize + 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tower gradient
+            const towerGradient = ctx.createRadialGradient(
+                corner.x - 2, corner.y - 2, 0,
+                corner.x, corner.y, cornerSize
+            );
+            towerGradient.addColorStop(0, '#8B7355');
+            towerGradient.addColorStop(1, '#5D4E37');
+            
+            ctx.fillStyle = towerGradient;
+            ctx.strokeStyle = '#3E2723';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, cornerSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Tower top crenellations
+            ctx.fillStyle = '#A0522D';
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const merlonX = corner.x + Math.cos(angle) * (cornerSize - 1);
+                const merlonY = corner.y + Math.sin(angle) * (cornerSize - 1);
+                
+                if (i % 2 === 0) {
+                    ctx.fillRect(merlonX - 1.5, merlonY - 3, 3, 3);
+                }
+            }
         });
         
-        // Main cannon platform (circular)
-        const radius = towerSize * 0.3;
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 3;
+        // Central cannon platform (circular with 3D depth)
+        const radius = towerSize * 0.25;
+        
+        // Platform shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.arc(this.x + 2, this.y + 2, radius + 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Platform with stone texture
+        const platformGradient = ctx.createRadialGradient(
+            this.x - radius * 0.3, this.y - radius * 0.3, 0,
+            this.x, this.y, radius
+        );
+        platformGradient.addColorStop(0, '#A9A9A9');
+        platformGradient.addColorStop(0.7, '#696969');
+        platformGradient.addColorStop(1, '#2F2F2F');
+        
+        ctx.fillStyle = platformGradient;
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -144,10 +242,10 @@ export class CannonTower {
         
         // Platform reinforcement rings
         ctx.strokeStyle = '#3E2723';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         for (let i = 1; i <= 2; i++) {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, radius * (0.4 + i * 0.2), 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, radius * (0.3 + i * 0.25), 0, Math.PI * 2);
             ctx.stroke();
         }
         
