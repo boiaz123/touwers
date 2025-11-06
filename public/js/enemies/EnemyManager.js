@@ -7,7 +7,7 @@ export class EnemyManager {
         this.spawning = false;
         this.spawnQueue = [];
         this.spawnTimer = 0;
-        this.spawnInterval = 1; // seconds between spawns
+        this.spawnInterval = 1; // seconds between spawns - will be overridden by wave config
         
         // Debug: log path
         console.log('EnemyManager initialized with path:', this.path);
@@ -18,16 +18,17 @@ export class EnemyManager {
         console.log('EnemyManager path updated:', this.path);
     }
     
-    spawnWave(waveNumber, count) {
-        console.log(`Spawning wave ${waveNumber} with ${count} enemies`);
+    spawnWave(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0) {
+        console.log(`Spawning wave ${waveNumber} with ${count} enemies (HP: ${health}, Speed: ${speed})`);
         this.spawning = true;
         this.spawnQueue = [];
+        this.spawnInterval = spawnInterval;
         
         for (let i = 0; i < count; i++) {
             this.spawnQueue.push({
                 type: 'basic',
-                health: 50 + waveNumber * 10,
-                speed: 50 + waveNumber * 2
+                health: health,
+                speed: speed
             });
         }
     }

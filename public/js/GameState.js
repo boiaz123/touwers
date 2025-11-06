@@ -2,7 +2,7 @@ export class GameState {
     constructor() {
         this.health = 20;
         this.gold = 100;
-        this.wave = 1;
+        this.wave = 1; // Start at wave 1
     }
     
     canAfford(cost) {
@@ -15,5 +15,11 @@ export class GameState {
             return true;
         }
         return false;
+    }
+    
+    reset() {
+        this.health = 20;
+        this.gold = 100;
+        this.wave = 1;
     }
 }

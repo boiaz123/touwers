@@ -28,9 +28,17 @@ export class Level {
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {
-        if (this.isInitialized && this.lastCanvasWidth === canvasWidth && this.lastCanvasHeight === canvasHeight) {
+        // Always reinitialize if canvas size changed significantly
+        const sizeChangeThreshold = 50; // pixels
+        const sizeChanged = !this.lastCanvasWidth || 
+                           Math.abs(this.lastCanvasWidth - canvasWidth) > sizeChangeThreshold ||
+                           Math.abs(this.lastCanvasHeight - canvasHeight) > sizeChangeThreshold;
+        
+        if (this.isInitialized && !sizeChanged) {
             return; // Already initialized for this size
         }
+        
+        console.log(`Level: Initializing for canvas size ${canvasWidth}x${canvasHeight}`);
         
         // Calculate grid size based on canvas dimensions
         // Aim for cells that are appropriately sized for the resolution
@@ -43,6 +51,7 @@ export class Level {
         
         // Create a more complex, meandering path that uses more of the map
         this.createMeanderingPath(canvasWidth, canvasHeight);
+        console.log('Level: Created path with', this.path.length, 'waypoints');
         
         // Clear and recalculate occupied cells
         this.occupiedCells.clear();
@@ -55,36 +64,48 @@ export class Level {
         this.lastCanvasWidth = canvasWidth;
         this.lastCanvasHeight = canvasHeight;
         this.isInitialized = true;
+        
+        console.log('Level: Initialization complete, path starts at', this.path[0], 'ends at', this.path[this.path.length - 1]);
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
-        const margin = this.cellSize * 2; // Keep path away from edges
-        const segmentLength = canvasWidth / 8; // Divide width into 8 segments for more turns
+        // Ensure minimum canvas size to avoid division by zero or negative values
+        const safeWidth = Math.max(800, canvasWidth);
+        const safeHeight = Math.max(600, canvasHeight);
         
+        // Create proportional waypoints that scale with canvas size
         this.path = [
-            // Start from left edge
-            { x: 0, y: canvasHeight * 0.7 },
+            // Start from left edge, positioned vertically based on canvas height
+            { x: 0, y: safeHeight * 0.7 },
             
             // First turn - go up and right
-            { x: canvasWidth * 0.15, y: canvasHeight * 0.7 },
-            { x: canvasWidth * 0.15, y: canvasHeight * 0.3 },
+            { x: safeWidth * 0.15, y: safeHeight * 0.7 },
+            { x: safeWidth * 0.15, y: safeHeight * 0.3 },
             
             // Second turn - go right and down
-            { x: canvasWidth * 0.35, y: canvasHeight * 0.3 },
-            { x: canvasWidth * 0.35, y: canvasHeight * 0.8 },
+            { x: safeWidth * 0.35, y: safeHeight * 0.3 },
+            { x: safeWidth * 0.35, y: safeHeight * 0.8 },
             
             // Third turn - go right and up
-            { x: canvasWidth * 0.55, y: canvasHeight * 0.8 },
-            { x: canvasWidth * 0.55, y: canvasHeight * 0.2 },
+            { x: safeWidth * 0.55, y: safeHeight * 0.8 },
+            { x: safeWidth * 0.55, y: safeHeight * 0.2 },
             
             // Fourth turn - go right and down
-            { x: canvasWidth * 0.75, y: canvasHeight * 0.2 },
-            { x: canvasWidth * 0.75, y: canvasHeight * 0.6 },
+            { x: safeWidth * 0.75, y: safeHeight * 0.2 },
+            { x: safeWidth * 0.75, y: safeHeight * 0.6 },
             
             // Final stretch to exit
-            { x: canvasWidth * 0.9, y: canvasHeight * 0.6 },
-            { x: canvasWidth, y: canvasHeight * 0.6 }
+            { x: safeWidth * 0.9, y: safeHeight * 0.6 },
+            { x: safeWidth, y: safeHeight * 0.6 }
         ];
+        
+        // Ensure all path points are within canvas bounds
+        this.path = this.path.map(point => ({
+            x: Math.max(0, Math.min(safeWidth, point.x)),
+            y: Math.max(0, Math.min(safeHeight, point.y))
+        }));
+        
+        console.log('Level: Path created with bounds check, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     markPathCells() {

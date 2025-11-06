@@ -12,14 +12,24 @@ class GameplayState {
         this.gameState = new GameState();
         this.level = new Level();
         this.towerManager = new TowerManager(this.gameState, this.level);
-        // Don't initialize EnemyManager here - will do it in enter()
         this.enemyManager = null;
         this.selectedTowerType = null;
+        this.currentLevel = 1; // Track current level
+        this.maxWavesForLevel = 10; // Level 1 has 10 waves
+        this.waveInProgress = false;
+        this.waveCompleted = false;
         console.log('GameplayState constructor completed');
     }
     
     enter() {
         console.log('GameplayState: entering');
+        
+        // Reset game state for new level
+        this.gameState = new GameState();
+        this.currentLevel = 1;
+        this.maxWavesForLevel = 10;
+        this.waveInProgress = false;
+        this.waveCompleted = false;
         
         // Ensure UI is visible
         const statsBar = document.getElementById('stats-bar');
@@ -38,9 +48,12 @@ class GameplayState {
         console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
         
-        // Now create enemy manager with the properly initialized path
+        // Create new enemy manager with the properly initialized path
         console.log('GameplayState: Creating enemy manager with path:', this.level.path);
         this.enemyManager = new EnemyManager(this.level.path);
+        
+        // Recreate tower manager to ensure it has the updated level reference
+        this.towerManager = new TowerManager(this.gameState, this.level);
         
         this.setupEventListeners();
         this.updateUI();
@@ -155,8 +168,55 @@ class GameplayState {
         }
     }
     
+    getWaveConfig(level, wave) {
+        // Level 1 wave configuration - 10 waves with gradual difficulty increase
+        if (level === 1) {
+            const baseEnemies = 5;
+            const baseHealth = 40;
+            const baseSpeed = 45;
+            
+            return {
+                enemyCount: baseEnemies + Math.floor(wave * 1.5), // 5, 6, 8, 9, 11, 12, 14, 15, 17, 18
+                enemyHealth: baseHealth + (wave - 1) * 8, // 40, 48, 56, 64, 72, 80, 88, 96, 104, 112
+                enemySpeed: baseSpeed + (wave - 1) * 3, // 45, 48, 51, 54, 57, 60, 63, 66, 69, 72
+                spawnInterval: Math.max(0.5, 1.2 - (wave - 1) * 0.05) // 1.2s down to 0.75s
+            };
+        }
+        
+        // Default fallback (for future levels)
+        return {
+            enemyCount: 10,
+            enemyHealth: 100,
+            enemySpeed: 50,
+            spawnInterval: 1.0
+        };
+    }
+    
     startWave() {
-        this.enemyManager.spawnWave(this.gameState.wave, 10);
+        if (this.gameState.wave > this.maxWavesForLevel) {
+            this.completeLevel();
+            return;
+        }
+        
+        console.log(`Starting wave ${this.gameState.wave} of level ${this.currentLevel}`);
+        this.waveInProgress = true;
+        this.waveCompleted = false;
+        
+        const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
+        this.enemyManager.spawnWave(
+            this.gameState.wave, 
+            waveConfig.enemyCount,
+            waveConfig.enemyHealth,
+            waveConfig.enemySpeed,
+            waveConfig.spawnInterval
+        );
+        
+        this.updateUI();
+    }
+    
+    completeLevel() {
+        alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
+        this.stateManager.changeState('levelSelect');
     }
     
     update(deltaTime) {
@@ -169,7 +229,7 @@ class GameplayState {
             this.updateUI();
             
             if (this.gameState.health <= 0) {
-                alert('Game Over!');
+                alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
                 this.stateManager.changeState('start');
                 return;
             }
@@ -177,14 +237,24 @@ class GameplayState {
         
         const killedEnemies = this.enemyManager.removeDeadEnemies();
         if (killedEnemies > 0) {
-            this.gameState.gold += killedEnemies * 10;
+            // Gold reward scales slightly with wave number
+            const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
+            this.gameState.gold += killedEnemies * goldPerEnemy;
             this.updateUI();
         }
         
-        if (this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
-            this.gameState.wave++;
-            this.updateUI();
-            setTimeout(() => this.startWave(), 2000);
+        // Check if wave is completed
+        if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
+            this.waveInProgress = false;
+            this.waveCompleted = true;
+            
+            console.log(`Wave ${this.gameState.wave} completed`);
+            
+            // Move to next wave after a short delay
+            setTimeout(() => {
+                this.gameState.wave++;
+                this.startWave();
+            }, 2000);
         }
     }
     
@@ -197,9 +267,16 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = this.gameState.gold;
-        document.getElementById('wave').textContent = this.gameState.wave;
-        document.getElementById('enemies-remaining').textContent = 
-            `Enemies: ${this.enemyManager.enemies.length}`;
+        document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
+        
+        let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
+        if (this.waveCompleted) {
+            statusText = 'Wave Complete!';
+        } else if (!this.waveInProgress && this.enemyManager.enemies.length === 0) {
+            statusText = 'Preparing...';
+        }
+        
+        document.getElementById('enemies-remaining').textContent = statusText;
         
         // Update tower button states based on available gold
         document.querySelectorAll('.tower-btn').forEach(btn => {
@@ -300,8 +377,45 @@ class Game {
         const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
         const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
+        const oldWidth = this.canvas.width;
+        const oldHeight = this.canvas.height;
+        
         this.canvas.width = window.innerWidth - sidebarWidth;
         this.canvas.height = window.innerHeight - statsBarHeight;
+        
+        // If in game state and canvas size changed significantly, update the level and enemy manager
+        if (this.stateManager.currentState === 'game' && this.stateManager.states.game) {
+            const gameState = this.stateManager.states.game;
+            const sizeChangeThreshold = 50;
+            
+            if (Math.abs(oldWidth - this.canvas.width) > sizeChangeThreshold ||
+                Math.abs(oldHeight - this.canvas.height) > sizeChangeThreshold) {
+                
+                console.log('Game: Significant canvas resize detected, updating level and enemies');
+                
+                // Reinitialize level for new canvas size
+                gameState.level.initializeForCanvas(this.canvas.width, this.canvas.height);
+                
+                // Update enemy manager with new path
+                if (gameState.enemyManager) {
+                    gameState.enemyManager.updatePath(gameState.level.path);
+                    
+                    // Update existing enemies to use new path if any exist
+                    gameState.enemyManager.enemies.forEach(enemy => {
+                        if (enemy.updatePath) {
+                            enemy.updatePath(gameState.level.path);
+                        } else {
+                            // Fallback: reset enemy path reference
+                            enemy.path = gameState.level.path;
+                            // Ensure enemy position is still valid
+                            if (enemy.currentPathIndex >= enemy.path.length - 1) {
+                                enemy.currentPathIndex = Math.max(0, enemy.path.length - 2);
+                            }
+                        }
+                    });
+                }
+            }
+        }
     }
     
     setupEventListeners() {
