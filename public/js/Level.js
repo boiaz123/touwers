@@ -46,12 +46,12 @@ export class Level {
         
         console.log(`Level: Initializing for canvas size ${canvasWidth}x${canvasHeight}`);
         
-        // Calculate grid size based on canvas dimensions
+        // Calculate grid size based on canvas dimensions - DOUBLED cell size to halve grid density
         // Aim for cells that are appropriately sized for the resolution
         const baseResolution = 1920; // 1080p width as baseline
         const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
         
-        this.cellSize = Math.floor(16 * scaleFactor); // Scale cell size
+        this.cellSize = Math.floor(32 * scaleFactor); // Doubled from 16 to 32 to halve grid density
         this.gridWidth = Math.floor(canvasWidth / this.cellSize);
         this.gridHeight = Math.floor(canvasHeight / this.cellSize);
         
@@ -197,41 +197,72 @@ export class Level {
     generateAllVisualElements(canvasWidth, canvasHeight) {
         if (this.visualElementsGenerated) return;
         
-        // Generate grass patches
+        // Generate grass patches - REDUCED density and added more natural variation
         this.grassPatches = [];
-        const patchCount = Math.floor((canvasWidth * canvasHeight) / 2000);
+        const patchCount = Math.floor((canvasWidth * canvasHeight) / 8000); // Reduced from 2000 to 8000
         for (let i = 0; i < patchCount; i++) {
+            // Add clustering - some patches appear near others
+            let x, y;
+            if (Math.random() < 0.3 && this.grassPatches.length > 0) {
+                // Cluster near existing patch
+                const nearPatch = this.grassPatches[Math.floor(Math.random() * this.grassPatches.length)];
+                const clusterRadius = 80;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * clusterRadius;
+                x = Math.max(0, Math.min(canvasWidth, nearPatch.x + Math.cos(angle) * distance));
+                y = Math.max(0, Math.min(canvasHeight, nearPatch.y + Math.sin(angle) * distance));
+            } else {
+                // Random placement
+                x = Math.random() * canvasWidth;
+                y = Math.random() * canvasHeight;
+            }
+            
             this.grassPatches.push({
-                x: Math.random() * canvasWidth,
-                y: Math.random() * canvasHeight,
-                size: Math.random() * 8 + 4,
-                shade: Math.random() * 0.3 + 0.7,
+                x: x,
+                y: y,
+                size: Math.random() * 12 + 6, // Increased size variation
+                shade: Math.random() * 0.4 + 0.6, // More variation in shading
                 type: Math.floor(Math.random() * 3)
             });
         }
         
-        // Generate dirt patches
+        // Generate dirt patches - REDUCED quantity
         this.dirtPatches = [];
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 8; i++) { // Reduced from 20 to 8
             this.dirtPatches.push({
                 x: Math.random() * canvasWidth,
                 y: Math.random() * canvasHeight,
-                sizeX: Math.random() * 80 + 40,
-                sizeY: (Math.random() * 80 + 40) * 0.6,
+                sizeX: Math.random() * 120 + 60, // Increased size for fewer patches
+                sizeY: (Math.random() * 120 + 60) * 0.6,
                 rotation: Math.random() * Math.PI
             });
         }
         
-        // Generate flowers
+        // Generate flowers - REDUCED density and improved clustering
         this.flowers = [];
-        const flowerCount = Math.floor(canvasWidth * canvasHeight / 10000);
+        const flowerCount = Math.floor(canvasWidth * canvasHeight / 25000); // Reduced from 10000 to 25000
         for (let i = 0; i < flowerCount; i++) {
             const flowerType = Math.random();
+            let x, y;
+            
+            // Create flower clusters
+            if (Math.random() < 0.4 && this.flowers.length > 0) {
+                const nearFlower = this.flowers[Math.floor(Math.random() * this.flowers.length)];
+                const clusterRadius = 40;
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * clusterRadius;
+                x = Math.max(0, Math.min(canvasWidth, nearFlower.x + Math.cos(angle) * distance));
+                y = Math.max(0, Math.min(canvasHeight, nearFlower.y + Math.sin(angle) * distance));
+            } else {
+                x = Math.random() * canvasWidth;
+                y = Math.random() * canvasHeight;
+            }
+            
             this.flowers.push({
-                x: Math.random() * canvasWidth,
-                y: Math.random() * canvasHeight,
+                x: x,
+                y: y,
                 type: flowerType < 0.3 ? 'yellow' : (flowerType < 0.6 ? 'daisy' : 'purple'),
-                petals: flowerType >= 0.3 && flowerType < 0.6 ? this.generateDaisyPetals(Math.random() * canvasWidth, Math.random() * canvasHeight) : null
+                petals: flowerType >= 0.3 && flowerType < 0.6 ? this.generateDaisyPetals(x, y) : null
             });
         }
         
@@ -257,49 +288,63 @@ export class Level {
         this.pathLeaves = [];
         const pathWidth = Math.max(40, Math.min(80, this.cellSize * 3));
         
-        // Generate texture elements along the path
+        // Generate texture elements along the path - REDUCED density
         for (let i = 0; i < this.path.length - 1; i++) {
             const start = this.path[i];
             const end = this.path[i + 1];
             const distance = Math.hypot(end.x - start.x, end.y - start.y);
-            const elements = Math.floor(distance / 5);
+            const elements = Math.floor(distance / 15); // Reduced from 5 to 15 for less density
             
             for (let j = 0; j < elements; j++) {
                 const t = j / elements;
                 const baseX = start.x + (end.x - start.x) * t;
                 const baseY = start.y + (end.y - start.y) * t;
                 
-                // Generate various path elements
-                for (let k = 0; k < 3; k++) {
+                // Generate fewer path elements with more natural distribution
+                const elementCount = Math.random() < 0.6 ? 1 : 2; // Reduced from always 3
+                for (let k = 0; k < elementCount; k++) {
                     const offsetX = (Math.random() - 0.5) * pathWidth * 0.8;
                     const offsetY = (Math.random() - 0.5) * pathWidth * 0.8;
                     
                     this.pathTexture.push({
                         x: baseX + offsetX,
                         y: baseY + offsetY,
-                        size: Math.random() * 4 + 1,
+                        size: Math.random() * 6 + 2, // Increased size variation
                         type: Math.floor(Math.random() * 4),
                         rotation: Math.random() * Math.PI * 2,
-                        shade: Math.random() * 0.4 + 0.6,
+                        shade: Math.random() * 0.5 + 0.5, // More variation in shading
                         // Cache stone shape for type 3
-                        stoneShape: Math.floor(Math.random() * 4) === 3 ? this.generateStoneShape(Math.random() * 4 + 1) : null
+                        stoneShape: Math.floor(Math.random() * 4) === 3 ? this.generateStoneShape(Math.random() * 6 + 2) : null
                     });
                 }
             }
         }
         
-        // Generate path leaves
-        const leafCount = Math.floor(this.path.length * 2);
+        // Generate path leaves - REDUCED quantity and improved distribution
+        const leafCount = Math.floor(this.path.length * 0.8); // Reduced from 2 to 0.8
         for (let i = 0; i < leafCount; i++) {
             const pathIndex = Math.floor(Math.random() * (this.path.length - 1));
             const t = Math.random();
             const start = this.path[pathIndex];
             const end = this.path[pathIndex + 1];
             
+            // Add some clustering to leaves
+            const clusterChance = Math.random() < 0.3 && this.pathLeaves.length > 0;
+            let leafX, leafY;
+            
+            if (clusterChance) {
+                const nearLeaf = this.pathLeaves[Math.floor(Math.random() * this.pathLeaves.length)];
+                leafX = nearLeaf.x + (Math.random() - 0.5) * 30;
+                leafY = nearLeaf.y + (Math.random() - 0.5) * 30;
+            } else {
+                leafX = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * pathWidth * 0.6;
+                leafY = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * pathWidth * 0.6;
+            }
+            
             this.pathLeaves.push({
-                x: start.x + (end.x - start.x) * t + (Math.random() - 0.5) * pathWidth * 0.6,
-                y: start.y + (end.y - start.y) * t + (Math.random() - 0.5) * pathWidth * 0.6,
-                size: Math.random() * 6 + 3,
+                x: leafX,
+                y: leafY,
+                size: Math.random() * 8 + 4, // Increased size variation
                 rotation: Math.random() * Math.PI * 2,
                 color: Math.random() < 0.5 ? 'rgba(160, 82, 45, 0.6)' : 'rgba(139, 115, 85, 0.6)'
             });
@@ -571,15 +616,15 @@ export class Level {
         // Render grass background first
         this.renderGrassBackground(ctx);
         
-        // Render grid with adaptive opacity based on cell size
-        const gridOpacity = Math.max(0.05, Math.min(0.15, this.cellSize / 40));
+        // Render grid with adaptive opacity based on cell size - ADJUSTED for new cell size
+        const gridOpacity = Math.max(0.03, Math.min(0.12, this.cellSize / 80)); // Adjusted for doubled cell size
         ctx.strokeStyle = `rgba(139, 69, 19, ${gridOpacity})`; // Brown grid lines to blend with grass
         ctx.lineWidth = 1;
         
         // Only render grid if cells are large enough to be useful
-        if (this.cellSize >= 10) {
+        if (this.cellSize >= 20) { // Adjusted threshold for new cell size
             // Vertical lines - only render every few lines if cells are very small
-            const lineStep = this.cellSize < 15 ? 2 : 1;
+            const lineStep = this.cellSize < 30 ? 2 : 1; // Adjusted threshold
             for (let x = 0; x <= this.gridWidth; x += lineStep) {
                 const screenX = x * this.cellSize;
                 ctx.beginPath();
