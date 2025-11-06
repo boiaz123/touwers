@@ -4,8 +4,9 @@ import { ArcherTower } from './ArcherTower.js';
 import { MagicTower } from './MagicTower.js';
 
 export class TowerManager {
-    constructor(gameState) {
+    constructor(gameState, level) {
         this.gameState = gameState;
+        this.level = level;
         this.towers = [];
         this.towerTypes = {
             'basic': { class: BasicTower, cost: 50 },
@@ -15,12 +16,12 @@ export class TowerManager {
         };
     }
     
-    placeTower(type, x, y) {
+    placeTower(type, x, y, gridX, gridY) {
         const towerType = this.towerTypes[type];
         if (!towerType) return false;
         
         if (this.gameState.spend(towerType.cost)) {
-            const tower = new towerType.class(x, y);
+            const tower = new towerType.class(x, y, gridX, gridY);
             this.towers.push(tower);
             return true;
         }

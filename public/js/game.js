@@ -11,7 +11,7 @@ class GameplayState {
         this.stateManager = stateManager;
         this.gameState = new GameState();
         this.level = new Level();
-        this.towerManager = new TowerManager(this.gameState);
+        this.towerManager = new TowerManager(this.gameState, this.level);
         this.enemyManager = new EnemyManager(this.level.path);
         this.selectedTowerType = null;
     }
@@ -50,6 +50,10 @@ class GameplayState {
                 this.showTowerInfo(e.currentTarget.dataset.type);
             });
         });
+        
+        // Add mouse move listener for placement preview
+        this.mouseMoveHandler = (e) => this.handleMouseMove(e);
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
     }
     
     removeEventListeners() {
@@ -57,6 +61,23 @@ class GameplayState {
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
+        
+        if (this.mouseMoveHandler) {
+            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
+    }
+    
+    handleMouseMove(e) {
+        if (!this.selectedTowerType) {
+            this.level.setPlacementPreview(0, 0, false);
+            return;
+        }
+        
+        const rect = this.stateManager.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        this.level.setPlacementPreview(x, y, true);
     }
     
     selectTower(btn) {
@@ -95,8 +116,20 @@ class GameplayState {
     handleClick(x, y) {
         if (!this.selectedTowerType) return;
         
-        if (this.towerManager.placeTower(this.selectedTowerType, x, y)) {
-            this.updateUI();
+        const { gridX, gridY } = this.level.screenToGrid(x, y);
+        
+        if (this.level.canPlaceTower(gridX, gridY)) {
+            const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
+            
+            if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
+                this.level.placeTower(gridX, gridY);
+                this.updateUI();
+                
+                // Clear selection after placing tower
+                this.selectedTowerType = null;
+                document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                this.level.setPlacementPreview(0, 0, false);
+            }
         }
     }
     
