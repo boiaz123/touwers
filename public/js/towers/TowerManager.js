@@ -4,9 +4,8 @@ import { ArcherTower } from './ArcherTower.js';
 import { MagicTower } from './MagicTower.js';
 
 export class TowerManager {
-    constructor(gameState, level) {
+    constructor(gameState) {
         this.gameState = gameState;
-        this.level = level; // Add level reference
         this.towers = [];
         this.towerTypes = {
             'basic': { class: BasicTower, cost: 50 },
@@ -16,26 +15,13 @@ export class TowerManager {
         };
     }
     
-    placeTower(type, x, y, ctx = null) {
+    placeTower(type, x, y) {
         const towerType = this.towerTypes[type];
-        if (!towerType || !this.level) return false;
-        
-        // Check if placement is valid using level's grid system
-        if (!this.level.canPlaceTower(x, y, ctx)) {
-            return false;
-        }
+        if (!towerType) return false;
         
         if (this.gameState.spend(towerType.cost)) {
-            // Get the proper grid-aligned position
-            const centerPos = this.level.getGridCenterPosition(x, y, ctx);
-            
-            // Create tower at grid-aligned position
-            const tower = new towerType.class(centerPos.x, centerPos.y);
+            const tower = new towerType.class(x, y);
             this.towers.push(tower);
-            
-            // Occupy the grid cells
-            this.level.occupyGridCell(x, y, ctx);
-            
             return true;
         }
         return false;
@@ -46,14 +32,7 @@ export class TowerManager {
     }
     
     render(ctx) {
-        console.log(`Rendering ${this.towers.length} towers`); // Debug log
-        this.towers.forEach((tower, index) => {
-            try {
-                tower.render(ctx);
-            } catch (error) {
-                console.error(`Error rendering tower ${index}:`, error);
-            }
-        });
+        this.towers.forEach(tower => tower.render(ctx));
     }
     
     getTowerInfo(type) {
