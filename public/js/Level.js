@@ -16,13 +16,15 @@ export class Level {
         ];
         this.isInitialized = false;
         
-        // Grass texture data - will be generated once
+        // Cached visual elements - will be generated once
         this.grassPatches = [];
         this.grassGenerated = false;
-        
-        // Path texture data - will be generated once
         this.pathTexture = [];
         this.pathTextureGenerated = false;
+        this.dirtPatches = [];
+        this.flowers = [];
+        this.pathLeaves = [];
+        this.visualElementsGenerated = false;
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {
@@ -45,6 +47,10 @@ export class Level {
         // Clear and recalculate occupied cells
         this.occupiedCells.clear();
         this.markPathCells();
+        
+        // Reset visual element generation flags to regenerate for new canvas size
+        this.visualElementsGenerated = false;
+        this.pathTextureGenerated = false;
         
         this.lastCanvasWidth = canvasWidth;
         this.lastCanvasHeight = canvasHeight;
@@ -154,29 +160,67 @@ export class Level {
         return { screenX, screenY };
     }
     
-    generateGrassTexture(canvasWidth, canvasHeight) {
-        if (this.grassGenerated) return;
+    generateAllVisualElements(canvasWidth, canvasHeight) {
+        if (this.visualElementsGenerated) return;
         
+        // Generate grass patches
         this.grassPatches = [];
-        const patchCount = Math.floor((canvasWidth * canvasHeight) / 2000); // Density based on area
-        
+        const patchCount = Math.floor((canvasWidth * canvasHeight) / 2000);
         for (let i = 0; i < patchCount; i++) {
             this.grassPatches.push({
                 x: Math.random() * canvasWidth,
                 y: Math.random() * canvasHeight,
                 size: Math.random() * 8 + 4,
-                shade: Math.random() * 0.3 + 0.7, // Variation in grass color
-                type: Math.floor(Math.random() * 3) // Different grass patch types
+                shade: Math.random() * 0.3 + 0.7,
+                type: Math.floor(Math.random() * 3)
             });
         }
         
-        this.grassGenerated = true;
+        // Generate dirt patches
+        this.dirtPatches = [];
+        for (let i = 0; i < 20; i++) {
+            this.dirtPatches.push({
+                x: Math.random() * canvasWidth,
+                y: Math.random() * canvasHeight,
+                sizeX: Math.random() * 80 + 40,
+                sizeY: (Math.random() * 80 + 40) * 0.6,
+                rotation: Math.random() * Math.PI
+            });
+        }
+        
+        // Generate flowers
+        this.flowers = [];
+        const flowerCount = Math.floor(canvasWidth * canvasHeight / 10000);
+        for (let i = 0; i < flowerCount; i++) {
+            const flowerType = Math.random();
+            this.flowers.push({
+                x: Math.random() * canvasWidth,
+                y: Math.random() * canvasHeight,
+                type: flowerType < 0.3 ? 'yellow' : (flowerType < 0.6 ? 'daisy' : 'purple'),
+                petals: flowerType >= 0.3 && flowerType < 0.6 ? this.generateDaisyPetals(Math.random() * canvasWidth, Math.random() * canvasHeight) : null
+            });
+        }
+        
+        this.visualElementsGenerated = true;
+    }
+    
+    generateDaisyPetals(centerX, centerY) {
+        const petals = [];
+        for (let petal = 0; petal < 6; petal++) {
+            const angle = (petal / 6) * Math.PI * 2;
+            petals.push({
+                x: centerX + Math.cos(angle) * 3,
+                y: centerY + Math.sin(angle) * 3
+            });
+        }
+        return petals;
     }
     
     generatePathTexture(canvasWidth, canvasHeight) {
         if (this.pathTextureGenerated) return;
         
         this.pathTexture = [];
+        this.pathLeaves = [];
         const pathWidth = Math.max(40, Math.min(80, this.cellSize * 3));
         
         // Generate texture elements along the path
@@ -184,7 +228,7 @@ export class Level {
             const start = this.path[i];
             const end = this.path[i + 1];
             const distance = Math.hypot(end.x - start.x, end.y - start.y);
-            const elements = Math.floor(distance / 5); // More dense texture
+            const elements = Math.floor(distance / 5);
             
             for (let j = 0; j < elements; j++) {
                 const t = j / elements;
@@ -200,22 +244,55 @@ export class Level {
                         x: baseX + offsetX,
                         y: baseY + offsetY,
                         size: Math.random() * 4 + 1,
-                        type: Math.floor(Math.random() * 4), // dirt, sand, wood chips, stones
+                        type: Math.floor(Math.random() * 4),
                         rotation: Math.random() * Math.PI * 2,
-                        shade: Math.random() * 0.4 + 0.6
+                        shade: Math.random() * 0.4 + 0.6,
+                        // Cache stone shape for type 3
+                        stoneShape: Math.floor(Math.random() * 4) === 3 ? this.generateStoneShape(Math.random() * 4 + 1) : null
                     });
                 }
             }
         }
         
+        // Generate path leaves
+        const leafCount = Math.floor(this.path.length * 2);
+        for (let i = 0; i < leafCount; i++) {
+            const pathIndex = Math.floor(Math.random() * (this.path.length - 1));
+            const t = Math.random();
+            const start = this.path[pathIndex];
+            const end = this.path[pathIndex + 1];
+            
+            this.pathLeaves.push({
+                x: start.x + (end.x - start.x) * t + (Math.random() - 0.5) * pathWidth * 0.6,
+                y: start.y + (end.y - start.y) * t + (Math.random() - 0.5) * pathWidth * 0.6,
+                size: Math.random() * 6 + 3,
+                rotation: Math.random() * Math.PI * 2,
+                color: Math.random() < 0.5 ? 'rgba(160, 82, 45, 0.6)' : 'rgba(139, 115, 85, 0.6)'
+            });
+        }
+        
         this.pathTextureGenerated = true;
+    }
+    
+    generateStoneShape(size) {
+        const sides = 5 + Math.floor(Math.random() * 3);
+        const points = [];
+        for (let i = 0; i < sides; i++) {
+            const angle = (i / sides) * Math.PI * 2;
+            const radius = size * (0.7 + Math.random() * 0.3);
+            points.push({
+                x: Math.cos(angle) * radius,
+                y: Math.sin(angle) * radius
+            });
+        }
+        return points;
     }
     
     renderGrassBackground(ctx) {
         const canvas = ctx.canvas;
         
-        // Generate grass if not done yet
-        this.generateGrassTexture(canvas.width, canvas.height);
+        // Generate all visual elements if not done yet
+        this.generateAllVisualElements(canvas.width, canvas.height);
         
         // Base grass color gradient
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -226,19 +303,19 @@ export class Level {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Add subtle dirt/earth patches
+        // Render cached dirt patches
         ctx.fillStyle = 'rgba(101, 67, 33, 0.15)';
-        for (let i = 0; i < 20; i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            const size = Math.random() * 80 + 40;
-            
+        this.dirtPatches.forEach(patch => {
+            ctx.save();
+            ctx.translate(patch.x, patch.y);
+            ctx.rotate(patch.rotation);
             ctx.beginPath();
-            ctx.ellipse(x, y, size, size * 0.6, Math.random() * Math.PI, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, patch.sizeX, patch.sizeY, 0, 0, Math.PI * 2);
             ctx.fill();
-        }
+            ctx.restore();
+        });
         
-        // Render individual grass patches for texture
+        // Render cached grass patches
         this.grassPatches.forEach(patch => {
             const alpha = patch.shade * 0.6;
             
@@ -254,8 +331,8 @@ export class Level {
                     ctx.strokeStyle = `rgba(50, 150, 50, ${alpha})`;
                     ctx.lineWidth = 1;
                     for (let j = 0; j < 3; j++) {
-                        const offsetX = (Math.random() - 0.5) * patch.size;
-                        const offsetY = (Math.random() - 0.5) * patch.size;
+                        const offsetX = (j - 1) * patch.size * 0.3;
+                        const offsetY = (j - 1) * patch.size * 0.2;
                         ctx.beginPath();
                         ctx.moveTo(patch.x + offsetX, patch.y + offsetY + patch.size * 0.5);
                         ctx.lineTo(patch.x + offsetX, patch.y + offsetY - patch.size * 0.5);
@@ -277,42 +354,39 @@ export class Level {
             }
         });
         
-        // Add some scattered flowers/weeds
-        for (let i = 0; i < Math.floor(canvas.width * canvas.height / 10000); i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            const flowerType = Math.random();
-            
-            if (flowerType < 0.3) {
-                // Small yellow flowers
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-                ctx.beginPath();
-                ctx.arc(x, y, 2, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (flowerType < 0.6) {
-                // White daisies
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                for (let petal = 0; petal < 6; petal++) {
-                    const angle = (petal / 6) * Math.PI * 2;
-                    const petalX = x + Math.cos(angle) * 3;
-                    const petalY = y + Math.sin(angle) * 3;
+        // Render cached flowers
+        this.flowers.forEach(flower => {
+            switch (flower.type) {
+                case 'yellow':
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
                     ctx.beginPath();
-                    ctx.arc(petalX, petalY, 1, 0, Math.PI * 2);
+                    ctx.arc(flower.x, flower.y, 2, 0, Math.PI * 2);
                     ctx.fill();
-                }
-                // Center
-                ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
-                ctx.beginPath();
-                ctx.arc(x, y, 1, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // Purple wildflowers
-                ctx.fillStyle = 'rgba(147, 112, 219, 0.6)';
-                ctx.beginPath();
-                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-                ctx.fill();
+                    break;
+                    
+                case 'daisy':
+                    // White petals
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    flower.petals.forEach(petal => {
+                        ctx.beginPath();
+                        ctx.arc(petal.x, petal.y, 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    // Yellow center
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(flower.x, flower.y, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 'purple':
+                    ctx.fillStyle = 'rgba(147, 112, 219, 0.6)';
+                    ctx.beginPath();
+                    ctx.arc(flower.x, flower.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
             }
-        }
+        });
     }
     
     renderPath(ctx) {
@@ -363,7 +437,7 @@ export class Level {
         }
         ctx.stroke();
         
-        // Render path texture elements
+        // Render cached path texture elements
         this.pathTexture.forEach(element => {
             ctx.save();
             ctx.translate(element.x, element.y);
@@ -400,68 +474,52 @@ export class Level {
                     
                 case 3: // Small stones
                     ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`;
-                    ctx.beginPath();
-                    // Create irregular stone shape
-                    const sides = 5 + Math.floor(Math.random() * 3);
-                    for (let i = 0; i < sides; i++) {
-                        const angle = (i / sides) * Math.PI * 2;
-                        const radius = element.size * (0.7 + Math.random() * 0.3);
-                        const x = Math.cos(angle) * radius;
-                        const y = Math.sin(angle) * radius;
-                        if (i === 0) {
-                            ctx.moveTo(x, y);
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
+                    if (element.stoneShape) {
+                        ctx.beginPath();
+                        element.stoneShape.forEach((point, index) => {
+                            if (index === 0) {
+                                ctx.moveTo(point.x, point.y);
+                            } else {
+                                ctx.lineTo(point.x, point.y);
+                            }
+                        });
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        // Stone highlight
+                        ctx.fillStyle = `rgba(160, 160, 160, ${alpha * 0.5})`;
+                        ctx.beginPath();
+                        ctx.arc(-element.size * 0.3, -element.size * 0.3, element.size * 0.3, 0, Math.PI * 2);
+                        ctx.fill();
                     }
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Stone highlight
-                    ctx.fillStyle = `rgba(160, 160, 160, ${alpha * 0.5})`;
-                    ctx.beginPath();
-                    ctx.arc(-element.size * 0.3, -element.size * 0.3, element.size * 0.3, 0, Math.PI * 2);
-                    ctx.fill();
                     break;
             }
             
             ctx.restore();
         });
         
-        // Add some scattered leaves on the path
-        const leafCount = Math.floor(this.path.length * 2);
-        for (let i = 0; i < leafCount; i++) {
-            const pathIndex = Math.floor(Math.random() * (this.path.length - 1));
-            const t = Math.random();
-            const start = this.path[pathIndex];
-            const end = this.path[pathIndex + 1];
-            
-            const leafX = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * pathWidth * 0.6;
-            const leafY = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * pathWidth * 0.6;
-            
+        // Render cached path leaves
+        this.pathLeaves.forEach(leaf => {
             ctx.save();
-            ctx.translate(leafX, leafY);
-            ctx.rotate(Math.random() * Math.PI * 2);
+            ctx.translate(leaf.x, leaf.y);
+            ctx.rotate(leaf.rotation);
             
-            // Draw simple leaf shape
-            const leafSize = Math.random() * 6 + 3;
-            const leafColor = Math.random() < 0.5 ? 'rgba(160, 82, 45, 0.6)' : 'rgba(139, 115, 85, 0.6)';
-            
-            ctx.fillStyle = leafColor;
+            // Draw leaf
+            ctx.fillStyle = leaf.color;
             ctx.beginPath();
-            ctx.ellipse(0, 0, leafSize, leafSize * 0.6, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, leaf.size, leaf.size * 0.6, 0, 0, Math.PI * 2);
             ctx.fill();
             
             // Leaf vein
             ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(0, -leafSize * 0.6);
-            ctx.lineTo(0, leafSize * 0.6);
+            ctx.moveTo(0, -leaf.size * 0.6);
+            ctx.lineTo(0, leaf.size * 0.6);
             ctx.stroke();
             
             ctx.restore();
-        }
+        });
     }
     
     render(ctx) {
