@@ -1,7 +1,9 @@
 export class CannonTower {
-    constructor(x, y) {
+    constructor(x, y, gridX, gridY) {
         this.x = x;
         this.y = y;
+        this.gridX = gridX;
+        this.gridY = gridY;
         this.range = 100;
         this.damage = 50;
         this.fireRate = 0.5; // shots per second
@@ -42,20 +44,25 @@ export class CannonTower {
     }
     
     render(ctx) {
+        // Auto-scale tower size based on screen resolution
+        const baseSize = Math.max(12, Math.min(28, ctx.canvas.width / 70));
+        
         // Tower base
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 18, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Cannon barrel
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(this.x - 3, this.y - 12, 6, 20);
+        const barrelWidth = baseSize * 0.33;
+        const barrelHeight = baseSize * 1.33;
+        ctx.fillRect(this.x - barrelWidth/2, this.y - barrelHeight*0.67, barrelWidth, barrelHeight);
         
         // Tower top
         ctx.fillStyle = '#654321';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize * 0.67, 0, Math.PI * 2);
         ctx.fill();
         
         // Range indicator

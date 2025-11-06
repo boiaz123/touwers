@@ -1,12 +1,16 @@
 export class BasicTower {
-    constructor(x, y) {
+    constructor(x, y, gridX, gridY) {
         this.x = x;
         this.y = y;
+        this.gridX = gridX;
+        this.gridY = gridY;
         this.range = 120;
         this.damage = 20;
-        this.fireRate = 1; // shots per second
+        this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
+        // Scale tower size based on grid
+        this.size = 15;
     }
     
     update(deltaTime, enemies) {
@@ -42,16 +46,19 @@ export class BasicTower {
     }
     
     render(ctx) {
+        // Auto-scale tower size based on screen resolution
+        const baseSize = Math.max(10, Math.min(25, ctx.canvas.width / 80));
+        
         // Tower base
         ctx.fillStyle = '#4CAF50';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Tower top
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize * 0.67, 0, Math.PI * 2);
         ctx.fill();
         
         // Range indicator (when selected or debugging)

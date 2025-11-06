@@ -1,10 +1,12 @@
 export class MagicTower {
-    constructor(x, y) {
+    constructor(x, y, gridX, gridY) {
         this.x = x;
         this.y = y;
+        this.gridX = gridX;
+        this.gridY = gridY;
         this.range = 110;
         this.damage = 30;
-        this.fireRate = 0.8; // shots per second
+        this.fireRate = 0.8;
         this.cooldown = 0;
         this.target = null;
         this.animationTime = 0;
@@ -48,28 +50,32 @@ export class MagicTower {
     }
     
     render(ctx) {
+        // Auto-scale tower size based on screen resolution
+        const baseSize = Math.max(12, Math.min(26, ctx.canvas.width / 75));
+        
         // Tower base
         ctx.fillStyle = '#4B0082';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 16, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic crystal (animated)
         const pulse = 0.8 + 0.2 * Math.sin(this.animationTime * 4);
         ctx.fillStyle = `rgba(138, 43, 226, ${pulse})`;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
         // Magic sparkles
         for (let i = 0; i < 4; i++) {
             const angle = (this.animationTime * 2 + i * Math.PI / 2) % (Math.PI * 2);
-            const sparkleX = this.x + Math.cos(angle) * 12;
-            const sparkleY = this.y + Math.sin(angle) * 12;
+            const sparkleDistance = baseSize * 0.75;
+            const sparkleX = this.x + Math.cos(angle) * sparkleDistance;
+            const sparkleY = this.y + Math.sin(angle) * sparkleDistance;
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.beginPath();
-            ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+            ctx.arc(sparkleX, sparkleY, Math.max(1, baseSize * 0.125), 0, Math.PI * 2);
             ctx.fill();
         }
         
