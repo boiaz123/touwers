@@ -16,6 +16,9 @@ export class CannonTower {
         this.explosions = [];
         this.cannonballs = [];
         this.animationTime = 0;
+        
+        // Fixed random seed for consistent texture
+        this.randomSeed = Math.random() * 1000;
     }
     
     update(deltaTime, enemies) {
@@ -101,6 +104,12 @@ export class CannonTower {
         }
     }
     
+    // Seeded random function for consistent textures
+    seededRandom(seed) {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    }
+    
     render(ctx) {
         // Calculate tower size based on grid cell size (2x2 cells)
         const baseResolution = 1920;
@@ -108,174 +117,178 @@ export class CannonTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // 3D fortress shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(this.x - towerSize * 0.45 + 4, this.y - towerSize * 0.45 + 4, towerSize * 0.9, towerSize * 0.9);
+        // 3D fortress shadow (improved)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(this.x - towerSize * 0.45 + 5, this.y - towerSize * 0.2 + 5, towerSize * 0.9, towerSize * 0.6);
         
-        // Main fortress base (irregular stone structure)
+        // Main fortress base (taller and more imposing)
         const baseSize = towerSize * 0.9;
+        const fortressHeight = towerSize * 0.3;
         
-        // Stone foundation with 3D effect
+        // Fortress foundation with improved 3D effect
         const stoneGradient = ctx.createLinearGradient(
-            this.x - baseSize/2, this.y - baseSize/2,
-            this.x + baseSize/4, this.y + baseSize/4
+            this.x - baseSize/2, this.y - fortressHeight,
+            this.x + baseSize/3, this.y
         );
-        stoneGradient.addColorStop(0, '#708090');
-        stoneGradient.addColorStop(0.5, '#5A5A5A');
+        stoneGradient.addColorStop(0, '#8A8A8A');
+        stoneGradient.addColorStop(0.3, '#696969');
+        stoneGradient.addColorStop(0.7, '#5A5A5A');
         stoneGradient.addColorStop(1, '#2F2F2F');
         
         ctx.fillStyle = stoneGradient;
-        ctx.strokeStyle = '#2F2F2F';
+        ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
         
-        // Draw irregular fortress outline
-        ctx.beginPath();
-        const corners = [
-            {x: -baseSize * 0.45, y: -baseSize * 0.45},
-            {x: baseSize * 0.45, y: -baseSize * 0.4},
-            {x: baseSize * 0.4, y: baseSize * 0.45},
-            {x: -baseSize * 0.4, y: baseSize * 0.45}
-        ];
+        // Draw fortress walls with perspective
+        ctx.fillRect(this.x - baseSize/2, this.y - fortressHeight, baseSize, fortressHeight);
+        ctx.strokeRect(this.x - baseSize/2, this.y - fortressHeight, baseSize, fortressHeight);
         
-        ctx.moveTo(this.x + corners[0].x, this.y + corners[0].y);
-        corners.forEach((corner, index) => {
-            // Add some irregularity to make it look more natural
-            const variance = 3;
-            const x = this.x + corner.x + (Math.random() - 0.5) * variance;
-            const y = this.y + corner.y + (Math.random() - 0.5) * variance;
-            ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Stone blocks texture
-        ctx.strokeStyle = '#3E3E3E';
+        // Fixed stone blocks texture (no flickering)
+        ctx.strokeStyle = '#3A3A3A';
         ctx.lineWidth = 1;
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-                const blockX = this.x - baseSize/2 + (i + 0.5) * baseSize/4;
-                const blockY = this.y - baseSize/2 + (j + 0.5) * baseSize/4;
-                const blockSize = baseSize/5;
+        for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 3; j++) {
+                const blockX = this.x - baseSize/2 + (i + 0.5) * baseSize/5;
+                const blockY = this.y - fortressHeight + (j + 0.5) * fortressHeight/3;
+                const blockSize = baseSize/6;
                 
-                // Irregular stone blocks
+                // Use seeded random for consistent positioning
+                const offsetX = (this.seededRandom(this.randomSeed + i * 7 + j * 13) - 0.5) * 2;
+                const offsetY = (this.seededRandom(this.randomSeed + i * 11 + j * 17) - 0.5) * 2;
+                const sizeVariance = this.seededRandom(this.randomSeed + i * 19 + j * 23) * 4 - 2;
+                
                 ctx.strokeRect(
-                    blockX - blockSize/2 + Math.random() * 2 - 1,
-                    blockY - blockSize/2 + Math.random() * 2 - 1,
-                    blockSize + Math.random() * 4 - 2,
-                    blockSize + Math.random() * 4 - 2
+                    blockX - blockSize/2 + offsetX,
+                    blockY - blockSize/2 + offsetY,
+                    blockSize + sizeVariance,
+                    blockSize * 0.7 + sizeVariance * 0.5
                 );
             }
         }
         
-        // Corner towers with 3D effect
-        const cornerSize = baseSize * 0.12;
-        const offset = baseSize * 0.32;
+        // Corner towers with improved 3D effect and height
+        const cornerSize = baseSize * 0.15;
+        const cornerHeight = fortressHeight * 1.5;
+        const offset = baseSize * 0.35;
         const corners3D = [
-            {x: this.x - offset, y: this.y - offset},
-            {x: this.x + offset, y: this.y - offset},
-            {x: this.x - offset, y: this.y + offset},
-            {x: this.x + offset, y: this.y + offset}
+            {x: this.x - offset, y: this.y - fortressHeight},
+            {x: this.x + offset, y: this.y - fortressHeight},
+            {x: this.x - offset, y: this.y},
+            {x: this.x + offset, y: this.y}
         ];
         
-        corners3D.forEach(corner => {
-            // Tower shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.beginPath();
-            ctx.arc(corner.x + 2, corner.y + 2, cornerSize + 2, 0, Math.PI * 2);
-            ctx.fill();
+        corners3D.forEach((corner, index) => {
+            // Tower shadow with proper depth
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(corner.x - cornerSize + 3, corner.y - cornerHeight + 3, cornerSize * 2, cornerHeight);
             
-            // Tower gradient
-            const towerGradient = ctx.createRadialGradient(
-                corner.x - 2, corner.y - 2, 0,
-                corner.x, corner.y, cornerSize
+            // Tower gradient with height
+            const towerGradient = ctx.createLinearGradient(
+                corner.x - cornerSize, corner.y - cornerHeight,
+                corner.x + cornerSize, corner.y
             );
-            towerGradient.addColorStop(0, '#8B7355');
-            towerGradient.addColorStop(1, '#5D4E37');
+            towerGradient.addColorStop(0, '#A0A0A0');
+            towerGradient.addColorStop(0.3, '#8B7355');
+            towerGradient.addColorStop(0.7, '#696969');
+            towerGradient.addColorStop(1, '#4A4A4A');
             
             ctx.fillStyle = towerGradient;
-            ctx.strokeStyle = '#3E2723';
+            ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(corner.x, corner.y, cornerSize, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+            ctx.fillRect(corner.x - cornerSize, corner.y - cornerHeight, cornerSize * 2, cornerHeight);
+            ctx.strokeRect(corner.x - cornerSize, corner.y - cornerHeight, cornerSize * 2, cornerHeight);
             
-            // Tower top crenellations
-            ctx.fillStyle = '#A0522D';
-            for (let i = 0; i < 6; i++) {
-                const angle = (i / 6) * Math.PI * 2;
-                const merlonX = corner.x + Math.cos(angle) * (cornerSize - 1);
-                const merlonY = corner.y + Math.sin(angle) * (cornerSize - 1);
-                
+            // Tower crenellations at top
+            ctx.fillStyle = '#8A8A8A';
+            for (let i = 0; i < 4; i++) {
                 if (i % 2 === 0) {
-                    ctx.fillRect(merlonX - 1.5, merlonY - 3, 3, 3);
+                    const merlonX = corner.x - cornerSize + (i * cornerSize/2);
+                    const merlonY = corner.y - cornerHeight;
+                    ctx.fillRect(merlonX, merlonY - 8, cornerSize/2, 8);
+                    ctx.strokeRect(merlonX, merlonY - 8, cornerSize/2, 8);
                 }
+            }
+            
+            // Arrow slits
+            ctx.fillStyle = '#000000';
+            for (let slit = 0; slit < 2; slit++) {
+                const slitY = corner.y - cornerHeight + (slit + 1) * cornerHeight/3;
+                ctx.fillRect(corner.x - 2, slitY - 6, 4, 12);
             }
         });
         
-        // Central cannon platform (circular with 3D depth)
-        const radius = towerSize * 0.25;
+        // Central cannon platform with increased height
+        const radius = towerSize * 0.22;
+        const platformHeight = fortressHeight * 0.3;
+        const platformY = this.y - fortressHeight - platformHeight;
         
-        // Platform shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        // Platform shadow with depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.beginPath();
-        ctx.arc(this.x + 2, this.y + 2, radius + 2, 0, Math.PI * 2);
+        ctx.arc(this.x + 3, platformY + 3, radius + 3, 0, Math.PI * 2);
         ctx.fill();
         
-        // Platform with stone texture
+        // Platform with stone texture and height
         const platformGradient = ctx.createRadialGradient(
-            this.x - radius * 0.3, this.y - radius * 0.3, 0,
-            this.x, this.y, radius
+            this.x - radius * 0.4, platformY - radius * 0.4, 0,
+            this.x, platformY, radius
         );
-        platformGradient.addColorStop(0, '#A9A9A9');
-        platformGradient.addColorStop(0.7, '#696969');
+        platformGradient.addColorStop(0, '#B8B8B8');
+        platformGradient.addColorStop(0.5, '#8A8A8A');
+        platformGradient.addColorStop(0.8, '#696969');
         platformGradient.addColorStop(1, '#2F2F2F');
         
         ctx.fillStyle = platformGradient;
         ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+        ctx.arc(this.x, platformY, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
+        // Platform side wall (3D cylinder effect)
+        ctx.fillStyle = '#696969';
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 2;
+        ctx.fillRect(this.x - radius, platformY, radius * 2, platformHeight);
+        ctx.strokeRect(this.x - radius, platformY, radius * 2, platformHeight);
+        
         // Platform reinforcement rings
-        ctx.strokeStyle = '#3E2723';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#4A4A4A';
+        ctx.lineWidth = 2;
         for (let i = 1; i <= 2; i++) {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, radius * (0.3 + i * 0.25), 0, Math.PI * 2);
+            ctx.arc(this.x, platformY, radius * (0.4 + i * 0.25), 0, Math.PI * 2);
             ctx.stroke();
         }
         
-        // Rotating cannon assembly
+        // Rotating cannon assembly (positioned on elevated platform)
         ctx.save();
-        ctx.translate(this.x, this.y);
+        ctx.translate(this.x, platformY);
         ctx.rotate(this.cannonAngle);
         
-        // Cannon mount (with recoil)
-        ctx.fillStyle = '#2F2F2F';
+        // Cannon mount (with recoil and improved design)
+        ctx.fillStyle = '#3A3A3A';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
-        const mountRadius = radius * 0.4;
+        const mountRadius = radius * 0.5;
         ctx.beginPath();
         ctx.arc(-this.recoilOffset, 0, mountRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         
-        // Heavy cannon barrel
-        const barrelLength = radius * 1.2;
-        const barrelWidth = radius * 0.25;
-        ctx.fillStyle = '#2F2F2F';
+        // Heavy cannon barrel with improved proportions
+        const barrelLength = radius * 1.4;
+        const barrelWidth = radius * 0.3;
+        ctx.fillStyle = '#2A2A2A';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
         ctx.fillRect(-this.recoilOffset, -barrelWidth/2, barrelLength, barrelWidth);
         ctx.strokeRect(-this.recoilOffset, -barrelWidth/2, barrelLength, barrelWidth);
         
-        // Barrel reinforcement bands
-        ctx.strokeStyle = '#555555';
-        ctx.lineWidth = 3;
+        // Barrel reinforcement bands (fixed positions)
+        ctx.strokeStyle = '#606060';
+        ctx.lineWidth = 4;
         for (let i = 1; i <= 3; i++) {
             const bandX = -this.recoilOffset + (barrelLength * i / 4);
             ctx.beginPath();
@@ -284,29 +297,51 @@ export class CannonTower {
             ctx.stroke();
         }
         
-        // Cannon wheels
-        const wheelRadius = mountRadius * 0.6;
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#5D4E37';
+        // Cannon muzzle
+        ctx.fillStyle = '#1A1A1A';
+        ctx.beginPath();
+        ctx.arc(-this.recoilOffset + barrelLength, 0, barrelWidth/3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Cannon wheels (improved 3D effect)
+        const wheelRadius = mountRadius * 0.7;
+        ctx.fillStyle = '#654321';
+        ctx.strokeStyle = '#3E2723';
         ctx.lineWidth = 2;
         
-        [-wheelRadius * 1.5, wheelRadius * 1.5].forEach(wheelY => {
+        [-wheelRadius * 1.2, wheelRadius * 1.2].forEach(wheelY => {
+            // Wheel shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
-            ctx.arc(-this.recoilOffset - mountRadius * 0.8, wheelY, wheelRadius, 0, Math.PI * 2);
+            ctx.arc(-this.recoilOffset - mountRadius * 0.9 + 1, wheelY + 1, wheelRadius + 1, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Wheel body
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.arc(-this.recoilOffset - mountRadius * 0.9, wheelY, wheelRadius, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             
-            // Wheel spokes
-            for (let spoke = 0; spoke < 6; spoke++) {
-                const spokeAngle = (spoke / 6) * Math.PI * 2;
+            // Wheel spokes (fixed positions)
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 3;
+            for (let spoke = 0; spoke < 8; spoke++) {
+                const spokeAngle = (spoke / 8) * Math.PI * 2;
                 ctx.beginPath();
-                ctx.moveTo(-this.recoilOffset - mountRadius * 0.8, wheelY);
+                ctx.moveTo(-this.recoilOffset - mountRadius * 0.9, wheelY);
                 ctx.lineTo(
-                    -this.recoilOffset - mountRadius * 0.8 + Math.cos(spokeAngle) * wheelRadius * 0.8,
+                    -this.recoilOffset - mountRadius * 0.9 + Math.cos(spokeAngle) * wheelRadius * 0.8,
                     wheelY + Math.sin(spokeAngle) * wheelRadius * 0.8
                 );
                 ctx.stroke();
             }
+            
+            // Wheel hub
+            ctx.fillStyle = '#2F2F2F';
+            ctx.beginPath();
+            ctx.arc(-this.recoilOffset - mountRadius * 0.9, wheelY, wheelRadius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
         });
         
         ctx.restore();

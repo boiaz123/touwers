@@ -109,197 +109,230 @@ export class ArcherTower {
         
         // 3D shadow for entire structure
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(this.x - towerSize * 0.4 + 3, this.y - towerSize * 0.4 + 3, towerSize * 0.8, towerSize * 0.8);
+        ctx.fillRect(this.x - towerSize * 0.3 + 4, this.y - towerSize * 0.1 + 4, towerSize * 0.6, towerSize * 0.8);
         
-        // Wooden platform base with 3D perspective
-        const baseSize = towerSize * 0.85;
+        // Wooden watchtower base (square foundation)
+        const baseWidth = towerSize * 0.6;
+        const baseHeight = towerSize * 0.15;
         
-        // Platform planks with 3D shading
-        const woodGradient = ctx.createLinearGradient(
-            this.x - baseSize/2, this.y - baseSize/2,
-            this.x + baseSize/4, this.y + baseSize/4
-        );
-        woodGradient.addColorStop(0, '#DEB887');
-        woodGradient.addColorStop(0.5, '#CD853F');
-        woodGradient.addColorStop(1, '#8B7355');
-        
-        ctx.fillStyle = woodGradient;
-        ctx.strokeStyle = '#654321';
+        // Foundation stones
+        ctx.fillStyle = '#696969';
+        ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
+        ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight * 2);
+        ctx.strokeRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight * 2);
         
-        // Draw wooden platform as hexagon for more natural look
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const x = this.x + Math.cos(angle) * baseSize * 0.4;
-            const y = this.y + Math.sin(angle) * baseSize * 0.4;
-            
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Wood planks detail
-        ctx.strokeStyle = '#A0522D';
+        // Stone texture
+        ctx.strokeStyle = '#555555';
         ctx.lineWidth = 1;
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const innerRadius = baseSize * 0.15;
-            const outerRadius = baseSize * 0.38;
-            
-            ctx.beginPath();
-            ctx.moveTo(this.x + Math.cos(angle) * innerRadius, this.y + Math.sin(angle) * innerRadius);
-            ctx.lineTo(this.x + Math.cos(angle) * outerRadius, this.y + Math.sin(angle) * outerRadius);
-            ctx.stroke();
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 2; j++) {
+                const stoneX = this.x - baseWidth/2 + (i + 0.5) * baseWidth/3;
+                const stoneY = this.y - baseHeight + (j + 0.5) * baseHeight;
+                ctx.strokeRect(stoneX - baseWidth/8, stoneY - baseHeight/3, baseWidth/4, baseHeight/1.5);
+            }
         }
         
-        // Support posts with 3D effect
-        const pillarSize = baseSize * 0.06;
-        const pillarOffset = baseSize * 0.3;
-        const pillars = [
-            {x: this.x - pillarOffset, y: this.y - pillarOffset},
-            {x: this.x + pillarOffset, y: this.y - pillarOffset},
-            {x: this.x - pillarOffset, y: this.y + pillarOffset},
-            {x: this.x + pillarOffset, y: this.y + pillarOffset}
-        ];
+        // Main wooden tower structure (tall and narrow)
+        const towerWidth = baseWidth * 0.8;
+        const towerHeight = towerSize * 0.7;
         
-        pillars.forEach(pillar => {
-            // Pillar shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-            ctx.fillRect(pillar.x - pillarSize + 1, pillar.y - pillarSize + 1, pillarSize * 2, pillarSize * 3);
-            
-            // Pillar with wood gradient
-            const pillarGradient = ctx.createLinearGradient(
-                pillar.x - pillarSize, pillar.y - pillarSize,
-                pillar.x + pillarSize, pillar.y + pillarSize
-            );
-            pillarGradient.addColorStop(0, '#CD853F');
-            pillarGradient.addColorStop(1, '#8B7355');
-            
-            ctx.fillStyle = pillarGradient;
-            ctx.strokeStyle = '#5D4E37';
-            ctx.lineWidth = 1;
-            ctx.fillRect(pillar.x - pillarSize, pillar.y - pillarSize, pillarSize * 2, pillarSize * 3);
-            ctx.strokeRect(pillar.x - pillarSize, pillar.y - pillarSize, pillarSize * 2, pillarSize * 3);
-        });
-        
-        // Central watchtower with conical shape for 3D effect
-        const towerRadius = towerSize * 0.2;
-        const towerHeight = towerSize * 0.3;
-        
-        // Tower body gradient (cylindrical 3D effect)
-        const towerGradient = ctx.createRadialGradient(
-            this.x - towerRadius * 0.3, this.y - towerHeight - towerRadius * 0.3, 0,
-            this.x, this.y - towerHeight, towerRadius
+        // Tower gradient (vertical wood planks)
+        const towerGradient = ctx.createLinearGradient(
+            this.x - towerWidth/2, this.y - towerHeight,
+            this.x + towerWidth/4, this.y
         );
-        towerGradient.addColorStop(0, '#F5DEB3');
-        towerGradient.addColorStop(0.7, '#DEB887');
-        towerGradient.addColorStop(1, '#CD853F');
+        towerGradient.addColorStop(0, '#DEB887');
+        towerGradient.addColorStop(0.5, '#CD853F');
+        towerGradient.addColorStop(1, '#8B7355');
         
         ctx.fillStyle = towerGradient;
-        ctx.strokeStyle = '#8B7355';
+        ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight, towerRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
+        ctx.strokeRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
         
-        // Wooden bands around tower
+        // Vertical wood planks
         ctx.strokeStyle = '#8B7355';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 3; i++) {
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const plankX = this.x - towerWidth/2 + (towerWidth * i / 4);
             ctx.beginPath();
-            ctx.arc(this.x, this.y - towerHeight + (towerRadius * 2 * i / 3) - towerRadius, towerRadius - 1, 0, Math.PI * 2);
+            ctx.moveTo(plankX, this.y - towerHeight);
+            ctx.lineTo(plankX, this.y);
             ctx.stroke();
         }
         
-        // Conical roof with 3D shading
-        const roofGradient = ctx.createLinearGradient(
-            this.x - towerRadius, this.y - towerHeight - towerRadius,
-            this.x + towerRadius * 0.3, this.y - towerHeight - towerRadius * 0.3
-        );
-        roofGradient.addColorStop(0, '#8B4513');
-        roofGradient.addColorStop(0.6, '#A0522D');
-        roofGradient.addColorStop(1, '#654321');
-        
-        ctx.fillStyle = roofGradient;
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y - towerHeight - towerRadius * 1.2);
-        ctx.lineTo(this.x - towerRadius * 0.9, this.y - towerHeight + towerRadius * 0.2);
-        ctx.lineTo(this.x + towerRadius * 0.9, this.y - towerHeight + towerRadius * 0.2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Archer windows with depth
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * towerRadius * 0.8;
-            const windowY = this.y - towerHeight + Math.sin(angle) * towerRadius * 0.8;
-            
-            // Window recess (3D depth)
-            ctx.fillStyle = '#2F2F2F';
-            ctx.fillRect(windowX - 4, windowY - 8, 8, 16);
-            
-            // Window frame
-            ctx.strokeStyle = '#8B7355';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(windowX - 4, windowY - 8, 8, 16);
-            
-            // Window cross
-            ctx.beginPath();
-            ctx.moveTo(windowX, windowY - 8);
-            ctx.lineTo(windowX, windowY + 8);
-            ctx.moveTo(windowX - 4, windowY);
-            ctx.lineTo(windowX + 4, windowY);
-            ctx.stroke();
-        }
-        
-        // Render archers
-        this.archers.forEach((archer, index) => {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            
-            const archerRadius = towerRadius * 0.7;
-            const archerX = Math.cos(archer.angle) * archerRadius;
-            const archerY = Math.sin(archer.angle) * archerRadius;
-            
-            ctx.translate(archerX, archerY);
-            ctx.rotate(archer.angle);
-            
-            // Archer body
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-3, -2, 6, 4);
-            
-            // Bow
-            const bowExtension = 8 + archer.drawback * 5;
+        // Horizontal support beams
+        for (let i = 1; i <= 3; i++) {
+            const beamY = this.y - towerHeight + (towerHeight * i / 4);
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(bowExtension, 0, 6, -0.8, 0.8);
+            ctx.moveTo(this.x - towerWidth/2, beamY);
+            ctx.lineTo(this.x + towerWidth/2, beamY);
             ctx.stroke();
+        }
+        
+        // Watchtower platform at top
+        const platformWidth = towerWidth * 1.2;
+        const platformThickness = towerSize * 0.08;
+        const platformY = this.y - towerHeight;
+        
+        // Platform shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(this.x - platformWidth/2 + 2, platformY - platformThickness + 2, platformWidth, platformThickness);
+        
+        // Platform
+        const platformGradient = ctx.createLinearGradient(
+            this.x - platformWidth/2, platformY - platformThickness,
+            this.x + platformWidth/4, platformY
+        );
+        platformGradient.addColorStop(0, '#CD853F');
+        platformGradient.addColorStop(1, '#8B7355');
+        
+        ctx.fillStyle = platformGradient;
+        ctx.strokeStyle = '#5D4E37';
+        ctx.lineWidth = 2;
+        ctx.fillRect(this.x - platformWidth/2, platformY - platformThickness, platformWidth, platformThickness);
+        ctx.strokeRect(this.x - platformWidth/2, platformY - platformThickness, platformWidth, platformThickness);
+        
+        // Platform support brackets
+        const bracketWidth = towerSize * 0.1;
+        for (let side = -1; side <= 1; side += 2) {
+            const bracketX = this.x + side * towerWidth/2;
+            ctx.fillStyle = '#654321';
+            ctx.beginPath();
+            ctx.moveTo(bracketX, platformY - platformThickness);
+            ctx.lineTo(bracketX + side * bracketWidth, platformY - platformThickness - bracketWidth);
+            ctx.lineTo(bracketX + side * bracketWidth, platformY);
+            ctx.lineTo(bracketX, platformY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        // Wooden railings with arrow slits
+        const railingHeight = towerSize * 0.15;
+        ctx.fillStyle = '#A0522D';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        
+        // Front and back railings
+        for (let side = -1; side <= 1; side += 2) {
+            const railingY = platformY - platformThickness - railingHeight;
+            ctx.fillRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
+            ctx.strokeRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
             
-            // Bowstring
-            if (archer.drawback > 0) {
-                ctx.strokeStyle = '#F5F5DC';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(bowExtension + 4, -5);
-                ctx.lineTo(bowExtension - archer.drawback * 5, 0);
-                ctx.lineTo(bowExtension + 4, 5);
-                ctx.stroke();
+            // Arrow slits
+            for (let i = 0; i < 3; i++) {
+                const slitX = this.x - platformWidth/2 + (i + 1) * platformWidth/4;
+                const slitWidth = platformWidth * 0.03;
+                const slitHeight = railingHeight * 0.6;
+                ctx.fillStyle = '#2F2F2F';
+                ctx.fillRect(slitX - slitWidth/2, railingY + railingHeight * 0.2, slitWidth, slitHeight);
+            }
+        }
+        
+        // Corner posts
+        const postSize = towerSize * 0.05;
+        ctx.fillStyle = '#654321';
+        for (let x = -1; x <= 1; x += 2) {
+            for (let z = -1; z <= 1; z += 2) {
+                const postX = this.x + x * platformWidth/2;
+                const postZ = platformY - platformThickness - railingHeight;
+                ctx.fillRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
+                ctx.strokeRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
+            }
+        }
+        
+        // Peaked roof
+        const roofHeight = towerSize * 0.2;
+        const roofY = platformY - platformThickness - railingHeight;
+        
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x, roofY - roofHeight);
+        ctx.lineTo(this.x - platformWidth/2 - postSize, roofY);
+        ctx.lineTo(this.x + platformWidth/2 + postSize, roofY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Roof tiles
+        ctx.strokeStyle = '#5D4E37';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const tileY = roofY - roofHeight * (i / 4);
+            const tileWidth = platformWidth * (1 - i / 8);
+            ctx.beginPath();
+            ctx.moveTo(this.x - tileWidth/2, tileY);
+            ctx.lineTo(this.x + tileWidth/2, tileY);
+            ctx.stroke();
+        }
+        
+        // Render archers on platform
+        this.archers.forEach((archer, index) => {
+            ctx.save();
+            
+            const archerPositions = [
+                { x: this.x - platformWidth * 0.3, y: platformY - platformThickness - railingHeight/2 },
+                { x: this.x + platformWidth * 0.3, y: platformY - platformThickness - railingHeight/2 },
+                { x: this.x - platformWidth * 0.1, y: platformY - platformThickness - railingHeight/2 },
+                { x: this.x + platformWidth * 0.1, y: platformY - platformThickness - railingHeight/2 }
+            ];
+            
+            const pos = archerPositions[index];
+            ctx.translate(pos.x, pos.y);
+            
+            // Archer body
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-2, -4, 4, 8);
+            
+            // Archer head
+            ctx.fillStyle = '#DDBEA9';
+            ctx.beginPath();
+            ctx.arc(0, -6, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Archer helmet
+            ctx.fillStyle = '#696969';
+            ctx.beginPath();
+            ctx.arc(0, -6, 2.5, Math.PI, Math.PI * 2);
+            ctx.fill();
+            
+            // Bow and aiming
+            if (this.target) {
+                const aimAngle = Math.atan2(this.target.y - pos.y, this.target.x - pos.x);
+                ctx.rotate(aimAngle);
                 
-                // Arrow being drawn
-                ctx.strokeStyle = '#8B4513';
+                // Bow
+                ctx.strokeStyle = '#654321';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo(bowExtension - archer.drawback * 5, 0);
-                ctx.lineTo(bowExtension - archer.drawback * 5 - 10, 0);
+                ctx.arc(6, 0, 4, -0.6, 0.6);
                 ctx.stroke();
+                
+                // Draw string if preparing to shoot
+                if (archer.drawback > 0) {
+                    ctx.strokeStyle = '#F5F5DC';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(6 + 3, -3);
+                    ctx.lineTo(6 - archer.drawback * 3, 0);
+                    ctx.lineTo(6 + 3, 3);
+                    ctx.stroke();
+                    
+                    // Arrow
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(6 - archer.drawback * 3, 0);
+                    ctx.lineTo(6 - archer.drawback * 3 - 8, 0);
+                    ctx.stroke();
+                }
             }
             
             ctx.restore();
@@ -345,7 +378,7 @@ export class ArcherTower {
         
         // Range indicator
         if (this.target) {
-            ctx.strokeStyle = 'rgba(222, 184, 135, 0.2)';
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
