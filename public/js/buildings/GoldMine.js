@@ -801,106 +801,194 @@ export class GoldMine extends Building {
     }
     
     renderExcavatedGround(ctx, size) {
-        // Render flat excavated forest floor that stays within 4x4 grid
+        // Render natural forest floor that blends excavated and grassy areas
         const maxArea = size * 0.45; // Keep within the 4x4 grid boundaries
         
-        // Base excavated ground - rectangular to fit grid
-        const groundGradient = ctx.createRadialGradient(
+        // Base forest floor - natural green-brown blend
+        const baseGradient = ctx.createRadialGradient(
             this.x, this.y, 0,
-            this.x, this.y, maxArea
+            this.x, this.y, maxArea * 1.2
         );
-        groundGradient.addColorStop(0, '#8B7355'); // Sandy brown center
-        groundGradient.addColorStop(0.4, '#A0522D'); // Sienna middle
-        groundGradient.addColorStop(0.8, '#654321'); // Dark brown
-        groundGradient.addColorStop(1, '#5D4E37'); // Very dark brown edge
+        baseGradient.addColorStop(0, '#A0522D'); // Brown center (excavated)
+        baseGradient.addColorStop(0.4, '#8B7355'); // Tan-brown
+        baseGradient.addColorStop(0.7, '#6B8E23'); // Olive green
+        baseGradient.addColorStop(1, '#228B22'); // Forest green edge
         
-        ctx.fillStyle = groundGradient;
-        // Rectangular excavated area instead of ellipse
-        ctx.fillRect(this.x - maxArea, this.y - maxArea, maxArea * 2, maxArea * 2);
+        // Fill entire area with natural blend
+        ctx.fillStyle = baseGradient;
+        ctx.fillRect(this.x - maxArea * 1.1, this.y - maxArea * 1.1, maxArea * 2.2, maxArea * 2.2);
         
-        // Add grassy edges around the excavated area
-        const grassGradient = ctx.createLinearGradient(
-            this.x - maxArea, this.y - maxArea,
-            this.x + maxArea, this.y + maxArea
-        );
-        grassGradient.addColorStop(0, '#228B22'); // Forest green
-        grassGradient.addColorStop(0.3, '#32CD32'); // Lime green
-        grassGradient.addColorStop(0.7, '#228B22'); // Forest green
-        grassGradient.addColorStop(1, '#006400'); // Dark green
-        
-        // Grass border around excavated area
-        ctx.fillStyle = grassGradient;
-        const borderWidth = 8;
-        
-        // Top grass border
-        ctx.fillRect(this.x - maxArea - borderWidth, this.y - maxArea - borderWidth, 
-                    (maxArea + borderWidth) * 2, borderWidth);
-        // Bottom grass border  
-        ctx.fillRect(this.x - maxArea - borderWidth, this.y + maxArea, 
-                    (maxArea + borderWidth) * 2, borderWidth);
-        // Left grass border
-        ctx.fillRect(this.x - maxArea - borderWidth, this.y - maxArea, 
-                    borderWidth, maxArea * 2);
-        // Right grass border
-        ctx.fillRect(this.x + maxArea, this.y - maxArea, 
-                    borderWidth, maxArea * 2);
-        
-        // Simple dirt texture with fixed patterns (no random/flickering elements)
-        ctx.fillStyle = 'rgba(139, 115, 85, 0.3)';
-        
-        // Fixed dirt patches
-        const dirtPatches = [
-            {x: -maxArea * 0.6, y: -maxArea * 0.4, size: 8},
-            {x: maxArea * 0.3, y: -maxArea * 0.7, size: 6},
-            {x: -maxArea * 0.2, y: maxArea * 0.5, size: 10},
-            {x: maxArea * 0.7, y: maxArea * 0.2, size: 7},
-            {x: 0, y: 0, size: 5},
-            {x: -maxArea * 0.8, y: maxArea * 0.8, size: 4},
-            {x: maxArea * 0.5, y: -maxArea * 0.3, size: 9}
+        // Add natural grass patches that blend organically
+        const grassPatches = [
+            {x: -maxArea * 0.8, y: -maxArea * 0.6, radius: 15, intensity: 0.6},
+            {x: maxArea * 0.7, y: -maxArea * 0.8, radius: 12, intensity: 0.8},
+            {x: -maxArea * 0.5, y: maxArea * 0.9, radius: 18, intensity: 0.7},
+            {x: maxArea * 0.9, y: maxArea * 0.4, radius: 14, intensity: 0.5},
+            {x: -maxArea * 1.0, y: maxArea * 0.1, radius: 20, intensity: 0.9},
+            {x: maxArea * 0.2, y: maxArea * 1.0, radius: 16, intensity: 0.6},
+            {x: -maxArea * 0.2, y: -maxArea * 1.0, radius: 13, intensity: 0.7}
         ];
         
-        dirtPatches.forEach(patch => {
+        grassPatches.forEach(patch => {
+            const grassGradient = ctx.createRadialGradient(
+                this.x + patch.x, this.y + patch.y, 0,
+                this.x + patch.x, this.y + patch.y, patch.radius
+            );
+            grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
+            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
+            grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
+            
+            ctx.fillStyle = grassGradient;
             ctx.beginPath();
-            ctx.arc(this.x + patch.x, this.y + patch.y, patch.size, 0, Math.PI * 2);
+            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Fixed excavation tool marks (no random elements)
-        ctx.strokeStyle = 'rgba(101, 67, 33, 0.6)';
+        // Add dirt/excavated patches in the center
+        const dirtPatches = [
+            {x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.7},
+            {x: maxArea * 0.1, y: -maxArea * 0.4, radius: 10, intensity: 0.6},
+            {x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.8},
+            {x: maxArea * 0.4, y: maxArea * 0.1, radius: 8, intensity: 0.5},
+            {x: 0, y: 0, radius: 16, intensity: 0.9}
+        ];
+        
+        dirtPatches.forEach(patch => {
+            const dirtGradient = ctx.createRadialGradient(
+                this.x + patch.x, this.y + patch.y, 0,
+                this.x + patch.x, this.y + patch.y, patch.radius
+            );
+            dirtGradient.addColorStop(0, `rgba(160, 82, 45, ${patch.intensity})`);
+            dirtGradient.addColorStop(0.6, `rgba(139, 115, 85, ${patch.intensity * 0.8})`);
+            dirtGradient.addColorStop(1, `rgba(139, 69, 19, 0)`);
+            
+            ctx.fillStyle = dirtGradient;
+            ctx.beginPath();
+            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Add small water pool near the excavation
+        const poolX = this.x + maxArea * 0.6;
+        const poolY = this.y + maxArea * 0.7;
+        const poolRadius = 18;
+        
+        // Water pool shadow/depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(poolX + 1, poolY + 1, poolRadius, poolRadius * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Water surface
+        const waterGradient = ctx.createRadialGradient(
+            poolX - poolRadius * 0.3, poolY - poolRadius * 0.3, 0,
+            poolX, poolY, poolRadius
+        );
+        waterGradient.addColorStop(0, '#87CEEB'); // Light blue
+        waterGradient.addColorStop(0.4, '#4682B4'); // Steel blue
+        waterGradient.addColorStop(0.8, '#2F4F4F'); // Dark slate gray
+        waterGradient.addColorStop(1, '#1C1C1C'); // Very dark edge
+        
+        ctx.fillStyle = waterGradient;
+        ctx.beginPath();
+        ctx.ellipse(poolX, poolY, poolRadius, poolRadius * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Water highlights/reflections
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(poolX - poolRadius * 0.4, poolY - poolRadius * 0.3, poolRadius * 0.3, poolRadius * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(poolX + poolRadius * 0.2, poolY + poolRadius * 0.1, poolRadius * 0.15, poolRadius * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Reeds around the water pool
+        const reedPositions = [
+            {x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12},
+            {x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15},
+            {x: poolX + poolRadius * 1.1, y: poolY - poolRadius * 0.3, height: 10},
+            {x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 1.0, height: 14},
+            {x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.2, height: 8},
+            {x: poolX + poolRadius * 1.2, y: poolY + poolRadius * 0.6, height: 11}
+        ];
+        
+        reedPositions.forEach(reed => {
+            // Reed stem
+            ctx.strokeStyle = '#6B8E23'; // Olive green
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(reed.x, reed.y);
+            ctx.lineTo(reed.x + (Math.random() - 0.5) * 3, reed.y - reed.height);
+            ctx.stroke();
+            
+            // Reed top
+            ctx.fillStyle = '#8FBC8F'; // Dark sea green
+            ctx.beginPath();
+            ctx.ellipse(reed.x, reed.y - reed.height, 2, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Add cattails near water
+        const cattailPositions = [
+            {x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.7},
+            {x: poolX + poolRadius * 0.9, y: poolY + poolRadius * 0.9},
+            {x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.5}
+        ];
+        
+        cattailPositions.forEach(cattail => {
+            // Cattail stem
+            ctx.strokeStyle = '#228B22';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cattail.x, cattail.y);
+            ctx.lineTo(cattail.x, cattail.y - 16);
+            ctx.stroke();
+            
+            // Cattail head (brown fuzzy part)
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.ellipse(cattail.x, cattail.y - 14, 2, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Scattered grass blades around the area
+        const grassBlades = [
+            {x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6},
+            {x: -maxArea * 0.7, y: maxArea * 0.8, length: 4},
+            {x: maxArea * 0.8, y: -maxArea * 0.6, length: 5},
+            {x: maxArea * 0.5, y: maxArea * 0.9, length: 7},
+            {x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5},
+            {x: 0, y: maxArea * 0.8, length: 6},
+            {x: maxArea * 0.9, y: maxArea * 0.2, length: 4}
+        ];
+        
+        grassBlades.forEach(blade => {
+            ctx.strokeStyle = 'rgba(34, 139, 34, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(this.x + blade.x, this.y + blade.y);
+            ctx.lineTo(this.x + blade.x + (Math.random() - 0.5) * 2, this.y + blade.y - blade.length);
+            ctx.stroke();
+        });
+        
+        // Fixed excavation tool marks for realism
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
         ctx.lineWidth = 2;
         
         const toolMarks = [
-            {x1: -maxArea * 0.8, y1: -maxArea * 0.5, x2: -maxArea * 0.3, y2: -maxArea * 0.2},
-            {x1: maxArea * 0.2, y1: -maxArea * 0.8, x2: maxArea * 0.7, y2: -maxArea * 0.4},
-            {x1: -maxArea * 0.5, y1: maxArea * 0.3, x2: 0, y2: maxArea * 0.8},
-            {x1: maxArea * 0.1, y1: maxArea * 0.1, x2: maxArea * 0.6, y2: maxArea * 0.6},
-            {x1: -maxArea * 0.3, y1: 0, x2: maxArea * 0.3, y2: maxArea * 0.2}
+            {x1: -maxArea * 0.6, y1: -maxArea * 0.3, x2: -maxArea * 0.2, y2: -maxArea * 0.1},
+            {x1: maxArea * 0.1, y1: -maxArea * 0.5, x2: maxArea * 0.4, y2: -maxArea * 0.2},
+            {x1: -maxArea * 0.3, y1: maxArea * 0.2, x2: maxArea * 0.1, y2: maxArea * 0.4},
+            {x1: maxArea * 0.2, y1: 0, x2: maxArea * 0.5, y2: maxArea * 0.3}
         ];
         
         toolMarks.forEach(mark => {
             ctx.beginPath();
             ctx.moveTo(this.x + mark.x1, this.y + mark.y1);
             ctx.lineTo(this.x + mark.x2, this.y + mark.y2);
-            ctx.stroke();
-        });
-        
-        // Simple grass texture on borders (fixed patterns)
-        ctx.strokeStyle = 'rgba(34, 139, 34, 0.8)';
-        ctx.lineWidth = 1;
-        
-        const grassBlades = [
-            {x: -maxArea - 4, y: -maxArea * 0.5},
-            {x: -maxArea - 6, y: 0},
-            {x: -maxArea - 3, y: maxArea * 0.3},
-            {x: maxArea + 2, y: -maxArea * 0.7},
-            {x: maxArea + 5, y: -maxArea * 0.2},
-            {x: maxArea + 3, y: maxArea * 0.6}
-        ];
-        
-        grassBlades.forEach(blade => {
-            ctx.beginPath();
-            ctx.moveTo(this.x + blade.x, this.y + blade.y - 3);
-            ctx.lineTo(this.x + blade.x, this.y + blade.y + 3);
             ctx.stroke();
         });
     }
