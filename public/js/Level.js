@@ -172,10 +172,37 @@ export class Level {
         return true;
     }
     
+    canPlaceBuilding(gridX, gridY, size = 4, towerManager = null) {
+        // Check if a building of specified size can be placed
+        for (let x = gridX; x < gridX + size; x++) {
+            for (let y = gridY; y < gridY + size; y++) {
+                if (!this.isValidGridPosition(x, y) || this.occupiedCells.has(`${x},${y}`)) {
+                    return false;
+                }
+            }
+        }
+        
+        // Check if there's already a building at this position
+        if (towerManager && towerManager.isBuildingPositionOccupied(gridX, gridY, size)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
     placeTower(gridX, gridY) {
         // Mark the 2x2 area as occupied
         for (let x = gridX; x < gridX + this.towerSize; x++) {
             for (let y = gridY; y < gridY + this.towerSize; y++) {
+                this.occupiedCells.add(`${x},${y}`);
+            }
+        }
+    }
+    
+    placeBuilding(gridX, gridY, size = 4) {
+        // Mark the building area as occupied
+        for (let x = gridX; x < gridX + size; x++) {
+            for (let y = gridY; y < gridY + size; y++) {
                 this.occupiedCells.add(`${x},${y}`);
             }
         }
@@ -187,10 +214,10 @@ export class Level {
         return { gridX, gridY };
     }
     
-    gridToScreen(gridX, gridY) {
-        // Return center of the 2x2 tower area
-        const screenX = (gridX + this.towerSize / 2) * this.cellSize;
-        const screenY = (gridY + this.towerSize / 2) * this.cellSize;
+    gridToScreen(gridX, gridY, size = 2) {
+        // Return center of the specified size area
+        const screenX = (gridX + size / 2) * this.cellSize;
+        const screenY = (gridY + size / 2) * this.cellSize;
         return { screenX, screenY };
     }
     
@@ -646,12 +673,16 @@ export class Level {
         // Render the updated path
         this.renderPath(ctx);
         
-        // Highlight valid placement areas when tower is selected
+        // Highlight valid placement areas when tower/building is selected
         if (this.showPlacementPreview && this.previewGridX !== undefined && this.previewGridY !== undefined) {
-            const canPlace = this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
+            const isBuilding = this.previewSize === 4;
+            const canPlace = isBuilding ? 
+                this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewSize, this.previewTowerManager) :
+                this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
+            
             ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
             
-            const size = this.towerSize * this.cellSize;
+            const size = this.previewSize * this.cellSize;
             ctx.fillRect(
                 this.previewGridX * this.cellSize,
                 this.previewGridY * this.cellSize,
@@ -671,9 +702,10 @@ export class Level {
         }
     }
     
-    setPlacementPreview(screenX, screenY, show = true, towerManager = null) {
+    setPlacementPreview(screenX, screenY, show = true, towerManager = null, size = 2) {
         this.showPlacementPreview = show;
         this.previewTowerManager = towerManager;
+        this.previewSize = size;
         if (show) {
             const { gridX, gridY } = this.screenToGrid(screenX, screenY);
             this.previewGridX = gridX;

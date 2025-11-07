@@ -14,6 +14,7 @@ class GameplayState {
         this.towerManager = new TowerManager(this.gameState, this.level);
         this.enemyManager = null;
         this.selectedTowerType = null;
+        this.selectedBuildingType = null;
         this.currentLevel = 1; // Track current level
         this.maxWavesForLevel = 10; // Level 1 has 10 waves
         this.waveInProgress = false;
@@ -86,6 +87,22 @@ class GameplayState {
             });
         });
         
+        // Add building button listeners
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.selectBuilding(e.currentTarget);
+            });
+            
+            btn.addEventListener('mouseenter', (e) => {
+                this.showBuildingInfo(e.currentTarget.dataset.type);
+            });
+            
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.showBuildingInfo(e.currentTarget.dataset.type);
+            });
+        });
+        
         // Add mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -93,7 +110,7 @@ class GameplayState {
     
     removeEventListeners() {
         // Clean up event listeners
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
         
@@ -103,7 +120,7 @@ class GameplayState {
     }
     
     handleMouseMove(e) {
-        if (!this.selectedTowerType) {
+        if (!this.selectedTowerType && !this.selectedBuildingType) {
             this.level.setPlacementPreview(0, 0, false);
             return;
         }
@@ -112,8 +129,8 @@ class GameplayState {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        // Pass towerManager for proper placement validation in preview
-        this.level.setPlacementPreview(x, y, true, this.towerManager);
+        const size = this.selectedBuildingType ? 4 : 2;
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size);
     }
     
     selectTower(btn) {
@@ -130,7 +147,32 @@ class GameplayState {
         btn.classList.add('selected');
         this.selectedTowerType = towerType;
         
+        // Clear building selection
+        this.selectedBuildingType = null;
+        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+        
         this.showTowerInfo(towerType);
+    }
+    
+    selectBuilding(btn) {
+        const buildingType = btn.dataset.type;
+        const cost = parseInt(btn.dataset.cost);
+        
+        // Check if player can afford this building
+        if (!this.gameState.canAfford(cost)) {
+            return;
+        }
+        
+        // Update selection
+        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        
+        // Clear tower selection
+        this.selectedTowerType = null;
+        this.selectedBuildingType = buildingType;
+        
+        this.showBuildingInfo(buildingType);
     }
     
     showTowerInfo(towerType) {
@@ -149,23 +191,54 @@ class GameplayState {
         `;
     }
     
+    showBuildingInfo(buildingType) {
+        const info = this.towerManager.getBuildingInfo(buildingType);
+        if (!info) return;
+        
+        const infoPanel = document.getElementById('tower-info');
+        infoPanel.innerHTML = `
+            <div class="info-title">${info.name}</div>
+            <div class="info-stats">
+                <div>Effect: ${info.effect}</div>
+                <div>Size: ${info.size}</div>
+                <div>Cost: $${info.cost}</div>
+            </div>
+            <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
+        `;
+    }
+    
     handleClick(x, y) {
-        if (!this.selectedTowerType) return;
-        
-        const { gridX, gridY } = this.level.screenToGrid(x, y);
-        
-        // Pass towerManager to check for tower overlaps
-        if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
-            const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
+        if (this.selectedTowerType) {
+            const { gridX, gridY } = this.level.screenToGrid(x, y);
             
-            if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
-                this.level.placeTower(gridX, gridY);
-                this.updateUI();
+            if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
+                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
                 
-                // Clear selection after placing tower
-                this.selectedTowerType = null;
-                document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-                this.level.setPlacementPreview(0, 0, false);
+                if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
+                    this.level.placeTower(gridX, gridY);
+                    this.updateUI();
+                    
+                    // Clear selection after placing tower
+                    this.selectedTowerType = null;
+                    document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                    this.level.setPlacementPreview(0, 0, false);
+                }
+            }
+        } else if (this.selectedBuildingType) {
+            const { gridX, gridY } = this.level.screenToGrid(x, y);
+            
+            if (this.level.canPlaceBuilding(gridX, gridY, 4, this.towerManager)) {
+                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, 4);
+                
+                if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
+                    this.level.placeBuilding(gridX, gridY, 4);
+                    this.updateUI();
+                    
+                    // Clear selection after placing building
+                    this.selectedBuildingType = null;
+                    document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+                    this.level.setPlacementPreview(0, 0, false);
+                }
             }
         }
     }
@@ -268,7 +341,7 @@ class GameplayState {
     
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
-        document.getElementById('gold').textContent = this.gameState.gold;
+        document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
         document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
         
         let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
@@ -282,6 +355,16 @@ class GameplayState {
         
         // Update tower button states based on available gold
         document.querySelectorAll('.tower-btn').forEach(btn => {
+            const cost = parseInt(btn.dataset.cost);
+            if (this.gameState.canAfford(cost)) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        });
+        
+        // Update building button states based on available gold
+        document.querySelectorAll('.building-btn').forEach(btn => {
             const cost = parseInt(btn.dataset.cost);
             if (this.gameState.canAfford(cost)) {
                 btn.classList.remove('disabled');
