@@ -176,53 +176,66 @@ export class BarricadeTower {
     }
     
     generateStaticEnvironment() {
-        const gridBounds = 64; // Approximate 2x2 grid size
+        const gridBounds = 32; // Tighter bounds within 2x2 grid
         
         return {
             // Forest floor elements very close to tower base
             bushes: [
-                { x: this.x - gridBounds * 0.25, y: this.y + gridBounds * 0.15 },
-                { x: this.x + gridBounds * 0.2, y: this.y + gridBounds * 0.12 },
-                { x: this.x - gridBounds * 0.18, y: this.y - gridBounds * 0.05 },
-                { x: this.x + gridBounds * 0.3, y: this.y - gridBounds * 0.08 },
-                { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.05 },
-                { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.25 },
-                { x: this.x - gridBounds * 0.3, y: this.y + gridBounds * 0.3 }
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.4 },
+                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.3 },
+                { x: this.x - gridBounds * 0.5, y: this.y - gridBounds * 0.2 },
+                { x: this.x + gridBounds * 0.8, y: this.y - gridBounds * 0.3 },
+                { x: this.x - gridBounds * 0.9, y: this.y + gridBounds * 0.1 },
+                { x: this.x + gridBounds * 0.9, y: this.y + gridBounds * 0.8 },
+                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.9 }
             ],
             rocks: [
                 // Rocks integrated into tower foundation
-                { x: this.x - gridBounds * 0.15, y: this.y + gridBounds * 0.08, size: 3 },
-                { x: this.x + gridBounds * 0.12, y: this.y + gridBounds * 0.05, size: 2 },
-                { x: this.x - gridBounds * 0.28, y: this.y + gridBounds * 0.2, size: 4 },
-                { x: this.x + gridBounds * 0.25, y: this.y + gridBounds * 0.18, size: 3 },
-                { x: this.x - gridBounds * 0.22, y: this.y - gridBounds * 0.1, size: 2 },
-                { x: this.x + gridBounds * 0.32, y: this.y - gridBounds * 0.05, size: 3 }
+                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.2, size: 3 },
+                { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.15, size: 2 },
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.6, size: 4 },
+                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.5, size: 3 },
+                { x: this.x - gridBounds * 0.6, y: this.y - gridBounds * 0.4, size: 2 },
+                { x: this.x + gridBounds * 0.7, y: this.y - gridBounds * 0.2, size: 3 }
             ],
-            // Smaller understory trees
-            smallPines: [
-                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.25, size: 12 },
-                { x: this.x + gridBounds * 0.38, y: this.y + gridBounds * 0.3, size: 10 },
-                { x: this.x - gridBounds * 0.45, y: this.y - gridBounds * 0.15, size: 11 }
+            // Small trees very close to tower
+            smallTrees: [
+                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 0.4, size: 8 },
+                { x: this.x + gridBounds * 0.5, y: this.y + gridBounds * 0.3, size: 7 },
+                { x: this.x - gridBounds * 0.7, y: this.y - gridBounds * 0.3, size: 9 },
+                { x: this.x + gridBounds * 0.6, y: this.y - gridBounds * 0.4, size: 6 },
+                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.7, size: 8 },
+                { x: this.x + gridBounds * 0.8, y: this.y + gridBounds * 0.1, size: 7 }
             ],
-            // Tall forest trees creating canopy above tower
+            // Medium understory trees
+            mediumTrees: [
+                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.7, size: 12 },
+                { x: this.x + gridBounds * 0.75, y: this.y + gridBounds * 0.6, size: 11 },
+                { x: this.x - gridBounds * 0.9, y: this.y - gridBounds * 0.1, size: 13 },
+                { x: this.x + gridBounds * 0.85, y: this.y - gridBounds * 0.3, size: 10 },
+                { x: this.x - gridBounds * 0.5, y: this.y + gridBounds * 0.9, size: 12 }
+            ],
+            // Tall forest trees within grid bounds
             forestTrees: [
-                { x: this.x - gridBounds * 0.45, y: this.y + gridBounds * 0.4, size: 25 },
-                { x: this.x + gridBounds * 0.42, y: this.y + gridBounds * 0.35, size: 28 },
-                { x: this.x - gridBounds * 0.48, y: this.y, size: 22 },
-                { x: this.x + gridBounds * 0.45, y: this.y - gridBounds * 0.2, size: 26 }
+                { x: this.x - gridBounds * 0.95, y: this.y + gridBounds * 0.9, size: 18 },
+                { x: this.x + gridBounds * 0.9, y: this.y + gridBounds * 0.8, size: 16 },
+                { x: this.x - gridBounds * 0.85, y: this.y + gridBounds * 0.2, size: 19 },
+                { x: this.x + gridBounds * 0.95, y: this.y - gridBounds * 0.1, size: 17 },
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 1.0, size: 15 },
+                { x: this.x + gridBounds * 0.8, y: this.y + gridBounds * 0.95, size: 18 }
             ],
             rubblePiles: [
                 {
-                    x: this.x + gridBounds * 0.08,
-                    y: this.y + gridBounds * 0.12,
+                    x: this.x + gridBounds * 0.25,
+                    y: this.y + gridBounds * 0.3,
                     pieces: [
                         { offsetX: -1, offsetY: 1, size: 1.2 },
                         { offsetX: 2, offsetY: -1, size: 1.5 }
                     ]
                 },
                 {
-                    x: this.x - gridBounds * 0.12,
-                    y: this.y - gridBounds * 0.15,
+                    x: this.x - gridBounds * 0.3,
+                    y: this.y - gridBounds * 0.4,
                     pieces: [
                         { offsetX: 1, offsetY: 0, size: 1.0 },
                         { offsetX: -2, offsetY: 1, size: 1.3 }
@@ -246,18 +259,18 @@ export class BarricadeTower {
         this.staticEnvironment.forestTrees.forEach(tree => {
             // Thick trunk for forest trees
             ctx.fillStyle = '#654321';
-            ctx.fillRect(tree.x - 4, tree.y - 4, 8, tree.size);
+            ctx.fillRect(tree.x - 3, tree.y - 3, 6, tree.size);
             
-            // 5 layers for tall forest trees
-            for (let layer = 0; layer < 5; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.2);
-                const layerSize = tree.size * (1.0 - layer * 0.12);
+            // 4 layers for tall forest trees
+            for (let layer = 0; layer < 4; layer++) {
+                const layerY = tree.y - layer * (tree.size * 0.25);
+                const layerSize = tree.size * (0.9 - layer * 0.15);
                 
                 ctx.fillStyle = layer < 2 ? '#0F2F0F' : '#1F4F1F';
                 ctx.beginPath();
                 ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.8, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.8, layerY);
+                ctx.lineTo(tree.x - layerSize * 0.7, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.7, layerY);
                 ctx.closePath();
                 ctx.fill();
                 
@@ -267,25 +280,48 @@ export class BarricadeTower {
             }
         });
         
-        // Small understory pines
-        this.staticEnvironment.smallPines.forEach(pine => {
+        // Medium understory trees
+        this.staticEnvironment.mediumTrees.forEach(tree => {
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(pine.x - 2, pine.y - 2, 4, pine.size);
+            ctx.fillRect(tree.x - 2.5, tree.y - 2.5, 5, tree.size);
             
             for (let layer = 0; layer < 3; layer++) {
-                const layerY = pine.y - layer * (pine.size * 0.3);
-                const layerSize = pine.size * (0.8 - layer * 0.2);
+                const layerY = tree.y - layer * (tree.size * 0.3);
+                const layerSize = tree.size * (0.85 - layer * 0.2);
+                
+                ctx.fillStyle = layer === 0 ? '#1F5F1F' : '#2F7F2F';
+                ctx.beginPath();
+                ctx.moveTo(tree.x, layerY - layerSize);
+                ctx.lineTo(tree.x - layerSize * 0.65, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.65, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#005500';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            }
+        });
+        
+        // Small trees close to tower
+        this.staticEnvironment.smallTrees.forEach(tree => {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(tree.x - 1.5, tree.y - 1.5, 3, tree.size);
+            
+            for (let layer = 0; layer < 2; layer++) {
+                const layerY = tree.y - layer * (tree.size * 0.4);
+                const layerSize = tree.size * (0.7 - layer * 0.2);
                 
                 ctx.fillStyle = layer === 0 ? '#228B22' : '#32CD32';
                 ctx.beginPath();
-                ctx.moveTo(pine.x, layerY - layerSize);
-                ctx.lineTo(pine.x - layerSize * 0.6, layerY);
-                ctx.lineTo(pine.x + layerSize * 0.6, layerY);
+                ctx.moveTo(tree.x, layerY - layerSize);
+                ctx.lineTo(tree.x - layerSize * 0.5, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.5, layerY);
                 ctx.closePath();
                 ctx.fill();
                 
                 ctx.strokeStyle = '#006400';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.5;
                 ctx.stroke();
             }
         });
@@ -516,8 +552,8 @@ export class BarricadeTower {
             
             ctx.translate(defenderX, defenderY);
             
-            // Defender body
-            ctx.fillStyle = '#8B4513';
+            // Defender body - purple tunic
+            ctx.fillStyle = '#663399';
             ctx.fillRect(-3, -8, 6, 12);
             
             // Defender head
