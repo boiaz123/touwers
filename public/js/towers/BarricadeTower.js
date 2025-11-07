@@ -180,19 +180,42 @@ export class BarricadeTower {
         
         return {
             bushes: [
+                // Original bushes
                 { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.3 },
                 { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.25 },
-                { x: this.x - gridBounds * 0.3, y: this.y - gridBounds * 0.1 }
+                { x: this.x - gridBounds * 0.3, y: this.y - gridBounds * 0.1 },
+                // Additional bushes around base
+                { x: this.x - gridBounds * 0.15, y: this.y + gridBounds * 0.45 },
+                { x: this.x + gridBounds * 0.2, y: this.y + gridBounds * 0.4 },
+                { x: this.x - gridBounds * 0.45, y: this.y + gridBounds * 0.1 },
+                { x: this.x + gridBounds * 0.45, y: this.y + gridBounds * 0.05 },
+                { x: this.x - gridBounds * 0.25, y: this.y + gridBounds * 0.2 }
             ],
             rocks: [
+                // Original rocks
                 { x: this.x + gridBounds * 0.25, y: this.y - gridBounds * 0.2, size: 4 },
                 { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.1, size: 3 },
                 { x: this.x + gridBounds * 0.4, y: this.y + gridBounds * 0.1, size: 5 },
-                { x: this.x - gridBounds * 0.2, y: this.y + gridBounds * 0.35, size: 3 }
+                { x: this.x - gridBounds * 0.2, y: this.y + gridBounds * 0.35, size: 3 },
+                // Additional rocks for more detail
+                { x: this.x + gridBounds * 0.1, y: this.y + gridBounds * 0.45, size: 2 },
+                { x: this.x - gridBounds * 0.1, y: this.y + gridBounds * 0.4, size: 3 },
+                { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.35, size: 2 },
+                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.2, size: 4 },
+                { x: this.x + gridBounds * 0.15, y: this.y + gridBounds * 0.3, size: 2 }
             ],
-            pines: [
-                { x: this.x - gridBounds * 0.45, y: this.y - gridBounds * 0.25, size: 12 },
-                { x: this.x + gridBounds * 0.4, y: this.y - gridBounds * 0.35, size: 10 }
+            smallPines: [
+                // Small pines moved more to the front and sides
+                { x: this.x - gridBounds * 0.3, y: this.y + gridBounds * 0.35, size: 10 },
+                { x: this.x + gridBounds * 0.25, y: this.y + gridBounds * 0.3, size: 8 },
+                { x: this.x - gridBounds * 0.45, y: this.y, size: 9 },
+                { x: this.x + gridBounds * 0.4, y: this.y - gridBounds * 0.1, size: 7 }
+            ],
+            largePines: [
+                // Larger trees but not higher than tower
+                { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.45, size: 18 },
+                { x: this.x + gridBounds * 0.3, y: this.y + gridBounds * 0.4, size: 16 },
+                { x: this.x - gridBounds * 0.45, y: this.y + gridBounds * 0.15, size: 20 }
             ],
             rubblePiles: [
                 {
@@ -217,7 +240,7 @@ export class BarricadeTower {
             ]
         };
     }
-    
+
     render(ctx) {
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
@@ -230,8 +253,33 @@ export class BarricadeTower {
         
         // Render static environmental details
         
-        // Pine trees
-        this.staticEnvironment.pines.forEach(pine => {
+        // Large pine trees (render first so they're in background)
+        this.staticEnvironment.largePines.forEach(pine => {
+            // Tree trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(pine.x - 3, pine.y - 3, 6, pine.size);
+            
+            // Tree layers (4 layers for larger trees)
+            for (let layer = 0; layer < 4; layer++) {
+                const layerY = pine.y - layer * (pine.size * 0.25);
+                const layerSize = pine.size * (0.9 - layer * 0.15);
+                
+                ctx.fillStyle = layer === 0 ? '#1F4F1F' : '#228B22';
+                ctx.beginPath();
+                ctx.moveTo(pine.x, layerY - layerSize);
+                ctx.lineTo(pine.x - layerSize * 0.7, layerY);
+                ctx.lineTo(pine.x + layerSize * 0.7, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#006400';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
+        
+        // Small pine trees
+        this.staticEnvironment.smallPines.forEach(pine => {
             // Tree trunk
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(pine.x - 2, pine.y - 2, 4, pine.size);
