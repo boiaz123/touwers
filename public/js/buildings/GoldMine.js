@@ -23,8 +23,7 @@ export class GoldMine extends Building {
         this.environmentRocks = [];
         this.bushes = [];
         
-        // Generate much more dense pine forest within the mine's 4x4 grid area
-        // Fixed positions to prevent pattern changes and flickering
+        // Generate dense pine forest - but avoid bottom right corner and track area
         const treePositions = [
             // Back row - taller trees (very dense)
             { x: -55, y: -45, height: 'tall' },
@@ -53,37 +52,27 @@ export class GoldMine extends Building {
             { x: 40, y: -25, height: 'small' },
             { x: 50, y: -23, height: 'medium' },
             
-            // Side dense coverage
+            // Side dense coverage (left side only to avoid clearing)
             { x: -58, y: -15, height: 'medium' },
             { x: -60, y: 0, height: 'small' },
             { x: -57, y: 15, height: 'medium' },
             { x: -55, y: 30, height: 'small' },
-            { x: 55, y: -15, height: 'medium' },
-            { x: 58, y: 0, height: 'small' },
-            { x: 60, y: 15, height: 'medium' },
-            { x: 57, y: 30, height: 'small' },
             
-            // Front scattered but dense
+            // Front left area only (avoid bottom right clearing)
             { x: -45, y: 35, height: 'small' },
             { x: -35, y: 38, height: 'small' },
             { x: -25, y: 32, height: 'small' },
             { x: -15, y: 36, height: 'small' },
-            { x: 15, y: 35, height: 'small' },
-            { x: 25, y: 38, height: 'small' },
-            { x: 35, y: 32, height: 'small' },
-            { x: 45, y: 36, height: 'small' },
             
-            // Fill in gaps for maximum density
+            // Fill in gaps on left side only
             { x: -42, y: -35, height: 'small' },
             { x: -32, y: -38, height: 'small' },
             { x: -22, y: -35, height: 'small' },
             { x: -12, y: -38, height: 'small' },
             { x: -2, y: -35, height: 'small' },
             { x: 8, y: -38, height: 'small' },
-            { x: 18, y: -35, height: 'small' },
-            { x: 28, y: -38, height: 'small' },
-            { x: 38, y: -35, height: 'small' },
-            { x: 42, y: -38, height: 'small' }
+            { x: 18, y: -35, height: 'small' }
+            // Removed trees from bottom right: 28, 35, 38, 42, 45, 55-60 on right side
         ];
         
         // Use fixed seed for consistent tree generation
@@ -905,7 +894,7 @@ export class GoldMine extends Building {
         ctx.ellipse(poolX + poolRadius * 0.2, poolY + poolRadius * 0.1, poolRadius * 0.15, poolRadius * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Reeds around the water pool (repositioned)
+        // Reeds around the water pool (fixed positions to prevent flickering)
         const reedPositions = [
             {x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12},
             {x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15},
@@ -915,19 +904,22 @@ export class GoldMine extends Building {
             {x: poolX + poolRadius * 1.1, y: poolY + poolRadius * 0.5, height: 11}
         ];
         
-        reedPositions.forEach(reed => {
+        reedPositions.forEach((reed, index) => {
+            // Fixed reed positions to prevent flickering
+            const fixedBend = index % 2 === 0 ? 1 : -1; // Alternate bending direction
+            
             // Reed stem
             ctx.strokeStyle = '#6B8E23'; // Olive green
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(reed.x, reed.y);
-            ctx.lineTo(reed.x + (Math.random() - 0.5) * 3, reed.y - reed.height);
+            ctx.lineTo(reed.x + fixedBend, reed.y - reed.height); // Fixed bend instead of random
             ctx.stroke();
             
             // Reed top
             ctx.fillStyle = '#8FBC8F'; // Dark sea green
             ctx.beginPath();
-            ctx.ellipse(reed.x, reed.y - reed.height, 2, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(reed.x + fixedBend, reed.y - reed.height, 2, 4, 0, 0, Math.PI * 2);
             ctx.fill();
         });
         
@@ -954,15 +946,14 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Scattered grass blades around the area (avoiding track area)
+        // Scattered grass blades (fixed positions, avoid bottom right clearing)
         const grassBlades = [
-            {x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6},
-            {x: -maxArea * 0.8, y: maxArea * 0.7, length: 4}, // Moved to bottom left
-            {x: -maxArea * 0.6, y: maxArea * 0.9, length: 5}, // Moved to bottom left
-            {x: maxArea * 0.5, y: maxArea * 0.9, length: 7},
-            {x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5},
-            {x: -maxArea * 0.5, y: maxArea * 0.8, length: 6}, // Moved to bottom left
-            {x: maxArea * 0.9, y: maxArea * 0.2, length: 4}
+            {x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6, bend: 1},
+            {x: -maxArea * 0.8, y: maxArea * 0.7, length: 4, bend: -1},
+            {x: -maxArea * 0.6, y: maxArea * 0.9, length: 5, bend: 1},
+            {x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5, bend: -1},
+            {x: -maxArea * 0.5, y: maxArea * 0.8, length: 6, bend: 1}
+            // Removed grass blades from bottom right clearing area
         ];
         
         grassBlades.forEach(blade => {
@@ -970,7 +961,7 @@ export class GoldMine extends Building {
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(this.x + blade.x, this.y + blade.y);
-            ctx.lineTo(this.x + blade.x + (Math.random() - 0.5) * 2, this.y + blade.y - blade.length);
+            ctx.lineTo(this.x + blade.x + blade.bend, this.y + blade.y - blade.length); // Fixed bend
             ctx.stroke();
         });
         
