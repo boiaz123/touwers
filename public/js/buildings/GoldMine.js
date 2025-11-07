@@ -801,70 +801,108 @@ export class GoldMine extends Building {
     }
     
     renderExcavatedGround(ctx, size) {
-        // Render flat excavated forest floor
-        const excavatedArea = size * 0.9;
+        // Render flat excavated forest floor that stays within 4x4 grid
+        const maxArea = size * 0.45; // Keep within the 4x4 grid boundaries
         
-        // Base excavated ground
+        // Base excavated ground - rectangular to fit grid
         const groundGradient = ctx.createRadialGradient(
             this.x, this.y, 0,
-            this.x, this.y, excavatedArea
+            this.x, this.y, maxArea
         );
         groundGradient.addColorStop(0, '#8B7355'); // Sandy brown center
-        groundGradient.addColorStop(0.5, '#A0522D'); // Sienna middle
+        groundGradient.addColorStop(0.4, '#A0522D'); // Sienna middle
         groundGradient.addColorStop(0.8, '#654321'); // Dark brown
         groundGradient.addColorStop(1, '#5D4E37'); // Very dark brown edge
         
         ctx.fillStyle = groundGradient;
-        ctx.beginPath();
-        ctx.ellipse(this.x, this.y, excavatedArea, excavatedArea * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Rectangular excavated area instead of ellipse
+        ctx.fillRect(this.x - maxArea, this.y - maxArea, maxArea * 2, maxArea * 2);
         
-        // Excavated ground texture with grid-like pattern
+        // Add grassy edges around the excavated area
+        const grassGradient = ctx.createLinearGradient(
+            this.x - maxArea, this.y - maxArea,
+            this.x + maxArea, this.y + maxArea
+        );
+        grassGradient.addColorStop(0, '#228B22'); // Forest green
+        grassGradient.addColorStop(0.3, '#32CD32'); // Lime green
+        grassGradient.addColorStop(0.7, '#228B22'); // Forest green
+        grassGradient.addColorStop(1, '#006400'); // Dark green
+        
+        // Grass border around excavated area
+        ctx.fillStyle = grassGradient;
+        const borderWidth = 8;
+        
+        // Top grass border
+        ctx.fillRect(this.x - maxArea - borderWidth, this.y - maxArea - borderWidth, 
+                    (maxArea + borderWidth) * 2, borderWidth);
+        // Bottom grass border  
+        ctx.fillRect(this.x - maxArea - borderWidth, this.y + maxArea, 
+                    (maxArea + borderWidth) * 2, borderWidth);
+        // Left grass border
+        ctx.fillRect(this.x - maxArea - borderWidth, this.y - maxArea, 
+                    borderWidth, maxArea * 2);
+        // Right grass border
+        ctx.fillRect(this.x + maxArea, this.y - maxArea, 
+                    borderWidth, maxArea * 2);
+        
+        // Simple dirt texture with fixed patterns (no random/flickering elements)
+        ctx.fillStyle = 'rgba(139, 115, 85, 0.3)';
+        
+        // Fixed dirt patches
+        const dirtPatches = [
+            {x: -maxArea * 0.6, y: -maxArea * 0.4, size: 8},
+            {x: maxArea * 0.3, y: -maxArea * 0.7, size: 6},
+            {x: -maxArea * 0.2, y: maxArea * 0.5, size: 10},
+            {x: maxArea * 0.7, y: maxArea * 0.2, size: 7},
+            {x: 0, y: 0, size: 5},
+            {x: -maxArea * 0.8, y: maxArea * 0.8, size: 4},
+            {x: maxArea * 0.5, y: -maxArea * 0.3, size: 9}
+        ];
+        
+        dirtPatches.forEach(patch => {
+            ctx.beginPath();
+            ctx.arc(this.x + patch.x, this.y + patch.y, patch.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Fixed excavation tool marks (no random elements)
         ctx.strokeStyle = 'rgba(101, 67, 33, 0.6)';
+        ctx.lineWidth = 2;
+        
+        const toolMarks = [
+            {x1: -maxArea * 0.8, y1: -maxArea * 0.5, x2: -maxArea * 0.3, y2: -maxArea * 0.2},
+            {x1: maxArea * 0.2, y1: -maxArea * 0.8, x2: maxArea * 0.7, y2: -maxArea * 0.4},
+            {x1: -maxArea * 0.5, y1: maxArea * 0.3, x2: 0, y2: maxArea * 0.8},
+            {x1: maxArea * 0.1, y1: maxArea * 0.1, x2: maxArea * 0.6, y2: maxArea * 0.6},
+            {x1: -maxArea * 0.3, y1: 0, x2: maxArea * 0.3, y2: maxArea * 0.2}
+        ];
+        
+        toolMarks.forEach(mark => {
+            ctx.beginPath();
+            ctx.moveTo(this.x + mark.x1, this.y + mark.y1);
+            ctx.lineTo(this.x + mark.x2, this.y + mark.y2);
+            ctx.stroke();
+        });
+        
+        // Simple grass texture on borders (fixed patterns)
+        ctx.strokeStyle = 'rgba(34, 139, 34, 0.8)';
         ctx.lineWidth = 1;
         
-        // Grid pattern from excavation
-        const gridSpacing = 15;
-        for (let x = -excavatedArea; x <= excavatedArea; x += gridSpacing) {
-            for (let y = -excavatedArea * 0.8; y <= excavatedArea * 0.8; y += gridSpacing) {
-                if (Math.hypot(x, y) <= excavatedArea * 0.9) {
-                    ctx.beginPath();
-                    ctx.rect(this.x + x - 2, this.y + y - 2, 4, 4);
-                    ctx.stroke();
-                }
-            }
-        }
+        const grassBlades = [
+            {x: -maxArea - 4, y: -maxArea * 0.5},
+            {x: -maxArea - 6, y: 0},
+            {x: -maxArea - 3, y: maxArea * 0.3},
+            {x: maxArea + 2, y: -maxArea * 0.7},
+            {x: maxArea + 5, y: -maxArea * 0.2},
+            {x: maxArea + 3, y: maxArea * 0.6}
+        ];
         
-        // Dig marks and tool scratches
-        ctx.strokeStyle = 'rgba(139, 115, 85, 0.5)';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const distance = excavatedArea * (0.3 + Math.random() * 0.5);
-            const scratchX = this.x + Math.cos(angle) * distance;
-            const scratchY = this.y + Math.sin(angle) * distance * 0.8;
-            const scratchLength = 10 + Math.random() * 15;
-            
+        grassBlades.forEach(blade => {
             ctx.beginPath();
-            ctx.moveTo(scratchX, scratchY);
-            ctx.lineTo(scratchX + Math.cos(angle + Math.PI/4) * scratchLength, 
-                      scratchY + Math.sin(angle + Math.PI/4) * scratchLength);
+            ctx.moveTo(this.x + blade.x, this.y + blade.y - 3);
+            ctx.lineTo(this.x + blade.x, this.y + blade.y + 3);
             ctx.stroke();
-        }
-        
-        // Scattered dirt and debris texture
-        ctx.fillStyle = 'rgba(160, 82, 45, 0.4)';
-        for (let i = 0; i < 25; i++) {
-            const debrisAngle = Math.random() * Math.PI * 2;
-            const debrisDistance = Math.random() * excavatedArea * 0.8;
-            const debrisX = this.x + Math.cos(debrisAngle) * debrisDistance;
-            const debrisY = this.y + Math.sin(debrisAngle) * debrisDistance * 0.8;
-            const debrisSize = Math.random() * 3 + 1;
-            
-            ctx.beginPath();
-            ctx.arc(debrisX, debrisY, debrisSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        });
     }
     
     renderCaveEntrance(ctx, size) {
