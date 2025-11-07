@@ -23,33 +23,67 @@ export class GoldMine extends Building {
         this.environmentRocks = [];
         this.bushes = [];
         
-        // Generate more dense pine forest within the mine's 4x4 grid area
+        // Generate much more dense pine forest within the mine's 4x4 grid area
         // Fixed positions to prevent pattern changes and flickering
         const treePositions = [
-            // Back row - taller trees
-            { x: -50, y: -40, height: 'tall' },
-            { x: -30, y: -45, height: 'tall' },
-            { x: -10, y: -42, height: 'medium' },
-            { x: 15, y: -48, height: 'tall' },
-            { x: 35, y: -43, height: 'medium' },
-            { x: 50, y: -38, height: 'tall' },
+            // Back row - taller trees (very dense)
+            { x: -55, y: -45, height: 'tall' },
+            { x: -45, y: -50, height: 'tall' },
+            { x: -35, y: -47, height: 'medium' },
+            { x: -25, y: -52, height: 'tall' },
+            { x: -15, y: -48, height: 'medium' },
+            { x: -5, y: -51, height: 'tall' },
+            { x: 5, y: -49, height: 'medium' },
+            { x: 15, y: -53, height: 'tall' },
+            { x: 25, y: -46, height: 'medium' },
+            { x: 35, y: -50, height: 'tall' },
+            { x: 45, y: -48, height: 'medium' },
+            { x: 55, y: -45, height: 'tall' },
             
-            // Middle row - medium trees
-            { x: -45, y: -15, height: 'medium' },
-            { x: -20, y: -18, height: 'small' },
-            { x: 5, y: -12, height: 'medium' },
-            { x: 25, y: -16, height: 'small' },
-            { x: 45, y: -10, height: 'medium' },
+            // Second back row
+            { x: -50, y: -25, height: 'medium' },
+            { x: -40, y: -28, height: 'small' },
+            { x: -30, y: -22, height: 'medium' },
+            { x: -20, y: -26, height: 'small' },
+            { x: -10, y: -24, height: 'medium' },
+            { x: 0, y: -20, height: 'small' },
+            { x: 10, y: -23, height: 'medium' },
+            { x: 20, y: -27, height: 'small' },
+            { x: 30, y: -21, height: 'medium' },
+            { x: 40, y: -25, height: 'small' },
+            { x: 50, y: -23, height: 'medium' },
             
-            // Front scattered - smaller trees
-            { x: -35, y: 25, height: 'small' },
-            { x: -10, y: 30, height: 'small' },
-            { x: 20, y: 35, height: 'small' },
-            { x: 40, y: 28, height: 'small' },
+            // Side dense coverage
+            { x: -58, y: -15, height: 'medium' },
+            { x: -60, y: 0, height: 'small' },
+            { x: -57, y: 15, height: 'medium' },
+            { x: -55, y: 30, height: 'small' },
+            { x: 55, y: -15, height: 'medium' },
+            { x: 58, y: 0, height: 'small' },
+            { x: 60, y: 15, height: 'medium' },
+            { x: 57, y: 30, height: 'small' },
             
-            // Side trees for density
-            { x: -55, y: 10, height: 'medium' },
-            { x: 55, y: 15, height: 'medium' }
+            // Front scattered but dense
+            { x: -45, y: 35, height: 'small' },
+            { x: -35, y: 38, height: 'small' },
+            { x: -25, y: 32, height: 'small' },
+            { x: -15, y: 36, height: 'small' },
+            { x: 15, y: 35, height: 'small' },
+            { x: 25, y: 38, height: 'small' },
+            { x: 35, y: 32, height: 'small' },
+            { x: 45, y: 36, height: 'small' },
+            
+            // Fill in gaps for maximum density
+            { x: -42, y: -35, height: 'small' },
+            { x: -32, y: -38, height: 'small' },
+            { x: -22, y: -35, height: 'small' },
+            { x: -12, y: -38, height: 'small' },
+            { x: -2, y: -35, height: 'small' },
+            { x: 8, y: -38, height: 'small' },
+            { x: 18, y: -35, height: 'small' },
+            { x: 28, y: -38, height: 'small' },
+            { x: 38, y: -35, height: 'small' },
+            { x: 42, y: -38, height: 'small' }
         ];
         
         // Use fixed seed for consistent tree generation
@@ -148,6 +182,58 @@ export class GoldMine extends Building {
                 direction: i === 0 ? -1 : 1
             });
         }
+        
+        // Generate excavated ground debris and rocks
+        this.excavatedDebris = [];
+        this.dirtMounds = [];
+        
+        // Create excavated area with scattered rocks and dirt
+        const debrisPositions = [
+            // Large rock piles from excavation
+            { x: -25, y: -15, type: 'rockPile', size: 'large' },
+            { x: 20, y: -10, type: 'rockPile', size: 'large' },
+            { x: -35, y: 25, type: 'rockPile', size: 'medium' },
+            { x: 30, y: 30, type: 'rockPile', size: 'medium' },
+            { x: -10, y: 35, type: 'rockPile', size: 'small' },
+            { x: 15, y: -25, type: 'rockPile', size: 'small' },
+            
+            // Dirt mounds from digging
+            { x: -40, y: 15, type: 'dirtMound', size: 'large' },
+            { x: 25, y: 20, type: 'dirtMound', size: 'medium' },
+            { x: -15, y: 25, type: 'dirtMound', size: 'small' },
+            { x: 35, y: -5, type: 'dirtMound', size: 'medium' },
+            { x: -5, y: -20, type: 'dirtMound', size: 'small' },
+            
+            // Scattered individual rocks
+            { x: -30, y: 5, type: 'scatteredRock', size: 'small' },
+            { x: 10, y: 15, type: 'scatteredRock', size: 'small' },
+            { x: -20, y: 30, type: 'scatteredRock', size: 'small' },
+            { x: 40, y: 10, type: 'scatteredRock', size: 'small' },
+            { x: 0, y: 25, type: 'scatteredRock', size: 'small' },
+            { x: -45, y: 0, type: 'scatteredRock', size: 'small' },
+            { x: 45, y: 5, type: 'scatteredRock', size: 'small' },
+            { x: -8, y: 10, type: 'scatteredRock', size: 'small' },
+            { x: 22, y: 35, type: 'scatteredRock', size: 'small' }
+        ];
+        
+        debrisPositions.forEach((pos, i) => {
+            let baseSize;
+            switch (pos.size) {
+                case 'large': baseSize = 12 + (seededRandom() * 6); break;
+                case 'medium': baseSize = 8 + (seededRandom() * 4); break;
+                case 'small': baseSize = 4 + (seededRandom() * 3); break;
+            }
+            
+            this.excavatedDebris.push({
+                x: pos.x,
+                y: pos.y,
+                type: pos.type,
+                size: baseSize,
+                rotation: seededRandom() * Math.PI * 2,
+                color: seededRandom() < 0.5 ? '#8B7355' : '#A0522D',
+                layers: pos.type === 'rockPile' && pos.size !== 'small' ? 2 + Math.floor(seededRandom() * 2) : 1
+            });
+        });
     }
     
     generateFixedBushSegments(radius, segments, randomFunc) {
@@ -266,7 +352,10 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Render trees first (background elements) - proper Christmas tree pine forest
+        // Render excavated ground base first
+        this.renderExcavatedGround(ctx, size);
+        
+        // Render trees (now much denser forest)
         this.trees.forEach(tree => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
@@ -383,82 +472,110 @@ export class GoldMine extends Building {
             ctx.restore();
         });
         
-        // Render environment rocks with fixed stacking (no random patterns)
-        this.environmentRocks.forEach(rock => {
+        // Render excavated debris and rock piles
+        this.excavatedDebris.forEach(debris => {
             ctx.save();
-            ctx.translate(this.x + rock.x, this.y + rock.y);
-            ctx.rotate(rock.rotation);
+            ctx.translate(this.x + debris.x, this.y + debris.y);
+            ctx.rotate(debris.rotation);
             
-            // Rock shadow (fixed)
+            // Debris shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
-            ctx.ellipse(2, 2, rock.size * 0.9, rock.size * 0.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(2, 2, debris.size * 0.9, debris.size * 0.4, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            ctx.fillStyle = rock.color;
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1;
-            
-            if (rock.layers > 1) {
-                // Stacked rocks with fixed patterns
-                for (let layer = 0; layer < rock.layers; layer++) {
-                    const layerSize = rock.size * (1 - layer * 0.15);
-                    const layerY = -layer * rock.size * 0.4;
-                    const layerColor = layer === 0 ? rock.color : this.darkenColor(rock.color, 0.1 * layer);
-                    
-                    ctx.fillStyle = layerColor;
-                    
-                    switch (rock.type) {
-                        case 0:
-                            ctx.beginPath();
-                            ctx.ellipse(0, layerY, layerSize, layerSize * 0.8, 0, 0, Math.PI * 2);
-                            ctx.fill();
-                            ctx.stroke();
-                            break;
+            switch (debris.type) {
+                case 'rockPile':
+                    // Pile of rocks from excavation
+                    if (debris.layers > 1) {
+                        for (let layer = 0; layer < debris.layers; layer++) {
+                            const layerSize = debris.size * (1 - layer * 0.1);
+                            const layerY = -layer * debris.size * 0.3;
+                            const layerColor = layer === 0 ? debris.color : this.darkenColor(debris.color, 0.15 * layer);
                             
-                        case 2:
-                            ctx.beginPath();
-                            ctx.ellipse(0, layerY, layerSize, layerSize * 0.5, 0, 0, Math.PI * 2);
-                            ctx.fill();
-                            ctx.stroke();
-                            break;
+                            ctx.fillStyle = layerColor;
+                            ctx.strokeStyle = '#654321';
+                            ctx.lineWidth = 1;
+                            
+                            // Irregular rock pile shape
+                            for (let rock = 0; rock < 3 + layer; rock++) {
+                                const rockAngle = (rock / (3 + layer)) * Math.PI * 2;
+                                const rockDist = layerSize * (0.6 + (rock % 2) * 0.3);
+                                const rockX = Math.cos(rockAngle) * rockDist;
+                                const rockY = Math.sin(rockAngle) * rockDist * 0.7 + layerY;
+                                const rockSize = layerSize * (0.3 + (rock % 3) * 0.1);
+                                
+                                ctx.beginPath();
+                                ctx.ellipse(rockX, rockY, rockSize, rockSize * 0.8, 0, 0, Math.PI * 2);
+                                ctx.fill();
+                                ctx.stroke();
+                            }
+                        }
+                    } else {
+                        // Single rock
+                        ctx.fillStyle = debris.color;
+                        ctx.strokeStyle = '#654321';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, debris.size, debris.size * 0.8, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
                     }
-                }
-            } else {
-                // Single rocks with fixed shapes
-                switch (rock.type) {
-                    case 0:
+                    break;
+                    
+                case 'dirtMound':
+                    // Mounds of excavated dirt
+                    const dirtGradient = ctx.createRadialGradient(0, -debris.size * 0.3, 0, 0, 0, debris.size);
+                    dirtGradient.addColorStop(0, '#D2B48C');
+                    dirtGradient.addColorStop(0.6, '#CD853F');
+                    dirtGradient.addColorStop(1, '#8B7355');
+                    
+                    ctx.fillStyle = dirtGradient;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, debris.size, debris.size * 0.6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Dirt texture
+                    ctx.strokeStyle = '#A0522D';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < 3; i++) {
+                        const lineAngle = (i / 3) * Math.PI * 2;
+                        const lineStart = debris.size * 0.3;
+                        const lineEnd = debris.size * 0.8;
                         ctx.beginPath();
-                        ctx.ellipse(0, 0, rock.size, rock.size * 0.8, 0, 0, Math.PI * 2);
-                        ctx.fill();
+                        ctx.moveTo(Math.cos(lineAngle) * lineStart, Math.sin(lineAngle) * lineStart);
+                        ctx.lineTo(Math.cos(lineAngle) * lineEnd, Math.sin(lineAngle) * lineEnd * 0.6);
                         ctx.stroke();
-                        break;
-                        
-                    case 1:
-                        // Fixed angular rock shape
-                        ctx.beginPath();
-                        const points = [
-                            {x: -rock.size, y: 0},
-                            {x: -rock.size * 0.5, y: -rock.size * 0.8},
-                            {x: rock.size * 0.3, y: -rock.size * 0.6},
-                            {x: rock.size, y: 0},
-                            {x: rock.size * 0.5, y: rock.size * 0.7}
-                        ];
-                        points.forEach((point, i) => {
-                            if (i === 0) ctx.moveTo(point.x, point.y);
-                            else ctx.lineTo(point.x, point.y);
-                        });
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                        break;
-                }
+                    }
+                    break;
+                    
+                case 'scatteredRock':
+                    // Individual scattered rocks
+                    ctx.fillStyle = debris.color;
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 1;
+                    
+                    // Irregular rock shape
+                    ctx.beginPath();
+                    const points = 5 + Math.floor(debris.size / 3);
+                    for (let i = 0; i < points; i++) {
+                        const angle = (i / points) * Math.PI * 2;
+                        const radius = debris.size * (0.7 + (i % 2) * 0.3);
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius * 0.8;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
             }
             
-            // Fixed rock highlight
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+            // Highlight for 3D effect
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.3)';
             ctx.beginPath();
-            ctx.arc(-rock.size * 0.3, -rock.size * 0.3, rock.size * 0.15, 0, Math.PI * 2);
+            ctx.arc(-debris.size * 0.3, -debris.size * 0.3, debris.size * 0.15, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();
@@ -498,150 +615,8 @@ export class GoldMine extends Building {
             ctx.restore();
         });
         
-        // Rock formation around cave entrance (existing cave structure)
-        const rockColor = '#8B7355';
-        const darkRock = '#654321';
-        const lightRock = '#A0522D';
-        
-        // Main rock formation (irregular shape)
-        ctx.fillStyle = rockColor;
-        ctx.strokeStyle = darkRock;
-        ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        ctx.moveTo(this.x - size * 0.4, this.y + size * 0.3);
-        ctx.lineTo(this.x - size * 0.3, this.y - size * 0.2);
-        ctx.lineTo(this.x - size * 0.1, this.y - size * 0.35);
-        ctx.lineTo(this.x + size * 0.2, this.y - size * 0.25);
-        ctx.lineTo(this.x + size * 0.4, this.y + size * 0.1);
-        ctx.lineTo(this.x + size * 0.3, this.y + size * 0.3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Rock highlights and texture
-        ctx.fillStyle = lightRock;
-        ctx.beginPath();
-        ctx.arc(this.x - size * 0.2, this.y - size * 0.1, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(this.x + size * 0.1, this.y - size * 0.05, size * 0.06, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Rock cracks/texture lines
-        ctx.strokeStyle = darkRock;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(this.x - size * 0.25, this.y - size * 0.15);
-        ctx.lineTo(this.x - size * 0.1, this.y + size * 0.1);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(this.x + size * 0.05, this.y - size * 0.2);
-        ctx.lineTo(this.x + size * 0.15, this.y + size * 0.05);
-        ctx.stroke();
-        
-        // Cave entrance (dark oval opening)
-        const caveGradient = ctx.createRadialGradient(
-            this.x - size * 0.15, this.y, 0,
-            this.x - size * 0.15, this.y, size * 0.15
-        );
-        caveGradient.addColorStop(0, '#000000');
-        caveGradient.addColorStop(0.7, '#1a1a1a');
-        caveGradient.addColorStop(1, '#2a2a2a');
-        
-        ctx.fillStyle = caveGradient;
-        ctx.beginPath();
-        ctx.ellipse(this.x - size * 0.15, this.y, size * 0.15, size * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Cave entrance border
-        ctx.strokeStyle = '#333333';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // Wooden support beams at cave entrance
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        
-        // Vertical supports
-        ctx.fillRect(this.x - size * 0.28, this.y - size * 0.08, size * 0.04, size * 0.16);
-        ctx.strokeRect(this.x - size * 0.28, this.y - size * 0.08, size * 0.04, size * 0.16);
-        
-        ctx.fillRect(this.x - size * 0.05, this.y - size * 0.08, size * 0.04, size * 0.16);
-        ctx.strokeRect(this.x - size * 0.05, this.y - size * 0.08, size * 0.04, size * 0.16);
-        
-        // Horizontal beam
-        ctx.fillRect(this.x - size * 0.28, this.y - size * 0.1, size * 0.27, size * 0.03);
-        ctx.strokeRect(this.x - size * 0.28, this.y - size * 0.1, size * 0.27, size * 0.03);
-        
-        // Mine cart track
-        const trackY = this.y + size * 0.25;
-        const trackStartX = this.x - size * 0.1;
-        const trackEndX = this.x + size * 0.4;
-        
-        // Track rails
-        ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3;
-        
-        // Left rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY - size * 0.02);
-        ctx.lineTo(trackEndX, trackY - size * 0.02);
-        ctx.stroke();
-        
-        // Right rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY + size * 0.02);
-        ctx.lineTo(trackEndX, trackY + size * 0.02);
-        ctx.stroke();
-        
-        // Railroad ties
-        ctx.fillStyle = '#654321';
-        for (let i = 0; i < 6; i++) {
-            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
-            ctx.fillRect(tieX - size * 0.02, trackY - size * 0.03, size * 0.04, size * 0.06);
-        }
-        
-        // Mine cart
-        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
-        
-        // Cart shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
-        
-        // Cart body
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        
-        // Cart wheels
-        ctx.fillStyle = '#2F2F2F';
-        ctx.beginPath();
-        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Gold ore in cart (if ready)
-        if (this.isReady && this.cartPosition > 0.5) {
-            ctx.fillStyle = '#FFD700';
-            for (let i = 0; i < 3; i++) {
-                const oreX = cartX - size * 0.02 + (i * size * 0.013);
-                const oreY = trackY - size * 0.07;
-                ctx.beginPath();
-                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+        // Render simplified cave entrance integrated into excavated ground
+        this.renderCaveEntrance(ctx, size);
         
         // Render workers
         this.workers.forEach(worker => {
@@ -823,5 +798,196 @@ export class GoldMine extends Building {
             size: '4x4',
             cost: 200
         };
+    }
+    
+    renderExcavatedGround(ctx, size) {
+        // Render flat excavated forest floor
+        const excavatedArea = size * 0.9;
+        
+        // Base excavated ground
+        const groundGradient = ctx.createRadialGradient(
+            this.x, this.y, 0,
+            this.x, this.y, excavatedArea
+        );
+        groundGradient.addColorStop(0, '#8B7355'); // Sandy brown center
+        groundGradient.addColorStop(0.5, '#A0522D'); // Sienna middle
+        groundGradient.addColorStop(0.8, '#654321'); // Dark brown
+        groundGradient.addColorStop(1, '#5D4E37'); // Very dark brown edge
+        
+        ctx.fillStyle = groundGradient;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y, excavatedArea, excavatedArea * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Excavated ground texture with grid-like pattern
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.6)';
+        ctx.lineWidth = 1;
+        
+        // Grid pattern from excavation
+        const gridSpacing = 15;
+        for (let x = -excavatedArea; x <= excavatedArea; x += gridSpacing) {
+            for (let y = -excavatedArea * 0.8; y <= excavatedArea * 0.8; y += gridSpacing) {
+                if (Math.hypot(x, y) <= excavatedArea * 0.9) {
+                    ctx.beginPath();
+                    ctx.rect(this.x + x - 2, this.y + y - 2, 4, 4);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // Dig marks and tool scratches
+        ctx.strokeStyle = 'rgba(139, 115, 85, 0.5)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = excavatedArea * (0.3 + Math.random() * 0.5);
+            const scratchX = this.x + Math.cos(angle) * distance;
+            const scratchY = this.y + Math.sin(angle) * distance * 0.8;
+            const scratchLength = 10 + Math.random() * 15;
+            
+            ctx.beginPath();
+            ctx.moveTo(scratchX, scratchY);
+            ctx.lineTo(scratchX + Math.cos(angle + Math.PI/4) * scratchLength, 
+                      scratchY + Math.sin(angle + Math.PI/4) * scratchLength);
+            ctx.stroke();
+        }
+        
+        // Scattered dirt and debris texture
+        ctx.fillStyle = 'rgba(160, 82, 45, 0.4)';
+        for (let i = 0; i < 25; i++) {
+            const debrisAngle = Math.random() * Math.PI * 2;
+            const debrisDistance = Math.random() * excavatedArea * 0.8;
+            const debrisX = this.x + Math.cos(debrisAngle) * debrisDistance;
+            const debrisY = this.y + Math.sin(debrisAngle) * debrisDistance * 0.8;
+            const debrisSize = Math.random() * 3 + 1;
+            
+            ctx.beginPath();
+            ctx.arc(debrisX, debrisY, debrisSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    renderCaveEntrance(ctx, size) {
+        // Rock formation around cave entrance - integrated into excavated ground
+        const rockColor = '#8B7355';
+        const darkRock = '#654321';
+        const lightRock = '#A0522D';
+        
+        // Natural rock outcropping from excavated ground
+        ctx.fillStyle = rockColor;
+        ctx.strokeStyle = darkRock;
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - size * 0.35, this.y + size * 0.15);
+        ctx.lineTo(this.x - size * 0.25, this.y - size * 0.15);
+        ctx.lineTo(this.x - size * 0.05, this.y - size * 0.25);
+        ctx.lineTo(this.x + size * 0.15, this.y - size * 0.2);
+        ctx.lineTo(this.x + size * 0.3, this.y + size * 0.05);
+        ctx.lineTo(this.x + size * 0.25, this.y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Cave entrance (dark oval opening)
+        const caveGradient = ctx.createRadialGradient(
+            this.x - size * 0.12, this.y - size * 0.05, 0,
+            this.x - size * 0.12, this.y - size * 0.05, size * 0.12
+        );
+        caveGradient.addColorStop(0, '#000000');
+        caveGradient.addColorStop(0.7, '#1a1a1a');
+        caveGradient.addColorStop(1, '#2a2a2a');
+        
+        ctx.fillStyle = caveGradient;
+        ctx.beginPath();
+        ctx.ellipse(this.x - size * 0.12, this.y - size * 0.05, size * 0.12, size * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Cave entrance border
+        ctx.strokeStyle = '#333333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Wooden support beams at cave entrance
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        
+        // Vertical supports
+        ctx.fillRect(this.x - size * 0.22, this.y - size * 0.1, size * 0.03, size * 0.12);
+        ctx.strokeRect(this.x - size * 0.22, this.y - size * 0.1, size * 0.03, size * 0.12);
+        
+        ctx.fillRect(this.x - size * 0.05, this.y - size * 0.1, size * 0.03, size * 0.12);
+        ctx.strokeRect(this.x - size * 0.05, this.y - size * 0.1, size * 0.03, size * 0.12);
+        
+        // Horizontal beam
+        ctx.fillRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
+        ctx.strokeRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
+        
+        // Mine cart track on excavated ground
+        const trackY = this.y + size * 0.2;
+        const trackStartX = this.x - size * 0.08;
+        const trackEndX = this.x + size * 0.35;
+        
+        // Track rails
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 3;
+        
+        // Left rail
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY - size * 0.015);
+        ctx.lineTo(trackEndX, trackY - size * 0.015);
+        ctx.stroke();
+        
+        // Right rail
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY + size * 0.015);
+        ctx.lineTo(trackEndX, trackY + size * 0.015);
+        ctx.stroke();
+        
+        // Railroad ties on excavated ground
+        ctx.fillStyle = '#654321';
+        for (let i = 0; i < 6; i++) {
+            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
+            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
+        }
+        
+        // Mine cart
+        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
+        
+        // Cart shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
+        
+        // Cart body
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        
+        // Cart wheels
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Gold ore in cart (if ready)
+        if (this.isReady && this.cartPosition > 0.5) {
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 3; i++) {
+                const oreX = cartX - size * 0.02 + (i * size * 0.013);
+                const oreY = trackY - size * 0.07;
+                ctx.beginPath();
+                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
 }
