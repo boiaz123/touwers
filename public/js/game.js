@@ -439,9 +439,13 @@ class Game {
             return;
         }
         
+        console.log('Game: Canvas found, setting up...');
+        
         // Apply UI scaling
         this.applyUIScaling();
         this.resizeCanvas();
+        
+        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
         
         // Create state manager
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
@@ -454,60 +458,15 @@ class Game {
         this.lastTime = 0;
         this.setupEventListeners();
         
+        console.log('Game: Starting with start screen');
         // Start immediately with start screen
         this.stateManager.changeState('start');
         
+        console.log('Game: Starting game loop');
         // Begin game loop
         requestAnimationFrame((time) => this.gameLoop(time));
         
         console.log('Game: Initialization complete');
-    }
-    
-    initializeStates() {
-        console.log('Game: Initializing states with canvas size:', this.canvas.width, 'x', this.canvas.height);
-        
-        try {
-            this.stateManager = new GameStateManager(this.canvas, this.ctx);
-            console.log('Game: GameStateManager created');
-            
-            // Add states
-            this.stateManager.addState('start', new StartScreen(this.stateManager));
-            console.log('Game: StartScreen state added');
-            
-            this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
-            console.log('Game: LevelSelect state added');
-            
-            this.stateManager.addState('game', new GameplayState(this.stateManager));
-            console.log('Game: GameplayState added');
-            
-            this.lastTime = 0;
-            
-            this.setupEventListeners();
-            console.log('Game: Event listeners set up');
-            
-            // Start with the start screen
-            console.log('Game: Starting with start screen');
-            this.stateManager.changeState('start');
-            
-            // Start game loop immediately
-            console.log('Game: Starting game loop');
-            requestAnimationFrame((time) => this.gameLoop(time));
-            
-        } catch (error) {
-            console.error('Error during state initialization:', error);
-            // Show error on canvas
-            this.showError(`Initialization failed: ${error.message}`);
-        }
-    }
-    
-    showError(message) {
-        console.error('Game: Showing error on canvas:', message);
-        if (this.ctx) {
-            this.ctx.fillStyle = '#ff0000';
-            this.ctx.font = '20px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
-        }
     }
     
     applyUIScaling() {
@@ -655,7 +614,11 @@ class Game {
             }
         } catch (error) {
             console.error('Error in game loop:', error);
-            this.showError(`Game loop error: ${error.message}`);
+            // Show error on canvas instead of calling missing method
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.font = '20px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(`Error: ${error.message}`, this.canvas.width / 2, this.canvas.height / 2);
         }
         
         requestAnimationFrame((time) => this.gameLoop(time));
@@ -664,5 +627,6 @@ class Game {
 
 // Simple initialization - wait for DOM and start immediately
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, creating game');
     new Game();
 });
