@@ -150,4 +150,8 @@ export class TowerManager {
     get buildingTypes() {
         return this.buildingManager.buildingTypes;
     }
+    
+    handleClick(x, y, canvasSize) {
+        return this.buildingManager.handleClick(x, y, canvasSize);
+    }
 }

@@ -80,10 +80,29 @@ export class BuildingManager {
             building.update(deltaTime);
         });
         
-        // Apply passive gold generation
-        if (this.goldPerSecond > 0) {
-            this.gameState.gold += this.goldPerSecond * deltaTime;
-        }
+        // Remove passive gold generation (gold mines now require clicking)
+    }
+    
+    handleClick(x, y, canvasSize) {
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasSize.width / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        
+        let goldCollected = 0;
+        
+        this.buildings.forEach(building => {
+            if (building.constructor.name === 'GoldMine') {
+                const buildingSize = cellSize * building.size;
+                if (building.isPointInside(x, y, buildingSize)) {
+                    const collected = building.collectGold();
+                    if (collected > 0) {
+                        goldCollected += collected;
+                    }
+                }
+            }
+        });
+        
+        return goldCollected;
     }
     
     render(ctx) {
