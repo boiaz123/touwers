@@ -182,70 +182,159 @@ export class BarricadeTower {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(this.x - towerSize * 0.4 + 4, this.y - towerSize * 0.3 + 4, towerSize * 0.8, towerSize * 0.6);
         
-        // Watch tower base platform
-        const baseWidth = towerSize * 0.8;
-        const baseHeight = towerSize * 0.3;
+        // Watch tower base platform - wooden planks
+        const baseWidth = towerSize * 0.6;
+        const baseHeight = towerSize * 0.2;
+        const plankHeight = 6;
+        const numPlanks = Math.floor(baseHeight / plankHeight);
         
-        const baseGradient = ctx.createLinearGradient(
-            this.x - baseWidth/2, this.y - baseHeight,
-            this.x + baseWidth/2, this.y
-        );
-        baseGradient.addColorStop(0, '#8B4513');
-        baseGradient.addColorStop(0.5, '#A0522D');
-        baseGradient.addColorStop(1, '#654321');
-        
-        ctx.fillStyle = baseGradient;
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 3;
-        ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight);
-        ctx.strokeRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight);
+        for (let i = 0; i < numPlanks; i++) {
+            const plankY = this.y - baseHeight + (i * plankHeight);
+            const plankOffset = (i % 2) * 3; // Stagger planks slightly
+            
+            // Individual wooden plank
+            const plankGradient = ctx.createLinearGradient(
+                this.x - baseWidth/2, plankY,
+                this.x + baseWidth/2, plankY + plankHeight
+            );
+            plankGradient.addColorStop(0, '#A0522D');
+            plankGradient.addColorStop(0.3, '#8B4513');
+            plankGradient.addColorStop(0.7, '#CD853F');
+            plankGradient.addColorStop(1, '#654321');
+            
+            ctx.fillStyle = plankGradient;
+            ctx.fillRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
+            
+            // Plank outline and wood grain
+            ctx.strokeStyle = '#5D4E37';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
+            
+            // Wood grain lines
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 0.5;
+            for (let g = 0; g < 2; g++) {
+                const grainY = plankY + (g + 1) * plankHeight / 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x - baseWidth/2 + plankOffset + 2, grainY);
+                ctx.lineTo(this.x + baseWidth/2 - 2, grainY);
+                ctx.stroke();
+            }
+        }
         
         // Watch tower supports (vertical beams)
-        const supportWidth = 8;
+        const supportWidth = 6;
         const supportHeight = towerSize * 0.6;
-        ctx.fillStyle = '#654321';
+        
         for (let side = -1; side <= 1; side += 2) {
-            const supportX = this.x + side * (baseWidth/2 - supportWidth);
-            ctx.fillRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
-            ctx.strokeRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            const supportX = this.x + side * (baseWidth/2 - supportWidth/2);
             
-            // Cross braces
+            // Support beam with wood texture
+            const supportGradient = ctx.createLinearGradient(
+                supportX, this.y - baseHeight - supportHeight,
+                supportX + supportWidth, this.y - baseHeight
+            );
+            supportGradient.addColorStop(0, '#8B4513');
+            supportGradient.addColorStop(0.5, '#654321');
+            supportGradient.addColorStop(1, '#5D4E37');
+            
+            ctx.fillStyle = supportGradient;
+            ctx.fillRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
             ctx.strokeStyle = '#5D4E37';
             ctx.lineWidth = 2;
+            ctx.strokeRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            
+            // Vertical wood grain
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            for (let g = 0; g < 2; g++) {
+                const grainX = supportX + (g + 1) * supportWidth / 3;
+                ctx.beginPath();
+                ctx.moveTo(grainX, this.y - baseHeight - supportHeight + 5);
+                ctx.lineTo(grainX, this.y - baseHeight - 5);
+                ctx.stroke();
+            }
+            
+            // Cross braces with rope/nail details
+            ctx.strokeStyle = '#5D4E37';
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(supportX, this.y - baseHeight - supportHeight * 0.7);
             ctx.lineTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.3);
             ctx.moveTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.7);
             ctx.lineTo(supportX, this.y - baseHeight - supportHeight * 0.3);
             ctx.stroke();
+            
+            // Nail/rope binding points
+            ctx.fillStyle = '#2F2F2F';
+            const bindingPoints = [0.3, 0.7];
+            bindingPoints.forEach(point => {
+                const bindY = this.y - baseHeight - supportHeight * point;
+                ctx.beginPath();
+                ctx.arc(supportX + supportWidth/2, bindY, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
         }
         
-        // Upper platform
-        const platformWidth = baseWidth * 0.7;
-        const platformHeight = 15;
+        // Upper platform - wooden plank construction
+        const platformWidth = baseWidth * 0.8;
+        const platformHeight = 8;
         const platformY = this.y - baseHeight - supportHeight;
+        const platformPlanks = 4;
+        const plankWidth = platformWidth / platformPlanks;
         
-        ctx.fillStyle = baseGradient;
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 3;
-        ctx.fillRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
-        ctx.strokeRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
+        for (let i = 0; i < platformPlanks; i++) {
+            const plankX = this.x - platformWidth/2 + (i * plankWidth);
+            
+            // Individual platform plank
+            const plankGradient = ctx.createLinearGradient(
+                plankX, platformY,
+                plankX + plankWidth, platformY + platformHeight
+            );
+            plankGradient.addColorStop(0, '#CD853F');
+            plankGradient.addColorStop(0.5, '#A0522D');
+            plankGradient.addColorStop(1, '#8B4513');
+            
+            ctx.fillStyle = plankGradient;
+            ctx.fillRect(plankX, platformY, plankWidth, platformHeight);
+            
+            // Plank separations and nails
+            ctx.strokeStyle = '#5D4E37';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(plankX, platformY, plankWidth, platformHeight);
+            
+            // Nails at corners
+            ctx.fillStyle = '#2F2F2F';
+            ctx.beginPath();
+            ctx.arc(plankX + 2, platformY + 2, 1, 0, Math.PI * 2);
+            ctx.arc(plankX + plankWidth - 2, platformY + 2, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
-        // Platform railings
+        // Platform railings with more detail
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         for (let side = -1; side <= 1; side += 2) {
             const railX = this.x + side * platformWidth/2;
+            
+            // Vertical railing post
             ctx.beginPath();
             ctx.moveTo(railX, platformY);
-            ctx.lineTo(railX, platformY - 20);
+            ctx.lineTo(railX, platformY - 18);
             ctx.stroke();
             
-            // Horizontal rail
+            // Horizontal rails
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(railX, platformY - 15);
-            ctx.lineTo(railX - side * 15, platformY - 15);
+            ctx.moveTo(railX, platformY - 12);
+            ctx.lineTo(railX - side * 12, platformY - 12);
+            ctx.moveTo(railX, platformY - 6);
+            ctx.lineTo(railX - side * 8, platformY - 6);
             ctx.stroke();
+            
+            // Railing post cap
+            ctx.fillStyle = '#5D4E37';
+            ctx.fillRect(railX - 1, platformY - 20, 2, 4);
         }
         
         // Barrel storage on platform
