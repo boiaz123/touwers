@@ -439,13 +439,23 @@ class Game {
             return;
         }
         
-        console.log('Game: Canvas found, size will be set');
+        console.log('Game: Canvas found, setting up...');
         
         // Detect and apply UI scaling based on screen resolution
         this.applyUIScaling();
         
+        // Initial canvas resize
         this.resizeCanvas();
-        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+        console.log('Game: Canvas initial size:', this.canvas.width, 'x', this.canvas.height);
+        
+        // Wait a frame to ensure canvas is properly sized before creating states
+        requestAnimationFrame(() => {
+            this.initializeStates();
+        });
+    }
+    
+    initializeStates() {
+        console.log('Game: Initializing states with canvas size:', this.canvas.width, 'x', this.canvas.height);
         
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
         console.log('Game: GameStateManager created');
@@ -570,7 +580,28 @@ class Game {
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            this.stateManager.handleClick(x, y);
+            console.log('Game: Canvas click at', x, y, 'current state:', this.stateManager?.currentState);
+            this.stateManager?.handleClick(x, y);
+        });
+        
+        // Add additional event listeners for better interaction
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            console.log('Game: Canvas touch at', x, y);
+            this.stateManager?.handleClick(x, y);
+        });
+        
+        // Keyboard support for start screen
+        document.addEventListener('keydown', (e) => {
+            if (this.stateManager?.currentState === 'start' && 
+                (e.key === 'Enter' || e.key === ' ')) {
+                console.log('Game: Keyboard input detected on start screen');
+                this.stateManager.handleClick(0, 0); // Trigger click handler
+            }
         });
     }
     
@@ -594,7 +625,16 @@ class Game {
 // Add error handling for the initialization
 try {
     console.log('Starting game initialization');
-    new Game();
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM ready, starting game');
+            new Game();
+        });
+    } else {
+        console.log('DOM already ready, starting game immediately');
+        new Game();
+    }
 } catch (error) {
     console.error('Failed to initialize game:', error);
 }

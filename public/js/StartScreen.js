@@ -7,28 +7,32 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         this.particles = [];
+        this.particlesInitialized = false;
         console.log('StartScreen: constructor called');
     }
     
     initParticles() {
-        // Ensure we have valid canvas dimensions before initializing particles
-        if (!this.stateManager.canvas.width || !this.stateManager.canvas.height) {
-            console.warn('StartScreen: Canvas dimensions not available, skipping particle initialization');
-            return;
+        // Always try to initialize particles when called
+        const canvas = this.stateManager.canvas;
+        if (!canvas || !canvas.width || !canvas.height) {
+            console.warn('StartScreen: Canvas not ready for particles');
+            return false;
         }
         
-        console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
+        console.log('StartScreen: Initializing particles for canvas size:', canvas.width, 'x', canvas.height);
         this.particles = [];
         for (let i = 0; i < 50; i++) {
             this.particles.push({
-                x: Math.random() * this.stateManager.canvas.width,
-                y: Math.random() * this.stateManager.canvas.height,
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
                 size: Math.random() * 3 + 1,
                 speed: Math.random() * 20 + 10,
                 opacity: Math.random() * 0.5 + 0.1
             });
         }
+        this.particlesInitialized = true;
         console.log('StartScreen: Particles initialized:', this.particles.length);
+        return true;
     }
     
     enter() {
@@ -57,15 +61,26 @@ export class StartScreen {
         this.titleOpacity = 0;
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
+        this.particlesInitialized = false;
         
-        // Initialize particles when entering (canvas size should be known by now)
+        // Try to initialize particles immediately
         this.initParticles();
         
         console.log('StartScreen: enter completed');
     }
     
+    exit() {
+        console.log('StartScreen: exit called');
+        // Clear any resources if needed
+    }
+    
     update(deltaTime) {
         this.animationTime += deltaTime;
+        
+        // Try to initialize particles if not done yet
+        if (!this.particlesInitialized) {
+            this.initParticles();
+        }
         
         // Title fade in
         if (this.animationTime > 1) {
@@ -84,7 +99,7 @@ export class StartScreen {
         }
         
         // Update particles only if they exist
-        if (this.particles.length > 0) {
+        if (this.particles.length > 0 && this.stateManager.canvas) {
             this.particles.forEach(particle => {
                 particle.y += particle.speed * deltaTime;
                 if (particle.y > this.stateManager.canvas.height) {
@@ -97,10 +112,11 @@ export class StartScreen {
     
     render(ctx) {
         try {
-            const canvas = this.stateManager.canvas;
+            const canvas = ctx.canvas;
             
             // Don't render if canvas isn't ready
-            if (!canvas.width || !canvas.height) {
+            if (!canvas || !canvas.width || !canvas.height) {
+                console.warn('StartScreen: Canvas not ready for rendering');
                 return;
             }
             
@@ -113,14 +129,15 @@ export class StartScreen {
             
             // Render particles (falling embers) only if they exist
             if (this.particles.length > 0) {
-                ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
                 this.particles.forEach(particle => {
+                    ctx.save();
                     ctx.globalAlpha = particle.opacity;
+                    ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
                     ctx.beginPath();
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.restore();
                 });
-                ctx.globalAlpha = 1;
             }
             
             // Title
@@ -150,7 +167,7 @@ export class StartScreen {
                 ctx.globalAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
                 ctx.font = '20px serif';
                 ctx.fillStyle = '#fff';
-                ctx.fillText('Press to Continue', canvas.width / 2, canvas.height / 2 + 120);
+                ctx.fillText('Click to Continue', canvas.width / 2, canvas.height / 2 + 120);
             }
             
             ctx.globalAlpha = 1;
@@ -162,6 +179,7 @@ export class StartScreen {
     handleClick() {
         console.log('StartScreen: Click detected, showContinue:', this.showContinue);
         if (this.showContinue) {
+            console.log('StartScreen: Transitioning to levelSelect');
             this.stateManager.changeState('levelSelect');
         }
     }

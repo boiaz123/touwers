@@ -13,6 +13,8 @@ export class LevelSelect {
     }
     
     enter() {
+        console.log('LevelSelect: enter called');
+        
         // Hide game UI when in level select
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -27,9 +29,11 @@ export class LevelSelect {
         }
         
         this.setupMouseListeners();
+        console.log('LevelSelect: enter completed');
     }
     
     exit() {
+        console.log('LevelSelect: exit called');
         // UI will be shown by the next state (game state)
         this.removeMouseListeners();
     }
@@ -214,6 +218,7 @@ export class LevelSelect {
     }
     
     handleClick(x, y) {
+        console.log('LevelSelect: Handling click at', x, y);
         const cardWidth = 300;
         const cardHeight = 150;
         const startY = 200;
@@ -236,11 +241,13 @@ export class LevelSelect {
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
+                        console.log('LevelSelect: Starting level', level.name);
                         // Pass level info to game state
                         this.stateManager.selectedLevelInfo = level;
                         this.stateManager.changeState('game');
                     }
                 } else {
+                    console.log('LevelSelect: Selected level', index);
                     this.selectedLevel = index;
                 }
             }

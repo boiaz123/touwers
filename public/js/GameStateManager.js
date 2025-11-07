@@ -2,50 +2,57 @@ export class GameStateManager {
     constructor(canvas, ctx) {
         this.canvas = canvas;
         this.ctx = ctx;
-        this.currentState = null; // Start with no state
         this.states = {};
-        this.lastTime = 0;
-        console.log('GameStateManager: initialized');
+        this.currentState = null;
+        this.currentStateObj = null;
+        console.log('GameStateManager: Created with canvas size', canvas.width, 'x', canvas.height);
     }
     
     addState(name, state) {
         this.states[name] = state;
-        console.log(`GameStateManager: Added state '${name}'`);
+        console.log('GameStateManager: Added state', name);
     }
     
-    changeState(name) {
-        console.log(`GameStateManager: Changing state from '${this.currentState}' to '${name}'`);
+    changeState(stateName) {
+        console.log('GameStateManager: Changing state from', this.currentState, 'to', stateName);
         
-        if (this.states[this.currentState] && this.states[this.currentState].exit) {
-            console.log(`GameStateManager: Exiting state '${this.currentState}'`);
-            this.states[this.currentState].exit();
+        if (this.currentStateObj && typeof this.currentStateObj.exit === 'function') {
+            console.log('GameStateManager: Calling exit on', this.currentState);
+            this.currentStateObj.exit();
         }
         
-        this.currentState = name;
-        
-        if (this.states[this.currentState] && this.states[this.currentState].enter) {
-            console.log(`GameStateManager: Entering state '${this.currentState}'`);
-            this.states[this.currentState].enter();
+        if (this.states[stateName]) {
+            this.currentState = stateName;
+            this.currentStateObj = this.states[stateName];
+            
+            if (typeof this.currentStateObj.enter === 'function') {
+                console.log('GameStateManager: Calling enter on', stateName);
+                this.currentStateObj.enter();
+            }
+            console.log('GameStateManager: State changed to', stateName);
         } else {
-            console.error(`GameStateManager: State '${name}' not found or has no enter method`);
+            console.error('GameStateManager: State not found:', stateName);
         }
     }
     
     update(deltaTime) {
-        if (this.states[this.currentState] && this.states[this.currentState].update) {
-            this.states[this.currentState].update(deltaTime);
+        if (this.currentStateObj && typeof this.currentStateObj.update === 'function') {
+            this.currentStateObj.update(deltaTime);
         }
     }
     
     render() {
-        if (this.states[this.currentState] && this.states[this.currentState].render) {
-            this.states[this.currentState].render(this.ctx);
+        if (this.currentStateObj && typeof this.currentStateObj.render === 'function') {
+            this.currentStateObj.render(this.ctx);
         }
     }
     
     handleClick(x, y) {
-        if (this.states[this.currentState] && this.states[this.currentState].handleClick) {
-            this.states[this.currentState].handleClick(x, y);
+        console.log('GameStateManager: Handling click at', x, y, 'in state', this.currentState);
+        if (this.currentStateObj && typeof this.currentStateObj.handleClick === 'function') {
+            this.currentStateObj.handleClick(x, y);
+        } else {
+            console.warn('GameStateManager: Current state does not handle clicks');
         }
     }
 }
