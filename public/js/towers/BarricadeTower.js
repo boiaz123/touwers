@@ -198,29 +198,29 @@ export class BarricadeTower {
                 { x: this.x - gridBounds * 0.7, y: this.y - gridBounds * 0.5, size: 2 },
                 { x: this.x + gridBounds * 0.8, y: this.y - gridBounds * 0.3, size: 3 }
             ],
-            // Small trees very close to tower
+            // Small trees very close to tower - made bigger
             smallTrees: [
-                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.5, size: 8 },
-                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.4, size: 7 },
-                { x: this.x - gridBounds * 0.8, y: this.y - gridBounds * 0.4, size: 9 },
-                { x: this.x + gridBounds * 0.7, y: this.y - gridBounds * 0.5, size: 6 },
-                { x: this.x - gridBounds * 0.5, y: this.y + gridBounds * 0.8, size: 8 },
-                { x: this.x + gridBounds * 0.9, y: this.y + gridBounds * 0.2, size: 7 }
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.5, size: 20 },
+                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.4, size: 18 },
+                { x: this.x - gridBounds * 0.8, y: this.y - gridBounds * 0.4, size: 22 },
+                { x: this.x + gridBounds * 0.7, y: this.y - gridBounds * 0.5, size: 16 },
+                { x: this.x - gridBounds * 0.5, y: this.y + gridBounds * 0.8, size: 20 },
+                { x: this.x + gridBounds * 0.9, y: this.y + gridBounds * 0.2, size: 18 }
             ],
-            // Medium understory trees
+            // Medium understory trees - made much bigger
             mediumTrees: [
-                { x: this.x - gridBounds * 0.9, y: this.y + gridBounds * 0.8, size: 12 },
-                { x: this.x + gridBounds * 0.85, y: this.y + gridBounds * 0.7, size: 11 },
-                { x: this.x - gridBounds * 1.0, y: this.y - gridBounds * 0.2, size: 13 },
-                { x: this.x + gridBounds * 0.95, y: this.y - gridBounds * 0.4, size: 10 },
-                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 1.0, size: 12 }
+                { x: this.x - gridBounds * 0.9, y: this.y + gridBounds * 0.8, size: 30 },
+                { x: this.x + gridBounds * 0.85, y: this.y + gridBounds * 0.7, size: 28 },
+                { x: this.x - gridBounds * 1.0, y: this.y - gridBounds * 0.2, size: 32 },
+                { x: this.x + gridBounds * 0.95, y: this.y - gridBounds * 0.4, size: 26 },
+                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 1.0, size: 30 }
             ],
-            // Tall forest trees within tight grid bounds
+            // Tall forest trees within tight grid bounds - made much taller
             forestTrees: [
-                { x: this.x - gridBounds * 1.0, y: this.y + gridBounds * 1.0, size: 18 },
-                { x: this.x + gridBounds * 0.95, y: this.y + gridBounds * 0.9, size: 16 },
-                { x: this.x - gridBounds * 0.95, y: this.y + gridBounds * 0.3, size: 19 },
-                { x: this.x + gridBounds * 1.0, y: this.y - gridBounds * 0.2, size: 17 }
+                { x: this.x - gridBounds * 1.0, y: this.y + gridBounds * 1.0, size: 45 },
+                { x: this.x + gridBounds * 0.95, y: this.y + gridBounds * 0.9, size: 42 },
+                { x: this.x - gridBounds * 0.95, y: this.y + gridBounds * 0.3, size: 48 },
+                { x: this.x + gridBounds * 1.0, y: this.y - gridBounds * 0.2, size: 44 }
             ],
             rubblePiles: [
                 {
@@ -670,6 +670,79 @@ export class BarricadeTower {
             ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
+        });
+        
+        // NOW RENDER TREES IN FOREGROUND TO OVERLAP TOWER
+        
+        // Forest canopy trees (foreground, tallest) - much bigger
+        this.staticEnvironment.forestTrees.forEach(tree => {
+            // Thick trunk for forest trees
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(tree.x - 4, tree.y - 4, 8, tree.size);
+            
+            // 6 layers for very tall forest trees
+            for (let layer = 0; layer < 6; layer++) {
+                const layerY = tree.y - layer * (tree.size * 0.18);
+                const layerSize = tree.size * (1.1 - layer * 0.12);
+                
+                ctx.fillStyle = layer < 2 ? '#0F2F0F' : layer < 4 ? '#1F4F1F' : '#2F5F2F';
+                ctx.beginPath();
+                ctx.moveTo(tree.x, layerY - layerSize);
+                ctx.lineTo(tree.x - layerSize * 0.8, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.8, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#004400';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+        });
+        
+        // Medium understory trees - much bigger
+        this.staticEnvironment.mediumTrees.forEach(tree => {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(tree.x - 3, tree.y - 3, 6, tree.size);
+            
+            for (let layer = 0; layer < 4; layer++) {
+                const layerY = tree.y - layer * (tree.size * 0.25);
+                const layerSize = tree.size * (0.9 - layer * 0.15);
+                
+                ctx.fillStyle = layer === 0 ? '#1F5F1F' : layer === 1 ? '#2F7F2F' : '#3F9F3F';
+                ctx.beginPath();
+                ctx.moveTo(tree.x, layerY - layerSize);
+                ctx.lineTo(tree.x - layerSize * 0.7, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.7, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#005500';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            }
+        });
+        
+        // Small trees close to tower - bigger
+        this.staticEnvironment.smallTrees.forEach(tree => {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(tree.x - 2, tree.y - 2, 4, tree.size);
+            
+            for (let layer = 0; layer < 3; layer++) {
+                const layerY = tree.y - layer * (tree.size * 0.3);
+                const layerSize = tree.size * (0.8 - layer * 0.18);
+                
+                ctx.fillStyle = layer === 0 ? '#228B22' : layer === 1 ? '#32CD32' : '#4AFF4A';
+                ctx.beginPath();
+                ctx.moveTo(tree.x, layerY - layerSize);
+                ctx.lineTo(tree.x - layerSize * 0.6, layerY);
+                ctx.lineTo(tree.x + layerSize * 0.6, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#006400';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
         });
         
         // Range indicator
