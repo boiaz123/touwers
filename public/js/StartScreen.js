@@ -81,6 +81,14 @@ export class StartScreen {
         const width = ctx.canvas.width || window.innerWidth;
         const height = ctx.canvas.height || window.innerHeight;
         
+        console.log('StartScreen: Rendering with canvas size:', width, 'x', height);
+        
+        // Ensure we have valid dimensions
+        if (width <= 0 || height <= 0) {
+            console.warn('StartScreen: Invalid canvas dimensions, using fallback');
+            return;
+        }
+        
         // Background
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, '#1a0f0a');
@@ -132,6 +140,9 @@ export class StartScreen {
         }
         
         ctx.restore();
+        
+        console.log('StartScreen: Render complete - title opacity:', this.titleOpacity, 
+                   'showContinue:', this.showContinue);
     }
     
     handleClick() {

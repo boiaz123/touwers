@@ -441,13 +441,16 @@ class Game {
         
         console.log('Game: Canvas found, setting up...');
         
-        // Apply UI scaling
+        // Apply UI scaling first
         this.applyUIScaling();
-        this.resizeCanvas();
         
-        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+        // Set initial canvas size for start screen (full window)
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
         
-        // Create state manager
+        console.log('Game: Canvas initial size set to:', this.canvas.width, 'x', this.canvas.height);
+        
+        // Create state manager with properly sized canvas
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
         
         // Add states
@@ -497,13 +500,14 @@ class Game {
     }
     
     resizeCanvas() {
-        const gameArea = document.getElementById('game-area');
         const sidebar = document.getElementById('tower-sidebar');
         const statsBar = document.getElementById('stats-bar');
         
-        // Only account for visible UI elements
-        const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
-        const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
+        // Check if UI elements are visible and get their dimensions
+        const sidebarWidth = (sidebar && sidebar.style.display !== 'none' && 
+                             getComputedStyle(sidebar).display !== 'none') ? sidebar.offsetWidth : 0;
+        const statsBarHeight = (statsBar && statsBar.style.display !== 'none' && 
+                               getComputedStyle(statsBar).display !== 'none') ? statsBar.offsetHeight : 0;
         
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
@@ -511,7 +515,10 @@ class Game {
         this.canvas.width = window.innerWidth - sidebarWidth;
         this.canvas.height = window.innerHeight - statsBarHeight;
         
-        // Only update game elements if we're in the game state and the state manager is initialized
+        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height, 
+                   'UI offsets - sidebar:', sidebarWidth, 'statsBar:', statsBarHeight);
+        
+        // Only update game elements if we're in the game state and properly initialized
         if (this.stateManager && 
             this.stateManager.currentState === 'game' && 
             this.stateManager.states.game && 
@@ -540,7 +547,6 @@ class Game {
                         } else {
                             // Fallback: reset enemy path reference
                             enemy.path = gameState.level.path;
-                            // Ensure enemy position is still valid
                             if (enemy.currentPathIndex >= enemy.path.length - 1) {
                                 enemy.currentPathIndex = Math.max(0, enemy.path.length - 2);
                             }
@@ -625,8 +631,13 @@ class Game {
     }
 }
 
-// Simple initialization - wait for DOM and start immediately
+// Wait for DOM and ensure it's fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, creating game');
-    new Game();
+    console.log('DOM loaded, waiting for styles to load...');
+    
+    // Give a small delay to ensure CSS and layout are ready
+    setTimeout(() => {
+        console.log('Creating game after layout is ready');
+        new Game();
+    }, 100);
 });

@@ -52,7 +52,7 @@ export class GameStateManager {
             } else {
                 console.warn('GameStateManager: State', stateName, 'does not have enter method');
             }
-            console.log('GameStateManager: State changed to', stateName);
+            console.log('GameStateManager: Successfully changed to state', stateName);
         } else {
             console.error('GameStateManager: State not found:', stateName, 'Available states:', Object.keys(this.states));
         }
@@ -74,7 +74,15 @@ export class GameStateManager {
                 this.currentStateObj.render(this.ctx);
             } catch (error) {
                 console.error('GameStateManager: Error during render:', error);
+                // Show error on canvas
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.font = '20px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`Render Error: ${error.message}`, 
+                                 this.canvas.width / 2, this.canvas.height / 2);
             }
+        } else {
+            console.warn('GameStateManager: No valid render method for current state:', this.currentState);
         }
     }
     
