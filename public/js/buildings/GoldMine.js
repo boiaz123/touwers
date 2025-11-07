@@ -12,9 +12,6 @@ export class GoldMine extends Building {
         this.workers = [];
         this.goldPiles = [];
         this.bobAnimations = [];
-        this.quarryLayers = [];
-        this.woodenStructures = [];
-        this.rockWalls = [];
         
         // Initialize workers
         for (let i = 0; i < 3; i++) {
@@ -26,42 +23,6 @@ export class GoldMine extends Building {
                 miningCooldown: Math.random() * 2
             });
         }
-        
-        // Generate quarry layers with proper depth and rock formations
-        for (let layer = 0; layer < 4; layer++) {
-            this.quarryLayers.push({
-                radiusX: 50 - layer * 8,
-                radiusY: 40 - layer * 6,
-                depth: layer * 15,
-                color: this.getLayerColor(layer),
-                wallHeight: 12,
-                rockFormations: this.generateRockFormations(50 - layer * 8, 40 - layer * 6, layer)
-            });
-        }
-        
-        // Generate rock walls between layers
-        for (let layer = 0; layer < 3; layer++) {
-            const currentLayer = this.quarryLayers[layer];
-            const nextLayer = this.quarryLayers[layer + 1];
-            
-            this.rockWalls.push({
-                topRadius: currentLayer.radiusX,
-                bottomRadius: nextLayer.radiusX,
-                topY: currentLayer.depth,
-                bottomY: nextLayer.depth,
-                color: this.darkenColor(currentLayer.color, 0.3),
-                segments: this.generateWallSegments(currentLayer.radiusX, nextLayer.radiusX)
-            });
-        }
-        
-        // Simplified wooden structures
-        this.woodenStructures = [
-            { type: 'beam', x1: -40, y1: -10, x2: 40, y2: -10, width: 6 },
-            { type: 'post', x: -30, y: -5, width: 4, height: 20 },
-            { type: 'post', x: 30, y: -5, width: 4, height: 20 },
-            { type: 'ladder', x: 0, y: -15, width: 4, height: 25 },
-            { type: 'platform', x: 0, y: 15, width: 20, height: 6 }
-        ];
     }
     
     getLayerColor(layer) {
@@ -69,55 +30,11 @@ export class GoldMine extends Building {
             '#8B7355', // Surface - sandy brown
             '#A0522D', // Layer 1 - sienna
             '#CD853F', // Layer 2 - peru  
-            '#D2B48C', // Layer 3 - tan
-            '#DEB887'  // Layer 4 - burlywood (bottom)
+            '#D2B48C'  // Layer 3 - tan
         ];
         return colors[layer] || '#8B7355';
     }
     
-    generateRockFormations(radiusX, radiusY, layer) {
-        const formations = [];
-        const count = 8 + layer * 2; // More formations in deeper layers
-        
-        for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const distance = radiusX * (0.8 + Math.random() * 0.2);
-            formations.push({
-                x: Math.cos(angle) * distance,
-                y: Math.sin(angle) * radiusY * (0.8 + Math.random() * 0.2),
-                size: Math.random() * 6 + 4,
-                type: Math.floor(Math.random() * 3),
-                protrusion: Math.random() * 3 + 2
-            });
-        }
-        
-        return formations;
-    }
-    
-    generateWallSegments(topRadius, bottomRadius) {
-        const segments = [];
-        const segmentCount = 16;
-        
-        for (let i = 0; i < segmentCount; i++) {
-            const angle = (i / segmentCount) * Math.PI * 2;
-            const nextAngle = ((i + 1) / segmentCount) * Math.PI * 2;
-            
-            segments.push({
-                topX1: Math.cos(angle) * topRadius,
-                topY1: Math.sin(angle) * topRadius * 0.7,
-                topX2: Math.cos(nextAngle) * topRadius,
-                topY2: Math.sin(nextAngle) * topRadius * 0.7,
-                bottomX1: Math.cos(angle) * bottomRadius,
-                bottomY1: Math.sin(angle) * bottomRadius * 0.7,
-                bottomX2: Math.cos(nextAngle) * bottomRadius,
-                bottomY2: Math.sin(nextAngle) * bottomRadius * 0.7,
-                roughness: Math.random() * 2 + 1
-            });
-        }
-        
-        return segments;
-    }
-
     update(deltaTime) {
         super.update(deltaTime);
         
@@ -210,226 +127,72 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Render quarry from deepest layer to surface for proper depth
-        for (let i = this.quarryLayers.length - 1; i >= 0; i--) {
-            const layer = this.quarryLayers[i];
-            
+        // Simple quarry pit with 3 concentric layers for depth
+        const layers = [
+            { radius: size * 0.45, depth: 5, color: this.getLayerColor(0) },
+            { radius: size * 0.35, depth: 10, color: this.getLayerColor(1) },
+            { radius: size * 0.25, depth: 15, color: this.getLayerColor(2) }
+        ];
+        
+        // Render each layer
+        layers.forEach((layer, index) => {
             ctx.save();
-            ctx.translate(this.x, this.y);
+            ctx.translate(this.x, this.y + layer.depth);
             
-            // Render the quarry floor (bottom of each layer)
-            const floorGradient = ctx.createRadialGradient(
-                0, layer.depth, 0,
-                0, layer.depth, layer.radiusX
-            );
-            floorGradient.addColorStop(0, layer.color);
-            floorGradient.addColorStop(0.7, this.darkenColor(layer.color, 0.2));
-            floorGradient.addColorStop(1, this.darkenColor(layer.color, 0.4));
+            // Layer gradient for depth
+            const layerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, layer.radius);
+            layerGradient.addColorStop(0, layer.color);
+            layerGradient.addColorStop(1, this.darkenColor(layer.color, 0.3));
             
-            ctx.fillStyle = floorGradient;
+            ctx.fillStyle = layerGradient;
             ctx.beginPath();
-            ctx.ellipse(0, layer.depth, layer.radiusX, layer.radiusY, 0, 0, Math.PI * 2);
+            ctx.arc(0, 0, layer.radius, 0, Math.PI * 2);
             ctx.fill();
             
-            // Add floor texture (scattered rocks and dirt)
-            for (let j = 0; j < 12; j++) {
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * layer.radiusX * 0.8;
-                const rockX = Math.cos(angle) * distance;
-                const rockY = Math.sin(angle) * distance * 0.7 + layer.depth;
-                
-                ctx.fillStyle = this.darkenColor(layer.color, 0.5);
-                ctx.beginPath();
-                ctx.arc(rockX, rockY, Math.random() * 3 + 1, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            // Layer border
+            ctx.strokeStyle = this.darkenColor(layer.color, 0.5);
+            ctx.lineWidth = 2;
+            ctx.stroke();
             
-            // Render rock formations around the layer edge
-            layer.rockFormations.forEach(rock => {
-                const rockX = rock.x;
-                const rockY = rock.y + layer.depth;
-                
-                ctx.save();
-                ctx.translate(rockX, rockY);
-                
-                // Rock shadow for 3D effect
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.beginPath();
-                ctx.ellipse(2, rock.protrusion + 1, rock.size * 0.8, rock.size * 0.4, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Main rock formation
-                const rockGradient = ctx.createRadialGradient(
-                    -rock.size * 0.3, -rock.protrusion * 0.5, 0,
-                    0, 0, rock.size
-                );
-                rockGradient.addColorStop(0, this.lightenColor(layer.color, 0.2));
-                rockGradient.addColorStop(0.7, layer.color);
-                rockGradient.addColorStop(1, this.darkenColor(layer.color, 0.3));
-                
-                ctx.fillStyle = rockGradient;
-                ctx.strokeStyle = this.darkenColor(layer.color, 0.5);
-                ctx.lineWidth = 1;
-                
-                switch (rock.type) {
-                    case 0: // Rounded boulder
-                        ctx.beginPath();
-                        ctx.ellipse(0, 0, rock.size, rock.size * 0.8, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                        break;
-                        
-                    case 1: // Jagged rock
-                        ctx.beginPath();
-                        for (let k = 0; k < 8; k++) {
-                            const angle = (k / 8) * Math.PI * 2;
-                            const radius = rock.size * (0.6 + Math.random() * 0.4);
-                            const x = Math.cos(angle) * radius;
-                            const y = Math.sin(angle) * radius * 0.8;
-                            if (k === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.stroke();
-                        break;
-                        
-                    case 2: // Layered rock
-                        for (let k = 0; k < 3; k++) {
-                            const layerY = -rock.size * 0.5 + k * rock.size * 0.4;
-                            const layerHeight = rock.size * 0.3;
-                            ctx.fillStyle = k === 1 ? layer.color : this.darkenColor(layer.color, 0.2);
-                            ctx.fillRect(-rock.size, layerY, rock.size * 2, layerHeight);
-                            ctx.strokeRect(-rock.size, layerY, rock.size * 2, layerHeight);
-                        }
-                        break;
-                }
-                
-                // Rock highlights for 3D effect
-                ctx.fillStyle = this.lightenColor(layer.color, 0.4);
-                ctx.beginPath();
-                ctx.ellipse(-rock.size * 0.3, -rock.size * 0.3, rock.size * 0.2, rock.size * 0.1, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.restore();
-            });
-            
-            ctx.restore();
-        }
-        
-        // Render rock walls between layers for 3D depth
-        this.rockWalls.forEach(wall => {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            
-            wall.segments.forEach(segment => {
-                // Create 3D wall segment
-                const wallGradient = ctx.createLinearGradient(
-                    segment.topX1, wall.topY,
-                    segment.bottomX1, wall.bottomY
-                );
-                wallGradient.addColorStop(0, wall.color);
-                wallGradient.addColorStop(1, this.darkenColor(wall.color, 0.4));
-                
-                ctx.fillStyle = wallGradient;
-                ctx.strokeStyle = this.darkenColor(wall.color, 0.6);
-                ctx.lineWidth = 1;
-                
-                // Draw wall segment as a quad
-                ctx.beginPath();
-                ctx.moveTo(segment.topX1, wall.topY);
-                ctx.lineTo(segment.topX2, wall.topY);
-                ctx.lineTo(segment.bottomX2, wall.bottomY);
-                ctx.lineTo(segment.bottomX1, wall.bottomY);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                
-                // Add rock texture lines on the wall
-                for (let j = 0; j < 3; j++) {
-                    const t = (j + 1) / 4;
-                    const midX1 = segment.topX1 + (segment.bottomX1 - segment.topX1) * t;
-                    const midX2 = segment.topX2 + (segment.bottomX2 - segment.topX2) * t;
-                    const midY = wall.topY + (wall.bottomY - wall.topY) * t;
+            // Add some rocks on each layer
+            if (index === 0) { // Only on surface layer to avoid complexity
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const distance = layer.radius * (0.7 + Math.random() * 0.2);
+                    const rockX = Math.cos(angle) * distance;
+                    const rockY = Math.sin(angle) * distance;
+                    const rockSize = Math.random() * 4 + 3;
                     
-                    ctx.strokeStyle = this.darkenColor(wall.color, 0.3);
-                    ctx.lineWidth = 0.5;
+                    ctx.fillStyle = this.darkenColor(layer.color, 0.4);
                     ctx.beginPath();
-                    ctx.moveTo(midX1 + Math.random() * segment.roughness, midY);
-                    ctx.lineTo(midX2 + Math.random() * segment.roughness, midY);
-                    ctx.stroke();
+                    ctx.arc(rockX, rockY, rockSize, 0, Math.PI * 2);
+                    ctx.fill();
                 }
-            });
-            
-            ctx.restore();
-        });
-        
-        // Render wooden structures (simplified for clarity)
-        this.woodenStructures.forEach(structure => {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            
-            switch (structure.type) {
-                case 'beam':
-                    const beamGradient = ctx.createLinearGradient(
-                        structure.x1, structure.y1 - 2,
-                        structure.x1, structure.y1 + 2
-                    );
-                    beamGradient.addColorStop(0, '#DEB887');
-                    beamGradient.addColorStop(1, '#8B7355');
-                    
-                    ctx.fillStyle = beamGradient;
-                    ctx.strokeStyle = '#654321';
-                    ctx.lineWidth = 1;
-                    ctx.fillRect(structure.x1, structure.y1 - structure.width/2, 
-                                structure.x2 - structure.x1, structure.width);
-                    ctx.strokeRect(structure.x1, structure.y1 - structure.width/2, 
-                                 structure.x2 - structure.x1, structure.width);
-                    break;
-                    
-                case 'post':
-                    ctx.fillStyle = '#CD853F';
-                    ctx.strokeStyle = '#654321';
-                    ctx.lineWidth = 1;
-                    ctx.fillRect(structure.x - structure.width/2, structure.y - structure.height, 
-                               structure.width, structure.height);
-                    ctx.strokeRect(structure.x - structure.width/2, structure.y - structure.height, 
-                                 structure.width, structure.height);
-                    break;
-                    
-                case 'ladder':
-                    ctx.strokeStyle = '#8B7355';
-                    ctx.lineWidth = 2;
-                    // Ladder sides
-                    ctx.beginPath();
-                    ctx.moveTo(structure.x - structure.width/2, structure.y);
-                    ctx.lineTo(structure.x - structure.width/2, structure.y - structure.height);
-                    ctx.moveTo(structure.x + structure.width/2, structure.y);
-                    ctx.lineTo(structure.x + structure.width/2, structure.y - structure.height);
-                    ctx.stroke();
-                    
-                    // Rungs
-                    for (let i = 0; i < structure.height; i += 5) {
-                        ctx.beginPath();
-                        ctx.moveTo(structure.x - structure.width/2, structure.y - i);
-                        ctx.lineTo(structure.x + structure.width/2, structure.y - i);
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 'platform':
-                    ctx.fillStyle = '#DEB887';
-                    ctx.strokeStyle = '#8B7355';
-                    ctx.lineWidth = 1;
-                    ctx.fillRect(structure.x - structure.width/2, structure.y, 
-                               structure.width, structure.height);
-                    ctx.strokeRect(structure.x - structure.width/2, structure.y, 
-                                 structure.width, structure.height);
-                    break;
             }
             
             ctx.restore();
         });
+        
+        // Simple wooden support beams
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 4;
+        
+        // Horizontal beam
+        ctx.beginPath();
+        ctx.moveTo(this.x - size * 0.4, this.y - 5);
+        ctx.lineTo(this.x + size * 0.4, this.y - 5);
+        ctx.stroke();
+        
+        // Vertical posts
+        ctx.beginPath();
+        ctx.moveTo(this.x - size * 0.3, this.y - 15);
+        ctx.lineTo(this.x - size * 0.3, this.y + 5);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x + size * 0.3, this.y - 15);
+        ctx.lineTo(this.x + size * 0.3, this.y + 5);
+        ctx.stroke();
         
         // Render workers
         this.workers.forEach(worker => {
@@ -563,21 +326,7 @@ export class GoldMine extends Building {
         ctx.fillText('⛏️💰', this.x, this.y + size/2 + 50);
     }
     
-    lightenColor(color, factor) {
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        
-        const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
-        const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
-        const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
-        
-        return `rgb(${newR}, ${newG}, ${newB})`;
-    }
-    
     darkenColor(color, factor) {
-        // Simple color darkening function
         const hex = color.replace('#', '');
         const r = parseInt(hex.substr(0, 2), 16);
         const g = parseInt(hex.substr(2, 2), 16);
