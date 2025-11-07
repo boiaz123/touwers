@@ -118,92 +118,70 @@ export class BasicTower {
         // Draw pine trees first (background)
         this.drawPineTrees(ctx, gridSize);
         
-        // Isometric tower dimensions
-        const towerBaseWidth = gridSize * 0.4;
-        const towerBaseDepth = gridSize * 0.3;
-        const towerHeight = gridSize * 0.8;
+        // Compact tower dimensions - everything centered and tight
+        const towerWidth = gridSize * 0.5;
+        const towerDepth = gridSize * 0.35;
+        const towerHeight = gridSize * 0.7;
+        const baseHeight = gridSize * 0.1;
         
         // Tower shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x + 3, this.y + 3);
-        ctx.fillRect(-towerBaseWidth/2, -towerBaseDepth/2, towerBaseWidth, towerBaseDepth);
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x + 2, this.y + 2);
+        ctx.fillRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth + baseHeight);
         ctx.restore();
         
-        // Base platform (isometric view)
+        // Base platform
         ctx.save();
         ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
         
-        // Platform top
-        const platformGradient = ctx.createLinearGradient(-towerBaseWidth/2, -towerBaseDepth/2, towerBaseWidth/2, towerBaseDepth/2);
-        platformGradient.addColorStop(0, '#8B4513');
-        platformGradient.addColorStop(1, '#654321');
-        ctx.fillStyle = platformGradient;
-        ctx.fillRect(-towerBaseWidth/2, -towerBaseDepth/2, towerBaseWidth, towerBaseDepth);
-        
-        // Platform edge lines
+        const baseGradient = ctx.createLinearGradient(-towerWidth/2, -towerDepth/2, towerWidth/2, towerDepth/2);
+        baseGradient.addColorStop(0, '#8B4513');
+        baseGradient.addColorStop(1, '#654321');
+        ctx.fillStyle = baseGradient;
+        ctx.fillRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth);
         ctx.strokeStyle = '#5D4E37';
         ctx.lineWidth = 1;
-        ctx.strokeRect(-towerBaseWidth/2, -towerBaseDepth/2, towerBaseWidth, towerBaseDepth);
+        ctx.strokeRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth);
         
         ctx.restore();
         
-        // Left face of base
+        // Base left side
         ctx.save();
         ctx.setTransform(0, 0.5, -1, 0.5, this.x, this.y);
         ctx.fillStyle = '#654321';
-        ctx.fillRect(0, 0, towerBaseDepth/2, 8);
+        ctx.fillRect(0, 0, towerDepth/2, baseHeight);
         ctx.restore();
         
-        // Right face of base
+        // Base right side
         ctx.save();
         ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
         ctx.fillStyle = '#5D4E37';
-        ctx.fillRect(towerBaseWidth/2, 0, 4, 8);
+        ctx.fillRect(towerWidth/2, 0, 3, baseHeight);
         ctx.restore();
         
-        // Main tower structure
-        const towerWidth = towerBaseWidth * 0.7;
-        const towerDepth = towerBaseDepth * 0.7;
+        // Main tower - slightly smaller than base
+        const mainWidth = towerWidth * 0.8;
+        const mainDepth = towerDepth * 0.8;
         const towerY = this.y - towerHeight;
-        
-        // Tower top face
-        ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY);
-        
-        const towerTopGradient = ctx.createLinearGradient(-towerWidth/2, -towerDepth/2, towerWidth/2, towerDepth/2);
-        towerTopGradient.addColorStop(0, '#DEB887');
-        towerTopGradient.addColorStop(1, '#CD853F');
-        ctx.fillStyle = towerTopGradient;
-        ctx.fillRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth);
-        
-        // Tower top planks
-        ctx.strokeStyle = '#8B7355';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankY = -towerDepth/2 + (towerDepth * i / 4);
-            ctx.beginPath();
-            ctx.moveTo(-towerWidth/2, plankY);
-            ctx.lineTo(towerWidth/2, plankY);
-            ctx.stroke();
-        }
-        
-        ctx.restore();
         
         // Tower left face
         ctx.save();
         ctx.setTransform(0, 0.5, -1, 0.5, this.x, this.y);
-        ctx.fillStyle = '#A0522D';
-        ctx.fillRect(0, -towerHeight, towerDepth/2, towerHeight);
+        const leftGradient = ctx.createLinearGradient(0, -towerHeight, mainDepth/2, 0);
+        leftGradient.addColorStop(0, '#DEB887');
+        leftGradient.addColorStop(1, '#A0522D');
+        ctx.fillStyle = leftGradient;
+        ctx.fillRect(0, -towerHeight, mainDepth/2, towerHeight);
         
-        // Vertical planks on left face
+        // Wooden planks on left
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
-        for (let i = 1; i <= 3; i++) {
-            const plankX = (towerDepth/2 * i / 4);
+        for (let i = 1; i <= 4; i++) {
+            const plankY = -towerHeight + (towerHeight * i / 5);
             ctx.beginPath();
-            ctx.moveTo(plankX, -towerHeight);
-            ctx.lineTo(plankX, 0);
+            ctx.moveTo(0, plankY);
+            ctx.lineTo(mainDepth/2, plankY);
             ctx.stroke();
         }
         
@@ -212,90 +190,122 @@ export class BasicTower {
         // Tower right face
         ctx.save();
         ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
-        ctx.fillStyle = '#8B7355';
-        ctx.fillRect(towerWidth/2, -towerHeight, 6, towerHeight);
+        const rightGradient = ctx.createLinearGradient(mainWidth/2, -towerHeight, mainWidth/2 + 4, 0);
+        rightGradient.addColorStop(0, '#CD853F');
+        rightGradient.addColorStop(1, '#8B7355');
+        ctx.fillStyle = rightGradient;
+        ctx.fillRect(mainWidth/2, -towerHeight, 4, towerHeight);
         
-        // Vertical planks on right face
+        // Wooden planks on right
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
         for (let i = 1; i <= 4; i++) {
             const plankY = -towerHeight + (towerHeight * i / 5);
             ctx.beginPath();
-            ctx.moveTo(towerWidth/2, plankY);
-            ctx.lineTo(towerWidth/2 + 6, plankY);
+            ctx.moveTo(mainWidth/2, plankY);
+            ctx.lineTo(mainWidth/2 + 4, plankY);
             ctx.stroke();
         }
         
         ctx.restore();
         
-        // Battlements on tower top
+        // Tower top
         ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY - 8);
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY);
         
-        ctx.fillStyle = '#8B4513';
-        const battlementWidth = towerWidth / 6;
-        for (let i = 0; i < 6; i += 2) {
-            const battlementX = -towerWidth/2 + i * battlementWidth;
-            ctx.fillRect(battlementX, -4, battlementWidth, 8);
+        const topGradient = ctx.createLinearGradient(-mainWidth/2, -mainDepth/2, mainWidth/2, mainDepth/2);
+        topGradient.addColorStop(0, '#DEB887');
+        topGradient.addColorStop(1, '#CD853F');
+        ctx.fillStyle = topGradient;
+        ctx.fillRect(-mainWidth/2, -mainDepth/2, mainWidth, mainDepth);
+        
+        // Platform planks
+        ctx.strokeStyle = '#8B7355';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const plankY = -mainDepth/2 + (mainDepth * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(-mainWidth/2, plankY);
+            ctx.lineTo(mainWidth/2, plankY);
+            ctx.stroke();
         }
         
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
-        ctx.strokeRect(-towerWidth/2, -4, towerWidth, 8);
+        ctx.strokeRect(-mainWidth/2, -mainDepth/2, mainWidth, mainDepth);
         
         ctx.restore();
         
-        // Render defenders on the tower
+        // Battlements
+        ctx.save();
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY - 6);
+        
+        ctx.fillStyle = '#8B4513';
+        const battlementSize = mainWidth / 5;
+        for (let i = 0; i < 5; i += 2) {
+            const battlementX = -mainWidth/2 + i * battlementSize;
+            ctx.fillRect(battlementX, -3, battlementSize, 6);
+        }
+        
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i += 2) {
+            const battlementX = -mainWidth/2 + i * battlementSize;
+            ctx.strokeRect(battlementX, -3, battlementSize, 6);
+        }
+        
+        ctx.restore();
+        
+        // Render defenders (positioned tighter on the platform)
         this.defenders.forEach((defender, index) => {
-            const defenderX = this.x + Math.cos(defender.angle) * (towerWidth * 0.25);
-            const defenderY = towerY + Math.sin(defender.angle) * (towerDepth * 0.15) - 5;
+            const defenderRadius = mainWidth * 0.3;
+            const defenderX = this.x + Math.cos(defender.angle) * defenderRadius;
+            const defenderY = towerY + Math.sin(defender.angle) * (mainDepth * 0.1) - 3;
             
             ctx.save();
             ctx.translate(defenderX, defenderY);
             
             // Defender body
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-1.5, -4, 3, 6);
+            ctx.fillRect(-1, -3, 2, 4);
             
-            // Defender head
+            // Head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -6, 1.5, 0, Math.PI * 2);
+            ctx.arc(0, -4.5, 1, 0, Math.PI * 2);
             ctx.fill();
             
             // Helmet
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -6, 2, Math.PI, Math.PI * 2);
+            ctx.arc(0, -4.5, 1.2, Math.PI, Math.PI * 2);
             ctx.fill();
             
             // Arms
             ctx.strokeStyle = '#DDBEA9';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1;
             
             const armAngle = this.target && index === this.throwingDefender ? 
                 -Math.PI / 4 - defender.armRaised * Math.PI / 6 : 
-                Math.sin(Date.now() * 0.001 + index) * 0.15;
+                Math.sin(Date.now() * 0.001 + index) * 0.1;
             
-            // Throwing arm
             ctx.beginPath();
-            ctx.moveTo(0, -3);
-            ctx.lineTo(Math.cos(armAngle) * 3, -3 + Math.sin(armAngle) * 3);
+            ctx.moveTo(0, -2);
+            ctx.lineTo(Math.cos(armAngle) * 2, -2 + Math.sin(armAngle) * 2);
             ctx.stroke();
             
-            // Other arm
             ctx.beginPath();
-            ctx.moveTo(0, -3);
-            ctx.lineTo(-2, -1);
+            ctx.moveTo(0, -2);
+            ctx.lineTo(-1.5, 0);
             ctx.stroke();
             
-            // Rock in hand when throwing
+            // Rock in hand
             if (defender.armRaised > 0.7) {
-                const rockX = Math.cos(armAngle) * 3.5;
-                const rockY = -3 + Math.sin(armAngle) * 3.5;
+                const rockX = Math.cos(armAngle) * 2.5;
+                const rockY = -2 + Math.sin(armAngle) * 2.5;
                 ctx.fillStyle = '#696969';
                 ctx.beginPath();
-                ctx.arc(rockX, rockY, 0.8, 0, Math.PI * 2);
+                ctx.arc(rockX, rockY, 0.5, 0, Math.PI * 2);
                 ctx.fill();
             }
             
@@ -345,10 +355,10 @@ export class BasicTower {
     
     drawPineTrees(ctx, gridSize) {
         const trees = [
-            { x: -gridSize * 0.35, y: -gridSize * 0.25, size: 0.6 },
-            { x: gridSize * 0.4, y: -gridSize * 0.3, size: 0.7 },
-            { x: -gridSize * 0.25, y: gridSize * 0.35, size: 0.5 },
-            { x: gridSize * 0.3, y: gridSize * 0.4, size: 0.8 }
+            { x: -gridSize * 0.4, y: -gridSize * 0.35, size: 0.4 },
+            { x: gridSize * 0.35, y: -gridSize * 0.4, size: 0.5 },
+            { x: -gridSize * 0.3, y: gridSize * 0.4, size: 0.3 },
+            { x: gridSize * 0.4, y: gridSize * 0.35, size: 0.45 }
         ];
         
         trees.forEach(tree => {
@@ -356,33 +366,33 @@ export class BasicTower {
             const treeY = this.y + tree.y;
             const scale = tree.size;
             
-            // Pine tree trunk
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, 8 * scale);
+            // Pine trunk
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(treeX - 0.5 * scale, treeY, 1 * scale, 6 * scale);
             
-            // Pine tree layers (triangular sections)
+            // Pine layers
             const layers = [
-                { y: -12 * scale, width: 8 * scale, color: '#1a4a1a' },
-                { y: -8 * scale, width: 6 * scale, color: '#228B22' },
-                { y: -4 * scale, width: 4 * scale, color: '#32CD32' }
+                { y: -8 * scale, width: 5 * scale, color: '#1a4a1a' },
+                { y: -6 * scale, width: 4 * scale, color: '#228B22' },
+                { y: -4 * scale, width: 3 * scale, color: '#32CD32' }
             ];
             
             layers.forEach(layer => {
                 ctx.fillStyle = layer.color;
                 ctx.beginPath();
                 ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.7);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.7);
                 ctx.closePath();
                 ctx.fill();
             });
             
-            // Pine tree highlights
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
+            // Highlight
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.2)';
             ctx.beginPath();
-            ctx.moveTo(treeX - 1 * scale, treeY - 10 * scale);
-            ctx.lineTo(treeX - 3 * scale, treeY - 6 * scale);
-            ctx.lineTo(treeX + 1 * scale, treeY - 8 * scale);
+            ctx.moveTo(treeX - 0.5 * scale, treeY - 7 * scale);
+            ctx.lineTo(treeX - 2 * scale, treeY - 5 * scale);
+            ctx.lineTo(treeX + 0.5 * scale, treeY - 6 * scale);
             ctx.closePath();
             ctx.fill();
         });
