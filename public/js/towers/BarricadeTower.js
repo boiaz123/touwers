@@ -4,20 +4,17 @@ export class BarricadeTower {
         this.y = y;
         this.gridX = gridX;
         this.gridY = gridY;
-        this.range = 100;
-        this.damage = 5;
-        this.fireRate = 0.6;
+        this.range = 120;
+        this.fireRate = 0.4;
         this.cooldown = 0;
         this.target = null;
         
         // Animation properties
         this.defenders = [
-            { angle: 0, throwAnimation: 0, carryingDebris: true },
-            { angle: Math.PI / 2, throwAnimation: 0, carryingDebris: true },
-            { angle: Math.PI, throwAnimation: 0, carryingDebris: false },
-            { angle: 3 * Math.PI / 2, throwAnimation: 0, carryingDebris: false }
+            { angle: 0, pushAnimation: 0, hasBarrel: true },
+            { angle: Math.PI, pushAnimation: 0, hasBarrel: true }
         ];
-        this.debris = [];
+        this.rollingBarrels = [];
         this.slowZones = [];
         this.animationTime = 0;
     }
@@ -30,31 +27,32 @@ export class BarricadeTower {
         
         // Update defenders
         this.defenders.forEach(defender => {
-            defender.throwAnimation = Math.max(0, defender.throwAnimation - deltaTime * 2);
+            defender.pushAnimation = Math.max(0, defender.pushAnimation - deltaTime * 2);
             
             if (this.target) {
                 const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
                 const angleDiff = targetAngle - defender.angle;
-                defender.angle += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), deltaTime * 1.5);
+                const adjustedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+                defender.angle += Math.sign(adjustedDiff) * Math.min(Math.abs(adjustedDiff), deltaTime * 1.5);
             }
         });
         
         if (this.target && this.cooldown === 0) {
-            this.shoot();
+            this.rollBarrel();
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update flying debris
-        this.debris = this.debris.filter(item => {
-            item.x += item.vx * deltaTime;
-            item.y += item.vy * deltaTime;
-            item.vy += 150 * deltaTime; // Gravity
-            item.rotation += item.rotationSpeed * deltaTime;
-            item.life -= deltaTime;
+        // Update rolling barrels
+        this.rollingBarrels = this.rollingBarrels.filter(barrel => {
+            barrel.x += barrel.vx * deltaTime;
+            barrel.y += barrel.vy * deltaTime;
+            barrel.rotation += barrel.rotationSpeed * deltaTime;
+            barrel.life -= deltaTime;
             
-            // Check if debris hits ground
-            if (item.life <= 0 || item.y >= item.targetY) {
-                this.createSlowZone(item.targetX, item.targetY);
+            // Check if barrel reaches target or expires
+            const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
+            if (barrel.life <= 0 || distanceToTarget < 15) {
+                this.createSmokeZone(barrel.targetX, barrel.targetY);
                 return false;
             }
             return true;
@@ -63,24 +61,22 @@ export class BarricadeTower {
         // Update slow zones and apply effects
         this.slowZones = this.slowZones.filter(zone => {
             zone.life -= deltaTime;
+            zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
             // Apply slow effect to enemies in zone
             enemies.forEach(enemy => {
-                // Ensure enemy has originalSpeed property
                 if (!enemy.hasOwnProperty('originalSpeed')) {
                     enemy.originalSpeed = enemy.speed;
                 }
                 
                 const distance = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
                 if (distance <= zone.radius) {
-                    // Apply slow effect gradually
-                    const targetSpeed = enemy.originalSpeed * 0.3;
-                    const slowRate = 1 - Math.pow(0.1, deltaTime); // Exponential approach
+                    const targetSpeed = enemy.originalSpeed * 0.25;
+                    const slowRate = 1 - Math.pow(0.05, deltaTime);
                     enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
                 } else {
-                    // Gradually restore speed when outside zone
                     if (enemy.speed < enemy.originalSpeed) {
-                        const restoreRate = 1 - Math.pow(0.2, deltaTime);
+                        const restoreRate = 1 - Math.pow(0.3, deltaTime);
                         enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
                     }
                 }
@@ -93,7 +89,7 @@ export class BarricadeTower {
         if (this.slowZones.length === 0) {
             enemies.forEach(enemy => {
                 if (enemy.hasOwnProperty('originalSpeed') && enemy.speed < enemy.originalSpeed) {
-                    const restoreRate = 1 - Math.pow(0.2, deltaTime);
+                    const restoreRate = 1 - Math.pow(0.3, deltaTime);
                     enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
                 }
             });
@@ -115,58 +111,65 @@ export class BarricadeTower {
         return closest;
     }
     
-    shoot() {
+    rollBarrel() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
-            
-            // Find a defender with debris to throw
-            const availableDefenders = this.defenders.filter(def => def.carryingDebris);
+            const availableDefenders = this.defenders.filter(def => def.hasBarrel);
             if (availableDefenders.length > 0) {
-                const thrower = availableDefenders[Math.floor(Math.random() * availableDefenders.length)];
-                thrower.throwAnimation = 1;
-                thrower.carryingDebris = false;
+                const defender = availableDefenders[Math.floor(Math.random() * availableDefenders.length)];
+                defender.pushAnimation = 1;
+                defender.hasBarrel = false;
                 
-                // Create debris projectile
                 const dx = this.target.x - this.x;
                 const dy = this.target.y - this.y;
                 const distance = Math.hypot(dx, dy);
-                const throwSpeed = 200;
-                const arcHeight = distance * 0.2;
+                const rollSpeed = 150;
                 
-                const debrisType = Math.random() < 0.5 ? 'barrel' : 'rock';
-                
-                this.debris.push({
-                    x: this.x + Math.cos(thrower.angle) * 20,
-                    y: this.y + Math.sin(thrower.angle) * 20 - 15,
-                    vx: (dx / distance) * throwSpeed,
-                    vy: (dy / distance) * throwSpeed - arcHeight,
+                this.rollingBarrels.push({
+                    x: this.x + Math.cos(defender.angle) * 25,
+                    y: this.y + Math.sin(defender.angle) * 25,
+                    vx: (dx / distance) * rollSpeed,
+                    vy: (dy / distance) * rollSpeed,
                     rotation: 0,
-                    rotationSpeed: Math.random() * 8 + 4,
-                    life: distance / throwSpeed + 1,
+                    rotationSpeed: 6,
+                    life: distance / rollSpeed + 0.5,
                     targetX: this.target.x,
                     targetY: this.target.y,
-                    type: debrisType,
-                    size: Math.random() * 3 + 5
+                    size: 8
                 });
                 
-                // Defender will get new debris after a delay
                 setTimeout(() => {
-                    if (thrower) { // Check if thrower still exists
-                        thrower.carryingDebris = true;
+                    if (defender) {
+                        defender.hasBarrel = true;
                     }
-                }, 2000 + Math.random() * 1000);
+                }, 3000 + Math.random() * 2000);
             }
         }
     }
     
-    createSlowZone(x, y) {
+    createSmokeZone(x, y) {
         this.slowZones.push({
             x: x,
             y: y,
-            radius: 30,
-            life: 5.0,
-            maxLife: 5.0
+            radius: 40,
+            life: 8.0,
+            maxLife: 8.0,
+            smokeIntensity: 0,
+            smokeParticles: this.generateSmokeParticles(x, y)
         });
+    }
+    
+    generateSmokeParticles(centerX, centerY) {
+        const particles = [];
+        for (let i = 0; i < 20; i++) {
+            particles.push({
+                x: centerX + (Math.random() - 0.5) * 60,
+                y: centerY + (Math.random() - 0.5) * 60,
+                size: Math.random() * 8 + 4,
+                opacity: Math.random() * 0.6 + 0.2,
+                drift: (Math.random() - 0.5) * 0.5
+            });
+        }
+        return particles;
     }
     
     render(ctx) {
@@ -177,213 +180,221 @@ export class BarricadeTower {
         
         // Tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(this.x - towerSize * 0.3 + 3, this.y - towerSize * 0.2 + 3, towerSize * 0.6, towerSize * 0.6);
+        ctx.fillRect(this.x - towerSize * 0.4 + 4, this.y - towerSize * 0.3 + 4, towerSize * 0.8, towerSize * 0.6);
         
-        // Wooden barricade base
-        const baseWidth = towerSize * 0.6;
-        const baseHeight = towerSize * 0.4;
+        // Watch tower base platform
+        const baseWidth = towerSize * 0.8;
+        const baseHeight = towerSize * 0.3;
         
-        // Main barricade structure
-        const gradient = ctx.createLinearGradient(
+        const baseGradient = ctx.createLinearGradient(
             this.x - baseWidth/2, this.y - baseHeight,
             this.x + baseWidth/2, this.y
         );
-        gradient.addColorStop(0, '#8B4513');
-        gradient.addColorStop(0.5, '#A0522D');
-        gradient.addColorStop(1, '#654321');
+        baseGradient.addColorStop(0, '#8B4513');
+        baseGradient.addColorStop(0.5, '#A0522D');
+        baseGradient.addColorStop(1, '#654321');
         
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = baseGradient;
         ctx.strokeStyle = '#5D4E37';
         ctx.lineWidth = 3;
         ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight);
         ctx.strokeRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight);
         
-        // Wooden planks texture
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankY = this.y - baseHeight + (baseHeight * i / 4);
+        // Watch tower supports (vertical beams)
+        const supportWidth = 8;
+        const supportHeight = towerSize * 0.6;
+        ctx.fillStyle = '#654321';
+        for (let side = -1; side <= 1; side += 2) {
+            const supportX = this.x + side * (baseWidth/2 - supportWidth);
+            ctx.fillRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            ctx.strokeRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            
+            // Cross braces
+            ctx.strokeStyle = '#5D4E37';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(this.x - baseWidth/2, plankY);
-            ctx.lineTo(this.x + baseWidth/2, plankY);
+            ctx.moveTo(supportX, this.y - baseHeight - supportHeight * 0.7);
+            ctx.lineTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.3);
+            ctx.moveTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.7);
+            ctx.lineTo(supportX, this.y - baseHeight - supportHeight * 0.3);
             ctx.stroke();
         }
         
-        // Corner posts
-        const postWidth = baseWidth * 0.08;
-        ctx.fillStyle = '#654321';
+        // Upper platform
+        const platformWidth = baseWidth * 0.7;
+        const platformHeight = 15;
+        const platformY = this.y - baseHeight - supportHeight;
+        
+        ctx.fillStyle = baseGradient;
+        ctx.strokeStyle = '#5D4E37';
+        ctx.lineWidth = 3;
+        ctx.fillRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
+        ctx.strokeRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
+        
+        // Platform railings
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
         for (let side = -1; side <= 1; side += 2) {
-            const postX = this.x + side * (baseWidth/2 - postWidth/2);
-            ctx.fillRect(postX, this.y - baseHeight - 10, postWidth, baseHeight + 10);
-            ctx.strokeRect(postX, this.y - baseHeight - 10, postWidth, baseHeight + 10);
-        }
-        
-        // Debris storage piles
-        for (let i = 0; i < 3; i++) {
-            const pileX = this.x - baseWidth/3 + (i * baseWidth/3);
-            const pileY = this.y - baseHeight * 0.2;
+            const railX = this.x + side * platformWidth/2;
+            ctx.beginPath();
+            ctx.moveTo(railX, platformY);
+            ctx.lineTo(railX, platformY - 20);
+            ctx.stroke();
             
-            // Barrel pile
-            if (i === 0) {
-                ctx.fillStyle = '#8B4513';
-                ctx.strokeStyle = '#654321';
-                ctx.lineWidth = 2;
-                for (let j = 0; j < 2; j++) {
-                    const barrelX = pileX + j * 8;
-                    const barrelY = pileY - j * 6;
-                    ctx.fillRect(barrelX - 6, barrelY - 8, 12, 16);
-                    ctx.strokeRect(barrelX - 6, barrelY - 8, 12, 16);
-                    
-                    // Barrel bands
-                    ctx.strokeStyle = '#2F2F2F';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(barrelX - 6, barrelY - 2);
-                    ctx.lineTo(barrelX + 6, barrelY - 2);
-                    ctx.moveTo(barrelX - 6, barrelY + 2);
-                    ctx.lineTo(barrelX + 6, barrelY + 2);
-                    ctx.stroke();
-                }
-            }
-            // Rock pile
-            else if (i === 2) {
-                for (let j = 0; j < 4; j++) {
-                    const rockX = pileX + (j % 2) * 8 - 4;
-                    const rockY = pileY - Math.floor(j / 2) * 6;
-                    const rockSize = 4 + Math.random() * 3;
-                    
-                    ctx.fillStyle = '#696969';
-                    ctx.strokeStyle = '#2F2F2F';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.arc(rockX, rockY, rockSize, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-            }
+            // Horizontal rail
+            ctx.beginPath();
+            ctx.moveTo(railX, platformY - 15);
+            ctx.lineTo(railX - side * 15, platformY - 15);
+            ctx.stroke();
         }
         
-        // Render defenders
+        // Barrel storage on platform
+        for (let i = 0; i < 3; i++) {
+            const barrelX = this.x - platformWidth/3 + (i * platformWidth/4);
+            const barrelY = platformY - 8;
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            ctx.fillRect(barrelX - 4, barrelY - 6, 8, 12);
+            ctx.strokeRect(barrelX - 4, barrelY - 6, 8, 12);
+            
+            // Barrel bands
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(barrelX - 4, barrelY - 2);
+            ctx.lineTo(barrelX + 4, barrelY - 2);
+            ctx.moveTo(barrelX - 4, barrelY + 2);
+            ctx.lineTo(barrelX + 4, barrelY + 2);
+            ctx.stroke();
+        }
+        
+        // Render defenders on platform
         this.defenders.forEach((defender, index) => {
             ctx.save();
             
-            const defenderRadius = baseWidth * 0.3;
-            const defenderX = this.x + Math.cos(defender.angle) * defenderRadius;
-            const defenderY = this.y - baseHeight * 0.7 + Math.sin(defender.angle) * defenderRadius;
+            const defenderX = this.x + (index === 0 ? -15 : 15);
+            const defenderY = platformY - 5;
             
             ctx.translate(defenderX, defenderY);
             
             // Defender body
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-3, -5, 6, 10);
+            ctx.fillRect(-3, -8, 6, 12);
             
             // Defender head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -7, 3, 0, Math.PI * 2);
+            ctx.arc(0, -12, 3, 0, Math.PI * 2);
             ctx.fill();
             
-            // Simple helmet
+            // Helmet
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -7, 3.5, Math.PI, Math.PI * 2);
+            ctx.arc(0, -12, 3.5, Math.PI, Math.PI * 2);
             ctx.fill();
             
-            // Arms
+            // Arms pushing animation
+            const pushOffset = defender.pushAnimation * 5;
             ctx.strokeStyle = '#DDBEA9';
             ctx.lineWidth = 3;
             
-            const armAngle = defender.throwAnimation * Math.PI / 2;
             ctx.beginPath();
-            ctx.moveTo(0, -2);
-            ctx.lineTo(Math.cos(armAngle) * 6, -2 + Math.sin(armAngle) * 6);
+            ctx.moveTo(0, -5);
+            ctx.lineTo(Math.cos(defender.angle) * (8 + pushOffset), -5 + Math.sin(defender.angle) * (8 + pushOffset));
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(0, -2);
-            ctx.lineTo(-4, 2);
+            ctx.moveTo(0, -5);
+            ctx.lineTo(-4, -1);
             ctx.stroke();
             
-            // Debris in hand if carrying
-            if (defender.carryingDebris && defender.throwAnimation < 0.5) {
-                const debrisX = Math.cos(armAngle) * 7;
-                const debrisY = -2 + Math.sin(armAngle) * 7;
+            // Barrel if carrying
+            if (defender.hasBarrel && defender.pushAnimation < 0.3) {
+                const barrelX = Math.cos(defender.angle) * 10;
+                const barrelY = -5 + Math.sin(defender.angle) * 10;
                 
-                if (Math.random() < 0.5) {
-                    // Barrel
-                    ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(debrisX - 3, debrisY - 4, 6, 8);
-                    ctx.strokeRect(debrisX - 3, debrisY - 4, 6, 8);
-                } else {
-                    // Rock
-                    ctx.fillStyle = '#696969';
-                    ctx.beginPath();
-                    ctx.arc(debrisX, debrisY, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-            }
-            
-            ctx.restore();
-        });
-        
-        // Render flying debris
-        this.debris.forEach(item => {
-            ctx.save();
-            ctx.translate(item.x, item.y);
-            ctx.rotate(item.rotation);
-            
-            if (item.type === 'barrel') {
                 ctx.fillStyle = '#8B4513';
                 ctx.strokeStyle = '#654321';
                 ctx.lineWidth = 2;
-                ctx.fillRect(-item.size/2, -item.size, item.size, item.size * 2);
-                ctx.strokeRect(-item.size/2, -item.size, item.size, item.size * 2);
+                ctx.fillRect(barrelX - 4, barrelY - 6, 8, 12);
+                ctx.strokeRect(barrelX - 4, barrelY - 6, 8, 12);
                 
-                // Barrel bands
                 ctx.strokeStyle = '#2F2F2F';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(-item.size/2, -item.size/4);
-                ctx.lineTo(item.size/2, -item.size/4);
-                ctx.moveTo(-item.size/2, item.size/4);
-                ctx.lineTo(item.size/2, item.size/4);
-                ctx.stroke();
-            } else {
-                ctx.fillStyle = '#696969';
-                ctx.strokeStyle = '#2F2F2F';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(0, 0, item.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(barrelX - 4, barrelY - 2);
+                ctx.lineTo(barrelX + 4, barrelY - 2);
+                ctx.moveTo(barrelX - 4, barrelY + 2);
+                ctx.lineTo(barrelX + 4, barrelY + 2);
                 ctx.stroke();
             }
             
             ctx.restore();
         });
         
-        // Render slow zones
+        // Render rolling barrels
+        this.rollingBarrels.forEach(barrel => {
+            ctx.save();
+            ctx.translate(barrel.x, barrel.y);
+            ctx.rotate(barrel.rotation);
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            ctx.fillRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
+            ctx.strokeRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
+            
+            // Barrel bands
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-barrel.size, -barrel.size/3);
+            ctx.lineTo(barrel.size, -barrel.size/3);
+            ctx.moveTo(-barrel.size, barrel.size/3);
+            ctx.lineTo(barrel.size, barrel.size/3);
+            ctx.stroke();
+            
+            ctx.restore();
+        });
+        
+        // Render smoke zones with rubble
         this.slowZones.forEach(zone => {
             const alpha = zone.life / zone.maxLife;
+            const smokeAlpha = zone.smokeIntensity * alpha;
             
-            // Debris scatter on ground
-            ctx.fillStyle = `rgba(139, 69, 19, ${alpha * 0.6})`;
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                const distance = Math.random() * zone.radius;
-                const debrisX = zone.x + Math.cos(angle) * distance;
-                const debrisY = zone.y + Math.sin(angle) * distance;
-                const debrisSize = Math.random() * 4 + 2;
+            // Rubble on ground
+            ctx.fillStyle = `rgba(105, 105, 105, ${alpha * 0.8})`;
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2 + this.animationTime * 0.1;
+                const distance = Math.random() * zone.radius * 0.8;
+                const rubbleX = zone.x + Math.cos(angle) * distance;
+                const rubbleY = zone.y + Math.sin(angle) * distance;
+                const rubbleSize = Math.random() * 3 + 1;
                 
                 ctx.beginPath();
-                ctx.arc(debrisX, debrisY, debrisSize, 0, Math.PI * 2);
+                ctx.arc(rubbleX, rubbleY, rubbleSize, 0, Math.PI * 2);
                 ctx.fill();
             }
             
-            // Slow zone indicator
-            ctx.strokeStyle = `rgba(139, 69, 19, ${alpha * 0.4})`;
+            // Smoke particles
+            zone.smokeParticles.forEach(particle => {
+                const particleAlpha = smokeAlpha * particle.opacity;
+                ctx.fillStyle = `rgba(128, 128, 128, ${particleAlpha})`;
+                
+                const smokeX = particle.x + Math.sin(this.animationTime + particle.drift) * 5;
+                const smokeY = particle.y + Math.cos(this.animationTime * 0.5 + particle.drift) * 3;
+                
+                ctx.beginPath();
+                ctx.arc(smokeX, smokeY, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Zone outline
+            ctx.strokeStyle = `rgba(105, 105, 105, ${alpha * 0.3})`;
             ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
+            ctx.setLineDash([3, 3]);
             ctx.beginPath();
             ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
             ctx.stroke();
@@ -402,11 +413,11 @@ export class BarricadeTower {
     
     static getInfo() {
         return {
-            name: 'Barricade Tower',
-            description: 'Defenders throw debris to slow enemies and create obstacles.',
-            damage: '5',
-            range: '100',
-            fireRate: '0.6/sec',
+            name: 'Watch Tower',
+            description: 'Defenders roll barrels to create smoke screens that slow enemies.',
+            damage: 'None',
+            range: '120',
+            fireRate: '0.4/sec',
             cost: 90
         };
     }
