@@ -21,6 +21,7 @@ Visit `http://localhost:3000`
 
 - `/public/js/towers/` - Add new tower types here
 - `/public/js/enemies/` - Add new enemy types here
+- `/public/js/buildings/` - Add new building types here
 - `/public/js/Level.js` - Modify or add levels
 
 ## Expanding
@@ -30,6 +31,9 @@ Create new file in `towers/` extending base tower pattern, register in `TowerMan
 
 ### Add New Enemy
 Create new file in `enemies/` extending base enemy pattern, use in `EnemyManager.js`
+
+### Add New Building
+Create new file in `buildings/` extending Building class, register in `BuildingManager.js`
 
 ## Mobile/APK Conversion
 Use Cordova or Capacitor to wrap the web app into an APK.
