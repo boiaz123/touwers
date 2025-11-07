@@ -182,6 +182,99 @@ export class BarricadeTower {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(this.x - towerSize * 0.4 + 4, this.y - towerSize * 0.3 + 4, towerSize * 0.8, towerSize * 0.6);
         
+        // Environmental details around tower base (within 2x2 grid)
+        const gridBounds = towerSize;
+        
+        // Bushes around the edges
+        const bushPositions = [
+            { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.3 },
+            { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.25 },
+            { x: this.x - gridBounds * 0.3, y: this.y - gridBounds * 0.1 }
+        ];
+        
+        bushPositions.forEach(pos => {
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(pos.x - 2, pos.y - 2, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(pos.x + 3, pos.y - 1, 5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Scattered rocks
+        const rockPositions = [
+            { x: this.x + gridBounds * 0.25, y: this.y - gridBounds * 0.2, size: 4 },
+            { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.1, size: 3 },
+            { x: this.x + gridBounds * 0.4, y: this.y + gridBounds * 0.1, size: 5 },
+            { x: this.x - gridBounds * 0.2, y: this.y + gridBounds * 0.35, size: 3 }
+        ];
+        
+        rockPositions.forEach(rock => {
+            ctx.fillStyle = '#696969';
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(rock.x, rock.y, rock.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        });
+        
+        // Barrel stashes
+        const barrelStashes = [
+            { x: this.x - gridBounds * 0.4, y: this.y - gridBounds * 0.3, count: 2 },
+            { x: this.x + gridBounds * 0.3, y: this.y - gridBounds * 0.4, count: 3 }
+        ];
+        
+        barrelStashes.forEach(stash => {
+            for (let i = 0; i < stash.count; i++) {
+                const offsetX = (i % 2) * 7 - 3;
+                const offsetY = Math.floor(i / 2) * 6;
+                const barrelX = stash.x + offsetX;
+                const barrelY = stash.y + offsetY;
+                
+                ctx.fillStyle = '#8B4513';
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 1;
+                ctx.fillRect(barrelX - 3, barrelY - 5, 6, 10);
+                ctx.strokeRect(barrelX - 3, barrelY - 5, 6, 10);
+                
+                // Barrel bands
+                ctx.strokeStyle = '#2F2F2F';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(barrelX - 3, barrelY - 1);
+                ctx.lineTo(barrelX + 3, barrelY - 1);
+                ctx.moveTo(barrelX - 3, barrelY + 1);
+                ctx.lineTo(barrelX + 3, barrelY + 1);
+                ctx.stroke();
+            }
+        });
+        
+        // Small rubble piles
+        const rubblePiles = [
+            { x: this.x + gridBounds * 0.15, y: this.y + gridBounds * 0.4 },
+            { x: this.x - gridBounds * 0.15, y: this.y - gridBounds * 0.35 },
+            { x: this.x + gridBounds * 0.45, y: this.y - gridBounds * 0.1 }
+        ];
+        
+        rubblePiles.forEach(pile => {
+            for (let i = 0; i < 4; i++) {
+                const offsetX = (Math.random() - 0.5) * 8;
+                const offsetY = (Math.random() - 0.5) * 6;
+                const rubbleSize = Math.random() * 2 + 1;
+                
+                ctx.fillStyle = '#A0522D';
+                ctx.beginPath();
+                ctx.arc(pile.x + offsetX, pile.y + offsetY, rubbleSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+        
         // Watch tower base platform - wooden planks
         const baseWidth = towerSize * 0.6;
         const baseHeight = towerSize * 0.2;
