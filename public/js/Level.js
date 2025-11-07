@@ -5,6 +5,7 @@ export class Level {
         this.gridHeight = 40;
         this.cellSize = 20;
         this.towerSize = 2; // Towers occupy 2x2 cells
+        this.buildingSize = 4; // Buildings occupy 4x4 cells
         
         // Track occupied grid cells (for tower placement)
         this.occupiedCells = new Set();
@@ -181,6 +182,33 @@ export class Level {
         }
     }
     
+    canPlaceBuilding(gridX, gridY, buildingManager = null) {
+        // Check if a 4x4 building can be placed at this grid position
+        for (let x = gridX; x < gridX + this.buildingSize; x++) {
+            for (let y = gridY; y < gridY + this.buildingSize; y++) {
+                if (!this.isValidGridPosition(x, y) || this.occupiedCells.has(`${x},${y}`)) {
+                    return false;
+                }
+            }
+        }
+        
+        // Also check if there's already a building at this position
+        if (buildingManager && buildingManager.isBuildingPositionOccupied(gridX, gridY)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    placeBuilding(gridX, gridY) {
+        // Mark the 4x4 area as occupied
+        for (let x = gridX; x < gridX + this.buildingSize; x++) {
+            for (let y = gridY; y < gridY + this.buildingSize; y++) {
+                this.occupiedCells.add(`${x},${y}`);
+            }
+        }
+    }
+    
     screenToGrid(screenX, screenY) {
         const gridX = Math.floor(screenX / this.cellSize);
         const gridY = Math.floor(screenY / this.cellSize);
@@ -191,6 +219,13 @@ export class Level {
         // Return center of the 2x2 tower area
         const screenX = (gridX + this.towerSize / 2) * this.cellSize;
         const screenY = (gridY + this.towerSize / 2) * this.cellSize;
+        return { screenX, screenY };
+    }
+    
+    gridToScreenBuilding(gridX, gridY) {
+        // Return center of the 4x4 building area
+        const screenX = (gridX + this.buildingSize / 2) * this.cellSize;
+        const screenY = (gridY + this.buildingSize / 2) * this.cellSize;
         return { screenX, screenY };
     }
     
@@ -646,12 +681,20 @@ export class Level {
         // Render the updated path
         this.renderPath(ctx);
         
-        // Highlight valid placement areas when tower is selected
+        // Highlight valid placement areas when tower/building is selected
         if (this.showPlacementPreview && this.previewGridX !== undefined && this.previewGridY !== undefined) {
-            const canPlace = this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
+            const isBuilding = this.previewType === 'building';
+            const size = (isBuilding ? this.buildingSize : this.towerSize) * this.cellSize;
+            
+            let canPlace = false;
+            if (isBuilding) {
+                canPlace = this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewBuildingManager);
+            } else {
+                canPlace = this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
+            }
+            
             ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
             
-            const size = this.towerSize * this.cellSize;
             ctx.fillRect(
                 this.previewGridX * this.cellSize,
                 this.previewGridY * this.cellSize,
@@ -671,9 +714,15 @@ export class Level {
         }
     }
     
-    setPlacementPreview(screenX, screenY, show = true, towerManager = null) {
+    setPlacementPreview(screenX, screenY, show = true, manager = null, type = 'tower') {
         this.showPlacementPreview = show;
-        this.previewTowerManager = towerManager;
+        this.previewType = type;
+        if (type === 'building') {
+            this.previewBuildingManager = manager;
+        } else {
+            this.previewTowerManager = manager;
+        }
+        
         if (show) {
             const { gridX, gridY } = this.screenToGrid(screenX, screenY);
             this.previewGridX = gridX;

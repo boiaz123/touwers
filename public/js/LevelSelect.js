@@ -4,7 +4,8 @@ export class LevelSelect {
         this.levels = [
             { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true },
             { name: 'Goblin Valley', difficulty: 'Medium', unlocked: false },
-            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false }
+            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false },
+            { name: 'TEST LEVEL', difficulty: 'Sandbox', unlocked: true, isTest: true }
         ];
         this.selectedLevel = 0;
         this.hoveredLevel = -1;
@@ -122,9 +123,13 @@ export class LevelSelect {
             
             if (level.unlocked) {
                 if (index === this.selectedLevel) {
-                    cardColor = '#3a2a1f';
+                    cardColor = level.isTest ? '#1f2a3a' : '#3a2a1f';
                 } else if (index === this.hoveredLevel) {
-                    cardColor = '#352217';
+                    cardColor = level.isTest ? '#172535' : '#352217';
+                }
+                
+                if (level.isTest) {
+                    borderColor = '#00ffff';
                 }
             } else {
                 cardColor = '#1a1a1a';
@@ -141,14 +146,28 @@ export class LevelSelect {
                 // Level name
                 ctx.textAlign = 'center';
                 ctx.font = 'bold 24px serif';
-                ctx.fillStyle = '#d4af37';
+                ctx.fillStyle = level.isTest ? '#00ffff' : '#d4af37';
                 ctx.fillText(level.name, x + cardWidth / 2, y + 50);
                 
                 // Difficulty
                 ctx.font = '18px serif';
-                ctx.fillStyle = level.difficulty === 'Easy' ? '#4CAF50' : 
-                              level.difficulty === 'Medium' ? '#FFC107' : '#F44336';
+                let difficultyColor = '#4CAF50';
+                if (level.isTest) {
+                    difficultyColor = '#ff00ff';
+                } else if (level.difficulty === 'Medium') {
+                    difficultyColor = '#FFC107';
+                } else if (level.difficulty === 'Hard') {
+                    difficultyColor = '#F44336';
+                }
+                ctx.fillStyle = difficultyColor;
                 ctx.fillText(level.difficulty, x + cardWidth / 2, y + 80);
+                
+                // Special test level description
+                if (level.isTest) {
+                    ctx.font = '12px serif';
+                    ctx.fillStyle = '#cccccc';
+                    ctx.fillText('∞ Gold • ∞ Lives • Endless Enemies', x + cardWidth / 2, y + 95);
+                }
                 
                 // Start button for selected level
                 if (index === this.selectedLevel) {
@@ -159,10 +178,16 @@ export class LevelSelect {
                     
                     // Button background with hover effect
                     ctx.fillStyle = this.hoveredStartButton ? '#45a049' : '#4CAF50';
+                    if (level.isTest) {
+                        ctx.fillStyle = this.hoveredStartButton ? '#ff4499' : '#ff00aa';
+                    }
                     ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
                     
                     // Button border
                     ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
+                    if (level.isTest) {
+                        ctx.strokeStyle = this.hoveredStartButton ? '#00ffff' : '#aa0055';
+                    }
                     ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
                     ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
                     
@@ -211,6 +236,8 @@ export class LevelSelect {
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
+                        // Pass level info to game state
+                        this.stateManager.selectedLevelInfo = level;
                         this.stateManager.changeState('game');
                     }
                 } else {
