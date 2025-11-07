@@ -17,6 +17,9 @@ export class BarricadeTower {
         this.rollingBarrels = [];
         this.slowZones = [];
         this.animationTime = 0;
+        
+        // Static environmental elements - generated once
+        this.staticEnvironment = this.generateStaticEnvironment();
     }
     
     update(deltaTime, enemies) {
@@ -172,6 +175,49 @@ export class BarricadeTower {
         return particles;
     }
     
+    generateStaticEnvironment() {
+        const gridBounds = 64; // Approximate 2x2 grid size
+        
+        return {
+            bushes: [
+                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.3 },
+                { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.25 },
+                { x: this.x - gridBounds * 0.3, y: this.y - gridBounds * 0.1 }
+            ],
+            rocks: [
+                { x: this.x + gridBounds * 0.25, y: this.y - gridBounds * 0.2, size: 4 },
+                { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.1, size: 3 },
+                { x: this.x + gridBounds * 0.4, y: this.y + gridBounds * 0.1, size: 5 },
+                { x: this.x - gridBounds * 0.2, y: this.y + gridBounds * 0.35, size: 3 }
+            ],
+            pines: [
+                { x: this.x - gridBounds * 0.45, y: this.y - gridBounds * 0.25, size: 12 },
+                { x: this.x + gridBounds * 0.4, y: this.y - gridBounds * 0.35, size: 10 }
+            ],
+            rubblePiles: [
+                {
+                    x: this.x + gridBounds * 0.15,
+                    y: this.y + gridBounds * 0.4,
+                    pieces: [
+                        { offsetX: -2, offsetY: 1, size: 1.5 },
+                        { offsetX: 3, offsetY: -1, size: 2 },
+                        { offsetX: 0, offsetY: 3, size: 1 },
+                        { offsetX: -4, offsetY: -2, size: 1.8 }
+                    ]
+                },
+                {
+                    x: this.x - gridBounds * 0.15,
+                    y: this.y - gridBounds * 0.35,
+                    pieces: [
+                        { offsetX: 1, offsetY: 0, size: 1.2 },
+                        { offsetX: -2, offsetY: 2, size: 1.7 },
+                        { offsetX: 2, offsetY: -3, size: 1.4 }
+                    ]
+                }
+            ]
+        };
+    }
+    
     render(ctx) {
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
@@ -182,39 +228,68 @@ export class BarricadeTower {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(this.x - towerSize * 0.4 + 4, this.y - towerSize * 0.3 + 4, towerSize * 0.8, towerSize * 0.6);
         
-        // Environmental details around tower base (within 2x2 grid)
-        const gridBounds = towerSize;
+        // Render static environmental details
         
-        // Bushes around the edges
-        const bushPositions = [
-            { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.3 },
-            { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.25 },
-            { x: this.x - gridBounds * 0.3, y: this.y - gridBounds * 0.1 }
-        ];
+        // Pine trees
+        this.staticEnvironment.pines.forEach(pine => {
+            // Tree trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(pine.x - 2, pine.y - 2, 4, pine.size);
+            
+            // Tree layers (3 layers getting smaller towards top)
+            for (let layer = 0; layer < 3; layer++) {
+                const layerY = pine.y - layer * (pine.size * 0.3);
+                const layerSize = pine.size * (0.8 - layer * 0.2);
+                
+                ctx.fillStyle = layer === 0 ? '#228B22' : '#32CD32';
+                ctx.beginPath();
+                ctx.moveTo(pine.x, layerY - layerSize);
+                ctx.lineTo(pine.x - layerSize * 0.6, layerY);
+                ctx.lineTo(pine.x + layerSize * 0.6, layerY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = '#006400';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
         
-        bushPositions.forEach(pos => {
+        // Improved bushes with more natural shape
+        this.staticEnvironment.bushes.forEach(bush => {
+            // Base layer (darker)
             ctx.fillStyle = '#228B22';
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+            ctx.arc(bush.x, bush.y, 8, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Multiple overlapping circles for natural bush shape
             ctx.fillStyle = '#32CD32';
+            const bushParts = [
+                { offsetX: -3, offsetY: -2, size: 6 },
+                { offsetX: 4, offsetY: -1, size: 5 },
+                { offsetX: 1, offsetY: 3, size: 5 },
+                { offsetX: -2, offsetY: 2, size: 4 }
+            ];
+            
+            bushParts.forEach(part => {
+                ctx.beginPath();
+                ctx.arc(bush.x + part.offsetX, bush.y + part.offsetY, part.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Highlight spots
+            ctx.fillStyle = '#90EE90';
             ctx.beginPath();
-            ctx.arc(pos.x - 2, pos.y - 2, 6, 0, Math.PI * 2);
+            ctx.arc(bush.x - 2, bush.y - 3, 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(pos.x + 3, pos.y - 1, 5, 0, Math.PI * 2);
+            ctx.arc(bush.x + 3, bush.y - 1, 1.5, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Scattered rocks
-        const rockPositions = [
-            { x: this.x + gridBounds * 0.25, y: this.y - gridBounds * 0.2, size: 4 },
-            { x: this.x - gridBounds * 0.35, y: this.y + gridBounds * 0.1, size: 3 },
-            { x: this.x + gridBounds * 0.4, y: this.y + gridBounds * 0.1, size: 5 },
-            { x: this.x - gridBounds * 0.2, y: this.y + gridBounds * 0.35, size: 3 }
-        ];
-        
-        rockPositions.forEach(rock => {
+        // Static rocks
+        this.staticEnvironment.rocks.forEach(rock => {
             ctx.fillStyle = '#696969';
             ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 1;
@@ -226,8 +301,8 @@ export class BarricadeTower {
         
         // Barrel stashes
         const barrelStashes = [
-            { x: this.x - gridBounds * 0.4, y: this.y - gridBounds * 0.3, count: 2 },
-            { x: this.x + gridBounds * 0.3, y: this.y - gridBounds * 0.4, count: 3 }
+            { x: this.x - towerSize * 0.4, y: this.y - towerSize * 0.3, count: 2 },
+            { x: this.x + towerSize * 0.3, y: this.y - towerSize * 0.4, count: 3 }
         ];
         
         barrelStashes.forEach(stash => {
@@ -255,24 +330,14 @@ export class BarricadeTower {
             }
         });
         
-        // Small rubble piles
-        const rubblePiles = [
-            { x: this.x + gridBounds * 0.15, y: this.y + gridBounds * 0.4 },
-            { x: this.x - gridBounds * 0.15, y: this.y - gridBounds * 0.35 },
-            { x: this.x + gridBounds * 0.45, y: this.y - gridBounds * 0.1 }
-        ];
-        
-        rubblePiles.forEach(pile => {
-            for (let i = 0; i < 4; i++) {
-                const offsetX = (Math.random() - 0.5) * 8;
-                const offsetY = (Math.random() - 0.5) * 6;
-                const rubbleSize = Math.random() * 2 + 1;
-                
+        // Static rubble piles (no more flickering)
+        this.staticEnvironment.rubblePiles.forEach(pile => {
+            pile.pieces.forEach(piece => {
                 ctx.fillStyle = '#A0522D';
                 ctx.beginPath();
-                ctx.arc(pile.x + offsetX, pile.y + offsetY, rubbleSize, 0, Math.PI * 2);
+                ctx.arc(pile.x + piece.offsetX, pile.y + piece.offsetY, piece.size, 0, Math.PI * 2);
                 ctx.fill();
-            }
+            });
         });
         
         // Watch tower base platform - wooden planks
@@ -344,7 +409,7 @@ export class BarricadeTower {
                 const grainX = supportX + (g + 1) * supportWidth / 3;
                 ctx.beginPath();
                 ctx.moveTo(grainX, this.y - baseHeight - supportHeight + 5);
-                ctx.lineTo(grainX, this.y - baseHeight - 5);
+                ctx.lineTo(grainX, this.y - baseHeight - supportHeight + 5);
                 ctx.stroke();
             }
             
@@ -546,14 +611,14 @@ export class BarricadeTower {
             const alpha = zone.life / zone.maxLife;
             const smokeAlpha = zone.smokeIntensity * alpha;
             
-            // Rubble on ground
+            // Static rubble on ground (fix flickering by using zone ID for consistent positioning)
             ctx.fillStyle = `rgba(105, 105, 105, ${alpha * 0.8})`;
             for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2 + this.animationTime * 0.1;
-                const distance = Math.random() * zone.radius * 0.8;
+                const angle = (i / 12) * Math.PI * 2;
+                const distance = (i * 7) % zone.radius * 0.8;
                 const rubbleX = zone.x + Math.cos(angle) * distance;
                 const rubbleY = zone.y + Math.sin(angle) * distance;
-                const rubbleSize = Math.random() * 3 + 1;
+                const rubbleSize = (i % 3) + 1;
                 
                 ctx.beginPath();
                 ctx.arc(rubbleX, rubbleY, rubbleSize, 0, Math.PI * 2);
