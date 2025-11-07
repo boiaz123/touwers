@@ -448,20 +448,18 @@ class Game {
         this.resizeCanvas();
         console.log('Game: Canvas initial size:', this.canvas.width, 'x', this.canvas.height);
         
-        // Wait a frame to ensure canvas is properly sized before creating states
-        requestAnimationFrame(() => {
-            this.initializeStates();
-        });
+        // Initialize states immediately instead of waiting for animation frame
+        this.initializeStates();
     }
     
     initializeStates() {
         console.log('Game: Initializing states with canvas size:', this.canvas.width, 'x', this.canvas.height);
         
-        this.stateManager = new GameStateManager(this.canvas, this.ctx);
-        console.log('Game: GameStateManager created');
-        
-        // Add states
         try {
+            this.stateManager = new GameStateManager(this.canvas, this.ctx);
+            console.log('Game: GameStateManager created');
+            
+            // Add states
             this.stateManager.addState('start', new StartScreen(this.stateManager));
             console.log('Game: StartScreen state added');
             
@@ -470,22 +468,35 @@ class Game {
             
             this.stateManager.addState('game', new GameplayState(this.stateManager));
             console.log('Game: GameplayState added');
+            
+            this.lastTime = 0;
+            
+            this.setupEventListeners();
+            console.log('Game: Event listeners set up');
+            
+            // Start with the start screen
+            console.log('Game: Starting with start screen');
+            this.stateManager.changeState('start');
+            
+            // Start game loop immediately
+            console.log('Game: Starting game loop');
+            requestAnimationFrame((time) => this.gameLoop(time));
+            
         } catch (error) {
-            console.error('Error creating states:', error);
-            return;
+            console.error('Error during state initialization:', error);
+            // Show error on canvas
+            this.showError(`Initialization failed: ${error.message}`);
         }
-        
-        this.lastTime = 0;
-        
-        this.setupEventListeners();
-        console.log('Game: Event listeners set up');
-        
-        // Start with the start screen
-        console.log('Game: Starting with start screen');
-        this.stateManager.changeState('start');
-        
-        console.log('Game: Starting game loop');
-        this.gameLoop(0);
+    }
+    
+    showError(message) {
+        console.error('Game: Showing error on canvas:', message);
+        if (this.ctx) {
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.font = '20px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
+        }
     }
     
     applyUIScaling() {
@@ -576,15 +587,18 @@ class Game {
             this.resizeCanvas();
         });
         
+        // Canvas click events
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             console.log('Game: Canvas click at', x, y, 'current state:', this.stateManager?.currentState);
-            this.stateManager?.handleClick(x, y);
+            if (this.stateManager) {
+                this.stateManager.handleClick(x, y);
+            }
         });
         
-        // Add additional event listeners for better interaction
+        // Touch events for mobile
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const rect = this.canvas.getBoundingClientRect();
@@ -592,7 +606,9 @@ class Game {
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
             console.log('Game: Canvas touch at', x, y);
-            this.stateManager?.handleClick(x, y);
+            if (this.stateManager) {
+                this.stateManager.handleClick(x, y);
+            }
         });
         
         // Keyboard support for start screen
@@ -600,7 +616,9 @@ class Game {
             if (this.stateManager?.currentState === 'start' && 
                 (e.key === 'Enter' || e.key === ' ')) {
                 console.log('Game: Keyboard input detected on start screen');
-                this.stateManager.handleClick(0, 0); // Trigger click handler
+                if (this.stateManager) {
+                    this.stateManager.handleClick(0, 0); // Trigger click handler
+                }
             }
         });
     }
@@ -610,31 +628,48 @@ class Game {
         this.lastTime = currentTime;
         
         try {
+            // Clear canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
-            this.stateManager.update(deltaTime);
-            this.stateManager.render();
+            // Update and render current state
+            if (this.stateManager) {
+                this.stateManager.update(deltaTime);
+                this.stateManager.render();
+            } else {
+                // Show loading message if state manager not ready
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
+            }
         } catch (error) {
             console.error('Error in game loop:', error);
+            this.showError(`Game loop error: ${error.message}`);
         }
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-// Add error handling for the initialization
-try {
-    console.log('Starting game initialization');
-    // Wait for DOM to be ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM ready, starting game');
-            new Game();
-        });
-    } else {
-        console.log('DOM already ready, starting game immediately');
+// Simplified initialization
+console.log('Starting game initialization');
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM ready, creating game');
+    try {
         new Game();
+    } catch (error) {
+        console.error('Failed to create game:', error);
     }
-} catch (error) {
-    console.error('Failed to initialize game:', error);
+});
+
+// Fallback for cases where DOMContentLoaded already fired
+if (document.readyState === 'loading') {
+    console.log('Waiting for DOM...');
+} else {
+    console.log('DOM already ready, starting game immediately');
+    try {
+        new Game();
+    } catch (error) {
+        console.error('Failed to initialize game:', error);
+    }
 }

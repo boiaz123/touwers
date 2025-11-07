@@ -5,6 +5,7 @@ export class GameStateManager {
         this.states = {};
         this.currentState = null;
         this.currentStateObj = null;
+        this.selectedLevelInfo = null; // Store level info for transitions
         console.log('GameStateManager: Created with canvas size', canvas.width, 'x', canvas.height);
     }
     
@@ -18,7 +19,11 @@ export class GameStateManager {
         
         if (this.currentStateObj && typeof this.currentStateObj.exit === 'function') {
             console.log('GameStateManager: Calling exit on', this.currentState);
-            this.currentStateObj.exit();
+            try {
+                this.currentStateObj.exit();
+            } catch (error) {
+                console.error('GameStateManager: Error during state exit:', error);
+            }
         }
         
         if (this.states[stateName]) {
@@ -27,7 +32,11 @@ export class GameStateManager {
             
             if (typeof this.currentStateObj.enter === 'function') {
                 console.log('GameStateManager: Calling enter on', stateName);
-                this.currentStateObj.enter();
+                try {
+                    this.currentStateObj.enter();
+                } catch (error) {
+                    console.error('GameStateManager: Error during state enter:', error);
+                }
             }
             console.log('GameStateManager: State changed to', stateName);
         } else {
@@ -37,20 +46,32 @@ export class GameStateManager {
     
     update(deltaTime) {
         if (this.currentStateObj && typeof this.currentStateObj.update === 'function') {
-            this.currentStateObj.update(deltaTime);
+            try {
+                this.currentStateObj.update(deltaTime);
+            } catch (error) {
+                console.error('GameStateManager: Error during update:', error);
+            }
         }
     }
     
     render() {
         if (this.currentStateObj && typeof this.currentStateObj.render === 'function') {
-            this.currentStateObj.render(this.ctx);
+            try {
+                this.currentStateObj.render(this.ctx);
+            } catch (error) {
+                console.error('GameStateManager: Error during render:', error);
+            }
         }
     }
     
     handleClick(x, y) {
         console.log('GameStateManager: Handling click at', x, y, 'in state', this.currentState);
         if (this.currentStateObj && typeof this.currentStateObj.handleClick === 'function') {
-            this.currentStateObj.handleClick(x, y);
+            try {
+                this.currentStateObj.handleClick(x, y);
+            } catch (error) {
+                console.error('GameStateManager: Error during click handling:', error);
+            }
         } else {
             console.warn('GameStateManager: Current state does not handle clicks');
         }
