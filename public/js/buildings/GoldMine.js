@@ -171,11 +171,11 @@ export class GoldMine extends Building {
             });
         });
         
-        // Initialize workers with fixed positions
+        // Initialize workers with repositioned positions (moved to left)
         for (let i = 0; i < 2; i++) {
             this.workers.push({
-                x: i === 0 ? 15 : 25, // Fixed positions near cave entrance
-                y: i === 0 ? 15 : 20,
+                x: i === 0 ? -5 : 5, // Moved further left from cave entrance
+                y: i === 0 ? 10 : 15,
                 animationOffset: i * Math.PI,
                 pickaxeRaised: 0,
                 miningCooldown: i * 1.5,
@@ -618,13 +618,13 @@ export class GoldMine extends Building {
         // Render simplified cave entrance integrated into excavated ground
         this.renderCaveEntrance(ctx, size);
         
-        // Render workers
+        // Render workers (updated position and blue shirts)
         this.workers.forEach(worker => {
             ctx.save();
             ctx.translate(this.x + worker.x, this.y + worker.y);
             
-            // Worker body
-            ctx.fillStyle = '#8B4513';
+            // Worker body - blue shirt (different from water blue)
+            ctx.fillStyle = '#1E3A8A'; // Dark blue, distinct from water colors
             ctx.fillRect(-2, -4, 4, 8);
             
             // Worker head
@@ -818,14 +818,14 @@ export class GoldMine extends Building {
         ctx.fillStyle = baseGradient;
         ctx.fillRect(this.x - maxArea * 1.1, this.y - maxArea * 1.1, maxArea * 2.2, maxArea * 2.2);
         
-        // Add natural grass patches that blend organically
+        // Add natural grass patches that blend organically (repositioned to avoid track area)
         const grassPatches = [
             {x: -maxArea * 0.8, y: -maxArea * 0.6, radius: 15, intensity: 0.6},
-            {x: maxArea * 0.7, y: -maxArea * 0.8, radius: 12, intensity: 0.8},
-            {x: -maxArea * 0.5, y: maxArea * 0.9, radius: 18, intensity: 0.7},
+            {x: -maxArea * 0.9, y: maxArea * 0.8, radius: 18, intensity: 0.7}, // Moved to bottom left
+            {x: -maxArea * 0.7, y: maxArea * 0.9, radius: 16, intensity: 0.6}, // Moved to bottom left
             {x: maxArea * 0.9, y: maxArea * 0.4, radius: 14, intensity: 0.5},
             {x: -maxArea * 1.0, y: maxArea * 0.1, radius: 20, intensity: 0.9},
-            {x: maxArea * 0.2, y: maxArea * 1.0, radius: 16, intensity: 0.6},
+            {x: -maxArea * 0.6, y: maxArea * 1.0, radius: 14, intensity: 0.8}, // Moved to bottom left
             {x: -maxArea * 0.2, y: -maxArea * 1.0, radius: 13, intensity: 0.7}
         ];
         
@@ -868,10 +868,10 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Add small water pool near the excavation
-        const poolX = this.x + maxArea * 0.6;
-        const poolY = this.y + maxArea * 0.7;
-        const poolRadius = 18;
+        // Add small water pool repositioned to bottom left corner
+        const poolX = this.x - maxArea * 0.7; // Moved to left
+        const poolY = this.y + maxArea * 0.8;  // Moved to bottom
+        const poolRadius = 16; // Slightly smaller
         
         // Water pool shadow/depth
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -905,14 +905,14 @@ export class GoldMine extends Building {
         ctx.ellipse(poolX + poolRadius * 0.2, poolY + poolRadius * 0.1, poolRadius * 0.15, poolRadius * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Reeds around the water pool
+        // Reeds around the water pool (repositioned)
         const reedPositions = [
             {x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12},
             {x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15},
-            {x: poolX + poolRadius * 1.1, y: poolY - poolRadius * 0.3, height: 10},
-            {x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 1.0, height: 14},
-            {x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.2, height: 8},
-            {x: poolX + poolRadius * 1.2, y: poolY + poolRadius * 0.6, height: 11}
+            {x: poolX + poolRadius * 1.0, y: poolY - poolRadius * 0.4, height: 10},
+            {x: poolX + poolRadius * 0.7, y: poolY + poolRadius * 0.9, height: 14},
+            {x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.1, height: 8},
+            {x: poolX + poolRadius * 1.1, y: poolY + poolRadius * 0.5, height: 11}
         ];
         
         reedPositions.forEach(reed => {
@@ -931,11 +931,11 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Add cattails near water
+        // Add cattails near water (repositioned)
         const cattailPositions = [
-            {x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.7},
-            {x: poolX + poolRadius * 0.9, y: poolY + poolRadius * 0.9},
-            {x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.5}
+            {x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.6},
+            {x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 0.8},
+            {x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.4}
         ];
         
         cattailPositions.forEach(cattail => {
@@ -954,14 +954,14 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Scattered grass blades around the area
+        // Scattered grass blades around the area (avoiding track area)
         const grassBlades = [
             {x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6},
-            {x: -maxArea * 0.7, y: maxArea * 0.8, length: 4},
-            {x: maxArea * 0.8, y: -maxArea * 0.6, length: 5},
+            {x: -maxArea * 0.8, y: maxArea * 0.7, length: 4}, // Moved to bottom left
+            {x: -maxArea * 0.6, y: maxArea * 0.9, length: 5}, // Moved to bottom left
             {x: maxArea * 0.5, y: maxArea * 0.9, length: 7},
             {x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5},
-            {x: 0, y: maxArea * 0.8, length: 6},
+            {x: -maxArea * 0.5, y: maxArea * 0.8, length: 6}, // Moved to bottom left
             {x: maxArea * 0.9, y: maxArea * 0.2, length: 4}
         ];
         
