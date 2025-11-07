@@ -254,9 +254,12 @@ class GameplayState {
             }
         } else if (this.selectedBuildingType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
+            console.log(`Attempting to place ${this.selectedBuildingType} at grid (${gridX}, ${gridY}), screen (${x}, ${y})`);
+            console.log(`Player gold: ${this.gameState.gold}, Building cost: ${this.getBuildingCost(this.selectedBuildingType)}`);
             
             if (this.level.canPlaceBuilding(gridX, gridY, 4, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, 4);
+                console.log(`Building placement allowed, placing at screen (${screenX}, ${screenY})`);
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, 4);
@@ -266,9 +269,24 @@ class GameplayState {
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    console.log('Building placed successfully');
+                } else {
+                    console.log('TowerManager.placeBuilding returned false');
                 }
+            } else {
+                console.log('Level.canPlaceBuilding returned false');
             }
         }
+    }
+    
+    getBuildingCost(buildingType) {
+        const costs = {
+            'mine': 200,
+            'forge': 300,
+            'academy': 250,
+            'superweapon': 500
+        };
+        return costs[buildingType] || 0;
     }
     
     getWaveConfig(level, wave) {

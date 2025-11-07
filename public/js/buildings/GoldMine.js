@@ -64,6 +64,17 @@ export class GoldMine extends Building {
         ];
     }
     
+    getLayerColor(layer) {
+        const colors = [
+            '#8B7355', // Surface - sandy brown
+            '#A0522D', // Layer 1 - sienna
+            '#CD853F', // Layer 2 - peru  
+            '#D2B48C', // Layer 3 - tan
+            '#DEB887'  // Layer 4 - burlywood (bottom)
+        ];
+        return colors[layer] || '#8B7355';
+    }
+    
     generateRockFormations(radiusX, radiusY, layer) {
         const formations = [];
         const count = 8 + layer * 2; // More formations in deeper layers

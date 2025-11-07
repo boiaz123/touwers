@@ -177,6 +177,7 @@ export class Level {
         for (let x = gridX; x < gridX + size; x++) {
             for (let y = gridY; y < gridY + size; y++) {
                 if (!this.isValidGridPosition(x, y) || this.occupiedCells.has(`${x},${y}`)) {
+                    console.log(`Building placement blocked at grid (${x}, ${y}) - Valid: ${this.isValidGridPosition(x, y)}, Occupied: ${this.occupiedCells.has(`${x},${y}`)}`);
                     return false;
                 }
             }
@@ -184,6 +185,7 @@ export class Level {
         
         // Check if there's already a building at this position
         if (towerManager && towerManager.isBuildingPositionOccupied(gridX, gridY, size)) {
+            console.log(`Building placement blocked - position already occupied by another building`);
             return false;
         }
         
