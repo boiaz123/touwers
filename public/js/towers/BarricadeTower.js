@@ -176,64 +176,64 @@ export class BarricadeTower {
     }
     
     generateStaticEnvironment() {
-        const gridBounds = 32; // Back to 2x2 grid bounds (64 pixels total, 32 from center)
+        const gridBounds = 30; // Strictly within 2x2 grid (64 pixels total, keep under 32 from center)
         
         return {
-            // Forest floor elements very close to tower base
+            // Forest floor elements within tower grid
             bushes: [
-                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.5 },
-                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.4 },
-                { x: this.x - gridBounds * 0.5, y: this.y - gridBounds * 0.3 },
-                { x: this.x + gridBounds * 0.8, y: this.y - gridBounds * 0.4 },
-                { x: this.x - gridBounds * 0.9, y: this.y + gridBounds * 0.2 },
-                { x: this.x + gridBounds * 0.9, y: this.y + gridBounds * 0.7 },
-                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.8 }
+                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 0.4 },
+                { x: this.x + gridBounds * 0.5, y: this.y + gridBounds * 0.3 },
+                { x: this.x - gridBounds * 0.4, y: this.y - gridBounds * 0.2 },
+                { x: this.x + gridBounds * 0.7, y: this.y - gridBounds * 0.3 },
+                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.1 },
+                { x: this.x + gridBounds * 0.8, y: this.y + gridBounds * 0.6 },
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.7 }
             ],
             rocks: [
                 // Rocks integrated into tower foundation
-                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.3, size: 3 },
-                { x: this.x + gridBounds * 0.35, y: this.y + gridBounds * 0.2, size: 2 },
-                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.6, size: 4 },
-                { x: this.x + gridBounds * 0.6, y: this.y + gridBounds * 0.5, size: 3 },
-                { x: this.x - gridBounds * 0.6, y: this.y - gridBounds * 0.4, size: 2 },
-                { x: this.x + gridBounds * 0.7, y: this.y - gridBounds * 0.3, size: 3 }
+                { x: this.x - gridBounds * 0.3, y: this.y + gridBounds * 0.2, size: 3 },
+                { x: this.x + gridBounds * 0.25, y: this.y + gridBounds * 0.15, size: 2 },
+                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 0.5, size: 4 },
+                { x: this.x + gridBounds * 0.5, y: this.y + gridBounds * 0.4, size: 3 },
+                { x: this.x - gridBounds * 0.5, y: this.y - gridBounds * 0.3, size: 2 },
+                { x: this.x + gridBounds * 0.6, y: this.y - gridBounds * 0.2, size: 3 }
             ],
-            // Small trees very close to tower - reduced size
+            // Small trees within grid
             smallTrees: [
-                { x: this.x - gridBounds * 0.6, y: this.y + gridBounds * 0.4, size: 12 },
-                { x: this.x + gridBounds * 0.5, y: this.y + gridBounds * 0.3, size: 10 },
-                { x: this.x - gridBounds * 0.7, y: this.y - gridBounds * 0.3, size: 14 },
-                { x: this.x + gridBounds * 0.6, y: this.y - gridBounds * 0.4, size: 9 },
-                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.7, size: 12 },
-                { x: this.x + gridBounds * 0.8, y: this.y + gridBounds * 0.1, size: 11 }
+                { x: this.x - gridBounds * 0.5, y: this.y + gridBounds * 0.3, size: 12 },
+                { x: this.x + gridBounds * 0.4, y: this.y + gridBounds * 0.2, size: 10 },
+                { x: this.x - gridBounds * 0.6, y: this.y - gridBounds * 0.2, size: 14 },
+                { x: this.x + gridBounds * 0.5, y: this.y - gridBounds * 0.3, size: 9 },
+                { x: this.x - gridBounds * 0.3, y: this.y + gridBounds * 0.6, size: 12 },
+                { x: this.x + gridBounds * 0.7, y: this.y + gridBounds * 0.05, size: 11 }
             ],
-            // Medium understory trees - reduced size
+            // Medium understory trees within grid
             mediumTrees: [
-                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.7, size: 18 },
-                { x: this.x + gridBounds * 0.75, y: this.y + gridBounds * 0.6, size: 16 },
-                { x: this.x - gridBounds * 0.9, y: this.y - gridBounds * 0.1, size: 20 },
-                { x: this.x + gridBounds * 0.85, y: this.y - gridBounds * 0.3, size: 15 },
-                { x: this.x - gridBounds * 0.5, y: this.y + gridBounds * 0.9, size: 18 }
+                { x: this.x - gridBounds * 0.7, y: this.y + gridBounds * 0.6, size: 18 },
+                { x: this.x + gridBounds * 0.65, y: this.y + gridBounds * 0.5, size: 16 },
+                { x: this.x - gridBounds * 0.8, y: this.y - gridBounds * 0.05, size: 20 },
+                { x: this.x + gridBounds * 0.75, y: this.y - gridBounds * 0.2, size: 15 },
+                { x: this.x - gridBounds * 0.4, y: this.y + gridBounds * 0.8, size: 18 }
             ],
-            // Tall forest trees within grid bounds - reduced size
+            // Tall forest trees within strict grid bounds
             forestTrees: [
-                { x: this.x - gridBounds * 0.9, y: this.y + gridBounds * 0.9, size: 25 },
-                { x: this.x + gridBounds * 0.85, y: this.y + gridBounds * 0.8, size: 23 },
-                { x: this.x - gridBounds * 0.85, y: this.y + gridBounds * 0.2, size: 27 },
-                { x: this.x + gridBounds * 0.9, y: this.y - gridBounds * 0.1, size: 24 }
+                { x: this.x - gridBounds * 0.8, y: this.y + gridBounds * 0.8, size: 25 },
+                { x: this.x + gridBounds * 0.75, y: this.y + gridBounds * 0.7, size: 23 },
+                { x: this.x - gridBounds * 0.75, y: this.y + gridBounds * 0.15, size: 27 },
+                { x: this.x + gridBounds * 0.8, y: this.y - gridBounds * 0.05, size: 24 }
             ],
             rubblePiles: [
                 {
-                    x: this.x + gridBounds * 0.25,
-                    y: this.y + gridBounds * 0.3,
+                    x: this.x + gridBounds * 0.2,
+                    y: this.y + gridBounds * 0.25,
                     pieces: [
                         { offsetX: -1, offsetY: 1, size: 1.2 },
                         { offsetX: 2, offsetY: -1, size: 1.5 }
                     ]
                 },
                 {
-                    x: this.x - gridBounds * 0.3,
-                    y: this.y - gridBounds * 0.4,
+                    x: this.x - gridBounds * 0.25,
+                    y: this.y - gridBounds * 0.3,
                     pieces: [
                         { offsetX: 1, offsetY: 0, size: 1.0 },
                         { offsetX: -2, offsetY: 1, size: 1.3 }
