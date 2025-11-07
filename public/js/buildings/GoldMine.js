@@ -13,67 +13,119 @@ export class GoldMine extends Building {
         this.goldPiles = [];
         this.bobAnimations = [];
         
-        // Mine cart animation
+        // Mine cart animation - halved speed
         this.cartPosition = 0;
         this.cartDirection = 1;
-        this.cartSpeed = 0.3;
+        this.cartSpeed = 0.15; // Reduced from 0.3 to 0.15
         
         // Natural environment elements within the mine area
         this.trees = [];
         this.environmentRocks = [];
         this.bushes = [];
         
-        // Generate 2 trees within the mine's 4x4 grid area
-        for (let i = 0; i < 2; i++) {
+        // Generate more pine trees within the mine's 4x4 grid area for forest patch look
+        // Fixed positions to prevent pattern changes and flickering
+        const treePositions = [
+            { x: -45, y: -35 }, // Back left
+            { x: -25, y: -40 }, // Back left center
+            { x: 45, y: -30 },  // Back right
+            { x: 25, y: -45 },  // Back right center
+            { x: -35, y: 35 },  // Front left
+            { x: 40, y: 40 },   // Front right
+            { x: -50, y: 0 },   // Mid left
+            { x: 50, y: 10 }    // Mid right
+        ];
+        
+        // Use fixed seed for consistent tree generation
+        let seedCounter = 12345; // Fixed seed
+        const seededRandom = () => {
+            seedCounter = (seedCounter * 9301 + 49297) % 233280;
+            return seedCounter / 233280;
+        };
+        
+        treePositions.forEach((pos, i) => {
             this.trees.push({
-                x: i === 0 ? -35 + Math.random() * 10 : 40 + Math.random() * 10, // One on left, one on right
-                y: -30 + Math.random() * 20, // Positioned behind the cave
-                height: Math.random() * 20 + 25, // Smaller trees to fit the area
-                trunkWidth: Math.random() * 4 + 4,
-                crownRadius: Math.random() * 10 + 12,
-                type: Math.floor(Math.random() * 2),
-                leafDensity: Math.random() * 0.3 + 0.7
+                x: pos.x,
+                y: pos.y,
+                height: 20 + (seededRandom() * 25), // Pine trees 20-45 units tall
+                trunkWidth: 3 + (seededRandom() * 3),
+                crownRadius: 8 + (seededRandom() * 8),
+                type: 1, // All coniferous (pine) trees
+                leafDensity: 0.6 + (seededRandom() * 0.3),
+                // Fixed needle layers to prevent flickering
+                needleLayers: Math.floor(4 + seededRandom() * 3)
             });
-        }
+        });
         
-        // Generate rocks within the mine area - mix of small and large
-        for (let i = 0; i < 6; i++) {
-            const isLargeRock = i < 2; // First 2 are large rocks
+        // Generate rocks with fixed positions to prevent movement
+        const rockPositions = [
+            { x: -20, y: -20, large: true },
+            { x: 30, y: -10, large: true },
+            { x: -40, y: 20, large: false },
+            { x: 15, y: 25, large: false },
+            { x: -10, y: 40, large: false },
+            { x: 35, y: -35, large: false }
+        ];
+        
+        rockPositions.forEach((pos, i) => {
+            const isLargeRock = pos.large;
             this.environmentRocks.push({
-                x: (Math.random() - 0.5) * 60, // Within 4x4 grid area
-                y: (Math.random() - 0.5) * 60,
-                size: isLargeRock ? Math.random() * 8 + 12 : Math.random() * 6 + 4, // Large or small
-                type: isLargeRock ? 2 : Math.floor(Math.random() * 2), // Large rocks are stacked type
-                rotation: Math.random() * Math.PI * 2,
-                color: Math.random() < 0.5 ? '#8B7355' : '#A0522D',
-                layers: isLargeRock ? 2 + Math.floor(Math.random() * 2) : 1 // Stacking for large rocks
+                x: pos.x,
+                y: pos.y,
+                size: isLargeRock ? 10 + (seededRandom() * 8) : 4 + (seededRandom() * 4),
+                type: isLargeRock ? 2 : Math.floor(seededRandom() * 2),
+                rotation: seededRandom() * Math.PI * 2,
+                color: seededRandom() < 0.5 ? '#8B7355' : '#A0522D',
+                layers: isLargeRock ? 2 + Math.floor(seededRandom() * 2) : 1
             });
-        }
+        });
         
-        // Generate fewer bushes, positioned to not block the cave entrance
-        for (let i = 0; i < 3; i++) {
+        // Generate fewer bushes with fixed positions
+        const bushPositions = [
+            { x: -30, y: 30 },
+            { x: 20, y: 35 },
+            { x: -15, y: -15 }
+        ];
+        
+        bushPositions.forEach((pos, i) => {
             this.bushes.push({
-                x: Math.random() < 0.5 ? -25 + Math.random() * 15 : 15 + Math.random() * 25, // Left or right side
-                y: 20 + Math.random() * 20, // In front area, not blocking cave
-                radius: Math.random() * 6 + 8,
-                segments: 4 + Math.floor(Math.random() * 3),
-                color: Math.random() < 0.3 ? '#228B22' : '#2E8B57'
+                x: pos.x,
+                y: pos.y,
+                radius: 6 + (seededRandom() * 6),
+                segments: 4 + Math.floor(seededRandom() * 3),
+                color: seededRandom() < 0.3 ? '#228B22' : '#2E8B57',
+                // Fixed segment positions to prevent movement
+                segmentPositions: this.generateFixedBushSegments(6 + (seededRandom() * 6), 4 + Math.floor(seededRandom() * 3), seededRandom)
             });
-        }
+        });
         
-        // Initialize workers
+        // Initialize workers with fixed positions
         for (let i = 0; i < 2; i++) {
             this.workers.push({
-                x: (Math.random() - 0.5) * 30 + 20, // Position near cave entrance
-                y: (Math.random() - 0.5) * 15 + 15,
-                animationOffset: Math.random() * Math.PI * 2,
+                x: i === 0 ? 15 : 25, // Fixed positions near cave entrance
+                y: i === 0 ? 15 : 20,
+                animationOffset: i * Math.PI,
                 pickaxeRaised: 0,
-                miningCooldown: Math.random() * 2,
-                direction: Math.random() < 0.5 ? -1 : 1
+                miningCooldown: i * 1.5,
+                direction: i === 0 ? -1 : 1
             });
         }
     }
     
+    generateFixedBushSegments(radius, segments, randomFunc) {
+        const positions = [];
+        for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const distance = radius * (0.4 + randomFunc() * 0.2); // Reduced randomness
+            positions.push({
+                x: Math.cos(angle) * distance,
+                y: Math.sin(angle) * distance,
+                radius: radius * (0.25 + randomFunc() * 0.1) // Reduced randomness
+            });
+        }
+        return positions;
+    }
+
     update(deltaTime) {
         super.update(deltaTime);
         
@@ -176,12 +228,12 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Render trees first (background elements) - smaller scale for integration
+        // Render trees first (background elements) - all pine trees for forest look
         this.trees.forEach(tree => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
             
-            // Tree shadow
+            // Tree shadow (fixed position)
             ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.beginPath();
             ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.6, tree.crownRadius * 0.2, 0, 0, Math.PI * 2);
@@ -189,97 +241,92 @@ export class GoldMine extends Building {
             
             // Tree trunk
             const trunkGradient = ctx.createLinearGradient(-tree.trunkWidth/2, 0, tree.trunkWidth/2, 0);
-            trunkGradient.addColorStop(0, '#8B4513');
-            trunkGradient.addColorStop(0.5, '#A0522D');
-            trunkGradient.addColorStop(1, '#654321');
+            trunkGradient.addColorStop(0, '#654321');
+            trunkGradient.addColorStop(0.5, '#8B4513');
+            trunkGradient.addColorStop(1, '#A0522D');
             
             ctx.fillStyle = trunkGradient;
             ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height);
             
-            // Trunk texture (bark lines)
-            ctx.strokeStyle = '#654321';
+            // Trunk texture (fixed bark lines)
+            ctx.strokeStyle = '#5D4E37';
             ctx.lineWidth = 1;
-            for (let i = 1; i < 3; i++) {
-                const lineY = -tree.height * (i / 3);
+            for (let i = 1; i < 4; i++) {
+                const lineY = -tree.height * (i / 4);
                 ctx.beginPath();
                 ctx.moveTo(-tree.trunkWidth/2, lineY);
                 ctx.lineTo(tree.trunkWidth/2, lineY);
                 ctx.stroke();
             }
             
-            // Tree crown
-            if (tree.type === 0) {
-                // Deciduous tree (round crown)
-                const crownGradient = ctx.createRadialGradient(
-                    -tree.crownRadius * 0.3, -tree.height - tree.crownRadius * 0.3, 0,
-                    0, -tree.height, tree.crownRadius
-                );
-                crownGradient.addColorStop(0, '#90EE90');
-                crownGradient.addColorStop(0.6, '#228B22');
-                crownGradient.addColorStop(1, '#006400');
+            // Pine tree crown (triangular with layers)
+            ctx.fillStyle = '#1B4332'; // Darker pine green
+            
+            // Main triangular crown
+            ctx.beginPath();
+            ctx.moveTo(0, -tree.height - tree.crownRadius);
+            ctx.lineTo(-tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.2);
+            ctx.lineTo(tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add layered pine sections for realistic look
+            for (let layer = 0; layer < 3; layer++) {
+                const layerY = -tree.height + (layer * tree.height * 0.3);
+                const layerRadius = tree.crownRadius * (0.9 - layer * 0.2);
                 
-                ctx.fillStyle = crownGradient;
+                ctx.fillStyle = layer === 0 ? '#2D5A3D' : '#1B4332';
                 ctx.beginPath();
-                ctx.arc(0, -tree.height, tree.crownRadius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Add some leaf clusters for texture
-                for (let j = 0; j < 5; j++) {
-                    const angle = (j / 5) * Math.PI * 2;
-                    const distance = tree.crownRadius * (0.6 + Math.random() * 0.3);
-                    const leafX = Math.cos(angle) * distance;
-                    const leafY = -tree.height + Math.sin(angle) * distance;
-                    
-                    ctx.fillStyle = `rgba(34, 139, 34, ${tree.leafDensity})`;
-                    ctx.beginPath();
-                    ctx.arc(leafX, leafY, tree.crownRadius * 0.15, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else {
-                // Coniferous tree (triangular crown)
-                ctx.fillStyle = '#228B22';
-                ctx.beginPath();
-                ctx.moveTo(0, -tree.height - tree.crownRadius);
-                ctx.lineTo(-tree.crownRadius * 0.7, -tree.height + tree.crownRadius * 0.2);
-                ctx.lineTo(tree.crownRadius * 0.7, -tree.height + tree.crownRadius * 0.2);
+                ctx.moveTo(0, layerY - layerRadius * 0.6);
+                ctx.lineTo(-layerRadius * 0.7, layerY + layerRadius * 0.3);
+                ctx.lineTo(layerRadius * 0.7, layerY + layerRadius * 0.3);
                 ctx.closePath();
                 ctx.fill();
-                
-                // Add needle texture
-                ctx.strokeStyle = '#006400';
-                ctx.lineWidth = 1;
-                for (let j = 0; j < 4; j++) {
-                    const needleY = -tree.height - tree.crownRadius * 0.8 + (j / 4) * tree.crownRadius * 1.0;
-                    const needleWidth = tree.crownRadius * (0.7 - j / 6);
-                    ctx.beginPath();
-                    ctx.moveTo(-needleWidth, needleY);
-                    ctx.lineTo(needleWidth, needleY);
-                    ctx.stroke();
-                }
+            }
+            
+            // Fixed needle texture (no random elements)
+            ctx.strokeStyle = '#0F2A1A';
+            ctx.lineWidth = 1;
+            for (let j = 0; j < tree.needleLayers; j++) {
+                const needleY = -tree.height - tree.crownRadius * 0.7 + (j / tree.needleLayers) * tree.crownRadius * 1.2;
+                const needleWidth = tree.crownRadius * (0.8 - j / (tree.needleLayers + 2));
+                ctx.beginPath();
+                ctx.moveTo(-needleWidth, needleY);
+                ctx.lineTo(needleWidth, needleY);
+                ctx.stroke();
+            }
+            
+            // Pine tree highlights (fixed positions)
+            ctx.fillStyle = 'rgba(45, 90, 61, 0.6)';
+            for (let k = 0; k < 3; k++) {
+                const highlightY = -tree.height - tree.crownRadius * 0.5 + (k * tree.crownRadius * 0.4);
+                const highlightX = (k % 2 === 0 ? -1 : 1) * tree.crownRadius * 0.3;
+                ctx.beginPath();
+                ctx.arc(highlightX, highlightY, tree.crownRadius * 0.1, 0, Math.PI * 2);
+                ctx.fill();
             }
             
             ctx.restore();
         });
         
-        // Render environment rocks with stacking for natural look
+        // Render environment rocks with fixed stacking (no random patterns)
         this.environmentRocks.forEach(rock => {
             ctx.save();
             ctx.translate(this.x + rock.x, this.y + rock.y);
             ctx.rotate(rock.rotation);
             
-            // Rock shadow
+            // Rock shadow (fixed)
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
             ctx.ellipse(2, 2, rock.size * 0.9, rock.size * 0.4, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Main rock with stacking effect
             ctx.fillStyle = rock.color;
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 1;
             
             if (rock.layers > 1) {
-                // Stacked rocks for natural formation
+                // Stacked rocks with fixed patterns
                 for (let layer = 0; layer < rock.layers; layer++) {
                     const layerSize = rock.size * (1 - layer * 0.15);
                     const layerY = -layer * rock.size * 0.4;
@@ -288,14 +335,14 @@ export class GoldMine extends Building {
                     ctx.fillStyle = layerColor;
                     
                     switch (rock.type) {
-                        case 0: // Round stacked boulders
+                        case 0:
                             ctx.beginPath();
                             ctx.ellipse(0, layerY, layerSize, layerSize * 0.8, 0, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.stroke();
                             break;
                             
-                        case 2: // Flat stacked rocks
+                        case 2:
                             ctx.beginPath();
                             ctx.ellipse(0, layerY, layerSize, layerSize * 0.5, 0, 0, Math.PI * 2);
                             ctx.fill();
@@ -304,25 +351,29 @@ export class GoldMine extends Building {
                     }
                 }
             } else {
-                // Single rocks
+                // Single rocks with fixed shapes
                 switch (rock.type) {
-                    case 0: // Round boulder
+                    case 0:
                         ctx.beginPath();
                         ctx.ellipse(0, 0, rock.size, rock.size * 0.8, 0, 0, Math.PI * 2);
                         ctx.fill();
                         ctx.stroke();
                         break;
                         
-                    case 1: // Angular rock
+                    case 1:
+                        // Fixed angular rock shape
                         ctx.beginPath();
-                        for (let i = 0; i < 5; i++) {
-                            const angle = (i / 5) * Math.PI * 2;
-                            const radius = rock.size * (0.8 + Math.random() * 0.2);
-                            const x = Math.cos(angle) * radius;
-                            const y = Math.sin(angle) * radius * 0.7;
-                            if (i === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
+                        const points = [
+                            {x: -rock.size, y: 0},
+                            {x: -rock.size * 0.5, y: -rock.size * 0.8},
+                            {x: rock.size * 0.3, y: -rock.size * 0.6},
+                            {x: rock.size, y: 0},
+                            {x: rock.size * 0.5, y: rock.size * 0.7}
+                        ];
+                        points.forEach((point, i) => {
+                            if (i === 0) ctx.moveTo(point.x, point.y);
+                            else ctx.lineTo(point.x, point.y);
+                        });
                         ctx.closePath();
                         ctx.fill();
                         ctx.stroke();
@@ -330,7 +381,7 @@ export class GoldMine extends Building {
                 }
             }
             
-            // Rock highlight for 3D effect
+            // Fixed rock highlight
             ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
             ctx.beginPath();
             ctx.arc(-rock.size * 0.3, -rock.size * 0.3, rock.size * 0.15, 0, Math.PI * 2);
@@ -339,43 +390,36 @@ export class GoldMine extends Building {
             ctx.restore();
         });
         
-        // Render bushes positioned naturally around the scene
+        // Render bushes with fixed segment positions
         this.bushes.forEach(bush => {
             ctx.save();
             ctx.translate(this.x + bush.x, this.y + bush.y);
             
-            // Bush shadow
+            // Bush shadow (fixed)
             ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.beginPath();
             ctx.ellipse(1, 1, bush.radius * 0.8, bush.radius * 0.2, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Main bush shape (cluster of circles for natural look)
+            // Main bush shape using fixed segment positions
             ctx.fillStyle = bush.color;
-            for (let i = 0; i < bush.segments; i++) {
-                const angle = (i / bush.segments) * Math.PI * 2;
-                const distance = bush.radius * (0.3 + Math.random() * 0.4);
-                const segmentX = Math.cos(angle) * distance;
-                const segmentY = Math.sin(angle) * distance;
-                const segmentRadius = bush.radius * (0.25 + Math.random() * 0.15);
-                
+            bush.segmentPositions.forEach(segment => {
                 ctx.beginPath();
-                ctx.arc(segmentX, segmentY, segmentRadius, 0, Math.PI * 2);
+                ctx.arc(segment.x, segment.y, segment.radius, 0, Math.PI * 2);
                 ctx.fill();
-            }
+            });
             
-            // Bush highlights
+            // Fixed bush highlights
             ctx.fillStyle = 'rgba(144, 238, 144, 0.5)';
-            for (let i = 0; i < 2; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const distance = bush.radius * 0.25;
-                const highlightX = Math.cos(angle) * distance;
-                const highlightY = Math.sin(angle) * distance;
-                
+            const highlights = [
+                {x: -bush.radius * 0.2, y: -bush.radius * 0.3},
+                {x: bush.radius * 0.3, y: bush.radius * 0.2}
+            ];
+            highlights.forEach(highlight => {
                 ctx.beginPath();
-                ctx.arc(highlightX, highlightY, bush.radius * 0.1, 0, Math.PI * 2);
+                ctx.arc(highlight.x, highlight.y, bush.radius * 0.1, 0, Math.PI * 2);
                 ctx.fill();
-            }
+            });
             
             ctx.restore();
         });
