@@ -10,6 +10,7 @@ export class LevelSelect {
         this.selectedLevel = 0;
         this.hoveredLevel = -1;
         this.hoveredStartButton = false;
+        console.log('LevelSelect: constructor completed');
     }
     
     enter() {
@@ -29,12 +30,10 @@ export class LevelSelect {
         }
         
         this.setupMouseListeners();
-        console.log('LevelSelect: enter completed');
     }
     
     exit() {
         console.log('LevelSelect: exit called');
-        // UI will be shown by the next state (game state)
         this.removeMouseListeners();
     }
     
@@ -72,9 +71,8 @@ export class LevelSelect {
                 
                 this.hoveredLevel = index;
                 
-                // Check if hovering over start button for selected level
                 if (index === this.selectedLevel) {
-                    const buttonX = cardX + cardWidth / 2 - 50; // Center the 100px wide button
+                    const buttonX = cardX + cardWidth / 2 - 50;
                     const buttonY = cardY + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;
@@ -86,21 +84,23 @@ export class LevelSelect {
                 }
             }
         });
-        
-        // Update cursor style
-        this.stateManager.canvas.style.cursor = 
-            (this.hoveredLevel !== -1 || this.hoveredStartButton) ? 'pointer' : 'default';
+    }
+    
+    update(deltaTime) {
+        // Nothing to update for level select
     }
     
     render(ctx) {
-        const canvas = this.stateManager.canvas;
+        const canvas = ctx.canvas;
+        const width = canvas.width || window.innerWidth;
+        const height = canvas.height || window.innerHeight;
         
         // Background
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, '#2a1a0f');
         gradient.addColorStop(1, '#1a0f0a');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, width, height);
         
         // Title
         ctx.textAlign = 'center';
@@ -108,8 +108,8 @@ export class LevelSelect {
         ctx.fillStyle = '#d4af37';
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
-        ctx.fillText('Select Your Quest', canvas.width / 2, 100);
-        ctx.strokeText('Select Your Quest', canvas.width / 2, 100);
+        ctx.fillText('Select Your Quest', width / 2, 100);
+        ctx.strokeText('Select Your Quest', width / 2, 100);
         
         // Level cards
         const cardWidth = 300;
@@ -118,10 +118,10 @@ export class LevelSelect {
         const spacing = 180;
         
         this.levels.forEach((level, index) => {
-            const x = canvas.width / 2 - cardWidth / 2;
+            const x = width / 2 - cardWidth / 2;
             const y = startY + index * spacing;
             
-            // Card background with hover effect
+            // Card background
             let cardColor = '#2a1a0f';
             let borderColor = '#d4af37';
             
@@ -142,7 +142,7 @@ export class LevelSelect {
             
             ctx.fillStyle = cardColor;
             ctx.strokeStyle = borderColor;
-            ctx.lineWidth = level.unlocked && index === this.hoveredLevel ? 3 : 2;
+            ctx.lineWidth = 2;
             ctx.fillRect(x, y, cardWidth, cardHeight);
             ctx.strokeRect(x, y, cardWidth, cardHeight);
             
@@ -166,7 +166,7 @@ export class LevelSelect {
                 ctx.fillStyle = difficultyColor;
                 ctx.fillText(level.difficulty, x + cardWidth / 2, y + 80);
                 
-                // Special test level description
+                // Test level description
                 if (level.isTest) {
                     ctx.font = '12px serif';
                     ctx.fillStyle = '#cccccc';
@@ -175,27 +175,24 @@ export class LevelSelect {
                 
                 // Start button for selected level
                 if (index === this.selectedLevel) {
-                    const buttonX = x + cardWidth / 2 - 50; // Center the button
+                    const buttonX = x + cardWidth / 2 - 50;
                     const buttonY = y + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;
                     
-                    // Button background with hover effect
                     ctx.fillStyle = this.hoveredStartButton ? '#45a049' : '#4CAF50';
                     if (level.isTest) {
                         ctx.fillStyle = this.hoveredStartButton ? '#ff4499' : '#ff00aa';
                     }
                     ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
                     
-                    // Button border
                     ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
                     if (level.isTest) {
                         ctx.strokeStyle = this.hoveredStartButton ? '#00ffff' : '#aa0055';
                     }
-                    ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
+                    ctx.lineWidth = 2;
                     ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
                     
-                    // Button text
                     ctx.fillStyle = '#fff';
                     ctx.font = 'bold 16px serif';
                     ctx.textAlign = 'center';
@@ -214,11 +211,12 @@ export class LevelSelect {
         ctx.textAlign = 'center';
         ctx.font = '16px serif';
         ctx.fillStyle = '#c9a876';
-        ctx.fillText('Click on a level to select, then click START', canvas.width / 2, canvas.height - 50);
+        ctx.fillText('Click on a level to select, then click START', width / 2, height - 50);
     }
     
     handleClick(x, y) {
-        console.log('LevelSelect: Handling click at', x, y);
+        console.log('LevelSelect: Click detected at', x, y);
+        
         const cardWidth = 300;
         const cardHeight = 150;
         const startY = 200;
@@ -233,8 +231,8 @@ export class LevelSelect {
                 y >= cardY && y <= cardY + cardHeight) {
                 
                 if (index === this.selectedLevel) {
-                    // Check start button area with corrected positioning
-                    const buttonX = cardX + cardWidth / 2 - 50; // Center the button
+                    // Check start button
+                    const buttonX = cardX + cardWidth / 2 - 50;
                     const buttonY = cardY + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;
@@ -242,7 +240,6 @@ export class LevelSelect {
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
                         console.log('LevelSelect: Starting level', level.name);
-                        // Pass level info to game state
                         this.stateManager.selectedLevelInfo = level;
                         this.stateManager.changeState('game');
                     }
