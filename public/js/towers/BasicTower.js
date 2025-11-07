@@ -115,123 +115,141 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // 3D wooden tower base (octagonal for more natural look)
-        const baseRadius = towerSize * 0.4;
-        const baseHeight = towerSize * 0.15;
+        // Isometric perspective settings
+        const isoScale = 0.866; // sqrt(3)/2 for proper isometric ratio
+        const baseWidth = towerSize * 0.8;
+        const baseHeight = towerSize * 0.4;
+        const towerHeight = towerSize * 0.6;
         
-        // Tower shadow (3D effect)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        // Draw decorative trees around the tower
+        this.drawTrees(ctx, towerSize);
+        
+        // Tower shadow (isometric)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.save();
+        ctx.transform(1, 0, 0.5, isoScale, 0, 0);
         ctx.beginPath();
-        ctx.ellipse(this.x + 3, this.y + baseHeight + 3, baseRadius + 2, baseRadius * 0.5 + 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x + 5, (this.y + baseHeight + 5) / isoScale, baseWidth * 0.5, baseHeight * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         
-        // Wooden base platform (3D bottom)
-        const gradient = ctx.createLinearGradient(this.x - baseRadius, this.y - baseHeight, this.x + baseRadius, this.y + baseHeight);
-        gradient.addColorStop(0, '#8B4513');
-        gradient.addColorStop(0.5, '#A0522D');
-        gradient.addColorStop(1, '#654321');
+        // Wooden base platform (isometric perspective)
+        ctx.save();
+        ctx.transform(1, 0, 0.5, isoScale, 0, 0);
         
-        ctx.fillStyle = gradient;
-        this.drawOctagon(ctx, this.x, this.y, baseRadius);
+        // Base platform
+        const baseGradient = ctx.createLinearGradient(
+            this.x - baseWidth/2, (this.y - baseHeight/2) / isoScale,
+            this.x + baseWidth/2, (this.y + baseHeight/2) / isoScale
+        );
+        baseGradient.addColorStop(0, '#8B4513');
+        baseGradient.addColorStop(0.5, '#A0522D');
+        baseGradient.addColorStop(1, '#654321');
         
-        // Platform edge (3D effect)
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 2;
-        this.drawOctagon(ctx, this.x, this.y, baseRadius);
-        ctx.stroke();
+        ctx.fillStyle = baseGradient;
+        ctx.fillRect(this.x - baseWidth/2, this.y / isoScale - baseHeight/2, baseWidth, baseHeight);
         
-        // Wooden support beams
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 4;
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const beamX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const beamY = this.y + Math.sin(angle) * baseRadius * 0.7;
-            
+        // Platform planks
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 6; i++) {
+            const plankY = this.y / isoScale - baseHeight/2 + (baseHeight * i / 6);
             ctx.beginPath();
-            ctx.moveTo(beamX, beamY);
-            ctx.lineTo(beamX, beamY - towerSize * 0.3);
+            ctx.moveTo(this.x - baseWidth/2, plankY);
+            ctx.lineTo(this.x + baseWidth/2, plankY);
             ctx.stroke();
         }
         
-        // Main tower structure (cylindrical wooden tower)
-        const towerRadius = baseRadius * 0.75;
-        const towerHeight = towerSize * 0.4;
+        ctx.restore();
         
-        // Tower body gradient (3D shading)
-        const towerGradient = ctx.createRadialGradient(
-            this.x - towerRadius * 0.3, this.y - towerHeight * 0.3, 0,
-            this.x, this.y, towerRadius
+        // Main tower structure (isometric cylinder)
+        const towerWidth = baseWidth * 0.7;
+        const towerTopY = this.y - towerHeight;
+        
+        // Tower body (isometric)
+        ctx.save();
+        ctx.transform(1, 0, 0.5, isoScale, 0, 0);
+        
+        // Tower gradient
+        const towerGradient = ctx.createLinearGradient(
+            this.x - towerWidth/2, towerTopY / isoScale,
+            this.x + towerWidth/2, this.y / isoScale
         );
         towerGradient.addColorStop(0, '#DEB887');
-        towerGradient.addColorStop(0.7, '#CD853F');
+        towerGradient.addColorStop(0.5, '#CD853F');
         towerGradient.addColorStop(1, '#8B7355');
         
         ctx.fillStyle = towerGradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight, towerRadius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(this.x - towerWidth/2, towerTopY / isoScale, towerWidth, towerHeight / isoScale);
         
-        // Tower wooden planks (horizontal lines for texture)
+        // Wooden planks texture
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
         for (let i = 1; i <= 5; i++) {
-            const plankY = this.y - towerHeight + (towerRadius * 2 * i / 6) - towerRadius;
+            const plankY = towerTopY / isoScale + (towerHeight / isoScale * i / 6);
             ctx.beginPath();
-            ctx.arc(this.x, plankY, towerRadius - 2, 0, Math.PI * 2);
+            ctx.moveTo(this.x - towerWidth/2, plankY);
+            ctx.lineTo(this.x + towerWidth/2, plankY);
             ctx.stroke();
         }
         
-        // Tower rim/parapet
-        ctx.fillStyle = '#A0522D';
+        // Tower outline
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight, towerRadius + 3, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.strokeRect(this.x - towerWidth/2, towerTopY / isoScale, towerWidth, towerHeight / isoScale);
         
-        // Wooden crenellations (merlons)
-        ctx.fillStyle = '#A0522D';
-        for (let i = 0; i < 12; i++) {
-            if (i % 2 === 0) { // Only every other segment for crenellation effect
-                const angle = (i / 12) * Math.PI * 2;
-                const merlonX = this.x + Math.cos(angle) * (towerRadius + 1);
-                const merlonY = this.y - towerHeight + Math.sin(angle) * (towerRadius + 1);
-                
-                ctx.save();
-                ctx.translate(merlonX, merlonY);
-                ctx.rotate(angle + Math.PI / 2);
-                ctx.fillRect(-3, -8, 6, 8);
-                ctx.strokeRect(-3, -8, 6, 8);
-                ctx.restore();
-            }
+        ctx.restore();
+        
+        // Tower top platform (isometric)
+        ctx.save();
+        ctx.transform(1, 0, 0.5, isoScale, 0, 0);
+        
+        const topGradient = ctx.createLinearGradient(
+            this.x - towerWidth/2, (towerTopY - 10) / isoScale,
+            this.x + towerWidth/2, towerTopY / isoScale
+        );
+        topGradient.addColorStop(0, '#A0522D');
+        topGradient.addColorStop(1, '#654321');
+        
+        ctx.fillStyle = topGradient;
+        ctx.fillRect(this.x - towerWidth/2, (towerTopY - 10) / isoScale, towerWidth, 10 / isoScale);
+        
+        // Crenellations (battlements)
+        ctx.fillStyle = '#8B4513';
+        const merlonWidth = towerWidth / 8;
+        for (let i = 0; i < 8; i += 2) {
+            const merlonX = this.x - towerWidth/2 + i * merlonWidth;
+            ctx.fillRect(merlonX, (towerTopY - 20) / isoScale, merlonWidth, 10 / isoScale);
         }
         
-        // Render defenders on the tower
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x - towerWidth/2, (towerTopY - 20) / isoScale, towerWidth, 20 / isoScale);
+        
+        ctx.restore();
+        
+        // Render defenders on the tower (adjusted for isometric view)
         this.defenders.forEach((defender, index) => {
+            const defenderX = this.x + Math.cos(defender.angle) * (towerWidth * 0.3);
+            const defenderY = towerTopY + Math.sin(defender.angle) * (towerWidth * 0.2);
+            
             ctx.save();
-            
-            const defenderRadius = towerRadius * 0.8;
-            const defenderX = this.x + Math.cos(defender.angle) * defenderRadius;
-            const defenderY = this.y - towerHeight + Math.sin(defender.angle) * defenderRadius;
-            
             ctx.translate(defenderX, defenderY);
             
-            // Defender body (simple figure)
+            // Defender body (isometric view)
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-2, -3, 4, 6); // Torso
+            ctx.fillRect(-2, -6, 4, 8); // Torso
             
             // Defender head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -5, 2, 0, Math.PI * 2);
+            ctx.arc(0, -8, 2, 0, Math.PI * 2);
             ctx.fill();
             
             // Helmet
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -5, 2.5, Math.PI, Math.PI * 2);
+            ctx.arc(0, -8, 2.5, Math.PI, Math.PI * 2);
             ctx.fill();
             
             // Arms - animate throwing motion
@@ -244,20 +262,20 @@ export class BasicTower {
                 Math.sin(Date.now() * 0.001 + index) * 0.2;
             
             ctx.beginPath();
-            ctx.moveTo(0, -1);
-            ctx.lineTo(Math.cos(armAngle) * 4, -1 + Math.sin(armAngle) * 4);
+            ctx.moveTo(0, -4);
+            ctx.lineTo(Math.cos(armAngle) * 4, -4 + Math.sin(armAngle) * 4);
             ctx.stroke();
             
             // Other arm
             ctx.beginPath();
-            ctx.moveTo(0, -1);
-            ctx.lineTo(-3, 1);
+            ctx.moveTo(0, -4);
+            ctx.lineTo(-3, -1);
             ctx.stroke();
             
             // If throwing, show rock in hand briefly
             if (defender.armRaised > 0.7) {
                 const rockX = Math.cos(armAngle) * 5;
-                const rockY = -1 + Math.sin(armAngle) * 5;
+                const rockY = -4 + Math.sin(armAngle) * 5;
                 ctx.fillStyle = '#696969';
                 ctx.beginPath();
                 ctx.arc(rockX, rockY, 1, 0, Math.PI * 2);
@@ -310,18 +328,41 @@ export class BasicTower {
         }
     }
     
-    drawOctagon(ctx, centerX, centerY, radius) {
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const x = centerX + Math.cos(angle) * radius;
-            const y = centerY + Math.sin(angle) * radius;
+    drawTrees(ctx, towerSize) {
+        const trees = [
+            { x: -towerSize * 0.6, y: -towerSize * 0.3, size: 0.7 },
+            { x: towerSize * 0.7, y: -towerSize * 0.4, size: 0.8 },
+            { x: -towerSize * 0.4, y: towerSize * 0.6, size: 0.6 },
+            { x: towerSize * 0.5, y: towerSize * 0.7, size: 0.9 },
+            { x: -towerSize * 0.8, y: towerSize * 0.2, size: 0.5 }
+        ];
+        
+        trees.forEach(tree => {
+            const treeX = this.x + tree.x;
+            const treeY = this.y + tree.y;
+            const scale = tree.size;
             
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
+            // Tree trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(treeX - 2 * scale, treeY - 5 * scale, 4 * scale, 10 * scale);
+            
+            // Tree foliage layers (3D effect)
+            const foliageColors = ['#2F4F2F', '#228B22', '#32CD32'];
+            const foliageSizes = [8, 6, 4];
+            
+            foliageColors.forEach((color, i) => {
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(treeX, treeY - 8 * scale + i * 2 * scale, foliageSizes[i] * scale, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Tree highlights
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
+            ctx.beginPath();
+            ctx.arc(treeX - 2 * scale, treeY - 10 * scale, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
     
     static getInfo() {
