@@ -2,9 +2,9 @@ export class LevelSelect {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.levels = [
-            { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true },
-            { name: 'Goblin Valley', difficulty: 'Medium', unlocked: false },
-            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false }
+            { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
+            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' },
+            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false, type: 'campaign' }
         ];
         this.selectedLevel = 0;
         this.hoveredLevel = -1;
@@ -211,6 +211,8 @@ export class LevelSelect {
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
+                        // Pass the selected level info to the game state
+                        this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
                         this.stateManager.changeState('game');
                     }
                 } else {

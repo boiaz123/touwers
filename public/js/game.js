@@ -25,10 +25,25 @@ class GameplayState {
     enter() {
         console.log('GameplayState: entering');
         
+        // Get level info from state manager
+        const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
+        
         // Reset game state for new level
         this.gameState = new GameState();
         this.currentLevel = 1;
-        this.maxWavesForLevel = 10;
+        this.levelType = levelInfo.type || 'campaign';
+        this.levelName = levelInfo.name || 'Unknown Level';
+        
+        // Configure level-specific settings
+        if (this.levelType === 'sandbox') {
+            this.gameState.gold = 10000; // High starting gold for testing
+            this.maxWavesForLevel = Infinity; // No wave limit
+            this.isSandbox = true;
+        } else {
+            this.maxWavesForLevel = 10; // Level 1 has 10 waves
+            this.isSandbox = false;
+        }
+        
         this.waveInProgress = false;
         this.waveCompleted = false;
         
@@ -59,6 +74,7 @@ class GameplayState {
         this.setupEventListeners();
         this.updateUI();
         this.startWave();
+        console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
     }
     
@@ -244,6 +260,20 @@ class GameplayState {
     }
     
     getWaveConfig(level, wave) {
+        if (this.levelType === 'sandbox') {
+            // Sandbox mode: continuously increasing difficulty
+            const baseEnemies = 8;
+            const baseHealth = 50;
+            const baseSpeed = 40;
+            
+            return {
+                enemyCount: baseEnemies + Math.floor(wave * 1.2), // Gradual increase
+                enemyHealth: baseHealth + (wave - 1) * 5, // Slower health scaling
+                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2), // Cap speed at 100
+                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03) // Faster spawning over time
+            };
+        }
+        
         // Level 1 wave configuration - 10 waves with gradual difficulty increase
         if (level === 1) {
             const baseEnemies = 5;
@@ -268,12 +298,12 @@ class GameplayState {
     }
     
     startWave() {
-        if (this.gameState.wave > this.maxWavesForLevel) {
+        if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
             this.completeLevel();
             return;
         }
         
-        console.log(`Starting wave ${this.gameState.wave} of level ${this.currentLevel}`);
+        console.log(`Starting wave ${this.gameState.wave} of ${this.levelName}`);
         this.waveInProgress = true;
         this.waveCompleted = false;
         
@@ -290,6 +320,10 @@ class GameplayState {
     }
     
     completeLevel() {
+        if (this.isSandbox) {
+            // Sandbox mode doesn't end, just continue
+            return;
+        }
         alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
         this.stateManager.changeState('levelSelect');
     }
@@ -342,11 +376,17 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
-        document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
+        
+        // Show wave info differently for sandbox mode
+        if (this.isSandbox) {
+            document.getElementById('wave').textContent = `${this.gameState.wave} (∞)`;
+        } else {
+            document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
+        }
         
         let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
         if (this.waveCompleted) {
-            statusText = 'Wave Complete!';
+            statusText = this.isSandbox ? 'Next Wave...' : 'Wave Complete!';
         } else if (!this.waveInProgress && this.enemyManager.enemies.length === 0) {
             statusText = 'Preparing...';
         }

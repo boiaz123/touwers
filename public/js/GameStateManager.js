@@ -4,7 +4,7 @@ export class GameStateManager {
         this.ctx = ctx;
         this.currentState = null; // Start with no state
         this.states = {};
-        this.lastTime = 0;
+        this.selectedLevelInfo = null; // Add this to store level selection
         console.log('GameStateManager: initialized');
     }
     
