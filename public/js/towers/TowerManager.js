@@ -2,6 +2,8 @@ import { BasicTower } from './BasicTower.js';
 import { CannonTower } from './CannonTower.js';
 import { ArcherTower } from './ArcherTower.js';
 import { MagicTower } from './MagicTower.js';
+import { BarricadeTower } from './BarricadeTower.js';
+import { PoisonArcherTower } from './PoisonArcherTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 
 export class TowerManager {
@@ -13,7 +15,9 @@ export class TowerManager {
             'basic': { class: BasicTower, cost: 50 },
             'cannon': { class: CannonTower, cost: 100 },
             'archer': { class: ArcherTower, cost: 75 },
-            'magic': { class: MagicTower, cost: 150 }
+            'magic': { class: MagicTower, cost: 150 },
+            'barricade': { class: BarricadeTower, cost: 90 },
+            'poison': { class: PoisonArcherTower, cost: 120 }
         };
         
         // Initialize building manager
