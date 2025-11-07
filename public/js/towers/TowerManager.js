@@ -76,27 +76,8 @@ export class TowerManager {
         }
     }
     
-    update(deltaTime, enemies, buildingManager = null) {
-        this.towers.forEach(tower => {
-            // Apply building upgrades if building manager is available
-            if (buildingManager) {
-                const upgrades = buildingManager.getTowerUpgrades(tower);
-                
-                // Store original values if not already stored
-                if (!tower.originalDamage) {
-                    tower.originalDamage = tower.damage;
-                    tower.originalRange = tower.range;
-                    tower.originalFireRate = tower.fireRate;
-                }
-                
-                // Apply upgrades
-                tower.damage = Math.floor(tower.originalDamage * upgrades.damageMultiplier);
-                tower.range = tower.originalRange + upgrades.rangeBonus;
-                tower.fireRate = tower.originalFireRate * upgrades.fireRateMultiplier;
-            }
-            
-            tower.update(deltaTime, enemies);
-        });
+    update(deltaTime, enemies) {
+        this.towers.forEach(tower => tower.update(deltaTime, enemies));
     }
     
     render(ctx) {

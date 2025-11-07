@@ -1,5 +1,4 @@
 import { TowerManager } from './towers/TowerManager.js';
-import { BuildingManager } from './buildings/BuildingManager.js';
 import { EnemyManager } from './enemies/EnemyManager.js';
 import { Level } from './Level.js';
 import { GameState } from './GameState.js';
@@ -13,38 +12,22 @@ class GameplayState {
         this.gameState = new GameState();
         this.level = new Level();
         this.towerManager = new TowerManager(this.gameState, this.level);
-        this.buildingManager = new BuildingManager(this.gameState, this.level);
         this.enemyManager = null;
         this.selectedTowerType = null;
-        this.selectedBuildingType = null;
         this.currentLevel = 1; // Track current level
         this.maxWavesForLevel = 10; // Level 1 has 10 waves
         this.waveInProgress = false;
         this.waveCompleted = false;
-        this.isTestLevel = false;
         console.log('GameplayState constructor completed');
     }
     
     enter() {
         console.log('GameplayState: entering');
         
-        // Check if this is a test level
-        this.isTestLevel = this.stateManager.selectedLevelInfo?.isTest || false;
-        
         // Reset game state for new level
         this.gameState = new GameState();
-        
-        // Test level gets infinite resources
-        if (this.isTestLevel) {
-            this.gameState.gold = 999999;
-            this.gameState.health = 999999;
-            this.currentLevel = 0; // Special test level
-            this.maxWavesForLevel = 999999;
-        } else {
-            this.currentLevel = 1;
-            this.maxWavesForLevel = 10;
-        }
-        
+        this.currentLevel = 1;
+        this.maxWavesForLevel = 10;
         this.waveInProgress = false;
         this.waveCompleted = false;
         
@@ -69,9 +52,8 @@ class GameplayState {
         console.log('GameplayState: Creating enemy manager with path:', this.level.path);
         this.enemyManager = new EnemyManager(this.level.path);
         
-        // Recreate managers to ensure they have the updated level reference
+        // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
-        this.buildingManager = new BuildingManager(this.gameState, this.level);
         
         this.setupEventListeners();
         this.updateUI();
@@ -88,7 +70,6 @@ class GameplayState {
         // Remove existing listeners first to avoid duplicates
         this.removeEventListeners();
         
-        // Tower buttons
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.selectTower(e.currentTarget);
@@ -105,23 +86,6 @@ class GameplayState {
             });
         });
         
-        // Building buttons
-        document.querySelectorAll('.building-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.selectBuilding(e.currentTarget);
-            });
-            
-            // Show building info on hover/touch
-            btn.addEventListener('mouseenter', (e) => {
-                this.showBuildingInfo(e.currentTarget.dataset.type);
-            });
-            
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.showBuildingInfo(e.currentTarget.dataset.type);
-            });
-        });
-        
         // Add mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -129,7 +93,7 @@ class GameplayState {
     
     removeEventListeners() {
         // Clean up event listeners
-        document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+        document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
         
@@ -139,7 +103,7 @@ class GameplayState {
     }
     
     handleMouseMove(e) {
-        if (!this.selectedTowerType && !this.selectedBuildingType) {
+        if (!this.selectedTowerType) {
             this.level.setPlacementPreview(0, 0, false);
             return;
         }
@@ -148,53 +112,25 @@ class GameplayState {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        if (this.selectedBuildingType) {
-            this.level.setPlacementPreview(x, y, true, this.buildingManager, 'building');
-        } else {
-            this.level.setPlacementPreview(x, y, true, this.towerManager, 'tower');
-        }
+        // Pass towerManager for proper placement validation in preview
+        this.level.setPlacementPreview(x, y, true, this.towerManager);
     }
     
     selectTower(btn) {
         const towerType = btn.dataset.type;
         const cost = parseInt(btn.dataset.cost);
         
-        // Check if player can afford this tower (unless test level)
-        if (!this.isTestLevel && !this.gameState.canAfford(cost)) {
+        // Check if player can afford this tower
+        if (!this.gameState.canAfford(cost)) {
             return;
         }
         
-        // Clear building selection
-        this.selectedBuildingType = null;
-        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
-        
-        // Update tower selection
+        // Update selection
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.selectedTowerType = towerType;
         
         this.showTowerInfo(towerType);
-    }
-    
-    selectBuilding(btn) {
-        const buildingType = btn.dataset.type;
-        const cost = parseInt(btn.dataset.cost);
-        
-        // Check if player can afford this building (unless test level)
-        if (!this.isTestLevel && !this.gameState.canAfford(cost)) {
-            return;
-        }
-        
-        // Clear tower selection
-        this.selectedTowerType = null;
-        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-        
-        // Update building selection
-        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        this.selectedBuildingType = buildingType;
-        
-        this.showBuildingInfo(buildingType);
     }
     
     showTowerInfo(towerType) {
@@ -213,66 +149,23 @@ class GameplayState {
         `;
     }
     
-    showBuildingInfo(buildingType) {
-        const info = this.buildingManager.getBuildingInfo(buildingType);
-        if (!info) return;
-        
-        const infoPanel = document.getElementById('tower-info');
-        infoPanel.innerHTML = `
-            <div class="info-title">${info.name}</div>
-            <div class="info-stats">
-                <div>Effect: ${info.effect}</div>
-                <div>Range: ${info.range}</div>
-                ${info.maxLevel ? `<div>Max Level: ${info.maxLevel}</div>` : ''}
-            </div>
-            <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
-        `;
-    }
-    
     handleClick(x, y) {
-        if (this.selectedTowerType) {
-            const { gridX, gridY } = this.level.screenToGrid(x, y);
+        if (!this.selectedTowerType) return;
+        
+        const { gridX, gridY } = this.level.screenToGrid(x, y);
+        
+        // Pass towerManager to check for tower overlaps
+        if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
+            const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
             
-            if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
+            if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
+                this.level.placeTower(gridX, gridY);
+                this.updateUI();
                 
-                if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
-                    this.level.placeTower(gridX, gridY);
-                    
-                    // Test level maintains infinite gold
-                    if (this.isTestLevel) {
-                        this.gameState.gold = 999999;
-                    }
-                    
-                    this.updateUI();
-                    
-                    // Clear selection after placing tower
-                    this.selectedTowerType = null;
-                    document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
-                    this.level.setPlacementPreview(0, 0, false);
-                }
-            }
-        } else if (this.selectedBuildingType) {
-            const { gridX, gridY } = this.level.screenToGrid(x, y);
-            
-            if (this.level.canPlaceBuilding(gridX, gridY, this.buildingManager)) {
-                const { screenX, screenY } = this.level.gridToScreenBuilding(gridX, gridY);
-                
-                if (this.buildingManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
-                    this.level.placeBuilding(gridX, gridY);
-                    
-                    // Test level maintains infinite gold
-                    if (this.isTestLevel) {
-                        this.gameState.gold = 999999;
-                    }
-                    
-                    this.updateUI();
-                    
-                    // Clear selection after placing building
-                    this.selectedBuildingType = null;
-                    document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
-                    this.level.setPlacementPreview(0, 0, false);
-                }
+                // Clear selection after placing tower
+                this.selectedTowerType = null;
+                document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                this.level.setPlacementPreview(0, 0, false);
             }
         }
     }
@@ -331,19 +224,16 @@ class GameplayState {
     update(deltaTime) {
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
-        this.buildingManager.update(deltaTime, this.towerManager.towers, this.enemyManager.enemies);
         
         const reachedEnd = this.enemyManager.checkReachedEnd();
         if (reachedEnd > 0) {
-            if (!this.isTestLevel) {
-                this.gameState.health -= reachedEnd;
-                this.updateUI();
-                
-                if (this.gameState.health <= 0) {
-                    alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
-                    this.stateManager.changeState('start');
-                    return;
-                }
+            this.gameState.health -= reachedEnd;
+            this.updateUI();
+            
+            if (this.gameState.health <= 0) {
+                alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
+                this.stateManager.changeState('start');
+                return;
             }
         }
         
@@ -352,12 +242,6 @@ class GameplayState {
             // Gold reward scales slightly with wave number
             const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
             this.gameState.gold += killedEnemies * goldPerEnemy;
-            
-            // Test level maintains infinite gold
-            if (this.isTestLevel) {
-                this.gameState.gold = 999999;
-            }
-            
             this.updateUI();
         }
         
@@ -372,39 +256,20 @@ class GameplayState {
             setTimeout(() => {
                 this.gameState.wave++;
                 this.startWave();
-            }, this.isTestLevel ? 1000 : 2000); // Faster waves in test level
+            }, 2000);
         }
     }
     
     render(ctx) {
         this.level.render(ctx);
-        this.buildingManager.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
-        
-        // Test level indicator
-        if (this.isTestLevel) {
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
-            ctx.font = 'bold 24px serif';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText('TEST MODE', 20, 20);
-            
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.font = '16px serif';
-            ctx.fillText('∞ Resources • Endless Waves', 20, 50);
-        }
     }
     
     updateUI() {
-        document.getElementById('health').textContent = this.isTestLevel ? '∞' : this.gameState.health;
-        document.getElementById('gold').textContent = this.isTestLevel ? '∞' : this.gameState.gold;
-        
-        if (this.isTestLevel) {
-            document.getElementById('wave').textContent = `${this.gameState.wave} (TEST)`;
-        } else {
-            document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
-        }
+        document.getElementById('health').textContent = this.gameState.health;
+        document.getElementById('gold').textContent = this.gameState.gold;
+        document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
         
         let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
         if (this.waveCompleted) {
@@ -415,10 +280,10 @@ class GameplayState {
         
         document.getElementById('enemies-remaining').textContent = statusText;
         
-        // Update button states based on available gold (unless test level)
-        document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+        // Update tower button states based on available gold
+        document.querySelectorAll('.tower-btn').forEach(btn => {
             const cost = parseInt(btn.dataset.cost);
-            if (this.isTestLevel || this.gameState.canAfford(cost)) {
+            if (this.gameState.canAfford(cost)) {
                 btn.classList.remove('disabled');
             } else {
                 btn.classList.add('disabled');
@@ -439,37 +304,43 @@ class Game {
             return;
         }
         
-        console.log('Game: Canvas found, setting up...');
+        console.log('Game: Canvas found, size will be set');
         
-        // Apply UI scaling first
+        // Detect and apply UI scaling based on screen resolution
         this.applyUIScaling();
         
-        // Set initial canvas size for start screen (full window)
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.resizeCanvas();
+        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
         
-        console.log('Game: Canvas initial size set to:', this.canvas.width, 'x', this.canvas.height);
-        
-        // Create state manager with properly sized canvas
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
+        console.log('Game: GameStateManager created');
         
         // Add states
-        this.stateManager.addState('start', new StartScreen(this.stateManager));
-        this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
-        this.stateManager.addState('game', new GameplayState(this.stateManager));
+        try {
+            this.stateManager.addState('start', new StartScreen(this.stateManager));
+            console.log('Game: StartScreen state added');
+            
+            this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
+            console.log('Game: LevelSelect state added');
+            
+            this.stateManager.addState('game', new GameplayState(this.stateManager));
+            console.log('Game: GameplayState added');
+        } catch (error) {
+            console.error('Error creating states:', error);
+            return;
+        }
         
         this.lastTime = 0;
-        this.setupEventListeners();
         
+        this.setupEventListeners();
+        console.log('Game: Event listeners set up');
+        
+        // Start with the start screen
         console.log('Game: Starting with start screen');
-        // Start immediately with start screen
         this.stateManager.changeState('start');
         
         console.log('Game: Starting game loop');
-        // Begin game loop
-        requestAnimationFrame((time) => this.gameLoop(time));
-        
-        console.log('Game: Initialization complete');
+        this.gameLoop(0);
     }
     
     applyUIScaling() {
@@ -500,14 +371,13 @@ class Game {
     }
     
     resizeCanvas() {
+        const gameArea = document.getElementById('game-area');
         const sidebar = document.getElementById('tower-sidebar');
         const statsBar = document.getElementById('stats-bar');
         
-        // Check if UI elements are visible and get their dimensions
-        const sidebarWidth = (sidebar && sidebar.style.display !== 'none' && 
-                             getComputedStyle(sidebar).display !== 'none') ? sidebar.offsetWidth : 0;
-        const statsBarHeight = (statsBar && statsBar.style.display !== 'none' && 
-                               getComputedStyle(statsBar).display !== 'none') ? statsBar.offsetHeight : 0;
+        // Only account for visible UI elements
+        const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
+        const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
         
         const oldWidth = this.canvas.width;
         const oldHeight = this.canvas.height;
@@ -515,10 +385,7 @@ class Game {
         this.canvas.width = window.innerWidth - sidebarWidth;
         this.canvas.height = window.innerHeight - statsBarHeight;
         
-        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height, 
-                   'UI offsets - sidebar:', sidebarWidth, 'statsBar:', statsBarHeight);
-        
-        // Only update game elements if we're in the game state and properly initialized
+        // Only update game elements if we're in the game state and the state manager is initialized
         if (this.stateManager && 
             this.stateManager.currentState === 'game' && 
             this.stateManager.states.game && 
@@ -547,6 +414,7 @@ class Game {
                         } else {
                             // Fallback: reset enemy path reference
                             enemy.path = gameState.level.path;
+                            // Ensure enemy position is still valid
                             if (enemy.currentPathIndex >= enemy.path.length - 1) {
                                 enemy.currentPathIndex = Math.max(0, enemy.path.length - 2);
                             }
@@ -563,39 +431,11 @@ class Game {
             this.resizeCanvas();
         });
         
-        // Canvas click events
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
-            console.log('Game: Canvas click at', x, y, 'current state:', this.stateManager?.currentState);
-            if (this.stateManager) {
-                this.stateManager.handleClick(x, y);
-            }
-        });
-        
-        // Touch events for mobile
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const rect = this.canvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
-            console.log('Game: Canvas touch at', x, y);
-            if (this.stateManager) {
-                this.stateManager.handleClick(x, y);
-            }
-        });
-        
-        // Keyboard support for start screen
-        document.addEventListener('keydown', (e) => {
-            if (this.stateManager?.currentState === 'start' && 
-                (e.key === 'Enter' || e.key === ' ')) {
-                console.log('Game: Keyboard input detected on start screen');
-                if (this.stateManager) {
-                    this.stateManager.handleClick(0, 0); // Trigger click handler
-                }
-            }
+            this.stateManager.handleClick(x, y);
         });
     }
     
@@ -604,40 +444,22 @@ class Game {
         this.lastTime = currentTime;
         
         try {
-            // Clear canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
-            // Update and render current state
-            if (this.stateManager) {
-                this.stateManager.update(deltaTime);
-                this.stateManager.render();
-            } else {
-                // Show loading message if state manager not ready
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = '24px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
-            }
+            this.stateManager.update(deltaTime);
+            this.stateManager.render();
         } catch (error) {
             console.error('Error in game loop:', error);
-            // Show error on canvas instead of calling missing method
-            this.ctx.fillStyle = '#ff0000';
-            this.ctx.font = '20px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(`Error: ${error.message}`, this.canvas.width / 2, this.canvas.height / 2);
         }
         
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-// Wait for DOM and ensure it's fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, waiting for styles to load...');
-    
-    // Give a small delay to ensure CSS and layout are ready
-    setTimeout(() => {
-        console.log('Creating game after layout is ready');
-        new Game();
-    }, 100);
-});
+// Add error handling for the initialization
+try {
+    console.log('Starting game initialization');
+    new Game();
+} catch (error) {
+    console.error('Failed to initialize game:', error);
+}
