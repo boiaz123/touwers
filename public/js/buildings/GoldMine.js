@@ -13,26 +13,22 @@ export class GoldMine extends Building {
         this.goldPiles = [];
         this.bobAnimations = [];
         
+        // Mine cart animation
+        this.cartPosition = 0;
+        this.cartDirection = 1;
+        this.cartSpeed = 0.3;
+        
         // Initialize workers
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
             this.workers.push({
-                x: (Math.random() - 0.5) * 60,
-                y: (Math.random() - 0.5) * 60,
+                x: (Math.random() - 0.5) * 40 + 30, // Position near cave entrance
+                y: (Math.random() - 0.5) * 20 + 20,
                 animationOffset: Math.random() * Math.PI * 2,
                 pickaxeRaised: 0,
-                miningCooldown: Math.random() * 2
+                miningCooldown: Math.random() * 2,
+                direction: Math.random() < 0.5 ? -1 : 1
             });
         }
-    }
-    
-    getLayerColor(layer) {
-        const colors = [
-            '#8B7355', // Surface - sandy brown
-            '#A0522D', // Layer 1 - sienna
-            '#CD853F', // Layer 2 - peru  
-            '#D2B48C'  // Layer 3 - tan
-        ];
-        return colors[layer] || '#8B7355';
     }
     
     update(deltaTime) {
@@ -49,12 +45,22 @@ export class GoldMine extends Building {
                 this.goldPiles = [];
                 for (let i = 0; i < 3; i++) {
                     this.goldPiles.push({
-                        x: (Math.random() - 0.5) * 60,
-                        y: (Math.random() - 0.5) * 60,
+                        x: (Math.random() - 0.5) * 30 + 25, // Near cave entrance
+                        y: (Math.random() - 0.5) * 30 + 25,
                         glimmer: Math.random() * Math.PI * 2
                     });
                 }
             }
+        }
+        
+        // Update mine cart animation
+        this.cartPosition += this.cartDirection * this.cartSpeed * deltaTime;
+        if (this.cartPosition > 1) {
+            this.cartPosition = 1;
+            this.cartDirection = -1;
+        } else if (this.cartPosition < 0) {
+            this.cartPosition = 0;
+            this.cartDirection = 1;
         }
         
         // Update workers
@@ -65,36 +71,36 @@ export class GoldMine extends Building {
             // Mining animation
             if (worker.miningCooldown <= 0 && !this.isReady) {
                 worker.pickaxeRaised = 1;
-                worker.miningCooldown = 1.5 + Math.random() * 1.5;
+                worker.miningCooldown = 2 + Math.random() * 2;
                 
                 // Create dust particles when mining
                 this.smokePuffs.push({
-                    x: this.x + worker.x + (Math.random() - 0.5) * 10,
-                    y: this.y + worker.y + (Math.random() - 0.5) * 10,
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: -15 - Math.random() * 15,
+                    x: this.x + worker.x + (Math.random() - 0.5) * 8,
+                    y: this.y + worker.y + (Math.random() - 0.5) * 8,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: -10 - Math.random() * 10,
                     life: 1.5,
                     maxLife: 1.5,
-                    size: Math.random() * 3 + 2,
-                    color: 'rgba(160, 130, 98, 0.6)'
+                    size: Math.random() * 2 + 1,
+                    color: 'rgba(139, 115, 85, 0.6)'
                 });
             }
         });
         
-        // Generate ambient dust from quarry
+        // Generate ambient dust from cave
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0 && !this.isReady) {
             this.smokePuffs.push({
-                x: this.x + (Math.random() - 0.5) * 80,
-                y: this.y + (Math.random() - 0.5) * 60,
-                vx: (Math.random() - 0.5) * 10,
-                vy: -10 - Math.random() * 10,
+                x: this.x - 20 + Math.random() * 15, // From cave entrance
+                y: this.y - 10 + Math.random() * 10,
+                vx: (Math.random() - 0.5) * 8,
+                vy: -5 - Math.random() * 5,
                 life: 2,
                 maxLife: 2,
-                size: Math.random() * 4 + 2,
-                color: 'rgba(139, 115, 85, 0.4)'
+                size: Math.random() * 3 + 1,
+                color: 'rgba(101, 67, 33, 0.4)'
             });
-            this.nextSmokeTime = 1.0 + Math.random() * 1.5;
+            this.nextSmokeTime = 2.0 + Math.random() * 2.0;
         }
         
         // Update smoke/dust
@@ -102,7 +108,7 @@ export class GoldMine extends Building {
             smoke.x += smoke.vx * deltaTime;
             smoke.y += smoke.vy * deltaTime;
             smoke.life -= deltaTime;
-            smoke.size += deltaTime * 0.5;
+            smoke.size += deltaTime * 0.3;
             return smoke.life > 0;
         });
         
@@ -127,72 +133,150 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Simple quarry pit with 3 concentric layers for depth
-        const layers = [
-            { radius: size * 0.45, depth: 5, color: this.getLayerColor(0) },
-            { radius: size * 0.35, depth: 10, color: this.getLayerColor(1) },
-            { radius: size * 0.25, depth: 15, color: this.getLayerColor(2) }
-        ];
+        // Rock formation around cave entrance
+        const rockColor = '#8B7355';
+        const darkRock = '#654321';
+        const lightRock = '#A0522D';
         
-        // Render each layer
-        layers.forEach((layer, index) => {
-            ctx.save();
-            ctx.translate(this.x, this.y + layer.depth);
-            
-            // Layer gradient for depth
-            const layerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, layer.radius);
-            layerGradient.addColorStop(0, layer.color);
-            layerGradient.addColorStop(1, this.darkenColor(layer.color, 0.3));
-            
-            ctx.fillStyle = layerGradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, layer.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Layer border
-            ctx.strokeStyle = this.darkenColor(layer.color, 0.5);
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Add some rocks on each layer
-            if (index === 0) { // Only on surface layer to avoid complexity
-                for (let i = 0; i < 6; i++) {
-                    const angle = (i / 6) * Math.PI * 2;
-                    const distance = layer.radius * (0.7 + Math.random() * 0.2);
-                    const rockX = Math.cos(angle) * distance;
-                    const rockY = Math.sin(angle) * distance;
-                    const rockSize = Math.random() * 4 + 3;
-                    
-                    ctx.fillStyle = this.darkenColor(layer.color, 0.4);
-                    ctx.beginPath();
-                    ctx.arc(rockX, rockY, rockSize, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            
-            ctx.restore();
-        });
+        // Main rock formation (irregular shape)
+        ctx.fillStyle = rockColor;
+        ctx.strokeStyle = darkRock;
+        ctx.lineWidth = 2;
         
-        // Simple wooden support beams
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(this.x - size * 0.4, this.y + size * 0.3);
+        ctx.lineTo(this.x - size * 0.3, this.y - size * 0.2);
+        ctx.lineTo(this.x - size * 0.1, this.y - size * 0.35);
+        ctx.lineTo(this.x + size * 0.2, this.y - size * 0.25);
+        ctx.lineTo(this.x + size * 0.4, this.y + size * 0.1);
+        ctx.lineTo(this.x + size * 0.3, this.y + size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Rock highlights and texture
+        ctx.fillStyle = lightRock;
+        ctx.beginPath();
+        ctx.arc(this.x - size * 0.2, this.y - size * 0.1, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(this.x + size * 0.1, this.y - size * 0.05, size * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Rock cracks/texture lines
+        ctx.strokeStyle = darkRock;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.x - size * 0.25, this.y - size * 0.15);
+        ctx.lineTo(this.x - size * 0.1, this.y + size * 0.1);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x + size * 0.05, this.y - size * 0.2);
+        ctx.lineTo(this.x + size * 0.15, this.y + size * 0.05);
+        ctx.stroke();
+        
+        // Cave entrance (dark oval opening)
+        const caveGradient = ctx.createRadialGradient(
+            this.x - size * 0.15, this.y, 0,
+            this.x - size * 0.15, this.y, size * 0.15
+        );
+        caveGradient.addColorStop(0, '#000000');
+        caveGradient.addColorStop(0.7, '#1a1a1a');
+        caveGradient.addColorStop(1, '#2a2a2a');
+        
+        ctx.fillStyle = caveGradient;
+        ctx.beginPath();
+        ctx.ellipse(this.x - size * 0.15, this.y, size * 0.15, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Cave entrance border
+        ctx.strokeStyle = '#333333';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Wooden support beams at cave entrance
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        
+        // Vertical supports
+        ctx.fillRect(this.x - size * 0.28, this.y - size * 0.08, size * 0.04, size * 0.16);
+        ctx.strokeRect(this.x - size * 0.28, this.y - size * 0.08, size * 0.04, size * 0.16);
+        
+        ctx.fillRect(this.x - size * 0.05, this.y - size * 0.08, size * 0.04, size * 0.16);
+        ctx.strokeRect(this.x - size * 0.05, this.y - size * 0.08, size * 0.04, size * 0.16);
         
         // Horizontal beam
+        ctx.fillRect(this.x - size * 0.28, this.y - size * 0.1, size * 0.27, size * 0.03);
+        ctx.strokeRect(this.x - size * 0.28, this.y - size * 0.1, size * 0.27, size * 0.03);
+        
+        // Mine cart track
+        const trackY = this.y + size * 0.25;
+        const trackStartX = this.x - size * 0.1;
+        const trackEndX = this.x + size * 0.4;
+        
+        // Track rails
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 3;
+        
+        // Left rail
         ctx.beginPath();
-        ctx.moveTo(this.x - size * 0.4, this.y - 5);
-        ctx.lineTo(this.x + size * 0.4, this.y - 5);
+        ctx.moveTo(trackStartX, trackY - size * 0.02);
+        ctx.lineTo(trackEndX, trackY - size * 0.02);
         ctx.stroke();
         
-        // Vertical posts
+        // Right rail
         ctx.beginPath();
-        ctx.moveTo(this.x - size * 0.3, this.y - 15);
-        ctx.lineTo(this.x - size * 0.3, this.y + 5);
+        ctx.moveTo(trackStartX, trackY + size * 0.02);
+        ctx.lineTo(trackEndX, trackY + size * 0.02);
+        ctx.stroke();
+        
+        // Railroad ties
+        ctx.fillStyle = '#654321';
+        for (let i = 0; i < 6; i++) {
+            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
+            ctx.fillRect(tieX - size * 0.02, trackY - size * 0.03, size * 0.04, size * 0.06);
+        }
+        
+        // Mine cart
+        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
+        
+        // Cart shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
+        
+        // Cart body
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        
+        // Cart wheels
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.moveTo(this.x + size * 0.3, this.y - 15);
-        ctx.lineTo(this.x + size * 0.3, this.y + 5);
+        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
+        
+        // Gold ore in cart (if ready)
+        if (this.isReady && this.cartPosition > 0.5) {
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 3; i++) {
+                const oreX = cartX - size * 0.02 + (i * size * 0.013);
+                const oreY = trackY - size * 0.07;
+                ctx.beginPath();
+                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
         
         // Render workers
         this.workers.forEach(worker => {
@@ -206,42 +290,48 @@ export class GoldMine extends Building {
             // Worker head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -6, 3, 0, Math.PI * 2);
+            ctx.arc(0, -6, 2.5, 0, Math.PI * 2);
             ctx.fill();
             
-            // Hard hat
+            // Miner's helmet with lamp
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
-            ctx.arc(0, -6, 3.5, Math.PI, Math.PI * 2);
+            ctx.arc(0, -6, 3, Math.PI, Math.PI * 2);
             ctx.fill();
             
-            // Simplified pickaxe animation
-            const armAngle = worker.pickaxeRaised > 0 ? -Math.PI/2 : 0;
+            // Helmet lamp
+            ctx.fillStyle = '#FFFF99';
+            ctx.beginPath();
+            ctx.arc(0, -8, 1, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Pickaxe animation
+            const armAngle = worker.pickaxeRaised > 0 ? -Math.PI/2 : Math.PI/6;
             
             // Mining arm
             ctx.strokeStyle = '#DDBEA9';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(0, -2);
-            ctx.lineTo(Math.cos(armAngle) * 6, -2 + Math.sin(armAngle) * 6);
+            ctx.lineTo(Math.cos(armAngle) * 5, -2 + Math.sin(armAngle) * 5);
             ctx.stroke();
             
-            // Pickaxe when raised
-            if (worker.pickaxeRaised > 0.3) {
-                const pickaxeX = Math.cos(armAngle) * 8;
-                const pickaxeY = -2 + Math.sin(armAngle) * 8;
+            // Pickaxe
+            if (worker.pickaxeRaised > 0.2) {
+                const pickaxeX = Math.cos(armAngle) * 7;
+                const pickaxeY = -2 + Math.sin(armAngle) * 7;
                 
                 // Pickaxe handle
                 ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(pickaxeX, pickaxeY);
-                ctx.lineTo(pickaxeX, pickaxeY - 6);
+                ctx.lineTo(pickaxeX - Math.cos(armAngle) * 8, pickaxeY - Math.sin(armAngle) * 8);
                 ctx.stroke();
                 
                 // Pickaxe head
                 ctx.fillStyle = '#696969';
-                ctx.fillRect(pickaxeX - 3, pickaxeY - 8, 6, 3);
+                ctx.fillRect(pickaxeX - 2, pickaxeY - 6, 4, 2);
             }
             
             ctx.restore();
@@ -251,20 +341,20 @@ export class GoldMine extends Building {
         if (this.isReady) {
             this.goldPiles.forEach((pile, index) => {
                 const bob = this.bobAnimations[index];
-                const bobOffset = bob ? Math.sin(bob.time) * 2 : 0;
+                const bobOffset = bob ? Math.sin(bob.time) * 1.5 : 0;
                 
                 ctx.save();
                 ctx.translate(this.x + pile.x, this.y + pile.y + bobOffset);
                 
                 // Gold pile glow
                 const glimmerIntensity = Math.sin(pile.glimmer) * 0.3 + 0.7;
-                const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 10);
+                const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
                 goldGlow.addColorStop(0, `rgba(255, 215, 0, ${glimmerIntensity * 0.8})`);
                 goldGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
                 
                 ctx.fillStyle = goldGlow;
                 ctx.beginPath();
-                ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
                 ctx.fill();
                 
                 // Gold nuggets
@@ -274,11 +364,11 @@ export class GoldMine extends Building {
                 
                 for (let i = 0; i < 3; i++) {
                     const nuggetAngle = (i / 3) * Math.PI * 2;
-                    const nuggetX = Math.cos(nuggetAngle) * 4;
-                    const nuggetY = Math.sin(nuggetAngle) * 4;
+                    const nuggetX = Math.cos(nuggetAngle) * 3;
+                    const nuggetY = Math.sin(nuggetAngle) * 3;
                     
                     ctx.beginPath();
-                    ctx.arc(nuggetX, nuggetY, 3, 0, Math.PI * 2);
+                    ctx.arc(nuggetX, nuggetY, 2, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.stroke();
                 }
@@ -290,40 +380,40 @@ export class GoldMine extends Building {
         // Render dust clouds
         this.smokePuffs.forEach(smoke => {
             const alpha = smoke.life / smoke.maxLife;
-            ctx.fillStyle = `rgba(160, 130, 98, ${alpha * 0.4})`;
+            ctx.fillStyle = `rgba(139, 115, 85, ${alpha * 0.4})`;
             ctx.beginPath();
             ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
             ctx.fill();
         });
         
         // Progress bar and indicators
-        const barWidth = size * 0.8;
-        const barHeight = 6;
+        const barWidth = size * 0.6;
+        const barHeight = 4;
         const progressRatio = this.currentProgress / this.miningInterval;
         
         ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
-        ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 10, barWidth, barHeight);
+        ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
         
         if (this.isReady) {
             ctx.fillStyle = '#FFD700';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 10, barWidth, barHeight);
+            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
             
             // Ready indicator
             const readyPulse = Math.sin(this.animationTime * 4) * 0.3 + 0.7;
             ctx.fillStyle = `rgba(255, 215, 0, ${readyPulse})`;
-            ctx.font = 'bold 12px Arial';
+            ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('CLICK TO COLLECT!', this.x, this.y + size/2 + 30);
+            ctx.fillText('CLICK TO COLLECT!', this.x, this.y + size/2 + 20);
         } else {
             ctx.fillStyle = '#D2691E';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 10, barWidth * progressRatio, barHeight);
+            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth * progressRatio, barHeight);
         }
         
         // Mine indicator
         ctx.fillStyle = '#8B4513';
-        ctx.font = 'bold 14px Arial';
+        ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('⛏️💰', this.x, this.y + size/2 + 50);
+        ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
     }
     
     darkenColor(color, factor) {
@@ -362,8 +452,8 @@ export class GoldMine extends Building {
     
     static getInfo() {
         return {
-            name: 'Quarry Mine',
-            description: 'Deep quarry pit with mining operations. Click to collect 30 gold when ready (15s cycle).',
+            name: 'Cave Mine',
+            description: 'Natural cave entrance with mining operations. Click to collect 30 gold when ready (15s cycle).',
             effect: 'Click to collect',
             size: '4x4',
             cost: 200
