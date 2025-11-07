@@ -10,67 +10,70 @@ export class GoldMine extends Building {
         this.smokePuffs = [];
         this.nextSmokeTime = 0;
         this.workers = [];
-        this.rocks = [];
         this.goldPiles = [];
         this.bobAnimations = [];
-        this.goldVeins = [];
+        this.quarryLayers = [];
+        this.woodenStructures = [];
         
-        // Initialize workers with random positions and animations
-        for (let i = 0; i < 3; i++) { // Reduced from 4 to 3
+        // Initialize workers with random positions around the quarry
+        for (let i = 0; i < 3; i++) {
             this.workers.push({
-                x: (Math.random() - 0.5) * 50, // Reduced spread
-                y: (Math.random() - 0.5) * 50,
+                x: (Math.random() - 0.5) * 80,
+                y: (Math.random() - 0.5) * 80,
                 animationOffset: Math.random() * Math.PI * 2,
                 pickaxeRaised: 0,
                 miningCooldown: Math.random() * 2
             });
         }
         
-        // Initialize fewer, larger rock formations
-        for (let i = 0; i < 6; i++) { // Reduced from 12 to 6
-            this.rocks.push({
-                x: (Math.random() - 0.5) * 70, // Slightly reduced spread
-                y: (Math.random() - 0.5) * 70,
-                size: Math.random() * 8 + 10, // Larger rocks
-                color: this.getNaturalRockColor(),
-                type: Math.floor(Math.random() * 3), // Reduced types
-                rotation: Math.random() * Math.PI * 2
+        // Generate natural quarry layers (oval/elliptical for more natural look)
+        for (let layer = 0; layer < 5; layer++) {
+            this.quarryLayers.push({
+                radiusX: 60 - layer * 8,
+                radiusY: 50 - layer * 6,
+                depth: layer * 8,
+                color: this.getLayerColor(layer),
+                rockiness: Math.random() * 0.3 + 0.7
             });
         }
         
-        // Generate fewer, more prominent gold veins
-        for (let i = 0; i < 3; i++) { // Reduced from 6 to 3
-            const vein = {
-                points: [],
-                thickness: Math.random() * 2 + 3, // Thicker veins
-                brightness: Math.random() * 0.3 + 0.7 // Brighter
-            };
+        // Generate wooden mining structures
+        this.woodenStructures = [
+            // Main support beam across quarry
+            { type: 'beam', x1: -50, y1: -20, x2: 50, y2: -20, width: 8 },
+            { type: 'beam', x1: -30, y1: 40, x2: 30, y2: 40, width: 6 },
             
-            // Create simpler vein paths
-            const startX = (Math.random() - 0.5) * 60;
-            const startY = (Math.random() - 0.5) * 60;
-            const endX = (Math.random() - 0.5) * 60;
-            const endY = (Math.random() - 0.5) * 60;
+            // Vertical support posts
+            { type: 'post', x: -40, y: -15, width: 6, height: 25 },
+            { type: 'post', x: 40, y: -15, width: 6, height: 25 },
+            { type: 'post', x: -25, y: 35, width: 5, height: 20 },
+            { type: 'post', x: 25, y: 35, width: 5, height: 20 },
             
-            // Simple 3-point path
-            vein.points.push(
-                { x: startX, y: startY },
-                { x: (startX + endX) / 2 + (Math.random() - 0.5) * 20, y: (startY + endY) / 2 + (Math.random() - 0.5) * 20 },
-                { x: endX, y: endY }
-            );
+            // Diagonal braces
+            { type: 'brace', x1: -40, y1: -15, x2: -25, y2: 35, width: 4 },
+            { type: 'brace', x1: 40, y1: -15, x2: 25, y2: 35, width: 4 },
             
-            this.goldVeins.push(vein);
-        }
+            // Wooden platforms at different levels
+            { type: 'platform', x: -20, y: 0, width: 25, height: 8, level: 1 },
+            { type: 'platform', x: 15, y: 20, width: 20, height: 6, level: 2 },
+            
+            // Wooden ladder
+            { type: 'ladder', x: 0, y: -30, width: 4, height: 40 },
+            
+            // Mining cart track
+            { type: 'track', x1: -60, y1: 25, x2: 60, y2: 25, width: 6 }
+        ];
     }
     
-    getNaturalRockColor() {
+    getLayerColor(layer) {
         const colors = [
-            '#8B7355', // Sandy brown
-            '#A0522D', // Sienna 
-            '#CD853F', // Peru
-            '#BC8F8F'  // Rosy brown
+            '#8B7355', // Surface - sandy brown
+            '#A0522D', // Layer 1 - sienna
+            '#CD853F', // Layer 2 - peru  
+            '#D2B48C', // Layer 3 - tan
+            '#DEB887'  // Layer 4 - burlywood (bottom)
         ];
-        return colors[Math.floor(Math.random() * colors.length)];
+        return colors[layer] || '#8B7355';
     }
     
     update(deltaTime) {
@@ -87,8 +90,8 @@ export class GoldMine extends Building {
                 this.goldPiles = [];
                 for (let i = 0; i < 3; i++) {
                     this.goldPiles.push({
-                        x: (Math.random() - 0.5) * 40,
-                        y: (Math.random() - 0.5) * 40,
+                        x: (Math.random() - 0.5) * 60,
+                        y: (Math.random() - 0.5) * 60,
                         glimmer: Math.random() * Math.PI * 2
                     });
                 }
@@ -109,30 +112,30 @@ export class GoldMine extends Building {
                 this.smokePuffs.push({
                     x: this.x + worker.x + (Math.random() - 0.5) * 10,
                     y: this.y + worker.y + (Math.random() - 0.5) * 10,
-                    vx: (Math.random() - 0.5) * 30,
-                    vy: -20 - Math.random() * 20,
-                    life: 1,
-                    maxLife: 1,
-                    size: Math.random() * 4 + 2,
-                    color: 'rgba(139, 115, 85, 0.6)'
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: -15 - Math.random() * 15,
+                    life: 1.5,
+                    maxLife: 1.5,
+                    size: Math.random() * 3 + 2,
+                    color: 'rgba(160, 130, 98, 0.6)'
                 });
             }
         });
         
-        // Generate ambient dust
+        // Generate ambient dust from quarry
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0 && !this.isReady) {
             this.smokePuffs.push({
-                x: this.x + (Math.random() - 0.5) * 60,
-                y: this.y - 20,
-                vx: (Math.random() - 0.5) * 15,
-                vy: -15 - Math.random() * 15,
+                x: this.x + (Math.random() - 0.5) * 80,
+                y: this.y + (Math.random() - 0.5) * 60,
+                vx: (Math.random() - 0.5) * 10,
+                vy: -10 - Math.random() * 10,
                 life: 2,
                 maxLife: 2,
-                size: Math.random() * 6 + 3,
-                color: 'rgba(160, 82, 45, 0.4)'
+                size: Math.random() * 4 + 2,
+                color: 'rgba(139, 115, 85, 0.4)'
             });
-            this.nextSmokeTime = 0.8 + Math.random() * 1.2;
+            this.nextSmokeTime = 1.0 + Math.random() * 1.5;
         }
         
         // Update smoke/dust
@@ -140,7 +143,7 @@ export class GoldMine extends Building {
             smoke.x += smoke.vx * deltaTime;
             smoke.y += smoke.vy * deltaTime;
             smoke.life -= deltaTime;
-            smoke.size += deltaTime * 1;
+            smoke.size += deltaTime * 0.5;
             return smoke.life > 0;
         });
         
@@ -158,7 +161,6 @@ export class GoldMine extends Building {
                 bob.time += deltaTime * 3;
             });
             
-            // Ensure we have enough bob animations
             while (this.bobAnimations.length < this.goldPiles.length) {
                 this.bobAnimations.push({ time: Math.random() * Math.PI * 2 });
             }
@@ -166,119 +168,205 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Natural rocky ground base - simplified
-        const groundGradient = ctx.createRadialGradient(
-            this.x, this.y, 0,
-            this.x, this.y, size/2
-        );
-        groundGradient.addColorStop(0, '#D2B48C'); // Tan center
-        groundGradient.addColorStop(0.6, '#CD853F'); // Peru 
-        groundGradient.addColorStop(1, '#8B7355');   // Darker brown edge
-        
-        ctx.fillStyle = groundGradient;
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        ctx.fillRect(this.x - size/2, this.y - size/2, size, size);
-        ctx.strokeRect(this.x - size/2, this.y - size/2, size, size);
-        
-        // Simple wooden mining cart track - single horizontal beam
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        ctx.fillRect(this.x - size/3, this.y - 3, size/1.5, 6);
-        ctx.strokeRect(this.x - size/3, this.y - 3, size/1.5, 6);
-        
-        // Simple wooden support beams - just 2 crossing beams
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(this.x - size/3, this.y - size/3);
-        ctx.lineTo(this.x + size/3, this.y + size/3);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(this.x + size/3, this.y - size/3);
-        ctx.lineTo(this.x - size/3, this.y + size/3);
-        ctx.stroke();
-        
-        // Render natural rock formations - simplified
-        this.rocks.forEach(rock => {
-            ctx.save();
-            ctx.translate(this.x + rock.x, this.y + rock.y);
-            ctx.rotate(rock.rotation);
+        // Render quarry layers from deepest to surface
+        for (let i = this.quarryLayers.length - 1; i >= 0; i--) {
+            const layer = this.quarryLayers[i];
             
-            ctx.fillStyle = rock.color;
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1;
-            
-            switch (rock.type) {
-                case 0: // Round boulder
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, rock.size, rock.size * 0.8, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                    break;
-                    
-                case 1: // Angular rock
-                    ctx.beginPath();
-                    ctx.moveTo(-rock.size, 0);
-                    ctx.lineTo(-rock.size/2, -rock.size * 0.8);
-                    ctx.lineTo(rock.size/2, -rock.size * 0.6);
-                    ctx.lineTo(rock.size, 0);
-                    ctx.lineTo(rock.size/2, rock.size * 0.8);
-                    ctx.lineTo(-rock.size/2, rock.size * 0.6);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                    break;
-                    
-                case 2: // Flat rock
-                    ctx.fillRect(-rock.size, -rock.size * 0.4, rock.size * 2, rock.size * 0.8);
-                    ctx.strokeRect(-rock.size, -rock.size * 0.4, rock.size * 2, rock.size * 0.8);
-                    break;
-            }
-            
-            // Single highlight per rock
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
-            ctx.beginPath();
-            ctx.arc(-rock.size * 0.3, -rock.size * 0.3, rock.size * 0.2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.restore();
-        });
-        
-        // Render simplified gold veins
-        this.goldVeins.forEach(vein => {
             ctx.save();
             ctx.translate(this.x, this.y);
             
-            // Main gold vein
-            ctx.strokeStyle = `rgba(255, 215, 0, ${vein.brightness})`;
-            ctx.lineWidth = vein.thickness;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            // Create layer gradient for depth effect
+            const layerGradient = ctx.createRadialGradient(
+                0, -layer.depth,
+                0,
+                0, -layer.depth,
+                layer.radiusX
+            );
+            layerGradient.addColorStop(0, layer.color);
+            layerGradient.addColorStop(1, this.darkenColor(layer.color, 0.3));
             
+            ctx.fillStyle = layerGradient;
+            ctx.strokeStyle = this.darkenColor(layer.color, 0.5);
+            ctx.lineWidth = 1;
+            
+            // Draw elliptical layer
             ctx.beginPath();
-            ctx.moveTo(vein.points[0].x, vein.points[0].y);
-            for (let i = 1; i < vein.points.length; i++) {
-                ctx.lineTo(vein.points[i].x, vein.points[i].y);
-            }
+            ctx.ellipse(0, -layer.depth, layer.radiusX, layer.radiusY, 0, 0, Math.PI * 2);
+            ctx.fill();
             ctx.stroke();
             
-            // Single highlight line
-            ctx.strokeStyle = `rgba(255, 255, 200, ${vein.brightness * 0.6})`;
-            ctx.lineWidth = vein.thickness * 0.4;
-            ctx.beginPath();
-            ctx.moveTo(vein.points[0].x, vein.points[0].y);
-            for (let i = 1; i < vein.points.length; i++) {
-                ctx.lineTo(vein.points[i].x, vein.points[i].y);
+            // Add rock texture to layer edges
+            if (i > 0) {
+                ctx.strokeStyle = this.darkenColor(layer.color, 0.4);
+                ctx.lineWidth = 2;
+                
+                // Add rocky texture along the edge
+                for (let angle = 0; angle < Math.PI * 2; angle += 0.3) {
+                    const x = Math.cos(angle) * layer.radiusX * layer.rockiness;
+                    const y = Math.sin(angle) * layer.radiusY * layer.rockiness - layer.depth;
+                    const variation = (Math.random() - 0.5) * 4;
+                    
+                    if (angle === 0) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + variation, y + variation);
+                    } else {
+                        ctx.lineTo(x + variation, y + variation);
+                    }
+                }
+                ctx.stroke();
             }
-            ctx.stroke();
+            
+            ctx.restore();
+        }
+        
+        // Render wooden structures
+        this.woodenStructures.forEach(structure => {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            
+            switch (structure.type) {
+                case 'beam':
+                    // Horizontal support beam
+                    const beamGradient = ctx.createLinearGradient(
+                        structure.x1, structure.y1 - structure.width/2,
+                        structure.x1, structure.y1 + structure.width/2
+                    );
+                    beamGradient.addColorStop(0, '#DEB887');
+                    beamGradient.addColorStop(0.5, '#CD853F');
+                    beamGradient.addColorStop(1, '#8B7355');
+                    
+                    ctx.fillStyle = beamGradient;
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 1;
+                    
+                    const beamLength = Math.hypot(structure.x2 - structure.x1, structure.y2 - structure.y1);
+                    const beamAngle = Math.atan2(structure.y2 - structure.y1, structure.x2 - structure.x1);
+                    
+                    ctx.save();
+                    ctx.translate(structure.x1, structure.y1);
+                    ctx.rotate(beamAngle);
+                    ctx.fillRect(0, -structure.width/2, beamLength, structure.width);
+                    ctx.strokeRect(0, -structure.width/2, beamLength, structure.width);
+                    
+                    // Wood grain
+                    ctx.strokeStyle = '#A0522D';
+                    ctx.lineWidth = 0.5;
+                    for (let i = 5; i < beamLength; i += 10) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, -structure.width/2);
+                        ctx.lineTo(i, structure.width/2);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                    break;
+                    
+                case 'post':
+                    // Vertical support post
+                    const postGradient = ctx.createLinearGradient(
+                        structure.x - structure.width/2, structure.y,
+                        structure.x + structure.width/2, structure.y
+                    );
+                    postGradient.addColorStop(0, '#8B7355');
+                    postGradient.addColorStop(0.5, '#CD853F');
+                    postGradient.addColorStop(1, '#A0522D');
+                    
+                    ctx.fillStyle = postGradient;
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 1;
+                    ctx.fillRect(structure.x - structure.width/2, structure.y - structure.height, structure.width, structure.height);
+                    ctx.strokeRect(structure.x - structure.width/2, structure.y - structure.height, structure.width, structure.height);
+                    break;
+                    
+                case 'brace':
+                    // Diagonal support brace
+                    ctx.strokeStyle = '#8B7355';
+                    ctx.lineWidth = structure.width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(structure.x1, structure.y1);
+                    ctx.lineTo(structure.x2, structure.y2);
+                    ctx.stroke();
+                    break;
+                    
+                case 'platform':
+                    // Wooden platform
+                    const platformY = structure.y - structure.level * 8;
+                    ctx.fillStyle = '#DEB887';
+                    ctx.strokeStyle = '#8B7355';
+                    ctx.lineWidth = 1;
+                    ctx.fillRect(structure.x - structure.width/2, platformY, structure.width, structure.height);
+                    ctx.strokeRect(structure.x - structure.width/2, platformY, structure.width, structure.height);
+                    
+                    // Platform planks
+                    ctx.strokeStyle = '#A0522D';
+                    ctx.lineWidth = 0.5;
+                    for (let i = structure.x - structure.width/2 + 3; i < structure.x + structure.width/2; i += 6) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, platformY);
+                        ctx.lineTo(i, platformY + structure.height);
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 'ladder':
+                    // Wooden ladder
+                    ctx.strokeStyle = '#8B7355';
+                    ctx.lineWidth = 3;
+                    
+                    // Ladder sides
+                    ctx.beginPath();
+                    ctx.moveTo(structure.x - structure.width/2, structure.y);
+                    ctx.lineTo(structure.x - structure.width/2, structure.y - structure.height);
+                    ctx.moveTo(structure.x + structure.width/2, structure.y);
+                    ctx.lineTo(structure.x + structure.width/2, structure.y - structure.height);
+                    ctx.stroke();
+                    
+                    // Ladder rungs
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < structure.height; i += 6) {
+                        ctx.beginPath();
+                        ctx.moveTo(structure.x - structure.width/2, structure.y - i);
+                        ctx.lineTo(structure.x + structure.width/2, structure.y - i);
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 'track':
+                    // Mining cart track
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = structure.width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(structure.x1, structure.y1);
+                    ctx.lineTo(structure.x2, structure.y2);
+                    ctx.stroke();
+                    
+                    // Track ties
+                    const trackLength = Math.hypot(structure.x2 - structure.x1, structure.y2 - structure.y1);
+                    const trackAngle = Math.atan2(structure.y2 - structure.y1, structure.x2 - structure.x1);
+                    
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 3;
+                    for (let i = 0; i < trackLength; i += 15) {
+                        const tieX = structure.x1 + Math.cos(trackAngle) * i;
+                        const tieY = structure.y1 + Math.sin(trackAngle) * i;
+                        
+                        ctx.save();
+                        ctx.translate(tieX, tieY);
+                        ctx.rotate(trackAngle + Math.PI/2);
+                        ctx.beginPath();
+                        ctx.moveTo(-8, 0);
+                        ctx.lineTo(8, 0);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                    break;
+            }
             
             ctx.restore();
         });
         
-        // Render workers (same as before but cleaner positioning)
+        // Render workers
         this.workers.forEach(worker => {
             ctx.save();
             ctx.translate(this.x + worker.x, this.y + worker.y);
@@ -331,7 +419,7 @@ export class GoldMine extends Building {
             ctx.restore();
         });
         
-        // Render gold piles when ready (same as before)
+        // Render gold piles when ready
         if (this.isReady) {
             this.goldPiles.forEach((pile, index) => {
                 const bob = this.bobAnimations[index];
@@ -356,7 +444,7 @@ export class GoldMine extends Building {
                 ctx.strokeStyle = '#B8860B';
                 ctx.lineWidth = 1;
                 
-                for (let i = 0; i < 3; i++) { // Reduced from 4 to 3
+                for (let i = 0; i < 3; i++) {
                     const nuggetAngle = (i / 3) * Math.PI * 2;
                     const nuggetX = Math.cos(nuggetAngle) * 4;
                     const nuggetY = Math.sin(nuggetAngle) * 4;
@@ -371,21 +459,21 @@ export class GoldMine extends Building {
             });
         }
         
-        // Render minimal dust clouds
+        // Render dust clouds
         this.smokePuffs.forEach(smoke => {
             const alpha = smoke.life / smoke.maxLife;
-            ctx.fillStyle = `rgba(139, 115, 85, ${alpha * 0.4})`;
+            ctx.fillStyle = `rgba(160, 130, 98, ${alpha * 0.4})`;
             ctx.beginPath();
             ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Progress bar and indicators (same as before but cleaner colors)
+        // Progress bar and indicators
         const barWidth = size * 0.8;
         const barHeight = 6;
         const progressRatio = this.currentProgress / this.miningInterval;
         
-        ctx.fillStyle = 'rgba(139, 115, 85, 0.8)';
+        ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
         ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 10, barWidth, barHeight);
         
         if (this.isReady) {
@@ -408,6 +496,20 @@ export class GoldMine extends Building {
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('⛏️💰', this.x, this.y + size/2 + 50);
+    }
+    
+    darkenColor(color, factor) {
+        // Simple color darkening function
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        
+        const newR = Math.floor(r * (1 - factor));
+        const newG = Math.floor(g * (1 - factor));
+        const newB = Math.floor(b * (1 - factor));
+        
+        return `rgb(${newR}, ${newG}, ${newB})`;
     }
     
     collectGold() {
@@ -433,8 +535,8 @@ export class GoldMine extends Building {
     
     static getInfo() {
         return {
-            name: 'Gold Quarry',
-            description: 'Natural quarry with gold veins. Click to collect 30 gold when ready (15s cycle).',
+            name: 'Quarry Mine',
+            description: 'Deep quarry pit with mining operations. Click to collect 30 gold when ready (15s cycle).',
             effect: 'Click to collect',
             size: '4x4',
             cost: 200
