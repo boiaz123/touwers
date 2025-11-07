@@ -18,6 +18,47 @@ export class GoldMine extends Building {
         this.cartDirection = 1;
         this.cartSpeed = 0.3;
         
+        // Natural environment elements
+        this.trees = [];
+        this.environmentRocks = [];
+        this.bushes = [];
+        
+        // Generate trees around the mine
+        for (let i = 0; i < 4; i++) {
+            this.trees.push({
+                x: (Math.random() - 0.5) * 140 + (Math.random() < 0.5 ? -60 : 60), // Position away from cave
+                y: (Math.random() - 0.5) * 100 + (Math.random() < 0.5 ? -40 : 40),
+                height: Math.random() * 30 + 40,
+                trunkWidth: Math.random() * 6 + 8,
+                crownRadius: Math.random() * 15 + 20,
+                type: Math.floor(Math.random() * 2), // 0 = deciduous, 1 = coniferous
+                leafDensity: Math.random() * 0.3 + 0.7
+            });
+        }
+        
+        // Generate rocks around the area
+        for (let i = 0; i < 8; i++) {
+            this.environmentRocks.push({
+                x: (Math.random() - 0.5) * 120 + (Math.random() < 0.5 ? -50 : 50),
+                y: (Math.random() - 0.5) * 120 + (Math.random() < 0.5 ? -50 : 50),
+                size: Math.random() * 12 + 8,
+                type: Math.floor(Math.random() * 3),
+                rotation: Math.random() * Math.PI * 2,
+                color: Math.random() < 0.5 ? '#8B7355' : '#A0522D'
+            });
+        }
+        
+        // Generate bushes for ground cover
+        for (let i = 0; i < 6; i++) {
+            this.bushes.push({
+                x: (Math.random() - 0.5) * 100 + (Math.random() < 0.5 ? -45 : 45),
+                y: (Math.random() - 0.5) * 100 + (Math.random() < 0.5 ? -45 : 45),
+                radius: Math.random() * 8 + 12,
+                segments: 6 + Math.floor(Math.random() * 4),
+                color: Math.random() < 0.3 ? '#228B22' : '#2E8B57'
+            });
+        }
+        
         // Initialize workers
         for (let i = 0; i < 2; i++) {
             this.workers.push({
@@ -133,6 +174,194 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
+        // Render trees first (background elements)
+        this.trees.forEach(tree => {
+            ctx.save();
+            ctx.translate(this.x + tree.x, this.y + tree.y);
+            
+            // Tree shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(5, tree.height * 0.1, tree.crownRadius * 0.8, tree.crownRadius * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tree trunk
+            const trunkGradient = ctx.createLinearGradient(-tree.trunkWidth/2, 0, tree.trunkWidth/2, 0);
+            trunkGradient.addColorStop(0, '#8B4513');
+            trunkGradient.addColorStop(0.5, '#A0522D');
+            trunkGradient.addColorStop(1, '#654321');
+            
+            ctx.fillStyle = trunkGradient;
+            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height);
+            
+            // Trunk texture (bark lines)
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const lineY = -tree.height * (i / 4);
+                ctx.beginPath();
+                ctx.moveTo(-tree.trunkWidth/2, lineY);
+                ctx.lineTo(tree.trunkWidth/2, lineY);
+                ctx.stroke();
+            }
+            
+            // Tree crown
+            if (tree.type === 0) {
+                // Deciduous tree (round crown)
+                const crownGradient = ctx.createRadialGradient(
+                    -tree.crownRadius * 0.3, -tree.height - tree.crownRadius * 0.3, 0,
+                    0, -tree.height, tree.crownRadius
+                );
+                crownGradient.addColorStop(0, '#90EE90');
+                crownGradient.addColorStop(0.6, '#228B22');
+                crownGradient.addColorStop(1, '#006400');
+                
+                ctx.fillStyle = crownGradient;
+                ctx.beginPath();
+                ctx.arc(0, -tree.height, tree.crownRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add some leaf clusters for texture
+                for (let j = 0; j < 8; j++) {
+                    const angle = (j / 8) * Math.PI * 2;
+                    const distance = tree.crownRadius * (0.6 + Math.random() * 0.3);
+                    const leafX = Math.cos(angle) * distance;
+                    const leafY = -tree.height + Math.sin(angle) * distance;
+                    
+                    ctx.fillStyle = `rgba(34, 139, 34, ${tree.leafDensity})`;
+                    ctx.beginPath();
+                    ctx.arc(leafX, leafY, tree.crownRadius * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // Coniferous tree (triangular crown)
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.moveTo(0, -tree.height - tree.crownRadius);
+                ctx.lineTo(-tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.3);
+                ctx.lineTo(tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Add needle texture
+                ctx.strokeStyle = '#006400';
+                ctx.lineWidth = 1;
+                for (let j = 0; j < 6; j++) {
+                    const needleY = -tree.height - tree.crownRadius * 0.8 + (j / 6) * tree.crownRadius * 1.3;
+                    const needleWidth = tree.crownRadius * (1 - j / 8);
+                    ctx.beginPath();
+                    ctx.moveTo(-needleWidth, needleY);
+                    ctx.lineTo(needleWidth, needleY);
+                    ctx.stroke();
+                }
+            }
+            
+            ctx.restore();
+        });
+        
+        // Render environment rocks
+        this.environmentRocks.forEach(rock => {
+            ctx.save();
+            ctx.translate(this.x + rock.x, this.y + rock.y);
+            ctx.rotate(rock.rotation);
+            
+            // Rock shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(2, 2, rock.size * 0.9, rock.size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main rock
+            ctx.fillStyle = rock.color;
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            
+            switch (rock.type) {
+                case 0: // Round boulder
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, rock.size, rock.size * 0.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                    
+                case 1: // Angular rock
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i / 6) * Math.PI * 2;
+                        const radius = rock.size * (0.7 + Math.random() * 0.3);
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius * 0.8;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    break;
+                    
+                case 2: // Flat rock stack
+                    for (let layer = 0; layer < 3; layer++) {
+                        const layerSize = rock.size * (1 - layer * 0.2);
+                        const layerY = -layer * rock.size * 0.3;
+                        ctx.fillStyle = layer === 0 ? rock.color : this.darkenColor(rock.color, 0.2);
+                        ctx.beginPath();
+                        ctx.ellipse(0, layerY, layerSize, layerSize * 0.6, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                    break;
+            }
+            
+            // Rock highlight
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+            ctx.beginPath();
+            ctx.arc(-rock.size * 0.3, -rock.size * 0.3, rock.size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        });
+        
+        // Render bushes
+        this.bushes.forEach(bush => {
+            ctx.save();
+            ctx.translate(this.x + bush.x, this.y + bush.y);
+            
+            // Bush shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(2, 2, bush.radius * 0.8, bush.radius * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main bush shape (cluster of circles)
+            ctx.fillStyle = bush.color;
+            for (let i = 0; i < bush.segments; i++) {
+                const angle = (i / bush.segments) * Math.PI * 2;
+                const distance = bush.radius * (0.4 + Math.random() * 0.3);
+                const segmentX = Math.cos(angle) * distance;
+                const segmentY = Math.sin(angle) * distance;
+                const segmentRadius = bush.radius * (0.3 + Math.random() * 0.2);
+                
+                ctx.beginPath();
+                ctx.arc(segmentX, segmentY, segmentRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Bush highlights
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.6)';
+            for (let i = 0; i < 3; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = bush.radius * 0.3;
+                const highlightX = Math.cos(angle) * distance;
+                const highlightY = Math.sin(angle) * distance;
+                
+                ctx.beginPath();
+                ctx.arc(highlightX, highlightY, bush.radius * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        });
+        
         // Rock formation around cave entrance
         const rockColor = '#8B7355';
         const darkRock = '#654321';
