@@ -439,17 +439,28 @@ class Game {
             return;
         }
         
-        console.log('Game: Canvas found, setting up...');
-        
-        // Detect and apply UI scaling based on screen resolution
+        // Apply UI scaling
         this.applyUIScaling();
-        
-        // Initial canvas resize
         this.resizeCanvas();
-        console.log('Game: Canvas initial size:', this.canvas.width, 'x', this.canvas.height);
         
-        // Initialize states immediately instead of waiting for animation frame
-        this.initializeStates();
+        // Create state manager
+        this.stateManager = new GameStateManager(this.canvas, this.ctx);
+        
+        // Add states
+        this.stateManager.addState('start', new StartScreen(this.stateManager));
+        this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
+        this.stateManager.addState('game', new GameplayState(this.stateManager));
+        
+        this.lastTime = 0;
+        this.setupEventListeners();
+        
+        // Start immediately with start screen
+        this.stateManager.changeState('start');
+        
+        // Begin game loop
+        requestAnimationFrame((time) => this.gameLoop(time));
+        
+        console.log('Game: Initialization complete');
     }
     
     initializeStates() {
@@ -651,30 +662,7 @@ class Game {
     }
 }
 
-// Simplified initialization - remove the duplicate at the bottom
-console.log('Starting game initialization');
-
-// Single initialization point
-function initializeGame() {
-    console.log('DOM ready, creating game');
-    try {
-        new Game();
-    } catch (error) {
-        console.error('Failed to create game:', error);
-        // Show error in the page
-        document.body.innerHTML = `<div style="color: red; text-align: center; margin-top: 50px;">
-            <h1>Game Failed to Load</h1>
-            <p>Error: ${error.message}</p>
-            <p>Check the console for more details.</p>
-        </div>`;
-    }
-}
-
-// Wait for DOM to be ready
-if (document.readyState === 'loading') {
-    console.log('Waiting for DOM...');
-    document.addEventListener('DOMContentLoaded', initializeGame);
-} else {
-    console.log('DOM already ready, starting game immediately');
-    initializeGame();
-}
+// Simple initialization - wait for DOM and start immediately
+document.addEventListener('DOMContentLoaded', () => {
+    new Game();
+});
