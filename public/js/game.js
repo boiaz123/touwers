@@ -651,25 +651,30 @@ class Game {
     }
 }
 
-// Simplified initialization
+// Simplified initialization - remove the duplicate at the bottom
 console.log('Starting game initialization');
-document.addEventListener('DOMContentLoaded', () => {
+
+// Single initialization point
+function initializeGame() {
     console.log('DOM ready, creating game');
     try {
         new Game();
     } catch (error) {
         console.error('Failed to create game:', error);
+        // Show error in the page
+        document.body.innerHTML = `<div style="color: red; text-align: center; margin-top: 50px;">
+            <h1>Game Failed to Load</h1>
+            <p>Error: ${error.message}</p>
+            <p>Check the console for more details.</p>
+        </div>`;
     }
-});
+}
 
-// Fallback for cases where DOMContentLoaded already fired
+// Wait for DOM to be ready
 if (document.readyState === 'loading') {
     console.log('Waiting for DOM...');
+    document.addEventListener('DOMContentLoaded', initializeGame);
 } else {
     console.log('DOM already ready, starting game immediately');
-    try {
-        new Game();
-    } catch (error) {
-        console.error('Failed to initialize game:', error);
-    }
+    initializeGame();
 }

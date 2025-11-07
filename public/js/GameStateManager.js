@@ -5,13 +5,23 @@ export class GameStateManager {
         this.states = {};
         this.currentState = null;
         this.currentStateObj = null;
-        this.selectedLevelInfo = null; // Store level info for transitions
+        this.selectedLevelInfo = null;
+        
+        if (!canvas || !ctx) {
+            throw new Error('GameStateManager: Invalid canvas or context provided');
+        }
+        
         console.log('GameStateManager: Created with canvas size', canvas.width, 'x', canvas.height);
     }
     
     addState(name, state) {
+        if (!name || !state) {
+            console.error('GameStateManager: Invalid state name or object');
+            return;
+        }
+        
         this.states[name] = state;
-        console.log('GameStateManager: Added state', name);
+        console.log('GameStateManager: Added state', name, typeof state);
     }
     
     changeState(stateName) {
@@ -30,6 +40,8 @@ export class GameStateManager {
             this.currentState = stateName;
             this.currentStateObj = this.states[stateName];
             
+            console.log('GameStateManager: New state object type:', typeof this.currentStateObj);
+            
             if (typeof this.currentStateObj.enter === 'function') {
                 console.log('GameStateManager: Calling enter on', stateName);
                 try {
@@ -37,10 +49,12 @@ export class GameStateManager {
                 } catch (error) {
                     console.error('GameStateManager: Error during state enter:', error);
                 }
+            } else {
+                console.warn('GameStateManager: State', stateName, 'does not have enter method');
             }
             console.log('GameStateManager: State changed to', stateName);
         } else {
-            console.error('GameStateManager: State not found:', stateName);
+            console.error('GameStateManager: State not found:', stateName, 'Available states:', Object.keys(this.states));
         }
     }
     

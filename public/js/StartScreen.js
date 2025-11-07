@@ -127,9 +127,15 @@ export class StartScreen {
         try {
             const canvas = ctx.canvas;
             
-            // Fallback canvas dimensions
-            const canvasWidth = canvas.width > 0 ? canvas.width : window.innerWidth;
-            const canvasHeight = canvas.height > 0 ? canvas.height : window.innerHeight;
+            // Use actual canvas dimensions or fallback
+            const canvasWidth = canvas?.width || window.innerWidth;
+            const canvasHeight = canvas?.height || window.innerHeight;
+            
+            // Ensure we have valid dimensions
+            if (canvasWidth <= 0 || canvasHeight <= 0) {
+                console.warn('StartScreen: Invalid canvas dimensions, skipping render');
+                return;
+            }
             
             console.log('StartScreen: Rendering with dimensions', canvasWidth, 'x', canvasHeight);
             
@@ -140,12 +146,12 @@ export class StartScreen {
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvasWidth, canvasHeight);
             
-            // Render particles
-            if (this.particles.length > 0) {
+            // Render particles if available
+            if (this.particles && this.particles.length > 0) {
                 this.particles.forEach(particle => {
                     ctx.save();
                     ctx.globalAlpha = particle.opacity;
-                    ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
+                    ctx.fillStyle = '#ff8c00';
                     ctx.beginPath();
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                     ctx.fill();
@@ -153,14 +159,22 @@ export class StartScreen {
                 });
             }
             
-            // Title
+            // Title with better error handling
+            ctx.save();
             ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
             ctx.globalAlpha = this.titleOpacity;
             
             // Title shadow
             ctx.fillStyle = '#000';
             ctx.font = 'bold 80px serif';
-            ctx.fillText('TOUWERS', canvasWidth / 2 + 3, canvasHeight / 2 - 50 + 3);
+            try {
+                ctx.fillText('TOUWERS', canvasWidth / 2 + 3, canvasHeight / 2 - 50 + 3);
+            } catch (e) {
+                console.warn('Font rendering failed, using fallback');
+                ctx.font = 'bold 60px Arial';
+                ctx.fillText('TOUWERS', canvasWidth / 2 + 3, canvasHeight / 2 - 50 + 3);
+            }
             
             // Title main
             ctx.fillStyle = '#d4af37';
@@ -177,22 +191,22 @@ export class StartScreen {
             
             // Continue message
             if (this.showContinue) {
-                ctx.globalAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
+                const blinkAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
+                ctx.globalAlpha = blinkAlpha;
                 ctx.font = '20px serif';
                 ctx.fillStyle = '#fff';
                 ctx.fillText('Click to Continue', canvasWidth / 2, canvasHeight / 2 + 120);
             }
             
-            ctx.globalAlpha = 1;
+            ctx.restore();
             
-            console.log('StartScreen: Render completed successfully');
         } catch (error) {
             console.error('StartScreen render error:', error);
-            // Fallback rendering
+            // Minimal fallback rendering
             ctx.fillStyle = '#ff0000';
             ctx.font = '20px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('StartScreen Render Error', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            ctx.fillText('Render Error - Check Console', ctx.canvas.width / 2, ctx.canvas.height / 2);
         }
     }
     
