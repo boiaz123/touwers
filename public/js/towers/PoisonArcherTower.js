@@ -18,14 +18,17 @@ export class PoisonArcherTower {
         this.poisonClouds = [];
         this.bushRustle = 0;
         
-        // Random bush positions
+        // Fixed bush positions (smaller and more scattered)
         this.bushes = [];
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + Math.random() * 0.5;
+            const distance = 25 + Math.random() * 20;
             this.bushes.push({
-                x: this.x + (Math.random() - 0.5) * 80,
-                y: this.y + (Math.random() - 0.5) * 80,
-                size: Math.random() * 15 + 20,
-                rustleOffset: Math.random() * Math.PI * 2
+                x: this.x + Math.cos(angle) * distance,
+                y: this.y + Math.sin(angle) * distance,
+                size: Math.random() * 8 + 12, // Smaller bushes
+                rustleOffset: i * 0.5,
+                leafPattern: Math.floor(Math.random() * 3) // Fixed pattern per bush
             });
         }
     }
@@ -181,51 +184,54 @@ export class PoisonArcherTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
         
-        // Render bushes
+        // Render bushes (smaller and more natural)
         this.bushes.forEach((bush, index) => {
             ctx.save();
             ctx.translate(bush.x, bush.y);
             
-            const rustleAmount = Math.sin(this.animationTime * 3 + bush.rustleOffset) * this.bushRustle;
+            // Subtle rustle (much reduced)
+            const rustleAmount = Math.sin(this.animationTime * 1.5 + bush.rustleOffset) * 0.02;
             ctx.rotate(rustleAmount);
             
             // Bush shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.beginPath();
-            ctx.arc(2, 2, bush.size * 0.8, 0, Math.PI * 2);
+            ctx.arc(1, 1, bush.size * 0.8, 0, Math.PI * 2);
             ctx.fill();
             
-            // Main bush body
+            // Main bush body (more muted colors)
             const bushGradient = ctx.createRadialGradient(
-                -bush.size * 0.3, -bush.size * 0.3, 0,
+                -bush.size * 0.2, -bush.size * 0.2, 0,
                 0, 0, bush.size
             );
-            bushGradient.addColorStop(0, '#228B22');
-            bushGradient.addColorStop(0.7, '#006400');
-            bushGradient.addColorStop(1, '#2F4F2F');
+            bushGradient.addColorStop(0, '#2F5F2F');
+            bushGradient.addColorStop(0.6, '#1F4F1F');
+            bushGradient.addColorStop(1, '#1A3F1A');
             
             ctx.fillStyle = bushGradient;
             ctx.beginPath();
             ctx.arc(0, 0, bush.size, 0, Math.PI * 2);
             ctx.fill();
             
-            // Bush texture (smaller leaf clusters)
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                const leafX = Math.cos(angle) * bush.size * 0.6;
-                const leafY = Math.sin(angle) * bush.size * 0.6;
-                const leafSize = bush.size * 0.2;
+            // Fixed leaf clusters (no animation)
+            const leafCount = 5 + bush.leafPattern;
+            for (let i = 0; i < leafCount; i++) {
+                const angle = (i / leafCount) * Math.PI * 2 + bush.leafPattern;
+                const leafDistance = bush.size * (0.4 + (i % 3) * 0.15);
+                const leafX = Math.cos(angle) * leafDistance;
+                const leafY = Math.sin(angle) * leafDistance;
+                const leafSize = bush.size * (0.15 + (i % 2) * 0.05);
                 
-                ctx.fillStyle = '#32CD32';
+                ctx.fillStyle = '#228B22';
                 ctx.beginPath();
                 ctx.arc(leafX, leafY, leafSize, 0, Math.PI * 2);
                 ctx.fill();
             }
             
-            // Central darker area
-            ctx.fillStyle = '#1C5F1C';
+            // Central darker area (smaller)
+            ctx.fillStyle = '#0F2F0F';
             ctx.beginPath();
-            ctx.arc(0, 0, bush.size * 0.3, 0, Math.PI * 2);
+            ctx.arc(0, 0, bush.size * 0.2, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();

@@ -60,20 +60,44 @@ export class BarricadeTower {
             return true;
         });
         
-        // Update slow zones
+        // Update slow zones and apply effects
         this.slowZones = this.slowZones.filter(zone => {
             zone.life -= deltaTime;
             
             // Apply slow effect to enemies in zone
             enemies.forEach(enemy => {
+                // Ensure enemy has originalSpeed property
+                if (!enemy.hasOwnProperty('originalSpeed')) {
+                    enemy.originalSpeed = enemy.speed;
+                }
+                
                 const distance = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
                 if (distance <= zone.radius) {
-                    enemy.speed = Math.max(enemy.originalSpeed * 0.3, enemy.speed * 0.98);
+                    // Apply slow effect gradually
+                    const targetSpeed = enemy.originalSpeed * 0.3;
+                    const slowRate = 1 - Math.pow(0.1, deltaTime); // Exponential approach
+                    enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
+                } else {
+                    // Gradually restore speed when outside zone
+                    if (enemy.speed < enemy.originalSpeed) {
+                        const restoreRate = 1 - Math.pow(0.2, deltaTime);
+                        enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
+                    }
                 }
             });
             
             return zone.life > 0;
         });
+        
+        // Restore speed for enemies not in any slow zone
+        if (this.slowZones.length === 0) {
+            enemies.forEach(enemy => {
+                if (enemy.hasOwnProperty('originalSpeed') && enemy.speed < enemy.originalSpeed) {
+                    const restoreRate = 1 - Math.pow(0.2, deltaTime);
+                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
+                }
+            });
+        }
     }
     
     findTarget(enemies) {
@@ -127,7 +151,9 @@ export class BarricadeTower {
                 
                 // Defender will get new debris after a delay
                 setTimeout(() => {
-                    thrower.carryingDebris = true;
+                    if (thrower) { // Check if thrower still exists
+                        thrower.carryingDebris = true;
+                    }
                 }, 2000 + Math.random() * 1000);
             }
         }
