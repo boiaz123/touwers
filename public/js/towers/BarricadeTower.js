@@ -176,66 +176,66 @@ export class BarricadeTower {
     }
     
     generateStaticEnvironment() {
-        // Use actual cell size to stay within 2x2 grid (each cell is 32 pixels)
+        // Use even tighter bounds to ensure everything stays within 2x2 grid
         const cellSize = 32;
-        const halfGrid = cellSize; // Distance from center to edge of 2x2 grid
+        const halfGrid = cellSize * 0.8; // Much tighter - 80% of cell size from center
         
         return {
             // Forest floor elements strictly within tower 2x2 grid
             bushes: [
-                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.3 },
-                { x: this.x + halfGrid * 0.4, y: this.y + halfGrid * 0.2 },
-                { x: this.x - halfGrid * 0.3, y: this.y - halfGrid * 0.1 },
-                { x: this.x + halfGrid * 0.6, y: this.y - halfGrid * 0.2 },
-                { x: this.x - halfGrid * 0.7, y: this.y + halfGrid * 0.1 },
-                { x: this.x + halfGrid * 0.7, y: this.y + halfGrid * 0.5 },
-                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.6 }
+                { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.25 },
+                { x: this.x + halfGrid * 0.3, y: this.y + halfGrid * 0.15 },
+                { x: this.x - halfGrid * 0.25, y: this.y - halfGrid * 0.1 },
+                { x: this.x + halfGrid * 0.5, y: this.y - halfGrid * 0.15 },
+                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.1 },
+                { x: this.x + halfGrid * 0.6, y: this.y + halfGrid * 0.4 },
+                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.5 }
             ],
             rocks: [
                 // Rocks integrated into tower foundation
-                { x: this.x - halfGrid * 0.2, y: this.y + halfGrid * 0.15, size: 3 },
-                { x: this.x + halfGrid * 0.2, y: this.y + halfGrid * 0.1, size: 2 },
-                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.4, size: 4 },
-                { x: this.x + halfGrid * 0.4, y: this.y + halfGrid * 0.3, size: 3 },
-                { x: this.x - halfGrid * 0.4, y: this.y - halfGrid * 0.2, size: 2 },
-                { x: this.x + halfGrid * 0.5, y: this.y - halfGrid * 0.15, size: 3 }
+                { x: this.x - halfGrid * 0.15, y: this.y + halfGrid * 0.12, size: 3 },
+                { x: this.x + halfGrid * 0.15, y: this.y + halfGrid * 0.08, size: 2 },
+                { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.3, size: 4 },
+                { x: this.x + halfGrid * 0.35, y: this.y + halfGrid * 0.25, size: 3 },
+                { x: this.x - halfGrid * 0.3, y: this.y - halfGrid * 0.15, size: 2 },
+                { x: this.x + halfGrid * 0.4, y: this.y - halfGrid * 0.12, size: 3 }
             ],
-            // Small trees within strict grid bounds
+            // Small trees within very tight grid bounds
             smallTrees: [
-                { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.25, size: 12 },
-                { x: this.x + halfGrid * 0.3, y: this.y + halfGrid * 0.15, size: 10 },
-                { x: this.x - halfGrid * 0.5, y: this.y - halfGrid * 0.15, size: 14 },
-                { x: this.x + halfGrid * 0.4, y: this.y - halfGrid * 0.2, size: 9 },
-                { x: this.x - halfGrid * 0.25, y: this.y + halfGrid * 0.5, size: 12 },
-                { x: this.x + halfGrid * 0.6, y: this.y + halfGrid * 0.05, size: 11 }
+                { x: this.x - halfGrid * 0.35, y: this.y + halfGrid * 0.2, size: 12 },
+                { x: this.x + halfGrid * 0.25, y: this.y + halfGrid * 0.12, size: 10 },
+                { x: this.x - halfGrid * 0.4, y: this.y - halfGrid * 0.12, size: 14 },
+                { x: this.x + halfGrid * 0.3, y: this.y - halfGrid * 0.15, size: 9 },
+                { x: this.x - halfGrid * 0.2, y: this.y + halfGrid * 0.4, size: 12 },
+                { x: this.x + halfGrid * 0.5, y: this.y + halfGrid * 0.03, size: 11 }
             ],
-            // Medium understory trees within grid
+            // Medium understory trees within tight grid
             mediumTrees: [
-                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.5, size: 18 },
-                { x: this.x + halfGrid * 0.55, y: this.y + halfGrid * 0.4, size: 16 },
-                { x: this.x - halfGrid * 0.7, y: this.y - halfGrid * 0.05, size: 20 },
-                { x: this.x + halfGrid * 0.65, y: this.y - halfGrid * 0.15, size: 15 },
-                { x: this.x - halfGrid * 0.3, y: this.y + halfGrid * 0.7, size: 18 }
+                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.4, size: 18 },
+                { x: this.x + halfGrid * 0.45, y: this.y + halfGrid * 0.3, size: 16 },
+                { x: this.x - halfGrid * 0.6, y: this.y - halfGrid * 0.03, size: 20 },
+                { x: this.x + halfGrid * 0.55, y: this.y - halfGrid * 0.12, size: 15 },
+                { x: this.x - halfGrid * 0.25, y: this.y + halfGrid * 0.6, size: 18 }
             ],
-            // Tall forest trees within strict grid bounds
+            // Tall forest trees within very strict grid bounds
             forestTrees: [
-                { x: this.x - halfGrid * 0.7, y: this.y + halfGrid * 0.7, size: 25 },
-                { x: this.x + halfGrid * 0.65, y: this.y + halfGrid * 0.6, size: 23 },
-                { x: this.x - halfGrid * 0.65, y: this.y + halfGrid * 0.1, size: 27 },
-                { x: this.x + halfGrid * 0.7, y: this.y - halfGrid * 0.05, size: 24 }
+                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.6, size: 25 },
+                { x: this.x + halfGrid * 0.55, y: this.y + halfGrid * 0.5, size: 23 },
+                { x: this.x - halfGrid * 0.55, y: this.y + halfGrid * 0.08, size: 27 },
+                { x: this.x + halfGrid * 0.6, y: this.y - halfGrid * 0.03, size: 24 }
             ],
             rubblePiles: [
                 {
-                    x: this.x + halfGrid * 0.15,
-                    y: this.y + halfGrid * 0.2,
+                    x: this.x + halfGrid * 0.12,
+                    y: this.y + halfGrid * 0.15,
                     pieces: [
                         { offsetX: -1, offsetY: 1, size: 1.2 },
                         { offsetX: 2, offsetY: -1, size: 1.5 }
                     ]
                 },
                 {
-                    x: this.x - halfGrid * 0.2,
-                    y: this.y - halfGrid * 0.25,
+                    x: this.x - halfGrid * 0.15,
+                    y: this.y - halfGrid * 0.2,
                     pieces: [
                         { offsetX: 1, offsetY: 0, size: 1.0 },
                         { offsetX: -2, offsetY: 1, size: 1.3 }
