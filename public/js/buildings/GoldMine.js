@@ -23,17 +23,33 @@ export class GoldMine extends Building {
         this.environmentRocks = [];
         this.bushes = [];
         
-        // Generate more pine trees within the mine's 4x4 grid area for forest patch look
+        // Generate more dense pine forest within the mine's 4x4 grid area
         // Fixed positions to prevent pattern changes and flickering
         const treePositions = [
-            { x: -45, y: -35 }, // Back left
-            { x: -25, y: -40 }, // Back left center
-            { x: 45, y: -30 },  // Back right
-            { x: 25, y: -45 },  // Back right center
-            { x: -35, y: 35 },  // Front left
-            { x: 40, y: 40 },   // Front right
-            { x: -50, y: 0 },   // Mid left
-            { x: 50, y: 10 }    // Mid right
+            // Back row - taller trees
+            { x: -50, y: -40, height: 'tall' },
+            { x: -30, y: -45, height: 'tall' },
+            { x: -10, y: -42, height: 'medium' },
+            { x: 15, y: -48, height: 'tall' },
+            { x: 35, y: -43, height: 'medium' },
+            { x: 50, y: -38, height: 'tall' },
+            
+            // Middle row - medium trees
+            { x: -45, y: -15, height: 'medium' },
+            { x: -20, y: -18, height: 'small' },
+            { x: 5, y: -12, height: 'medium' },
+            { x: 25, y: -16, height: 'small' },
+            { x: 45, y: -10, height: 'medium' },
+            
+            // Front scattered - smaller trees
+            { x: -35, y: 25, height: 'small' },
+            { x: -10, y: 30, height: 'small' },
+            { x: 20, y: 35, height: 'small' },
+            { x: 40, y: 28, height: 'small' },
+            
+            // Side trees for density
+            { x: -55, y: 10, height: 'medium' },
+            { x: 55, y: 15, height: 'medium' }
         ];
         
         // Use fixed seed for consistent tree generation
@@ -44,16 +60,38 @@ export class GoldMine extends Building {
         };
         
         treePositions.forEach((pos, i) => {
+            let baseHeight, crownRadius, trunkWidth;
+            
+            // Set tree sizes based on height category
+            switch (pos.height) {
+                case 'tall':
+                    baseHeight = 35 + (seededRandom() * 20);
+                    crownRadius = 12 + (seededRandom() * 6);
+                    trunkWidth = 4 + (seededRandom() * 2);
+                    break;
+                case 'medium':
+                    baseHeight = 25 + (seededRandom() * 15);
+                    crownRadius = 8 + (seededRandom() * 4);
+                    trunkWidth = 3 + (seededRandom() * 1.5);
+                    break;
+                case 'small':
+                    baseHeight = 15 + (seededRandom() * 10);
+                    crownRadius = 6 + (seededRandom() * 3);
+                    trunkWidth = 2 + (seededRandom() * 1);
+                    break;
+            }
+            
             this.trees.push({
                 x: pos.x,
                 y: pos.y,
-                height: 20 + (seededRandom() * 25), // Pine trees 20-45 units tall
-                trunkWidth: 3 + (seededRandom() * 3),
-                crownRadius: 8 + (seededRandom() * 8),
+                height: baseHeight,
+                trunkWidth: trunkWidth,
+                crownRadius: crownRadius,
                 type: 1, // All coniferous (pine) trees
-                leafDensity: 0.6 + (seededRandom() * 0.3),
-                // Fixed needle layers to prevent flickering
-                needleLayers: Math.floor(4 + seededRandom() * 3)
+                leafDensity: 0.8 + (seededRandom() * 0.2),
+                heightCategory: pos.height,
+                // Fixed layers for Christmas tree shape
+                layers: pos.height === 'tall' ? 5 : (pos.height === 'medium' ? 4 : 3)
             });
         });
         
@@ -228,81 +266,117 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
-        // Render trees first (background elements) - all pine trees for forest look
+        // Render trees first (background elements) - proper Christmas tree pine forest
         this.trees.forEach(tree => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
             
             // Tree shadow (fixed position)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
             ctx.beginPath();
-            ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.6, tree.crownRadius * 0.2, 0, 0, Math.PI * 2);
+            ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.8, tree.crownRadius * 0.3, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Tree trunk
+            // Tree trunk - more realistic brown colors
             const trunkGradient = ctx.createLinearGradient(-tree.trunkWidth/2, 0, tree.trunkWidth/2, 0);
-            trunkGradient.addColorStop(0, '#654321');
-            trunkGradient.addColorStop(0.5, '#8B4513');
-            trunkGradient.addColorStop(1, '#A0522D');
+            trunkGradient.addColorStop(0, '#4A4A4A'); // Dark bark
+            trunkGradient.addColorStop(0.3, '#654321'); // Brown bark
+            trunkGradient.addColorStop(0.7, '#8B4513'); // Lighter brown
+            trunkGradient.addColorStop(1, '#5D4E37'); // Dark brown edge
             
             ctx.fillStyle = trunkGradient;
-            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height);
+            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height * 0.3);
             
             // Trunk texture (fixed bark lines)
-            ctx.strokeStyle = '#5D4E37';
+            ctx.strokeStyle = '#3A3A3A';
             ctx.lineWidth = 1;
-            for (let i = 1; i < 4; i++) {
-                const lineY = -tree.height * (i / 4);
+            const barkLines = tree.heightCategory === 'tall' ? 4 : (tree.heightCategory === 'medium' ? 3 : 2);
+            for (let i = 1; i <= barkLines; i++) {
+                const lineY = -(tree.height * 0.3) * (i / barkLines);
                 ctx.beginPath();
                 ctx.moveTo(-tree.trunkWidth/2, lineY);
                 ctx.lineTo(tree.trunkWidth/2, lineY);
                 ctx.stroke();
             }
             
-            // Pine tree crown (triangular with layers)
-            ctx.fillStyle = '#1B4332'; // Darker pine green
+            // Christmas tree layered crown - proper coniferous shape
+            const layerCount = tree.layers;
+            const layerHeight = (tree.height * 0.8) / layerCount;
             
-            // Main triangular crown
-            ctx.beginPath();
-            ctx.moveTo(0, -tree.height - tree.crownRadius);
-            ctx.lineTo(-tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.2);
-            ctx.lineTo(tree.crownRadius * 0.8, -tree.height + tree.crownRadius * 0.2);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Add layered pine sections for realistic look
-            for (let layer = 0; layer < 3; layer++) {
-                const layerY = -tree.height + (layer * tree.height * 0.3);
-                const layerRadius = tree.crownRadius * (0.9 - layer * 0.2);
+            for (let layer = 0; layer < layerCount; layer++) {
+                const layerTop = -tree.height + (layer * layerHeight * 0.7); // Overlap layers
+                const layerBottom = layerTop + layerHeight;
                 
-                ctx.fillStyle = layer === 0 ? '#2D5A3D' : '#1B4332';
+                // Each layer gets progressively larger towards bottom
+                const layerRadius = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6);
+                
+                // Layer color - darker at bottom, lighter at top
+                const layerLightness = 1 - (layer * 0.1);
+                const greenBase = Math.floor(27 * layerLightness); // Dark forest green base
+                const greenSecondary = Math.floor(67 * layerLightness); // Forest green
+                ctx.fillStyle = `rgb(${greenBase}, ${greenSecondary}, ${greenBase + 10})`;
+                
+                // Draw triangular layer with slight curve
                 ctx.beginPath();
-                ctx.moveTo(0, layerY - layerRadius * 0.6);
-                ctx.lineTo(-layerRadius * 0.7, layerY + layerRadius * 0.3);
-                ctx.lineTo(layerRadius * 0.7, layerY + layerRadius * 0.3);
+                
+                if (layer === 0) {
+                    // Top layer - pointed
+                    ctx.moveTo(0, layerTop);
+                    ctx.lineTo(-layerRadius * 0.9, layerBottom);
+                    ctx.lineTo(layerRadius * 0.9, layerBottom);
+                } else {
+                    // Lower layers - fuller
+                    ctx.moveTo(0, layerTop + layerHeight * 0.2); // Start slightly down for overlap
+                    ctx.lineTo(-layerRadius, layerBottom);
+                    ctx.lineTo(layerRadius, layerBottom);
+                }
+                
                 ctx.closePath();
                 ctx.fill();
-            }
-            
-            // Fixed needle texture (no random elements)
-            ctx.strokeStyle = '#0F2A1A';
-            ctx.lineWidth = 1;
-            for (let j = 0; j < tree.needleLayers; j++) {
-                const needleY = -tree.height - tree.crownRadius * 0.7 + (j / tree.needleLayers) * tree.crownRadius * 1.2;
-                const needleWidth = tree.crownRadius * (0.8 - j / (tree.needleLayers + 2));
-                ctx.beginPath();
-                ctx.moveTo(-needleWidth, needleY);
-                ctx.lineTo(needleWidth, needleY);
+                
+                // Add subtle layer outline for definition
+                ctx.strokeStyle = `rgb(${Math.floor(greenBase * 0.7)}, ${Math.floor(greenSecondary * 0.7)}, ${Math.floor((greenBase + 10) * 0.7)})`;
+                ctx.lineWidth = 0.5;
                 ctx.stroke();
+                
+                // Add needle texture to each layer
+                ctx.strokeStyle = `rgb(${Math.floor(greenBase * 0.6)}, ${Math.floor(greenSecondary * 0.6)}, ${Math.floor((greenBase + 10) * 0.6)})`;
+                ctx.lineWidth = 0.5;
+                
+                // Horizontal needle lines
+                const needleLines = Math.floor(layerRadius / 4);
+                for (let n = 1; n <= needleLines; n++) {
+                    const needleY = layerTop + (layerHeight * n / (needleLines + 1));
+                    const needleWidth = layerRadius * (1 - n / (needleLines + 2));
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(-needleWidth, needleY);
+                    ctx.lineTo(needleWidth, needleY);
+                    ctx.stroke();
+                }
             }
             
-            // Pine tree highlights (fixed positions)
-            ctx.fillStyle = 'rgba(45, 90, 61, 0.6)';
-            for (let k = 0; k < 3; k++) {
-                const highlightY = -tree.height - tree.crownRadius * 0.5 + (k * tree.crownRadius * 0.4);
-                const highlightX = (k % 2 === 0 ? -1 : 1) * tree.crownRadius * 0.3;
+            // Add snow highlights for winter forest look
+            if (tree.heightCategory !== 'small') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                for (let layer = 0; layer < layerCount; layer++) {
+                    const snowY = -tree.height + (layer * layerHeight * 0.7) + layerHeight;
+                    const snowWidth = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6) * 0.8;
+                    
+                    ctx.beginPath();
+                    ctx.ellipse(0, snowY, snowWidth, snowWidth * 0.2, 0, 0, Math.PI);
+                    ctx.fill();
+                }
+            }
+            
+            // Pine tree highlights for depth
+            ctx.fillStyle = 'rgba(60, 120, 60, 0.4)';
+            for (let layer = 0; layer < Math.min(3, layerCount); layer++) {
+                const highlightY = -tree.height + (layer * layerHeight * 0.7) + layerHeight * 0.3;
+                const highlightX = (layer % 2 === 0 ? -1 : 1) * tree.crownRadius * 0.4;
+                
                 ctx.beginPath();
-                ctx.arc(highlightX, highlightY, tree.crownRadius * 0.1, 0, Math.PI * 2);
+                ctx.arc(highlightX, highlightY, tree.crownRadius * 0.08, 0, Math.PI * 2);
                 ctx.fill();
             }
             
