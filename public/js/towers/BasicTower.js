@@ -115,152 +115,146 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const gridSize = cellSize * 2; // 2x2 grid
         
-        // Tower dimensions for 3D appearance
-        const baseWidth = gridSize * 0.5;
-        const baseDepth = gridSize * 0.4;
-        const baseHeight = gridSize * 0.15;
-        const towerWidth = gridSize * 0.35;
-        const towerDepth = gridSize * 0.25;
-        const towerHeight = gridSize * 0.7;
-        const platformHeight = gridSize * 0.1;
-        const roofHeight = gridSize * 0.15;
+        // Tower dimensions for more spacious, lower structure
+        const baseWidth = gridSize * 0.45;
+        const baseDepth = gridSize * 0.35;
+        const baseHeight = gridSize * 0.12;
+        const towerWidth = gridSize * 0.25;
+        const towerDepth = gridSize * 0.2;
+        const towerHeight = gridSize * 0.45;
+        const platformWidth = gridSize * 0.35;
+        const platformDepth = gridSize * 0.28;
+        const platformHeight = gridSize * 0.08;
+        const roofHeight = gridSize * 0.12;
         
-        // Draw trees at base level within the grid
-        this.drawBaseTrees(ctx, gridSize);
+        // Draw environmental elements first
+        this.drawEnvironment(ctx, gridSize);
         
-        // Draw shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        // Improved shadow with proper perspective
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.save();
-        ctx.translate(this.x + 5, this.y + 8);
-        ctx.scale(1, 0.5);
-        ctx.fillRect(-baseWidth/2, -baseDepth/2, baseWidth, baseDepth + baseHeight + towerHeight);
+        ctx.translate(this.x, this.y);
+        ctx.transform(1, 0.3, 0.6, 0.2, 8, 12); // Realistic shadow projection
+        ctx.fillRect(-baseWidth/2, -baseDepth/2, baseWidth, baseDepth + towerHeight + platformHeight + roofHeight);
         ctx.restore();
         
-        // Stone base - draw from bottom up
+        // Stone base with better 3D perspective
         const baseY = this.y;
         
         // Base front face
-        const baseGradient = ctx.createLinearGradient(0, 0, 0, baseHeight);
-        baseGradient.addColorStop(0, '#A9A9A9');
-        baseGradient.addColorStop(1, '#696969');
+        const baseGradient = ctx.createLinearGradient(0, baseY - baseHeight, 0, baseY);
+        baseGradient.addColorStop(0, '#C0C0C0');
+        baseGradient.addColorStop(1, '#808080');
         ctx.fillStyle = baseGradient;
-        ctx.fillRect(this.x - baseWidth/2, baseY, baseWidth, baseHeight);
+        ctx.fillRect(this.x - baseWidth/2, baseY - baseHeight, baseWidth, baseHeight);
         
-        // Stone texture on front face
-        ctx.strokeStyle = '#555555';
+        // Stone blocks texture
+        ctx.strokeStyle = '#606060';
         ctx.lineWidth = 1;
         for (let i = 1; i < 3; i++) {
-            const y = baseY + (baseHeight * i / 3);
+            const y = baseY - baseHeight + (baseHeight * i / 3);
             ctx.beginPath();
             ctx.moveTo(this.x - baseWidth/2, y);
             ctx.lineTo(this.x + baseWidth/2, y);
             ctx.stroke();
         }
-        for (let i = 1; i < 4; i++) {
-            const x = this.x - baseWidth/2 + (baseWidth * i / 4);
+        for (let i = 1; i < 5; i++) {
+            const x = this.x - baseWidth/2 + (baseWidth * i / 5);
             ctx.beginPath();
-            ctx.moveTo(x, baseY);
-            ctx.lineTo(x, baseY + baseHeight);
+            ctx.moveTo(x, baseY - baseHeight);
+            ctx.lineTo(x, baseY);
             ctx.stroke();
         }
         
-        // Base right side (3D effect)
-        ctx.fillStyle = '#808080';
+        // Base right side with proper depth
+        ctx.fillStyle = '#909090';
         ctx.beginPath();
-        ctx.moveTo(this.x + baseWidth/2, baseY);
-        ctx.lineTo(this.x + baseWidth/2 + baseDepth/2, baseY - baseDepth/4);
-        ctx.lineTo(this.x + baseWidth/2 + baseDepth/2, baseY - baseDepth/4 + baseHeight);
-        ctx.lineTo(this.x + baseWidth/2, baseY + baseHeight);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Base top surface
-        ctx.fillStyle = '#D3D3D3';
-        ctx.beginPath();
-        ctx.moveTo(this.x - baseWidth/2, baseY);
-        ctx.lineTo(this.x - baseWidth/2 + baseDepth/2, baseY - baseDepth/4);
-        ctx.lineTo(this.x + baseWidth/2 + baseDepth/2, baseY - baseDepth/4);
+        ctx.moveTo(this.x + baseWidth/2, baseY - baseHeight);
+        ctx.lineTo(this.x + baseWidth/2 + baseDepth * 0.7, baseY - baseHeight - baseDepth * 0.4);
+        ctx.lineTo(this.x + baseWidth/2 + baseDepth * 0.7, baseY - baseDepth * 0.4);
         ctx.lineTo(this.x + baseWidth/2, baseY);
         ctx.closePath();
         ctx.fill();
         
-        // Stone lines on top
-        ctx.strokeStyle = '#A9A9A9';
-        ctx.lineWidth = 1;
+        // Base top surface
+        ctx.fillStyle = '#E0E0E0';
         ctx.beginPath();
-        ctx.moveTo(this.x - baseWidth/4, baseY - baseDepth/8);
-        ctx.lineTo(this.x + baseWidth/4, baseY - baseDepth/8);
-        ctx.stroke();
-        
-        // Wooden tower structure
-        const towerY = baseY - towerHeight;
-        
-        // Tower front face
-        const towerGradient = ctx.createLinearGradient(0, towerY, 0, baseY);
-        towerGradient.addColorStop(0, '#DEB887');
-        towerGradient.addColorStop(1, '#A0522D');
-        ctx.fillStyle = towerGradient;
-        ctx.fillRect(this.x - towerWidth/2, towerY, towerWidth, towerHeight);
-        
-        // Wooden planks on front
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        for (let i = 1; i < 6; i++) {
-            const y = towerY + (towerHeight * i / 6);
-            ctx.beginPath();
-            ctx.moveTo(this.x - towerWidth/2, y);
-            ctx.lineTo(this.x + towerWidth/2, y);
-            ctx.stroke();
-        }
-        
-        // Vertical support beams on front
-        ctx.strokeStyle = '#5D4037';
-        ctx.lineWidth = 3;
-        const beamPositions = [-towerWidth/3, 0, towerWidth/3];
-        beamPositions.forEach(pos => {
-            ctx.beginPath();
-            ctx.moveTo(this.x + pos, towerY);
-            ctx.lineTo(this.x + pos, baseY);
-            ctx.stroke();
-        });
-        
-        // Tower right side (3D effect)
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.moveTo(this.x + towerWidth/2, towerY);
-        ctx.lineTo(this.x + towerWidth/2 + towerDepth/2, towerY - towerDepth/4);
-        ctx.lineTo(this.x + towerWidth/2 + towerDepth/2, baseY - towerDepth/4);
-        ctx.lineTo(this.x + towerWidth/2, baseY);
+        ctx.moveTo(this.x - baseWidth/2, baseY - baseHeight);
+        ctx.lineTo(this.x - baseWidth/2 + baseDepth * 0.7, baseY - baseHeight - baseDepth * 0.4);
+        ctx.lineTo(this.x + baseWidth/2 + baseDepth * 0.7, baseY - baseHeight - baseDepth * 0.4);
+        ctx.lineTo(this.x + baseWidth/2, baseY - baseHeight);
         ctx.closePath();
         ctx.fill();
         
-        // Side planks
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 6; i++) {
-            const y1 = towerY + (towerHeight * i / 6);
-            const y2 = baseY - towerDepth/4 + (towerHeight * i / 6);
-            ctx.beginPath();
-            ctx.moveTo(this.x + towerWidth/2, y1);
-            ctx.lineTo(this.x + towerWidth/2 + towerDepth/2, y2);
-            ctx.stroke();
-        }
+        // Wooden tower structure - more open frame
+        const towerY = baseY - baseHeight - towerHeight;
+        
+        // Four corner posts instead of solid walls
+        const postWidth = 4;
+        const postPositions = [
+            { x: -towerWidth/2, depth: -towerDepth/2 },
+            { x: towerWidth/2, depth: -towerDepth/2 },
+            { x: -towerWidth/2, depth: towerDepth/2 },
+            { x: towerWidth/2, depth: towerDepth/2 }
+        ];
+        
+        postPositions.forEach((pos, index) => {
+            const postX = this.x + pos.x + pos.depth * 0.7;
+            const postY = baseY - baseHeight + pos.depth * -0.4;
+            
+            // Post front face
+            ctx.fillStyle = index < 2 ? '#DEB887' : '#CD853F'; // Front posts lighter
+            ctx.fillRect(postX - postWidth/2, towerY, postWidth, towerHeight);
+            
+            // Post side face for depth
+            if (index === 1 || index === 3) { // Right posts show side
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(postX + postWidth/2, towerY, 3, towerHeight);
+            }
+            
+            // Wood grain
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 6; i++) {
+                const grainY = towerY + (towerHeight * i / 6);
+                ctx.beginPath();
+                ctx.moveTo(postX - postWidth/2, grainY);
+                ctx.lineTo(postX + postWidth/2, grainY);
+                ctx.stroke();
+            }
+        });
+        
+        // Horizontal braces between posts
+        ctx.strokeStyle = '#A0522D';
+        ctx.lineWidth = 3;
+        
+        // Front horizontal braces
+        const braceY1 = towerY + towerHeight * 0.3;
+        const braceY2 = towerY + towerHeight * 0.7;
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - towerWidth/2, braceY1);
+        ctx.lineTo(this.x + towerWidth/2, braceY1);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - towerWidth/2, braceY2);
+        ctx.lineTo(this.x + towerWidth/2, braceY2);
+        ctx.stroke();
         
         // Platform
         const platformY = towerY - platformHeight;
-        const platformWidth = towerWidth * 1.2;
-        const platformDepth = towerDepth * 1.2;
         
         // Platform front edge
-        ctx.fillStyle = '#CD853F';
+        ctx.fillStyle = '#D2B48C';
         ctx.fillRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
         
         // Platform right side
-        ctx.fillStyle = '#A0522D';
+        ctx.fillStyle = '#BC9A6A';
         ctx.beginPath();
         ctx.moveTo(this.x + platformWidth/2, platformY);
-        ctx.lineTo(this.x + platformWidth/2 + platformDepth/2, platformY - platformDepth/4);
-        ctx.lineTo(this.x + platformWidth/2 + platformDepth/2, platformY - platformDepth/4 + platformHeight);
+        ctx.lineTo(this.x + platformWidth/2 + platformDepth * 0.7, platformY - platformDepth * 0.4);
+        ctx.lineTo(this.x + platformWidth/2 + platformDepth * 0.7, platformY - platformDepth * 0.4 + platformHeight);
         ctx.lineTo(this.x + platformWidth/2, platformY + platformHeight);
         ctx.closePath();
         ctx.fill();
@@ -269,8 +263,8 @@ export class BasicTower {
         ctx.fillStyle = '#DEB887';
         ctx.beginPath();
         ctx.moveTo(this.x - platformWidth/2, platformY);
-        ctx.lineTo(this.x - platformWidth/2 + platformDepth/2, platformY - platformDepth/4);
-        ctx.lineTo(this.x + platformWidth/2 + platformDepth/2, platformY - platformDepth/4);
+        ctx.lineTo(this.x - platformWidth/2 + platformDepth * 0.7, platformY - platformDepth * 0.4);
+        ctx.lineTo(this.x + platformWidth/2 + platformDepth * 0.7, platformY - platformDepth * 0.4);
         ctx.lineTo(this.x + platformWidth/2, platformY);
         ctx.closePath();
         ctx.fill();
@@ -278,61 +272,62 @@ export class BasicTower {
         // Platform planks
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 5; i++) {
-            const ratio = i / 5;
+        for (let i = 1; i < 6; i++) {
+            const ratio = i / 6;
             ctx.beginPath();
             ctx.moveTo(
-                this.x - platformWidth/2 + platformDepth/2 * ratio,
-                platformY - platformDepth/4 * ratio
+                this.x - platformWidth/2 + platformDepth * 0.7 * ratio,
+                platformY - platformDepth * 0.4 * ratio
             );
             ctx.lineTo(
-                this.x + platformWidth/2 + platformDepth/2 * ratio,
-                platformY - platformDepth/4 * ratio
+                this.x + platformWidth/2 + platformDepth * 0.7 * ratio,
+                platformY - platformDepth * 0.4 * ratio
             );
             ctx.stroke();
         }
         
-        // Simple roof
+        // Simple roof with supports
         const roofY = platformY - roofHeight;
-        const roofWidth = platformWidth * 0.8;
-        const roofDepth = platformDepth * 0.8;
+        const roofWidth = platformWidth * 0.9;
+        const roofDepth = platformDepth * 0.9;
         
         // Roof support posts
         ctx.fillStyle = '#654321';
-        const postPositions = [
-            { x: -roofWidth/3, depth: -roofDepth/3 },
-            { x: roofWidth/3, depth: -roofDepth/3 },
-            { x: -roofWidth/3, depth: roofDepth/3 },
-            { x: roofWidth/3, depth: roofDepth/3 }
-        ];
-        
-        postPositions.forEach(pos => {
-            ctx.fillRect(
-                this.x + pos.x + pos.depth/2,
-                platformY + pos.depth/4 - roofHeight,
-                3,
-                roofHeight
-            );
-        });
+        ctx.fillRect(this.x - roofWidth/3, roofY, 3, roofHeight);
+        ctx.fillRect(this.x + roofWidth/3, roofY, 3, roofHeight);
+        ctx.fillRect(this.x - roofWidth/3 + roofDepth * 0.35, roofY - roofDepth * 0.2, 3, roofHeight);
+        ctx.fillRect(this.x + roofWidth/3 + roofDepth * 0.35, roofY - roofDepth * 0.2, 3, roofHeight);
         
         // Roof top surface
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
         ctx.moveTo(this.x - roofWidth/2, roofY);
-        ctx.lineTo(this.x - roofWidth/2 + roofDepth/2, roofY - roofDepth/4);
-        ctx.lineTo(this.x + roofWidth/2 + roofDepth/2, roofY - roofDepth/4);
+        ctx.lineTo(this.x - roofWidth/2 + roofDepth * 0.7, roofY - roofDepth * 0.4);
+        ctx.lineTo(this.x + roofWidth/2 + roofDepth * 0.7, roofY - roofDepth * 0.4);
         ctx.lineTo(this.x + roofWidth/2, roofY);
         ctx.closePath();
         ctx.fill();
         
-        // Roof edge
+        // Roof planks
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const ratio = i / 4;
+            ctx.beginPath();
+            ctx.moveTo(
+                this.x - roofWidth/2 + roofDepth * 0.7 * ratio,
+                roofY - roofDepth * 0.4 * ratio
+            );
+            ctx.lineTo(
+                this.x + roofWidth/2 + roofDepth * 0.7 * ratio,
+                roofY - roofDepth * 0.4 * ratio
+            );
+            ctx.stroke();
+        }
         
         // Render defender on platform
-        const defenderX = this.x;
-        const defenderY = platformY - 12;
+        const defenderX = this.x + platformDepth * 0.2;
+        const defenderY = platformY - platformDepth * 0.1 - 10;
         
         ctx.save();
         ctx.translate(defenderX, defenderY);
@@ -340,53 +335,53 @@ export class BasicTower {
         // Face target if exists
         if (this.target) {
             const targetAngle = Math.atan2(this.target.y - defenderY, this.target.x - defenderX);
-            ctx.rotate(targetAngle + Math.PI/2); // Adjust for front-facing
+            ctx.rotate(targetAngle);
         }
         
         // Defender body
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-3, 0, 6, 10);
+        ctx.fillRect(-2, -3, 4, 8);
         
         // Head
         ctx.fillStyle = '#DDBEA9';
         ctx.beginPath();
-        ctx.arc(0, -2, 3, 0, Math.PI * 2);
+        ctx.arc(0, -6, 2.5, 0, Math.PI * 2);
         ctx.fill();
         
         // Helmet
         ctx.fillStyle = '#696969';
         ctx.beginPath();
-        ctx.arc(0, -2, 3.5, Math.PI, Math.PI * 2);
+        ctx.arc(0, -6, 3, Math.PI, Math.PI * 2);
         ctx.fill();
         
         // Arms
         ctx.strokeStyle = '#DDBEA9';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         
         const throwingDefender = this.defenders[0];
         const armAngle = this.target && this.throwingDefender === 0 ? 
             -Math.PI / 2 - throwingDefender.armRaised * Math.PI / 3 : 
-            Math.sin(Date.now() * 0.002) * 0.3;
+            Math.sin(Date.now() * 0.002) * 0.2;
         
         // Throwing arm
         ctx.beginPath();
-        ctx.moveTo(-2, 2);
-        ctx.lineTo(-2 + Math.cos(armAngle) * 4, 2 + Math.sin(armAngle) * 4);
+        ctx.moveTo(-1, -2);
+        ctx.lineTo(-1 + Math.cos(armAngle) * 3.5, -2 + Math.sin(armAngle) * 3.5);
         ctx.stroke();
         
         // Other arm
         ctx.beginPath();
-        ctx.moveTo(2, 2);
-        ctx.lineTo(5, 5);
+        ctx.moveTo(1, -2);
+        ctx.lineTo(3, 1);
         ctx.stroke();
         
         // Rock in hand when ready to throw
         if (throwingDefender.armRaised > 0.5) {
-            const rockX = -2 + Math.cos(armAngle) * 5;
-            const rockY = 2 + Math.sin(armAngle) * 5;
+            const rockX = -1 + Math.cos(armAngle) * 4;
+            const rockY = -2 + Math.sin(armAngle) * 4;
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(rockX, rockY, 1.5, 0, Math.PI * 2);
+            ctx.arc(rockX, rockY, 1, 0, Math.PI * 2);
             ctx.fill();
         }
         
@@ -435,13 +430,12 @@ export class BasicTower {
         }
     }
     
-    drawBaseTrees(ctx, gridSize) {
-        // Trees positioned around the base at ground level
+    drawEnvironment(ctx, gridSize) {
+        // Trees positioned around the base within 2x2 grid
         const trees = [
-            { x: -gridSize * 0.4, y: gridSize * 0.3, size: 0.7 },
-            { x: gridSize * 0.35, y: gridSize * 0.35, size: 0.8 },
-            { x: -gridSize * 0.35, y: -gridSize * 0.4, size: 0.6 },
-            { x: gridSize * 0.4, y: -gridSize * 0.3, size: 0.9 }
+            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 0.6 },
+            { x: gridSize * 0.4, y: gridSize * 0.4, size: 0.7 },
+            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 0.5 }
         ];
         
         trees.forEach(tree => {
@@ -452,32 +446,20 @@ export class BasicTower {
             // Tree shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.save();
-            ctx.translate(treeX + 3, treeY + 3);
-            ctx.scale(1, 0.3);
+            ctx.translate(treeX, treeY);
+            ctx.transform(1, 0.3, 0.6, 0.2, 3, 3);
             ctx.fillRect(-3 * scale, -2 * scale, 6 * scale, 4 * scale);
             ctx.restore();
             
             // Tree trunk
             ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - 1.5 * scale, treeY, 3 * scale, -8 * scale);
+            ctx.fillRect(treeX - 1.5 * scale, treeY - 8 * scale, 3 * scale, 8 * scale);
             
-            // Trunk texture
-            ctx.strokeStyle = '#5D4037';
-            ctx.lineWidth = 1;
-            for (let i = 1; i < 3; i++) {
-                const lineY = treeY - (8 * scale * i / 3);
-                ctx.beginPath();
-                ctx.moveTo(treeX - 1.5 * scale, lineY);
-                ctx.lineTo(treeX + 1.5 * scale, lineY);
-                ctx.stroke();
-            }
-            
-            // Pine tree layers
+            // Pine layers
             const layers = [
-                { y: -12 * scale, width: 10 * scale, color: '#0F3B0F' },
-                { y: -9 * scale, width: 8 * scale, color: '#1a4a1a' },
-                { y: -6 * scale, width: 6 * scale, color: '#228B22' },
-                { y: -3 * scale, width: 4 * scale, color: '#32CD32' }
+                { y: -10 * scale, width: 8 * scale, color: '#0F3B0F' },
+                { y: -7 * scale, width: 6 * scale, color: '#228B22' },
+                { y: -4 * scale, width: 4 * scale, color: '#32CD32' }
             ];
             
             layers.forEach(layer => {
@@ -488,12 +470,94 @@ export class BasicTower {
                 ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.6);
                 ctx.closePath();
                 ctx.fill();
-                
-                // Tree outline
-                ctx.strokeStyle = '#0F3B0F';
-                ctx.lineWidth = 1;
-                ctx.stroke();
             });
+        });
+        
+        // Bushes around the base
+        const bushes = [
+            { x: -gridSize * 0.3, y: gridSize * 0.2, size: 0.4 },
+            { x: gridSize * 0.25, y: -gridSize * 0.25, size: 0.3 },
+            { x: -gridSize * 0.2, y: -gridSize * 0.3, size: 0.35 },
+            { x: gridSize * 0.35, y: gridSize * 0.15, size: 0.3 }
+        ];
+        
+        bushes.forEach(bush => {
+            const bushX = this.x + bush.x;
+            const bushY = this.y + bush.y;
+            const scale = bush.size;
+            
+            // Bush shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.save();
+            ctx.translate(bushX + 2, bushY + 2);
+            ctx.scale(1.2, 0.3);
+            ctx.beginPath();
+            ctx.arc(0, 0, 4 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Bush body
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(bushX, bushY - 2 * scale, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(bushX - 1 * scale, bushY - 1 * scale, 2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(bushX + 1 * scale, bushY - 1 * scale, 2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Rocks scattered around
+        const rocks = [
+            { x: -gridSize * 0.35, y: gridSize * 0.45, size: 0.4 },
+            { x: gridSize * 0.45, y: -gridSize * 0.15, size: 0.3 },
+            { x: -gridSize * 0.15, y: -gridSize * 0.45, size: 0.25 },
+            { x: gridSize * 0.2, y: gridSize * 0.3, size: 0.35 }
+        ];
+        
+        rocks.forEach(rock => {
+            const rockX = this.x + rock.x;
+            const rockY = this.y + rock.y;
+            const scale = rock.size;
+            
+            // Rock shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.save();
+            ctx.translate(rockX + 1, rockY + 1);
+            ctx.scale(1, 0.4);
+            ctx.beginPath();
+            ctx.arc(0, 0, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Rock
+            const rockGradient = ctx.createRadialGradient(rockX - 1, rockY - 1, 0, rockX, rockY, 3 * scale);
+            rockGradient.addColorStop(0, '#C0C0C0');
+            rockGradient.addColorStop(1, '#808080');
+            
+            ctx.fillStyle = rockGradient;
+            ctx.beginPath();
+            // Irregular rock shape
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const variance = 0.7 + Math.random() * 0.3;
+                const x = rockX + Math.cos(angle) * 3 * scale * variance;
+                const y = rockY + Math.sin(angle) * 2 * scale * variance;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = '#696969';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         });
     }
     
