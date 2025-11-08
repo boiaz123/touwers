@@ -115,17 +115,17 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const gridSize = cellSize * 2; // 2x2 grid
         
-        // Tower dimensions for more spacious, lower structure
+        // Tower dimensions - bigger platform to match beams
         const baseWidth = gridSize * 0.45;
         const baseDepth = gridSize * 0.35;
         const baseHeight = gridSize * 0.12;
-        const towerWidth = gridSize * 0.25;
-        const towerDepth = gridSize * 0.2;
+        const towerWidth = gridSize * 0.35; // Increased to match platform
+        const towerDepth = gridSize * 0.28; // Increased to match platform
         const towerHeight = gridSize * 0.45;
-        const platformWidth = gridSize * 0.35;
-        const platformDepth = gridSize * 0.28;
+        const platformWidth = gridSize * 0.4; // Bigger platform
+        const platformDepth = gridSize * 0.32; // Bigger platform
         const platformHeight = gridSize * 0.08;
-        const roofHeight = gridSize * 0.35; // Much higher roof
+        const roofHeight = gridSize * 0.35;
         
         // Draw environmental elements first
         this.drawEnvironment(ctx, gridSize);
@@ -189,7 +189,7 @@ export class BasicTower {
         // Platform positioned first to align beams properly
         const platformY = baseY - baseHeight - towerHeight - platformHeight;
         
-        // Wooden tower structure - beams aligned with platform edges
+        // Wooden tower structure - beams aligned with bigger platform
         const towerY = baseY - baseHeight - towerHeight;
         
         // Four corner posts perfectly aligned with platform corners
@@ -234,6 +234,7 @@ export class BasicTower {
         const braceY1 = towerY + towerHeight * 0.3;
         const braceY2 = towerY + towerHeight * 0.7;
         
+        // Front and back braces
         ctx.beginPath();
         ctx.moveTo(this.x - platformWidth/2 + postWidth/2, braceY1);
         ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY1);
@@ -242,6 +243,12 @@ export class BasicTower {
         ctx.beginPath();
         ctx.moveTo(this.x - platformWidth/2 + postWidth/2, braceY2);
         ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY2);
+        ctx.stroke();
+        
+        // Side braces with perspective
+        ctx.beginPath();
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2 + platformDepth/2 * 0.7, braceY1 - platformDepth/2 * 0.4);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2 + platformDepth/2 * 0.7, braceY1 - platformDepth/2 * 0.4);
         ctx.stroke();
         
         // Platform front edge
@@ -285,30 +292,48 @@ export class BasicTower {
             ctx.stroke();
         }
         
-        // Much higher roof with supports
+        // Bigger and more robust roof
         const roofY = platformY - roofHeight;
-        const roofWidth = platformWidth * 0.9;
-        const roofDepth = platformDepth * 0.9;
+        const roofWidth = platformWidth * 1.1; // Bigger roof
+        const roofDepth = platformDepth * 1.1; // Bigger roof
         
-        // Roof support posts - much taller
+        // Roof support posts - more robust structure
         ctx.fillStyle = '#654321';
         const roofPostPositions = [
-            { x: -roofWidth/3, depth: 0 },
-            { x: roofWidth/3, depth: 0 },
-            { x: -roofWidth/3, depth: roofDepth * 0.7 },
-            { x: roofWidth/3, depth: roofDepth * 0.7 }
+            { x: -roofWidth/3, depth: -roofDepth/3 },
+            { x: roofWidth/3, depth: -roofDepth/3 },
+            { x: -roofWidth/3, depth: roofDepth/3 },
+            { x: roofWidth/3, depth: roofDepth/3 },
+            { x: 0, depth: 0 } // Center support post
         ];
         
         roofPostPositions.forEach(pos => {
-            ctx.fillRect(
-                this.x + pos.x + pos.depth * 0.5,
-                platformY + pos.depth * -0.2 - roofHeight,
-                3,
-                roofHeight
-            );
+            const postX = this.x + pos.x + pos.depth * 0.7;
+            const postYPos = platformY + pos.depth * -0.4;
+            ctx.fillRect(postX - 2, postYPos - roofHeight, 4, roofHeight);
+            
+            // Post side for depth
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(postX + 2, postYPos - roofHeight, 2, roofHeight);
+            ctx.fillStyle = '#654321';
         });
         
-        // Roof top surface
+        // Roof beams connecting posts
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 4;
+        
+        // Main roof beams
+        ctx.beginPath();
+        ctx.moveTo(this.x - roofWidth/3, roofY);
+        ctx.lineTo(this.x + roofWidth/3, roofY);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - roofWidth/3 + roofDepth/3 * 0.7, roofY - roofDepth/3 * 0.4);
+        ctx.lineTo(this.x + roofWidth/3 + roofDepth/3 * 0.7, roofY - roofDepth/3 * 0.4);
+        ctx.stroke();
+        
+        // Roof top surface - bigger
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
         ctx.moveTo(this.x - roofWidth/2, roofY);
@@ -318,11 +343,21 @@ export class BasicTower {
         ctx.closePath();
         ctx.fill();
         
-        // Roof planks
+        // Roof right side
+        ctx.fillStyle = '#654321';
+        ctx.beginPath();
+        ctx.moveTo(this.x + roofWidth/2, roofY);
+        ctx.lineTo(this.x + roofWidth/2 + roofDepth * 0.7, roofY - roofDepth * 0.4);
+        ctx.lineTo(this.x + roofWidth/2 + roofDepth * 0.7, roofY - roofDepth * 0.4 + 8);
+        ctx.lineTo(this.x + roofWidth/2, roofY + 8);
+        ctx.closePath();
+        ctx.fill();
+        
+        // More detailed roof planks
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const ratio = i / 4;
+        for (let i = 1; i < 6; i++) {
+            const ratio = i / 6;
             ctx.beginPath();
             ctx.moveTo(
                 this.x - roofWidth/2 + roofDepth * 0.7 * ratio,
@@ -441,21 +476,23 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // More bigger and higher trees positioned around the base within 2x2 grid
+        // More natural trees with proper trunks
         const trees = [
-            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.3 },
-            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.5 },
-            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.1 },
-            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.2 },
-            { x: -gridSize * 0.15, y: gridSize * 0.45, size: 0.9 },
-            { x: gridSize * 0.45, y: -gridSize * 0.1, size: 1.0 },
-            { x: -gridSize * 0.5, y: -gridSize * 0.1, size: 1.4 }
+            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.3, trunkVariation: 0.8 },
+            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.5, trunkVariation: 1.2 },
+            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.1, trunkVariation: 0.9 },
+            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.2, trunkVariation: 1.0 },
+            { x: -gridSize * 0.15, y: gridSize * 0.45, size: 0.9, trunkVariation: 0.7 },
+            { x: gridSize * 0.45, y: -gridSize * 0.1, size: 1.0, trunkVariation: 0.8 },
+            { x: -gridSize * 0.5, y: -gridSize * 0.1, size: 1.4, trunkVariation: 1.1 },
+            { x: gridSize * 0.1, y: gridSize * 0.5, size: 0.8, trunkVariation: 0.6 }
         ];
         
-        trees.forEach(tree => {
+        trees.forEach((tree, index) => {
             const treeX = this.x + tree.x;
             const treeY = this.y + tree.y;
             const scale = tree.size;
+            const trunkVar = tree.trunkVariation;
             
             // Tree shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
@@ -465,52 +502,111 @@ export class BasicTower {
             ctx.fillRect(-5 * scale, -4 * scale, 10 * scale, 8 * scale);
             ctx.restore();
             
-            // Tree trunk - bigger
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - 2.5 * scale, treeY - 15 * scale, 5 * scale, 15 * scale);
+            // More natural tree trunk with variation
+            const trunkWidth = 2.5 * scale * trunkVar;
+            const trunkHeight = 15 * scale;
             
-            // Trunk texture
-            ctx.strokeStyle = '#5D4037';
+            // Trunk base (wider)
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(treeX - trunkWidth * 0.6, treeY - 2, trunkWidth * 1.2, 4);
+            
+            // Main trunk with slight taper
+            for (let i = 0; i < trunkHeight; i += 2) {
+                const heightRatio = i / trunkHeight;
+                const currentWidth = trunkWidth * (1 - heightRatio * 0.3);
+                const trunkGradient = ctx.createLinearGradient(
+                    treeX - currentWidth, treeY - i,
+                    treeX + currentWidth, treeY - i
+                );
+                trunkGradient.addColorStop(0, '#5D4037');
+                trunkGradient.addColorStop(0.3, '#654321');
+                trunkGradient.addColorStop(0.7, '#654321');
+                trunkGradient.addColorStop(1, '#4A2C17');
+                
+                ctx.fillStyle = trunkGradient;
+                ctx.fillRect(treeX - currentWidth/2, treeY - i - 2, currentWidth, 2);
+            }
+            
+            // Trunk texture and bark details
+            ctx.strokeStyle = '#4A2C17';
             ctx.lineWidth = 1;
-            for (let i = 1; i < 5; i++) {
-                const lineY = treeY - (15 * scale * i / 5);
+            for (let i = 1; i < 8; i++) {
+                const lineY = treeY - (trunkHeight * i / 8);
+                const lineVariation = Math.sin(index + i) * 0.5;
                 ctx.beginPath();
-                ctx.moveTo(treeX - 2.5 * scale, lineY);
-                ctx.lineTo(treeX + 2.5 * scale, lineY);
+                ctx.moveTo(treeX - trunkWidth/2 + lineVariation, lineY);
+                ctx.lineTo(treeX + trunkWidth/2 + lineVariation, lineY);
                 ctx.stroke();
             }
             
-            // Pine layers - much bigger and higher
+            // Vertical bark lines
+            for (let i = 0; i < 3; i++) {
+                const xPos = treeX - trunkWidth/2 + (trunkWidth * i / 2);
+                ctx.beginPath();
+                ctx.moveTo(xPos, treeY);
+                ctx.lineTo(xPos, treeY - trunkHeight * 0.7);
+                ctx.stroke();
+            }
+            
+            // Pine layers - more natural and lush
             const layers = [
-                { y: -25 * scale, width: 18 * scale, color: '#0F3B0F' },
-                { y: -20 * scale, width: 16 * scale, color: '#1a4a1a' },
-                { y: -15 * scale, width: 14 * scale, color: '#228B22' },
-                { y: -10 * scale, width: 12 * scale, color: '#32CD32' },
-                { y: -5 * scale, width: 10 * scale, color: '#90EE90' },
-                { y: -2 * scale, width: 8 * scale, color: '#98FB98' }
+                { y: -28 * scale, width: 20 * scale, color: '#0F3B0F' },
+                { y: -23 * scale, width: 18 * scale, color: '#1a4a1a' },
+                { y: -18 * scale, width: 16 * scale, color: '#228B22' },
+                { y: -13 * scale, width: 14 * scale, color: '#32CD32' },
+                { y: -8 * scale, width: 12 * scale, color: '#90EE90' },
+                { y: -4 * scale, width: 10 * scale, color: '#98FB98' },
+                { y: -1 * scale, width: 8 * scale, color: '#ADFF2F' }
             ];
             
-            layers.forEach(layer => {
+            layers.forEach((layer, layerIndex) => {
+                // Main layer
                 ctx.fillStyle = layer.color;
                 ctx.beginPath();
                 ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.6);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.6);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.65);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.65);
                 ctx.closePath();
                 ctx.fill();
+                
+                // Add some irregularity and extra branches
+                const branchCount = 3 + Math.floor(scale * 2);
+                for (let b = 0; b < branchCount; b++) {
+                    const branchAngle = (b / branchCount) * Math.PI * 2;
+                    const branchLength = layer.width * 0.3 * (0.5 + Math.random() * 0.5);
+                    const branchX = treeX + Math.cos(branchAngle) * branchLength;
+                    const branchY = treeY + layer.y + layer.width * 0.4;
+                    
+                    ctx.fillStyle = layer.color;
+                    ctx.beginPath();
+                    ctx.arc(branchX, branchY, 2 * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 
                 // Tree outline
                 ctx.strokeStyle = '#0F3B0F';
                 ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(treeX, treeY + layer.y);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.65);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.65);
+                ctx.closePath();
                 ctx.stroke();
             });
             
-            // Tree highlights
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.2)';
+            // Tree highlights and light spots
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
             ctx.beginPath();
-            ctx.moveTo(treeX - 3 * scale, treeY - 22 * scale);
-            ctx.lineTo(treeX - 7 * scale, treeY - 15 * scale);
-            ctx.lineTo(treeX + 3 * scale, treeY - 18 * scale);
+            ctx.moveTo(treeX - 3 * scale, treeY - 25 * scale);
+            ctx.lineTo(treeX - 8 * scale, treeY - 18 * scale);
+            ctx.lineTo(treeX + 2 * scale, treeY - 20 * scale);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(treeX + 2 * scale, treeY - 15 * scale);
+            ctx.lineTo(treeX + 6 * scale, treeY - 10 * scale);
+            ctx.lineTo(treeX - 1 * scale, treeY - 12 * scale);
             ctx.closePath();
             ctx.fill();
         });
