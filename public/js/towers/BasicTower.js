@@ -115,197 +115,188 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const gridSize = cellSize * 2; // 2x2 grid
         
-        // Draw pine trees first (background)
+        // Draw pine trees around the tower first
         this.drawPineTrees(ctx, gridSize);
         
-        // Compact tower dimensions - everything centered and tight
-        const towerWidth = gridSize * 0.5;
-        const towerDepth = gridSize * 0.35;
-        const towerHeight = gridSize * 0.7;
-        const baseHeight = gridSize * 0.1;
+        // Tower dimensions - simple and clean
+        const towerSize = gridSize * 0.6;
+        const towerHeight = gridSize * 0.8;
         
-        // Tower shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        // Draw tower shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x + 2, this.y + 2);
-        ctx.fillRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth + baseHeight);
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x + 3, this.y + 3);
+        ctx.fillRect(-towerSize/2, -towerSize/2, towerSize, towerSize);
         ctx.restore();
         
-        // Base platform
+        // Draw wooden base platform
+        const baseY = this.y;
         ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x, baseY);
         
-        const baseGradient = ctx.createLinearGradient(-towerWidth/2, -towerDepth/2, towerWidth/2, towerDepth/2);
-        baseGradient.addColorStop(0, '#8B4513');
-        baseGradient.addColorStop(1, '#654321');
+        // Base wood texture
+        const baseGradient = ctx.createLinearGradient(-towerSize/2, -towerSize/2, towerSize/2, towerSize/2);
+        baseGradient.addColorStop(0, '#D2B48C');
+        baseGradient.addColorStop(0.5, '#DEB887');
+        baseGradient.addColorStop(1, '#CD853F');
         ctx.fillStyle = baseGradient;
-        ctx.fillRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth);
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-towerWidth/2, -towerDepth/2, towerWidth, towerDepth);
+        ctx.fillRect(-towerSize/2, -towerSize/2, towerSize, towerSize);
         
-        ctx.restore();
-        
-        // Base left side
-        ctx.save();
-        ctx.setTransform(0, 0.5, -1, 0.5, this.x, this.y);
-        ctx.fillStyle = '#654321';
-        ctx.fillRect(0, 0, towerDepth/2, baseHeight);
-        ctx.restore();
-        
-        // Base right side
-        ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
-        ctx.fillStyle = '#5D4E37';
-        ctx.fillRect(towerWidth/2, 0, 3, baseHeight);
-        ctx.restore();
-        
-        // Main tower - slightly smaller than base
-        const mainWidth = towerWidth * 0.8;
-        const mainDepth = towerDepth * 0.8;
-        const towerY = this.y - towerHeight;
-        
-        // Tower left face
-        ctx.save();
-        ctx.setTransform(0, 0.5, -1, 0.5, this.x, this.y);
-        const leftGradient = ctx.createLinearGradient(0, -towerHeight, mainDepth/2, 0);
-        leftGradient.addColorStop(0, '#DEB887');
-        leftGradient.addColorStop(1, '#A0522D');
-        ctx.fillStyle = leftGradient;
-        ctx.fillRect(0, -towerHeight, mainDepth/2, towerHeight);
-        
-        // Wooden planks on left
+        // Wood planks on base
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
-        for (let i = 1; i <= 4; i++) {
-            const plankY = -towerHeight + (towerHeight * i / 5);
+        for (let i = 1; i < 4; i++) {
+            const plankY = -towerSize/2 + (towerSize * i / 4);
             ctx.beginPath();
-            ctx.moveTo(0, plankY);
-            ctx.lineTo(mainDepth/2, plankY);
+            ctx.moveTo(-towerSize/2, plankY);
+            ctx.lineTo(towerSize/2, plankY);
             ctx.stroke();
         }
         
-        ctx.restore();
-        
-        // Tower right face
-        ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, this.y);
-        const rightGradient = ctx.createLinearGradient(mainWidth/2, -towerHeight, mainWidth/2 + 4, 0);
-        rightGradient.addColorStop(0, '#CD853F');
-        rightGradient.addColorStop(1, '#8B7355');
-        ctx.fillStyle = rightGradient;
-        ctx.fillRect(mainWidth/2, -towerHeight, 4, towerHeight);
-        
-        // Wooden planks on right
+        // Base border
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 1; i <= 4; i++) {
-            const plankY = -towerHeight + (towerHeight * i / 5);
-            ctx.beginPath();
-            ctx.moveTo(mainWidth/2, plankY);
-            ctx.lineTo(mainWidth/2 + 4, plankY);
-            ctx.stroke();
-        }
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-towerSize/2, -towerSize/2, towerSize, towerSize);
         
         ctx.restore();
         
-        // Tower top
-        ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY);
+        // Draw vertical wooden posts (4 corners)
+        const postWidth = 4;
+        const postPositions = [
+            { x: -towerSize/2 + postWidth/2, y: -towerSize/2 + postWidth/2 },
+            { x: towerSize/2 - postWidth/2, y: -towerSize/2 + postWidth/2 },
+            { x: -towerSize/2 + postWidth/2, y: towerSize/2 - postWidth/2 },
+            { x: towerSize/2 - postWidth/2, y: towerSize/2 - postWidth/2 }
+        ];
         
-        const topGradient = ctx.createLinearGradient(-mainWidth/2, -mainDepth/2, mainWidth/2, mainDepth/2);
-        topGradient.addColorStop(0, '#DEB887');
-        topGradient.addColorStop(1, '#CD853F');
-        ctx.fillStyle = topGradient;
-        ctx.fillRect(-mainWidth/2, -mainDepth/2, mainWidth, mainDepth);
+        postPositions.forEach(pos => {
+            // Post shadow side
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(this.x + pos.x + 1, baseY + pos.y - towerHeight, postWidth-1, towerHeight);
+            
+            // Post main side
+            ctx.fillStyle = '#A0522D';
+            ctx.fillRect(this.x + pos.x, baseY + pos.y - towerHeight, postWidth-1, towerHeight);
+            
+            // Post wood grain
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const grainY = baseY + pos.y - towerHeight + (towerHeight * i / 4);
+                ctx.beginPath();
+                ctx.moveTo(this.x + pos.x, grainY);
+                ctx.lineTo(this.x + pos.x + postWidth-1, grainY);
+                ctx.stroke();
+            }
+        });
+        
+        // Draw platform top
+        const platformY = baseY - towerHeight;
+        ctx.save();
+        ctx.setTransform(1, 0.5, 0, 0.5, this.x, platformY);
+        
+        // Platform wood
+        const platformGradient = ctx.createLinearGradient(-towerSize/2, -towerSize/2, towerSize/2, towerSize/2);
+        platformGradient.addColorStop(0, '#DEB887');
+        platformGradient.addColorStop(0.5, '#D2B48C');
+        platformGradient.addColorStop(1, '#BC9A6A');
+        ctx.fillStyle = platformGradient;
+        ctx.fillRect(-towerSize/2, -towerSize/2, towerSize, towerSize);
         
         // Platform planks
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankY = -mainDepth/2 + (mainDepth * i / 4);
+        for (let i = 1; i < 5; i++) {
+            const plankX = -towerSize/2 + (towerSize * i / 5);
             ctx.beginPath();
-            ctx.moveTo(-mainWidth/2, plankY);
-            ctx.lineTo(mainWidth/2, plankY);
+            ctx.moveTo(plankX, -towerSize/2);
+            ctx.lineTo(plankX, towerSize/2);
             ctx.stroke();
         }
         
+        // Platform border
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-mainWidth/2, -mainDepth/2, mainWidth, mainDepth);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-towerSize/2, -towerSize/2, towerSize, towerSize);
         
         ctx.restore();
         
-        // Battlements
-        ctx.save();
-        ctx.setTransform(1, 0.5, 0, 0.5, this.x, towerY - 6);
+        // Draw simple wooden railings
+        const railingHeight = 8;
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 3;
         
-        ctx.fillStyle = '#8B4513';
-        const battlementSize = mainWidth / 5;
-        for (let i = 0; i < 5; i += 2) {
-            const battlementX = -mainWidth/2 + i * battlementSize;
-            ctx.fillRect(battlementX, -3, battlementSize, 6);
-        }
+        // Front railing
+        ctx.beginPath();
+        ctx.moveTo(this.x - towerSize/2, platformY);
+        ctx.lineTo(this.x - towerSize/2, platformY - railingHeight);
+        ctx.lineTo(this.x + towerSize/2, platformY - railingHeight);
+        ctx.lineTo(this.x + towerSize/2, platformY);
+        ctx.stroke();
         
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i += 2) {
-            const battlementX = -mainWidth/2 + i * battlementSize;
-            ctx.strokeRect(battlementX, -3, battlementSize, 6);
-        }
+        // Side railings
+        ctx.beginPath();
+        ctx.moveTo(this.x - towerSize/2, platformY - towerSize/4);
+        ctx.lineTo(this.x - towerSize/2, platformY - towerSize/4 - railingHeight);
+        ctx.stroke();
         
-        ctx.restore();
+        ctx.beginPath();
+        ctx.moveTo(this.x + towerSize/2, platformY - towerSize/4);
+        ctx.lineTo(this.x + towerSize/2, platformY - towerSize/4 - railingHeight);
+        ctx.stroke();
         
-        // Render defenders (positioned tighter on the platform)
+        // Render defenders on the platform
         this.defenders.forEach((defender, index) => {
-            const defenderRadius = mainWidth * 0.3;
+            const defenderRadius = towerSize * 0.25;
             const defenderX = this.x + Math.cos(defender.angle) * defenderRadius;
-            const defenderY = towerY + Math.sin(defender.angle) * (mainDepth * 0.1) - 3;
+            const defenderY = platformY + Math.sin(defender.angle) * (towerSize * 0.1) - 5;
             
             ctx.save();
             ctx.translate(defenderX, defenderY);
             
             // Defender body
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-1, -3, 2, 4);
+            ctx.fillRect(-2, -4, 4, 6);
             
             // Head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -4.5, 1, 0, Math.PI * 2);
+            ctx.arc(0, -6, 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Helmet
+            // Simple helmet
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -4.5, 1.2, Math.PI, Math.PI * 2);
+            ctx.arc(0, -6, 2.5, Math.PI, Math.PI * 2);
             ctx.fill();
             
             // Arms
             ctx.strokeStyle = '#DDBEA9';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 2;
             
             const armAngle = this.target && index === this.throwingDefender ? 
-                -Math.PI / 4 - defender.armRaised * Math.PI / 6 : 
-                Math.sin(Date.now() * 0.001 + index) * 0.1;
+                -Math.PI / 3 - defender.armRaised * Math.PI / 4 : 
+                Math.sin(Date.now() * 0.001 + index) * 0.2;
             
+            // Throwing arm
             ctx.beginPath();
-            ctx.moveTo(0, -2);
-            ctx.lineTo(Math.cos(armAngle) * 2, -2 + Math.sin(armAngle) * 2);
+            ctx.moveTo(0, -3);
+            ctx.lineTo(Math.cos(armAngle) * 3, -3 + Math.sin(armAngle) * 3);
             ctx.stroke();
             
+            // Other arm
             ctx.beginPath();
-            ctx.moveTo(0, -2);
-            ctx.lineTo(-1.5, 0);
+            ctx.moveTo(0, -3);
+            ctx.lineTo(-2, -1);
             ctx.stroke();
             
-            // Rock in hand
-            if (defender.armRaised > 0.7) {
-                const rockX = Math.cos(armAngle) * 2.5;
-                const rockY = -2 + Math.sin(armAngle) * 2.5;
+            // Rock in hand when ready to throw
+            if (defender.armRaised > 0.5) {
+                const rockX = Math.cos(armAngle) * 3.5;
+                const rockY = -3 + Math.sin(armAngle) * 3.5;
                 ctx.fillStyle = '#696969';
                 ctx.beginPath();
-                ctx.arc(rockX, rockY, 0.5, 0, Math.PI * 2);
+                ctx.arc(rockX, rockY, 1, 0, Math.PI * 2);
                 ctx.fill();
             }
             
@@ -343,22 +334,28 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Range indicator
+        // Range indicator when targeting
         if (this.target) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
+            ctx.setLineDash([]);
         }
     }
     
     drawPineTrees(ctx, gridSize) {
+        // More trees around the tower for better coverage
         const trees = [
-            { x: -gridSize * 0.4, y: -gridSize * 0.35, size: 0.4 },
-            { x: gridSize * 0.35, y: -gridSize * 0.4, size: 0.5 },
-            { x: -gridSize * 0.3, y: gridSize * 0.4, size: 0.3 },
-            { x: gridSize * 0.4, y: gridSize * 0.35, size: 0.45 }
+            { x: -gridSize * 0.8, y: -gridSize * 0.3, size: 0.6 },
+            { x: -gridSize * 0.6, y: gridSize * 0.7, size: 0.5 },
+            { x: gridSize * 0.7, y: -gridSize * 0.6, size: 0.7 },
+            { x: gridSize * 0.8, y: gridSize * 0.4, size: 0.4 },
+            { x: -gridSize * 0.9, y: gridSize * 0.1, size: 0.3 },
+            { x: gridSize * 0.2, y: -gridSize * 0.9, size: 0.5 },
+            { x: 0, y: gridSize * 0.9, size: 0.4 }
         ];
         
         trees.forEach(tree => {
@@ -366,33 +363,38 @@ export class BasicTower {
             const treeY = this.y + tree.y;
             const scale = tree.size;
             
-            // Pine trunk
+            // Tree trunk
             ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - 0.5 * scale, treeY, 1 * scale, 6 * scale);
+            ctx.fillRect(treeX - 1 * scale, treeY - 2 * scale, 2 * scale, 8 * scale);
             
-            // Pine layers
+            // Pine tree layers (3 triangular sections)
             const layers = [
-                { y: -8 * scale, width: 5 * scale, color: '#1a4a1a' },
-                { y: -6 * scale, width: 4 * scale, color: '#228B22' },
-                { y: -4 * scale, width: 3 * scale, color: '#32CD32' }
+                { y: -12 * scale, width: 8 * scale, color: '#0F3B0F' },
+                { y: -8 * scale, width: 6 * scale, color: '#228B22' },
+                { y: -4 * scale, width: 4 * scale, color: '#32CD32' }
             ];
             
-            layers.forEach(layer => {
+            layers.forEach((layer, index) => {
                 ctx.fillStyle = layer.color;
                 ctx.beginPath();
                 ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.7);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.7);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
                 ctx.closePath();
                 ctx.fill();
+                
+                // Tree outline
+                ctx.strokeStyle = '#0F3B0F';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             });
             
-            // Highlight
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.2)';
+            // Subtle highlight on trees
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.15)';
             ctx.beginPath();
-            ctx.moveTo(treeX - 0.5 * scale, treeY - 7 * scale);
-            ctx.lineTo(treeX - 2 * scale, treeY - 5 * scale);
-            ctx.lineTo(treeX + 0.5 * scale, treeY - 6 * scale);
+            ctx.moveTo(treeX - 1 * scale, treeY - 10 * scale);
+            ctx.lineTo(treeX - 3 * scale, treeY - 6 * scale);
+            ctx.lineTo(treeX + 1 * scale, treeY - 8 * scale);
             ctx.closePath();
             ctx.fill();
         });
