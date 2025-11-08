@@ -115,17 +115,17 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const gridSize = cellSize * 2; // 2x2 grid
         
-        // Tower dimensions - bigger platform to match beams
+        // Tower dimensions - all aligned properly
         const baseWidth = gridSize * 0.45;
         const baseDepth = gridSize * 0.35;
         const baseHeight = gridSize * 0.12;
-        const towerWidth = gridSize * 0.35; // Increased to match platform
-        const towerDepth = gridSize * 0.28; // Increased to match platform
+        const platformWidth = gridSize * 0.4;
+        const platformDepth = gridSize * 0.32;
         const towerHeight = gridSize * 0.45;
-        const platformWidth = gridSize * 0.4; // Bigger platform
-        const platformDepth = gridSize * 0.32; // Bigger platform
         const platformHeight = gridSize * 0.08;
         const roofHeight = gridSize * 0.35;
+        const roofWidth = platformWidth * 1.05; // Aligned with platform
+        const roofDepth = platformDepth * 1.05; // Aligned with platform
         
         // Draw environmental elements first
         this.drawEnvironment(ctx, gridSize);
@@ -186,13 +186,11 @@ export class BasicTower {
         ctx.closePath();
         ctx.fill();
         
-        // Platform positioned first to align beams properly
+        // Platform positioned first to align everything properly
         const platformY = baseY - baseHeight - towerHeight - platformHeight;
-        
-        // Wooden tower structure - beams aligned with bigger platform
         const towerY = baseY - baseHeight - towerHeight;
         
-        // Four corner posts perfectly aligned with platform corners
+        // Four corner posts perfectly aligned with platform AND roof
         const postWidth = 5;
         const postPositions = [
             { x: -platformWidth/2 + postWidth/2, depth: -platformDepth/2 + postWidth/2 },
@@ -227,14 +225,14 @@ export class BasicTower {
             }
         });
         
-        // Horizontal braces between posts aligned with platform width
+        // Horizontal braces between posts - properly aligned
         ctx.strokeStyle = '#A0522D';
         ctx.lineWidth = 3;
         
         const braceY1 = towerY + towerHeight * 0.3;
         const braceY2 = towerY + towerHeight * 0.7;
         
-        // Front and back braces
+        // Front braces
         ctx.beginPath();
         ctx.moveTo(this.x - platformWidth/2 + postWidth/2, braceY1);
         ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY1);
@@ -245,10 +243,13 @@ export class BasicTower {
         ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY2);
         ctx.stroke();
         
-        // Side braces with perspective
+        // Back braces with perspective
+        const backDepthOffset = platformDepth * 0.7;
+        const backHeightOffset = platformDepth * -0.4;
+        
         ctx.beginPath();
-        ctx.moveTo(this.x - platformWidth/2 + postWidth/2 + platformDepth/2 * 0.7, braceY1 - platformDepth/2 * 0.4);
-        ctx.lineTo(this.x + platformWidth/2 - postWidth/2 + platformDepth/2 * 0.7, braceY1 - platformDepth/2 * 0.4);
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2 + backDepthOffset, braceY1 + backHeightOffset);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2 + backDepthOffset, braceY1 + backHeightOffset);
         ctx.stroke();
         
         // Platform front edge
@@ -292,48 +293,52 @@ export class BasicTower {
             ctx.stroke();
         }
         
-        // Bigger and more robust roof
+        // Roof structure - perfectly aligned with posts
         const roofY = platformY - roofHeight;
-        const roofWidth = platformWidth * 1.1; // Bigger roof
-        const roofDepth = platformDepth * 1.1; // Bigger roof
         
-        // Roof support posts - more robust structure
+        // Roof support posts - aligned with corner posts
         ctx.fillStyle = '#654321';
-        const roofPostPositions = [
-            { x: -roofWidth/3, depth: -roofDepth/3 },
-            { x: roofWidth/3, depth: -roofDepth/3 },
-            { x: -roofWidth/3, depth: roofDepth/3 },
-            { x: roofWidth/3, depth: roofDepth/3 },
-            { x: 0, depth: 0 } // Center support post
-        ];
-        
-        roofPostPositions.forEach(pos => {
+        postPositions.forEach(pos => {
             const postX = this.x + pos.x + pos.depth * 0.7;
-            const postYPos = platformY + pos.depth * -0.4;
-            ctx.fillRect(postX - 2, postYPos - roofHeight, 4, roofHeight);
+            const postYOffset = pos.depth * -0.4;
+            
+            // Roof post extending from platform
+            ctx.fillRect(postX - 2, platformY + postYOffset - roofHeight, 4, roofHeight);
             
             // Post side for depth
             ctx.fillStyle = '#5D4037';
-            ctx.fillRect(postX + 2, postYPos - roofHeight, 2, roofHeight);
+            ctx.fillRect(postX + 2, platformY + postYOffset - roofHeight, 2, roofHeight);
             ctx.fillStyle = '#654321';
         });
         
-        // Roof beams connecting posts
+        // Roof beams connecting aligned posts
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 4;
         
-        // Main roof beams
+        // Front roof beam
         ctx.beginPath();
-        ctx.moveTo(this.x - roofWidth/3, roofY);
-        ctx.lineTo(this.x + roofWidth/3, roofY);
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2, roofY);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2, roofY);
+        ctx.stroke();
+        
+        // Back roof beam
+        ctx.beginPath();
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2 + backDepthOffset, roofY + backHeightOffset);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2 + backDepthOffset, roofY + backHeightOffset);
+        ctx.stroke();
+        
+        // Side beams
+        ctx.beginPath();
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2, roofY);
+        ctx.lineTo(this.x - platformWidth/2 + postWidth/2 + backDepthOffset, roofY + backHeightOffset);
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.moveTo(this.x - roofWidth/3 + roofDepth/3 * 0.7, roofY - roofDepth/3 * 0.4);
-        ctx.lineTo(this.x + roofWidth/3 + roofDepth/3 * 0.7, roofY - roofDepth/3 * 0.4);
+        ctx.moveTo(this.x + platformWidth/2 - postWidth/2, roofY);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2 + backDepthOffset, roofY + backHeightOffset);
         ctx.stroke();
         
-        // Roof top surface - bigger
+        // Roof top surface - aligned with structure
         ctx.fillStyle = '#8B4513';
         ctx.beginPath();
         ctx.moveTo(this.x - roofWidth/2, roofY);
@@ -353,7 +358,7 @@ export class BasicTower {
         ctx.closePath();
         ctx.fill();
         
-        // More detailed roof planks
+        // Roof planks
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
         for (let i = 1; i < 6; i++) {
@@ -476,137 +481,97 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // More natural trees with proper trunks
+        // Fixed tree positions to prevent flickering
         const trees = [
-            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.3, trunkVariation: 0.8 },
-            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.5, trunkVariation: 1.2 },
-            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.1, trunkVariation: 0.9 },
-            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.2, trunkVariation: 1.0 },
-            { x: -gridSize * 0.15, y: gridSize * 0.45, size: 0.9, trunkVariation: 0.7 },
-            { x: gridSize * 0.45, y: -gridSize * 0.1, size: 1.0, trunkVariation: 0.8 },
-            { x: -gridSize * 0.5, y: -gridSize * 0.1, size: 1.4, trunkVariation: 1.1 },
-            { x: gridSize * 0.1, y: gridSize * 0.5, size: 0.8, trunkVariation: 0.6 }
+            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.3 },
+            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.5 },
+            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.1 },
+            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.2 },
+            { x: -gridSize * 0.15, y: gridSize * 0.45, size: 0.9 },
+            { x: gridSize * 0.45, y: -gridSize * 0.1, size: 1.0 },
+            { x: -gridSize * 0.5, y: -gridSize * 0.1, size: 1.4 },
+            { x: gridSize * 0.1, y: gridSize * 0.5, size: 0.8 }
         ];
         
         trees.forEach((tree, index) => {
             const treeX = this.x + tree.x;
             const treeY = this.y + tree.y;
             const scale = tree.size;
-            const trunkVar = tree.trunkVariation;
             
             // Tree shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.save();
             ctx.translate(treeX, treeY);
             ctx.transform(1, 0.3, 0.6, 0.2, 3, 3);
-            ctx.fillRect(-5 * scale, -4 * scale, 10 * scale, 8 * scale);
+            ctx.fillRect(-4 * scale, -3 * scale, 8 * scale, 6 * scale);
             ctx.restore();
             
-            // More natural tree trunk with variation
-            const trunkWidth = 2.5 * scale * trunkVar;
-            const trunkHeight = 15 * scale;
+            // Visible tree trunk - brown base
+            const trunkWidth = 2.5 * scale;
+            const trunkHeight = 12 * scale;
             
-            // Trunk base (wider)
+            // Trunk base - wider at bottom
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(treeX - trunkWidth * 0.7, treeY - 3, trunkWidth * 1.4, 6);
+            
+            // Main trunk - solid brown cylinder
             ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - trunkWidth * 0.6, treeY - 2, trunkWidth * 1.2, 4);
+            ctx.fillRect(treeX - trunkWidth/2, treeY - trunkHeight, trunkWidth, trunkHeight);
             
-            // Main trunk with slight taper
-            for (let i = 0; i < trunkHeight; i += 2) {
-                const heightRatio = i / trunkHeight;
-                const currentWidth = trunkWidth * (1 - heightRatio * 0.3);
-                const trunkGradient = ctx.createLinearGradient(
-                    treeX - currentWidth, treeY - i,
-                    treeX + currentWidth, treeY - i
-                );
-                trunkGradient.addColorStop(0, '#5D4037');
-                trunkGradient.addColorStop(0.3, '#654321');
-                trunkGradient.addColorStop(0.7, '#654321');
-                trunkGradient.addColorStop(1, '#4A2C17');
-                
-                ctx.fillStyle = trunkGradient;
-                ctx.fillRect(treeX - currentWidth/2, treeY - i - 2, currentWidth, 2);
-            }
-            
-            // Trunk texture and bark details
+            // Trunk texture lines
             ctx.strokeStyle = '#4A2C17';
             ctx.lineWidth = 1;
-            for (let i = 1; i < 8; i++) {
-                const lineY = treeY - (trunkHeight * i / 8);
-                const lineVariation = Math.sin(index + i) * 0.5;
+            for (let i = 1; i < 6; i++) {
+                const lineY = treeY - (trunkHeight * i / 6);
                 ctx.beginPath();
-                ctx.moveTo(treeX - trunkWidth/2 + lineVariation, lineY);
-                ctx.lineTo(treeX + trunkWidth/2 + lineVariation, lineY);
+                ctx.moveTo(treeX - trunkWidth/2, lineY);
+                ctx.lineTo(treeX + trunkWidth/2, lineY);
                 ctx.stroke();
             }
             
             // Vertical bark lines
-            for (let i = 0; i < 3; i++) {
-                const xPos = treeX - trunkWidth/2 + (trunkWidth * i / 2);
-                ctx.beginPath();
-                ctx.moveTo(xPos, treeY);
-                ctx.lineTo(xPos, treeY - trunkHeight * 0.7);
-                ctx.stroke();
-            }
+            ctx.beginPath();
+            ctx.moveTo(treeX - trunkWidth/4, treeY);
+            ctx.lineTo(treeX - trunkWidth/4, treeY - trunkHeight);
+            ctx.stroke();
             
-            // Pine layers - more natural and lush
+            ctx.beginPath();
+            ctx.moveTo(treeX + trunkWidth/4, treeY);
+            ctx.lineTo(treeX + trunkWidth/4, treeY - trunkHeight);
+            ctx.stroke();
+            
+            // Pine layers ON TOP of the trunk
             const layers = [
-                { y: -28 * scale, width: 20 * scale, color: '#0F3B0F' },
-                { y: -23 * scale, width: 18 * scale, color: '#1a4a1a' },
-                { y: -18 * scale, width: 16 * scale, color: '#228B22' },
-                { y: -13 * scale, width: 14 * scale, color: '#32CD32' },
-                { y: -8 * scale, width: 12 * scale, color: '#90EE90' },
-                { y: -4 * scale, width: 10 * scale, color: '#98FB98' },
-                { y: -1 * scale, width: 8 * scale, color: '#ADFF2F' }
+                { y: -25 * scale, width: 18 * scale, color: '#0F3B0F' },
+                { y: -20 * scale, width: 16 * scale, color: '#1a4a1a' },
+                { y: -15 * scale, width: 14 * scale, color: '#228B22' },
+                { y: -10 * scale, width: 12 * scale, color: '#32CD32' },
+                { y: -6 * scale, width: 10 * scale, color: '#90EE90' },
+                { y: -3 * scale, width: 8 * scale, color: '#98FB98' }
             ];
             
-            layers.forEach((layer, layerIndex) => {
-                // Main layer
+            layers.forEach(layer => {
+                // Main triangular layer
                 ctx.fillStyle = layer.color;
                 ctx.beginPath();
                 ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.65);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.65);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.6);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.6);
                 ctx.closePath();
                 ctx.fill();
                 
-                // Add some irregularity and extra branches
-                const branchCount = 3 + Math.floor(scale * 2);
-                for (let b = 0; b < branchCount; b++) {
-                    const branchAngle = (b / branchCount) * Math.PI * 2;
-                    const branchLength = layer.width * 0.3 * (0.5 + Math.random() * 0.5);
-                    const branchX = treeX + Math.cos(branchAngle) * branchLength;
-                    const branchY = treeY + layer.y + layer.width * 0.4;
-                    
-                    ctx.fillStyle = layer.color;
-                    ctx.beginPath();
-                    ctx.arc(branchX, branchY, 2 * scale, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Tree outline
+                // Layer outline
                 ctx.strokeStyle = '#0F3B0F';
                 ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.65);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.65);
-                ctx.closePath();
                 ctx.stroke();
             });
             
-            // Tree highlights and light spots
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
+            // Tree highlights
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.2)';
             ctx.beginPath();
-            ctx.moveTo(treeX - 3 * scale, treeY - 25 * scale);
-            ctx.lineTo(treeX - 8 * scale, treeY - 18 * scale);
-            ctx.lineTo(treeX + 2 * scale, treeY - 20 * scale);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.moveTo(treeX + 2 * scale, treeY - 15 * scale);
-            ctx.lineTo(treeX + 6 * scale, treeY - 10 * scale);
-            ctx.lineTo(treeX - 1 * scale, treeY - 12 * scale);
+            ctx.moveTo(treeX - 2 * scale, treeY - 22 * scale);
+            ctx.lineTo(treeX - 6 * scale, treeY - 15 * scale);
+            ctx.lineTo(treeX + 1 * scale, treeY - 18 * scale);
             ctx.closePath();
             ctx.fill();
         });
