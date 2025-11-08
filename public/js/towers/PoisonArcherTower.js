@@ -20,30 +20,62 @@ export class PoisonArcherTower {
         // Create compact cover elements within 2x2 grid (64x64 area)
         this.coverElements = [];
         
-        // 4 strategic bushes in corners of the grid
+        // 4 strategic bushes closer together in corners of the grid
         const positions = [
-            { x: this.x - 25, y: this.y - 25 },
-            { x: this.x + 25, y: this.y - 25 },
-            { x: this.x - 25, y: this.y + 25 },
-            { x: this.x + 25, y: this.y + 25 }
+            { x: this.x - 15, y: this.y - 15 },
+            { x: this.x + 15, y: this.y - 15 },
+            { x: this.x - 15, y: this.y + 15 },
+            { x: this.x + 15, y: this.y + 15 }
         ];
         
         positions.forEach((pos, i) => {
-            this.coverElements.push({
+            const baseSize = 18 + (i * 2); // Deterministic size variation
+            const element = {
                 x: pos.x,
                 y: pos.y,
                 type: 'bush',
-                size: 18 + Math.random() * 6,
+                size: baseSize,
                 rustleOffset: i * 0.5,
-                pattern: Math.floor(Math.random() * 3),
-                branchPattern: Math.random()
-            });
+                pattern: (i * 1.2), // Deterministic pattern
+                branchPattern: (i * 0.3),
+                // Cache branch data to prevent flickering
+                branches: [],
+                leafClusters: []
+            };
+            
+            // Pre-generate branch data
+            for (let j = 0; j < 5; j++) {
+                const angle = (j / 5) * Math.PI * 2 + element.pattern;
+                const branchLength = baseSize * (0.4 + (j % 3) * 0.1);
+                element.branches.push({
+                    angle: angle,
+                    length: branchLength,
+                    subBranches: [
+                        { angle: angle - 0.3, length: branchLength * 0.5 },
+                        { angle: angle, length: branchLength * 0.5 },
+                        { angle: angle + 0.3, length: branchLength * 0.5 }
+                    ]
+                });
+            }
+            
+            // Pre-generate leaf cluster data
+            for (let j = 0; j < 8; j++) {
+                const angle = (j / 8) * Math.PI * 2 + element.pattern;
+                const distance = baseSize * (0.5 + (j % 3) * 0.2);
+                element.leafClusters.push({
+                    angle: angle,
+                    distance: distance,
+                    color: j % 3 === 0 ? '#228B22' : '#32CD32'
+                });
+            }
+            
+            this.coverElements.push(element);
         });
         
         // Ranger position in center between bushes
         this.rangerSpot = {
-            x: this.x + (Math.random() - 0.5) * 10,
-            y: this.y + (Math.random() - 0.5) * 10
+            x: this.x + ((gridX % 2) - 0.5) * 4,
+            y: this.y + ((gridY % 2) - 0.5) * 4
         };
     }
     
@@ -198,43 +230,37 @@ export class PoisonArcherTower {
             ctx.lineTo(0, -element.size * 0.3);
             ctx.stroke();
             
-            // Main branches
-            for (let i = 0; i < 5; i++) {
-                const angle = (i / 5) * Math.PI * 2 + element.pattern;
-                const branchLength = element.size * (0.4 + Math.random() * 0.3);
-                const branchX = Math.cos(angle) * branchLength;
-                const branchY = Math.sin(angle) * branchLength;
+            // Main branches (using cached data)
+            element.branches.forEach(branch => {
+                const branchX = Math.cos(branch.angle) * branch.length;
+                const branchY = Math.sin(branch.angle) * branch.length;
                 
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
                 ctx.lineTo(branchX, branchY);
                 ctx.stroke();
                 
-                // Sub-branches
+                // Sub-branches (using cached data)
                 ctx.lineWidth = 1;
-                for (let j = 0; j < 3; j++) {
-                    const subAngle = angle + (j - 1) * 0.3;
-                    const subLength = branchLength * 0.5;
-                    const subX = branchX + Math.cos(subAngle) * subLength;
-                    const subY = branchY + Math.sin(subAngle) * subLength;
+                branch.subBranches.forEach(subBranch => {
+                    const subX = branchX + Math.cos(subBranch.angle) * subBranch.length;
+                    const subY = branchY + Math.sin(subBranch.angle) * subBranch.length;
                     
                     ctx.beginPath();
                     ctx.moveTo(branchX, branchY);
                     ctx.lineTo(subX, subY);
                     ctx.stroke();
-                }
+                });
                 ctx.lineWidth = 2;
-            }
+            });
             
-            // Leafy clusters on branches
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2 + element.pattern;
-                const distance = element.size * (0.5 + (i % 3) * 0.2);
-                const leafX = Math.cos(angle) * distance;
-                const leafY = Math.sin(angle) * distance;
+            // Leafy clusters on branches (using cached data)
+            element.leafClusters.forEach((cluster, i) => {
+                const leafX = Math.cos(cluster.angle) * cluster.distance;
+                const leafY = Math.sin(cluster.angle) * cluster.distance;
                 
                 // Leaf cluster
-                ctx.fillStyle = i % 3 === 0 ? '#228B22' : '#32CD32';
+                ctx.fillStyle = cluster.color;
                 ctx.beginPath();
                 ctx.arc(leafX, leafY, element.size * 0.2, 0, Math.PI * 2);
                 ctx.fill();
@@ -251,7 +277,7 @@ export class PoisonArcherTower {
                     ctx.ellipse(lx, ly, 3, 6, leafAngle, 0, Math.PI * 2);
                     ctx.fill();
                 }
-            }
+            });
             
             // Dense foliage base
             ctx.fillStyle = '#1F4F1F';
