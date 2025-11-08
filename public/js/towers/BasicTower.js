@@ -125,7 +125,7 @@ export class BasicTower {
         const platformWidth = gridSize * 0.35;
         const platformDepth = gridSize * 0.28;
         const platformHeight = gridSize * 0.08;
-        const roofHeight = gridSize * 0.2; // Increased roof height
+        const roofHeight = gridSize * 0.35; // Much higher roof
         
         // Draw environmental elements first
         this.drawEnvironment(ctx, gridSize);
@@ -189,37 +189,37 @@ export class BasicTower {
         // Platform positioned first to align beams properly
         const platformY = baseY - baseHeight - towerHeight - platformHeight;
         
-        // Wooden tower structure - aligned with platform
+        // Wooden tower structure - beams aligned with platform edges
         const towerY = baseY - baseHeight - towerHeight;
         
-        // Four corner posts aligned with platform corners
-        const postWidth = 4;
+        // Four corner posts perfectly aligned with platform corners
+        const postWidth = 5;
         const postPositions = [
-            { x: -platformWidth/2, depth: -platformDepth/2 },
-            { x: platformWidth/2, depth: -platformDepth/2 },
-            { x: -platformWidth/2, depth: platformDepth/2 },
-            { x: platformWidth/2, depth: platformDepth/2 }
+            { x: -platformWidth/2 + postWidth/2, depth: -platformDepth/2 + postWidth/2 },
+            { x: platformWidth/2 - postWidth/2, depth: -platformDepth/2 + postWidth/2 },
+            { x: -platformWidth/2 + postWidth/2, depth: platformDepth/2 - postWidth/2 },
+            { x: platformWidth/2 - postWidth/2, depth: platformDepth/2 - postWidth/2 }
         ];
         
         postPositions.forEach((pos, index) => {
             const postX = this.x + pos.x + pos.depth * 0.7;
-            const postYBase = baseY - baseHeight + pos.depth * -0.4;
+            const postYOffset = pos.depth * -0.4;
             
             // Post front face
             ctx.fillStyle = index < 2 ? '#DEB887' : '#CD853F';
-            ctx.fillRect(postX - postWidth/2, towerY, postWidth, towerHeight);
+            ctx.fillRect(postX - postWidth/2, towerY + postYOffset, postWidth, towerHeight);
             
             // Post side face for depth
             if (index === 1 || index === 3) {
                 ctx.fillStyle = '#8B4513';
-                ctx.fillRect(postX + postWidth/2, towerY, 3, towerHeight);
+                ctx.fillRect(postX + postWidth/2, towerY + postYOffset, 3, towerHeight);
             }
             
             // Wood grain
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 1;
             for (let i = 1; i < 6; i++) {
-                const grainY = towerY + (towerHeight * i / 6);
+                const grainY = towerY + postYOffset + (towerHeight * i / 6);
                 ctx.beginPath();
                 ctx.moveTo(postX - postWidth/2, grainY);
                 ctx.lineTo(postX + postWidth/2, grainY);
@@ -227,7 +227,7 @@ export class BasicTower {
             }
         });
         
-        // Horizontal braces between posts aligned with platform
+        // Horizontal braces between posts aligned with platform width
         ctx.strokeStyle = '#A0522D';
         ctx.lineWidth = 3;
         
@@ -235,13 +235,13 @@ export class BasicTower {
         const braceY2 = towerY + towerHeight * 0.7;
         
         ctx.beginPath();
-        ctx.moveTo(this.x - platformWidth/2, braceY1);
-        ctx.lineTo(this.x + platformWidth/2, braceY1);
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2, braceY1);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY1);
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.moveTo(this.x - platformWidth/2, braceY2);
-        ctx.lineTo(this.x + platformWidth/2, braceY2);
+        ctx.moveTo(this.x - platformWidth/2 + postWidth/2, braceY2);
+        ctx.lineTo(this.x + platformWidth/2 - postWidth/2, braceY2);
         ctx.stroke();
         
         // Platform front edge
@@ -285,17 +285,28 @@ export class BasicTower {
             ctx.stroke();
         }
         
-        // Higher roof with supports
+        // Much higher roof with supports
         const roofY = platformY - roofHeight;
         const roofWidth = platformWidth * 0.9;
         const roofDepth = platformDepth * 0.9;
         
-        // Roof support posts - taller
+        // Roof support posts - much taller
         ctx.fillStyle = '#654321';
-        ctx.fillRect(this.x - roofWidth/3, platformY, 3, -roofHeight);
-        ctx.fillRect(this.x + roofWidth/3, platformY, 3, -roofHeight);
-        ctx.fillRect(this.x - roofWidth/3 + roofDepth * 0.35, platformY - roofDepth * 0.2, 3, -roofHeight);
-        ctx.fillRect(this.x + roofWidth/3 + roofDepth * 0.35, platformY - roofDepth * 0.2, 3, -roofHeight);
+        const roofPostPositions = [
+            { x: -roofWidth/3, depth: 0 },
+            { x: roofWidth/3, depth: 0 },
+            { x: -roofWidth/3, depth: roofDepth * 0.7 },
+            { x: roofWidth/3, depth: roofDepth * 0.7 }
+        ];
+        
+        roofPostPositions.forEach(pos => {
+            ctx.fillRect(
+                this.x + pos.x + pos.depth * 0.5,
+                platformY + pos.depth * -0.2 - roofHeight,
+                3,
+                roofHeight
+            );
+        });
         
         // Roof top surface
         ctx.fillStyle = '#8B4513';
@@ -324,9 +335,9 @@ export class BasicTower {
             ctx.stroke();
         }
         
-        // Render defender on platform with blue shirt
-        const defenderX = this.x + platformDepth * 0.2;
-        const defenderY = platformY - platformDepth * 0.1 - 10;
+        // Render defender on platform with enough clearance under roof
+        const defenderX = this.x + platformDepth * 0.1;
+        const defenderY = platformY - platformDepth * 0.05 - 12;
         
         ctx.save();
         ctx.translate(defenderX, defenderY);
@@ -430,12 +441,15 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Bigger and higher trees positioned around the base within 2x2 grid
+        // More bigger and higher trees positioned around the base within 2x2 grid
         const trees = [
-            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.2 },
-            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.4 },
-            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.0 },
-            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.1 }
+            { x: -gridSize * 0.45, y: gridSize * 0.35, size: 1.3 },
+            { x: gridSize * 0.4, y: gridSize * 0.4, size: 1.5 },
+            { x: -gridSize * 0.4, y: -gridSize * 0.45, size: 1.1 },
+            { x: gridSize * 0.3, y: -gridSize * 0.3, size: 1.2 },
+            { x: -gridSize * 0.15, y: gridSize * 0.45, size: 0.9 },
+            { x: gridSize * 0.45, y: -gridSize * 0.1, size: 1.0 },
+            { x: -gridSize * 0.5, y: -gridSize * 0.1, size: 1.4 }
         ];
         
         trees.forEach(tree => {
@@ -448,31 +462,32 @@ export class BasicTower {
             ctx.save();
             ctx.translate(treeX, treeY);
             ctx.transform(1, 0.3, 0.6, 0.2, 3, 3);
-            ctx.fillRect(-4 * scale, -3 * scale, 8 * scale, 6 * scale);
+            ctx.fillRect(-5 * scale, -4 * scale, 10 * scale, 8 * scale);
             ctx.restore();
             
             // Tree trunk - bigger
             ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - 2 * scale, treeY - 12 * scale, 4 * scale, 12 * scale);
+            ctx.fillRect(treeX - 2.5 * scale, treeY - 15 * scale, 5 * scale, 15 * scale);
             
             // Trunk texture
             ctx.strokeStyle = '#5D4037';
             ctx.lineWidth = 1;
-            for (let i = 1; i < 4; i++) {
-                const lineY = treeY - (12 * scale * i / 4);
+            for (let i = 1; i < 5; i++) {
+                const lineY = treeY - (15 * scale * i / 5);
                 ctx.beginPath();
-                ctx.moveTo(treeX - 2 * scale, lineY);
-                ctx.lineTo(treeX + 2 * scale, lineY);
+                ctx.moveTo(treeX - 2.5 * scale, lineY);
+                ctx.lineTo(treeX + 2.5 * scale, lineY);
                 ctx.stroke();
             }
             
-            // Pine layers - bigger and higher
+            // Pine layers - much bigger and higher
             const layers = [
-                { y: -18 * scale, width: 14 * scale, color: '#0F3B0F' },
-                { y: -14 * scale, width: 12 * scale, color: '#1a4a1a' },
-                { y: -10 * scale, width: 10 * scale, color: '#228B22' },
-                { y: -6 * scale, width: 8 * scale, color: '#32CD32' },
-                { y: -3 * scale, width: 6 * scale, color: '#90EE90' }
+                { y: -25 * scale, width: 18 * scale, color: '#0F3B0F' },
+                { y: -20 * scale, width: 16 * scale, color: '#1a4a1a' },
+                { y: -15 * scale, width: 14 * scale, color: '#228B22' },
+                { y: -10 * scale, width: 12 * scale, color: '#32CD32' },
+                { y: -5 * scale, width: 10 * scale, color: '#90EE90' },
+                { y: -2 * scale, width: 8 * scale, color: '#98FB98' }
             ];
             
             layers.forEach(layer => {
@@ -493,9 +508,9 @@ export class BasicTower {
             // Tree highlights
             ctx.fillStyle = 'rgba(144, 238, 144, 0.2)';
             ctx.beginPath();
-            ctx.moveTo(treeX - 2 * scale, treeY - 16 * scale);
-            ctx.lineTo(treeX - 5 * scale, treeY - 10 * scale);
-            ctx.lineTo(treeX + 2 * scale, treeY - 12 * scale);
+            ctx.moveTo(treeX - 3 * scale, treeY - 22 * scale);
+            ctx.lineTo(treeX - 7 * scale, treeY - 15 * scale);
+            ctx.lineTo(treeX + 3 * scale, treeY - 18 * scale);
             ctx.closePath();
             ctx.fill();
         });
