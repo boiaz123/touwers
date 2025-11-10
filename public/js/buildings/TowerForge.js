@@ -91,14 +91,15 @@ export class TowerForge extends Building {
             this.nextSparkTime = 0.1 + Math.random() * 0.2;
         }
         
-        // Generate chimney smoke - NOW FIXED TO START FROM CHIMNEY TOP
+        // Generate chimney smoke - UPDATED FOR NEW CHIMNEY POSITION
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0) {
-            const chimneyX = this.x + 25; // Bottom right chimney position
-            const chimneyTopY = this.y - 35; // Top of chimney
+            const buildingWidth = 128 * 0.9; // Approximate size
+            const chimneyX = this.x + buildingWidth/2 - 19; // Updated for integrated position
+            const chimneyTopY = this.y - 42; // Top of chimney
             
             this.smokeParticles.push({
-                x: chimneyX + (Math.random() - 0.5) * 8, // From chimney opening
+                x: chimneyX + (Math.random() - 0.5) * 12, // From chimney opening
                 y: chimneyTopY,
                 vx: (Math.random() - 0.5) * 20,
                 vy: -30 - Math.random() * 20,
@@ -540,99 +541,170 @@ export class TowerForge extends Building {
         ctx.fillStyle = '#DCDCDC';
         ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, 3);
         
-        // Wall side face (3D effect)
+        // RIGHT SIDE WALL - properly integrated with chimney
+        const rightWallStart = this.x + buildingWidth/2;
+        const chimneyStart = this.x + buildingWidth/2 - buildingWidth * 0.2; // Chimney starts 20% from right edge
+        
+        // Right wall section (before chimney integration)
         ctx.fillStyle = '#696969';
-        ctx.beginPath();
-        ctx.moveTo(this.x + buildingWidth/2, this.y - wallHeight);
-        ctx.lineTo(this.x + buildingWidth/2 + 8, this.y - wallHeight - 8);
-        ctx.lineTo(this.x + buildingWidth/2 + 8, this.y - 8);
-        ctx.lineTo(this.x + buildingWidth/2, this.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-    }
-    
-    renderForgeOpening(ctx, size) {
-        // Forge opening in the wall
-        const openingWidth = size * 0.25;
-        const openingHeight = size * 0.2;
-        const openingX = this.x - openingWidth/2 - 15;
-        const openingY = this.y - openingHeight/2 - 5;
+        ctx.fillRect(rightWallStart, this.y - wallHeight, 8, wallHeight);
         
-        // Opening shadow/depth
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
-        
-        // Opening border (stone arch)
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
-        
-        // Arch top
+        // Right wall top
         ctx.fillStyle = '#808080';
-        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
+        ctx.fillRect(rightWallStart, this.y - wallHeight, 8, 3);
         
-        // Fire glow from opening
-        const fireGlow = ctx.createRadialGradient(
-            openingX + openingWidth/2, openingY + openingHeight/2, 0,
-            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
-        );
-        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
-        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
-        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        // Chimney integration stones - blend chimney base with main wall
+        const chimneyIntegrationWidth = buildingWidth * 0.25;
+        ctx.fillStyle = '#696969';
         
-        ctx.fillStyle = fireGlow;
-        ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
+        // Integration stones that blend wall into chimney
+        for (let row = 0; row < 4; row++) {
+            const integrationY = this.y - wallHeight + (row * stoneHeight);
+            const integrationX = chimneyStart + (row * 3); // Stepped integration
+            
+            ctx.fillRect(integrationX, integrationY, chimneyIntegrationWidth - (row * 2), stoneHeight - 1);
+            ctx.strokeRect(integrationX, integrationY, chimneyIntegrationWidth - (row * 2), stoneHeight - 1);
+        }
+        
+        // Corner reinforcement stones where chimney meets wall
+        ctx.fillStyle = '#808080';
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 2;
+        
+        // Large corner stones
+        const cornerStones = [
+            { x: rightWallStart - 4, y: this.y - wallHeight + stoneHeight, width: 12, height: stoneHeight },
+            { x: rightWallStart - 2, y: this.y - wallHeight + stoneHeight * 2, width: 10, height: stoneHeight },
+            { x: rightWallStart - 6, y: this.y - wallHeight + stoneHeight * 3, width: 14, height: stoneHeight }
+        ];
+        
+        cornerStones.forEach(stone => {
+            ctx.fillRect(stone.x, stone.y, stone.width, stone.height);
+            ctx.strokeRect(stone.x, stone.y, stone.width, stone.height);
+            
+            // Stone highlight
+            ctx.fillStyle = 'rgba(220, 220, 220, 0.4)';
+            ctx.fillRect(stone.x, stone.y, stone.width/3, stone.height/3);
+            ctx.fillStyle = '#808080';
+        });
     }
     
     renderChimney(ctx, size) {
-        // Chimney position - NOW AT BOTTOM RIGHT
-        const chimneyX = this.x + size * 0.25; // Moved to bottom right
-        const chimneyY = this.y + size * 0.1;  // Bottom of building
-        const chimneyWidth = size * 0.12;
-        const chimneyHeight = size * 0.6;
+        // Chimney position - PROPERLY INTEGRATED AT RIGHT CORNER
+        const buildingWidth = size * 0.9;
+        const chimneyX = this.x + buildingWidth/2 - size * 0.15; // Integrated into corner, not separate
+        const chimneyY = this.y - size * 0.05;  // Slightly raised from base
+        const chimneyWidth = size * 0.18; // Wider to blend with building
+        const chimneyHeight = size * 0.65;
         
-        // Chimney shadow
+        // Chimney shadow - integrated with building shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(chimneyX + 2, chimneyY - chimneyHeight + 2, chimneyWidth, chimneyHeight);
         
-        // Chimney main body - darker stone
+        // Chimney base foundation - blends with wall
+        const foundationGradient = ctx.createLinearGradient(
+            chimneyX, chimneyY,
+            chimneyX + chimneyWidth, chimneyY - chimneyHeight/4
+        );
+        foundationGradient.addColorStop(0, '#808080'); // Matches wall color
+        foundationGradient.addColorStop(0.5, '#696969');
+        foundationGradient.addColorStop(1, '#2F2F2F');
+        
+        ctx.fillStyle = foundationGradient;
+        ctx.fillRect(chimneyX - 4, chimneyY - chimneyHeight/4, chimneyWidth + 8, chimneyHeight/4);
+        
+        // Foundation stones to match wall pattern
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        const foundationStoneWidth = chimneyWidth / 3;
+        for (let i = 0; i < 4; i++) {
+            const stoneX = chimneyX - 4 + (i * foundationStoneWidth);
+            ctx.strokeRect(stoneX, chimneyY - chimneyHeight/4, foundationStoneWidth, chimneyHeight/4);
+        }
+        
+        // Main chimney body - darker stone that complements building
         const chimneyGradient = ctx.createLinearGradient(
             chimneyX, chimneyY - chimneyHeight,
-            chimneyX + chimneyWidth, chimneyY
+            chimneyX + chimneyWidth, chimneyY - chimneyHeight/4
         );
         chimneyGradient.addColorStop(0, '#696969');
-        chimneyGradient.addColorStop(0.5, '#2F2F2F');
-        chimneyGradient.addColorStop(1, '#1C1C1C');
+        chimneyGradient.addColorStop(0.3, '#2F2F2F');
+        chimneyGradient.addColorStop(0.7, '#1C1C1C');
+        chimneyGradient.addColorStop(1, '#696969'); // Blend back to building color at base
         
         ctx.fillStyle = chimneyGradient;
-        ctx.fillRect(chimneyX, chimneyY - chimneyHeight, chimneyWidth, chimneyHeight);
+        ctx.fillRect(chimneyX, chimneyY - chimneyHeight, chimneyWidth, chimneyHeight * 0.75);
         
-        // Chimney stones
+        // Chimney stones - more refined pattern
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 1;
         
-        const chimneyStoneHeight = chimneyHeight / 8;
+        const chimneyStoneHeight = (chimneyHeight * 0.75) / 8;
         for (let i = 0; i < 8; i++) {
             const stoneY = chimneyY - chimneyHeight + (i * chimneyStoneHeight);
-            ctx.strokeRect(chimneyX, stoneY, chimneyWidth, chimneyStoneHeight);
+            const offsetX = (i % 2) * 2; // Slight stagger like main wall
+            
+            // Main chimney stones
+            ctx.strokeRect(chimneyX + offsetX, stoneY, chimneyWidth - offsetX, chimneyStoneHeight);
+            
+            // Stone detail lines
+            if (i % 2 === 0) {
+                ctx.strokeRect(chimneyX + offsetX, stoneY, chimneyWidth/2, chimneyStoneHeight);
+            }
         }
         
-        // Chimney top
+        // Chimney cap - more elaborate to match building quality
+        const capHeight = 8;
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(chimneyX - 2, chimneyY - chimneyHeight - 4, chimneyWidth + 4, 6);
-        ctx.strokeRect(chimneyX - 2, chimneyY - chimneyHeight - 4, chimneyWidth + 4, 6);
+        ctx.fillRect(chimneyX - 3, chimneyY - chimneyHeight - capHeight, chimneyWidth + 6, capHeight);
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(chimneyX - 3, chimneyY - chimneyHeight - capHeight, chimneyWidth + 6, capHeight);
         
-        // Chimney 3D side
-        ctx.fillStyle = '#1C1C1C';
+        // Cap detail - crown molding
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(chimneyX - 2, chimneyY - chimneyHeight - capHeight + 1, chimneyWidth + 4, 2);
+        ctx.fillRect(chimneyX - 2, chimneyY - chimneyHeight - 3, chimneyWidth + 4, 2);
+        
+        // Chimney interior opening
+        const openingWidth = chimneyWidth * 0.6;
+        const openingDepth = 4;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(
+            chimneyX + (chimneyWidth - openingWidth)/2, 
+            chimneyY - chimneyHeight - capHeight, 
+            openingWidth, 
+            openingDepth
+        );
+        
+        // 3D CORNER INTEGRATION - make it look like one structure
+        ctx.fillStyle = '#5D5D5D';
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        
+        // Corner edge where chimney meets building
         ctx.beginPath();
-        ctx.moveTo(chimneyX + chimneyWidth, chimneyY - chimneyHeight);
-        ctx.lineTo(chimneyX + chimneyWidth + 4, chimneyY - chimneyHeight - 4);
-        ctx.lineTo(chimneyX + chimneyWidth + 4, chimneyY - 4);
-        ctx.lineTo(chimneyX + chimneyWidth, chimneyY);
+        ctx.moveTo(chimneyX, chimneyY - chimneyHeight);
+        ctx.lineTo(chimneyX - 6, chimneyY - chimneyHeight + 6);
+        ctx.lineTo(chimneyX - 6, chimneyY + 6);
+        ctx.lineTo(chimneyX, chimneyY);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+        
+        // Corner reinforcement details
+        const cornerDetails = [
+            { y: chimneyY - chimneyHeight * 0.8, size: 4 },
+            { y: chimneyY - chimneyHeight * 0.6, size: 5 },
+            { y: chimneyY - chimneyHeight * 0.4, size: 3 },
+            { y: chimneyY - chimneyHeight * 0.2, size: 4 }
+        ];
+        
+        cornerDetails.forEach(detail => {
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(chimneyX - detail.size, detail.y, detail.size, detail.size);
+            ctx.strokeRect(chimneyX - detail.size, detail.y, detail.size, detail.size);
+        });
     }
     
     renderRoof(ctx, buildingWidth, buildingHeight, wallHeight) {
