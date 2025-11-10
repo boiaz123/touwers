@@ -457,11 +457,12 @@ export class TowerForge extends Building {
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
         
-        if (!cost || gameState.coins < cost || upgrade.level >= upgrade.maxLevel) {
+        // Use gold instead of coins - this was the main bug
+        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         
-        gameState.coins -= cost;
+        gameState.gold -= cost; // Changed from coins to gold
         upgrade.level++;
         this.applyUpgrade(upgradeType, gameState);
         return true;

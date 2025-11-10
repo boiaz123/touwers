@@ -87,12 +87,12 @@ class GameplayState {
         // Remove existing listeners first to avoid duplicates
         this.removeEventListeners();
         
+        // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.selectTower(e.currentTarget);
             });
             
-            // Show tower info on hover/touch
             btn.addEventListener('mouseenter', (e) => {
                 this.showTowerInfo(e.currentTarget.dataset.type);
             });
@@ -103,7 +103,7 @@ class GameplayState {
             });
         });
         
-        // Add building button listeners
+        // Building button listeners
         document.querySelectorAll('.building-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.selectBuilding(e.currentTarget);
@@ -119,18 +119,18 @@ class GameplayState {
             });
         });
         
-        // Add mouse move listener for placement preview
+        // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // Add click listener for forge upgrade menu
-        this.canvas.addEventListener('click', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
+        // Single unified click handler - removed duplicate
+        this.clickHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Check for forge upgrade menu
-            const clickResult = this.towerManager.handleClick(canvasX, canvasY, this.canvas.getBoundingClientRect());
+            // Check for forge upgrade menu first
+            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             if (clickResult && clickResult.type === 'forge_menu') {
                 this.showForgeUpgradeMenu(clickResult);
                 return;
@@ -138,17 +138,24 @@ class GameplayState {
             
             // Handle regular tower/building placement
             this.handleClick(canvasX, canvasY);
-        });
+        };
+        this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
     
     removeEventListeners() {
-        // Clean up event listeners
+        // Clean up event listeners properly
         document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
         
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+            this.mouseMoveHandler = null;
+        }
+        
+        if (this.clickHandler) {
+            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
+            this.clickHandler = null;
         }
     }
     
@@ -250,7 +257,7 @@ class GameplayState {
         if (goldCollected > 0) {
             this.gameState.gold += goldCollected;
             this.updateUI();
-            return; // Don't place towers if we collected gold
+            return;
         }
         
         if (this.selectedTowerType) {
@@ -263,7 +270,6 @@ class GameplayState {
                     this.level.placeTower(gridX, gridY);
                     this.updateUI();
                     
-                    // Clear selection after placing tower
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
@@ -271,201 +277,27 @@ class GameplayState {
             }
         } else if (this.selectedBuildingType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
-            console.log(`Attempting to place ${this.selectedBuildingType} at grid (${gridX}, ${gridY}), screen (${x}, ${y})`);
-            console.log(`Player gold: ${this.gameState.gold}, Building cost: ${this.getBuildingCost(this.selectedBuildingType)}`);
             
             if (this.level.canPlaceBuilding(gridX, gridY, 4, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, 4);
-                console.log(`Building placement allowed, placing at screen (${screenX}, ${screenY})`);
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, 4);
                     this.updateUI();
                     
-                    // Clear selection after placing building
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
-                    console.log('Building placed successfully');
-                } else {
-                    console.log('TowerManager.placeBuilding returned false');
                 }
-            } else {
-                console.log('Level.canPlaceBuilding returned false');
             }
         }
-    }
-    
-    getBuildingCost(buildingType) {
-        const costs = {
-            'mine': 200,
-            'forge': 300,
-            'academy': 250,
-            'superweapon': 500
-        };
-        return costs[buildingType] || 0;
-    }
-    
-    getWaveConfig(level, wave) {
-        if (this.levelType === 'sandbox') {
-            // Sandbox mode: continuously increasing difficulty
-            const baseEnemies = 8;
-            const baseHealth = 50;
-            const baseSpeed = 40;
-            
-            return {
-                enemyCount: baseEnemies + Math.floor(wave * 1.2), // Gradual increase
-                enemyHealth: baseHealth + (wave - 1) * 5, // Slower health scaling
-                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2), // Cap speed at 100
-                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03) // Faster spawning over time
-            };
-        }
-        
-        // Level 1 wave configuration - 10 waves with gradual difficulty increase
-        if (level === 1) {
-            const baseEnemies = 5;
-            const baseHealth = 40;
-            const baseSpeed = 45;
-            
-            return {
-                enemyCount: baseEnemies + Math.floor(wave * 1.5), // 5, 6, 8, 9, 11, 12, 14, 15, 17, 18
-                enemyHealth: baseHealth + (wave - 1) * 8, // 40, 48, 56, 64, 72, 80, 88, 96, 104, 112
-                enemySpeed: baseSpeed + (wave - 1) * 3, // 45, 48, 51, 54, 57, 60, 63, 66, 69, 72
-                spawnInterval: Math.max(0.5, 1.2 - (wave - 1) * 0.05) // 1.2s down to 0.75s
-            };
-        }
-        
-        // Default fallback (for future levels)
-        return {
-            enemyCount: 10,
-            enemyHealth: 100,
-            enemySpeed: 50,
-            spawnInterval: 1.0
-        };
-    }
-    
-    startWave() {
-        if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
-            this.completeLevel();
-            return;
-        }
-        
-        console.log(`Starting wave ${this.gameState.wave} of ${this.levelName}`);
-        this.waveInProgress = true;
-        this.waveCompleted = false;
-        
-        const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
-        this.enemyManager.spawnWave(
-            this.gameState.wave, 
-            waveConfig.enemyCount,
-            waveConfig.enemyHealth,
-            waveConfig.enemySpeed,
-            waveConfig.spawnInterval
-        );
-        
-        this.updateUI();
-    }
-    
-    completeLevel() {
-        if (this.isSandbox) {
-            // Sandbox mode doesn't end, just continue
-            return;
-        }
-        alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
-        this.stateManager.changeState('levelSelect');
-    }
-    
-    update(deltaTime) {
-        this.enemyManager.update(deltaTime);
-        this.towerManager.update(deltaTime, this.enemyManager.enemies);
-        
-        const reachedEnd = this.enemyManager.checkReachedEnd();
-        if (reachedEnd > 0) {
-            this.gameState.health -= reachedEnd;
-            this.updateUI();
-            
-            if (this.gameState.health <= 0) {
-                alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
-                this.stateManager.changeState('start');
-                return;
-            }
-        }
-        
-        const killedEnemies = this.enemyManager.removeDeadEnemies();
-        if (killedEnemies > 0) {
-            // Gold reward scales slightly with wave number
-            const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
-            this.gameState.gold += killedEnemies * goldPerEnemy;
-            this.updateUI();
-        }
-        
-        // Check if wave is completed
-        if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
-            this.waveInProgress = false;
-            this.waveCompleted = true;
-            
-            console.log(`Wave ${this.gameState.wave} completed`);
-            
-            // Move to next wave after a short delay
-            setTimeout(() => {
-                this.gameState.wave++;
-                this.startWave();
-            }, 2000);
-        }
-    }
-    
-    render(ctx) {
-        this.level.render(ctx);
-        this.towerManager.render(ctx);
-        this.enemyManager.render(ctx);
-    }
-    
-    updateUI() {
-        document.getElementById('health').textContent = this.gameState.health;
-        document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
-        
-        // Show wave info differently for sandbox mode
-        if (this.isSandbox) {
-            document.getElementById('wave').textContent = `${this.gameState.wave} (∞)`;
-        } else {
-            document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
-        }
-        
-        let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
-        if (this.waveCompleted) {
-            statusText = this.isSandbox ? 'Next Wave...' : 'Wave Complete!';
-        } else if (!this.waveInProgress && this.enemyManager.enemies.length === 0) {
-            statusText = 'Preparing...';
-        }
-        
-        document.getElementById('enemies-remaining').textContent = statusText;
-        
-        // Update tower button states based on available gold
-        document.querySelectorAll('.tower-btn').forEach(btn => {
-            const cost = parseInt(btn.dataset.cost);
-            if (this.gameState.canAfford(cost)) {
-                btn.classList.remove('disabled');
-            } else {
-                btn.classList.add('disabled');
-            }
-        });
-        
-        // Update building button states based on available gold
-        document.querySelectorAll('.building-btn').forEach(btn => {
-            const cost = parseInt(btn.dataset.cost);
-            if (this.gameState.canAfford(cost)) {
-                btn.classList.remove('disabled');
-            } else {
-                btn.classList.add('disabled');
-            }
-        });
     }
     
     showForgeUpgradeMenu(forgeData) {
         // Clear existing menus
         this.clearActiveMenus();
         
-        // Create upgrade menu
+        // Create upgrade menu with proper currency check
         const menu = document.createElement('div');
         menu.id = 'forge-upgrade-menu';
         menu.className = 'upgrade-menu';
@@ -488,7 +320,7 @@ class GameplayState {
                         </div>
                         <button class="upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
-                                ${(!upgrade.cost || this.gameState.coins < upgrade.cost) ? 'disabled' : ''}>
+                                ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
                             ${upgrade.cost ? 'Upgrade' : 'MAX'}
                         </button>
                     </div>

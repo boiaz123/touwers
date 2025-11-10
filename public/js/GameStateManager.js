@@ -13,39 +13,74 @@ export class GameStateManager {
         console.log(`GameStateManager: Added state '${name}'`);
     }
     
-    changeState(name) {
-        console.log(`GameStateManager: Changing state from '${this.currentState}' to '${name}'`);
+    changeState(stateName) {
+        console.log(`StateManager: Attempting to change to state '${stateName}'`);
         
-        if (this.states[this.currentState] && this.states[this.currentState].exit) {
-            console.log(`GameStateManager: Exiting state '${this.currentState}'`);
-            this.states[this.currentState].exit();
+        if (!this.states[stateName]) {
+            console.error(`StateManager: State '${stateName}' does not exist`);
+            return false;
         }
         
-        this.currentState = name;
-        
-        if (this.states[this.currentState] && this.states[this.currentState].enter) {
-            console.log(`GameStateManager: Entering state '${this.currentState}'`);
-            this.states[this.currentState].enter();
-        } else {
-            console.error(`GameStateManager: State '${name}' not found or has no enter method`);
+        try {
+            // Exit current state
+            if (this.currentStateName && this.states[this.currentStateName]) {
+                console.log(`StateManager: Exiting state '${this.currentStateName}'`);
+                if (this.states[this.currentStateName].exit) {
+                    this.states[this.currentStateName].exit();
+                }
+            }
+            
+            // Enter new state
+            this.currentStateName = stateName;
+            console.log(`StateManager: Entering state '${stateName}'`);
+            if (this.states[stateName].enter) {
+                this.states[stateName].enter();
+            }
+            
+            console.log(`StateManager: Successfully changed to state '${stateName}'`);
+            return true;
+        } catch (error) {
+            console.error(`StateManager: Error changing to state '${stateName}':`, error);
+            return false;
         }
     }
     
     update(deltaTime) {
-        if (this.states[this.currentState] && this.states[this.currentState].update) {
-            this.states[this.currentState].update(deltaTime);
+        try {
+            if (this.currentStateName && this.states[this.currentStateName]) {
+                const currentState = this.states[this.currentStateName];
+                if (currentState.update) {
+                    currentState.update(deltaTime);
+                }
+            }
+        } catch (error) {
+            console.error('StateManager: Error in update:', error);
         }
     }
     
     render() {
-        if (this.states[this.currentState] && this.states[this.currentState].render) {
-            this.states[this.currentState].render(this.ctx);
+        try {
+            if (this.currentStateName && this.states[this.currentStateName]) {
+                const currentState = this.states[this.currentStateName];
+                if (currentState.render) {
+                    currentState.render(this.ctx);
+                }
+            }
+        } catch (error) {
+            console.error('StateManager: Error in render:', error);
         }
     }
     
     handleClick(x, y) {
-        if (this.states[this.currentState] && this.states[this.currentState].handleClick) {
-            this.states[this.currentState].handleClick(x, y);
+        try {
+            if (this.currentStateName && this.states[this.currentStateName]) {
+                const currentState = this.states[this.currentStateName];
+                if (currentState.handleClick) {
+                    currentState.handleClick(x, y);
+                }
+            }
+        } catch (error) {
+            console.error('StateManager: Error handling click:', error);
         }
     }
 }

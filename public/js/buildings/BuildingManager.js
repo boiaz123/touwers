@@ -84,25 +84,37 @@ export class BuildingManager {
     }
     
     handleClick(x, y, canvasSize) {
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasSize.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
+        // Add safety check for canvasSize
+        if (!canvasSize || typeof canvasSize !== 'object') {
+            console.warn('BuildingManager: Invalid canvasSize provided to handleClick');
+            return null;
+        }
         
-        let goldCollected = 0;
-        
-        this.buildings.forEach(building => {
-            if (building.constructor.name === 'GoldMine') {
-                const buildingSize = cellSize * building.size;
-                if (building.isPointInside(x, y, buildingSize)) {
-                    const collected = building.collectGold();
-                    if (collected > 0) {
-                        goldCollected += collected;
+        // Check building clicks with proper error handling
+        for (const building of this.buildings) {
+            try {
+                if (building.isPointInside && building.isPointInside(x, y, this.buildingTypes[building.type]?.size * 32 || 128)) {
+                    if (building.onClick) {
+                        const result = building.onClick();
+                        if (result) {
+                            return result;
+                        }
+                    }
+                    
+                    // Handle gold collection for mines
+                    if (building.collectGold && typeof building.collectGold === 'function') {
+                        const gold = building.collectGold();
+                        if (gold > 0) {
+                            return gold;
+                        }
                     }
                 }
+            } catch (error) {
+                console.error('BuildingManager: Error handling building click:', error);
             }
-        });
+        }
         
-        return goldCollected;
+        return null;
     }
     
     render(ctx) {
