@@ -169,13 +169,8 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // REMOVED YELLOW SELECTION INDICATOR
-        
-        // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+        // CLICKABLE UPGRADE ICON - Bottom right of 4x4 grid
+        this.renderUpgradeIcon(ctx, size);
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -1001,6 +996,15 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
+        // Check if click is on upgrade icon (higher priority)
+        if (this.upgradeIconBounds) {
+            const distance = Math.hypot(x - this.upgradeIconBounds.x, y - this.upgradeIconBounds.y);
+            if (distance <= this.upgradeIconBounds.radius) {
+                return true;
+            }
+        }
+        
+        // Check if click is on the building itself (4x4 grid area)
         return x >= this.x - size/2 && x <= this.x + size/2 &&
                y >= this.y - size/2 && y <= this.y + size/2;
     }
@@ -1242,6 +1246,84 @@ export class TowerForge extends Building {
             effect: 'Global tower boost + upgrade menu',
             size: '4x4',
             cost: 300
+        };
+    }
+    
+    renderUpgradeIcon(ctx, size) {
+        // Position at bottom right of 4x4 grid
+        const iconX = this.x + size/2 - 12;
+        const iconY = this.y + size/2 - 12;
+        const iconSize = 24;
+        
+        // Icon background - golden metallic circle
+        const bgGradient = ctx.createRadialGradient(iconX - 2, iconY - 2, 0, iconX, iconY, iconSize/2 + 2);
+        bgGradient.addColorStop(0, '#FFD700');
+        bgGradient.addColorStop(0.5, '#FFA500');
+        bgGradient.addColorStop(1, '#FF8C00');
+        
+        ctx.fillStyle = bgGradient;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize/2 + 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icon border - dark metallic ring
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize/2 + 2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Inner highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(iconX - 3, iconY - 3, iconSize/4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(iconX + 2, iconY + 2, iconSize/4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icon content - hammer and wrench symbol
+        ctx.save();
+        ctx.translate(iconX, iconY);
+        
+        // Hammer
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-6, -2, 3, 8);
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(-7, -3, 5, 3);
+        
+        // Wrench
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(4, -2, 3, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(6, 0);
+        ctx.lineTo(9, 3);
+        ctx.stroke();
+        
+        // Plus symbol for upgrade
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -4);
+        ctx.lineTo(0, 4);
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(4, 0);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Store icon bounds for click detection
+        this.upgradeIconBounds = {
+            x: iconX,
+            y: iconY,
+            radius: iconSize/2 + 2
         };
     }
 }
