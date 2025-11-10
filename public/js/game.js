@@ -139,12 +139,13 @@ class GameplayState {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            console.log(`Game: Mouse move at (${x}, ${y})`); // Debug mouse position
+            // Add debugging to see if mouse events are firing
+            console.log(`Game: Mouse move at (${x}, ${y}), rect:`, rect);
             
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
             
-            console.log(`Game: isHoveringInteractable: ${isHoveringInteractable}`); // Debug hover result
+            console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
             
             // Update cursor based on hover state
             if (isHoveringInteractable) {
@@ -157,7 +158,6 @@ class GameplayState {
             // Handle placement preview
             this.handleMouseMove(e);
         };
-        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
         // SIMPLIFIED: Canvas click handler with extensive debugging
         this.clickHandler = (e) => {
@@ -166,13 +166,22 @@ class GameplayState {
             const canvasY = e.clientY - rect.top;
             
             console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
+            console.log(`Game: Event target:`, e.target);
+            console.log(`Game: Canvas element:`, this.stateManager.canvas);
             console.log(`Game: Canvas rect:`, rect);
+            console.log(`Game: Mouse event clientX/Y:`, e.clientX, e.clientY);
+            
+            // Verify we're actually clicking the canvas
+            if (e.target !== this.stateManager.canvas) {
+                console.log(`Game: Click was not on canvas! Target:`, e.target);
+                return;
+            }
             
             // CRITICAL: Check for building/tower icon clicks FIRST with debugging
-            console.log(`Game: Calling towerManager.handleClick...`);
+            console.log(`Game: Calling towerManager.handleClick with coordinates (${canvasX}, ${canvasY})`);
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
-            console.log(`Game: TowerManager returned:`, clickResult);
+            console.log(`Game: TowerManager click result:`, clickResult);
             
             if (clickResult) {
                 if (clickResult.type === 'forge_menu') {
@@ -200,9 +209,10 @@ class GameplayState {
             this.handleClick(canvasX, canvasY);
         };
         
-        // Add canvas click listener
+        // Add canvas click listener with more debugging
+        console.log('Game: Adding click listener to canvas:', this.stateManager.canvas);
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
-        console.log(`Game: Canvas click handler attached`);
+        console.log(`Game: Canvas click handler attached successfully`);
     }
     
     removeEventListeners() {

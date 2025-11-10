@@ -50,6 +50,7 @@ body {
     display: flex;
     flex: 1;
     min-height: 0;
+    position: relative;
 }
 
 #gameCanvas {
@@ -57,6 +58,10 @@ body {
     background: #0a0a0a;
     cursor: crosshair;
     touch-action: none;
+    /* Ensure the canvas can receive clicks */
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
 }
 
 /* C&C Style Tower Sidebar */
@@ -69,6 +74,10 @@ body {
     padding: 10px 5px;
     flex-shrink: 0;
     overflow-y: auto;
+    /* Ensure sidebar doesn't interfere with canvas clicks */
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
 }
 
 #tower-grid {
