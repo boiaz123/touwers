@@ -510,14 +510,14 @@ export class TowerForge extends Building {
         }
     }
     
-    applyEffect(towerManager) {
-        // Base forge effect
-        towerManager.towerUpgrades.damage *= 1.25;
-        towerManager.towerUpgrades.range *= 1.15;
+    applyEffect(buildingManager) {
+        // Base forge effect - modify the existing towerUpgrades object
+        buildingManager.towerUpgrades.damage *= 1.25;
+        buildingManager.towerUpgrades.range *= 1.15;
         
         // Apply forge upgrades
         if (this.upgrades.towerRange.level > 0) {
-            towerManager.towerUpgrades.range *= (1 + this.upgrades.towerRange.level * this.upgrades.towerRange.effect);
+            buildingManager.towerUpgrades.range *= (1 + this.upgrades.towerRange.level * this.upgrades.towerRange.effect);
         }
     }
     

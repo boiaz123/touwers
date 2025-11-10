@@ -140,12 +140,4 @@ export class BuildingManager {
         
         return buildingType.class.getInfo();
     }
-    
-    get towerUpgrades() {
-        return {
-            damage: 1.0,
-            range: 1.0,
-            fireRate: 1.0
-        };
-    }
 }

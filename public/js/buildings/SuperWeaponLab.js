@@ -94,9 +94,9 @@ export class SuperWeaponLab extends Building {
         ctx.fillText('⚡🚀', this.x, this.y + size/2 + 35);
     }
     
-    applyEffect(towerManager) {
-        towerManager.superWeaponUnlocked = true;
-        towerManager.buildingTypes.combo = { class: null, cost: 400, size: 2 };
+    applyEffect(buildingManager) {
+        buildingManager.superWeaponUnlocked = true;
+        // Don't try to modify buildingTypes here as it may cause issues
     }
     
     static getInfo() {
