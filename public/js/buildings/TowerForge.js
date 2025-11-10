@@ -29,8 +29,8 @@ export class TowerForge extends Building {
             }
         ];
         
-        // Forge level and tower upgrades
-        this.forgeLevel = 0; // Start at level 0, built to level 1
+        // Forge level and tower upgrades - START AT LEVEL 1 when built
+        this.forgeLevel = 1; // Changed from 0 to 1
         this.maxForgeLevel = 10;
         
         // Tower upgrade system - rebalanced for better progression
@@ -1154,7 +1154,8 @@ export class TowerForge extends Building {
     calculateForgeUpgradeCost() {
         if (this.forgeLevel >= this.maxForgeLevel) return null;
         // Expensive forge upgrades: 400, 800, 1600, 3200, etc.
-        return 400 * Math.pow(2, this.forgeLevel - 1);
+        // FIXED: Start from current level, not level-1
+        return 400 * Math.pow(2, this.forgeLevel);
     }
     
     calculateUpgradeCost(upgradeType) {

@@ -324,6 +324,8 @@ class GameplayState {
     }
     
     showForgeUpgradeMenu(forgeData) {
+        console.log('GameplayState: Showing forge upgrade menu', forgeData);
+        
         // Clear existing menus
         this.clearActiveMenus();
         
@@ -335,6 +337,9 @@ class GameplayState {
             unlockSystem.canUseUpgrade(upgrade.id)
         );
         
+        console.log('GameplayState: Available upgrades:', availableUpgrades);
+        console.log('GameplayState: Forge upgrade option:', forgeData.forgeUpgrade);
+        
         // Create upgrade menu with proper currency check
         const menu = document.createElement('div');
         menu.id = 'forge-upgrade-menu';
@@ -345,6 +350,7 @@ class GameplayState {
         // Add forge level upgrade first if available
         if (forgeData.forgeUpgrade) {
             const forgeUpgrade = forgeData.forgeUpgrade;
+            console.log('GameplayState: Adding forge level upgrade:', forgeUpgrade);
             upgradeListHTML += `
                 <div class="upgrade-item forge-upgrade ${forgeUpgrade.level >= forgeUpgrade.maxLevel ? 'maxed' : ''}">
                     <div class="upgrade-icon">${forgeUpgrade.icon}</div>
@@ -364,6 +370,8 @@ class GameplayState {
                     </button>
                 </div>
             `;
+        } else {
+            console.log('GameplayState: No forge upgrade available (max level reached?)');
         }
         
         // Add tower upgrades
@@ -387,6 +395,10 @@ class GameplayState {
             </div>
         `).join('');
         
+        if (!upgradeListHTML) {
+            upgradeListHTML = '<div class="upgrade-item"><div class="upgrade-details">No upgrades available</div></div>';
+        }
+        
         menu.innerHTML = `
             <div class="menu-header">
                 <h3>🔨 Tower Forge Upgrades</h3>
@@ -403,6 +415,7 @@ class GameplayState {
         menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
+                console.log('GameplayState: Upgrade button clicked:', upgradeId);
                 
                 if (upgradeId === 'forge_level') {
                     // Handle forge level upgrade
@@ -419,6 +432,8 @@ class GameplayState {
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
                         });
+                    } else {
+                        console.log('GameplayState: Forge upgrade purchase failed');
                     }
                 } else {
                     // Handle tower upgrades
@@ -432,6 +447,8 @@ class GameplayState {
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
                         });
+                    } else {
+                        console.log('GameplayState: Tower upgrade purchase failed');
                     }
                 }
             });

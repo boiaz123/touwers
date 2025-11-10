@@ -21,7 +21,7 @@ export class UnlockSystem {
         if (this.forgeCount < this.maxForges) {
             this.hasForge = true;
             this.forgeCount++;
-            this.forgeLevel = 1;
+            this.forgeLevel = 1; // This should match the forge's starting level
             
             // Forge level 1 unlocks
             this.unlockedBuildings.add('mine');
