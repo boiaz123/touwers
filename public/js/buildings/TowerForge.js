@@ -1251,7 +1251,6 @@ export class TowerForge extends Building {
     
     renderUpgradeIcon(ctx, size) {
         // Position at bottom right of 4x4 grid
-        // 30% smaller: 48 * 0.7 = 33.6 ≈ 34
         const iconSize = 34;
         const radius = iconSize / 2;
         const iconX = this.x + size/2 - radius - 2;
@@ -1268,12 +1267,58 @@ export class TowerForge extends Building {
         ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
         ctx.fill();
         
-        // Icon border - dark metallic ring
-        ctx.strokeStyle = '#654321';
+        // Medieval ornate border - multiple rings
+        // Outer dark ring (iron)
+        ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, radius + 1, 0, Math.PI * 2);
         ctx.stroke();
+        
+        // Middle decorative ring (brass/gold)
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, radius - 1, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Inner dark ring (shadow)
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, radius - 3, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Decorative corner gems (medieval studs)
+        const gemPositions = [
+            { angle: 0, dist: radius * 0.85 },           // Right
+            { angle: Math.PI/2, dist: radius * 0.85 },   // Bottom
+            { angle: Math.PI, dist: radius * 0.85 },     // Left
+            { angle: -Math.PI/2, dist: radius * 0.85 }   // Top
+        ];
+        
+        gemPositions.forEach(gem => {
+            const gemX = iconX + Math.cos(gem.angle) * gem.dist;
+            const gemY = iconY + Math.sin(gem.angle) * gem.dist;
+            
+            // Gem shadow
+            ctx.fillStyle = '#1A1A1A';
+            ctx.beginPath();
+            ctx.arc(gemX + 0.5, gemY + 0.5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Gem highlight (alternating colors)
+            ctx.fillStyle = gem.angle === 0 || gem.angle === Math.PI ? '#FFD700' : '#FF6347';
+            ctx.beginPath();
+            ctx.arc(gemX, gemY, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Gem shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.arc(gemX - 0.5, gemY - 0.5, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        });
         
         // Inner highlight
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -1333,11 +1378,11 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection - exactly matches the visible circle
+        // Store icon bounds for click detection - exactly matches the icon (without border padding)
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius
+            radius: radius - 2 // Slightly smaller to match inner visual area
         };
     }
 }
