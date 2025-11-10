@@ -1378,11 +1378,11 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection - exactly matches the icon (without border padding)
+        // Store icon bounds for click detection - exactly matches the golden circle
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius - 2 // Slightly smaller to match inner visual area
+            radius: radius // Match exactly the golden circle radius
         };
     }
 }
