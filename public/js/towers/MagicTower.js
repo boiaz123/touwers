@@ -214,7 +214,19 @@ export class MagicTower {
         if (['fire', 'ice', 'lightning', 'earth'].includes(element)) {
             this.selectedElement = element;
             console.log(`MagicTower: Element changed to ${element}`);
+            
+            // Update visual particles to match element
+            this.updateElementalParticles();
         }
+    }
+    
+    updateElementalParticles() {
+        // Clear existing particles and regenerate with new element color
+        this.magicParticles = [];
+    }
+    
+    isClickable(x, y, towerSize) {
+        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
     }
     
     applyElementalBonuses(bonuses) {
@@ -516,13 +528,31 @@ export class MagicTower {
             });
         });
         
-        // Element indicator
+        // Element indicator with enhanced visibility when selected
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         const elementIcons = { fire: '🔥', ice: '❄️', lightning: '⚡', earth: '🌍' };
+        
+        // Add selection glow effect
+        if (this.isSelected) {
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 10;
+        }
+        
         ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
         
+        if (this.isSelected) {
+            ctx.shadowBlur = 0;
+            
+            // Selection ring
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
         // Range indicator
         if (this.target) {
             ctx.strokeStyle = 'rgba(138, 43, 226, 0.2)';

@@ -21,24 +21,24 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // Tree positions (fixed to prevent flickering)
+        // Tree positions (CONSTRAINED to 4x4 grid = 128px area, so ±64px from center)
         this.trees = [
-            { x: -80, y: -60, size: 25, type: 'oak' },
-            { x: 70, y: -70, size: 30, type: 'pine' },
-            { x: -90, y: 40, size: 20, type: 'willow' },
-            { x: 85, y: 50, size: 28, type: 'oak' },
-            { x: -50, y: 80, size: 22, type: 'pine' },
-            { x: 60, y: 85, size: 26, type: 'willow' }
+            { x: -50, y: -45, size: 18, type: 'oak' },
+            { x: 45, y: -50, size: 20, type: 'pine' },
+            { x: -55, y: 30, size: 15, type: 'willow' },
+            { x: 50, y: 35, size: 18, type: 'oak' },
+            { x: -35, y: 55, size: 16, type: 'pine' },
+            { x: 40, y: 50, size: 17, type: 'willow' }
         ];
         
-        // Bush positions
+        // Bush positions (CONSTRAINED to 4x4 grid)
         this.bushes = [
-            { x: -60, y: -30, size: 12 },
-            { x: 45, y: -45, size: 15 },
-            { x: -75, y: 20, size: 10 },
-            { x: 55, y: 30, size: 14 },
-            { x: -40, y: 60, size: 11 },
-            { x: 70, y: 70, size: 13 }
+            { x: -40, y: -25, size: 8 },
+            { x: 30, y: -30, size: 9 },
+            { x: -45, y: 15, size: 7 },
+            { x: 35, y: 20, size: 8 },
+            { x: -25, y: 40, size: 7 },
+            { x: 45, y: 45, size: 8 }
         ];
     }
     
@@ -78,16 +78,16 @@ export class MagicAcademy extends Building {
             return particle.life > 0 && particle.size > 0;
         });
         
-        // Generate water ripples
+        // Generate water ripples (CONSTRAINED to smaller moat area)
         this.nextRippleTime -= deltaTime;
         if (this.nextRippleTime <= 0) {
             const angle = Math.random() * Math.PI * 2;
-            const distance = 70 + Math.random() * 20;
+            const distance = 40 + Math.random() * 15; // Reduced from 70+20 to fit grid
             this.waterRipples.push({
                 x: this.x + Math.cos(angle) * distance,
                 y: this.y + Math.sin(angle) * distance,
                 radius: 0,
-                maxRadius: 15 + Math.random() * 10,
+                maxRadius: 10 + Math.random() * 8, // Reduced from 15+10
                 life: 2,
                 maxLife: 2
             });
@@ -124,9 +124,9 @@ export class MagicAcademy extends Building {
     }
     
     renderWaterMoat(ctx, size) {
-        // Water moat around the fortress
-        const moatRadius = size * 0.7;
-        const innerRadius = size * 0.45;
+        // Water moat around the fortress (CONSTRAINED to 4x4 grid)
+        const moatRadius = size * 0.45; // Reduced from 0.7 to fit in grid
+        const innerRadius = size * 0.3;  // Reduced from 0.45
         
         // Water base
         const waterGradient = ctx.createRadialGradient(
@@ -158,7 +158,7 @@ export class MagicAcademy extends Building {
             ctx.fill();
         }
         
-        // Render water ripples
+        // Render water ripples (CONSTRAINED to moat area)
         this.waterRipples.forEach(ripple => {
             const alpha = ripple.life / ripple.maxLife * 0.3;
             ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
@@ -689,23 +689,6 @@ export class MagicAcademy extends Building {
         
         console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level}`);
         return true;
-    }
-    
-    getElementalBonuses() {
-        return {
-            fire: {
-                damageBonus: this.elementalUpgrades.fire.level * this.elementalUpgrades.fire.damageBonus
-            },
-            ice: {
-                slowBonus: this.elementalUpgrades.ice.level * this.elementalUpgrades.ice.slowBonus
-            },
-            lightning: {
-                chainRange: this.elementalUpgrades.lightning.level * this.elementalUpgrades.lightning.chainRange
-            },
-            earth: {
-                armorPiercing: this.elementalUpgrades.earth.level * this.elementalUpgrades.earth.armorPiercing
-            }
-        };
     }
     
     deselect() {

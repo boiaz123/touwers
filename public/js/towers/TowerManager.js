@@ -129,6 +129,11 @@ export class TowerManager {
             building.constructor.name === 'TowerForge'
         );
         
+        // Check if any academy upgrades have changed  
+        const academies = this.buildingManager.buildings.filter(building =>
+            building.constructor.name === 'MagicAcademy'
+        );
+        
         let upgradesChanged = false;
         forges.forEach(forge => {
             if (forge.upgradesChanged) {
@@ -161,11 +166,28 @@ export class TowerManager {
             // Apply forge-specific upgrades
             this.applyForgeUpgrades(tower);
             
+            // Apply academy elemental bonuses to Magic Towers
+            this.applyAcademyUpgrades(tower);
+            
             tower.update(deltaTime, enemies);
         });
         
         // Update building manager
         this.buildingManager.update(deltaTime);
+    }
+    
+    applyAcademyUpgrades(tower) {
+        if (tower.constructor.name === 'MagicTower') {
+            // Get elemental bonuses from academies
+            const academies = this.buildingManager.buildings.filter(building =>
+                building.constructor.name === 'MagicAcademy'
+            );
+            
+            if (academies.length > 0) {
+                const elementalBonuses = academies[0].getElementalBonuses();
+                tower.applyElementalBonuses(elementalBonuses);
+            }
+        }
     }
     
     recalculateAllTowerStats() {
@@ -229,17 +251,30 @@ export class TowerManager {
     }
     
     handleClick(x, y, canvasSize) {
+        // Clear any previous selections
+        this.towers.forEach(tower => tower.isSelected = false);
+        this.buildingManager.buildings.forEach(building => {
+            if (building.deselect) building.deselect();
+        });
+        
         // Check tower clicks first for element selection
         for (const tower of this.towers) {
             const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
             const towerSize = cellSize * 2;
             
-            if (Math.hypot(tower.x - x, tower.y - y) <= towerSize/2) {
+            if (tower.isClickable && tower.isClickable(x, y, towerSize)) {
                 if (tower.constructor.name === 'MagicTower') {
+                    tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
                         tower: tower,
-                        elements: ['fire', 'ice', 'lightning', 'earth']
+                        elements: [
+                            { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
+                            { id: 'ice', name: 'Ice', icon: '❄️', description: 'Slows and freezes enemies' },
+                            { id: 'lightning', name: 'Lightning', icon: '⚡', description: 'Chains to nearby enemies' },
+                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                        ],
+                        currentElement: tower.selectedElement
                     };
                 }
             }
@@ -253,6 +288,14 @@ export class TowerManager {
             buildingResult.unlockSystem = this.unlockSystem;
         }
         return buildingResult;
+    }
+    
+    selectMagicTowerElement(tower, element) {
+        if (tower.constructor.name === 'MagicTower') {
+            tower.setElement(element);
+            return true;
+        }
+        return false;
     }
     
     render(ctx) {

@@ -123,7 +123,10 @@ export class BuildingManager {
         // Check building clicks with proper error handling
         for (const building of this.buildings) {
             try {
-                if (building.isPointInside && building.isPointInside(x, y, this.buildingTypes[building.type]?.size * 32 || 128)) {
+                const buildingType = this.getBuildingTypeFromInstance(building);
+                const buildingSize = buildingType ? buildingType.size * 32 : 128;
+                
+                if (building.isPointInside && building.isPointInside(x, y, buildingSize)) {
                     if (building.onClick) {
                         const result = building.onClick();
                         if (result) {
@@ -145,6 +148,17 @@ export class BuildingManager {
         }
         
         return null;
+    }
+    
+    getBuildingTypeFromInstance(building) {
+        const className = building.constructor.name;
+        switch(className) {
+            case 'TowerForge': return { size: 4 };
+            case 'MagicAcademy': return { size: 4 };
+            case 'GoldMine': return { size: 4 };
+            case 'SuperWeaponLab': return { size: 4 };
+            default: return { size: 4 };
+        }
     }
     
     render(ctx) {
