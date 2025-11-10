@@ -1378,12 +1378,12 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection - exactly matches the golden circle only
-        // Don't include the decorative rings in the clickbox
+        // Store icon bounds for click detection
+        // The golden circle is drawn at exactly this radius
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius * 0.4 // Reduce to exclude the border rings
+            radius: radius - 0.5 // Tiny adjustment for stroke rendering, matches the filled circle
         };
     }
 }
