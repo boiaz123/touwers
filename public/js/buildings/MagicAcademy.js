@@ -21,24 +21,44 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // Tree positions (CONSTRAINED to 4x4 grid = 128px area, so ±64px from center)
+        // More pine trees within 4x4 grid using barricade tower style (±64px from center)
         this.trees = [
-            { x: -50, y: -45, size: 18, type: 'oak' },
-            { x: 45, y: -50, size: 20, type: 'pine' },
-            { x: -55, y: 30, size: 15, type: 'willow' },
-            { x: 50, y: 35, size: 18, type: 'oak' },
-            { x: -35, y: 55, size: 16, type: 'pine' },
-            { x: 40, y: 50, size: 17, type: 'willow' }
+            { x: -55, y: -55, size: 0.8 },
+            { x: -25, y: -60, size: 0.6 },
+            { x: 5, y: -58, size: 0.5 },
+            { x: 35, y: -50, size: 0.7 },
+            { x: 55, y: -45, size: 0.5 },
+            { x: -60, y: -15, size: 0.9 },
+            { x: -35, y: -25, size: 0.4 },
+            { x: -5, y: -30, size: 0.6 },
+            { x: 20, y: -30, size: 0.6 },
+            { x: 50, y: -20, size: 0.7 },
+            { x: -50, y: 20, size: 0.8 },
+            { x: -20, y: 15, size: 0.5 },
+            { x: 10, y: 10, size: 0.4 },
+            { x: 25, y: 25, size: 0.6 },
+            { x: 55, y: 30, size: 0.7 },
+            { x: -45, y: 50, size: 0.6 },
+            { x: -15, y: 55, size: 0.8 },
+            { x: 15, y: 45, size: 0.5 },
+            { x: 30, y: 50, size: 0.5 },
+            { x: 45, y: 55, size: 0.9 }
         ];
         
         // Bush positions (CONSTRAINED to 4x4 grid)
         this.bushes = [
-            { x: -40, y: -25, size: 8 },
-            { x: 30, y: -30, size: 9 },
-            { x: -45, y: 15, size: 7 },
-            { x: 35, y: 20, size: 8 },
-            { x: -25, y: 40, size: 7 },
-            { x: 45, y: 45, size: 8 }
+            { x: -40, y: -35, size: 8 },
+            { x: -10, y: -40, size: 6 },
+            { x: 15, y: -45, size: 7 },
+            { x: 40, y: -35, size: 8 },
+            { x: -45, y: -5, size: 7 },
+            { x: -15, y: -10, size: 6 },
+            { x: 10, y: -5, size: 8 },
+            { x: 35, y: 5, size: 7 },
+            { x: -35, y: 35, size: 8 },
+            { x: -5, y: 30, size: 6 },
+            { x: 20, y: 40, size: 7 },
+            { x: 40, y: 35, size: 8 }
         ];
     }
     
@@ -171,91 +191,56 @@ export class MagicAcademy extends Building {
     
     renderTrees(ctx, size) {
         this.trees.forEach(tree => {
-            ctx.save();
-            ctx.translate(this.x + tree.x, this.y + tree.y);
+            const treeX = this.x + tree.x;
+            const treeY = this.y + tree.y;
+            const scale = tree.size;
             
             // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.save();
+            ctx.translate(treeX + 2, treeY + 2);
+            ctx.scale(1, 0.5);
             ctx.beginPath();
-            ctx.ellipse(3, 3, tree.size * 0.6, tree.size * 0.2, 0, 0, Math.PI * 2);
+            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
             
             // Tree trunk
-            const trunkHeight = tree.size * 0.8;
-            const trunkWidth = tree.size * 0.15;
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-trunkWidth/2, 0, trunkWidth, trunkHeight);
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
             
-            // Tree crown based on type
-            switch(tree.type) {
-                case 'oak':
-                    // Round oak crown
-                    ctx.fillStyle = '#228B22';
-                    ctx.beginPath();
-                    ctx.arc(0, trunkHeight * 0.3, tree.size * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Oak leaves detail
-                    ctx.fillStyle = '#32CD32';
-                    for (let i = 0; i < 5; i++) {
-                        const angle = (i / 5) * Math.PI * 2;
-                        const leafX = Math.cos(angle) * tree.size * 0.3;
-                        const leafY = trunkHeight * 0.3 + Math.sin(angle) * tree.size * 0.3;
-                        ctx.beginPath();
-                        ctx.arc(leafX, leafY, tree.size * 0.2, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    break;
-                    
-                case 'pine':
-                    // Triangular pine crown
-                    ctx.fillStyle = '#006400';
-                    ctx.beginPath();
-                    ctx.moveTo(0, trunkHeight * 0.1);
-                    ctx.lineTo(-tree.size * 0.4, trunkHeight * 0.7);
-                    ctx.lineTo(tree.size * 0.4, trunkHeight * 0.7);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Pine layers
-                    ctx.fillStyle = '#228B22';
-                    ctx.beginPath();
-                    ctx.moveTo(0, trunkHeight * 0.3);
-                    ctx.lineTo(-tree.size * 0.3, trunkHeight * 0.6);
-                    ctx.lineTo(tree.size * 0.3, trunkHeight * 0.6);
-                    ctx.closePath();
-                    ctx.fill();
-                    break;
-                    
-                case 'willow':
-                    // Drooping willow crown
-                    ctx.fillStyle = '#9ACD32';
-                    ctx.beginPath();
-                    ctx.arc(0, trunkHeight * 0.2, tree.size * 0.4, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Drooping branches
-                    ctx.strokeStyle = '#228B22';
-                    ctx.lineWidth = 2;
-                    for (let i = 0; i < 6; i++) {
-                        const angle = (i / 6) * Math.PI * 2;
-                        const startX = Math.cos(angle) * tree.size * 0.3;
-                        const startY = trunkHeight * 0.2 + Math.sin(angle) * tree.size * 0.2;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(startX, startY);
-                        ctx.quadraticCurveTo(
-                            startX + Math.cos(angle) * tree.size * 0.2,
-                            startY + tree.size * 0.3,
-                            startX + Math.cos(angle) * tree.size * 0.15,
-                            startY + tree.size * 0.4
-                        );
-                        ctx.stroke();
-                    }
-                    break;
+            // Trunk texture
+            ctx.strokeStyle = '#5D4037';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 3; i++) {
+                const y = treeY - (6 * scale * i / 3);
+                ctx.beginPath();
+                ctx.moveTo(treeX - 1 * scale, y);
+                ctx.lineTo(treeX + 1 * scale, y);
+                ctx.stroke();
             }
             
-            ctx.restore();
+            // Pine layers (same as barricade tower)
+            const layers = [
+                { y: -10 * scale, width: 8 * scale, color: '#0F3B0F' },
+                { y: -7 * scale, width: 6 * scale, color: '#228B22' },
+                { y: -4 * scale, width: 4 * scale, color: '#32CD32' }
+            ];
+            
+            layers.forEach(layer => {
+                ctx.fillStyle = layer.color;
+                ctx.beginPath();
+                ctx.moveTo(treeX, treeY + layer.y);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Tree outline
+                ctx.strokeStyle = '#0F3B0F';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
         });
     }
     
@@ -699,6 +684,23 @@ export class MagicAcademy extends Building {
         // Academy provides mana regeneration and elemental research
         buildingManager.manaPerSecond = this.manaRegenRate;
         buildingManager.elementalBonuses = this.getElementalBonuses();
+    }
+    
+    getElementalBonuses() {
+        return {
+            fire: {
+                damageBonus: this.elementalUpgrades.fire.level * this.elementalUpgrades.fire.damageBonus
+            },
+            ice: {
+                slowBonus: this.elementalUpgrades.ice.level * this.elementalUpgrades.ice.slowBonus
+            },
+            lightning: {
+                chainRange: this.elementalUpgrades.lightning.level * this.elementalUpgrades.lightning.chainRange
+            },
+            earth: {
+                armorPiercing: this.elementalUpgrades.earth.level * this.elementalUpgrades.earth.armorPiercing
+            }
+        };
     }
     
     static getInfo() {

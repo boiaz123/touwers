@@ -333,7 +333,7 @@ export class MagicTower {
         ctx.strokeStyle = '#4B0082';
         ctx.lineWidth = 2;
         
-        // Draw tower cylinder
+        // Draw tower cylinder (FIXED: proper alignment)
         ctx.beginPath();
         ctx.arc(this.x, this.y - towerHeight/2, baseRadius * 0.9, 0, Math.PI * 2);
         ctx.fill();
@@ -343,7 +343,7 @@ export class MagicTower {
         ctx.strokeStyle = '#2E0A4F';
         ctx.lineWidth = 1;
         for (let ring = 0; ring < 4; ring++) {
-            const ringY = this.y - towerHeight/2 + (ring - 1.5) * towerHeight/6;
+            const ringY = this.y - towerHeight + (ring * towerHeight/4);
             ctx.beginPath();
             ctx.arc(this.x, ringY, baseRadius * 0.85, 0, Math.PI * 2);
             ctx.stroke();
@@ -353,7 +353,7 @@ export class MagicTower {
         for (let i = 0; i < 4; i++) {
             const angle = (i / 4) * Math.PI * 2;
             const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const windowY = this.y - towerHeight/2 + Math.sin(angle) * baseRadius * 0.7;
+            const windowY = this.y - towerHeight/2;
             
             // Window glow
             const windowGlow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, 8);
@@ -371,7 +371,7 @@ export class MagicTower {
             ctx.fill();
         }
         
-        // Tesla coil base platform
+        // Tesla coil base platform (FIXED: aligned with tower)
         const coilBaseRadius = baseRadius * 0.6;
         const coilBaseY = this.y - towerHeight;
         
@@ -383,7 +383,7 @@ export class MagicTower {
         ctx.fill();
         ctx.stroke();
         
-        // Tesla coil central column (fixed position)
+        // Tesla coil central column (FIXED: proper positioning)
         const coilHeight = towerSize * 0.4;
         const coilWidth = baseRadius * 0.15;
         
@@ -403,7 +403,7 @@ export class MagicTower {
         ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
         ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
         
-        // Tesla coil rings (fixed positions)
+        // Tesla coil rings (FIXED: proper alignment)
         const ringCount = 5;
         for (let i = 0; i < ringCount; i++) {
             const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
@@ -423,7 +423,7 @@ export class MagicTower {
             ctx.stroke();
         }
         
-        // Tesla coil top sphere
+        // Tesla coil top sphere (FIXED: aligned properly)
         const sphereRadius = coilWidth * 1.5;
         const sphereY = coilBaseY - coilHeight;
         
@@ -538,12 +538,6 @@ export class MagicTower {
         if (this.isSelected) {
             ctx.shadowColor = '#FFD700';
             ctx.shadowBlur = 10;
-        }
-        
-        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
-        
-        if (this.isSelected) {
-            ctx.shadowBlur = 0;
             
             // Selection ring
             ctx.strokeStyle = '#FFD700';
@@ -551,6 +545,12 @@ export class MagicTower {
             ctx.beginPath();
             ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
             ctx.stroke();
+        }
+        
+        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
+        
+        if (this.isSelected) {
+            ctx.shadowBlur = 0;
         }
 
         // Range indicator
