@@ -227,7 +227,8 @@ export class MagicTower {
     }
     
     isClickable(x, y, towerSize) {
-        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
+        // Deprecated: selection handled by icon in TowerManager
+        return false;
     }
     
     applyElementalBonuses(bonuses) {
