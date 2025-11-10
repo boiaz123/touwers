@@ -139,18 +139,21 @@ class GameplayState {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // Add debugging to see if mouse events are firing
-            console.log(`Game: Mouse move at (${x}, ${y}), rect:`, rect);
+            // Only debug on demand to avoid spam
+            if (this.debugMouseEvents) {
+                console.log(`Game: Mouse move at (${x}, ${y})`);
+            }
             
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
             
-            console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
+            if (this.debugMouseEvents) {
+                console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
+            }
             
             // Update cursor based on hover state
             if (isHoveringInteractable) {
                 this.stateManager.canvas.style.cursor = 'pointer';
-                console.log('Game: Setting cursor to pointer');
             } else {
                 this.stateManager.canvas.style.cursor = 'crosshair';
             }
@@ -158,18 +161,15 @@ class GameplayState {
             // Handle placement preview
             this.handleMouseMove(e);
         };
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // SIMPLIFIED: Canvas click handler with extensive debugging
+        // Canvas click handler with better state management
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
             console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
-            console.log(`Game: Event target:`, e.target);
-            console.log(`Game: Canvas element:`, this.stateManager.canvas);
-            console.log(`Game: Canvas rect:`, rect);
-            console.log(`Game: Mouse event clientX/Y:`, e.clientX, e.clientY);
             
             // Verify we're actually clicking the canvas
             if (e.target !== this.stateManager.canvas) {
@@ -177,40 +177,30 @@ class GameplayState {
                 return;
             }
             
-            // CRITICAL: Check for building/tower icon clicks FIRST with debugging
-            console.log(`Game: Calling towerManager.handleClick with coordinates (${canvasX}, ${canvasY})`);
+            // CRITICAL: Check for building/tower icon clicks FIRST
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
-            console.log(`Game: TowerManager click result:`, clickResult);
-            
             if (clickResult) {
-                if (clickResult.type === 'forge_menu') {
-                    console.log('Game: OPENING FORGE MENU');
-                    this.showForgeUpgradeMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'academy_menu') {
-                    console.log('Game: OPENING ACADEMY MENU');
-                    this.showAcademyUpgradeMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'magic_tower_menu') {
-                    console.log('Game: OPENING MAGIC TOWER MENU');
-                    this.showMagicTowerElementMenu(clickResult);
-                    return;
-                } else if (typeof clickResult === 'number') {
-                    console.log(`Game: GOLD COLLECTED: ${clickResult}`);
-                    this.gameState.gold += clickResult;
-                    this.updateUI();
-                    return;
-                }
+                // Handle the result and refresh mouse state
+                this.handleClickResult(clickResult);
+                
+                // Force refresh mouse state after any interaction
+                setTimeout(() => {
+                    this.refreshMouseState(canvasX, canvasY);
+                }, 100);
+                
+                return;
             }
             
-            console.log(`Game: No menu triggered, handling normal placement click`);
-            // Only handle tower/building placement if no icon was clicked
+            // Handle normal placement click
             this.handleClick(canvasX, canvasY);
+            
+            // Refresh mouse state after placement too
+            setTimeout(() => {
+                this.refreshMouseState(canvasX, canvasY);
+            }, 100);
         };
         
-        // Add canvas click listener with more debugging
-        console.log('Game: Adding click listener to canvas:', this.stateManager.canvas);
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
         console.log(`Game: Canvas click handler attached successfully`);
     }
@@ -325,6 +315,34 @@ class GameplayState {
         `;
     }
     
+    handleClickResult(clickResult) {
+        if (clickResult.type === 'forge_menu') {
+            console.log('Game: OPENING FORGE MENU');
+            this.showForgeUpgradeMenu(clickResult);
+        } else if (clickResult.type === 'academy_menu') {
+            console.log('Game: OPENING ACADEMY MENU');
+            this.showAcademyUpgradeMenu(clickResult);
+        } else if (clickResult.type === 'magic_tower_menu') {
+            console.log('Game: OPENING MAGIC TOWER MENU');
+            this.showMagicTowerElementMenu(clickResult);
+        } else if (typeof clickResult === 'number') {
+            console.log(`Game: GOLD COLLECTED: ${clickResult}`);
+            this.gameState.gold += clickResult;
+            this.updateUI();
+        }
+    }
+    
+    refreshMouseState(x, y) {
+        // Force refresh the mouse hover state
+        if (this.mouseMoveHandler) {
+            const syntheticEvent = {
+                clientX: x + this.stateManager.canvas.getBoundingClientRect().left,
+                clientY: y + this.stateManager.canvas.getBoundingClientRect().top
+            };
+            this.mouseMoveHandler(syntheticEvent);
+        }
+    }
+    
     handleClick(x, y) {
         // Handle regular tower/building placement (NOT icon clicks)
         if (this.selectedTowerType) {
@@ -340,6 +358,8 @@ class GameplayState {
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    
+                    console.log('Game: Tower placed successfully');
                 }
             }
         } else if (this.selectedBuildingType) {
@@ -355,9 +375,39 @@ class GameplayState {
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    
+                    console.log('Game: Building placed successfully, refreshing event listeners');
+                    
+                    // CRITICAL: Refresh event listeners after building placement
+                    setTimeout(() => {
+                        this.refreshEventListeners();
+                    }, 50);
                 }
             }
         }
+    }
+    
+    refreshEventListeners() {
+        console.log('Game: Refreshing event listeners after building placement');
+        
+        // Store current mouse position
+        const rect = this.stateManager.canvas.getBoundingClientRect();
+        const currentMouseX = this.mouseX || 0;
+        const currentMouseY = this.mouseY || 0;
+        
+        // Re-setup event listeners
+        this.setupEventListeners();
+        
+        // Force a mouse move event to refresh hover state
+        setTimeout(() => {
+            if (this.mouseMoveHandler) {
+                const syntheticEvent = {
+                    clientX: currentMouseX + rect.left,
+                    clientY: currentMouseY + rect.top
+                };
+                this.mouseMoveHandler(syntheticEvent);
+            }
+        }, 100);
     }
     
     showForgeUpgradeMenu(forgeData) {

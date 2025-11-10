@@ -275,37 +275,52 @@ export class TowerManager {
         this.mouseX = x;
         this.mouseY = y;
         
-        console.log(`TowerManager: handleMouseMove at (${x}, ${y}), checking ${this.towers.length} towers`);
+        // Only debug when needed to avoid spam
+        const debugMouse = false; // Set to true for debugging
+        
+        if (debugMouse) {
+            console.log(`TowerManager: handleMouseMove at (${x}, ${y}), checking ${this.towers.length} towers`);
+        }
         
         // Check for hover over tower icons
         let foundHover = false;
         
+        // Use a more robust approach - check all towers and buildings
         for (const tower of this.towers) {
             if (tower.clickArea) {
                 const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
                 const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
                 
-                console.log(`TowerManager: Checking ${tower.constructor.name} clickArea:`, tower.clickArea);
-                console.log(`TowerManager: withinX=${withinX}, withinY=${withinY}`);
+                if (debugMouse) {
+                    console.log(`TowerManager: Checking ${tower.constructor.name} clickArea:`, tower.clickArea);
+                    console.log(`TowerManager: withinX=${withinX}, withinY=${withinY}`);
+                }
                 
                 if (withinX && withinY) {
                     if (this.hoveredTower !== tower) {
+                        // Clear previous hover
+                        if (this.hoveredTower) {
+                            this.hoveredTower.isHovered = false;
+                        }
+                        
                         this.hoveredTower = tower;
                         tower.isHovered = true;
-                        console.log(`TowerManager: Started hovering over ${tower.constructor.name} at (${tower.x}, ${tower.y})`);
-                        console.log(`TowerManager: Mouse at (${x}, ${y}), clickArea:`, tower.clickArea);
+                        
+                        if (debugMouse) {
+                            console.log(`TowerManager: Started hovering over ${tower.constructor.name}`);
+                        }
                     }
                     foundHover = true;
                     break;
                 }
-            } else {
-                console.log(`TowerManager: Tower ${tower.constructor.name} has no clickArea!`);
             }
         }
         
         // Clear hover state if no tower is hovered
         if (!foundHover && this.hoveredTower) {
-            console.log(`TowerManager: Stopped hovering over ${this.hoveredTower.constructor.name}`);
+            if (debugMouse) {
+                console.log(`TowerManager: Stopped hovering over ${this.hoveredTower.constructor.name}`);
+            }
             this.hoveredTower.isHovered = false;
             this.hoveredTower = null;
         }
@@ -317,10 +332,17 @@ export class TowerManager {
             }
         });
         
-        // Also check building hover
-        const buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+        // Also check building hover with better error handling
+        let buildingHover = false;
+        try {
+            buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+        } catch (error) {
+            console.warn('TowerManager: Error in building mouse move:', error);
+        }
         
-        console.log(`TowerManager: foundHover=${foundHover}, buildingHover=${buildingHover}`);
+        if (debugMouse) {
+            console.log(`TowerManager: foundHover=${foundHover}, buildingHover=${buildingHover}`);
+        }
         
         // Return true if hovering over any interactive element
         return foundHover || buildingHover;
