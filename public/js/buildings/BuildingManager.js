@@ -114,6 +114,8 @@ export class BuildingManager {
     }
     
     handleClick(x, y, canvasSize) {
+        console.log(`BuildingManager: Click at (${x}, ${y}), checking ${this.buildings.length} buildings`);
+        
         // Clear all selections first
         this.buildings.forEach(building => {
             if (building.deselect) building.deselect();
@@ -121,6 +123,7 @@ export class BuildingManager {
         
         // Check building clicks with proper size calculation
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
         
         for (const building of this.buildings) {
             const buildingSize = building.size * cellSize;
@@ -130,8 +133,10 @@ export class BuildingManager {
             const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
             const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
             
+            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with size ${buildingSize}, bounds: [${building.x - halfSize}, ${building.x + halfSize}] x [${building.y - halfSize}, ${building.y + halfSize}], click within: ${withinX && withinY}`);
+            
             if (withinX && withinY) {
-                console.log(`BuildingManager: Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
                 
                 if (building.constructor.name === 'GoldMine') {
                     return building.collectGold();
@@ -144,6 +149,7 @@ export class BuildingManager {
             }
         }
         
+        console.log('BuildingManager: No building hit');
         return null;
     }
     

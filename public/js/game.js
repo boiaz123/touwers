@@ -262,6 +262,7 @@ class GameplayState {
     }
     
     handleClick(x, y) {
+        // REMOVED: Old logic that was preventing menu detection
         // First check if clicking on a building (like gold mine or academy)
         const clickResult = this.towerManager.handleClick(x, y, { 
             width: this.stateManager.canvas.width, 
@@ -273,12 +274,14 @@ class GameplayState {
                 this.showForgeUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'academy_menu') {
+                console.log('GameplayState: Academy menu detected, showing menu');
                 this.showAcademyUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'magic_tower_menu') {
+                console.log('GameplayState: Magic tower menu detected, showing menu');
                 this.showMagicTowerElementMenu(clickResult);
                 return;
-            } else if (clickResult > 0) {
+            } else if (typeof clickResult === 'number') {
                 // Gold collection from mine
                 this.gameState.gold += clickResult;
                 this.updateUI();
