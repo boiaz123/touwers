@@ -137,47 +137,50 @@ class GameplayState {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // FIXED: Canvas click handler that doesn't conflict with other handlers
+        // SIMPLIFIED: Canvas click handler with extensive debugging
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            console.log(`Game: Canvas click at (${canvasX}, ${canvasY})`);
+            console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
+            console.log(`Game: Canvas rect:`, rect);
             
-            // CRITICAL: Check for building/tower icon clicks FIRST
+            // CRITICAL: Check for building/tower icon clicks FIRST with debugging
+            console.log(`Game: Calling towerManager.handleClick...`);
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
+            console.log(`Game: TowerManager returned:`, clickResult);
+            
             if (clickResult) {
-                console.log('Game: Click result received:', clickResult);
-                
                 if (clickResult.type === 'forge_menu') {
-                    console.log('Game: Opening forge menu');
+                    console.log('Game: OPENING FORGE MENU');
                     this.showForgeUpgradeMenu(clickResult);
-                    return; // CRITICAL: Don't process further
+                    return;
                 } else if (clickResult.type === 'academy_menu') {
-                    console.log('Game: Opening academy menu');
+                    console.log('Game: OPENING ACADEMY MENU');
                     this.showAcademyUpgradeMenu(clickResult);
-                    return; // CRITICAL: Don't process further
+                    return;
                 } else if (clickResult.type === 'magic_tower_menu') {
-                    console.log('Game: Opening magic tower menu');
+                    console.log('Game: OPENING MAGIC TOWER MENU');
                     this.showMagicTowerElementMenu(clickResult);
-                    return; // CRITICAL: Don't process further
+                    return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine
-                    console.log('Game: Gold collected:', clickResult);
+                    console.log(`Game: GOLD COLLECTED: ${clickResult}`);
                     this.gameState.gold += clickResult;
                     this.updateUI();
-                    return; // CRITICAL: Don't process further
+                    return;
                 }
             }
             
+            console.log(`Game: No menu triggered, handling normal placement click`);
             // Only handle tower/building placement if no icon was clicked
             this.handleClick(canvasX, canvasY);
         };
         
-        // Add canvas click listener WITHOUT removing existing ones
+        // Add canvas click listener
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        console.log(`Game: Canvas click handler attached`);
     }
     
     removeEventListeners() {

@@ -120,11 +120,16 @@ export class BuildingManager {
         for (let i = this.buildings.length - 1; i >= 0; i--) {
             const building = this.buildings[i];
             
+            console.log(`BuildingManager: Checking building ${i}: ${building.constructor.name} at (${building.x}, ${building.y})`);
+            
             if (building.clickArea) {
+                console.log(`BuildingManager: ${building.constructor.name} clickArea:`, building.clickArea);
+                
                 const withinX = x >= building.clickArea.x && x <= building.clickArea.x + building.clickArea.width;
                 const withinY = y >= building.clickArea.y && y <= building.clickArea.y + building.clickArea.height;
                 
-                console.log(`BuildingManager: Checking ${building.constructor.name} icon at (${building.clickArea.x}, ${building.clickArea.y}), click within: ${withinX && withinY}`);
+                console.log(`BuildingManager: Click (${x}, ${y}) vs area (${building.clickArea.x}, ${building.clickArea.y}, ${building.clickArea.width}, ${building.clickArea.height})`);
+                console.log(`BuildingManager: withinX: ${withinX}, withinY: ${withinY}`);
                 
                 if (withinX && withinY) {
                     console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon`);
@@ -143,6 +148,7 @@ export class BuildingManager {
                     
                     // Fallback for buildings without onClick
                     if (building.constructor.name === 'GoldMine' && building.collectGold) {
+                        console.log(`BuildingManager: Calling collectGold on ${building.constructor.name}`);
                         return building.collectGold();
                     }
                     

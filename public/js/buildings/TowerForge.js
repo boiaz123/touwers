@@ -169,7 +169,7 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // CRITICAL: Always set up clickable area
+        // CRITICAL: Always set up clickable area with detailed debugging
         const iconSize = 15;
         const iconX = this.x + size/2 - iconSize;
         const iconY = this.y + size/2 - iconSize;
@@ -182,7 +182,8 @@ export class TowerForge extends Building {
             height: iconSize * 2
         };
         
-        console.log(`TowerForge: Setting clickArea at (${this.clickArea.x}, ${this.clickArea.y}) size ${this.clickArea.width}x${this.clickArea.height}`);
+        console.log(`TowerForge: Render - setting clickArea at building position (${this.x}, ${this.y})`);
+        console.log(`TowerForge: Icon at (${iconX}, ${iconY}), clickArea:`, this.clickArea);
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

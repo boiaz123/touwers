@@ -774,8 +774,9 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
             
-            // Clear click area when not ready
+            // CRITICAL: Clear click area when not ready
             this.clickArea = null;
+            console.log(`GoldMine: Not ready, clearing clickArea`);
         } else {
             // Ready indicator with clickable icon in bottom right corner of 4x4 grid
             const iconSize = 15;
@@ -790,7 +791,8 @@ export class GoldMine extends Building {
                 height: iconSize * 2
             };
             
-            console.log(`GoldMine: Setting clickArea to`, this.clickArea);
+            console.log(`GoldMine: READY - setting clickArea at mine position (${this.x}, ${this.y})`);
+            console.log(`GoldMine: Icon at (${iconX}, ${iconY}), clickArea:`, this.clickArea);
             
             // Glow background with pulse
             const pulseIntensity = Math.sin(this.animationTime * 8) * 0.3 + 0.7;
