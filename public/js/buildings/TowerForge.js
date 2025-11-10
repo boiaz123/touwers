@@ -999,10 +999,13 @@ export class TowerForge extends Building {
         // Check if click is on upgrade icon (higher priority)
         if (this.upgradeIconBounds) {
             const bounds = this.upgradeIconBounds;
-            const isWithinX = x >= bounds.x - bounds.halfSize && x <= bounds.x + bounds.halfSize;
-            const isWithinY = y >= bounds.y - bounds.halfSize && y <= bounds.y + bounds.halfSize;
-            if (isWithinX && isWithinY) {
-                return true;
+            
+            // Use circular hit detection - much tighter and more accurate
+            if (bounds.type === 'circle') {
+                const distance = Math.hypot(x - bounds.x, y - bounds.y);
+                if (distance <= bounds.radius) {
+                    return true;
+                }
             }
         }
         
@@ -1403,13 +1406,13 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection
-        // Use square bounding box around the hovering icon
-        const iconHalfSize = iconSize / 2; // 17px
+        // Store icon bounds for click detection - dynamic, follows hover animation
+        // Use circular bounds that match the visible icon (17px radius)
         this.upgradeIconBounds = {
             x: iconX,
-            y: iconY, // Use the animated Y position (with hover offset)
-            halfSize: iconHalfSize // Square box from center
+            y: iconY, // Animated Y position - updates every frame with hover bob
+            radius: radius * 0.9, // Slightly smaller than visual radius for precision
+            type: 'circle' // Use circular hit detection instead of square
         };
     }
 }
