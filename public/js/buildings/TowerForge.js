@@ -905,6 +905,59 @@ export class TowerForge extends Building {
         ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
     }
     
+    renderForgeInterior(ctx, size) {
+        // Coal pile visible in opening
+        const openingX = this.x - 15;
+        const openingY = this.y + 5;
+        
+        // Coal pieces - fixed positions
+        ctx.fillStyle = '#1C1C1C';
+        const coalPositions = [
+            { x: -8, y: -3, size: 2 },
+            { x: -2, y: -3, size: 2 },
+            { x: 4, y: -3, size: 2 },
+            { x: -5, y: 1, size: 2 },
+            { x: 1, y: 1, size: 2 },
+            { x: 7, y: 1, size: 2 }
+        ];
+        
+        coalPositions.forEach(coal => {
+            ctx.beginPath();
+            ctx.arc(openingX + coal.x, openingY + coal.y, coal.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Fire above coal
+        const fireColors = [
+            `rgba(255, 0, 0, ${this.fireIntensity * 0.7})`,
+            `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`,
+            `rgba(255, 200, 0, ${this.fireIntensity * 0.6})`
+        ];
+        
+        fireColors.forEach((color, index) => {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(
+                openingX - 3 + index * 2,
+                openingY - 8 - index * 2,
+                4 - index,
+                8 - index * 2,
+                0, 0, Math.PI * 2
+            );
+            ctx.fill();
+        });
+        
+        // Anvil inside (partially visible)
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 10, openingY - 2, 8, 4);
+        
+        // Hammer on anvil
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 6);
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 3);
+    }
+
     renderParticles(ctx) {
         // Render sparks
         this.sparks.forEach(spark => {
