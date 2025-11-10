@@ -7,6 +7,7 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         this.particles = [];
+        this.particlesInitialized = false;
         console.log('StartScreen: constructor called');
     }
     
@@ -17,9 +18,16 @@ export class StartScreen {
             return;
         }
         
+        // Prevent multiple initializations
+        if (this.particlesInitialized) {
+            return;
+        }
+        
         console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.particles = [];
-        for (let i = 0; i < 50; i++) {
+        
+        // Reduce particle count to speed up initialization
+        for (let i = 0; i < 25; i++) { // Reduced from 50 to 25
             this.particles.push({
                 x: Math.random() * this.stateManager.canvas.width,
                 y: Math.random() * this.stateManager.canvas.height,
@@ -28,6 +36,8 @@ export class StartScreen {
                 opacity: Math.random() * 0.5 + 0.1
             });
         }
+        
+        this.particlesInitialized = true;
         console.log('StartScreen: Particles initialized:', this.particles.length);
     }
     
@@ -41,15 +51,11 @@ export class StartScreen {
         if (statsBar) {
             statsBar.style.display = 'none';
             console.log('StartScreen: Stats bar hidden');
-        } else {
-            console.warn('StartScreen: Stats bar element not found');
         }
         
         if (sidebar) {
             sidebar.style.display = 'none';
             console.log('StartScreen: Sidebar hidden');
-        } else {
-            console.warn('StartScreen: Sidebar element not found');
         }
         
         this.animationTime = 0;
@@ -58,9 +64,7 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         
-        // Initialize particles when entering (canvas size should be known by now)
-        this.initParticles();
-        
+        // Don't initialize particles immediately - let first render do it
         console.log('StartScreen: enter completed');
     }
     
@@ -68,19 +72,19 @@ export class StartScreen {
         this.animationTime += deltaTime;
         
         // Title fade in
-        if (this.animationTime > 1) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 1) / 2);
+        if (this.animationTime > 0.5) { // Reduced from 1
+            this.titleOpacity = Math.min(1, (this.animationTime - 0.5) / 1); // Reduced from 2
         }
         
         // Subtitle fade in
-        if (this.animationTime > 3) {
-            this.subtitleOpacity = Math.min(1, (this.animationTime - 3) / 1.5);
+        if (this.animationTime > 1.5) { // Reduced from 3
+            this.subtitleOpacity = Math.min(1, (this.animationTime - 1.5) / 1); // Reduced from 1.5
         }
         
         // Show continue button
-        if (this.animationTime > 5) {
+        if (this.animationTime > 2.5) { // Reduced from 5
             this.showContinue = true;
-            this.continueOpacity = Math.min(1, (this.animationTime - 5) / 1);
+            this.continueOpacity = Math.min(1, (this.animationTime - 2.5) / 1); // Reduced from 5
         }
         
         // Update particles only if they exist
@@ -102,6 +106,11 @@ export class StartScreen {
             // Don't render if canvas isn't ready
             if (!canvas.width || !canvas.height) {
                 return;
+            }
+            
+            // Initialize particles on first render if not done yet
+            if (!this.particlesInitialized) {
+                this.initParticles();
             }
             
             // Dark medieval background

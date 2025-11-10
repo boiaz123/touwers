@@ -371,13 +371,17 @@ class Game {
         // Detect and apply UI scaling based on screen resolution
         this.applyUIScaling();
         
+        // Set initial canvas size
         this.resizeCanvas();
         console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+        
+        // Prevent infinite resize loops
+        this.isResizing = false;
         
         this.stateManager = new GameStateManager(this.canvas, this.ctx);
         console.log('Game: GameStateManager created');
         
-        // Add states
+        // Add states with error handling
         try {
             this.stateManager.addState('start', new StartScreen(this.stateManager));
             console.log('Game: StartScreen state added');
@@ -393,16 +397,18 @@ class Game {
         }
         
         this.lastTime = 0;
-        
         this.setupEventListeners();
-        console.log('Game: Event listeners set up');
         
         // Start with the start screen
         console.log('Game: Starting with start screen');
-        this.stateManager.changeState('start');
+        try {
+            this.stateManager.changeState('start');
+        } catch (error) {
+            console.error('Error changing to start state:', error);
+        }
         
         console.log('Game: Starting game loop');
-        this.gameLoop(0);
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
     
     applyUIScaling() {
@@ -433,79 +439,72 @@ class Game {
     }
     
     resizeCanvas() {
-        const gameArea = document.getElementById('game-area');
-        const sidebar = document.getElementById('tower-sidebar');
-        const statsBar = document.getElementById('stats-bar');
+        // Prevent resize loops
+        if (this.isResizing) {
+            return;
+        }
         
-        // Only account for visible UI elements
-        const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
-        const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
+        this.isResizing = true;
         
-        const oldWidth = this.canvas.width;
-        const oldHeight = this.canvas.height;
-        
-        this.canvas.width = window.innerWidth - sidebarWidth;
-        this.canvas.height = window.innerHeight - statsBarHeight;
-        
-        // Only update game elements if we're in the game state and the state manager is initialized
-        if (this.stateManager && 
-            this.stateManager.currentState === 'game' && 
-            this.stateManager.states.game && 
-            this.stateManager.states.game.level &&
-            this.stateManager.states.game.level.isInitialized) {
+        try {
+            const gameArea = document.getElementById('game-area');
+            const sidebar = document.getElementById('tower-sidebar');
+            const statsBar = document.getElementById('stats-bar');
             
-            const gameState = this.stateManager.states.game;
-            const sizeChangeThreshold = 50;
+            // Only account for visible UI elements
+            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
+            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
             
-            if (Math.abs(oldWidth - this.canvas.width) > sizeChangeThreshold ||
-                Math.abs(oldHeight - this.canvas.height) > sizeChangeThreshold) {
-                
-                console.log('Game: Significant canvas resize detected, updating level and enemies');
-                
-                // Reinitialize level for new canvas size
-                gameState.level.initializeForCanvas(this.canvas.width, this.canvas.height);
-                
-                // Update enemy manager with new path
-                if (gameState.enemyManager) {
-                    gameState.enemyManager.updatePath(gameState.level.path);
-                    
-                    // Update existing enemies to use new path if any exist
-                    gameState.enemyManager.enemies.forEach(enemy => {
-                        if (enemy.updatePath) {
-                            enemy.updatePath(gameState.level.path);
-                        } else {
-                            // Fallback: reset enemy path reference
-                            enemy.path = gameState.level.path;
-                            // Ensure enemy position is still valid
-                            if (enemy.currentPathIndex >= enemy.path.length - 1) {
-                                enemy.currentPathIndex = Math.max(0, enemy.path.length - 2);
-                            }
-                        }
-                    });
-                }
+            const oldWidth = this.canvas.width;
+            const oldHeight = this.canvas.height;
+            
+            const newWidth = Math.max(800, window.innerWidth - sidebarWidth); // Minimum size
+            const newHeight = Math.max(600, window.innerHeight - statsBarHeight); // Minimum size
+            
+            // Only resize if there's a significant change
+            if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                console.log('Game: Canvas resized from', oldWidth, 'x', oldHeight, 'to', newWidth, 'x', newHeight);
             }
+        } catch (error) {
+            console.error('Game: Error during resize:', error);
+        } finally {
+            this.isResizing = false;
         }
     }
     
     setupEventListeners() {
+        let resizeTimeout;
+        
         window.addEventListener('resize', () => {
-            this.applyUIScaling();
-            this.resizeCanvas();
+            // Debounce resize events
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (!this.isResizing) {
+                    this.applyUIScaling();
+                    this.resizeCanvas();
+                }
+            }, 100); // Wait 100ms after resize stops
         });
         
         this.canvas.addEventListener('click', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            this.stateManager.handleClick(x, y);
+            try {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                this.stateManager.handleClick(x, y);
+            } catch (error) {
+                console.error('Game: Error handling click:', error);
+            }
         });
     }
     
     gameLoop(currentTime) {
-        const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000); // Cap at 60fps
-        this.lastTime = currentTime;
-        
         try {
+            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000); // Cap at 60fps
+            this.lastTime = currentTime;
+            
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
             this.stateManager.update(deltaTime);

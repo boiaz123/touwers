@@ -1,4 +1,4 @@
-export class Level {
+export class Level3D {
     constructor() {
         // Grid configuration - will be calculated based on screen size
         this.gridWidth = 70;
@@ -15,6 +15,7 @@ export class Level {
             { x: 800, y: 300 }
         ];
         this.isInitialized = false;
+        this.isInitializing = false; // Initialization flag to prevent recursion
         
         // Cached visual elements - will be generated once
         this.grassPatches = [];
@@ -34,6 +35,12 @@ export class Level {
             return;
         }
         
+        // Prevent infinite loops by checking if already initializing
+        if (this.isInitializing) {
+            console.warn('Level: Already initializing, skipping duplicate call');
+            return;
+        }
+        
         // Always reinitialize if canvas size changed significantly
         const sizeChangeThreshold = 50; // pixels
         const sizeChanged = !this.lastCanvasWidth || 
@@ -46,32 +53,42 @@ export class Level {
         
         console.log(`Level: Initializing for canvas size ${canvasWidth}x${canvasHeight}`);
         
-        // Calculate grid size based on canvas dimensions - DOUBLED cell size to halve grid density
-        // Aim for cells that are appropriately sized for the resolution
-        const baseResolution = 1920; // 1080p width as baseline
-        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
+        // Set initialization flag to prevent recursion
+        this.isInitializing = true;
         
-        this.cellSize = Math.floor(32 * scaleFactor); // Doubled from 16 to 32 to halve grid density
-        this.gridWidth = Math.floor(canvasWidth / this.cellSize);
-        this.gridHeight = Math.floor(canvasHeight / this.cellSize);
-        
-        // Create a more complex, meandering path that uses more of the map
-        this.createMeanderingPath(canvasWidth, canvasHeight);
-        console.log('Level: Created path with', this.path.length, 'waypoints');
-        
-        // Clear and recalculate occupied cells
-        this.occupiedCells.clear();
-        this.markPathCells();
-        
-        // Reset visual element generation flags to regenerate for new canvas size
-        this.visualElementsGenerated = false;
-        this.pathTextureGenerated = false;
-        
-        this.lastCanvasWidth = canvasWidth;
-        this.lastCanvasHeight = canvasHeight;
-        this.isInitialized = true;
-        
-        console.log('Level: Initialization complete, path starts at', this.path[0], 'ends at', this.path[this.path.length - 1]);
+        try {
+            // Calculate grid size based on canvas dimensions - DOUBLED cell size to halve grid density
+            // Aim for cells that are appropriately sized for the resolution
+            const baseResolution = 1920; // 1080p width as baseline
+            const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
+            
+            this.cellSize = Math.floor(32 * scaleFactor); // Doubled from 16 to 32 to halve grid density
+            this.gridWidth = Math.floor(canvasWidth / this.cellSize);
+            this.gridHeight = Math.floor(canvasHeight / this.cellSize);
+            
+            // Create a more complex, meandering path that uses more of the map
+            this.createMeanderingPath(canvasWidth, canvasHeight);
+            console.log('Level: Created path with', this.path.length, 'waypoints');
+            
+            // Clear and recalculate occupied cells
+            this.occupiedCells.clear();
+            this.markPathCells();
+            
+            // Reset visual element generation flags to regenerate for new canvas size
+            this.visualElementsGenerated = false;
+            this.pathTextureGenerated = false;
+            
+            this.lastCanvasWidth = canvasWidth;
+            this.lastCanvasHeight = canvasHeight;
+            this.isInitialized = true;
+            
+            console.log('Level: Initialization complete, path starts at', this.path[0], 'ends at', this.path[this.path.length - 1]);
+        } catch (error) {
+            console.error('Level: Error during initialization:', error);
+        } finally {
+            // Always clear the initializing flag
+            this.isInitializing = false;
+        }
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
@@ -632,8 +649,8 @@ export class Level {
     }
     
     render(ctx) {
-        // Only initialize if we have valid canvas dimensions
-        if (ctx.canvas.width > 0 && ctx.canvas.height > 0) {
+        // Only initialize if we have valid canvas dimensions AND not already initializing
+        if (ctx.canvas.width > 0 && ctx.canvas.height > 0 && !this.isInitializing) {
             this.initializeForCanvas(ctx.canvas.width, ctx.canvas.height);
         }
         
