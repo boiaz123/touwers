@@ -272,6 +272,12 @@ export class TowerManager {
     }
     
     handleMouseMove(x, y) {
+        // Validate input coordinates
+        if (typeof x !== 'number' || typeof y !== 'number' || !isFinite(x) || !isFinite(y)) {
+            console.warn('TowerManager: Invalid mouse coordinates:', x, y);
+            return false;
+        }
+        
         this.mouseX = x;
         this.mouseY = y;
         
@@ -287,7 +293,7 @@ export class TowerManager {
         
         // Use a more robust approach - check all towers and buildings
         for (const tower of this.towers) {
-            if (tower.clickArea) {
+            if (tower.clickArea && this.isValidClickArea(tower.clickArea)) {
                 const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
                 const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
                 
@@ -313,6 +319,8 @@ export class TowerManager {
                     foundHover = true;
                     break;
                 }
+            } else if (debugMouse) {
+                console.log(`TowerManager: Tower ${tower.constructor.name} has invalid clickArea:`, tower.clickArea);
             }
         }
         
@@ -346,6 +354,20 @@ export class TowerManager {
         
         // Return true if hovering over any interactive element
         return foundHover || buildingHover;
+    }
+    
+    isValidClickArea(clickArea) {
+        return clickArea && 
+               typeof clickArea.x === 'number' && 
+               typeof clickArea.y === 'number' && 
+               typeof clickArea.width === 'number' && 
+               typeof clickArea.height === 'number' &&
+               isFinite(clickArea.x) && 
+               isFinite(clickArea.y) && 
+               isFinite(clickArea.width) && 
+               isFinite(clickArea.height) &&
+               clickArea.width > 0 && 
+               clickArea.height > 0;
     }
     
     handleClick(x, y, canvasSize) {

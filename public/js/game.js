@@ -34,6 +34,10 @@ class GameplayState {
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
         
+        // Initialize mouse tracking
+        this.mouseX = 0;
+        this.mouseY = 0;
+        
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
             this.gameState.gold = 10000; // High starting gold for testing
@@ -71,12 +75,9 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // CRITICAL: Setup event listeners AFTER everything is initialized
-        // Add a small delay to ensure all objects are fully created
-        setTimeout(() => {
-            this.setupEventListeners();
-            console.log('GameplayState: Event listeners set up after initialization delay');
-        }, 100);
+        // CRITICAL: Setup event listeners SYNCHRONOUSLY, not with timeout
+        this.setupEventListeners();
+        console.log('GameplayState: Event listeners set up synchronously');
         
         this.updateUI();
         this.startWave();
@@ -145,6 +146,10 @@ class GameplayState {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
+            // CRITICAL: Always update mouse position tracking
+            this.mouseX = x;
+            this.mouseY = y;
+            
             // Only debug on demand to avoid spam
             if (this.debugMouseEvents) {
                 console.log(`Game: Mouse move at (${x}, ${y})`);
@@ -175,6 +180,10 @@ class GameplayState {
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
+            // Update mouse position on click as well
+            this.mouseX = canvasX;
+            this.mouseY = canvasY;
+            
             console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
             
             // Verify we're actually clicking the canvas
@@ -190,21 +199,16 @@ class GameplayState {
                 // Handle the result and refresh mouse state
                 this.handleClickResult(clickResult);
                 
-                // Force refresh mouse state after any interaction
-                setTimeout(() => {
-                    this.refreshMouseState(canvasX, canvasY);
-                }, 100);
-                
+                // Force refresh mouse state after any interaction - IMMEDIATE, not delayed
+                this.refreshMouseState(canvasX, canvasY);
                 return;
             }
             
             // Handle normal placement click
             this.handleClick(canvasX, canvasY);
             
-            // Refresh mouse state after placement too
-            setTimeout(() => {
-                this.refreshMouseState(canvasX, canvasY);
-            }, 100);
+            // Refresh mouse state after placement too - IMMEDIATE
+            this.refreshMouseState(canvasX, canvasY);
         };
         
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
@@ -384,36 +388,47 @@ class GameplayState {
                     
                     console.log('Game: Building placed successfully, refreshing event listeners');
                     
-                    // CRITICAL: Refresh event listeners after building placement
-                    setTimeout(() => {
-                        this.refreshEventListeners();
-                    }, 50);
+                    // CRITICAL: Force immediate mouse state refresh, not just event listener refresh
+                    this.forceMouseStateRefresh(x, y);
                 }
             }
         }
     }
     
+    forceMouseStateRefresh(x, y) {
+        console.log('Game: Force refreshing mouse state after building placement');
+        
+        // Update our tracked position
+        this.mouseX = x;
+        this.mouseY = y;
+        
+        // Force immediate hover state check without waiting for mouse movement
+        const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
+        
+        // Update cursor immediately
+        if (isHoveringInteractable) {
+            this.stateManager.canvas.style.cursor = 'pointer';
+        } else {
+            this.stateManager.canvas.style.cursor = 'crosshair';
+        }
+        
+        console.log(`Game: Force refresh complete - hovering: ${isHoveringInteractable}`);
+    }
+    
     refreshEventListeners() {
         console.log('Game: Refreshing event listeners after building placement');
         
-        // Store current mouse position
-        const rect = this.stateManager.canvas.getBoundingClientRect();
+        // Store current mouse position - use our tracked position
         const currentMouseX = this.mouseX || 0;
         const currentMouseY = this.mouseY || 0;
+        
+        console.log(`Game: Stored mouse position: ${currentMouseX}, ${currentMouseY}`);
         
         // Re-setup event listeners
         this.setupEventListeners();
         
-        // Force a mouse move event to refresh hover state
-        setTimeout(() => {
-            if (this.mouseMoveHandler) {
-                const syntheticEvent = {
-                    clientX: currentMouseX + rect.left,
-                    clientY: currentMouseY + rect.top
-                };
-                this.mouseMoveHandler(syntheticEvent);
-            }
-        }, 100);
+        // Force immediate mouse state refresh
+        this.refreshMouseState(currentMouseX, currentMouseY);
     }
     
     showForgeUpgradeMenu(forgeData) {
