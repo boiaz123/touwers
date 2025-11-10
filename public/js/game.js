@@ -71,7 +71,13 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        this.setupEventListeners();
+        // CRITICAL: Setup event listeners AFTER everything is initialized
+        // Add a small delay to ensure all objects are fully created
+        setTimeout(() => {
+            this.setupEventListeners();
+            console.log('GameplayState: Event listeners set up after initialization delay');
+        }, 100);
+        
         this.updateUI();
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);

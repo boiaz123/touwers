@@ -26,6 +26,32 @@ export class CannonTower {
         
         // Fixed random seed for consistent texture
         this.randomSeed = Math.random() * 1000;
+        
+        // CRITICAL: Initialize click area immediately
+        this.initializeClickArea();
+    }
+    
+    initializeClickArea() {
+        // Calculate tower size based on a default resolution
+        const baseResolution = 1920;
+        const defaultCanvasWidth = 1200; // Assume reasonable default
+        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const towerSize = cellSize * 2;
+        
+        // Set up clickable icon area
+        const iconSize = 12;
+        const iconX = this.x + towerSize/2 - iconSize;
+        const iconY = this.y + towerSize/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        console.log(`CannonTower: Initialized clickArea in constructor:`, this.clickArea);
     }
     
     update(deltaTime, enemies) {

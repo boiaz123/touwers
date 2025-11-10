@@ -60,6 +60,32 @@ export class MagicAcademy extends Building {
             { x: 20, y: 40, size: 7 },
             { x: 40, y: 35, size: 8 }
         ];
+        
+        // CRITICAL: Initialize click area immediately
+        this.initializeClickArea();
+    }
+    
+    initializeClickArea() {
+        // Calculate building size based on default resolution
+        const baseResolution = 1920;
+        const defaultCanvasWidth = 1200;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const size = cellSize * 4; // 4x4 building
+        
+        // Set up clickable icon area
+        const iconSize = 15;
+        const iconX = this.x + size/2 - iconSize;
+        const iconY = this.y + size/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        console.log(`MagicAcademy: Initialized clickArea in constructor:`, this.clickArea);
     }
     
     update(deltaTime) {
@@ -147,15 +173,13 @@ export class MagicAcademy extends Building {
         const iconX = this.x + size/2 - iconSize;
         const iconY = this.y + size/2 - iconSize;
         
-        // Store click area for detection - FIXED: Proper area centering
+        // Update click area for current canvas size
         this.clickArea = {
             x: iconX - iconSize/2,
             y: iconY - iconSize/2,
             width: iconSize * 2,
             height: iconSize * 2
         };
-        
-        console.log(`MagicAcademy: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

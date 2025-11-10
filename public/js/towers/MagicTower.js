@@ -38,6 +38,32 @@ export class MagicTower {
                 symbol: ['◊', '☆', '◇', '※', '❋', '⚡'][i]
             });
         }
+        
+        // CRITICAL: Initialize click area immediately
+        this.initializeClickArea();
+    }
+    
+    initializeClickArea() {
+        // Calculate tower size based on a default resolution
+        const baseResolution = 1920;
+        const defaultCanvasWidth = 1200; // Assume reasonable default
+        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const gridSize = cellSize * 2; // 2x2 grid
+        
+        // Set up clickable icon area in bottom right corner
+        const iconSize = 12;
+        const iconX = this.x + gridSize/2 - iconSize;
+        const iconY = this.y + gridSize/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        console.log(`MagicTower: Initialized clickArea in constructor:`, this.clickArea);
     }
     
     update(deltaTime, enemies) {
@@ -283,7 +309,20 @@ export class MagicTower {
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
-        const towerSize = cellSize * 2;
+        const towerSize = cellSize * 2; // FIX: Define towerSize variable
+        const gridSize = cellSize * 2; // 2x2 grid
+        
+        // Update click area for current canvas size
+        const iconSize = 12;
+        const iconX = this.x + gridSize/2 - iconSize;
+        const iconY = this.y + gridSize/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
         
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
@@ -559,34 +598,15 @@ export class MagicTower {
             ctx.stroke();
         }
         
-        // Clickable element selection icon in bottom right corner of 2x2 grid
-        const gridSize = cellSize * 2; // 2x2 grid
-        const iconSize = 12;
-        const iconX = this.x + gridSize/2 - iconSize;
-        const iconY = this.y + gridSize/2 - iconSize;
-        
-        // Store click area for detection - FIXED: Proper area calculation
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`MagicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
-        console.log(`MagicTower: isHovered=${this.isHovered}, isSelected=${this.isSelected}`);
-        
         // Glow background for element selection with hover/selection effects
         let elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
         
         if (this.isSelected) {
             elementPulse = 1.0;
             ctx.fillStyle = `rgba(255, 215, 0, ${elementPulse * 0.6})`;
-            console.log('MagicTower: Rendering SELECTED state');
         } else if (this.isHovered) {
             elementPulse = 1.0;
             ctx.fillStyle = `rgba(147, 112, 219, ${elementPulse * 0.6})`;
-            console.log('MagicTower: Rendering HOVERED state');
         } else {
             ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
         }
@@ -616,7 +636,9 @@ export class MagicTower {
         // Current element icon
         ctx.fillStyle = this.isSelected || this.isHovered ? '#FFF' : '#FFD700';
         ctx.font = 'bold 16px Arial';
-        ctx.fillText(elementIcons[this.selectedElement], iconX, iconY + 5);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(elementIcons[this.selectedElement], iconX, iconY);
         
         // Clear shadow
         ctx.shadowBlur = 0;
