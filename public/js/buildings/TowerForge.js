@@ -1251,90 +1251,90 @@ export class TowerForge extends Building {
     
     renderUpgradeIcon(ctx, size) {
         // Position at bottom right of 4x4 grid
-        const iconX = this.x + size/2 - 12;
-        const iconY = this.y + size/2 - 12;
-        const iconSize = 24;
+        const iconX = this.x + size/2 - 24; // Adjusted for larger icon
+        const iconY = this.y + size/2 - 24; // Adjusted for larger icon
+        const iconSize = 48; // Doubled from 24
         
         // Icon background - golden metallic circle
-        const bgGradient = ctx.createRadialGradient(iconX - 2, iconY - 2, 0, iconX, iconY, iconSize/2 + 2);
+        const bgGradient = ctx.createRadialGradient(iconX - 4, iconY - 4, 0, iconX, iconY, iconSize/2 + 4);
         bgGradient.addColorStop(0, '#FFD700');
         bgGradient.addColorStop(0.5, '#FFA500');
         bgGradient.addColorStop(1, '#FF8C00');
         
         ctx.fillStyle = bgGradient;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize/2 + 2, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize/2 + 4, 0, Math.PI * 2);
         ctx.fill();
         
         // Icon border - dark metallic ring
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3; // Slightly thicker for larger icon
         ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize/2 + 2, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize/2 + 4, 0, Math.PI * 2);
         ctx.stroke();
         
         // Inner highlight
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
-        ctx.arc(iconX - 3, iconY - 3, iconSize/4, 0, Math.PI * 2);
+        ctx.arc(iconX - 6, iconY - 6, iconSize/4, 0, Math.PI * 2);
         ctx.fill();
         
         // Inner shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.arc(iconX + 2, iconY + 2, iconSize/4, 0, Math.PI * 2);
+        ctx.arc(iconX + 4, iconY + 4, iconSize/4, 0, Math.PI * 2);
         ctx.fill();
         
-        // Icon content - forge tools (hammer, anvil, tongs)
+        // Icon content - forge tools (hammer, anvil, tongs) - doubled scale
         ctx.save();
         ctx.translate(iconX, iconY);
         
         // ANVIL - center bottom (dark gray)
         ctx.fillStyle = '#1C1C1C';
         // Anvil base/body
-        ctx.fillRect(-5, 1, 10, 4);
-        ctx.fillRect(-3, -1, 6, 2);
+        ctx.fillRect(-10, 2, 20, 8);
+        ctx.fillRect(-6, -2, 12, 4);
         // Anvil horn (pointy part on right)
         ctx.beginPath();
-        ctx.moveTo(4, 0);
-        ctx.lineTo(7, -1);
-        ctx.lineTo(6, 1);
+        ctx.moveTo(8, 0);
+        ctx.lineTo(14, -2);
+        ctx.lineTo(12, 2);
         ctx.closePath();
         ctx.fill();
         
         // HAMMER - top left (brown handle with dark head)
         ctx.fillStyle = '#8B6F47';
-        ctx.fillRect(-7, -6, 2, 8); // Handle
+        ctx.fillRect(-14, -12, 4, 16); // Handle
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(-8, -7, 4, 2); // Hammer head
-        ctx.fillRect(-8, -5, 4, 1); // Hammer face detail
+        ctx.fillRect(-16, -14, 8, 4); // Hammer head
+        ctx.fillRect(-16, -10, 8, 2); // Hammer face detail
         
         // TONGS - top right (metal gray)
         ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3; // Doubled line width
         // Left tong arm
         ctx.beginPath();
-        ctx.moveTo(4, -5);
-        ctx.lineTo(3, -1);
+        ctx.moveTo(8, -10);
+        ctx.lineTo(6, -2);
         ctx.stroke();
         // Right tong arm
         ctx.beginPath();
-        ctx.moveTo(8, -5);
-        ctx.lineTo(7, -1);
+        ctx.moveTo(16, -10);
+        ctx.lineTo(14, -2);
         ctx.stroke();
         // Tong pivot/hinge
         ctx.fillStyle = '#2F2F2F';
         ctx.beginPath();
-        ctx.arc(5.5, -1.5, 1, 0, Math.PI * 2);
+        ctx.arc(11, -3, 2, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
         
-        // Store icon bounds for click detection
+        // Store icon bounds for click detection - exactly matches the icon
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: iconSize/2 + 2
+            radius: iconSize/2 + 4
         };
     }
 }
