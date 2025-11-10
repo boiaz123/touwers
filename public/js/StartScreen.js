@@ -104,12 +104,13 @@ export class StartScreen {
             const canvas = this.stateManager.canvas;
             
             // Don't render if canvas isn't ready
-            if (!canvas.width || !canvas.height) {
+            if (!canvas || !canvas.width || !canvas.height) {
+                console.warn('StartScreen: Canvas not ready for rendering');
                 return;
             }
             
-            // Initialize particles on first render if not done yet
-            if (!this.particlesInitialized) {
+            // Initialize particles on first render if not done yet and canvas is ready
+            if (!this.particlesInitialized && canvas.width > 0 && canvas.height > 0) {
                 this.initParticles();
             }
             
@@ -122,9 +123,9 @@ export class StartScreen {
             
             // Render particles (falling embers) only if they exist
             if (this.particles.length > 0) {
-                ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
                 this.particles.forEach(particle => {
                     ctx.globalAlpha = particle.opacity;
+                    ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
                     ctx.beginPath();
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                     ctx.fill();
@@ -163,8 +164,12 @@ export class StartScreen {
             }
             
             ctx.globalAlpha = 1;
+            
+            console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue);
+            
         } catch (error) {
             console.error('StartScreen render error:', error);
+            console.error('Stack trace:', error.stack);
         }
     }
     

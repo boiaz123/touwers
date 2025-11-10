@@ -1,4 +1,4 @@
-export class Level3D {
+export class Level { // Changed from Level3D to Level
     constructor() {
         // Grid configuration - will be calculated based on screen size
         this.gridWidth = 70;
@@ -26,6 +26,8 @@ export class Level3D {
         this.flowers = [];
         this.pathLeaves = [];
         this.visualElementsGenerated = false;
+        
+        console.log('Level: Constructor completed');
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {

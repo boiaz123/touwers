@@ -358,169 +358,150 @@ class Game {
     constructor() {
         console.log('Game: Starting initialization');
         
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        
-        if (!this.canvas || !this.ctx) {
-            console.error('Failed to get canvas or context');
-            return;
-        }
-        
-        console.log('Game: Canvas found, size will be set');
-        
-        // Detect and apply UI scaling based on screen resolution
-        this.applyUIScaling();
-        
-        // Set initial canvas size
-        this.resizeCanvas();
-        console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
-        
-        // Prevent infinite resize loops
-        this.isResizing = false;
-        
-        this.stateManager = new GameStateManager(this.canvas, this.ctx);
-        console.log('Game: GameStateManager created');
-        
-        // Add states with error handling
         try {
-            this.stateManager.addState('start', new StartScreen(this.stateManager));
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            
+            if (!this.canvas) {
+                throw new Error('Canvas element not found');
+            }
+            if (!this.ctx) {
+                throw new Error('Canvas context not available');
+            }
+            
+            console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
+            
+            // Detect and apply UI scaling based on screen resolution
+            this.applyUIScaling();
+            
+            // Set initial canvas size
+            this.resizeCanvas();
+            console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+            
+            // Prevent infinite resize loops
+            this.isResizing = false;
+            
+            this.stateManager = new GameStateManager(this.canvas, this.ctx);
+            console.log('Game: GameStateManager created');
+            
+            // Add states with comprehensive error handling
+            console.log('Game: Adding states...');
+            
+            const startScreen = new StartScreen(this.stateManager);
+            this.stateManager.addState('start', startScreen);
             console.log('Game: StartScreen state added');
             
-            this.stateManager.addState('levelSelect', new LevelSelect(this.stateManager));
+            const levelSelect = new LevelSelect(this.stateManager);
+            this.stateManager.addState('levelSelect', levelSelect);
             console.log('Game: LevelSelect state added');
             
-            this.stateManager.addState('game', new GameplayState(this.stateManager));
+            const gameplayState = new GameplayState(this.stateManager);
+            this.stateManager.addState('game', gameplayState);
             console.log('Game: GameplayState added');
+            
+            console.log('Game: All states added successfully');
+            
+            this.lastTime = 0;
+            this.setupEventListeners();
+            
+            // Start with the start screen
+            console.log('Game: Changing to start state');
+            const stateChanged = this.stateManager.changeState('start');
+            
+            if (!stateChanged) {
+                throw new Error('Failed to change to start state');
+            }
+            
+            console.log('Game: Starting game loop');
+            this.startGameLoop();
+            
         } catch (error) {
-            console.error('Error creating states:', error);
-            return;
+            console.error('Game: Critical error during initialization:', error);
+            console.error('Stack trace:', error.stack);
+            
+            // Show error on screen
+            if (this.canvas && this.ctx) {
+                this.showError(error.message);
+            }
         }
-        
-        this.lastTime = 0;
-        this.setupEventListeners();
-        
-        // Start with the start screen
-        console.log('Game: Starting with start screen');
-        try {
-            this.stateManager.changeState('start');
-        } catch (error) {
-            console.error('Error changing to start state:', error);
-        }
-        
-        console.log('Game: Starting game loop');
+    }
+    
+    startGameLoop() {
+        console.log('Game: Game loop starting');
         requestAnimationFrame((time) => this.gameLoop(time));
     }
     
-    applyUIScaling() {
-        const width = window.screen.width;
-        const height = window.screen.height;
-        const dpr = window.devicePixelRatio || 1;
-        
-        // Calculate effective resolution
-        const effectiveWidth = width * dpr;
-        const effectiveHeight = height * dpr;
-        
-        // Add scaling class to body based on resolution
-        document.body.classList.remove('scale-1x', 'scale-1-5x', 'scale-2x', 'scale-2-5x');
-        
-        if (effectiveWidth >= 7680 || effectiveHeight >= 4320) {
-            // 8K+ displays
-            document.body.classList.add('scale-2-5x');
-        } else if (effectiveWidth >= 3840 || effectiveHeight >= 2160) {
-            // 4K displays
-            document.body.classList.add('scale-2x');
-        } else if (effectiveWidth >= 2560 || effectiveHeight >= 1440) {
-            // 1440p+ displays
-            document.body.classList.add('scale-1-5x');
-        } else {
-            // 1080p and below
-            document.body.classList.add('scale-1x');
-        }
-    }
-    
-    resizeCanvas() {
-        // Prevent resize loops
-        if (this.isResizing) {
-            return;
-        }
-        
-        this.isResizing = true;
-        
-        try {
-            const gameArea = document.getElementById('game-area');
-            const sidebar = document.getElementById('tower-sidebar');
-            const statsBar = document.getElementById('stats-bar');
-            
-            // Only account for visible UI elements
-            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
-            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
-            
-            const oldWidth = this.canvas.width;
-            const oldHeight = this.canvas.height;
-            
-            const newWidth = Math.max(800, window.innerWidth - sidebarWidth); // Minimum size
-            const newHeight = Math.max(600, window.innerHeight - statsBarHeight); // Minimum size
-            
-            // Only resize if there's a significant change
-            if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
-                this.canvas.width = newWidth;
-                this.canvas.height = newHeight;
-                console.log('Game: Canvas resized from', oldWidth, 'x', oldHeight, 'to', newWidth, 'x', newHeight);
-            }
-        } catch (error) {
-            console.error('Game: Error during resize:', error);
-        } finally {
-            this.isResizing = false;
-        }
-    }
-    
-    setupEventListeners() {
-        let resizeTimeout;
-        
-        window.addEventListener('resize', () => {
-            // Debounce resize events
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (!this.isResizing) {
-                    this.applyUIScaling();
-                    this.resizeCanvas();
-                }
-            }, 100); // Wait 100ms after resize stops
-        });
-        
-        this.canvas.addEventListener('click', (e) => {
-            try {
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                this.stateManager.handleClick(x, y);
-            } catch (error) {
-                console.error('Game: Error handling click:', error);
-            }
-        });
+    showError(message) {
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.font = '24px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Error:', this.canvas.width / 2, this.canvas.height / 2 - 50);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.fillText('Check console for details', this.canvas.width / 2, this.canvas.height / 2 + 30);
     }
     
     gameLoop(currentTime) {
         try {
-            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000); // Cap at 60fps
+            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
             this.lastTime = currentTime;
             
+            // Clear the canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
-            this.stateManager.update(deltaTime);
-            this.stateManager.render();
+            // Update and render current state
+            if (this.stateManager) {
+                this.stateManager.update(deltaTime);
+                this.stateManager.render();
+            } else {
+                // Fallback if state manager is not available
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('State Manager Error', this.canvas.width / 2, this.canvas.height / 2);
+            }
+            
         } catch (error) {
-            console.error('Error in game loop:', error);
+            console.error('Game: Error in game loop:', error);
+            this.showError('Game loop error: ' + error.message);
         }
         
+        // Continue the game loop
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 
-// Add error handling for the initialization
-try {
-    console.log('Starting game initialization');
-    new Game();
-} catch (error) {
-    console.error('Failed to initialize game:', error);
-}
+// Add comprehensive error handling for the initialization
+window.addEventListener('load', () => {
+    console.log('Window loaded, starting game initialization');
+    
+    try {
+        new Game();
+        console.log('Game initialized successfully');
+    } catch (error) {
+        console.error('Critical error initializing game:', error);
+        console.error('Stack trace:', error.stack);
+        
+        // Show error message on page if canvas is available
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ff0000';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Failed to Initialize Game', canvas.width / 2, canvas.height / 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.fillText('Check console for details', canvas.width / 2, canvas.height / 2 + 30);
+            }
+        }
+    }
+});
