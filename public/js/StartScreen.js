@@ -48,9 +48,8 @@ export class StartScreen {
         document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
         document.body.classList.add('start-screen');
         
-        // Force cursor to pointer for start screen
-        this.stateManager.canvas.style.cursor = 'pointer';
-        console.log('StartScreen: Set cursor to pointer');
+        // Let CSS handle cursor - remove manual setting
+        console.log('StartScreen: Using CSS cursor styling');
         
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');

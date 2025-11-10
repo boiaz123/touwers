@@ -29,9 +29,8 @@ class GameplayState {
         document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
         document.body.classList.add('game-active');
         
-        // Force initial cursor state
-        this.stateManager.canvas.style.cursor = 'crosshair';
-        console.log('GameplayState: Set initial cursor to crosshair');
+        // Let CSS handle cursor - remove manual setting
+        console.log('GameplayState: Using CSS cursor styling');
         
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
@@ -42,9 +41,10 @@ class GameplayState {
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
         
-        // Initialize mouse tracking
+        // Initialize mouse tracking IMMEDIATELY
         this.mouseX = 0;
         this.mouseY = 0;
+        this.mouseInitialized = false;
         
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
@@ -83,8 +83,9 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // CRITICAL: Setup event listeners SYNCHRONOUSLY
+        // CRITICAL: Setup event listeners SYNCHRONOUSLY and initialize mouse tracking
         this.setupEventListeners();
+        this.initializeMouseTracking();
         console.log('GameplayState: Event listeners set up synchronously');
         
         // CRITICAL: Force an immediate render to ensure click areas are set
@@ -207,22 +208,21 @@ class GameplayState {
             // CRITICAL: Always update mouse position tracking
             this.mouseX = x;
             this.mouseY = y;
+            this.mouseInitialized = true;
             
             // Disable excessive debugging that was blocking mouse events
-            const debugMouseEvents = false; // Changed back to false
+            const debugMouseEvents = false;
             
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
             
             // Update cursor based on hover state with proper classes
             if (isHoveringInteractable) {
-                this.stateManager.canvas.style.cursor = 'pointer';
                 this.stateManager.canvas.classList.add('hovering-interactive');
                 if (debugMouseEvents) {
-                    console.log('GameplayState: Set cursor to pointer (hovering interactive)');
+                    console.log('GameplayState: Hovering interactive element');
                 }
             } else {
-                this.stateManager.canvas.style.cursor = 'crosshair';
                 this.stateManager.canvas.classList.remove('hovering-interactive');
             }
             
@@ -416,6 +416,33 @@ class GameplayState {
         }
     }
     
+    initializeMouseTracking() {
+        // Force immediate mouse position detection
+        const initMouseHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            this.mouseX = e.clientX - rect.left;
+            this.mouseY = e.clientY - rect.top;
+            this.mouseInitialized = true;
+            console.log('GameplayState: Mouse initialized at', this.mouseX, this.mouseY);
+            
+            // Remove this one-time handler
+            this.stateManager.canvas.removeEventListener('mousemove', initMouseHandler);
+        };
+        
+        this.stateManager.canvas.addEventListener('mousemove', initMouseHandler);
+        
+        // Also try to get initial position from current mouse location
+        this.stateManager.canvas.addEventListener('mouseenter', (e) => {
+            if (!this.mouseInitialized) {
+                const rect = this.stateManager.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+                this.mouseInitialized = true;
+                console.log('GameplayState: Mouse initialized on enter at', this.mouseX, this.mouseY);
+            }
+        }, { once: true });
+    }
+    
     handleClick(x, y) {
         // Handle regular tower/building placement (NOT icon clicks)
         if (this.selectedTowerType) {
@@ -436,6 +463,9 @@ class GameplayState {
                     
                     // Force render to set click area for new tower
                     this.forceClickAreaRefresh();
+                    
+                    // Refresh mouse state immediately
+                    this.refreshMouseState(x, y);
                 }
             }
         } else if (this.selectedBuildingType) {
@@ -454,9 +484,11 @@ class GameplayState {
                     
                     console.log('Game: Building placed successfully');
                     
-                    // Force render to set click area for new building, then refresh mouse state
+                    // Force render to set click area for new building
                     this.forceClickAreaRefresh();
-                    this.forceMouseStateRefresh(x, y);
+                    
+                    // Refresh mouse state immediately
+                    this.refreshMouseState(x, y);
                 }
             }
         }

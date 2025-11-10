@@ -16,9 +16,8 @@ export class LevelSelect {
         document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
         document.body.classList.add('level-select');
         
-        // Force initial cursor for level select
-        this.stateManager.canvas.style.cursor = 'default';
-        console.log('LevelSelect: Set initial cursor to default');
+        // Let CSS handle cursor - remove manual setting
+        console.log('LevelSelect: Using CSS cursor styling');
         
         // Hide game UI when in level select
         const statsBar = document.getElementById('stats-bar');
@@ -93,12 +92,11 @@ export class LevelSelect {
             }
         });
         
-        // Update cursor style with explicit CSS override
-        const shouldShowPointer = (this.hoveredLevel !== -1 || this.hoveredStartButton);
-        this.stateManager.canvas.style.cursor = shouldShowPointer ? 'pointer' : 'default';
-        
-        if (shouldShowPointer) {
-            console.log('LevelSelect: Set cursor to pointer (hovering level/button)');
+        // Let CSS handle cursor styling via hovering-interactive class
+        if (this.hoveredLevel !== -1 || this.hoveredStartButton) {
+            this.stateManager.canvas.classList.add('hovering-interactive');
+        } else {
+            this.stateManager.canvas.classList.remove('hovering-interactive');
         }
     }
     
@@ -226,8 +224,7 @@ export class LevelSelect {
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
-                        // Reset cursor before state change
-                        this.stateManager.canvas.style.cursor = 'default';
+                        // CSS will handle cursor reset
                         
                         // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
