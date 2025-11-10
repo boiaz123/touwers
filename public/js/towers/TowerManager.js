@@ -312,46 +312,36 @@ export class TowerManager {
         return false;
     }
     
-    render(ctx) {
-        // Render all towers
-        this.towers.forEach(tower => {
-            tower.render(ctx);
-        });
-        
-        // Render all buildings
-        this.buildingManager.render(ctx);
+    getUnlockSystem() {
+        return this.unlockSystem;
     }
     
     getTowerInfo(type) {
         const towerType = this.towerTypes[type];
         if (!towerType || !towerType.class.getInfo) return null;
-        
-        const info = towerType.class.getInfo();
-        // Add unlock status
-        info.unlocked = this.unlockSystem.canBuildTower(type);
-        return info;
+        return towerType.class.getInfo();
     }
     
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
-        if (info) {
-            info.unlocked = this.unlockSystem.canBuildBuilding(type);
-            
-            if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-                info.disabled = true;
-                info.disableReason = "Only 1 forge allowed";
-            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-                info.disabled = true;
-                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
-            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-                info.disabled = true;
-                info.disableReason = "Only 1 academy allowed";
-            }
-        }
-        return info;
+        if (!info) return null;
+        
+        // Add unlock status and availability
+        const unlocked = this.unlockSystem.canBuildBuilding(type);
+        const canAfford = this.gameState.canAfford(info.cost || 0);
+        
+        return {
+            ...info,
+            unlocked: unlocked,
+            disabled: !unlocked || !canAfford,
+            disableReason: !unlocked ? 'Not unlocked yet' : (!canAfford ? 'Not enough gold' : '')
+        };
     }
     
-    getUnlockSystem() {
-        return this.unlockSystem;
+    render(ctx) {
+        this.towers.forEach(tower => {
+            tower.render(ctx);
+        });
+        this.buildingManager.render(ctx);
     }
 }

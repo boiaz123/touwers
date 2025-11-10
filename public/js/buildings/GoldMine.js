@@ -858,6 +858,19 @@ export class GoldMine extends Building {
         return income;
     }
     
+    darkenColor(color, factor) {
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        
+        const newR = Math.floor(r * (1 - factor));
+        const newG = Math.floor(g * (1 - factor));
+        const newB = Math.floor(b * (1 - factor));
+        
+        return `rgb(${newR}, ${newG}, ${newB})`;
+    }
+    
     isPointInside(x, y, size) {
         const dx = x - this.x;
         const dy = y - this.y;
