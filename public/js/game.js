@@ -352,6 +352,171 @@ class GameplayState {
             this.activeMenu = null;
         }
     }
+    
+    getBuildingCost(buildingType) {
+        const costs = {
+            'mine': 200,
+            'forge': 300,
+            'academy': 250,
+            'superweapon': 500
+        };
+        return costs[buildingType] || 0;
+    }
+    
+    getWaveConfig(level, wave) {
+        if (this.levelType === 'sandbox') {
+            // Sandbox mode: continuously increasing difficulty
+            const baseEnemies = 8;
+            const baseHealth = 50;
+            const baseSpeed = 40;
+            
+            return {
+                enemyCount: baseEnemies + Math.floor(wave * 1.2), // Gradual increase
+                enemyHealth: baseHealth + (wave - 1) * 5, // Slower health scaling
+                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2), // Cap speed at 100
+                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03) // Faster spawning over time
+            };
+        }
+        
+        // Level 1 wave configuration - 10 waves with gradual difficulty increase
+        if (level === 1) {
+            const baseEnemies = 5;
+            const baseHealth = 40;
+            const baseSpeed = 45;
+            
+            return {
+                enemyCount: baseEnemies + Math.floor(wave * 1.5), // 5, 6, 8, 9, 11, 12, 14, 15, 17, 18
+                enemyHealth: baseHealth + (wave - 1) * 8, // 40, 48, 56, 64, 72, 80, 88, 96, 104, 112
+                enemySpeed: baseSpeed + (wave - 1) * 3, // 45, 48, 51, 54, 57, 60, 63, 66, 69, 72
+                spawnInterval: Math.max(0.5, 1.2 - (wave - 1) * 0.05) // 1.2s down to 0.75s
+            };
+        }
+        
+        // Default fallback (for future levels)
+        return {
+            enemyCount: 10,
+            enemyHealth: 100,
+            enemySpeed: 50,
+            spawnInterval: 1.0
+        };
+    }
+    
+    startWave() {
+        if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
+            this.completeLevel();
+            return;
+        }
+        
+        console.log(`Starting wave ${this.gameState.wave} of ${this.levelName}`);
+        this.waveInProgress = true;
+        this.waveCompleted = false;
+        
+        const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
+        this.enemyManager.spawnWave(
+            this.gameState.wave, 
+            waveConfig.enemyCount,
+            waveConfig.enemyHealth,
+            waveConfig.enemySpeed,
+            waveConfig.spawnInterval
+        );
+        
+        this.updateUI();
+    }
+    
+    completeLevel() {
+        if (this.isSandbox) {
+            // Sandbox mode doesn't end, just continue
+            return;
+        }
+        alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
+        this.stateManager.changeState('levelSelect');
+    }
+    
+    update(deltaTime) {
+        this.enemyManager.update(deltaTime);
+        this.towerManager.update(deltaTime, this.enemyManager.enemies);
+        
+        const reachedEnd = this.enemyManager.checkReachedEnd();
+        if (reachedEnd > 0) {
+            this.gameState.health -= reachedEnd;
+            this.updateUI();
+            
+            if (this.gameState.health <= 0) {
+                alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
+                this.stateManager.changeState('start');
+                return;
+            }
+        }
+        
+        const killedEnemies = this.enemyManager.removeDeadEnemies();
+        if (killedEnemies > 0) {
+            // Gold reward scales slightly with wave number
+            const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
+            this.gameState.gold += killedEnemies * goldPerEnemy;
+            this.updateUI();
+        }
+        
+        // Check if wave is completed
+        if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
+            this.waveInProgress = false;
+            this.waveCompleted = true;
+            
+            console.log(`Wave ${this.gameState.wave} completed`);
+            
+            // Move to next wave after a short delay
+            setTimeout(() => {
+                this.gameState.wave++;
+                this.startWave();
+            }, 2000);
+        }
+    }
+    
+    render(ctx) {
+        this.level.render(ctx);
+        this.towerManager.render(ctx);
+        this.enemyManager.render(ctx);
+    }
+    
+    updateUI() {
+        document.getElementById('health').textContent = this.gameState.health;
+        document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
+        
+        // Show wave info differently for sandbox mode
+        if (this.isSandbox) {
+            document.getElementById('wave').textContent = `${this.gameState.wave} (∞)`;
+        } else {
+            document.getElementById('wave').textContent = `${this.gameState.wave}/${this.maxWavesForLevel}`;
+        }
+        
+        let statusText = `Enemies: ${this.enemyManager.enemies.length}`;
+        if (this.waveCompleted) {
+            statusText = this.isSandbox ? 'Next Wave...' : 'Wave Complete!';
+        } else if (!this.waveInProgress && this.enemyManager.enemies.length === 0) {
+            statusText = 'Preparing...';
+        }
+        
+        document.getElementById('enemies-remaining').textContent = statusText;
+        
+        // Update tower button states based on available gold
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const cost = parseInt(btn.dataset.cost);
+            if (this.gameState.canAfford(cost)) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        });
+        
+        // Update building button states based on available gold
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            const cost = parseInt(btn.dataset.cost);
+            if (this.gameState.canAfford(cost)) {
+                btn.classList.remove('disabled');
+            } else {
+                btn.classList.add('disabled');
+            }
+        });
+    }
 }
 
 class Game {
@@ -426,22 +591,126 @@ class Game {
         }
     }
     
+    applyUIScaling() {
+        try {
+            const width = window.screen.width;
+            const height = window.screen.height;
+            const dpr = window.devicePixelRatio || 1;
+            
+            // Calculate effective resolution
+            const effectiveWidth = width * dpr;
+            const effectiveHeight = height * dpr;
+            
+            // Add scaling class to body based on resolution
+            document.body.classList.remove('scale-1x', 'scale-1-5x', 'scale-2x', 'scale-2-5x');
+            
+            if (effectiveWidth >= 7680 || effectiveHeight >= 4320) {
+                // 8K+ displays
+                document.body.classList.add('scale-2-5x');
+            } else if (effectiveWidth >= 3840 || effectiveHeight >= 2160) {
+                // 4K displays
+                document.body.classList.add('scale-2x');
+            } else if (effectiveWidth >= 2560 || effectiveHeight >= 1440) {
+                // 1440p+ displays
+                document.body.classList.add('scale-1-5x');
+            } else {
+                // 1080p and below
+                document.body.classList.add('scale-1x');
+            }
+            
+            console.log('Game: UI scaling applied');
+        } catch (error) {
+            console.error('Game: Error applying UI scaling:', error);
+        }
+    }
+    
+    resizeCanvas() {
+        // Prevent resize loops
+        if (this.isResizing) {
+            return;
+        }
+        
+        this.isResizing = true;
+        
+        try {
+            const sidebar = document.getElementById('tower-sidebar');
+            const statsBar = document.getElementById('stats-bar');
+            
+            // Only account for visible UI elements
+            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
+            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
+            
+            const oldWidth = this.canvas.width;
+            const oldHeight = this.canvas.height;
+            
+            const newWidth = Math.max(800, window.innerWidth - sidebarWidth); // Minimum size
+            const newHeight = Math.max(600, window.innerHeight - statsBarHeight); // Minimum size
+            
+            // Only resize if there's a significant change
+            if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                console.log('Game: Canvas resized from', oldWidth, 'x', oldHeight, 'to', newWidth, 'x', newHeight);
+            }
+        } catch (error) {
+            console.error('Game: Error during resize:', error);
+        } finally {
+            this.isResizing = false;
+        }
+    }
+    
+    setupEventListeners() {
+        try {
+            let resizeTimeout;
+            
+            window.addEventListener('resize', () => {
+                // Debounce resize events
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (!this.isResizing) {
+                        this.applyUIScaling();
+                        this.resizeCanvas();
+                    }
+                }, 100); // Wait 100ms after resize stops
+            });
+            
+            this.canvas.addEventListener('click', (e) => {
+                try {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    this.stateManager.handleClick(x, y);
+                } catch (error) {
+                    console.error('Game: Error handling click:', error);
+                }
+            });
+            
+            console.log('Game: Event listeners set up successfully');
+        } catch (error) {
+            console.error('Game: Error setting up event listeners:', error);
+        }
+    }
+    
     startGameLoop() {
         console.log('Game: Game loop starting');
         requestAnimationFrame((time) => this.gameLoop(time));
     }
     
     showError(message) {
-        this.ctx.fillStyle = '#000000';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = '#ff0000';
-        this.ctx.font = '24px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Error:', this.canvas.width / 2, this.canvas.height / 2 - 50);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '16px Arial';
-        this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
-        this.ctx.fillText('Check console for details', this.canvas.width / 2, this.canvas.height / 2 + 30);
+        try {
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.font = '24px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Error:', this.canvas.width / 2, this.canvas.height / 2 - 50);
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
+            this.ctx.fillText('Check console for details', this.canvas.width / 2, this.canvas.height / 2 + 30);
+        } catch (renderError) {
+            console.error('Game: Error showing error message:', renderError);
+        }
     }
     
     gameLoop(currentTime) {
