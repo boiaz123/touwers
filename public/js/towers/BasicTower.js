@@ -350,20 +350,6 @@ export class BasicTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
-        
-        // Click icon - bottom right corner
-        const iconSize = gridSize * 0.25;
-        const iconX = this.x + gridSize - iconSize/2 - 5;
-        const iconY = this.y + gridSize - iconSize/2 - 5;
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        ctx.fillStyle = '#d4af37';
-        ctx.font = `bold ${iconSize * 0.6}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('⚙️', iconX, iconY);
     }
     
     drawEnvironment(ctx, gridSize) {

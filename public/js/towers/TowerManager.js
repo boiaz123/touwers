@@ -259,18 +259,12 @@ export class TowerManager {
         
         // Check tower clicks first for element selection
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const towerSize = cellSize * 2; // 2x2 grid cells
+        const towerSize = cellSize * 2;
         
         for (const tower of this.towers) {
-            // Calculate clickable icon area - bottom right corner of tower
-            const iconSize = cellSize * 0.7; // Smaller icon for towers
-            const iconX = tower.x + towerSize/2 - iconSize/2 - 3; // Bottom right position
-            const iconY = tower.y + towerSize/2 - iconSize/2 - 3;
-            
-            const withinX = x >= iconX && x <= iconX + iconSize;
-            const withinY = y >= iconY && y <= iconY + iconSize;
-            
-            if (withinX && withinY) {
+            // Check if click is within tower bounds
+            const distance = Math.hypot(tower.x - x, tower.y - y);
+            if (distance <= towerSize / 2) {
                 if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {

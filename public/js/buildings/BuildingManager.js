@@ -128,18 +128,15 @@ export class BuildingManager {
         for (const building of this.buildings) {
             const buildingSize = building.size * cellSize;
             
-            // Calculate clickable icon area - bottom right corner
-            const iconSize = cellSize * 0.8; // Icon is about 0.8 cells
-            const iconX = building.x + buildingSize/2 - iconSize/2 - 5; // Bottom right position
-            const iconY = building.y + buildingSize/2 - iconSize/2 - 5;
+            // Check if click is within building bounds with generous detection
+            const halfSize = buildingSize / 2;
+            const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
+            const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
             
-            const withinX = x >= iconX && x <= iconX + iconSize;
-            const withinY = y >= iconY && y <= iconY + iconSize;
-            
-            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with icon at (${iconX}, ${iconY}), size ${iconSize}, click within: ${withinX && withinY}`);
+            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with size ${buildingSize}, bounds: [${building.x - halfSize}, ${building.x + halfSize}] x [${building.y - halfSize}, ${building.y + halfSize}], click within: ${withinX && withinY}`);
             
             if (withinX && withinY) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon at (${building.x}, ${building.y})`);
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {
