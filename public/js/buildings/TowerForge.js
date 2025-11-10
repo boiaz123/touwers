@@ -1255,21 +1255,44 @@ export class TowerForge extends Building {
         // Position at bottom right of 4x4 grid
         const iconSize = 34;
         const radius = iconSize / 2; // 17px
-        const iconX = this.x + size/2 - radius - 2;
-        const iconY = this.y + size/2 - radius - 2;
+        const baseIconX = this.x + size/2 - radius - 2;
+        const baseIconY = this.y + size/2 - radius - 2;
         
-        // Icon background - golden metallic circle
-        const bgGradient = ctx.createRadialGradient(iconX - 2, iconY - 2, 0, iconX, iconY, radius);
-        bgGradient.addColorStop(0, '#FFD700');
-        bgGradient.addColorStop(0.5, '#FFA500');
-        bgGradient.addColorStop(1, '#FF8C00');
+        // Hover animation - bob up and down
+        const hoverOffset = Math.sin(this.animationTime * 3) * 3; // Bob 3px up/down
+        const iconX = baseIconX;
+        const iconY = baseIconY - hoverOffset; // Move up when hovering
+        
+        // Ground shadow (directly below the icon)
+        const shadowX = baseIconX;
+        const shadowY = baseIconY + 2; // Slightly below the base position
+        ctx.save();
+        ctx.globalAlpha = 0.4 - (hoverOffset * 0.05); // Fade shadow as icon rises
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.ellipse(shadowX, shadowY, radius * 0.8, radius * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        // Icon background - golden metallic circle with 3D effect
+        const bgGradient = ctx.createRadialGradient(iconX - 3, iconY - 3, 0, iconX, iconY, radius);
+        bgGradient.addColorStop(0, '#FFFF99'); // Bright highlight
+        bgGradient.addColorStop(0.3, '#FFD700'); // Gold
+        bgGradient.addColorStop(0.6, '#FFA500'); // Orange-gold
+        bgGradient.addColorStop(1, '#FF8C00'); // Dark orange edge
         
         ctx.fillStyle = bgGradient;
         ctx.beginPath();
         ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
         ctx.fill();
         
-        // Medieval ornate border - multiple rings
+        // 3D rim/edge effect
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
         // Outer dark ring (iron)
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
@@ -1322,16 +1345,16 @@ export class TowerForge extends Building {
             ctx.fill();
         });
         
-        // Inner highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        // Inner highlight (bright spot for 3D effect)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.beginPath();
-        ctx.arc(iconX - 3, iconY - 3, radius/3, 0, Math.PI * 2);
+        ctx.arc(iconX - 4, iconY - 4, radius * 0.35, 0, Math.PI * 2);
         ctx.fill();
         
         // Inner shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.beginPath();
-        ctx.arc(iconX + 2, iconY + 2, radius/3, 0, Math.PI * 2);
+        ctx.arc(iconX + 3, iconY + 3, radius * 0.3, 0, Math.PI * 2);
         ctx.fill();
         
         // Icon content - forge tools (hammer, anvil, tongs) - scaled to 70%
@@ -1381,11 +1404,11 @@ export class TowerForge extends Building {
         ctx.restore();
         
         // Store icon bounds for click detection
-        // Use square bounding box around the icon - simple and reliable
+        // Use square bounding box around the hovering icon
         const iconHalfSize = iconSize / 2; // 17px
         this.upgradeIconBounds = {
             x: iconX,
-            y: iconY,
+            y: iconY, // Use the animated Y position (with hover offset)
             halfSize: iconHalfSize // Square box from center
         };
     }
