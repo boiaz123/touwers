@@ -1040,15 +1040,12 @@ class Game {
             
             console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
             
-            // Detect and apply UI scaling based on screen resolution
+            // CRITICAL: Set canvas size FIRST before anything else
+            this.setInitialCanvasSize();
+            console.log('Game: Canvas sized to:', this.canvas.width, 'x', this.canvas.height);
+            
+            // Detect and apply UI scaling
             this.applyUIScaling();
-            
-            // Set initial canvas size BEFORE creating state manager
-            this.resizeCanvas();
-            console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
-            
-            // Prevent infinite resize loops
-            this.isResizing = false;
             
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
@@ -1057,11 +1054,12 @@ class Game {
             // Initialize game loop timing
             this.lastTime = 0;
             this.isInitialized = false;
+            this.isResizing = false;
             
-            // Setup event listeners early
+            // Setup event listeners
             this.setupEventListeners();
             
-            // Add states with comprehensive error handling
+            // Add states
             this.initializeStates();
             
         } catch (error) {
@@ -1073,6 +1071,17 @@ class Game {
                 this.showError(error.message);
             }
         }
+    }
+    
+    setInitialCanvasSize() {
+        // Set canvas to full available size immediately
+        const width = Math.max(800, window.innerWidth);
+        const height = Math.max(600, window.innerHeight);
+        
+        this.canvas.width = width;
+        this.canvas.height = height;
+        
+        console.log('Game: Initial canvas size set to:', width, 'x', height);
     }
     
     initializeStates() {
@@ -1093,17 +1102,19 @@ class Game {
             
             console.log('Game: All states added successfully');
             
-            // Start with the start screen AFTER all states are added
-            console.log('Game: Changing to start state');
-            const stateChanged = this.stateManager.changeState('start');
-            
-            if (!stateChanged) {
-                throw new Error('Failed to change to start state');
-            }
-            
-            this.isInitialized = true;
-            console.log('Game: State initialization complete, starting game loop');
-            this.startGameLoop();
+            // CRITICAL: Wait for next frame before changing state to ensure everything is ready
+            requestAnimationFrame(() => {
+                console.log('Game: Changing to start state');
+                const stateChanged = this.stateManager.changeState('start');
+                
+                if (!stateChanged) {
+                    throw new Error('Failed to change to start state');
+                }
+                
+                this.isInitialized = true;
+                console.log('Game: State initialization complete, starting game loop');
+                this.startGameLoop();
+            });
             
         } catch (error) {
             console.error('Game: Error initializing states:', error);
@@ -1157,14 +1168,14 @@ class Game {
             const statsBar = document.getElementById('stats-bar');
             
             // Only account for visible UI elements
-            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
-            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
+            const sidebarWidth = (sidebar && sidebar.offsetWidth > 0) ? sidebar.offsetWidth : 0;
+            const statsBarHeight = (statsBar && statsBar.offsetHeight > 0) ? statsBar.offsetHeight : 0;
             
             const oldWidth = this.canvas.width;
             const oldHeight = this.canvas.height;
             
-            const newWidth = Math.max(800, window.innerWidth - sidebarWidth); // Minimum size
-            const newHeight = Math.max(600, window.innerHeight - statsBarHeight); // Minimum size
+            const newWidth = Math.max(800, window.innerWidth - sidebarWidth);
+            const newHeight = Math.max(600, window.innerHeight - statsBarHeight);
             
             // Only resize if there's a significant change
             if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
@@ -1235,24 +1246,19 @@ class Game {
     
     gameLoop(currentTime) {
         try {
-            // Don't process if not initialized
-            if (!this.isInitialized) {
-                requestAnimationFrame((time) => this.gameLoop(time));
-                return;
-            }
-            
+            // Continue loop even if not initialized to show loading
             const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
             this.lastTime = currentTime;
             
             // Clear the canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
-            // Update and render current state
-            if (this.stateManager && this.stateManager.currentState) {
+            if (this.isInitialized && this.stateManager && this.stateManager.currentState) {
+                // Normal game loop
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
             } else {
-                // Show loading state if state manager isn't ready
+                // Show loading state
                 this.ctx.fillStyle = '#1a0f0a';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.fillStyle = '#d4af37';
