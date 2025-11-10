@@ -67,10 +67,15 @@ export class TowerManager {
         
         const result = this.buildingManager.placeBuilding(type, x, y, gridX, gridY);
         
-        // Handle forge building
-        if (result && type === 'forge') {
-            this.unlockSystem.onForgeBuilt();
-            console.log('TowerManager: Forge built, new content unlocked');
+        // Handle building placement for unlock system
+        if (result) {
+            if (type === 'forge') {
+                this.unlockSystem.onForgeBuilt();
+                console.log('TowerManager: Forge built, new content unlocked');
+            } else if (type === 'mine') {
+                this.unlockSystem.onMineBuilt();
+                console.log('TowerManager: Mine built');
+            }
         }
         
         return result;
@@ -254,9 +259,13 @@ export class TowerManager {
         const info = this.buildingManager.getBuildingInfo(type);
         if (info) {
             info.unlocked = this.unlockSystem.canBuildBuilding(type);
+            
             if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
                 info.disabled = true;
                 info.disableReason = "Only 1 forge allowed";
+            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+                info.disabled = true;
+                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
             }
         }
         return info;

@@ -3,15 +3,21 @@ import { Building } from './Building.js';
 export class GoldMine extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.goldPerCollection = 30;
-        this.miningInterval = 15;
-        this.currentProgress = 0;
-        this.isReady = false;
-        this.smokePuffs = [];
-        this.nextSmokeTime = 0;
-        this.workers = [];
-        this.goldPiles = [];
-        this.bobAnimations = [];
+        this.goldReady = true;
+        this.productionTime = 30; // 30 seconds to produce gold
+        this.currentProduction = 0;
+        this.sparks = [];
+        this.nextSparkTime = 0;
+        this.incomeMultiplier = 1;
+        this.workers = [
+            { x: -15, y: 15, animationOffset: 0, type: 'miner' },
+            { x: 20, y: 10, animationOffset: Math.PI, type: 'cart' }
+        ];
+        this.mineshaft = {
+            x: 0, y: -10,
+            depth: 0,
+            carts: []
+        };
         
         // Mine cart animation - halved speed
         this.cartPosition = 0;
@@ -242,22 +248,14 @@ export class GoldMine extends Building {
     update(deltaTime) {
         super.update(deltaTime);
         
-        // Update mining progress
-        if (!this.isReady) {
-            this.currentProgress += deltaTime;
-            if (this.currentProgress >= this.miningInterval) {
-                this.isReady = true;
-                this.currentProgress = this.miningInterval;
-                
-                // Create gold piles when ready
-                this.goldPiles = [];
-                for (let i = 0; i < 3; i++) {
-                    this.goldPiles.push({
-                        x: (Math.random() - 0.5) * 30 + 25, // Near cave entrance
-                        y: (Math.random() - 0.5) * 30 + 25,
-                        glimmer: Math.random() * Math.PI * 2
-                    });
-                }
+        // Only produce gold if not ready
+        if (!this.goldReady) {
+            this.currentProduction += deltaTime;
+            
+            if (this.currentProduction >= this.productionTime) {
+                this.goldReady = true;
+                this.currentProduction = 0;
+                console.log('GoldMine: Gold production completed, ready to collect');
             }
         }
         
@@ -743,6 +741,35 @@ export class GoldMine extends Building {
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
+        
+        // Add production status indicator
+        if (!this.goldReady) {
+            const progress = this.currentProduction / this.productionTime;
+            
+            // Production timer bar
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50, 8);
+            
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50 * progress, 8);
+            
+            ctx.strokeStyle = '#FFF';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(this.x - 25, this.y - size/2 - 15, 50, 8);
+            
+            // Timer text
+            const timeLeft = Math.ceil(this.productionTime - this.currentProduction);
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
+        } else {
+            // Ready indicator
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
+        }
     }
     
     getBaseIncome() {
@@ -751,11 +778,21 @@ export class GoldMine extends Building {
     }
     
     onClick() {
+        // Only allow collection if gold is ready
+        if (!this.goldReady) {
+            console.log(`GoldMine: Gold not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
+            return 0;
+        }
+        
         // Apply forge income multiplier
         const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
-        this.sparks = [];
+        
+        // Reset production cycle
+        this.goldReady = false;
+        this.currentProduction = 0;
         
         // Create collection sparks
+        this.sparks = [];
         for (let i = 0; i < 8; i++) {
             this.sparks.push({
                 x: this.x + (Math.random() - 0.5) * 30,
@@ -810,8 +847,8 @@ export class GoldMine extends Building {
     static getInfo() {
         return {
             name: 'Gold Mine',
-            description: 'Click to collect gold. Income scales with forge level.',
-            effect: 'Generates gold on click',
+            description: 'Produces gold every 30 seconds. Click to collect. Income scales with forge level.',
+            effect: 'Generates gold on timer',
             size: '4x4',
             cost: 200
         };

@@ -608,16 +608,22 @@ class GameplayState {
         document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
-            const unlocked = unlockSystem.canBuildBuilding(type);
+            const info = this.towerManager.getBuildingInfo(type);
             
-            if (!unlocked) {
+            if (!info || !info.unlocked) {
                 btn.style.display = 'none';
             } else {
                 btn.style.display = '';
-                if (this.gameState.canAfford(cost)) {
+                
+                if (info.disabled) {
+                    btn.classList.add('disabled');
+                    btn.title = info.disableReason || '';
+                } else if (this.gameState.canAfford(cost)) {
                     btn.classList.remove('disabled');
+                    btn.title = '';
                 } else {
                     btn.classList.add('disabled');
+                    btn.title = 'Not enough gold';
                 }
             }
         });

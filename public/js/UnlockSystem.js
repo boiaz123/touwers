@@ -8,6 +8,7 @@ export class UnlockSystem {
         this.hasForge = false;
         this.forgeCount = 0;
         this.maxForges = 1;
+        this.mineCount = 0;
         
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
@@ -31,6 +32,23 @@ export class UnlockSystem {
             return true;
         }
         return false;
+    }
+    
+    onMineBuilt() {
+        if (this.mineCount < this.getMaxMines()) {
+            this.mineCount++;
+            console.log(`UnlockSystem: Mine built - ${this.mineCount}/${this.getMaxMines()}`);
+            return true;
+        }
+        return false;
+    }
+    
+    getMaxMines() {
+        if (this.forgeLevel >= 10) return 4;
+        if (this.forgeLevel >= 8) return 3;
+        if (this.forgeLevel >= 5) return 2;
+        if (this.forgeLevel >= 1) return 1;
+        return 0;
     }
     
     onForgeUpgraded(newLevel) {
@@ -59,6 +77,18 @@ export class UnlockSystem {
                 console.log('UnlockSystem: Forge level 4 - unlocked magic academy and tower');
                 break;
                 
+            case 5:
+                console.log(`UnlockSystem: Forge level 5 - can now build ${this.getMaxMines()} mines`);
+                break;
+                
+            case 8:
+                console.log(`UnlockSystem: Forge level 8 - can now build ${this.getMaxMines()} mines`);
+                break;
+                
+            case 10:
+                console.log(`UnlockSystem: Forge level 10 - can now build ${this.getMaxMines()} mines`);
+                break;
+                
             default:
                 // Higher levels just improve mine income
                 console.log(`UnlockSystem: Forge level ${newLevel} - improved mine efficiency`);
@@ -72,6 +102,9 @@ export class UnlockSystem {
     
     canBuildBuilding(type) {
         if (type === 'forge' && this.forgeCount >= this.maxForges) {
+            return false;
+        }
+        if (type === 'mine' && this.mineCount >= this.getMaxMines()) {
             return false;
         }
         return this.unlockedBuildings.has(type);
@@ -113,6 +146,12 @@ export class UnlockSystem {
                 return "Cannon Tower + Explosive Upgrades + Better Mine Income";
             case 4:
                 return "Magic Academy + Magic Tower + Fire Arrows + Better Mine Income";
+            case 5:
+                return "2nd Gold Mine + Better Mine Income";
+            case 8:
+                return "3rd Gold Mine + Better Mine Income";
+            case 10:
+                return "4th Gold Mine + Better Mine Income";
             default:
                 return nextLevel <= 10 ? "Improved Mine Income" : "Max Level Reached";
         }

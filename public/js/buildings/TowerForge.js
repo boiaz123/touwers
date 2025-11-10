@@ -1084,9 +1084,22 @@ export class TowerForge extends Building {
             case 4:
                 nextUnlock = "Unlocks: Magic Academy + Magic Tower + Fire Arrows + 3x Mine Income";
                 break;
+            case 5:
+                nextUnlock = "Unlocks: 2nd Gold Mine + 3.2x Mine Income";
+                break;
+            case 8:
+                nextUnlock = "Unlocks: 3rd Gold Mine + 3.8x Mine Income";
+                break;
+            case 10:
+                nextUnlock = "Unlocks: 4th Gold Mine + 4.2x Mine Income";
+                break;
             default:
-                const multiplier = 3.0 + (nextLevel - 4) * 0.2;
-                nextUnlock = `Unlocks: ${multiplier.toFixed(1)}x Mine Income`;
+                if (nextLevel < 10) {
+                    const multiplier = 3.0 + (nextLevel - 4) * 0.2;
+                    nextUnlock = `Unlocks: ${multiplier.toFixed(1)}x Mine Income`;
+                } else {
+                    nextUnlock = "Max Level Reached";
+                }
                 break;
         }
         
