@@ -971,4 +971,37 @@ export class TowerForge extends Building {
             cost: 300
         };
     }
+    
+    renderForgeOpening(ctx, size) {
+        // Forge opening in the wall
+        const openingWidth = size * 0.25;
+        const openingHeight = size * 0.2;
+        const openingX = this.x - openingWidth/2 - 15;
+        const openingY = this.y - openingHeight/2 - 5;
+        
+        // Opening shadow/depth
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
+        
+        // Opening border (stone arch)
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
+        
+        // Arch top
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
+        
+        // Fire glow from opening
+        const fireGlow = ctx.createRadialGradient(
+            openingX + openingWidth/2, openingY + openingHeight/2, 0,
+            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
+        );
+        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
+        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
+        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        
+        ctx.fillStyle = fireGlow;
+        ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
+    }
 }
