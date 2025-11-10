@@ -9,6 +9,16 @@ export class GoldMine extends Building {
         this.sparks = [];
         this.nextSparkTime = 0;
         this.incomeMultiplier = 1;
+        
+        // Initialize missing properties
+        this.smokePuffs = [];
+        this.nextSmokeTime = 0;
+        this.goldPiles = [];
+        this.bobAnimations = [];
+        this.isReady = false; // Different from goldReady - used for rendering logic
+        this.currentProgress = 0;
+        this.miningInterval = this.productionTime; // For compatibility with existing render code
+        
         this.workers = [
             { x: -15, y: 15, animationOffset: 0, type: 'miner' },
             { x: 20, y: 10, animationOffset: Math.PI, type: 'cart' }
@@ -275,7 +285,7 @@ export class GoldMine extends Building {
             worker.pickaxeRaised = Math.max(0, worker.pickaxeRaised - deltaTime * 3);
             
             // Mining animation
-            if (worker.miningCooldown <= 0 && !this.isReady) {
+            if (worker.miningCooldown <= 0 && !this.goldReady) { // Use goldReady instead of isReady
                 worker.pickaxeRaised = 1;
                 worker.miningCooldown = 2 + Math.random() * 2;
                 
@@ -295,7 +305,7 @@ export class GoldMine extends Building {
         
         // Generate ambient dust from cave
         this.nextSmokeTime -= deltaTime;
-        if (this.nextSmokeTime <= 0 && !this.isReady) {
+        if (this.nextSmokeTime <= 0 && !this.goldReady) { // Use goldReady instead of isReady
             this.smokePuffs.push({
                 x: this.x - 20 + Math.random() * 15, // From cave entrance
                 y: this.y - 10 + Math.random() * 10,
@@ -324,7 +334,7 @@ export class GoldMine extends Building {
         });
         
         // Update collection bob animation when ready
-        if (this.isReady) {
+        if (this.goldReady) { // Use goldReady instead of isReady
             this.bobAnimations.forEach((bob, index) => {
                 if (!bob) {
                     this.bobAnimations[index] = { time: Math.random() * Math.PI * 2 };
@@ -665,7 +675,7 @@ export class GoldMine extends Building {
         });
         
         // Render gold piles when ready
-        if (this.isReady) {
+        if (this.goldReady) { // Use goldReady instead of isReady
             this.goldPiles.forEach((pile, index) => {
                 const bob = this.bobAnimations[index];
                 const bobOffset = bob ? Math.sin(bob.time) * 1.5 : 0;
@@ -716,12 +726,12 @@ export class GoldMine extends Building {
         // Progress bar and indicators
         const barWidth = size * 0.6;
         const barHeight = 4;
-        const progressRatio = this.currentProgress / this.miningInterval;
+        const progressRatio = this.currentProduction / this.productionTime; // Use consistent properties
         
         ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
         ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
         
-        if (this.isReady) {
+        if (this.goldReady) { // Use goldReady consistently
             ctx.fillStyle = '#FFD700';
             ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
             
@@ -1161,7 +1171,7 @@ export class GoldMine extends Building {
         ctx.stroke();
         
         // Gold ore in cart (if ready)
-        if (this.isReady && this.cartPosition > 0.5) {
+        if (this.goldReady && this.cartPosition > 0.5) { // Use goldReady instead of isReady
             ctx.fillStyle = '#FFD700';
             for (let i = 0; i < 3; i++) {
                 const oreX = cartX - size * 0.02 + (i * size * 0.013);
