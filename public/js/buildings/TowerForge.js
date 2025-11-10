@@ -11,13 +11,13 @@ export class TowerForge extends Building {
         this.nextSmokeTime = 0;
         this.fireIntensity = 0;
         
-        // Upgrade system
+        // Upgrade system - rebalanced for better progression
         this.upgrades = {
-            towerRange: { level: 0, maxLevel: 5, baseCost: 100, effect: 0.1 },
-            poisonDamage: { level: 0, maxLevel: 5, baseCost: 150, effect: 2 },
-            barricadeDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 5 },
+            towerRange: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 }, // Reduced from 0.1 to 0.05 (5% per level)
+            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 }, // Increased from 2 to 3
+            barricadeDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 }, // Increased from 5 to 8
             fireArrows: { level: 0, maxLevel: 3, baseCost: 200, effect: 1 },
-            explosiveRadius: { level: 0, maxLevel: 4, baseCost: 250, effect: 20 }
+            explosiveRadius: { level: 0, maxLevel: 4, baseCost: 180, effect: 15 } // Reduced from 20 to 15
         };
     }
     
@@ -402,7 +402,7 @@ export class TowerForge extends Building {
             {
                 id: 'towerRange',
                 name: 'Extended Barrels',
-                description: `Increase all tower range by ${(this.upgrades.towerRange.effect * 100).toFixed(0)}%`,
+                description: `Increase all tower range by ${(this.upgrades.towerRange.effect * 100).toFixed(0)}% per level`,
                 level: this.upgrades.towerRange.level,
                 maxLevel: this.upgrades.towerRange.maxLevel,
                 cost: this.calculateUpgradeCost('towerRange'),
@@ -411,7 +411,7 @@ export class TowerForge extends Building {
             {
                 id: 'poisonDamage',
                 name: 'Toxic Coating',
-                description: `Add ${this.upgrades.poisonDamage.effect} poison damage to Poison Archers`,
+                description: `Add ${this.upgrades.poisonDamage.effect} poison damage per level to Poison Archers`,
                 level: this.upgrades.poisonDamage.level,
                 maxLevel: this.upgrades.poisonDamage.maxLevel,
                 cost: this.calculateUpgradeCost('poisonDamage'),
@@ -419,8 +419,8 @@ export class TowerForge extends Building {
             },
             {
                 id: 'barricadeDamage',
-                name: 'Reinforced Spikes',
-                description: `Add ${this.upgrades.barricadeDamage.effect} damage to Barricade Towers`,
+                name: 'Reinforced Materials',
+                description: `Add ${this.upgrades.barricadeDamage.effect} damage per level to Barricade/Basic Towers`,
                 level: this.upgrades.barricadeDamage.level,
                 maxLevel: this.upgrades.barricadeDamage.maxLevel,
                 cost: this.calculateUpgradeCost('barricadeDamage'),
@@ -438,7 +438,7 @@ export class TowerForge extends Building {
             {
                 id: 'explosiveRadius',
                 name: 'Enhanced Gunpowder',
-                description: `Increase Cannon blast radius by ${this.upgrades.explosiveRadius.effect}px`,
+                description: `Increase Cannon blast radius by ${this.upgrades.explosiveRadius.effect}px per level`,
                 level: this.upgrades.explosiveRadius.level,
                 maxLevel: this.upgrades.explosiveRadius.maxLevel,
                 cost: this.calculateUpgradeCost('explosiveRadius'),
@@ -457,15 +457,35 @@ export class TowerForge extends Building {
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
         
-        // Use gold instead of coins - this was the main bug
         if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         
-        gameState.gold -= cost; // Changed from coins to gold
+        gameState.gold -= cost;
         upgrade.level++;
-        this.applyUpgrade(upgradeType, gameState);
+        
+        // Trigger immediate effect application to all towers
+        this.notifyUpgradeChanged();
+        
+        console.log(`TowerForge: Purchased ${upgradeType} upgrade level ${upgrade.level}`);
         return true;
+    }
+    
+    // New method to notify that upgrades have changed
+    notifyUpgradeChanged() {
+        // This will be called by TowerManager to refresh all tower stats
+        this.upgradesChanged = true;
+    }
+    
+    // Method to get all current upgrade multipliers
+    getUpgradeMultipliers() {
+        return {
+            rangeMultiplier: 1 + (this.upgrades.towerRange.level * this.upgrades.towerRange.effect),
+            poisonDamageBonus: this.upgrades.poisonDamage.level * this.upgrades.poisonDamage.effect,
+            barricadeDamageBonus: this.upgrades.barricadeDamage.level * this.upgrades.barricadeDamage.effect,
+            fireArrowsEnabled: this.upgrades.fireArrows.level > 0,
+            explosiveRadiusBonus: this.upgrades.explosiveRadius.level * this.upgrades.explosiveRadius.effect
+        };
     }
     
     applyUpgrade(upgradeType, gameState) {

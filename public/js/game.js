@@ -314,6 +314,7 @@ class GameplayState {
                             <div class="upgrade-name">${upgrade.name}</div>
                             <div class="upgrade-desc">${upgrade.description}</div>
                             <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                            <div class="upgrade-current">Current: ${this.getUpgradeCurrentEffect(upgrade)}</div>
                         </div>
                         <div class="upgrade-cost">
                             ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
@@ -330,18 +331,41 @@ class GameplayState {
         
         document.body.appendChild(menu);
         
-        // Add upgrade button handlers
+        // Add upgrade button handlers with immediate menu refresh
         menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
                 if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
                     this.updateUI();
-                    this.showForgeUpgradeMenu(forgeData); // Refresh menu
+                    
+                    // Immediately refresh the menu to show updated values
+                    this.showForgeUpgradeMenu({
+                        type: 'forge_menu',
+                        forge: forgeData.forge,
+                        upgrades: forgeData.forge.getUpgradeOptions()
+                    });
                 }
             });
         });
         
         this.activeMenu = menu;
+    }
+    
+    getUpgradeCurrentEffect(upgrade) {
+        switch (upgrade.id) {
+            case 'towerRange':
+                return `+${(upgrade.level * 5)}% range`;
+            case 'poisonDamage':
+                return `+${upgrade.level * 3} poison damage`;
+            case 'barricadeDamage':
+                return `+${upgrade.level * 8} damage`;
+            case 'fireArrows':
+                return upgrade.level > 0 ? 'Active' : 'Inactive';
+            case 'explosiveRadius':
+                return `+${upgrade.level * 15}px radius`;
+            default:
+                return '';
+        }
     }
     
     clearActiveMenus() {

@@ -94,6 +94,24 @@ export class TowerManager {
     }
     
     update(deltaTime, enemies) {
+        // Check if any forge upgrades have changed
+        const forges = this.buildingManager.buildings.filter(building => 
+            building.constructor.name === 'TowerForge'
+        );
+        
+        let upgradesChanged = false;
+        forges.forEach(forge => {
+            if (forge.upgradesChanged) {
+                upgradesChanged = true;
+                forge.upgradesChanged = false; // Reset flag
+            }
+        });
+        
+        // If upgrades changed, recalculate all tower stats
+        if (upgradesChanged) {
+            this.recalculateAllTowerStats();
+        }
+        
         // Apply building upgrades to towers
         const upgrades = this.buildingManager.towerUpgrades;
         
@@ -105,10 +123,13 @@ export class TowerManager {
                 tower.originalFireRate = tower.fireRate;
             }
             
-            // Apply upgrades
+            // Apply base building upgrades
             tower.damage = tower.originalDamage * upgrades.damage;
             tower.range = tower.originalRange * upgrades.range;
             tower.fireRate = tower.originalFireRate * upgrades.fireRate;
+            
+            // Apply forge-specific upgrades
+            this.applyForgeUpgrades(tower);
             
             tower.update(deltaTime, enemies);
         });
@@ -117,42 +138,60 @@ export class TowerManager {
         this.buildingManager.update(deltaTime);
     }
     
-    render(ctx) {
-        this.towers.forEach(tower => tower.render(ctx));
-        this.buildingManager.render(ctx);
+    recalculateAllTowerStats() {
+        // Force recalculation of all tower stats when forge upgrades change
+        this.towers.forEach(tower => {
+            // Reset to original values first
+            if (tower.originalDamage) {
+                tower.damage = tower.originalDamage;
+                tower.range = tower.originalRange;
+                tower.fireRate = tower.originalFireRate;
+            }
+        });
+        console.log('TowerManager: Recalculated all tower stats due to forge upgrade');
     }
     
-    getTowerInfo(type) {
-        const towerType = this.towerTypes[type];
-        if (towerType && towerType.class.getInfo) {
-            return towerType.class.getInfo();
-        }
-        return null;
-    }
-    
-    getBuildingInfo(type) {
-        return this.buildingManager.getBuildingInfo(type);
-    }
-    
-    // Getter methods to access building manager properties
-    get goldPerSecond() {
-        return this.buildingManager.goldPerSecond;
-    }
-    
-    get availableSkills() {
-        return this.buildingManager.availableSkills;
-    }
-    
-    get superWeaponUnlocked() {
-        return this.buildingManager.superWeaponUnlocked;
-    }
-    
-    get buildings() {
-        return this.buildingManager.buildings;
-    }
-    
-    get buildingTypes() {
-        return this.buildingManager.buildingTypes;
+    applyForgeUpgrades(tower) {
+        // Get all forge upgrade multipliers
+        const forges = this.buildingManager.buildings.filter(building => 
+            building.constructor.name === 'TowerForge'
+        );
+        
+        forges.forEach(forge => {
+            const multipliers = forge.getUpgradeMultipliers();
+            
+            // Apply range upgrade to ALL towers
+            tower.range *= multipliers.rangeMultiplier;
+            
+            // Apply specific upgrades based on tower type
+            const towerType = tower.constructor.name;
+            
+            switch (towerType) {
+                case 'PoisonArcherTower':
+                    tower.damage += multipliers.poisonDamageBonus;
+                    if (multipliers.fireArrowsEnabled) {
+                        tower.hasFireArrows = true;
+                    }
+                    break;
+                    
+                case 'ArcherTower':
+                    if (multipliers.fireArrowsEnabled) {
+                        tower.hasFireArrows = true;
+                    }
+                    break;
+                    
+                case 'BarricadeTower':
+                case 'BasicTower':
+                    tower.damage += multipliers.barricadeDamageBonus;
+                    break;
+                    
+                case 'CannonTower':
+                    if (tower.explosionRadius) {
+                        tower.explosionRadius += multipliers.explosiveRadiusBonus;
+                    }
+                    break;
+            }
+        });
     }
     
     handleClick(x, y, canvasSize) {

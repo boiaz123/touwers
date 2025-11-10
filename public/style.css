@@ -330,6 +330,17 @@ body {
     opacity: 0.5;
 }
 
+.upgrade-current {
+    font-size: 11px;
+    color: #32CD32;
+    font-weight: bold;
+    margin-top: 3px;
+}
+
+.upgrade-item.maxed .upgrade-current {
+    color: #FFD700;
+}
+
 /* Mobile optimizations */
 @media (max-width: 1024px) {
     #stats {
