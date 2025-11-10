@@ -175,6 +175,9 @@ export class TowerForge extends Building {
     }
 
     renderFrontAreaItems(ctx, size) {
+        // FIRST: Render natural ground patches
+        this.renderNaturalGroundDetails(ctx, size);
+        
         // Storage barrels
         const barrels = [
             { x: -25, y: 30, size: 8, type: 'wood' },
@@ -374,23 +377,146 @@ export class TowerForge extends Building {
             ctx.restore();
         });
         
-        // Coal pile near forge
+        // Coal pile near forge - FIXED POSITIONS to prevent flickering
         const coalPile = { x: -40, y: 10 };
         ctx.save();
         ctx.translate(this.x + coalPile.x, this.y + coalPile.y);
         
         ctx.fillStyle = '#1C1C1C';
-        for (let i = 0; i < 8; i++) {
-            const coalX = -6 + (i % 4) * 4;
-            const coalY = -2 + Math.floor(i / 4) * 3;
-            const coalSize = 1.5 + Math.random() * 1;
-            
+        // Use fixed positions instead of random to prevent flickering
+        const fixedCoalPositions = [
+            { x: -6, y: -2, size: 2 },
+            { x: -2, y: -1, size: 2.5 },
+            { x: 2, y: -2, size: 1.8 },
+            { x: 6, y: 0, size: 2.2 },
+            { x: -4, y: 1, size: 1.5 },
+            { x: 0, y: 2, size: 2.8 },
+            { x: 4, y: 1, size: 1.7 },
+            { x: 1, y: -1, size: 2.3 }
+        ];
+        
+        fixedCoalPositions.forEach(coal => {
             ctx.beginPath();
-            ctx.arc(coalX, coalY, coalSize, 0, Math.PI * 2);
+            ctx.arc(coal.x, coal.y, coal.size, 0, Math.PI * 2);
             ctx.fill();
-        }
+        });
         
         ctx.restore();
+    }
+
+    renderNaturalGroundDetails(ctx, size) {
+        // Natural dirt patches in front of the forge
+        const dirtPatches = [
+            { x: -20, y: 35, radius: 12, intensity: 0.6 },
+            { x: 10, y: 40, radius: 15, intensity: 0.7 },
+            { x: -5, y: 30, radius: 10, intensity: 0.5 },
+            { x: 25, y: 35, radius: 8, intensity: 0.8 },
+            { x: -30, y: 25, radius: 7, intensity: 0.4 },
+            { x: 15, y: 25, radius: 6, intensity: 0.6 }
+        ];
+        
+        dirtPatches.forEach(patch => {
+            const dirtGradient = ctx.createRadialGradient(
+                this.x + patch.x, this.y + patch.y, 0,
+                this.x + patch.x, this.y + patch.y, patch.radius
+            );
+            dirtGradient.addColorStop(0, `rgba(139, 69, 19, ${patch.intensity})`);
+            dirtGradient.addColorStop(0.6, `rgba(160, 82, 45, ${patch.intensity * 0.7})`);
+            dirtGradient.addColorStop(1, `rgba(139, 69, 19, 0)`);
+            
+            ctx.fillStyle = dirtGradient;
+            ctx.beginPath();
+            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Grass patches
+        const grassPatches = [
+            { x: -35, y: 40, radius: 10, intensity: 0.8 },
+            { x: -15, y: 45, radius: 8, intensity: 0.7 },
+            { x: 20, y: 45, radius: 12, intensity: 0.9 },
+            { x: 35, y: 40, radius: 9, intensity: 0.6 },
+            { x: 0, y: 50, radius: 7, intensity: 0.8 },
+            { x: -25, y: 20, radius: 6, intensity: 0.5 }
+        ];
+        
+        grassPatches.forEach(patch => {
+            const grassGradient = ctx.createRadialGradient(
+                this.x + patch.x, this.y + patch.y, 0,
+                this.x + patch.x, this.y + patch.y, patch.radius
+            );
+            grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
+            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.8})`);
+            grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
+            
+            ctx.fillStyle = grassGradient;
+            ctx.beginPath();
+            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Scattered small rocks
+        const scatteredRocks = [
+            { x: -30, y: 35, size: 2 },
+            { x: -10, y: 38, size: 1.5 },
+            { x: 8, y: 33, size: 2.5 },
+            { x: 22, y: 42, size: 1.8 },
+            { x: 30, y: 30, size: 1.2 },
+            { x: -18, y: 25, size: 1.6 }
+        ];
+        
+        scatteredRocks.forEach(rock => {
+            ctx.fillStyle = '#696969';
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 0.5;
+            
+            ctx.beginPath();
+            ctx.arc(this.x + rock.x, this.y + rock.y, rock.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        });
+        
+        // Small grass clumps
+        const grassClumps = [
+            { x: -12, y: 42, count: 3, spread: 2 },
+            { x: 18, y: 38, count: 4, spread: 3 },
+            { x: -28, y: 30, count: 2, spread: 1.5 },
+            { x: 32, y: 45, count: 3, spread: 2.5 }
+        ];
+        
+        grassClumps.forEach(clump => {
+            ctx.strokeStyle = '#228B22';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < clump.count; i++) {
+                const angle = (i / clump.count) * Math.PI * 2;
+                const distance = Math.random() * clump.spread;
+                const bladeX = this.x + clump.x + Math.cos(angle) * distance;
+                const bladeY = this.y + clump.y + Math.sin(angle) * distance;
+                const bladeHeight = 3 + Math.random() * 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(bladeX, bladeY);
+                ctx.lineTo(bladeX + (Math.random() - 0.5), bladeY - bladeHeight);
+                ctx.stroke();
+            }
+        });
+        
+        // Worn footpaths in the dirt
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.3)';
+        ctx.lineWidth = 3;
+        
+        // Path from forge to coal pile
+        ctx.beginPath();
+        ctx.moveTo(this.x - 20, this.y + 15);
+        ctx.quadraticCurveTo(this.x - 30, this.y + 12, this.x - 35, this.y + 10);
+        ctx.stroke();
+        
+        // Path from forge to barrel area
+        ctx.beginPath();
+        ctx.moveTo(this.x - 15, this.y + 15);
+        ctx.quadraticCurveTo(this.x - 18, this.y + 22, this.x - 22, this.y + 28);
+        ctx.stroke();
     }
     
     renderWorkers(ctx, size) {
@@ -710,7 +836,6 @@ export class TowerForge extends Building {
         const roofPeakY = this.y - wallHeight - buildingHeight * 0.2;
         const leftRoofX = this.x - buildingWidth/2 - 5;
         const rightRoofX = this.x + buildingWidth/2; // Ends at main building edge
-        const chimneyRoofX = this.x + buildingWidth/2; // Chimney starts here
         
         // Main roof (no right overhang since chimney continues the structure)
         ctx.beginPath();
@@ -736,67 +861,48 @@ export class TowerForge extends Building {
             ctx.stroke();
         }
         
-        // Roof ridge
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(leftRoofX + 10, roofPeakY + 2);
-        ctx.lineTo(rightRoofX - 10, roofPeakY + 2);
-        ctx.stroke();
+        // REMOVED: Roof ridge that was causing the bar on top
         
         // Roof flashing where it meets chimney
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(chimneyRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
+        ctx.fillRect(rightRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
         
         ctx.strokeStyle = '#1C1C1C';
         ctx.lineWidth = 1;
-        ctx.strokeRect(chimneyRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
+        ctx.strokeRect(rightRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
     }
-    
-    renderForgeInterior(ctx, size) {
-        // Coal pile visible in opening
-        const openingX = this.x - 15;
-        const openingY = this.y + 5;
+
+    renderForgeOpening(ctx, size) {
+        // Forge opening in the wall
+        const openingWidth = size * 0.25;
+        const openingHeight = size * 0.2;
+        const openingX = this.x - openingWidth/2 - 15;
+        const openingY = this.y - openingHeight/2 - 5;
         
-        // Coal pieces
-        ctx.fillStyle = '#1C1C1C';
-        for (let i = 0; i < 6; i++) {
-            const coalX = openingX - 8 + (i % 3) * 6;
-            const coalY = openingY - 3 + Math.floor(i / 3) * 4;
-            ctx.beginPath();
-            ctx.arc(coalX, coalY, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // Opening shadow/depth
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
         
-        // Fire above coal
-        const fireColors = [
-            `rgba(255, 0, 0, ${this.fireIntensity * 0.7})`,
-            `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`,
-            `rgba(255, 200, 0, ${this.fireIntensity * 0.6})`
-        ];
+        // Opening border (stone arch)
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
         
-        fireColors.forEach((color, index) => {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.ellipse(
-                openingX - 3 + index * 2,
-                openingY - 8 - index * 2,
-                4 - index,
-                8 - index * 2,
-                0, 0, Math.PI * 2
-            );
-            ctx.fill();
-        });
+        // Arch top
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
         
-        // Anvil inside (partially visible)
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(openingX + 10, openingY - 2, 8, 4);
+        // Fire glow from opening
+        const fireGlow = ctx.createRadialGradient(
+            openingX + openingWidth/2, openingY + openingHeight/2, 0,
+            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
+        );
+        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
+        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
+        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
         
-        // Hammer on anvil
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(openingX + 12, openingY - 6, 2, 6);
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(openingX + 12, openingY - 6, 2, 3);
+        ctx.fillStyle = fireGlow;
+        ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
     }
     
     renderParticles(ctx) {
@@ -987,38 +1093,5 @@ export class TowerForge extends Building {
             size: '4x4',
             cost: 300
         };
-    }
-    
-    renderForgeOpening(ctx, size) {
-        // Forge opening in the wall
-        const openingWidth = size * 0.25;
-        const openingHeight = size * 0.2;
-        const openingX = this.x - openingWidth/2 - 15;
-        const openingY = this.y - openingHeight/2 - 5;
-        
-        // Opening shadow/depth
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
-        
-        // Opening border (stone arch)
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
-        
-        // Arch top
-        ctx.fillStyle = '#808080';
-        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
-        
-        // Fire glow from opening
-        const fireGlow = ctx.createRadialGradient(
-            openingX + openingWidth/2, openingY + openingHeight/2, 0,
-            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
-        );
-        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
-        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
-        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
-        
-        ctx.fillStyle = fireGlow;
-        ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
     }
 }
