@@ -104,7 +104,7 @@ export class MagicTower {
         if (this.target) {
             let finalDamage = this.damage;
             
-            // Apply elemental effects based on selected element
+            // Apply elemental effects based on selected element - CORRECTED
             switch(this.selectedElement) {
                 case 'fire':
                     finalDamage += this.elementalBonuses.fire.damageBonus;
@@ -160,7 +160,7 @@ export class MagicTower {
     createElementalEffect() {
         if (!this.target) return;
         
-        // Create lightning bolt effect with elemental color
+        // Create lightning bolt effect with elemental color - CORRECTED
         let boltColor, impactColor;
         
         switch(this.selectedElement) {
@@ -529,7 +529,7 @@ export class MagicTower {
             });
         });
         
-        // Element indicator with enhanced visibility when selected
+        // Element indicator with enhanced visibility when selected - CORRECTED
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';

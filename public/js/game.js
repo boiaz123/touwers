@@ -123,17 +123,31 @@ class GameplayState {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // Single unified click handler - removed duplicate
+        // FIXED: Unified click handler that properly routes all menu types
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Check for forge upgrade menu first
+            // Check for building/tower clicks first
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
-            if (clickResult && clickResult.type === 'forge_menu') {
-                this.showForgeUpgradeMenu(clickResult);
-                return;
+            
+            if (clickResult) {
+                if (clickResult.type === 'forge_menu') {
+                    this.showForgeUpgradeMenu(clickResult);
+                    return;
+                } else if (clickResult.type === 'academy_menu') {
+                    this.showAcademyUpgradeMenu(clickResult);
+                    return;
+                } else if (clickResult.type === 'magic_tower_menu') {
+                    this.showMagicTowerElementMenu(clickResult);
+                    return;
+                } else if (typeof clickResult === 'number') {
+                    // Gold collection from mine
+                    this.gameState.gold += clickResult;
+                    this.updateUI();
+                    return;
+                }
             }
             
             // Handle regular tower/building placement

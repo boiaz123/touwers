@@ -608,12 +608,17 @@ export class MagicAcademy extends Building {
     }
     
     onClick() {
+        console.log('MagicAcademy: onClick called');
         this.isSelected = true;
-        return {
+        
+        const result = {
             type: 'academy_menu',
             academy: this,
             upgrades: this.getElementalUpgradeOptions()
         };
+        
+        console.log('MagicAcademy: returning menu data:', result);
+        return result;
     }
     
     getElementalUpgradeOptions() {
