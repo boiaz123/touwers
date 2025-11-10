@@ -9,11 +9,10 @@ export class MagicTower {
         this.fireRate = 0.8;
         this.cooldown = 0;
         this.target = null;
-        this.isSelected = false;
-        this.isHovered = false;
+        this.isSelected = false; // Add selection state
         
         // Element system - CORRECTED elements
-        this.selectedElement = 'fire';
+        this.selectedElement = 'fire'; // Default element
         this.elementalBonuses = {
             fire: { damageBonus: 0 },
             water: { slowBonus: 0 },
@@ -38,10 +37,6 @@ export class MagicTower {
                 symbol: ['◊', '☆', '◇', '※', '❋', '⚡'][i]
             });
         }
-        
-        // Initialize click area as null - will be set during first render
-        this.clickArea = null;
-        console.log(`MagicTower: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime, enemies) {
@@ -288,24 +283,6 @@ export class MagicTower {
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
-        const gridSize = cellSize * 2;
-        
-        // ALWAYS update click area during render with current canvas size
-        const iconSize = 12;
-        const iconX = this.x + gridSize/2 - iconSize;
-        const iconY = this.y + gridSize/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        if (!this.clickAreaLogged) {
-            console.log(`MagicTower: Set clickArea during render:`, this.clickArea, `Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
-            this.clickAreaLogged = true;
-        }
         
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
@@ -552,16 +529,16 @@ export class MagicTower {
             });
         });
         
-        // Element indicator with enhanced visibility when selected/hovered - CORRECTED
+        // Element indicator with enhanced visibility when selected - CORRECTED
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
         
-        // Add selection/hover glow effect
+        // Add selection glow effect
         if (this.isSelected) {
             ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 15;
+            ctx.shadowBlur = 10;
             
             // Selection ring
             ctx.strokeStyle = '#FFD700';
@@ -569,62 +546,13 @@ export class MagicTower {
             ctx.beginPath();
             ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
             ctx.stroke();
-        } else if (this.isHovered) {
-            ctx.shadowColor = '#9370DB';
-            ctx.shadowBlur = 10;
-            
-            // Hover ring
-            ctx.strokeStyle = '#9370DB';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, towerSize/2 + 3, 0, Math.PI * 2);
-            ctx.stroke();
         }
         
-        // Glow background for element selection with hover/selection effects
-        let elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
+        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
         
         if (this.isSelected) {
-            elementPulse = 1.0;
-            ctx.fillStyle = `rgba(255, 215, 0, ${elementPulse * 0.6})`;
-        } else if (this.isHovered) {
-            elementPulse = 1.0;
-            ctx.fillStyle = `rgba(147, 112, 219, ${elementPulse * 0.6})`;
-        } else {
-            ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
+            ctx.shadowBlur = 0;
         }
-        
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Element icon background
-        if (this.isSelected) {
-            ctx.fillStyle = '#FFD700';
-        } else if (this.isHovered) {
-            ctx.fillStyle = '#9370DB';
-        } else {
-            ctx.fillStyle = 'rgba(138, 43, 226, 0.8)';
-        }
-        
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Border
-        ctx.strokeStyle = this.isSelected ? '#FFD700' : (this.isHovered ? '#9370DB' : '#4B0082');
-        ctx.lineWidth = this.isSelected || this.isHovered ? 3 : 2;
-        ctx.stroke();
-        
-        // Current element icon
-        ctx.fillStyle = this.isSelected || this.isHovered ? '#FFF' : '#FFD700';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(elementIcons[this.selectedElement], iconX, iconY);
-        
-        // Clear shadow
-        ctx.shadowBlur = 0;
 
         // Range indicator
         if (this.target) {
@@ -634,23 +562,6 @@ export class MagicTower {
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
         }
-    }
-    
-    onClick() {
-        console.log('MagicTower: Clicked! Opening element selection menu');
-        this.isSelected = true;
-        
-        return {
-            type: 'magic_tower_menu',
-            tower: this,
-            elements: [
-                { id: 'fire', name: 'Fire', description: 'High damage, applies burn effect', icon: '🔥' },
-                { id: 'water', name: 'Water', description: 'Slows and freezes enemies', icon: '💧' },
-                { id: 'air', name: 'Air', description: 'Chain lightning to multiple targets', icon: '💨' },
-                { id: 'earth', name: 'Earth', description: 'Armor piercing damage', icon: '🌍' }
-            ],
-            currentElement: this.selectedElement
-        };
     }
     
     static getInfo() {

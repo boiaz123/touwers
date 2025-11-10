@@ -773,49 +773,12 @@ export class GoldMine extends Building {
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
-            
-            // CRITICAL: Clear click area when not ready
-            this.clickArea = null;
-            console.log(`GoldMine: Not ready, clearing clickArea`);
         } else {
-            // Ready indicator with clickable icon in bottom right corner of 4x4 grid
-            const iconSize = 15;
-            const iconX = this.x + size/2 - iconSize;
-            const iconY = this.y + size/2 - iconSize;
-            
-            // CRITICAL: Store click area for detection - FIXED: Proper area centering
-            this.clickArea = {
-                x: iconX - iconSize/2,
-                y: iconY - iconSize/2,
-                width: iconSize * 2,
-                height: iconSize * 2
-            };
-            
-            console.log(`GoldMine: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
-            
-            // Glow background with pulse
-            const pulseIntensity = Math.sin(this.animationTime * 8) * 0.3 + 0.7;
-            ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.5})`;
-            ctx.beginPath();
-            ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Click icon background
-            ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-            ctx.beginPath();
-            ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Border
-            ctx.strokeStyle = '#B8860B';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Collection icon
-            ctx.fillStyle = '#8B4513';
-            ctx.font = 'bold 18px Arial';
+            // Ready indicator
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('💰', iconX, iconY + 5);
+            ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
         }
     }
     
@@ -874,14 +837,26 @@ export class GoldMine extends Building {
         return `rgb(${newR}, ${newG}, ${newB})`;
     }
     
+    collectGold() {
+        // Only allow collection if gold is ready
+        if (this.isReady) {
+            this.isReady = false;
+            this.currentProgress = 0;
+            this.goldPiles = [];
+            this.bobAnimations = [];
+            return this.goldPerCollection;
+        }
+        return 0;
+    }
+    
     isPointInside(x, y, size) {
         const dx = x - this.x;
         const dy = y - this.y;
         return Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2;
     }
     
-    applyEffect(buildingManager) {
-        // No passive gold generation anymore - only manual collection
+    applyEffect(towerManager) {
+        // No passive gold generation anymore
     }
     
     static getInfo() {

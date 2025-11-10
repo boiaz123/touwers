@@ -50,25 +50,13 @@ body {
     display: flex;
     flex: 1;
     min-height: 0;
-    position: relative;
 }
 
 #gameCanvas {
     flex: 1;
     background: #0a0a0a;
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><defs><filter id="shadow"><feDropShadow dx="1" dy="1" stdDeviation="1" flood-opacity="0.5"/></filter></defs><g filter="url(%23shadow)"><path d="M8 2 L8 18 L11 15 L14 22 L17 21 L14 14 L18 14 Z" fill="%23D4AF37" stroke="%238B7355" stroke-width="1.5"/><ellipse cx="9" cy="8" rx="2" ry="3" fill="%23FFD700" opacity="0.6"/><ellipse cx="11" cy="12" rx="1.5" ry="2" fill="%23FFD700" opacity="0.4"/></g></svg>'), auto !important;
+    cursor: crosshair;
     touch-action: none;
-    pointer-events: auto;
-    position: relative;
-    z-index: 1;
-}
-
-/* All states use the same golden gauntlet cursor */
-.game-active #gameCanvas,
-.start-screen #gameCanvas,
-.level-select #gameCanvas,
-.game-active #gameCanvas.hovering-interactive {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><defs><filter id="shadow"><feDropShadow dx="1" dy="1" stdDeviation="1" flood-opacity="0.5"/></filter></defs><g filter="url(%23shadow)"><path d="M8 2 L8 18 L11 15 L14 22 L17 21 L14 14 L18 14 Z" fill="%23D4AF37" stroke="%238B7355" stroke-width="1.5"/><ellipse cx="9" cy="8" rx="2" ry="3" fill="%23FFD700" opacity="0.6"/><ellipse cx="11" cy="12" rx="1.5" ry="2" fill="%23FFD700" opacity="0.4"/></g></svg>'), auto !important;
 }
 
 /* C&C Style Tower Sidebar */
@@ -81,10 +69,6 @@ body {
     padding: 10px 5px;
     flex-shrink: 0;
     overflow-y: auto;
-    /* Ensure sidebar doesn't interfere with canvas clicks */
-    pointer-events: auto;
-    position: relative;
-    z-index: 2;
 }
 
 #tower-grid {

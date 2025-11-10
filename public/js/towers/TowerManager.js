@@ -5,7 +5,7 @@ import { MagicTower } from './MagicTower.js';
 import { BarricadeTower } from './BarricadeTower.js';
 import { PoisonArcherTower } from './PoisonArcherTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
-import { UnlockSystem } from './UnlockSystem.js';
+import { UnlockSystem } from '../UnlockSystem.js';
 
 export class TowerManager {
     constructor(gameState, level) {
@@ -27,11 +27,6 @@ export class TowerManager {
         
         // Track occupied grid positions by towers only
         this.occupiedPositions = new Set();
-        
-        // Add hover tracking
-        this.hoveredTower = null;
-        this.mouseX = 0;
-        this.mouseY = 0;
     }
     
     placeTower(type, x, y, gridX, gridY) {
@@ -66,29 +61,13 @@ export class TowerManager {
     placeBuilding(type, x, y, gridX, gridY) {
         // Check if building type is unlocked
         if (!this.unlockSystem.canBuildBuilding(type)) {
-            console.log(`TowerManager: ${type} building not yet unlocked`);
-            return false;
-        }
-        
-        // Check building limits BEFORE attempting to place
-        if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-            console.log('TowerManager: Cannot build forge - limit reached');
-            return false;
-        }
-        
-        if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-            console.log('TowerManager: Cannot build mine - limit reached');
-            return false;
-        }
-        
-        if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-            console.log('TowerManager: Cannot build academy - limit reached');
+            console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
             return false;
         }
         
         const result = this.buildingManager.placeBuilding(type, x, y, gridX, gridY);
         
-        // Handle building placement for unlock system ONLY if placement succeeded
+        // Handle building placement for unlock system
         if (result) {
             if (type === 'forge') {
                 this.unlockSystem.onForgeBuilt();
@@ -271,190 +250,107 @@ export class TowerManager {
         });
     }
     
-    handleMouseMove(x, y) {
-        // Validate input coordinates
-        if (typeof x !== 'number' || typeof y !== 'number' || !isFinite(x) || !isFinite(y)) {
-            console.warn('TowerManager: Invalid mouse coordinates:', x, y);
-            return false;
-        }
-        
-        this.mouseX = x;
-        this.mouseY = y;
-        
-        // Disable excessive debugging that was blocking mouse events
-        const debugMouse = false; // Changed back to false
-        
-        // Check for hover over tower icons
-        let foundHover = false;
-        
-        // Use a more robust approach - check all towers and buildings
-        for (const tower of this.towers) {
-            if (tower.clickArea && this.isValidClickArea(tower.clickArea)) {
-                const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
-                const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
-                
-                if (withinX && withinY) {
-                    if (this.hoveredTower !== tower) {
-                        // Clear previous hover
-                        if (this.hoveredTower) {
-                            this.hoveredTower.isHovered = false;
-                        }
-                        
-                        this.hoveredTower = tower;
-                        tower.isHovered = true;
-                        
-                        if (debugMouse) {
-                            console.log(`TowerManager: Started hovering over ${tower.constructor.name}`);
-                        }
-                    }
-                    foundHover = true;
-                    break;
-                }
-            }
-        }
-        
-        // Clear hover state if no tower is hovered
-        if (!foundHover && this.hoveredTower) {
-            if (debugMouse) {
-                console.log(`TowerManager: Stopped hovering over ${this.hoveredTower.constructor.name}`);
-            }
-            this.hoveredTower.isHovered = false;
-            this.hoveredTower = null;
-        }
-        
-        // Clear hover state from all other towers
-        this.towers.forEach(tower => {
-            if (tower !== this.hoveredTower) {
-                tower.isHovered = false;
-            }
+    handleClick(x, y, canvasSize) {
+        // Clear any previous selections
+        this.towers.forEach(tower => tower.isSelected = false);
+        this.buildingManager.buildings.forEach(building => {
+            if (building.deselect) building.deselect();
         });
         
-        // Also check building hover with better error handling
-        let buildingHover = false;
-        try {
-            buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
-        } catch (error) {
-            console.warn('TowerManager: Error in building mouse move:', error);
-        }
+        // Check tower clicks first for element selection
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const towerSize = cellSize * 2;
         
-        // Return true if hovering over any interactive element
-        return foundHover || buildingHover;
-    }
-    
-    handleClick(x, y, rect) {
-        console.log(`TowerManager: handleClick at (${x}, ${y})`);
-        console.log(`TowerManager: Checking ${this.towers.length} towers and ${this.buildingManager.buildings.length} buildings`);
-        
-        // Check tower clicks first - with DETAILED logging
-        for (let i = 0; i < this.towers.length; i++) {
-            const tower = this.towers[i];
-            
-            if (tower && tower.clickArea) {
-                console.log(`TowerManager: Tower ${i} (${tower.constructor.name}) clickArea:`, tower.clickArea);
-                
-                if (this.isValidClickArea(tower.clickArea)) {
-                    const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
-                    const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
-                    
-                    console.log(`TowerManager: Tower ${i} - withinX: ${withinX}, withinY: ${withinY}`);
-                    
-                    if (withinX && withinY) {
-                        console.log(`TowerManager: TOWER CLICK HIT on ${tower.constructor.name}!`);
-                        
-                        // Check if tower has an onClick method
-                        if (tower.onClick && typeof tower.onClick === 'function') {
-                            const result = tower.onClick();
-                            console.log(`TowerManager: Tower onClick returned:`, result);
-                            return result;
-                        } else {
-                            console.log(`TowerManager: Tower ${tower.constructor.name} has no onClick method`);
-                        }
-                    }
-                } else {
-                    console.log(`TowerManager: Tower ${i} has invalid clickArea`);
+        for (const tower of this.towers) {
+            // Check if click is within tower bounds
+            const distance = Math.hypot(tower.x - x, tower.y - y);
+            if (distance <= towerSize / 2) {
+                if (tower.constructor.name === 'MagicTower') {
+                    tower.isSelected = true;
+                    return {
+                        type: 'magic_tower_menu',
+                        tower: tower,
+                        elements: [
+                            { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
+                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
+                            { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
+                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                        ],
+                        currentElement: tower.selectedElement
+                    };
                 }
-            } else {
-                console.log(`TowerManager: Tower ${i} missing clickArea`);
+                break; // Found a tower, don't check buildings
             }
         }
         
-        // Check building clicks with DETAILED logging
-        console.log(`TowerManager: Checking building clicks...`);
-        const buildingResult = this.buildingManager.handleClick(x, y, rect);
+        // Then check building clicks with improved detection
+        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
         if (buildingResult) {
-            console.log(`TowerManager: Building click returned:`, buildingResult);
-            return buildingResult;
+            if (buildingResult.type === 'forge_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                return buildingResult;
+            } else if (buildingResult.type === 'academy_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                console.log('TowerManager: Academy menu requested');
+                return buildingResult;
+            } else if (typeof buildingResult === 'number') {
+                // Gold collection
+                return buildingResult;
+            }
         }
         
-        console.log(`TowerManager: No clicks detected`);
         return null;
     }
     
-    isValidClickArea(clickArea) {
-        return clickArea && 
-               typeof clickArea.x === 'number' && 
-               typeof clickArea.y === 'number' &&
-               typeof clickArea.width === 'number' && 
-               typeof clickArea.height === 'number' &&
-               isFinite(clickArea.x) && 
-               isFinite(clickArea.y) &&
-               isFinite(clickArea.width) && 
-               isFinite(clickArea.height) &&
-               clickArea.width > 0 && 
-               clickArea.height > 0;
+    selectMagicTowerElement(tower, element) {
+        if (tower && tower.setElement) {
+            tower.setElement(element);
+            console.log(`TowerManager: Set magic tower element to ${element}`);
+            return true;
+        }
+        return false;
     }
     
-    getUnlockSystem() {
-        return this.unlockSystem;
+    render(ctx) {
+        // Render all towers
+        this.towers.forEach(tower => {
+            tower.render(ctx);
+        });
+        
+        // Render all buildings
+        this.buildingManager.render(ctx);
     }
     
     getTowerInfo(type) {
         const towerType = this.towerTypes[type];
         if (!towerType || !towerType.class.getInfo) return null;
-        return towerType.class.getInfo();
+        
+        const info = towerType.class.getInfo();
+        // Add unlock status
+        info.unlocked = this.unlockSystem.canBuildTower(type);
+        return info;
     }
     
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
-        if (!info) return null;
-        
-        // Add unlock status and availability
-        const unlocked = this.unlockSystem.canBuildBuilding(type);
-        const canAfford = this.gameState.canAfford(info.cost || 0);
-        
-        // Check specific building limits
-        let disabled = false;
-        let disableReason = '';
-        
-        if (!unlocked) {
-            disabled = true;
-            disableReason = 'Not unlocked yet';
-        } else if (!canAfford) {
-            disabled = true;
-            disableReason = 'Not enough gold';
-        } else if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-            disabled = true;
-            disableReason = 'Only 1 forge allowed';
-        } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-            disabled = true;
-            disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
-        } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-            disabled = true;
-            disableReason = 'Only 1 academy allowed';
+        if (info) {
+            info.unlocked = this.unlockSystem.canBuildBuilding(type);
+            
+            if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+                info.disabled = true;
+                info.disableReason = "Only 1 forge allowed";
+            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+                info.disabled = true;
+                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
+            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+                info.disabled = true;
+                info.disableReason = "Only 1 academy allowed";
+            }
         }
-        
-        return {
-            ...info,
-            unlocked: unlocked,
-            disabled: disabled,
-            disableReason: disableReason
-        };
+        return info;
     }
     
-    render(ctx) {
-        this.towers.forEach(tower => {
-            tower.render(ctx);
-        });
-        this.buildingManager.render(ctx);
+    getUnlockSystem() {
+        return this.unlockSystem;
     }
 }

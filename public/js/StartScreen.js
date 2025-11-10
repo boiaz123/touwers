@@ -44,12 +44,6 @@ export class StartScreen {
     enter() {
         console.log('StartScreen: enter called');
         
-        // Add start-screen class to body for CSS cursor control
-        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
-        document.body.classList.add('start-screen');
-        
-        console.log('StartScreen: Using CSS cursor styling');
-        
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -75,29 +69,12 @@ export class StartScreen {
         this.particles = [];
         this.particlesInitialized = false;
         
-        // CRITICAL: Initialize particles SYNCHRONOUSLY - don't defer
-        const canvas = this.stateManager.canvas;
-        if (canvas && canvas.width > 0 && canvas.height > 0) {
-            console.log('StartScreen: Force initializing particles NOW in enter()');
-            
-            // Initialize particles inline to ensure they're ready
-            this.particles = [];
-            for (let i = 0; i < 25; i++) {
-                this.particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 3 + 1,
-                    speed: Math.random() * 20 + 10,
-                    opacity: Math.random() * 0.5 + 0.1
-                });
-            }
-            this.particlesInitialized = true;
-            console.log('StartScreen: Particles initialized synchronously:', this.particles.length);
-        } else {
-            console.error('StartScreen: Canvas not ready in enter()! Width:', canvas?.width, 'Height:', canvas?.height);
+        // Initialize particles immediately if canvas is ready
+        if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
+            this.initParticles();
         }
         
-        console.log('StartScreen: enter completed successfully');
+        console.log('StartScreen: enter completed');
     }
     
     update(deltaTime) {
@@ -135,46 +112,30 @@ export class StartScreen {
         try {
             const canvas = this.stateManager.canvas;
             
-            // Validate canvas dimensions
+            // Always render background, even if canvas isn't fully ready
             if (!canvas || !canvas.width || !canvas.height) {
-                console.error('StartScreen: Invalid canvas in render!', canvas);
+                // Fallback rendering for uninitialized canvas
+                ctx.fillStyle = '#1a0f0a';
+                ctx.fillRect(0, 0, 800, 600); // Default size
+                console.warn('StartScreen: Canvas not ready, using fallback rendering');
                 return;
             }
             
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            // REMOVED excessive logging - only log once
-            if (!this._hasRendered) {
-                console.log('StartScreen: First render - canvas', width, 'x', height, 'particles:', this.particles.length);
-                this._hasRendered = true;
-            }
-            
-            // Initialize particles on first render if somehow not initialized
-            if (!this.particlesInitialized && width > 0 && height > 0) {
-                console.warn('StartScreen: Late particle initialization in render');
-                this.particles = [];
-                for (let i = 0; i < 25; i++) {
-                    this.particles.push({
-                        x: Math.random() * width,
-                        y: Math.random() * height,
-                        size: Math.random() * 3 + 1,
-                        speed: Math.random() * 20 + 10,
-                        opacity: Math.random() * 0.5 + 0.1
-                    });
-                }
-                this.particlesInitialized = true;
+            // Initialize particles on first render if needed
+            if (!this.particlesInitialized) {
+                this.initParticles();
             }
             
             // Dark medieval background
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#1a0f0a');
             gradient.addColorStop(1, '#0a0505');
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Render particles (falling embers) if they exist
             if (this.particles && this.particles.length > 0) {
+                ctx.globalAlpha = 1;
                 this.particles.forEach(particle => {
                     ctx.globalAlpha = particle.opacity;
                     ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
@@ -184,59 +145,54 @@ export class StartScreen {
                 });
             }
             
-            ctx.globalAlpha = 1;
-            
             // Title rendering
-            ctx.globalAlpha = Math.max(0.1, this.titleOpacity);
+            ctx.globalAlpha = Math.max(0.1, this.titleOpacity); // Ensure some visibility initially
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
             
             // Title shadow
             ctx.fillStyle = '#000';
             ctx.font = 'bold 80px serif';
-            ctx.fillText('TOUWERS', width / 2 + 3, height / 2 - 50 + 3);
+            ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 2 - 50 + 3);
             
             // Title main
             ctx.fillStyle = '#d4af37';
             ctx.strokeStyle = '#8b7355';
             ctx.lineWidth = 2;
-            ctx.fillText('TOUWERS', width / 2, height / 2 - 50);
-            ctx.strokeText('TOUWERS', width / 2, height / 2 - 50);
+            ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
             
             // Subtitle
-            ctx.globalAlpha = Math.max(0.05, this.subtitleOpacity);
+            ctx.globalAlpha = Math.max(0.05, this.subtitleOpacity); // Ensure some visibility
             ctx.font = 'italic 24px serif';
             ctx.fillStyle = '#c9a876';
-            ctx.fillText('Defend the Realm', width / 2, height / 2 + 20);
+            ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
             
             // Continue message
-            if (this.showContinue || this.animationTime > 1) {
+            if (this.showContinue || this.animationTime > 1) { // Show early for testing
                 const flickerAlpha = this.showContinue ? 
                     this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3)) : 
-                    0.3;
+                    0.3; // Static visibility before animation completes
                 ctx.globalAlpha = flickerAlpha;
                 ctx.font = '20px serif';
                 ctx.fillStyle = '#fff';
-                ctx.fillText('Press to Continue', width / 2, height / 2 + 120);
+                ctx.fillText('Press to Continue', canvas.width / 2, canvas.height / 2 + 120);
             }
             
             ctx.globalAlpha = 1;
             
+            console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
+            
         } catch (error) {
             console.error('StartScreen render error:', error);
-            console.error('Error stack:', error.stack);
+            console.error('Stack trace:', error.stack);
             
             // Fallback rendering
-            try {
-                ctx.fillStyle = '#1a0f0a';
-                ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
-                ctx.fillStyle = '#d4af37';
-                ctx.font = '24px serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Starting...', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
-            } catch (fallbackError) {
-                console.error('StartScreen: Even fallback render failed:', fallbackError);
-            }
+            ctx.fillStyle = '#1a0f0a';
+            ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('StartScreen Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
     }
     
@@ -244,8 +200,6 @@ export class StartScreen {
         console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
         // Allow clicking even before animation completes for testing
         if (this.showContinue || this.animationTime > 1) {
-            // Ensure cursor is reset before state change
-            this.stateManager.canvas.style.cursor = 'default';
             this.stateManager.changeState('levelSelect');
         }
     }

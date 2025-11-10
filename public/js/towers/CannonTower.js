@@ -11,13 +11,9 @@ export class CannonTower {
         this.cooldown = 0;
         this.target = null;
         
-        // Add interaction states
-        this.isSelected = false;
-        this.isHovered = false;
-        
         // Animation properties
         this.trebuchetAngle = 0;
-        this.armPosition = 0;
+        this.armPosition = 0; // 0 = ready, 1 = loaded/pulled back, 2 = firing
         this.armSpeed = 0;
         this.explosions = [];
         this.fireballs = [];
@@ -26,10 +22,6 @@ export class CannonTower {
         
         // Fixed random seed for consistent texture
         this.randomSeed = Math.random() * 1000;
-        
-        // Initialize click area as null - will be set during first render
-        this.clickArea = null;
-        console.log(`CannonTower: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime, enemies) {
@@ -175,23 +167,6 @@ export class CannonTower {
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
-        
-        // ALWAYS update click area during render
-        const iconSize = 12;
-        const iconX = this.x + towerSize/2 - iconSize;
-        const iconY = this.y + towerSize/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        if (!this.clickAreaLogged) {
-            console.log(`CannonTower: Set clickArea during render:`, this.clickArea, `Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
-            this.clickAreaLogged = true;
-        }
         
         // 3D square tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -556,59 +531,6 @@ export class CannonTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
-        
-        // Add clickable icon in bottom right corner of 2x2 grid
-        // Icon background with hover/selection effects
-        let pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;
-        
-        if (this.isSelected) {
-            pulseIntensity = 1.0;
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 15;
-        } else if (this.isHovered) {
-            pulseIntensity = 1.0;
-            ctx.shadowColor = '#FF8C00';
-            ctx.shadowBlur = 10;
-        }
-        
-        ctx.fillStyle = `rgba(139, 69, 19, ${pulseIntensity * 0.8})`;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon circle
-        if (this.isSelected) {
-            ctx.fillStyle = '#FFD700';
-        } else if (this.isHovered) {
-            ctx.fillStyle = '#FF8C00';
-        } else {
-            ctx.fillStyle = '#8B4513';
-        }
-        
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon border
-        ctx.strokeStyle = this.isSelected ? '#FFD700' : (this.isHovered ? '#FF8C00' : '#654321');
-        ctx.lineWidth = this.isSelected || this.isHovered ? 3 : 2;
-        ctx.stroke();
-        
-        // Trebuchet icon
-        ctx.fillStyle = this.isSelected || this.isHovered ? '#000' : '#FFD700';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('💣', iconX, iconY);
-        
-        // Clear shadow
-        ctx.shadowBlur = 0;
-    }
-    
-    onClick() {
-        // Cannon towers don't have interactive menus
-        console.log('CannonTower: Clicked, but no menu available');
-        return null;
     }
     
     static getInfo() {

@@ -1,120 +1,109 @@
 export class GameStateManager {
     constructor(canvas, ctx) {
-        if (!canvas || !ctx) {
-            throw new Error('GameStateManager: Canvas and context are required');
-        }
-        
         this.canvas = canvas;
         this.ctx = ctx;
         this.states = {};
         this.currentState = null;
         this.currentStateName = null;
-        
-        console.log('GameStateManager: Initialized with canvas:', canvas.width, 'x', canvas.height);
+        console.log('GameStateManager: Constructor called with canvas:', canvas.width, 'x', canvas.height);
     }
     
     addState(name, state) {
+        console.log('GameStateManager: Adding state:', name);
         this.states[name] = state;
-        console.log('GameStateManager: Added state:', name);
+        console.log('GameStateManager: State added successfully:', name);
     }
     
-    changeState(name) {
-        if (!this.states[name]) {
-            console.error('GameStateManager: State not found:', name);
+    changeState(stateName) {
+        console.log(`GameStateManager: Attempting to change to state '${stateName}'`);
+        
+        if (!this.states[stateName]) {
+            console.error(`GameStateManager: State '${stateName}' does not exist. Available states:`, Object.keys(this.states));
             return false;
         }
         
-        console.log('GameStateManager: Changing state from', this.currentStateName, 'to', name);
-        
-        // Exit current state if exists
-        if (this.currentState && this.currentState.exit) {
-            try {
-                this.currentState.exit();
-                console.log('GameStateManager: Exited previous state');
-            } catch (error) {
-                console.error('GameStateManager: Error exiting state:', error);
-            }
-        }
-        
-        // Change to new state
-        this.currentState = this.states[name];
-        this.currentStateName = name;
-        console.log('GameStateManager: Set currentState to', name);
-        
-        // Enter new state
-        if (this.currentState && this.currentState.enter) {
-            try {
-                this.currentState.enter();
-                console.log('GameStateManager: Entered new state successfully');
-            } catch (error) {
-                console.error('GameStateManager: Error entering state:', error);
-                return false;
-            }
-        } else {
-            console.warn('GameStateManager: State has no enter method');
-        }
-        
-        // CRITICAL: Force TWO immediate renders to ensure canvas is drawn
-        console.log('GameStateManager: Forcing immediate renders after state change');
         try {
-            this.render();
-            this.render(); // Second render to ensure everything is visible
-        } catch (renderError) {
-            console.error('GameStateManager: Error in immediate render:', renderError);
-        }
-        
-        console.log('GameStateManager: State changed successfully to', name);
-        return true;
-    }
-    
-    update(deltaTime) {
-        if (this.currentState && this.currentState.update) {
-            try {
-                this.currentState.update(deltaTime);
-            } catch (error) {
-                console.error('GameStateManager: Error updating state:', error);
+            // Exit current state
+            if (this.currentStateName && this.states[this.currentStateName]) {
+                console.log(`GameStateManager: Exiting state '${this.currentStateName}'`);
+                if (this.states[this.currentStateName].exit) {
+                    this.states[this.currentStateName].exit();
+                }
             }
-        }
-    }
-    
-    render() {
-        if (!this.ctx || !this.canvas) {
-            console.warn('GameStateManager: Canvas or context not available');
-            return;
-        }
-        
-        if (!this.currentState) {
-            console.warn('GameStateManager: No current state to render');
-            return;
-        }
-        
-        if (this.currentState.render) {
-            try {
-                this.currentState.render(this.ctx);
-            } catch (error) {
-                console.error('GameStateManager: Error rendering state:', error);
-                console.error('Error stack:', error.stack);
-                
-                // Fallback rendering
-                this.ctx.fillStyle = '#000';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.fillStyle = '#f00';
-                this.ctx.font = '20px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('Render Error: ' + error.message, this.canvas.width / 2, this.canvas.height / 2);
+            
+            // Enter new state
+            this.currentStateName = stateName;
+            this.currentState = this.states[stateName];
+            console.log(`GameStateManager: Entering state '${stateName}'`);
+            
+            if (this.currentState.enter) {
+                this.currentState.enter();
             }
-        } else {
-            console.warn('GameStateManager: Current state has no render method');
+            
+            console.log(`GameStateManager: Successfully changed to state '${stateName}'`);
+            return true;
+        } catch (error) {
+            console.error(`GameStateManager: Error changing to state '${stateName}':`, error);
+            console.error('Stack trace:', error.stack);
+            return false;
         }
     }
     
     handleClick(x, y) {
-        if (this.currentState && this.currentState.handleClick) {
-            try {
+        try {
+            if (this.currentState && this.currentState.handleClick) {
+                console.log(`GameStateManager: Handling click at (${x}, ${y}) for state '${this.currentStateName}'`);
                 this.currentState.handleClick(x, y);
-            } catch (error) {
-                console.error('GameStateManager: Error handling click:', error);
+            } else {
+                console.warn(`GameStateManager: No click handler for state '${this.currentStateName}'`);
             }
+        } catch (error) {
+            console.error('GameStateManager: Error handling click:', error);
         }
+    }
+    
+    update(deltaTime) {
+        try {
+            if (this.currentState && this.currentState.update) {
+                this.currentState.update(deltaTime);
+            }
+        } catch (error) {
+            console.error(`GameStateManager: Error in update for state '${this.currentStateName}':`, error);
+        }
+    }
+    
+    render() {
+        try {
+            if (this.currentState && this.currentState.render) {
+                this.currentState.render(this.ctx);
+            } else {
+                // Fallback: render a debug screen
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = '24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`No render method for state: ${this.currentStateName}`, this.canvas.width / 2, this.canvas.height / 2);
+            }
+        } catch (error) {
+            console.error(`GameStateManager: Error in render for state '${this.currentStateName}':`, error);
+            // Fallback error screen
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = '#ff0000';
+            this.ctx.font = '24px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Render Error', this.canvas.width / 2, this.canvas.height / 2);
+            this.ctx.fillText(error.message, this.canvas.width / 2, this.canvas.height / 2 + 40);
+        }
+    }
+    
+    get selectedLevelInfo() {
+        return this._selectedLevelInfo;
+    }
+    
+    set selectedLevelInfo(info) {
+        console.log('GameStateManager: Setting selected level info:', info);
+        this._selectedLevelInfo = info;
     }
 }

@@ -25,13 +25,6 @@ class GameplayState {
     enter() {
         console.log('GameplayState: entering');
         
-        // Add game-active class to body for CSS cursor control
-        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
-        document.body.classList.add('game-active');
-        
-        // Let CSS handle cursor - remove manual setting
-        console.log('GameplayState: Using CSS cursor styling');
-        
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
         
@@ -40,11 +33,6 @@ class GameplayState {
         this.currentLevel = 1;
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
-        
-        // Initialize mouse tracking IMMEDIATELY
-        this.mouseX = 0;
-        this.mouseY = 0;
-        this.mouseInitialized = false;
         
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
@@ -83,68 +71,14 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // CRITICAL: Setup event listeners SYNCHRONOUSLY and initialize mouse tracking
         this.setupEventListeners();
-        this.initializeMouseTracking();
-        console.log('GameplayState: Event listeners set up synchronously');
-        
-        // CRITICAL: Force an immediate render to ensure click areas are set
-        this.forceInitialRender();
-        
-        // CRITICAL: Force another render after a brief delay to catch any async issues
-        setTimeout(() => {
-            console.log('GameplayState: Post-initialization render');
-            this.forceInitialRender();
-            
-            // Force one more mouse state refresh to ensure interactivity works
-            if (this.mouseX !== undefined && this.mouseY !== undefined) {
-                this.refreshMouseState(this.mouseX, this.mouseY);
-            }
-        }, 50); // Shorter delay
-        
         this.updateUI();
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
     }
     
-    forceInitialRender() {
-        console.log('GameplayState: Forcing initial render to set click areas');
-        
-        try {
-            // CRITICAL: Force multiple render passes to ensure click areas are properly set
-            for (let pass = 0; pass < 3; pass++) {
-                console.log(`GameplayState: Render pass ${pass + 1}`);
-                
-                // Clear and render
-                this.stateManager.ctx.clearRect(0, 0, this.stateManager.canvas.width, this.stateManager.canvas.height);
-                this.render(this.stateManager.ctx);
-                
-                // Force canvas state synchronization
-                this.stateManager.ctx.save();
-                this.stateManager.ctx.restore();
-            }
-            
-            console.log('GameplayState: All render passes complete');
-            
-            // Log final tower/building click areas for debugging
-            this.towerManager.towers.forEach((tower, i) => {
-                console.log(`Tower ${i} (${tower.constructor.name}) final clickArea:`, tower.clickArea);
-            });
-            
-            this.towerManager.buildingManager.buildings.forEach((building, i) => {
-                console.log(`Building ${i} (${building.constructor.name}) final clickArea:`, building.clickArea);
-            });
-            
-        } catch (error) {
-            console.error('GameplayState: Error during initial render:', error);
-        }
-    }
-    
     exit() {
-        // Remove game-active class when leaving
-        document.body.classList.remove('game-active');
-        
         // Clean up event listeners when leaving game state
         this.removeEventListeners();
     }
@@ -155,138 +89,77 @@ class GameplayState {
         
         // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
-            const clickHandler = (e) => {
+            btn.addEventListener('click', (e) => {
                 this.selectTower(e.currentTarget);
-            };
-            const enterHandler = (e) => {
+            });
+            
+            btn.addEventListener('mouseenter', (e) => {
                 this.showTowerInfo(e.currentTarget.dataset.type);
-            };
-            const touchHandler = (e) => {
+            });
+            
+            btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 this.showTowerInfo(e.currentTarget.dataset.type);
-            };
-            
-            btn.addEventListener('click', clickHandler);
-            btn.addEventListener('mouseenter', enterHandler);
-            btn.addEventListener('touchstart', touchHandler);
-            
-            // Store references for cleanup
-            btn._clickHandler = clickHandler;
-            btn._enterHandler = enterHandler;
-            btn._touchHandler = touchHandler;
+            });
         });
         
         // Building button listeners
         document.querySelectorAll('.building-btn').forEach(btn => {
-            const clickHandler = (e) => {
+            btn.addEventListener('click', (e) => {
                 this.selectBuilding(e.currentTarget);
-            };
-            const enterHandler = (e) => {
+            });
+            
+            btn.addEventListener('mouseenter', (e) => {
                 this.showBuildingInfo(e.currentTarget.dataset.type);
-            };
-            const touchHandler = (e) => {
+            });
+            
+            btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 this.showBuildingInfo(e.currentTarget.dataset.type);
-            };
-            
-            btn.addEventListener('click', clickHandler);
-            btn.addEventListener('mouseenter', enterHandler);
-            btn.addEventListener('touchstart', touchHandler);
-            
-            // Store references for cleanup
-            btn._clickHandler = clickHandler;
-            btn._enterHandler = enterHandler;
-            btn._touchHandler = touchHandler;
+            });
         });
         
-        // Mouse move listener for placement preview AND hover effects
-        this.mouseMoveHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            // CRITICAL: Always update mouse position tracking
-            this.mouseX = x;
-            this.mouseY = y;
-            this.mouseInitialized = true;
-            
-            // Disable excessive debugging that was blocking mouse events
-            const debugMouseEvents = false;
-            
-            // Handle tower/building hover effects FIRST
-            const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
-            
-            // Update cursor based on hover state with proper classes
-            if (isHoveringInteractable) {
-                this.stateManager.canvas.classList.add('hovering-interactive');
-                if (debugMouseEvents) {
-                    console.log('GameplayState: Hovering interactive element');
-                }
-            } else {
-                this.stateManager.canvas.classList.remove('hovering-interactive');
-            }
-            
-            // Handle placement preview
-            this.handleMouseMove(e);
-        };
+        // Mouse move listener for placement preview
+        this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // Canvas click handler with better state management
+        // FIXED: Unified click handler that properly routes all menu types
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Update mouse position on click as well
-            this.mouseX = canvasX;
-            this.mouseY = canvasY;
-            
-            console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
-            console.log(`Game: Canvas rect:`, rect);
-            console.log(`Game: Event clientX/Y:`, e.clientX, e.clientY);
-            
-            // Verify we're actually clicking the canvas
-            if (e.target !== this.stateManager.canvas) {
-                console.log(`Game: Click was not on canvas! Target:`, e.target);
-                return;
-            }
-            
-            // CRITICAL: Check for building/tower icon clicks FIRST
-            console.log(`Game: Calling towerManager.handleClick...`);
+            // Check for building/tower clicks first
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
             if (clickResult) {
-                console.log(`Game: TowerManager returned result:`, clickResult);
-                // Handle the result and refresh mouse state
-                this.handleClickResult(clickResult);
-                
-                // Force refresh mouse state after any interaction - IMMEDIATE, not delayed
-                this.refreshMouseState(canvasX, canvasY);
-                return;
-            } else {
-                console.log(`Game: TowerManager returned null, handling normal placement`);
+                if (clickResult.type === 'forge_menu') {
+                    this.showForgeUpgradeMenu(clickResult);
+                    return;
+                } else if (clickResult.type === 'academy_menu') {
+                    this.showAcademyUpgradeMenu(clickResult);
+                    return;
+                } else if (clickResult.type === 'magic_tower_menu') {
+                    this.showMagicTowerElementMenu(clickResult);
+                    return;
+                } else if (typeof clickResult === 'number') {
+                    // Gold collection from mine
+                    this.gameState.gold += clickResult;
+                    this.updateUI();
+                    return;
+                }
             }
             
-            // Handle normal placement click
+            // Handle regular tower/building placement
             this.handleClick(canvasX, canvasY);
-            
-            // Refresh mouse state after placement too - IMMEDIATE
-            this.refreshMouseState(canvasX, canvasY);
         };
-        
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
-        console.log(`Game: Canvas click handler attached successfully`);
     }
     
     removeEventListeners() {
-        // Clean up button event listeners properly
+        // Clean up event listeners properly
         document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
-            if (btn._clickHandler) btn.removeEventListener('click', btn._clickHandler);
-            if (btn._enterHandler) btn.removeEventListener('mouseenter', btn._enterHandler);
-            if (btn._touchHandler) btn.removeEventListener('touchstart', btn._touchHandler);
-            btn._clickHandler = null;
-            btn._enterHandler = null;
-            btn._touchHandler = null;
+            btn.replaceWith(btn.cloneNode(true));
         });
         
         if (this.mouseMoveHandler) {
@@ -388,63 +261,35 @@ class GameplayState {
         `;
     }
     
-    handleClickResult(clickResult) {
-        if (clickResult.type === 'forge_menu') {
-            console.log('Game: OPENING FORGE MENU');
-            this.showForgeUpgradeMenu(clickResult);
-        } else if (clickResult.type === 'academy_menu') {
-            console.log('Game: OPENING ACADEMY MENU');
-            this.showAcademyUpgradeMenu(clickResult);
-        } else if (clickResult.type === 'magic_tower_menu') {
-            console.log('Game: OPENING MAGIC TOWER MENU');
-            this.showMagicTowerElementMenu(clickResult);
-        } else if (typeof clickResult === 'number') {
-            console.log(`Game: GOLD COLLECTED: ${clickResult}`);
-            this.gameState.gold += clickResult;
-            this.updateUI();
-        }
-    }
-    
-    refreshMouseState(x, y) {
-        // Force refresh the mouse hover state
-        if (this.mouseMoveHandler) {
-            const syntheticEvent = {
-                clientX: x + this.stateManager.canvas.getBoundingClientRect().left,
-                clientY: y + this.stateManager.canvas.getBoundingClientRect().top
-            };
-            this.mouseMoveHandler(syntheticEvent);
-        }
-    }
-    
-    initializeMouseTracking() {
-        // Force immediate mouse position detection
-        const initMouseHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
-            this.mouseInitialized = true;
-            console.log('GameplayState: Mouse initialized at', this.mouseX, this.mouseY);
-            
-            // Remove this one-time handler
-            this.stateManager.canvas.removeEventListener('mousemove', initMouseHandler);
-        };
-        
-        this.stateManager.canvas.addEventListener('mousemove', initMouseHandler);
-        
-        // Also try to get initial position from current mouse location
-        this.stateManager.canvas.addEventListener('mouseenter', (e) => {
-            if (!this.mouseInitialized) {
-                const rect = this.stateManager.canvas.getBoundingClientRect();
-                this.mouseX = e.clientX - rect.left;
-                this.mouseY = e.clientY - rect.top;
-                this.mouseInitialized = true;
-                console.log('GameplayState: Mouse initialized on enter at', this.mouseX, this.mouseY);
-            }
-        }, { once: true });
-    }
-    
     handleClick(x, y) {
-        // Handle regular tower/building placement (NOT icon clicks)
+        // REMOVED: Old logic that was preventing menu detection
+        // First check if clicking on a building (like gold mine or academy)
+        const clickResult = this.towerManager.handleClick(x, y, { 
+            width: this.stateManager.canvas.width, 
+            height: this.stateManager.canvas.height 
+        });
+        
+        if (clickResult) {
+            if (clickResult.type === 'forge_menu') {
+                this.showForgeUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'academy_menu') {
+                console.log('GameplayState: Academy menu detected, showing menu');
+                this.showAcademyUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'magic_tower_menu') {
+                console.log('GameplayState: Magic tower menu detected, showing menu');
+                this.showMagicTowerElementMenu(clickResult);
+                return;
+            } else if (typeof clickResult === 'number') {
+                // Gold collection from mine
+                this.gameState.gold += clickResult;
+                this.updateUI();
+                return;
+            }
+        }
+        
+        // Handle regular tower/building placement
         if (this.selectedTowerType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
             
@@ -458,14 +303,6 @@ class GameplayState {
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
-                    
-                    console.log('Game: Tower placed successfully');
-                    
-                    // Force render to set click area for new tower
-                    this.forceClickAreaRefresh();
-                    
-                    // Refresh mouse state immediately
-                    this.refreshMouseState(x, y);
                 }
             }
         } else if (this.selectedBuildingType) {
@@ -481,44 +318,12 @@ class GameplayState {
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
-                    
-                    console.log('Game: Building placed successfully');
-                    
-                    // Force render to set click area for new building
-                    this.forceClickAreaRefresh();
-                    
-                    // Refresh mouse state immediately
-                    this.refreshMouseState(x, y);
                 }
             }
         }
     }
     
-    forceClickAreaRefresh() {
-        console.log('Game: Force refreshing click areas after placement');
-        
-        try {
-            // Force a render to ensure new tower/building click areas are set
-            this.render(this.stateManager.ctx);
-            
-            // Log new click areas for debugging
-            const lastTower = this.towerManager.towers[this.towerManager.towers.length - 1];
-            const lastBuilding = this.towerManager.buildingManager.buildings[this.towerManager.buildingManager.buildings.length - 1];
-            
-            if (lastTower) {
-                console.log(`New tower clickArea:`, lastTower.clickArea);
-            }
-            if (lastBuilding) {
-                console.log(`New building clickArea:`, lastBuilding.clickArea);
-            }
-        } catch (error) {
-            console.error('Game: Error during click area refresh:', error);
-        }
-    }
-    
     showForgeUpgradeMenu(forgeData) {
-        console.log('GameplayState: Showing forge upgrade menu', forgeData);
-        
         // Clear existing menus
         this.clearActiveMenus();
         
@@ -530,9 +335,6 @@ class GameplayState {
             unlockSystem.canUseUpgrade(upgrade.id)
         );
         
-        console.log('GameplayState: Available upgrades:', availableUpgrades);
-        console.log('GameplayState: Forge upgrade option:', forgeData.forgeUpgrade);
-        
         // Create upgrade menu with proper currency check
         const menu = document.createElement('div');
         menu.id = 'forge-upgrade-menu';
@@ -543,7 +345,6 @@ class GameplayState {
         // Add forge level upgrade first if available
         if (forgeData.forgeUpgrade) {
             const forgeUpgrade = forgeData.forgeUpgrade;
-            console.log('GameplayState: Adding forge level upgrade:', forgeUpgrade);
             upgradeListHTML += `
                 <div class="upgrade-item forge-upgrade ${forgeUpgrade.level >= forgeUpgrade.maxLevel ? 'maxed' : ''}">
                     <div class="upgrade-icon">${forgeUpgrade.icon}</div>
@@ -563,8 +364,6 @@ class GameplayState {
                     </button>
                 </div>
             `;
-        } else {
-            console.log('GameplayState: No forge upgrade available (max level reached?)');
         }
         
         // Add tower upgrades
@@ -588,10 +387,6 @@ class GameplayState {
             </div>
         `).join('');
         
-        if (!upgradeListHTML) {
-            upgradeListHTML = '<div class="upgrade-item"><div class="upgrade-details">No upgrades available</div></div>';
-        }
-        
         menu.innerHTML = `
             <div class="menu-header">
                 <h3>🔨 Tower Forge Upgrades</h3>
@@ -608,7 +403,6 @@ class GameplayState {
         menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
-                console.log('GameplayState: Upgrade button clicked:', upgradeId);
                 
                 if (upgradeId === 'forge_level') {
                     // Handle forge level upgrade
@@ -625,8 +419,6 @@ class GameplayState {
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
                         });
-                    } else {
-                        console.log('GameplayState: Forge upgrade purchase failed');
                     }
                 } else {
                     // Handle tower upgrades
@@ -640,8 +432,6 @@ class GameplayState {
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
                         });
-                    } else {
-                        console.log('GameplayState: Tower upgrade purchase failed');
                     }
                 }
             });
@@ -770,10 +560,7 @@ class GameplayState {
                 
                 console.log(`GameplayState: Magic tower element selected: ${elementId}`);
                 
-                // Call setElement directly on the tower
-                if (towerData.tower && towerData.tower.setElement) {
-                    towerData.tower.setElement(elementId);
-                    
+                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
                     // Refresh the menu
                     this.showMagicTowerElementMenu({
                         type: 'magic_tower_menu',
@@ -1040,36 +827,29 @@ class Game {
             
             console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
             
-            // CRITICAL: Set canvas size FIRST before anything else
-            this.setInitialCanvasSize();
-            console.log('Game: Canvas sized to:', this.canvas.width, 'x', this.canvas.height);
-            
-            // VERIFY canvas size is actually set
-            if (this.canvas.width <= 0 || this.canvas.height <= 0) {
-                throw new Error(`Canvas has invalid size: ${this.canvas.width}x${this.canvas.height}`);
-            }
-            
-            // Detect and apply UI scaling
+            // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
+            
+            // Set initial canvas size BEFORE creating state manager
+            this.resizeCanvas();
+            console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+            
+            // Prevent infinite resize loops
+            this.isResizing = false;
             
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
             console.log('Game: GameStateManager created');
             
             // Initialize game loop timing
-            this.lastTime = performance.now();
+            this.lastTime = 0;
             this.isInitialized = false;
-            this.isResizing = false;
             
-            // Setup event listeners
+            // Setup event listeners early
             this.setupEventListeners();
             
-            // Initialize states IMMEDIATELY - no delay
+            // Add states with comprehensive error handling
             this.initializeStates();
-            
-            // START GAME LOOP AFTER state initialization
-            console.log('Game: Starting game loop');
-            this.startGameLoop();
             
         } catch (error) {
             console.error('Game: Critical error during initialization:', error);
@@ -1082,24 +862,8 @@ class Game {
         }
     }
     
-    setInitialCanvasSize() {
-        // Set canvas to full available size immediately
-        const width = Math.max(800, window.innerWidth);
-        const height = Math.max(600, window.innerHeight);
-        
-        this.canvas.width = width;
-        this.canvas.height = height;
-        
-        // Force a reflow to ensure canvas size is applied
-        void this.canvas.offsetHeight;
-        
-        console.log('Game: Initial canvas size set to:', width, 'x', height);
-        console.log('Game: Verified canvas size:', this.canvas.width, 'x', this.canvas.height);
-    }
-    
     initializeStates() {
         console.log('Game: Adding states...');
-        console.log('Game: Canvas size before state init:', this.canvas.width, 'x', this.canvas.height);
         
         try {
             const startScreen = new StartScreen(this.stateManager);
@@ -1116,8 +880,8 @@ class Game {
             
             console.log('Game: All states added successfully');
             
-            // Change to start state IMMEDIATELY
-            console.log('Game: Changing to start state NOW');
+            // Start with the start screen AFTER all states are added
+            console.log('Game: Changing to start state');
             const stateChanged = this.stateManager.changeState('start');
             
             if (!stateChanged) {
@@ -1125,11 +889,11 @@ class Game {
             }
             
             this.isInitialized = true;
-            console.log('Game: State initialization complete');
+            console.log('Game: State initialization complete, starting game loop');
+            this.startGameLoop();
             
         } catch (error) {
             console.error('Game: Error initializing states:', error);
-            console.error('Error stack:', error.stack);
             throw error;
         }
     }
@@ -1180,14 +944,14 @@ class Game {
             const statsBar = document.getElementById('stats-bar');
             
             // Only account for visible UI elements
-            const sidebarWidth = (sidebar && sidebar.offsetWidth > 0) ? sidebar.offsetWidth : 0;
-            const statsBarHeight = (statsBar && statsBar.offsetHeight > 0) ? statsBar.offsetHeight : 0;
+            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
+            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
             
             const oldWidth = this.canvas.width;
             const oldHeight = this.canvas.height;
             
-            const newWidth = Math.max(800, window.innerWidth - sidebarWidth);
-            const newHeight = Math.max(600, window.innerHeight - statsBarHeight);
+            const newWidth = Math.max(800, window.innerWidth - sidebarWidth); // Minimum size
+            const newHeight = Math.max(600, window.innerHeight - statsBarHeight); // Minimum size
             
             // Only resize if there's a significant change
             if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
@@ -1236,8 +1000,7 @@ class Game {
     
     startGameLoop() {
         console.log('Game: Game loop starting');
-        this.gameLoopRunning = true;
-        this.gameLoop(performance.now());
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
     
     showError(message) {
@@ -1258,26 +1021,31 @@ class Game {
     }
     
     gameLoop(currentTime) {
-        // Calculate delta time
-        const deltaTime = Math.min(0.033, (currentTime - this.lastTime) / 1000); // Cap at 33ms (30fps minimum)
-        this.lastTime = currentTime;
-        
         try {
+            // Don't process if not initialized
+            if (!this.isInitialized) {
+                requestAnimationFrame((time) => this.gameLoop(time));
+                return;
+            }
+            
+            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
+            this.lastTime = currentTime;
+            
             // Clear the canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
+            // Update and render current state
             if (this.stateManager && this.stateManager.currentState) {
-                // Normal game loop with state
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
             } else {
-                // Show loading state if no state is active yet
+                // Show loading state if state manager isn't ready
                 this.ctx.fillStyle = '#1a0f0a';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.fillStyle = '#d4af37';
                 this.ctx.font = '24px serif';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('Initializing...', this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
             }
             
         } catch (error) {
@@ -1286,9 +1054,7 @@ class Game {
         }
         
         // Continue the game loop
-        if (this.gameLoopRunning) {
-            requestAnimationFrame((time) => this.gameLoop(time));
-        }
+        requestAnimationFrame((time) => this.gameLoop(time));
     }
 }
 

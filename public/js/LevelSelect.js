@@ -12,13 +12,6 @@ export class LevelSelect {
     }
     
     enter() {
-        // Add level-select class to body for CSS cursor control
-        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
-        document.body.classList.add('level-select');
-        
-        // Let CSS handle cursor - remove manual setting
-        console.log('LevelSelect: Using CSS cursor styling');
-        
         // Hide game UI when in level select
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -36,9 +29,6 @@ export class LevelSelect {
     }
     
     exit() {
-        // Remove level-select class when leaving
-        document.body.classList.remove('level-select');
-        
         // UI will be shown by the next state (game state)
         this.removeMouseListeners();
     }
@@ -92,12 +82,9 @@ export class LevelSelect {
             }
         });
         
-        // Let CSS handle cursor styling via hovering-interactive class
-        if (this.hoveredLevel !== -1 || this.hoveredStartButton) {
-            this.stateManager.canvas.classList.add('hovering-interactive');
-        } else {
-            this.stateManager.canvas.classList.remove('hovering-interactive');
-        }
+        // Update cursor style
+        this.stateManager.canvas.style.cursor = 
+            (this.hoveredLevel !== -1 || this.hoveredStartButton) ? 'pointer' : 'default';
     }
     
     render(ctx) {
@@ -217,15 +204,13 @@ export class LevelSelect {
                 
                 if (index === this.selectedLevel) {
                     // Check start button area with corrected positioning
-                    const buttonX = cardX + cardWidth / 2 - 50;
+                    const buttonX = cardX + cardWidth / 2 - 50; // Center the button
                     const buttonY = cardY + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
-                        // CSS will handle cursor reset
-                        
                         // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
                         this.stateManager.changeState('game');

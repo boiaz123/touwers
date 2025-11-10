@@ -10,10 +10,6 @@ export class BasicTower {
         this.cooldown = 0;
         this.target = null;
         
-        // Add interaction states
-        this.isSelected = false;
-        this.isHovered = false;
-        
         // Animation properties
         this.throwingDefender = -1; // Which defender is throwing
         this.throwAnimationTime = 0;
@@ -354,76 +350,6 @@ export class BasicTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
-        
-        // CRITICAL: Always set up clickable icon area
-        const iconSize = 12;
-        const iconX = this.x + gridSize/2 - iconSize;
-        const iconY = this.y + gridSize/2 - iconSize;
-        
-        // Store click area for detection - FIXED: Proper centering around icon
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`BasicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
-        console.log(`BasicTower: isHovered=${this.isHovered}, isSelected=${this.isSelected}`);
-        
-        // Icon background with glow - ENHANCED with hover effects
-        let pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;
-        
-        // Enhance glow when hovered or selected
-        if (this.isSelected) {
-            pulseIntensity = 1.0;
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 15;
-            console.log('BasicTower: Rendering SELECTED state');
-        } else if (this.isHovered) {
-            pulseIntensity = 1.0;
-            ctx.shadowColor = '#FFA500';
-            ctx.shadowBlur = 10;
-            console.log('BasicTower: Rendering HOVERED state');
-        }
-        
-        ctx.fillStyle = `rgba(139, 69, 19, ${pulseIntensity * 0.8})`;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon circle with state-based colors
-        if (this.isSelected) {
-            ctx.fillStyle = '#FFD700';
-        } else if (this.isHovered) {
-            ctx.fillStyle = '#FFA500';
-        } else {
-            ctx.fillStyle = '#8B4513';
-        }
-        
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon border
-        ctx.strokeStyle = this.isSelected ? '#FFD700' : (this.isHovered ? '#FFA500' : '#654321');
-        ctx.lineWidth = this.isSelected || this.isHovered ? 3 : 2;
-        ctx.stroke();
-        
-        // Tower icon
-        ctx.fillStyle = this.isSelected || this.isHovered ? '#000' : '#FFD700';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🏰', iconX, iconY + 5);
-        
-        // Clear shadow
-        ctx.shadowBlur = 0;
-    }
-    
-    onClick() {
-        // Basic towers don't have interactive menus
-        console.log('BasicTower: Clicked, but no menu available');
-        return null;
     }
     
     drawEnvironment(ctx, gridSize) {

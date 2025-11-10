@@ -1,18 +1,6 @@
 export class UnlockSystem {
     constructor() {
-        // Building counts
-        this.hasForge = false;
-        this.forgeCount = 0;
-        this.maxForges = 1;
-        this.forgeLevel = 0;
-        
-        this.mineCount = 0;
-        this.academyCount = 0;
-        
-        // Unlocked content
-        this.unlockedTowers = new Set(['basic', 'barricade']); // Start with basic towers
-        this.unlockedBuildings = new Set(['forge']); // Start with forge
-        this.unlockedUpgrades = new Set(); // No upgrades initially
+        this.reset();
     }
     
     reset() {
@@ -33,7 +21,7 @@ export class UnlockSystem {
         if (this.forgeCount < this.maxForges) {
             this.hasForge = true;
             this.forgeCount++;
-            this.forgeLevel = 1; // This should match the forge's starting level
+            this.forgeLevel = 1;
             
             // Forge level 1 unlocks
             this.unlockedBuildings.add('mine');
@@ -57,20 +45,18 @@ export class UnlockSystem {
     }
     
     onAcademyBuilt() {
-        if (this.academyCount < 1) {
-            this.academyCount++;
-            this.unlockedTowers.add('magic');
-            console.log('UnlockSystem: Academy built - Magic Tower unlocked');
-            return true;
-        }
-        return false;
+        this.academyCount++;
+        this.unlockedTowers.add('magic');
+        console.log('UnlockSystem: Academy built - unlocked magic tower');
+        return true;
     }
     
     getMaxMines() {
-        if (this.forgeLevel < 5) return 1;
-        if (this.forgeLevel < 8) return 2;
-        if (this.forgeLevel < 10) return 3;
-        return 4;
+        if (this.forgeLevel >= 10) return 4;
+        if (this.forgeLevel >= 8) return 3;
+        if (this.forgeLevel >= 5) return 2;
+        if (this.forgeLevel >= 1) return 1;
+        return 0;
     }
     
     onForgeUpgraded(newLevel) {
@@ -78,18 +64,21 @@ export class UnlockSystem {
         
         switch(newLevel) {
             case 2:
+                // Forge level 2 unlocks
                 this.unlockedTowers.add('poison');
                 this.unlockedUpgrades.add('poisonDamage');
                 console.log('UnlockSystem: Forge level 2 - unlocked poison tower and upgrades');
                 break;
                 
             case 3:
+                // Forge level 3 unlocks
                 this.unlockedTowers.add('cannon');
                 this.unlockedUpgrades.add('explosiveRadius');
                 console.log('UnlockSystem: Forge level 3 - unlocked cannon tower and upgrades');
                 break;
                 
             case 4:
+                // Forge level 4 unlocks
                 this.unlockedBuildings.add('academy');
                 this.unlockedUpgrades.add('fireArrows');
                 console.log('UnlockSystem: Forge level 4 - unlocked magic academy');
@@ -108,21 +97,31 @@ export class UnlockSystem {
                 break;
                 
             default:
+                // Higher levels just improve mine income
                 console.log(`UnlockSystem: Forge level ${newLevel} - improved mine efficiency`);
                 break;
         }
     }
     
-    canBuildTower(towerType) {
-        return this.unlockedTowers.has(towerType);
+    canBuildTower(type) {
+        return this.unlockedTowers.has(type);
     }
     
-    canBuildBuilding(buildingType) {
-        return this.unlockedBuildings.has(buildingType);
+    canBuildBuilding(type) {
+        if (type === 'forge' && this.forgeCount >= this.maxForges) {
+            return false;
+        }
+        if (type === 'mine' && this.mineCount >= this.getMaxMines()) {
+            return false;
+        }
+        if (type === 'academy' && this.academyCount >= 1) {
+            return false; // Only 1 academy allowed
+        }
+        return this.unlockedBuildings.has(type);
     }
     
-    canUseUpgrade(upgradeType) {
-        return this.unlockedUpgrades.has(upgradeType);
+    canUseUpgrade(upgradeId) {
+        return this.unlockedUpgrades.has(upgradeId);
     }
     
     getMineIncomeMultiplier() {

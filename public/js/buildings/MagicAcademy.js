@@ -21,7 +21,7 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // Trees and bushes data...
+        // More pine trees within 4x4 grid using barricade tower style (±64px from center)
         this.trees = [
             { x: -55, y: -55, size: 0.8 },
             { x: -25, y: -60, size: 0.6 },
@@ -45,6 +45,7 @@ export class MagicAcademy extends Building {
             { x: 45, y: 55, size: 0.9 }
         ];
         
+        // Bush positions (CONSTRAINED to 4x4 grid)
         this.bushes = [
             { x: -40, y: -35, size: 8 },
             { x: -10, y: -40, size: 6 },
@@ -59,10 +60,6 @@ export class MagicAcademy extends Building {
             { x: 20, y: 40, size: 7 },
             { x: 40, y: 35, size: 8 }
         ];
-        
-        // Initialize click area as null - will be set during first render
-        this.clickArea = null;
-        console.log(`MagicAcademy: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime) {
@@ -126,23 +123,6 @@ export class MagicAcademy extends Building {
     }
     
     render(ctx, size) {
-        // ALWAYS update click area during render with current canvas size
-        const iconSize = 15;
-        const iconX = this.x + size/2 - iconSize;
-        const iconY = this.y + size/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        if (!this.clickAreaLogged) {
-            console.log(`MagicAcademy: Set clickArea during render:`, this.clickArea, `Size: ${size}, Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
-            this.clickAreaLogged = true;
-        }
-        
         // Render surrounding elements first
         this.renderWaterMoat(ctx, size);
         this.renderTrees(ctx, size);
@@ -161,35 +141,6 @@ export class MagicAcademy extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
         }
-        
-        // Glow background
-        const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
-        ctx.fillStyle = `rgba(75, 0, 130, ${pulseIntensity * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Click icon background
-        ctx.fillStyle = this.isSelected ? '#9370DB' : '#6A5ACD';
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Border
-        ctx.strokeStyle = '#4B0082';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // Academy icon
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🎓', iconX, iconY + 6);
-        
-        // "RESEARCH" text below
-        ctx.fillStyle = '#9370DB';
-        ctx.font = 'bold 8px Arial';
-        ctx.fillText('RESEARCH', iconX, iconY + 18);
     }
     
     renderFortress(ctx, size) {
@@ -657,13 +608,17 @@ export class MagicAcademy extends Building {
     }
     
     onClick() {
+        console.log('MagicAcademy: onClick called');
         this.isSelected = true;
-        console.log('MagicAcademy: onClick called, returning academy menu data');
-        return {
+        
+        const result = {
             type: 'academy_menu',
             academy: this,
             upgrades: this.getElementalUpgradeOptions()
         };
+        
+        console.log('MagicAcademy: returning menu data:', result);
+        return result;
     }
     
     getElementalUpgradeOptions() {

@@ -29,8 +29,8 @@ export class TowerForge extends Building {
             }
         ];
         
-        // Forge level and tower upgrades - START AT LEVEL 1 when built
-        this.forgeLevel = 1; // Changed from 0 to 1
+        // Forge level and tower upgrades
+        this.forgeLevel = 0; // Start at level 0, built to level 1
         this.maxForgeLevel = 10;
         
         // Tower upgrade system - rebalanced for better progression
@@ -169,50 +169,13 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // CRITICAL: Always set up clickable area with detailed debugging
-        const iconSize = 15;
-        const iconX = this.x + size/2 - iconSize;
-        const iconY = this.y + size/2 - iconSize;
+        // REMOVED YELLOW SELECTION INDICATOR
         
-        // Store click area for detection - FIXED: Proper area centering
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`TowerForge: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
-        console.log(`TowerForge: Building center at (${this.x}, ${this.y}), size: ${size}`);
-        
-        // Glow background
-        const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
-        ctx.fillStyle = `rgba(255, 165, 0, ${pulseIntensity * 0.4})`;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Click icon background
+        // Upgrade indicator
         ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Border
-        ctx.strokeStyle = '#B8860B';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        
-        // Forge icon
-        ctx.fillStyle = '#654321';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('🔨', iconX, iconY + 6);
-        
-        // "UPGRADES" text below
-        ctx.fillStyle = '#FF8C00';
-        ctx.font = 'bold 8px Arial';
-        ctx.fillText('UPGRADES', iconX, iconY + 18);
+        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -1154,7 +1117,7 @@ export class TowerForge extends Building {
     
     calculateForgeUpgradeCost() {
         if (this.forgeLevel >= this.maxForgeLevel) return null;
-        // FIXED: Use (forgeLevel - 1) for proper progression: Level 1->2 costs 400, Level 2->3 costs 800
+        // Expensive forge upgrades: 400, 800, 1600, 3200, etc.
         return 400 * Math.pow(2, this.forgeLevel - 1);
     }
     
