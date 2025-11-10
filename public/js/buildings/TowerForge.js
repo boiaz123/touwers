@@ -49,436 +49,65 @@ export class TowerForge extends Building {
     }
     
     render(ctx, size) {
-        // Calculate scale factor like other towers
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const forgeSize = cellSize * 4; // 4x4 building
-        
-        // Draw the 3D blacksmith building
-        this.drawBlacksmithBuilding(ctx, forgeSize);
-        
-        // Draw the open furnace with fire
-        this.drawOpenFurnace(ctx, forgeSize);
-        
-        // Draw chimney with smoke
-        this.drawChimney3D(ctx, forgeSize);
-        
-        // Draw forge equipment and tools
-        this.drawForgeTools(ctx, forgeSize);
-        
-        // Render sparks from the furnace
-        this.renderSparks(ctx);
-        
-        // Selection highlight
-        if (this.isSelected) {
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([8, 8]);
-            ctx.strokeRect(this.x - forgeSize/2, this.y - forgeSize/2, forgeSize, forgeSize);
-            ctx.setLineDash([]);
-        }
-        
-        // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFD700' : '#FFA500';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + forgeSize/2 + 25);
-    }
-    
-    drawBlacksmithBuilding(ctx, size) {
-        // Building shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(this.x - size/2 + 5, this.y - size/4 + 5, size, size/2);
-        
-        // Stone foundation (matches archer tower style)
-        const foundationHeight = size * 0.12;
-        const foundationGradient = ctx.createLinearGradient(
-            this.x - size/2, this.y - foundationHeight,
-            this.x + size/4, this.y
+        // Main forge building - stone base
+        const stoneGradient = ctx.createLinearGradient(
+            this.x - size/2, this.y - size/2,
+            this.x + size/2, this.y + size/2
         );
-        foundationGradient.addColorStop(0, '#A9A9A9');
-        foundationGradient.addColorStop(0.5, '#808080');
-        foundationGradient.addColorStop(1, '#696969');
+        stoneGradient.addColorStop(0, '#8B7355');
+        stoneGradient.addColorStop(0.5, '#654321');
+        stoneGradient.addColorStop(1, '#4A4A4A');
         
-        ctx.fillStyle = foundationGradient;
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 2;
-        ctx.fillRect(this.x - size/2, this.y - foundationHeight, size, foundationHeight);
-        ctx.strokeRect(this.x - size/2, this.y - foundationHeight, size, foundationHeight);
+        ctx.fillStyle = stoneGradient;
+        ctx.strokeStyle = this.isSelected ? '#FFD700' : '#2F2F2F';
+        ctx.lineWidth = this.isSelected ? 4 : 2;
+        ctx.fillRect(this.x - size/2, this.y - size/2, size * 0.8, size * 0.8);
+        ctx.strokeRect(this.x - size/2, this.y - size/2, size * 0.8, size * 0.8);
         
-        // Stone blocks texture
-        ctx.strokeStyle = '#555555';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 6; i++) {
-            ctx.beginPath();
-            ctx.moveTo(this.x - size/2 + (size * i / 6), this.y - foundationHeight);
-            ctx.lineTo(this.x - size/2 + (size * i / 6), this.y);
-            ctx.stroke();
-        }
+        // Chimney
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(this.x + size/4, this.y - size/2 - 15, size/6, 20);
+        ctx.strokeRect(this.x + size/4, this.y - size/2 - 15, size/6, 20);
         
-        // Main building walls (3D perspective like archer tower)
-        const wallHeight = size * 0.4;
-        const wallY = this.y - foundationHeight - wallHeight;
+        // Forge fire (more realistic)
+        const fireIntensity = Math.sin(this.animationTime * 8) * 0.2 + 0.8;
         
-        // Front wall with forge opening
-        const wallGradient = ctx.createLinearGradient(
-            this.x - size/2, wallY,
-            this.x + size/4, this.y - foundationHeight
-        );
-        wallGradient.addColorStop(0, '#CD853F');
-        wallGradient.addColorStop(0.3, '#A0522D');
-        wallGradient.addColorStop(0.7, '#8B4513');
-        wallGradient.addColorStop(1, '#654321');
+        // Fire base
+        ctx.fillStyle = `rgba(255, 50, 0, ${fireIntensity})`;
+        ctx.fillRect(this.x - size/3, this.y - size/8, size/1.8, size/4);
         
-        ctx.fillStyle = wallGradient;
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 2;
-        ctx.fillRect(this.x - size/2, wallY, size, wallHeight);
-        ctx.strokeRect(this.x - size/2, wallY, size, wallHeight);
+        // Fire core
+        ctx.fillStyle = `rgba(255, 150, 0, ${fireIntensity * 0.8})`;
+        ctx.fillRect(this.x - size/4, this.y - size/12, size/2.5, size/6);
         
-        // Vertical wood planks
-        ctx.strokeStyle = '#8B7355';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 8; i++) {
-            ctx.beginPath();
-            ctx.moveTo(this.x - size/2 + (size * i / 8), wallY);
-            ctx.lineTo(this.x - size/2 + (size * i / 8), this.y - foundationHeight);
-            ctx.stroke();
-        }
+        // Fire center
+        ctx.fillStyle = `rgba(255, 255, 100, ${fireIntensity * 0.6})`;
+        ctx.fillRect(this.x - size/6, this.y - size/16, size/8, size/12);
         
-        // Horizontal support beams
-        for (let i = 1; i <= 2; i++) {
-            const beamY = wallY + (wallHeight * i / 3);
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(this.x - size/2, beamY);
-            ctx.lineTo(this.x + size/2, beamY);
-            ctx.stroke();
-        }
-        
-        // Sloped roof (3D perspective)
-        const roofHeight = size * 0.25;
-        const roofY = wallY - roofHeight;
-        
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        
-        // Roof front face
-        ctx.beginPath();
-        ctx.moveTo(this.x, roofY);
-        ctx.lineTo(this.x - size/2 - 10, wallY);
-        ctx.lineTo(this.x + size/2 + 10, wallY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Roof tiles
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 6; i++) {
-            const tileY = wallY - (roofHeight * i / 6);
-            const tileWidth = size * (1.2 - i * 0.04);
-            ctx.beginPath();
-            ctx.moveTo(this.x - tileWidth/2, tileY);
-            ctx.lineTo(this.x + tileWidth/2, tileY);
-            ctx.stroke();
-        }
-        
-        // Building corner posts
-        const postWidth = 6;
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 1;
-        
-        // Corner posts
-        for (let side = -1; side <= 1; side += 2) {
-            const postX = this.x + side * (size/2 - postWidth/2);
-            ctx.fillRect(postX, wallY, postWidth, wallHeight + foundationHeight);
-            ctx.strokeRect(postX, wallY, postWidth, wallHeight + foundationHeight);
-        }
-    }
-    
-    drawOpenFurnace(ctx, size) {
-        // Furnace opening in the front wall
-        const openingWidth = size * 0.25;
-        const openingHeight = size * 0.2;
-        const openingX = this.x - openingWidth/2;
-        const openingY = this.y - size * 0.15;
-        
-        // Dark opening interior
-        ctx.fillStyle = '#0A0A0A';
-        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
-        
-        // Arched opening outline
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(this.x, openingY, openingWidth/2, 0, Math.PI);
-        ctx.stroke();
-        
-        // Fire glow from inside
-        const fireIntensity = Math.sin(this.animationTime * 12) * 0.4 + 0.6;
-        const glowGradient = ctx.createRadialGradient(
-            this.x, openingY + openingHeight/2, 0,
-            this.x, openingY + openingHeight/2, openingWidth
-        );
-        glowGradient.addColorStop(0, `rgba(255, 69, 0, ${fireIntensity})`);
-        glowGradient.addColorStop(0.5, `rgba(255, 140, 0, ${fireIntensity * 0.6})`);
-        glowGradient.addColorStop(1, 'rgba(255, 140, 0, 0)');
-        
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(openingX - openingWidth/2, openingY, openingWidth * 2, openingHeight);
-        
-        // Coal bed inside furnace
-        this.drawCoalBed(ctx, openingX, openingY, openingWidth, openingHeight);
-        
-        // Flames inside
-        this.drawFurnaceFire(ctx, openingX, openingY, openingWidth, openingHeight, fireIntensity);
-        
-        // Brick lining around opening
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(openingX - 5, openingY - 5, openingWidth + 10, openingHeight + 5);
-    }
-    
-    drawCoalBed(ctx, x, y, width, height) {
-        const coalY = y + height - 10;
-        
-        // Coal chunks
-        for (let i = 0; i < 12; i++) {
-            const coalX = x + Math.random() * width;
-            const coalSize = 2 + Math.random() * 3;
-            
-            ctx.fillStyle = '#1A1A1A';
-            ctx.beginPath();
-            ctx.arc(coalX, coalY + Math.random() * 8, coalSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Glowing coals
-            if (Math.random() > 0.5) {
-                ctx.fillStyle = Math.random() > 0.5 ? '#FF4500' : '#FF6B00';
-                ctx.beginPath();
-                ctx.arc(coalX, coalY + Math.random() * 8, coalSize * 0.6, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    
-    drawFurnaceFire(ctx, x, y, width, height, intensity) {
-        // Layered fire effect
-        const layers = [
-            { color: `rgba(255, 69, 0, ${intensity})`, scale: 1.0 },
-            { color: `rgba(255, 140, 0, ${intensity * 0.8})`, scale: 0.7 },
-            { color: `rgba(255, 255, 100, ${intensity * 0.5})`, scale: 0.4 }
-        ];
-        
-        layers.forEach((layer, i) => {
-            ctx.fillStyle = layer.color;
-            const fireWidth = width * layer.scale;
-            const fireHeight = height * 0.8 * layer.scale;
-            const fireX = x + (width - fireWidth) / 2;
-            const fireY = y + height - fireHeight - 5;
-            
-            // Flickering flame shapes
-            ctx.beginPath();
-            for (let j = 0; j <= 10; j++) {
-                const angle = (j / 10) * Math.PI;
-                const flicker = Math.sin(this.animationTime * 15 + j) * 3;
-                const fx = fireX + fireWidth/2 + Math.cos(angle) * fireWidth/2;
-                const fy = fireY + Math.sin(angle) * fireHeight + flicker;
-                
-                if (j === 0) ctx.moveTo(fx, fy);
-                else ctx.lineTo(fx, fy);
-            }
-            ctx.closePath();
-            ctx.fill();
-        });
-    }
-    
-    drawChimney3D(ctx, size) {
-        // Chimney positioned on the roof
-        const chimneyWidth = size * 0.12;
-        const chimneyHeight = size * 0.6;
-        const chimneyX = this.x + size * 0.25;
-        const chimneyY = this.y - size * 0.4 - chimneyHeight;
-        
-        // Chimney shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(chimneyX + 3, chimneyY + 3, chimneyWidth, chimneyHeight);
-        
-        // Chimney brick structure
-        const chimneyGradient = ctx.createLinearGradient(
-            chimneyX, chimneyY,
-            chimneyX + chimneyWidth, chimneyY + chimneyHeight
-        );
-        chimneyGradient.addColorStop(0, '#A0522D');
-        chimneyGradient.addColorStop(0.5, '#8B4513');
-        chimneyGradient.addColorStop(1, '#654321');
-        
-        ctx.fillStyle = chimneyGradient;
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 2;
-        ctx.fillRect(chimneyX, chimneyY, chimneyWidth, chimneyHeight);
-        ctx.strokeRect(chimneyX, chimneyY, chimneyWidth, chimneyHeight);
-        
-        // Brick pattern
-        const brickHeight = 8;
-        ctx.strokeStyle = '#8B7355';
-        ctx.lineWidth = 1;
-        for (let row = 0; row < Math.ceil(chimneyHeight / brickHeight); row++) {
-            const rowY = chimneyY + row * brickHeight;
-            const offset = (row % 2) * (chimneyWidth / 4);
-            
-            ctx.beginPath();
-            ctx.moveTo(chimneyX, rowY);
-            ctx.lineTo(chimneyX + chimneyWidth, rowY);
-            ctx.stroke();
-            
-            if (row % 2 === 0) {
-                ctx.beginPath();
-                ctx.moveTo(chimneyX + chimneyWidth/2, rowY);
-                ctx.lineTo(chimneyX + chimneyWidth/2, rowY + brickHeight);
-                ctx.stroke();
-            }
-        }
-        
-        // Chimney cap
-        ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 2;
-        ctx.fillRect(chimneyX - 4, chimneyY - 6, chimneyWidth + 8, 8);
-        ctx.strokeRect(chimneyX - 4, chimneyY - 6, chimneyWidth + 8, 8);
-        
-        // Rising smoke animation
-        this.drawRisingSmoke(ctx, chimneyX + chimneyWidth/2, chimneyY - 6);
-    }
-    
-    drawRisingSmoke(ctx, x, y) {
-        for (let i = 0; i < 10; i++) {
-            const smokeY = y - (i * 12);
-            const drift = Math.sin(this.animationTime * 1.5 + i * 0.8) * (8 + i * 2);
-            const smokeX = x + drift;
-            const smokeSize = 5 + i * 1.5;
-            const alpha = 0.6 * (1 - i / 10);
-            
-            ctx.fillStyle = `rgba(120, 120, 120, ${alpha})`;
-            ctx.beginPath();
-            ctx.arc(smokeX, smokeY, smokeSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Secondary smoke wisps
-            if (i > 3) {
-                const wispX = smokeX + Math.cos(this.animationTime * 2 + i) * 8;
-                const wispY = smokeY + Math.sin(this.animationTime * 1.8 + i) * 4;
-                ctx.fillStyle = `rgba(140, 140, 140, ${alpha * 0.6})`;
-                ctx.beginPath();
-                ctx.arc(wispX, wispY, smokeSize * 0.6, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    
-    drawForgeTools(ctx, size) {
-        // Anvil positioned outside
-        const anvilX = this.x - size * 0.3;
-        const anvilY = this.y - size * 0.05;
-        
-        // Anvil shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(anvilX - 12, anvilY + 2, 24, 8);
-        
-        // Anvil base
+        // Anvil
         ctx.fillStyle = '#2F2F2F';
-        ctx.strokeStyle = '#1F1F1F';
-        ctx.lineWidth = 1;
-        ctx.fillRect(anvilX - 12, anvilY, 24, 8);
-        ctx.strokeRect(anvilX - 12, anvilY, 24, 8);
-        
-        // Anvil top
-        const anvilGradient = ctx.createLinearGradient(anvilX - 8, anvilY - 6, anvilX + 8, anvilY);
-        anvilGradient.addColorStop(0, '#696969');
-        anvilGradient.addColorStop(0.5, '#2F2F2F');
-        anvilGradient.addColorStop(1, '#1A1A1A');
-        
-        ctx.fillStyle = anvilGradient;
-        ctx.fillRect(anvilX - 8, anvilY - 6, 16, 6);
-        ctx.strokeRect(anvilX - 8, anvilY - 6, 16, 6);
+        ctx.fillRect(this.x - size/5, this.y + size/8, size/2.5, size/8);
+        ctx.strokeRect(this.x - size/5, this.y + size/8, size/2.5, size/8);
         
         // Hammer on anvil
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(anvilX + 15, anvilY - 2);
-        ctx.lineTo(anvilX + 22, anvilY - 12);
-        ctx.stroke();
-        
-        // Hammer head
-        ctx.fillStyle = '#696969';
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.fillRect(anvilX + 20, anvilY - 16, 8, 6);
-        ctx.strokeRect(anvilX + 20, anvilY - 16, 8, 6);
-        
-        // Tool rack
-        const rackX = this.x + size * 0.3;
-        const rackY = this.y - size * 0.15;
-        
-        // Rack post
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(rackX, rackY - 25);
-        ctx.lineTo(rackX, rackY + 15);
-        ctx.stroke();
-        
-        // Cross beam
-        ctx.strokeStyle = '#A0522D';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(rackX - 8, rackY - 15);
-        ctx.lineTo(rackX + 8, rackY - 15);
-        ctx.stroke();
-        
-        // Hanging tools
-        const tools = [
-            { x: rackX - 6, y: rackY - 10, tool: '🔨' },
-            { x: rackX, y: rackY - 12, tool: '⚒️' },
-            { x: rackX + 6, y: rackY - 11, tool: '🔧' }
-        ];
-        
-        tools.forEach(({ x, y, tool }) => {
-            ctx.fillStyle = '#654321';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(tool, x, y);
-        });
-        
-        // Water barrel
-        const barrelX = this.x + size * 0.35;
-        const barrelY = this.y + size * 0.1;
-        
         ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        ctx.fillRect(barrelX - 8, barrelY - 12, 16, 20);
-        ctx.strokeRect(barrelX - 8, barrelY - 12, 16, 20);
+        ctx.fillRect(this.x + size/12, this.y + size/12, size/20, size/6);
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(this.x + size/12, this.y + size/12, size/20, size/12);
         
-        // Barrel bands
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 3; i++) {
-            const bandY = barrelY - 12 + 6 + i * 6;
-            ctx.beginPath();
-            ctx.moveTo(barrelX - 8, bandY);
-            ctx.lineTo(barrelX + 8, bandY);
-            ctx.stroke();
-        }
-    }
-    
-    renderSparks(ctx) {
+        // Bellows
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(this.x - size/2.5, this.y + size/6, size/4, size/8);
+        
+        // Tools rack
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x + size/3, this.y - size/4);
+        ctx.lineTo(this.x + size/3, this.y + size/4);
+        ctx.stroke();
+        
+        // Render sparks
         this.sparks.forEach(spark => {
             const alpha = spark.life / spark.maxLife;
             if (spark.color === 'orange') {
@@ -490,6 +119,19 @@ export class TowerForge extends Building {
             ctx.arc(spark.x, spark.y, 1.5, 0, Math.PI * 2);
             ctx.fill();
         });
+        
+        // Smoke from chimney
+        const smokeOffset = Math.sin(this.animationTime * 2) * 5;
+        ctx.fillStyle = `rgba(100, 100, 100, 0.3)`;
+        ctx.beginPath();
+        ctx.arc(this.x + size/3 + smokeOffset, this.y - size/2 - 25, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Upgrade indicator
+        ctx.fillStyle = this.isSelected ? '#FFD700' : '#FFA500';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
     }
     
     isPointInside(x, y, size) {

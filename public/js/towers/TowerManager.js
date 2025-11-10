@@ -93,131 +93,6 @@ export class TowerManager {
         }
     }
     
-    handleClick(x, y, canvasSize) {
-        const result = this.buildingManager.handleClick(x, y, canvasSize);
-        
-        // Handle forge upgrade menu
-        if (result && result.type === 'forge_menu') {
-            this.showForgeUpgradeMenu(result);
-        }
-        
-        return result;
-    }
-    
-    showForgeUpgradeMenu(forgeData) {
-        // Create and show forge upgrade menu
-        const existingMenu = document.getElementById('forge-upgrade-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
-        
-        const menuHtml = this.createForgeMenuHtml(forgeData);
-        document.body.insertAdjacentHTML('beforeend', menuHtml);
-        
-        // Add event listeners for upgrade buttons
-        this.setupForgeMenuEvents(forgeData.forge);
-    }
-    
-    createForgeMenuHtml(forgeData) {
-        const upgrades = forgeData.upgrades;
-        
-        let upgradesHtml = upgrades.map(upgrade => {
-            const isMaxed = upgrade.level >= upgrade.maxLevel;
-            const canAfford = upgrade.cost !== null && this.gameState.coins >= upgrade.cost;
-            const buttonClass = isMaxed ? 'maxed' : (canAfford ? 'affordable' : 'expensive');
-            const buttonText = isMaxed ? 'MAXED' : `$${upgrade.cost}`;
-            
-            return `
-                <div class="upgrade-item">
-                    <div class="upgrade-header">
-                        <span class="upgrade-icon">${upgrade.icon}</span>
-                        <span class="upgrade-name">${upgrade.name}</span>
-                        <span class="upgrade-level">Lv. ${upgrade.level}/${upgrade.maxLevel}</span>
-                    </div>
-                    <div class="upgrade-description">${upgrade.description}</div>
-                    <button class="upgrade-btn ${buttonClass}" 
-                            data-upgrade="${upgrade.id}" 
-                            ${isMaxed ? 'disabled' : ''}>
-                        ${buttonText}
-                    </button>
-                </div>
-            `;
-        }).join('');
-        
-        return `
-            <div id="forge-upgrade-menu" class="upgrade-menu">
-                <div class="upgrade-menu-content">
-                    <div class="upgrade-menu-header">
-                        <h3>🔨 Tower Forge Upgrades</h3>
-                        <button id="close-forge-menu" class="close-btn">✖</button>
-                    </div>
-                    <div class="upgrade-menu-body">
-                        ${upgradesHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    setupForgeMenuEvents(forge) {
-        const menu = document.getElementById('forge-upgrade-menu');
-        
-        // Close menu button
-        menu.querySelector('#close-forge-menu').addEventListener('click', () => {
-            menu.remove();
-            forge.deselect();
-        });
-        
-        // Click outside to close
-        menu.addEventListener('click', (e) => {
-            if (e.target === menu) {
-                menu.remove();
-                forge.deselect();
-            }
-        });
-        
-        // Upgrade buttons
-        menu.querySelectorAll('.upgrade-btn:not([disabled])').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const upgradeType = e.target.dataset.upgrade;
-                if (forge.purchaseUpgrade(upgradeType, this.gameState)) {
-                    // Refresh menu with updated data
-                    this.showForgeUpgradeMenu({
-                        type: 'forge_menu',
-                        forge: forge,
-                        upgrades: forge.getUpgradeOptions()
-                    });
-                }
-            });
-        });
-    }
-    
-    // Apply forge upgrades to towers
-    applyForgeUpgrades(tower) {
-        this.buildingManager.buildings.forEach(building => {
-            if (building.constructor.name === 'TowerForge') {
-                const forge = building;
-                
-                // Apply specific tower upgrades based on tower type
-                if (tower.constructor.name === 'PoisonArcherTower' && forge.upgrades.poisonDamage.level > 0) {
-                    tower.poisonDamageBonus = forge.upgrades.poisonDamage.level * forge.upgrades.poisonDamage.effect;
-                }
-                
-                if (tower.constructor.name === 'BarricadeTower' && forge.upgrades.barricadeDamage.level > 0) {
-                    tower.damageBonus = forge.upgrades.barricadeDamage.level * forge.upgrades.barricadeDamage.effect;
-                }
-                
-                if (tower.constructor.name === 'ArcherTower' && forge.upgrades.fireArrows.level > 0) {
-                    tower.fireArrowsLevel = forge.upgrades.fireArrows.level;
-                }
-                
-                if (tower.constructor.name === 'CannonTower' && forge.upgrades.explosiveRadius.level > 0) {
-                    tower.blastRadiusBonus = forge.upgrades.explosiveRadius.level * forge.upgrades.explosiveRadius.effect;
-                }
-            }
-        });
-    }
-    
     update(deltaTime, enemies) {
         // Apply building upgrades to towers
         const upgrades = this.buildingManager.towerUpgrades;
@@ -234,9 +109,6 @@ export class TowerManager {
             tower.damage = tower.originalDamage * upgrades.damage;
             tower.range = tower.originalRange * upgrades.range;
             tower.fireRate = tower.originalFireRate * upgrades.fireRate;
-            
-            // Apply forge-specific upgrades
-            this.applyForgeUpgrades(tower);
             
             tower.update(deltaTime, enemies);
         });
@@ -281,5 +153,9 @@ export class TowerManager {
     
     get buildingTypes() {
         return this.buildingManager.buildingTypes;
+    }
+    
+    handleClick(x, y, canvasSize) {
+        return this.buildingManager.handleClick(x, y, canvasSize);
     }
 }
