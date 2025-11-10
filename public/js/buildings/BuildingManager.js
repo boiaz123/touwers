@@ -121,15 +121,10 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check building clicks - prioritize icon clicks
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
-        
+        // Check building icon clicks - pass canvas width for proper calculation
         for (const building of this.buildings) {
-            const buildingSize = building.size * cellSize;
-            
-            // First check if click is on the icon (priority)
-            if (building.isIconClicked && building.isIconClicked(x, y)) {
+            // Check if click is on the icon (priority) - pass canvas width
+            if (building.isIconClicked && building.isIconClicked(x, y, canvasSize.width)) {
                 console.log(`BuildingManager: ICON HIT! Clicked icon on ${building.constructor.name}`);
                 
                 if (building.onClick) {

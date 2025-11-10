@@ -16,6 +16,36 @@ export class Building {
         // Override in subclasses
     }
     
+    // Calculate icon bounds on-demand (matches rendering calculation)
+    calculateIconBounds(canvasWidth) {
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const buildingSize = cellSize * this.size;
+        const iconSize = Math.max(24, buildingSize * 0.18);
+        
+        const iconX = this.x + (buildingSize / 2) - (iconSize * 0.7);
+        const iconY = this.y + (buildingSize / 2) - (iconSize * 0.7);
+        
+        return {
+            x: iconX - iconSize / 2,
+            y: iconY - iconSize / 2,
+            width: iconSize,
+            height: iconSize
+        };
+    }
+    
+    // Check if click is on the icon
+    isIconClicked(x, y, canvasWidth) {
+        // Always calculate fresh bounds based on current canvas size
+        const bounds = this.calculateIconBounds(canvasWidth);
+        
+        return x >= bounds.x && 
+               x <= bounds.x + bounds.width &&
+               y >= bounds.y && 
+               y <= bounds.y + bounds.height;
+    }
+    
     // Render clickable icon in bottom-right corner
     renderClickableIcon(ctx, buildingSize, icon = '⚙️') {
         const iconSize = Math.max(24, buildingSize * 0.18); // Increased from 20 and 0.15

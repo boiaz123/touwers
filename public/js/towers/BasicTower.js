@@ -357,9 +357,42 @@ export class BasicTower {
         }
     }
     
+    // Calculate icon bounds on-demand for towers
+    calculateTowerIconBounds(canvasWidth) {
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const gridSize = cellSize * 2; // 2x2 grid for towers
+        const iconSize = Math.max(20, gridSize * 0.24);
+        
+        const iconX = this.x + (gridSize / 2) - (iconSize * 0.7);
+        const iconY = this.y + (gridSize / 2) - (iconSize * 0.7);
+        
+        return {
+            x: iconX - iconSize / 2,
+            y: iconY - iconSize / 2,
+            width: iconSize,
+            height: iconSize
+        };
+    }
+    
+    // Check if click is on the icon
+    isIconClicked(x, y, canvasWidth) {
+        // Only magic towers have clickable icons
+        if (this.constructor.name !== 'MagicTower') return false;
+        
+        // Always calculate fresh bounds based on current canvas size
+        const bounds = this.calculateTowerIconBounds(canvasWidth);
+        
+        return x >= bounds.x && 
+               x <= bounds.x + bounds.width &&
+               y >= bounds.y && 
+               y <= bounds.y + bounds.height;
+    }
+    
     // Render clickable icon for towers
     renderTowerIcon(ctx, gridSize) {
-        const iconSize = Math.max(20, gridSize * 0.24); // Increased from 16 and 0.2
+        const iconSize = Math.max(20, gridSize * 0.24);
         
         // Position at bottom-right corner of the tower's 2x2 grid area
         const iconX = this.x + (gridSize / 2) - (iconSize * 0.7);
@@ -383,24 +416,6 @@ export class BasicTower {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚡', iconX, iconY);
-        
-        // Store icon bounds for click detection - exact match to visual position
-        this.iconBounds = {
-            x: iconX - iconSize / 2,
-            y: iconY - iconSize / 2,
-            width: iconSize,
-            height: iconSize
-        };
-    }
-    
-    // Check if click is on the icon
-    isIconClicked(x, y) {
-        if (!this.iconBounds) return false;
-        
-        return x >= this.iconBounds.x && 
-               x <= this.iconBounds.x + this.iconBounds.width &&
-               y >= this.iconBounds.y && 
-               y <= this.iconBounds.y + this.iconBounds.height;
     }
     
     drawEnvironment(ctx, gridSize) {
