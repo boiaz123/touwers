@@ -248,18 +248,31 @@ class GameplayState {
     }
     
     handleClick(x, y) {
-        // First check if clicking on a building (like gold mine)
-        const goldCollected = this.towerManager.handleClick(x, y, { 
+        // First check if clicking on a building (like gold mine or academy)
+        const clickResult = this.towerManager.handleClick(x, y, { 
             width: this.stateManager.canvas.width, 
             height: this.stateManager.canvas.height 
         });
         
-        if (goldCollected > 0) {
-            this.gameState.gold += goldCollected;
-            this.updateUI();
-            return;
+        if (clickResult) {
+            if (clickResult.type === 'forge_menu') {
+                this.showForgeUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'academy_menu') {
+                this.showAcademyUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'magic_tower_menu') {
+                this.showMagicTowerElementMenu(clickResult);
+                return;
+            } else if (clickResult > 0) {
+                // Gold collection from mine
+                this.gameState.gold += clickResult;
+                this.updateUI();
+                return;
+            }
         }
         
+        // Handle regular tower/building placement
         if (this.selectedTowerType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
             

@@ -125,10 +125,17 @@ export class BuildingManager {
         for (const building of this.buildings) {
             const buildingSize = building.size * cellSize;
             
-            // Check if click is within building bounds
-            if (building.isPointInside && building.isPointInside(x, y, buildingSize)) {
-                console.log(`BuildingManager: Clicked on ${building.constructor.name}`);
-                if (building.onClick) {
+            // Check if click is within building bounds with more generous detection
+            const halfSize = buildingSize / 2;
+            const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
+            const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
+            
+            if (withinX && withinY) {
+                console.log(`BuildingManager: Clicked on ${building.constructor.name} at (${building.x}, ${building.y})`);
+                
+                if (building.constructor.name === 'GoldMine') {
+                    return building.collectGold();
+                } else if (building.onClick) {
                     return building.onClick();
                 }
                 break;

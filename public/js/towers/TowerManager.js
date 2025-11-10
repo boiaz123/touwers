@@ -283,14 +283,23 @@ export class TowerManager {
             }
         }
         
-        // Then check building clicks
+        // Then check building clicks with improved detection
         const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
-        if (buildingResult && buildingResult.type === 'forge_menu') {
-            buildingResult.unlockSystem = this.unlockSystem;
-        } else if (buildingResult && buildingResult.type === 'academy_menu') {
-            buildingResult.unlockSystem = this.unlockSystem;
+        if (buildingResult) {
+            if (buildingResult.type === 'forge_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                return buildingResult;
+            } else if (buildingResult.type === 'academy_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                console.log('TowerManager: Academy menu requested');
+                return buildingResult;
+            } else if (typeof buildingResult === 'number') {
+                // Gold collection
+                return buildingResult;
+            }
         }
-        return buildingResult;
+        
+        return null;
     }
     
     selectMagicTowerElement(tower, element) {

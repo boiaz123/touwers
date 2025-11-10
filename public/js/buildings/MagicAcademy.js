@@ -143,6 +143,22 @@ export class MagicAcademy extends Building {
         }
     }
     
+    renderFortress(ctx, size) {
+        // NO SHADOW RENDERING - this was causing the grey square
+        
+        // Main fortress base (cobblestone)
+        this.renderCobblestoneBase(ctx, size);
+        
+        // Main central tower
+        this.renderCentralTower(ctx, size);
+        
+        // Side towers/spires
+        this.renderSideSpires(ctx, size);
+        
+        // Fortress details
+        this.renderFortressDetails(ctx, size);
+    }
+    
     renderWaterMoat(ctx, size) {
         // Water moat around the fortress (CONSTRAINED to 4x4 grid)
         const moatRadius = size * 0.45; // Reduced from 0.7 to fit in grid
@@ -274,20 +290,6 @@ export class MagicAcademy extends Building {
             
             ctx.restore();
         });
-    }
-    
-    renderFortress(ctx, size) {
-        // Main fortress base (cobblestone)
-        this.renderCobblestoneBase(ctx, size);
-        
-        // Main central tower
-        this.renderCentralTower(ctx, size);
-        
-        // Side towers/spires
-        this.renderSideSpires(ctx, size);
-        
-        // Fortress details
-        this.renderFortressDetails(ctx, size);
     }
     
     renderCobblestoneBase(ctx, size) {
