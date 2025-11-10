@@ -1252,7 +1252,7 @@ export class TowerForge extends Building {
     renderUpgradeIcon(ctx, size) {
         // Position at bottom right of 4x4 grid
         const iconSize = 34;
-        const radius = iconSize / 2;
+        const radius = iconSize / 2; // 17px
         const iconX = this.x + size/2 - radius - 2;
         const iconY = this.y + size/2 - radius - 2;
         
@@ -1378,11 +1378,12 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection - exactly matches the golden circle
+        // Store icon bounds for click detection - exactly matches the visible golden circle
+        // The golden circle is drawn at radius size, so clickbox should be exactly that
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius // Match exactly the golden circle radius
+            radius: radius - 1 // Subtract 1 to account for the stroke width not being included in the visible circle
         };
     }
 }
