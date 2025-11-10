@@ -1153,8 +1153,7 @@ export class TowerForge extends Building {
     
     calculateForgeUpgradeCost() {
         if (this.forgeLevel >= this.maxForgeLevel) return null;
-        // Expensive forge upgrades: 400, 800, 1600, 3200, etc.
-        // FIXED: Use (forgeLevel - 1) for proper progression: Level 1->2 costs 400, Level 2->3 costs 800, etc.
+        // FIXED: Use (forgeLevel - 1) for proper progression: Level 1->2 costs 400, Level 2->3 costs 800
         return 400 * Math.pow(2, this.forgeLevel - 1);
     }
     
