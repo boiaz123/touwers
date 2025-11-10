@@ -1285,37 +1285,48 @@ export class TowerForge extends Building {
         ctx.arc(iconX + 2, iconY + 2, iconSize/4, 0, Math.PI * 2);
         ctx.fill();
         
-        // Icon content - hammer and wrench symbol
+        // Icon content - forge tools (hammer, anvil, tongs)
         ctx.save();
         ctx.translate(iconX, iconY);
         
-        // Hammer
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-6, -2, 3, 8);
+        // ANVIL - center bottom (dark gray)
+        ctx.fillStyle = '#1C1C1C';
+        // Anvil base/body
+        ctx.fillRect(-5, 1, 10, 4);
+        ctx.fillRect(-3, -1, 6, 2);
+        // Anvil horn (pointy part on right)
+        ctx.beginPath();
+        ctx.moveTo(4, 0);
+        ctx.lineTo(7, -1);
+        ctx.lineTo(6, 1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // HAMMER - top left (brown handle with dark head)
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillRect(-7, -6, 2, 8); // Handle
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(-7, -3, 5, 3);
+        ctx.fillRect(-8, -7, 4, 2); // Hammer head
+        ctx.fillRect(-8, -5, 4, 1); // Hammer face detail
         
-        // Wrench
-        ctx.strokeStyle = '#2F2F2F';
+        // TONGS - top right (metal gray)
+        ctx.strokeStyle = '#696969';
         ctx.lineWidth = 2;
+        // Left tong arm
         ctx.beginPath();
-        ctx.arc(4, -2, 3, 0, Math.PI * 2);
+        ctx.moveTo(4, -5);
+        ctx.lineTo(3, -1);
         ctx.stroke();
-        
+        // Right tong arm
         ctx.beginPath();
-        ctx.moveTo(6, 0);
-        ctx.lineTo(9, 3);
+        ctx.moveTo(8, -5);
+        ctx.lineTo(7, -1);
         ctx.stroke();
-        
-        // Plus symbol for upgrade
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 1.5;
+        // Tong pivot/hinge
+        ctx.fillStyle = '#2F2F2F';
         ctx.beginPath();
-        ctx.moveTo(0, -4);
-        ctx.lineTo(0, 4);
-        ctx.moveTo(-4, 0);
-        ctx.lineTo(4, 0);
-        ctx.stroke();
+        ctx.arc(5.5, -1.5, 1, 0, Math.PI * 2);
+        ctx.fill();
         
         ctx.restore();
         
