@@ -120,7 +120,6 @@ export class BuildingManager {
             return null;
         }
         
-        // Reduce debugging spam
         console.log(`BuildingManager: handleClick at (${x}, ${y}), checking ${this.buildings.length} buildings`);
         
         for (let i = 0; i < this.buildings.length; i++) {
@@ -130,12 +129,16 @@ export class BuildingManager {
                 if (building && building.clickArea) {
                     const area = building.clickArea;
                     
+                    console.log(`BuildingManager: Building ${i} (${building.constructor.name}) clickArea:`, area);
+                    
                     // Validate click area
                     if (typeof area.x === 'number' && typeof area.y === 'number' && 
                         typeof area.width === 'number' && typeof area.height === 'number') {
                         
                         const withinX = x >= area.x && x <= area.x + area.width;
                         const withinY = y >= area.y && y <= area.y + area.height;
+                        
+                        console.log(`BuildingManager: Building ${i} - withinX: ${withinX}, withinY: ${withinY}`);
                         
                         if (withinX && withinY) {
                             console.log(`BuildingManager: BUILDING ICON HIT! Clicked on ${building.constructor.name}`);
@@ -148,13 +151,18 @@ export class BuildingManager {
                                 console.log(`BuildingManager: Building ${building.constructor.name} has no valid onClick method!`);
                             }
                         }
+                    } else {
+                        console.log(`BuildingManager: Building ${i} has invalid clickArea properties`);
                     }
+                } else {
+                    console.log(`BuildingManager: Building ${i} missing clickArea`);
                 }
             } catch (error) {
                 console.warn(`BuildingManager: Error checking building click for ${building.constructor.name}:`, error);
             }
         }
         
+        console.log(`BuildingManager: No building clicks detected`);
         return null;
     }
     

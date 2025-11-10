@@ -770,7 +770,10 @@ class GameplayState {
                 
                 console.log(`GameplayState: Magic tower element selected: ${elementId}`);
                 
-                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
+                // Call setElement directly on the tower
+                if (towerData.tower && towerData.tower.setElement) {
+                    towerData.tower.setElement(elementId);
+                    
                     // Refresh the menu
                     this.showMagicTowerElementMenu({
                         type: 'magic_tower_menu',

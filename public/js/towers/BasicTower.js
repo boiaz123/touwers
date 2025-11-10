@@ -420,6 +420,12 @@ export class BasicTower {
         ctx.shadowBlur = 0;
     }
     
+    onClick() {
+        // Basic towers don't have interactive menus
+        console.log('BasicTower: Clicked, but no menu available');
+        return null;
+    }
+    
     drawEnvironment(ctx, gridSize) {
         // Pine trees exactly like in barricade tower
         const trees = [

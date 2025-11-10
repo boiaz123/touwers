@@ -636,6 +636,23 @@ export class MagicTower {
         }
     }
     
+    onClick() {
+        console.log('MagicTower: Clicked! Opening element selection menu');
+        this.isSelected = true;
+        
+        return {
+            type: 'magic_tower_menu',
+            tower: this,
+            elements: [
+                { id: 'fire', name: 'Fire', description: 'High damage, applies burn effect', icon: '🔥' },
+                { id: 'water', name: 'Water', description: 'Slows and freezes enemies', icon: '💧' },
+                { id: 'air', name: 'Air', description: 'Chain lightning to multiple targets', icon: '💨' },
+                { id: 'earth', name: 'Earth', description: 'Armor piercing damage', icon: '🌍' }
+            ],
+            currentElement: this.selectedElement
+        };
+    }
+    
     static getInfo() {
         return {
             name: 'Magic Tower',

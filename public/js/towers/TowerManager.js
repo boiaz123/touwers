@@ -5,7 +5,7 @@ import { MagicTower } from './MagicTower.js';
 import { BarricadeTower } from './BarricadeTower.js';
 import { PoisonArcherTower } from './PoisonArcherTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
-import { UnlockSystem } from '../UnlockSystem.js';
+import { UnlockSystem } from './UnlockSystem.js';
 
 export class TowerManager {
     constructor(gameState, level) {
@@ -342,34 +342,51 @@ export class TowerManager {
     }
     
     handleClick(x, y, rect) {
-        // Reduce click debugging
         console.log(`TowerManager: handleClick at (${x}, ${y})`);
+        console.log(`TowerManager: Checking ${this.towers.length} towers and ${this.buildingManager.buildings.length} buildings`);
         
-        // Check tower clicks first
-        for (const tower of this.towers) {
-            if (tower.clickArea && this.isValidClickArea(tower.clickArea)) {
-                const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
-                const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
+        // Check tower clicks first - with DETAILED logging
+        for (let i = 0; i < this.towers.length; i++) {
+            const tower = this.towers[i];
+            
+            if (tower && tower.clickArea) {
+                console.log(`TowerManager: Tower ${i} (${tower.constructor.name}) clickArea:`, tower.clickArea);
                 
-                if (withinX && withinY) {
-                    console.log(`TowerManager: TOWER CLICK HIT on ${tower.constructor.name}`);
+                if (this.isValidClickArea(tower.clickArea)) {
+                    const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
+                    const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
                     
-                    if (tower.onClick && typeof tower.onClick === 'function') {
-                        return tower.onClick();
-                    } else {
-                        console.log(`TowerManager: Tower has no onClick method`);
+                    console.log(`TowerManager: Tower ${i} - withinX: ${withinX}, withinY: ${withinY}`);
+                    
+                    if (withinX && withinY) {
+                        console.log(`TowerManager: TOWER CLICK HIT on ${tower.constructor.name}!`);
+                        
+                        // Check if tower has an onClick method
+                        if (tower.onClick && typeof tower.onClick === 'function') {
+                            const result = tower.onClick();
+                            console.log(`TowerManager: Tower onClick returned:`, result);
+                            return result;
+                        } else {
+                            console.log(`TowerManager: Tower ${tower.constructor.name} has no onClick method`);
+                        }
                     }
+                } else {
+                    console.log(`TowerManager: Tower ${i} has invalid clickArea`);
                 }
+            } else {
+                console.log(`TowerManager: Tower ${i} missing clickArea`);
             }
         }
         
-        // Check building clicks
+        // Check building clicks with DETAILED logging
+        console.log(`TowerManager: Checking building clicks...`);
         const buildingResult = this.buildingManager.handleClick(x, y, rect);
         if (buildingResult) {
             console.log(`TowerManager: Building click returned:`, buildingResult);
             return buildingResult;
         }
         
+        console.log(`TowerManager: No clicks detected`);
         return null;
     }
     

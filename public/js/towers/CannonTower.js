@@ -605,6 +605,12 @@ export class CannonTower {
         ctx.shadowBlur = 0;
     }
     
+    onClick() {
+        // Cannon towers don't have interactive menus
+        console.log('CannonTower: Clicked, but no menu available');
+        return null;
+    }
+    
     static getInfo() {
         return {
             name: 'Trebuchet Tower',
