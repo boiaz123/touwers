@@ -1251,43 +1251,46 @@ export class TowerForge extends Building {
     
     renderUpgradeIcon(ctx, size) {
         // Position at bottom right of 4x4 grid
-        const iconX = this.x + size/2 - 24; // Adjusted for larger icon
-        const iconY = this.y + size/2 - 24; // Adjusted for larger icon
-        const iconSize = 48; // Doubled from 24
+        // 30% smaller: 48 * 0.7 = 33.6 ≈ 34
+        const iconSize = 34;
+        const radius = iconSize / 2;
+        const iconX = this.x + size/2 - radius - 2;
+        const iconY = this.y + size/2 - radius - 2;
         
         // Icon background - golden metallic circle
-        const bgGradient = ctx.createRadialGradient(iconX - 4, iconY - 4, 0, iconX, iconY, iconSize/2 + 4);
+        const bgGradient = ctx.createRadialGradient(iconX - 2, iconY - 2, 0, iconX, iconY, radius);
         bgGradient.addColorStop(0, '#FFD700');
         bgGradient.addColorStop(0.5, '#FFA500');
         bgGradient.addColorStop(1, '#FF8C00');
         
         ctx.fillStyle = bgGradient;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize/2 + 4, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
         ctx.fill();
         
         // Icon border - dark metallic ring
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 3; // Slightly thicker for larger icon
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize/2 + 4, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
         ctx.stroke();
         
         // Inner highlight
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.beginPath();
-        ctx.arc(iconX - 6, iconY - 6, iconSize/4, 0, Math.PI * 2);
+        ctx.arc(iconX - 3, iconY - 3, radius/3, 0, Math.PI * 2);
         ctx.fill();
         
         // Inner shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.arc(iconX + 4, iconY + 4, iconSize/4, 0, Math.PI * 2);
+        ctx.arc(iconX + 2, iconY + 2, radius/3, 0, Math.PI * 2);
         ctx.fill();
         
-        // Icon content - forge tools (hammer, anvil, tongs) - doubled scale
+        // Icon content - forge tools (hammer, anvil, tongs) - scaled to 70%
         ctx.save();
         ctx.translate(iconX, iconY);
+        ctx.scale(0.7, 0.7); // Scale down to 70% of original doubled size
         
         // ANVIL - center bottom (dark gray)
         ctx.fillStyle = '#1C1C1C';
@@ -1311,7 +1314,7 @@ export class TowerForge extends Building {
         
         // TONGS - top right (metal gray)
         ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3; // Doubled line width
+        ctx.lineWidth = 3;
         // Left tong arm
         ctx.beginPath();
         ctx.moveTo(8, -10);
@@ -1330,11 +1333,11 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store icon bounds for click detection - exactly matches the icon
+        // Store icon bounds for click detection - exactly matches the visible circle
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: iconSize/2 + 4
+            radius: radius
         };
     }
 }
