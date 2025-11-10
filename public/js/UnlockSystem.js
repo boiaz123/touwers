@@ -9,6 +9,7 @@ export class UnlockSystem {
         this.forgeCount = 0;
         this.maxForges = 1;
         this.mineCount = 0;
+        this.academyCount = 0;
         
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
@@ -43,6 +44,13 @@ export class UnlockSystem {
         return false;
     }
     
+    onAcademyBuilt() {
+        this.academyCount++;
+        this.unlockedTowers.add('magic');
+        console.log('UnlockSystem: Academy built - unlocked magic tower');
+        return true;
+    }
+    
     getMaxMines() {
         if (this.forgeLevel >= 10) return 4;
         if (this.forgeLevel >= 8) return 3;
@@ -72,9 +80,8 @@ export class UnlockSystem {
             case 4:
                 // Forge level 4 unlocks
                 this.unlockedBuildings.add('academy');
-                this.unlockedTowers.add('magic');
                 this.unlockedUpgrades.add('fireArrows');
-                console.log('UnlockSystem: Forge level 4 - unlocked magic academy and tower');
+                console.log('UnlockSystem: Forge level 4 - unlocked magic academy');
                 break;
                 
             case 5:
@@ -106,6 +113,9 @@ export class UnlockSystem {
         }
         if (type === 'mine' && this.mineCount >= this.getMaxMines()) {
             return false;
+        }
+        if (type === 'academy' && this.academyCount >= 1) {
+            return false; // Only 1 academy allowed
         }
         return this.unlockedBuildings.has(type);
     }

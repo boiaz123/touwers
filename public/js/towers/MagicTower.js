@@ -10,6 +10,15 @@ export class MagicTower {
         this.cooldown = 0;
         this.target = null;
         
+        // Element system
+        this.selectedElement = 'fire'; // Default element
+        this.elementalBonuses = {
+            fire: { damageBonus: 0 },
+            ice: { slowBonus: 0 },
+            lightning: { chainRange: 0 },
+            earth: { armorPiercing: 0 }
+        };
+        
         // Animation properties
         this.animationTime = 0;
         this.crystalPulse = 0;
@@ -92,40 +101,133 @@ export class MagicTower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
+            let finalDamage = this.damage;
             
-            // Slow effect
-            if (this.target.speed > 20) {
-                this.target.speed *= 0.9;
+            // Apply elemental effects based on selected element
+            switch(this.selectedElement) {
+                case 'fire':
+                    finalDamage += this.elementalBonuses.fire.damageBonus;
+                    this.target.takeDamage(finalDamage);
+                    // Apply burn effect
+                    if (this.target.burnTimer) {
+                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                    } else {
+                        this.target.burnTimer = 3;
+                        this.target.burnDamage = 5;
+                    }
+                    break;
+                    
+                case 'ice':
+                    this.target.takeDamage(finalDamage);
+                    // Apply enhanced slow effect
+                    const baseSlowEffect = 0.7;
+                    const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.ice.slowBonus);
+                    if (this.target.speed > 20) {
+                        this.target.speed *= enhancedSlowEffect;
+                    }
+                    // Apply freeze effect visual
+                    this.target.frozenTimer = 0.5;
+                    break;
+                    
+                case 'lightning':
+                    this.target.takeDamage(finalDamage);
+                    // Chain lightning to nearby enemies
+                    this.chainLightning(this.target);
+                    break;
+                    
+                case 'earth':
+                    // Armor piercing ignores enemy defense
+                    const piercingDamage = finalDamage + this.elementalBonuses.earth.armorPiercing;
+                    this.target.takeDamage(piercingDamage, true); // True = ignore armor
+                    break;
             }
             
-            // Create lightning bolt effect
-            this.lightningBolts.push({
-                startX: this.x,
-                startY: this.y,
-                endX: this.target.x,
-                endY: this.target.y,
-                life: 0.3,
-                maxLife: 0.3,
-                segments: this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y)
+            // Create appropriate visual effect
+            this.createElementalEffect();
+        }
+    }
+    
+    chainLightning(originalTarget) {
+        const chainRange = 50 + this.elementalBonuses.lightning.chainRange;
+        const chainTargets = [];
+        
+        // Find nearby enemies for chain lightning
+        // This would need access to the enemies array - to be implemented in game logic
+        // For now, just create the visual effect
+    }
+    
+    createElementalEffect() {
+        if (!this.target) return;
+        
+        // Create lightning bolt effect with elemental color
+        let boltColor, impactColor;
+        
+        switch(this.selectedElement) {
+            case 'fire':
+                boltColor = 'rgba(255, 69, 0, ';
+                impactColor = 'rgba(255, 140, 0, ';
+                break;
+            case 'ice':
+                boltColor = 'rgba(173, 216, 230, ';
+                impactColor = 'rgba(135, 206, 250, ';
+                break;
+            case 'lightning':
+                boltColor = 'rgba(255, 255, 0, ';
+                impactColor = 'rgba(255, 255, 255, ';
+                break;
+            case 'earth':
+                boltColor = 'rgba(139, 69, 19, ';
+                impactColor = 'rgba(160, 82, 45, ';
+                break;
+        }
+        
+        this.lightningBolts.push({
+            startX: this.x,
+            startY: this.y,
+            endX: this.target.x,
+            endY: this.target.y,
+            life: 0.3,
+            maxLife: 0.3,
+            segments: this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y),
+            color: boltColor
+        });
+        
+        // Create impact particles with elemental colors
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const speed = Math.random() * 100 + 50;
+            this.magicParticles.push({
+                x: this.target.x,
+                y: this.target.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                maxLife: 1,
+                size: 0,
+                maxSize: 5,
+                color: impactColor
             });
-            
-            // Create impact particles
-            for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2;
-                const speed = Math.random() * 100 + 50;
-                this.magicParticles.push({
-                    x: this.target.x,
-                    y: this.target.y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    life: 1,
-                    maxLife: 1,
-                    size: 0,
-                    maxSize: 5,
-                    color: 'rgba(255, 255, 255, '
-                });
-            }
+        }
+    }
+    
+    setElement(element) {
+        if (['fire', 'ice', 'lightning', 'earth'].includes(element)) {
+            this.selectedElement = element;
+            console.log(`MagicTower: Element changed to ${element}`);
+        }
+    }
+    
+    applyElementalBonuses(bonuses) {
+        this.elementalBonuses = bonuses;
+    }
+    
+    getElementalColor() {
+        switch(this.selectedElement) {
+            case 'fire': return 'rgba(255, 69, 0, ';
+            case 'ice': return 'rgba(173, 216, 230, ';
+            case 'lightning': return 'rgba(255, 255, 0, ';
+            case 'earth': return 'rgba(139, 69, 19, ';
+            default: return 'rgba(138, 43, 226, ';
         }
     }
     
@@ -329,13 +431,14 @@ export class MagicTower {
         ctx.fill();
         ctx.stroke();
         
-        // Tesla coil energy discharge points
+        // Tesla coil energy discharge points with elemental color
         for (let i = 0; i < 4; i++) {
             const angle = (i / 4) * Math.PI * 2;
             const dischargeX = this.x + Math.cos(angle) * sphereRadius * 0.8;
             const dischargeY = sphereY + Math.sin(angle) * sphereRadius * 0.8;
             
-            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
+            const elementColor = this.getElementalColor();
+            ctx.fillStyle = elementColor + `${this.crystalPulse})`;
             ctx.beginPath();
             ctx.arc(dischargeX, dischargeY, 2, 0, Math.PI * 2);
             ctx.fill();
@@ -384,7 +487,7 @@ export class MagicTower {
             ctx.fill();
         });
         
-        // Render lightning bolts (now from tesla coil sphere)
+        // Render lightning bolts with elemental colors
         this.lightningBolts.forEach(bolt => {
             const alpha = bolt.life / bolt.maxLife;
             
@@ -392,8 +495,8 @@ export class MagicTower {
             bolt.startX = this.x;
             bolt.startY = sphereY;
             
-            // Main lightning
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            // Main lightning with elemental color
+            ctx.strokeStyle = (bolt.color || 'rgba(255, 255, 255, ') + alpha + ')';
             ctx.lineWidth = 4;
             bolt.segments.forEach(segment => {
                 ctx.beginPath();
@@ -403,7 +506,7 @@ export class MagicTower {
             });
             
             // Lightning glow
-            ctx.strokeStyle = `rgba(138, 43, 226, ${alpha * 0.6})`;
+            ctx.strokeStyle = (bolt.color || 'rgba(138, 43, 226, ') + (alpha * 0.6) + ')';
             ctx.lineWidth = 8;
             bolt.segments.forEach(segment => {
                 ctx.beginPath();
@@ -412,6 +515,13 @@ export class MagicTower {
                 ctx.stroke();
             });
         });
+        
+        // Element indicator
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        const elementIcons = { fire: '🔥', ice: '❄️', lightning: '⚡', earth: '🌍' };
+        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
         
         // Range indicator
         if (this.target) {
@@ -426,8 +536,8 @@ export class MagicTower {
     static getInfo() {
         return {
             name: 'Magic Tower',
-            description: 'Mystical tower that pierces armor and slows enemies.',
-            damage: '30',
+            description: 'Elemental tower with selectable damage types. Requires Magic Academy.',
+            damage: '30 + elemental bonuses',
             range: '110',
             fireRate: '0.8/sec',
             cost: 150

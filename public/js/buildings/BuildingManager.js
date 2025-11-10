@@ -25,6 +25,13 @@ export class BuildingManager {
         };
         this.availableSkills = [];
         this.superWeaponUnlocked = false;
+        this.manaPerSecond = 0;
+        this.elementalBonuses = {
+            fire: { damageBonus: 0 },
+            ice: { slowBonus: 0 },
+            lightning: { chainRange: 0 },
+            earth: { armorPiercing: 0 }
+        };
     }
     
     placeBuilding(type, x, y, gridX, gridY) {

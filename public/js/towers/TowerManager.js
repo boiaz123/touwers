@@ -75,6 +75,9 @@ export class TowerManager {
             } else if (type === 'mine') {
                 this.unlockSystem.onMineBuilt();
                 console.log('TowerManager: Mine built');
+            } else if (type === 'academy') {
+                this.unlockSystem.onAcademyBuilt();
+                console.log('TowerManager: Academy built, Magic Tower unlocked');
             }
         }
         
@@ -226,10 +229,27 @@ export class TowerManager {
     }
     
     handleClick(x, y, canvasSize) {
-        // First check building clicks (including forge)
+        // Check tower clicks first for element selection
+        for (const tower of this.towers) {
+            const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+            const towerSize = cellSize * 2;
+            
+            if (Math.hypot(tower.x - x, tower.y - y) <= towerSize/2) {
+                if (tower.constructor.name === 'MagicTower') {
+                    return {
+                        type: 'magic_tower_menu',
+                        tower: tower,
+                        elements: ['fire', 'ice', 'lightning', 'earth']
+                    };
+                }
+            }
+        }
+        
+        // Then check building clicks
         const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
         if (buildingResult && buildingResult.type === 'forge_menu') {
-            // Pass unlock system to forge menu
+            buildingResult.unlockSystem = this.unlockSystem;
+        } else if (buildingResult && buildingResult.type === 'academy_menu') {
             buildingResult.unlockSystem = this.unlockSystem;
         }
         return buildingResult;
@@ -266,6 +286,9 @@ export class TowerManager {
             } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
                 info.disabled = true;
                 info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
+            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+                info.disabled = true;
+                info.disableReason = "Only 1 academy allowed";
             }
         }
         return info;

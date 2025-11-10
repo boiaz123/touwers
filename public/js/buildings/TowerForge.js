@@ -30,7 +30,7 @@ export class TowerForge extends Building {
         ];
         
         // Forge level and tower upgrades
-        this.forgeLevel = 1;
+        this.forgeLevel = 0; // Start at level 0, built to level 1
         this.maxForgeLevel = 10;
         
         // Tower upgrade system - rebalanced for better progression

@@ -40,11 +40,31 @@ The Tower Forge is the key to progression. Only 1 forge can be built per game.
 - Mine Income: 2.5x
 
 **Forge Level 4** ($1600)
-- Unlocks: Magic Academy, Magic Tower, Fire Arrows
+- Unlocks: Magic Academy, Fire Arrows
 - Mine Income: 3.0x
 
 **Forge Level 5+** ($3200+)
 - Mine Income increases by 0.2x per level
+
+### Magic Academy
+Unlocked at Forge Level 4. Only 1 academy allowed per game.
+
+**Magic Academy Features**
+- Unlocks: Magic Tower (elemental damage)
+- Provides: 4 elemental upgrade trees
+- Elements: Fire (🔥), Ice (❄️), Lightning (⚡), Earth (🌍)
+- Visual: Magical fortress with moat, towers, and natural surroundings
+
+**Elemental Upgrades** (5 levels each)
+- **Fire Mastery**: +5 burn damage per level
+- **Ice Mastery**: +10% slow effect per level  
+- **Lightning Mastery**: +20px chain range per level
+- **Earth Mastery**: +3 armor piercing per level
+
+**Magic Tower System**
+- Click placed Magic Towers to select element type
+- Each element has unique effects and academy bonuses
+- Visual indicators show selected element
 
 ## Project Structure
 
