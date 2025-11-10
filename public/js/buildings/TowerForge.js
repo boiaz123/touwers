@@ -7,6 +7,9 @@ export class TowerForge extends Building {
         this.sparks = [];
         this.nextSparkTime = 0;
         this.isSelected = false;
+        this.smokeParticles = [];
+        this.nextSmokeTime = 0;
+        this.fireIntensity = 0;
         
         // Upgrade system
         this.upgrades = {
@@ -21,117 +24,363 @@ export class TowerForge extends Building {
     update(deltaTime) {
         super.update(deltaTime);
         
-        // Generate more sparks for active forge
+        // Update fire intensity
+        this.fireIntensity = Math.sin(this.animationTime * 6) * 0.3 + 0.7;
+        
+        // Generate forge sparks from fire opening
         this.nextSparkTime -= deltaTime;
         if (this.nextSparkTime <= 0) {
-            const sparkCount = this.isSelected ? 5 : 3;
+            const sparkCount = this.isSelected ? 8 : 5;
             for (let i = 0; i < sparkCount; i++) {
                 this.sparks.push({
-                    x: this.x + (Math.random() - 0.5) * 60,
-                    y: this.y - 20 + (Math.random() - 0.5) * 30,
-                    vx: (Math.random() - 0.5) * 80,
-                    vy: -Math.random() * 100 - 20,
-                    life: 0.8,
-                    maxLife: 0.8,
-                    color: Math.random() > 0.3 ? 'orange' : 'red'
+                    x: this.x - 15 + (Math.random() - 0.5) * 25, // From forge opening
+                    y: this.y - 10 + (Math.random() - 0.5) * 15,
+                    vx: (Math.random() - 0.5) * 60,
+                    vy: -Math.random() * 80 - 30,
+                    life: 1.2,
+                    maxLife: 1.2,
+                    size: Math.random() * 2 + 1,
+                    color: Math.random() > 0.4 ? 'orange' : (Math.random() > 0.7 ? 'yellow' : 'red')
                 });
             }
-            this.nextSparkTime = 0.15 + Math.random() * 0.25;
+            this.nextSparkTime = 0.1 + Math.random() * 0.2;
         }
         
+        // Generate chimney smoke
+        this.nextSmokeTime -= deltaTime;
+        if (this.nextSmokeTime <= 0) {
+            this.smokeParticles.push({
+                x: this.x + 35, // From chimney
+                y: this.y - 45,
+                vx: (Math.random() - 0.5) * 20,
+                vy: -30 - Math.random() * 20,
+                life: 3,
+                maxLife: 3,
+                size: Math.random() * 8 + 4
+            });
+            this.nextSmokeTime = 0.3 + Math.random() * 0.4;
+        }
+        
+        // Update particles
         this.sparks = this.sparks.filter(spark => {
             spark.x += spark.vx * deltaTime;
             spark.y += spark.vy * deltaTime;
             spark.life -= deltaTime;
-            spark.vy += 50 * deltaTime; // gravity
-            return spark.life > 0;
+            spark.vy += 150 * deltaTime; // gravity
+            spark.size = Math.max(0, spark.size - deltaTime * 2);
+            return spark.life > 0 && spark.size > 0;
+        });
+        
+        this.smokeParticles = this.smokeParticles.filter(smoke => {
+            smoke.x += smoke.vx * deltaTime;
+            smoke.y += smoke.vy * deltaTime;
+            smoke.life -= deltaTime;
+            smoke.size += deltaTime * 3;
+            smoke.vx *= 0.99; // wind resistance
+            return smoke.life > 0;
         });
     }
     
     render(ctx, size) {
-        // Main forge building - stone base
-        const stoneGradient = ctx.createLinearGradient(
-            this.x - size/2, this.y - size/2,
-            this.x + size/2, this.y + size/2
-        );
-        stoneGradient.addColorStop(0, '#8B7355');
-        stoneGradient.addColorStop(0.5, '#654321');
-        stoneGradient.addColorStop(1, '#4A4A4A');
+        // Calculate building dimensions
+        const buildingWidth = size * 0.9;
+        const buildingHeight = size * 0.6;
+        const wallHeight = size * 0.5;
         
-        ctx.fillStyle = stoneGradient;
-        ctx.strokeStyle = this.isSelected ? '#FFD700' : '#2F2F2F';
-        ctx.lineWidth = this.isSelected ? 4 : 2;
-        ctx.fillRect(this.x - size/2, this.y - size/2, size * 0.8, size * 0.8);
-        ctx.strokeRect(this.x - size/2, this.y - size/2, size * 0.8, size * 0.8);
+        // Building shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - buildingHeight/2 + 4, buildingWidth, buildingHeight);
+        
+        // Cobblestone wall structure
+        this.renderCobblestoneWalls(ctx, buildingWidth, buildingHeight, wallHeight);
+        
+        // Forge opening with fire
+        this.renderForgeOpening(ctx, size);
         
         // Chimney
-        ctx.fillStyle = '#4A4A4A';
-        ctx.fillRect(this.x + size/4, this.y - size/2 - 15, size/6, 20);
-        ctx.strokeRect(this.x + size/4, this.y - size/2 - 15, size/6, 20);
+        this.renderChimney(ctx, size);
         
-        // Forge fire (more realistic)
-        const fireIntensity = Math.sin(this.animationTime * 8) * 0.2 + 0.8;
+        // Roof
+        this.renderRoof(ctx, buildingWidth, buildingHeight, wallHeight);
         
-        // Fire base
-        ctx.fillStyle = `rgba(255, 50, 0, ${fireIntensity})`;
-        ctx.fillRect(this.x - size/3, this.y - size/8, size/1.8, size/4);
+        // Forge interior details
+        this.renderForgeInterior(ctx, size);
         
-        // Fire core
-        ctx.fillStyle = `rgba(255, 150, 0, ${fireIntensity * 0.8})`;
-        ctx.fillRect(this.x - size/4, this.y - size/12, size/2.5, size/6);
+        // Render particles
+        this.renderParticles(ctx);
         
-        // Fire center
-        ctx.fillStyle = `rgba(255, 255, 100, ${fireIntensity * 0.6})`;
-        ctx.fillRect(this.x - size/6, this.y - size/16, size/8, size/12);
-        
-        // Anvil
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(this.x - size/5, this.y + size/8, size/2.5, size/8);
-        ctx.strokeRect(this.x - size/5, this.y + size/8, size/2.5, size/8);
-        
-        // Hammer on anvil
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(this.x + size/12, this.y + size/12, size/20, size/6);
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(this.x + size/12, this.y + size/12, size/20, size/12);
-        
-        // Bellows
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(this.x - size/2.5, this.y + size/6, size/4, size/8);
-        
-        // Tools rack
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(this.x + size/3, this.y - size/4);
-        ctx.lineTo(this.x + size/3, this.y + size/4);
-        ctx.stroke();
-        
-        // Render sparks
-        this.sparks.forEach(spark => {
-            const alpha = spark.life / spark.maxLife;
-            if (spark.color === 'orange') {
-                ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
-            } else {
-                ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
-            }
-            ctx.beginPath();
-            ctx.arc(spark.x, spark.y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Smoke from chimney
-        const smokeOffset = Math.sin(this.animationTime * 2) * 5;
-        ctx.fillStyle = `rgba(100, 100, 100, 0.3)`;
-        ctx.beginPath();
-        ctx.arc(this.x + size/3 + smokeOffset, this.y - size/2 - 25, 8, 0, Math.PI * 2);
-        ctx.fill();
+        // Selection indicator
+        if (this.isSelected) {
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(this.x - size/2, this.y - size/2, size, size);
+        }
         
         // Upgrade indicator
         ctx.fillStyle = this.isSelected ? '#FFD700' : '#FFA500';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+    }
+    
+    renderCobblestoneWalls(ctx, buildingWidth, buildingHeight, wallHeight) {
+        // Base wall color
+        const wallGradient = ctx.createLinearGradient(
+            this.x - buildingWidth/2, this.y - wallHeight,
+            this.x + buildingWidth/4, this.y
+        );
+        wallGradient.addColorStop(0, '#A9A9A9');
+        wallGradient.addColorStop(0.5, '#808080');
+        wallGradient.addColorStop(1, '#696969');
+        
+        // Main wall structure
+        ctx.fillStyle = wallGradient;
+        ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, wallHeight);
+        
+        // Individual cobblestones
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        
+        const stoneWidth = buildingWidth / 8;
+        const stoneHeight = wallHeight / 6;
+        
+        // Draw cobblestone pattern
+        for (let row = 0; row < 6; row++) {
+            const offsetX = (row % 2) * stoneWidth/2; // Staggered pattern
+            const rowY = this.y - wallHeight + (row * stoneHeight);
+            
+            for (let col = 0; col < 9; col++) {
+                const stoneX = this.x - buildingWidth/2 + offsetX + (col * stoneWidth);
+                
+                // Skip stones where forge opening will be
+                if (row >= 2 && row <= 4 && col >= 1 && col <= 3) {
+                    continue;
+                }
+                
+                // Individual stone color variation
+                const stoneShade = 0.8 + Math.sin(row * col * 0.5) * 0.2;
+                ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
+                
+                // Draw stone
+                ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
+                ctx.strokeRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
+                
+                // Stone highlight for 3D effect
+                ctx.fillStyle = `rgba(200, 200, 200, ${0.3 * stoneShade})`;
+                ctx.fillRect(stoneX, rowY, stoneWidth/3, stoneHeight/3);
+            }
+        }
+        
+        // Wall top edge
+        ctx.fillStyle = '#DCDCDC';
+        ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, 3);
+        
+        // Wall side face (3D effect)
+        ctx.fillStyle = '#696969';
+        ctx.beginPath();
+        ctx.moveTo(this.x + buildingWidth/2, this.y - wallHeight);
+        ctx.lineTo(this.x + buildingWidth/2 + 8, this.y - wallHeight - 8);
+        ctx.lineTo(this.x + buildingWidth/2 + 8, this.y - 8);
+        ctx.lineTo(this.x + buildingWidth/2, this.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    renderForgeOpening(ctx, size) {
+        // Forge opening in the wall
+        const openingWidth = size * 0.25;
+        const openingHeight = size * 0.2;
+        const openingX = this.x - openingWidth/2 - 15;
+        const openingY = this.y - openingHeight/2 - 5;
+        
+        // Opening shadow/depth
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
+        
+        // Opening border (stone arch)
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
+        
+        // Arch top
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
+        
+        // Fire glow from opening
+        const fireGlow = ctx.createRadialGradient(
+            openingX + openingWidth/2, openingY + openingHeight/2, 0,
+            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
+        );
+        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
+        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
+        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        
+        ctx.fillStyle = fireGlow;
+        ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
+    }
+    
+    renderChimney(ctx, size) {
+        // Chimney position (separate from main building)
+        const chimneyX = this.x + size * 0.35;
+        const chimneyY = this.y - size * 0.1;
+        const chimneyWidth = size * 0.12;
+        const chimneyHeight = size * 0.6;
+        
+        // Chimney shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(chimneyX + 2, chimneyY - chimneyHeight + 2, chimneyWidth, chimneyHeight);
+        
+        // Chimney main body - darker stone
+        const chimneyGradient = ctx.createLinearGradient(
+            chimneyX, chimneyY - chimneyHeight,
+            chimneyX + chimneyWidth, chimneyY
+        );
+        chimneyGradient.addColorStop(0, '#696969');
+        chimneyGradient.addColorStop(0.5, '#2F2F2F');
+        chimneyGradient.addColorStop(1, '#1C1C1C');
+        
+        ctx.fillStyle = chimneyGradient;
+        ctx.fillRect(chimneyX, chimneyY - chimneyHeight, chimneyWidth, chimneyHeight);
+        
+        // Chimney stones
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        
+        const chimneyStoneHeight = chimneyHeight / 8;
+        for (let i = 0; i < 8; i++) {
+            const stoneY = chimneyY - chimneyHeight + (i * chimneyStoneHeight);
+            ctx.strokeRect(chimneyX, stoneY, chimneyWidth, chimneyStoneHeight);
+        }
+        
+        // Chimney top
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(chimneyX - 2, chimneyY - chimneyHeight - 4, chimneyWidth + 4, 6);
+        ctx.strokeRect(chimneyX - 2, chimneyY - chimneyHeight - 4, chimneyWidth + 4, 6);
+        
+        // Chimney 3D side
+        ctx.fillStyle = '#1C1C1C';
+        ctx.beginPath();
+        ctx.moveTo(chimneyX + chimneyWidth, chimneyY - chimneyHeight);
+        ctx.lineTo(chimneyX + chimneyWidth + 4, chimneyY - chimneyHeight - 4);
+        ctx.lineTo(chimneyX + chimneyWidth + 4, chimneyY - 4);
+        ctx.lineTo(chimneyX + chimneyWidth, chimneyY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    renderRoof(ctx, buildingWidth, buildingHeight, wallHeight) {
+        // Simple slanted roof
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - buildingWidth/2 - 5, this.y - wallHeight);
+        ctx.lineTo(this.x, this.y - wallHeight - buildingHeight * 0.2);
+        ctx.lineTo(this.x + buildingWidth/2 + 5, this.y - wallHeight);
+        ctx.lineTo(this.x + buildingWidth/2, this.y - wallHeight + 3);
+        ctx.lineTo(this.x - buildingWidth/2, this.y - wallHeight + 3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Roof tiles
+        ctx.strokeStyle = '#5D4E37';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const tileY = this.y - wallHeight + (3 * i / 4);
+            const tileWidth = buildingWidth * (1 - i / 8);
+            ctx.beginPath();
+            ctx.moveTo(this.x - tileWidth/2, tileY);
+            ctx.lineTo(this.x + tileWidth/2, tileY);
+            ctx.stroke();
+        }
+    }
+    
+    renderForgeInterior(ctx, size) {
+        // Coal pile visible in opening
+        const openingX = this.x - 15;
+        const openingY = this.y + 5;
+        
+        // Coal pieces
+        ctx.fillStyle = '#1C1C1C';
+        for (let i = 0; i < 6; i++) {
+            const coalX = openingX - 8 + (i % 3) * 6;
+            const coalY = openingY - 3 + Math.floor(i / 3) * 4;
+            ctx.beginPath();
+            ctx.arc(coalX, coalY, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Fire above coal
+        const fireColors = [
+            `rgba(255, 0, 0, ${this.fireIntensity * 0.7})`,
+            `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`,
+            `rgba(255, 200, 0, ${this.fireIntensity * 0.6})`
+        ];
+        
+        fireColors.forEach((color, index) => {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(
+                openingX - 3 + index * 2,
+                openingY - 8 - index * 2,
+                4 - index,
+                8 - index * 2,
+                0, 0, Math.PI * 2
+            );
+            ctx.fill();
+        });
+        
+        // Anvil inside (partially visible)
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 10, openingY - 2, 8, 4);
+        
+        // Hammer on anvil
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 6);
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 3);
+    }
+    
+    renderParticles(ctx) {
+        // Render sparks
+        this.sparks.forEach(spark => {
+            const alpha = (spark.life / spark.maxLife) * (spark.size / 3);
+            
+            switch(spark.color) {
+                case 'orange':
+                    ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
+                    break;
+                case 'yellow':
+                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                    break;
+                case 'red':
+                    ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
+                    break;
+            }
+            
+            ctx.beginPath();
+            ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Spark trail
+            ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(spark.x - spark.vx * 0.01, spark.y - spark.vy * 0.01, spark.size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Render smoke
+        this.smokeParticles.forEach(smoke => {
+            const alpha = (smoke.life / smoke.maxLife) * 0.4;
+            ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
     
     isPointInside(x, y, size) {

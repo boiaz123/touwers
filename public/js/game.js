@@ -122,6 +122,23 @@ class GameplayState {
         // Add mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+        
+        // Add click listener for forge upgrade menu
+        this.canvas.addEventListener('click', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasX = e.clientX - rect.left;
+            const canvasY = e.clientY - rect.top;
+            
+            // Check for forge upgrade menu
+            const clickResult = this.towerManager.handleClick(canvasX, canvasY, this.canvas.getBoundingClientRect());
+            if (clickResult && clickResult.type === 'forge_menu') {
+                this.showForgeUpgradeMenu(clickResult);
+                return;
+            }
+            
+            // Handle regular tower/building placement
+            this.handleClick(canvasX, canvasY);
+        });
     }
     
     removeEventListeners() {
@@ -442,6 +459,66 @@ class GameplayState {
                 btn.classList.add('disabled');
             }
         });
+    }
+    
+    showForgeUpgradeMenu(forgeData) {
+        // Clear existing menus
+        this.clearActiveMenus();
+        
+        // Create upgrade menu
+        const menu = document.createElement('div');
+        menu.id = 'forge-upgrade-menu';
+        menu.className = 'upgrade-menu';
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>🔨 Tower Forge Upgrades</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${forgeData.upgrades.map(upgrade => `
+                    <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                        <div class="upgrade-icon">${upgrade.icon}</div>
+                        <div class="upgrade-details">
+                            <div class="upgrade-name">${upgrade.name}</div>
+                            <div class="upgrade-desc">${upgrade.description}</div>
+                            <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                        </div>
+                        <div class="upgrade-cost">
+                            ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
+                        </div>
+                        <button class="upgrade-btn" 
+                                data-upgrade="${upgrade.id}" 
+                                ${(!upgrade.cost || this.gameState.coins < upgrade.cost) ? 'disabled' : ''}>
+                            ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Add upgrade button handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    this.showForgeUpgradeMenu(forgeData); // Refresh menu
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
+    }
+    
+    clearActiveMenus() {
+        const existingMenus = document.querySelectorAll('.upgrade-menu');
+        existingMenus.forEach(menu => menu.remove());
+        if (this.activeMenu) {
+            this.activeMenu.remove();
+            this.activeMenu = null;
+        }
     }
 }
 

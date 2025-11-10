@@ -156,6 +156,12 @@ export class TowerManager {
     }
     
     handleClick(x, y, canvasSize) {
-        return this.buildingManager.handleClick(x, y, canvasSize);
+        // First check building clicks (including forge)
+        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
+        if (buildingResult) {
+            return buildingResult;
+        }
+        
+        return null;
     }
 }
