@@ -90,15 +90,16 @@ class GameplayState {
         // CRITICAL: Force an immediate render to ensure click areas are set
         this.forceInitialRender();
         
-        // Add a small delay to ensure everything is properly initialized
+        // CRITICAL: Force another render after a brief delay to catch any async issues
         setTimeout(() => {
-            console.log('GameplayState: Post-initialization setup complete');
+            console.log('GameplayState: Post-initialization render');
+            this.forceInitialRender();
             
             // Force one more mouse state refresh to ensure interactivity works
             if (this.mouseX !== undefined && this.mouseY !== undefined) {
                 this.refreshMouseState(this.mouseX, this.mouseY);
             }
-        }, 100);
+        }, 50); // Shorter delay
         
         this.updateUI();
         this.startWave();
@@ -110,19 +111,28 @@ class GameplayState {
         console.log('GameplayState: Forcing initial render to set click areas');
         
         try {
-            // Clear and render once to ensure all click areas are set
-            this.stateManager.ctx.clearRect(0, 0, this.stateManager.canvas.width, this.stateManager.canvas.height);
-            this.render(this.stateManager.ctx);
+            // CRITICAL: Force multiple render passes to ensure click areas are properly set
+            for (let pass = 0; pass < 3; pass++) {
+                console.log(`GameplayState: Render pass ${pass + 1}`);
+                
+                // Clear and render
+                this.stateManager.ctx.clearRect(0, 0, this.stateManager.canvas.width, this.stateManager.canvas.height);
+                this.render(this.stateManager.ctx);
+                
+                // Force canvas state synchronization
+                this.stateManager.ctx.save();
+                this.stateManager.ctx.restore();
+            }
             
-            console.log('GameplayState: Initial render complete');
+            console.log('GameplayState: All render passes complete');
             
-            // Log tower/building click areas for debugging
+            // Log final tower/building click areas for debugging
             this.towerManager.towers.forEach((tower, i) => {
-                console.log(`Tower ${i} (${tower.constructor.name}) clickArea:`, tower.clickArea);
+                console.log(`Tower ${i} (${tower.constructor.name}) final clickArea:`, tower.clickArea);
             });
             
             this.towerManager.buildingManager.buildings.forEach((building, i) => {
-                console.log(`Building ${i} (${building.constructor.name}) clickArea:`, building.clickArea);
+                console.log(`Building ${i} (${building.constructor.name}) final clickArea:`, building.clickArea);
             });
             
         } catch (error) {

@@ -185,9 +185,6 @@ export class BuildingManager {
                         const withinY = y >= area.y && y <= area.y + area.height;
                         
                         if (withinX && withinY) {
-                            if (debugMouse) {
-                                console.log(`BuildingManager: Hovering over ${building.constructor.name}`);
-                            }
                             foundHover = true;
                             break;
                         }
