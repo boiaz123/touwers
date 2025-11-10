@@ -121,24 +121,37 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check building icon clicks - pass canvas width for proper calculation
+        // Check building clicks with proper size calculation
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
+        
         for (const building of this.buildings) {
-            // Check if click is on the icon (priority) - pass canvas width
-            if (building.isIconClicked && building.isIconClicked(x, y, canvasSize.width)) {
-                console.log(`BuildingManager: ICON HIT! Clicked icon on ${building.constructor.name}`);
+            const buildingSize = building.size * cellSize;
+            
+            // Check if click is within building bounds with generous detection
+            const halfSize = buildingSize / 2;
+            const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
+            const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
+            
+            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with size ${buildingSize}, bounds: [${building.x - halfSize}, ${building.x + halfSize}] x [${building.y - halfSize}, ${building.y + halfSize}], click within: ${withinX && withinY}`);
+            
+            if (withinX && withinY) {
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
                 
+                // Call the building's onClick method directly
                 if (building.onClick) {
                     const result = building.onClick();
                     console.log(`BuildingManager: onClick result:`, result);
                     return result;
                 } else if (building.constructor.name === 'GoldMine') {
+                    // Fallback for GoldMine if onClick doesn't exist
                     return building.collectGold();
                 }
                 break;
             }
         }
         
-        console.log('BuildingManager: No icon hit');
+        console.log('BuildingManager: No building hit');
         return null;
     }
     

@@ -257,11 +257,15 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check tower icon clicks first (only for magic towers) - pass canvas width
+        // Check tower clicks first for element selection
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const towerSize = cellSize * 2;
+        
         for (const tower of this.towers) {
-            if (tower.constructor.name === 'MagicTower') {
-                // Check if click is on the icon - pass canvas width
-                if (tower.isIconClicked && tower.isIconClicked(x, y, canvasSize.width)) {
+            // Check if click is within tower bounds
+            const distance = Math.hypot(tower.x - x, tower.y - y);
+            if (distance <= towerSize / 2) {
+                if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
@@ -275,10 +279,11 @@ export class TowerManager {
                         currentElement: tower.selectedElement
                     };
                 }
+                break; // Found a tower, don't check buildings
             }
         }
         
-        // Then check building icon clicks - pass canvas size
+        // Then check building clicks with improved detection
         const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {

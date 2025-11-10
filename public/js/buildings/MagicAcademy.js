@@ -134,8 +134,13 @@ export class MagicAcademy extends Building {
         // Render magic effects
         this.renderMagicEffects(ctx, size);
         
-        // Render clickable upgrade icon in bottom-right corner
-        this.renderClickableIcon(ctx, size, '🎓');
+        // Upgrade indicator when selected
+        if (this.isSelected) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
+        }
     }
     
     renderFortress(ctx, size) {
