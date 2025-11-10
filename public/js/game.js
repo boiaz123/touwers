@@ -563,19 +563,42 @@ class Game {
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
             
-            // Set initial canvas size
+            // Set initial canvas size BEFORE creating state manager
             this.resizeCanvas();
             console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
             
             // Prevent infinite resize loops
             this.isResizing = false;
             
+            // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
             console.log('Game: GameStateManager created');
             
-            // Add states with comprehensive error handling
-            console.log('Game: Adding states...');
+            // Initialize game loop timing
+            this.lastTime = 0;
+            this.isInitialized = false;
             
+            // Setup event listeners early
+            this.setupEventListeners();
+            
+            // Add states with comprehensive error handling
+            this.initializeStates();
+            
+        } catch (error) {
+            console.error('Game: Critical error during initialization:', error);
+            console.error('Stack trace:', error.stack);
+            
+            // Show error on screen
+            if (this.canvas && this.ctx) {
+                this.showError(error.message);
+            }
+        }
+    }
+    
+    initializeStates() {
+        console.log('Game: Adding states...');
+        
+        try {
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
             console.log('Game: StartScreen state added');
@@ -590,10 +613,7 @@ class Game {
             
             console.log('Game: All states added successfully');
             
-            this.lastTime = 0;
-            this.setupEventListeners();
-            
-            // Start with the start screen
+            // Start with the start screen AFTER all states are added
             console.log('Game: Changing to start state');
             const stateChanged = this.stateManager.changeState('start');
             
@@ -601,17 +621,13 @@ class Game {
                 throw new Error('Failed to change to start state');
             }
             
-            console.log('Game: Starting game loop');
+            this.isInitialized = true;
+            console.log('Game: State initialization complete, starting game loop');
             this.startGameLoop();
             
         } catch (error) {
-            console.error('Game: Critical error during initialization:', error);
-            console.error('Stack trace:', error.stack);
-            
-            // Show error on screen
-            if (this.canvas && this.ctx) {
-                this.showError(error.message);
-            }
+            console.error('Game: Error initializing states:', error);
+            throw error;
         }
     }
     
@@ -739,6 +755,12 @@ class Game {
     
     gameLoop(currentTime) {
         try {
+            // Don't process if not initialized
+            if (!this.isInitialized) {
+                requestAnimationFrame((time) => this.gameLoop(time));
+                return;
+            }
+            
             const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
             this.lastTime = currentTime;
             
@@ -746,17 +768,17 @@ class Game {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
             // Update and render current state
-            if (this.stateManager) {
+            if (this.stateManager && this.stateManager.currentState) {
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
             } else {
-                // Fallback if state manager is not available
-                this.ctx.fillStyle = '#ff0000';
+                // Show loading state if state manager isn't ready
+                this.ctx.fillStyle = '#1a0f0a';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = '24px Arial';
+                this.ctx.fillStyle = '#d4af37';
+                this.ctx.font = '24px serif';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('State Manager Error', this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
             }
             
         } catch (error) {

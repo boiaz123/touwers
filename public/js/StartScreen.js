@@ -58,13 +58,22 @@ export class StartScreen {
             console.log('StartScreen: Sidebar hidden');
         }
         
+        // Reset animation state
         this.animationTime = 0;
         this.showContinue = false;
         this.titleOpacity = 0;
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         
-        // Don't initialize particles immediately - let first render do it
+        // Reset particle state
+        this.particles = [];
+        this.particlesInitialized = false;
+        
+        // Initialize particles immediately if canvas is ready
+        if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
+            this.initParticles();
+        }
+        
         console.log('StartScreen: enter completed');
     }
     
@@ -103,14 +112,17 @@ export class StartScreen {
         try {
             const canvas = this.stateManager.canvas;
             
-            // Don't render if canvas isn't ready
+            // Always render background, even if canvas isn't fully ready
             if (!canvas || !canvas.width || !canvas.height) {
-                console.warn('StartScreen: Canvas not ready for rendering');
+                // Fallback rendering for uninitialized canvas
+                ctx.fillStyle = '#1a0f0a';
+                ctx.fillRect(0, 0, 800, 600); // Default size
+                console.warn('StartScreen: Canvas not ready, using fallback rendering');
                 return;
             }
             
-            // Initialize particles on first render if not done yet and canvas is ready
-            if (!this.particlesInitialized && canvas.width > 0 && canvas.height > 0) {
+            // Initialize particles on first render if needed
+            if (!this.particlesInitialized) {
                 this.initParticles();
             }
             
@@ -121,8 +133,9 @@ export class StartScreen {
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Render particles (falling embers) only if they exist
-            if (this.particles.length > 0) {
+            // Render particles (falling embers) if they exist
+            if (this.particles && this.particles.length > 0) {
+                ctx.globalAlpha = 1;
                 this.particles.forEach(particle => {
                     ctx.globalAlpha = particle.opacity;
                     ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
@@ -130,12 +143,11 @@ export class StartScreen {
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
                     ctx.fill();
                 });
-                ctx.globalAlpha = 1;
             }
             
-            // Title
+            // Title rendering
+            ctx.globalAlpha = Math.max(0.1, this.titleOpacity); // Ensure some visibility initially
             ctx.textAlign = 'center';
-            ctx.globalAlpha = this.titleOpacity;
             
             // Title shadow
             ctx.fillStyle = '#000';
@@ -150,14 +162,17 @@ export class StartScreen {
             ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
             
             // Subtitle
-            ctx.globalAlpha = this.subtitleOpacity;
+            ctx.globalAlpha = Math.max(0.05, this.subtitleOpacity); // Ensure some visibility
             ctx.font = 'italic 24px serif';
             ctx.fillStyle = '#c9a876';
             ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
             
             // Continue message
-            if (this.showContinue) {
-                ctx.globalAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
+            if (this.showContinue || this.animationTime > 1) { // Show early for testing
+                const flickerAlpha = this.showContinue ? 
+                    this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3)) : 
+                    0.3; // Static visibility before animation completes
+                ctx.globalAlpha = flickerAlpha;
                 ctx.font = '20px serif';
                 ctx.fillStyle = '#fff';
                 ctx.fillText('Press to Continue', canvas.width / 2, canvas.height / 2 + 120);
@@ -165,17 +180,26 @@ export class StartScreen {
             
             ctx.globalAlpha = 1;
             
-            console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue);
+            console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
             
         } catch (error) {
             console.error('StartScreen render error:', error);
             console.error('Stack trace:', error.stack);
+            
+            // Fallback rendering
+            ctx.fillStyle = '#1a0f0a';
+            ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('StartScreen Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
     }
     
     handleClick() {
-        console.log('StartScreen: Click detected, showContinue:', this.showContinue);
-        if (this.showContinue) {
+        console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
+        // Allow clicking even before animation completes for testing
+        if (this.showContinue || this.animationTime > 1) {
             this.stateManager.changeState('levelSelect');
         }
     }
