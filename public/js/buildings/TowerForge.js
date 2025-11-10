@@ -169,20 +169,20 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // REMOVED YELLOW SELECTION INDICATOR
-        
-        // Upgrade indicator with clickable icon in bottom right corner of 4x4 grid
+        // CRITICAL: Always set up clickable area
         const iconSize = 15;
         const iconX = this.x + size/2 - iconSize;
         const iconY = this.y + size/2 - iconSize;
         
-        // Store click area for detection
+        // Store click area for detection - THIS MUST ALWAYS BE SET
         this.clickArea = {
             x: iconX - iconSize,
             y: iconY - iconSize,
             width: iconSize * 2,
             height: iconSize * 2
         };
+        
+        console.log(`TowerForge: Setting clickArea at (${this.clickArea.x}, ${this.clickArea.y}) size ${this.clickArea.width}x${this.clickArea.height}`);
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

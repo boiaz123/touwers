@@ -89,41 +89,55 @@ class GameplayState {
         
         // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            const clickHandler = (e) => {
                 this.selectTower(e.currentTarget);
-            });
-            
-            btn.addEventListener('mouseenter', (e) => {
+            };
+            const enterHandler = (e) => {
                 this.showTowerInfo(e.currentTarget.dataset.type);
-            });
-            
-            btn.addEventListener('touchstart', (e) => {
+            };
+            const touchHandler = (e) => {
                 e.preventDefault();
                 this.showTowerInfo(e.currentTarget.dataset.type);
-            });
+            };
+            
+            btn.addEventListener('click', clickHandler);
+            btn.addEventListener('mouseenter', enterHandler);
+            btn.addEventListener('touchstart', touchHandler);
+            
+            // Store references for cleanup
+            btn._clickHandler = clickHandler;
+            btn._enterHandler = enterHandler;
+            btn._touchHandler = touchHandler;
         });
         
         // Building button listeners
         document.querySelectorAll('.building-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            const clickHandler = (e) => {
                 this.selectBuilding(e.currentTarget);
-            });
-            
-            btn.addEventListener('mouseenter', (e) => {
+            };
+            const enterHandler = (e) => {
                 this.showBuildingInfo(e.currentTarget.dataset.type);
-            });
-            
-            btn.addEventListener('touchstart', (e) => {
+            };
+            const touchHandler = (e) => {
                 e.preventDefault();
                 this.showBuildingInfo(e.currentTarget.dataset.type);
-            });
+            };
+            
+            btn.addEventListener('click', clickHandler);
+            btn.addEventListener('mouseenter', enterHandler);
+            btn.addEventListener('touchstart', touchHandler);
+            
+            // Store references for cleanup
+            btn._clickHandler = clickHandler;
+            btn._enterHandler = enterHandler;
+            btn._touchHandler = touchHandler;
         });
         
         // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // FIXED: Unified click handler that properly routes all menu types
+        // FIXED: Canvas click handler that doesn't conflict with other handlers
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
@@ -131,7 +145,7 @@ class GameplayState {
             
             console.log(`Game: Canvas click at (${canvasX}, ${canvasY})`);
             
-            // Check for building/tower clicks first
+            // CRITICAL: Check for building/tower icon clicks FIRST
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
             if (clickResult) {
@@ -140,34 +154,41 @@ class GameplayState {
                 if (clickResult.type === 'forge_menu') {
                     console.log('Game: Opening forge menu');
                     this.showForgeUpgradeMenu(clickResult);
-                    return;
+                    return; // CRITICAL: Don't process further
                 } else if (clickResult.type === 'academy_menu') {
                     console.log('Game: Opening academy menu');
                     this.showAcademyUpgradeMenu(clickResult);
-                    return;
+                    return; // CRITICAL: Don't process further
                 } else if (clickResult.type === 'magic_tower_menu') {
                     console.log('Game: Opening magic tower menu');
                     this.showMagicTowerElementMenu(clickResult);
-                    return;
+                    return; // CRITICAL: Don't process further
                 } else if (typeof clickResult === 'number') {
                     // Gold collection from mine
                     console.log('Game: Gold collected:', clickResult);
                     this.gameState.gold += clickResult;
                     this.updateUI();
-                    return;
+                    return; // CRITICAL: Don't process further
                 }
             }
             
-            // Handle regular tower/building placement
+            // Only handle tower/building placement if no icon was clicked
             this.handleClick(canvasX, canvasY);
         };
+        
+        // Add canvas click listener WITHOUT removing existing ones
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
     
     removeEventListeners() {
-        // Clean up event listeners properly
+        // Clean up button event listeners properly
         document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
-            btn.replaceWith(btn.cloneNode(true));
+            if (btn._clickHandler) btn.removeEventListener('click', btn._clickHandler);
+            if (btn._enterHandler) btn.removeEventListener('mouseenter', btn._enterHandler);
+            if (btn._touchHandler) btn.removeEventListener('touchstart', btn._touchHandler);
+            btn._clickHandler = null;
+            btn._enterHandler = null;
+            btn._touchHandler = null;
         });
         
         if (this.mouseMoveHandler) {
@@ -270,34 +291,7 @@ class GameplayState {
     }
     
     handleClick(x, y) {
-        // REMOVED: Old logic that was preventing menu detection
-        // First check if clicking on a building (like gold mine or academy)
-        const clickResult = this.towerManager.handleClick(x, y, { 
-            width: this.stateManager.canvas.width, 
-            height: this.stateManager.canvas.height 
-        });
-        
-        if (clickResult) {
-            if (clickResult.type === 'forge_menu') {
-                this.showForgeUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'academy_menu') {
-                console.log('GameplayState: Academy menu detected, showing menu');
-                this.showAcademyUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'magic_tower_menu') {
-                console.log('GameplayState: Magic tower menu detected, showing menu');
-                this.showMagicTowerElementMenu(clickResult);
-                return;
-            } else if (typeof clickResult === 'number') {
-                // Gold collection from mine
-                this.gameState.gold += clickResult;
-                this.updateUI();
-                return;
-            }
-        }
-        
-        // Handle regular tower/building placement
+        // Handle regular tower/building placement (NOT icon clicks)
         if (this.selectedTowerType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
             

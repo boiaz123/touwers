@@ -155,6 +155,8 @@ export class MagicAcademy extends Building {
             height: iconSize * 2
         };
         
+        console.log(`MagicAcademy: Setting clickArea at (${this.clickArea.x}, ${this.clickArea.y}) size ${this.clickArea.width}x${this.clickArea.height}`);
+        
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
         ctx.fillStyle = `rgba(75, 0, 130, ${pulseIntensity * 0.4})`;
@@ -650,17 +652,13 @@ export class MagicAcademy extends Building {
     }
     
     onClick() {
-        console.log('MagicAcademy: onClick called');
         this.isSelected = true;
-        
-        const result = {
+        console.log('MagicAcademy: onClick called, returning academy menu data');
+        return {
             type: 'academy_menu',
             academy: this,
             upgrades: this.getElementalUpgradeOptions()
         };
-        
-        console.log('MagicAcademy: returning menu data:', result);
-        return result;
     }
     
     getElementalUpgradeOptions() {
