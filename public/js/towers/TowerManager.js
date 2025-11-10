@@ -303,11 +303,10 @@ export class TowerManager {
         
         return null;
     }
-    
-    selectMagicTowerElement(tower, element) {
+
+    selectMagicTowerElement(tower, elementId) {
         if (tower && tower.setElement) {
-            tower.setElement(element);
-            console.log(`TowerManager: Set magic tower element to ${element}`);
+            tower.setElement(elementId);
             return true;
         }
         return false;

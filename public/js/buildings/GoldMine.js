@@ -858,39 +858,14 @@ export class GoldMine extends Building {
         return income;
     }
     
-    darkenColor(color, factor) {
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        
-        const newR = Math.floor(r * (1 - factor));
-        const newG = Math.floor(g * (1 - factor));
-        const newB = Math.floor(b * (1 - factor));
-        
-        return `rgb(${newR}, ${newG}, ${newB})`;
-    }
-    
-    collectGold() {
-        // Only allow collection if gold is ready
-        if (this.isReady) {
-            this.isReady = false;
-            this.currentProgress = 0;
-            this.goldPiles = [];
-            this.bobAnimations = [];
-            return this.goldPerCollection;
-        }
-        return 0;
-    }
-    
     isPointInside(x, y, size) {
         const dx = x - this.x;
         const dy = y - this.y;
         return Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2;
     }
     
-    applyEffect(towerManager) {
-        // No passive gold generation anymore
+    applyEffect(buildingManager) {
+        // No passive gold generation anymore - only manual collection
     }
     
     static getInfo() {
