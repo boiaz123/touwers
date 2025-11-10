@@ -75,12 +75,26 @@ export class StartScreen {
         this.particles = [];
         this.particlesInitialized = false;
         
-        // Initialize particles IMMEDIATELY if canvas is ready
-        if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
-            console.log('StartScreen: Initializing particles immediately in enter()');
-            this.initParticles();
+        // CRITICAL: Initialize particles SYNCHRONOUSLY - don't defer
+        const canvas = this.stateManager.canvas;
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
+            console.log('StartScreen: Force initializing particles NOW in enter()');
+            
+            // Initialize particles inline to ensure they're ready
+            this.particles = [];
+            for (let i = 0; i < 25; i++) {
+                this.particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 3 + 1,
+                    speed: Math.random() * 20 + 10,
+                    opacity: Math.random() * 0.5 + 0.1
+                });
+            }
+            this.particlesInitialized = true;
+            console.log('StartScreen: Particles initialized synchronously:', this.particles.length);
         } else {
-            console.warn('StartScreen: Canvas not ready, particles will initialize on first render');
+            console.error('StartScreen: Canvas not ready in enter()! Width:', canvas?.width, 'Height:', canvas?.height);
         }
         
         console.log('StartScreen: enter completed successfully');
@@ -121,13 +135,31 @@ export class StartScreen {
         try {
             const canvas = this.stateManager.canvas;
             
-            // Always use canvas dimensions, with fallback
-            const width = canvas.width || 800;
-            const height = canvas.height || 600;
+            // Validate canvas dimensions
+            if (!canvas || !canvas.width || !canvas.height) {
+                console.error('StartScreen: Invalid canvas in render!', canvas);
+                return;
+            }
             
-            // Initialize particles on first render if needed
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            console.log('StartScreen: Rendering to canvas', width, 'x', height, 'particles:', this.particles.length);
+            
+            // Initialize particles on first render if somehow not initialized
             if (!this.particlesInitialized && width > 0 && height > 0) {
-                this.initParticles();
+                console.warn('StartScreen: Late particle initialization in render');
+                this.particles = [];
+                for (let i = 0; i < 25; i++) {
+                    this.particles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        size: Math.random() * 3 + 1,
+                        speed: Math.random() * 20 + 10,
+                        opacity: Math.random() * 0.5 + 0.1
+                    });
+                }
+                this.particlesInitialized = true;
             }
             
             // Dark medieval background
@@ -188,14 +220,19 @@ export class StartScreen {
             
         } catch (error) {
             console.error('StartScreen render error:', error);
+            console.error('Error stack:', error.stack);
             
             // Fallback rendering
-            ctx.fillStyle = '#1a0f0a';
-            ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
-            ctx.fillStyle = '#d4af37';
-            ctx.font = '24px serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Starting...', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
+            try {
+                ctx.fillStyle = '#1a0f0a';
+                ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
+                ctx.fillStyle = '#d4af37';
+                ctx.font = '24px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Starting...', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
+            } catch (fallbackError) {
+                console.error('StartScreen: Even fallback render failed:', fallbackError);
+            }
         }
     }
     

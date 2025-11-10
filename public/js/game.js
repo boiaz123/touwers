@@ -1044,6 +1044,11 @@ class Game {
             this.setInitialCanvasSize();
             console.log('Game: Canvas sized to:', this.canvas.width, 'x', this.canvas.height);
             
+            // VERIFY canvas size is actually set
+            if (this.canvas.width <= 0 || this.canvas.height <= 0) {
+                throw new Error(`Canvas has invalid size: ${this.canvas.width}x${this.canvas.height}`);
+            }
+            
             // Detect and apply UI scaling
             this.applyUIScaling();
             
@@ -1063,8 +1068,10 @@ class Game {
             console.log('Game: Starting game loop BEFORE state initialization');
             this.startGameLoop();
             
-            // Add states and change to start screen
-            this.initializeStates();
+            // Add states and change to start screen - with small delay to ensure canvas is stable
+            setTimeout(() => {
+                this.initializeStates();
+            }, 10); // Very small delay to let canvas settle
             
         } catch (error) {
             console.error('Game: Critical error during initialization:', error);
@@ -1085,11 +1092,16 @@ class Game {
         this.canvas.width = width;
         this.canvas.height = height;
         
+        // Force a reflow to ensure canvas size is applied
+        void this.canvas.offsetHeight;
+        
         console.log('Game: Initial canvas size set to:', width, 'x', height);
+        console.log('Game: Verified canvas size:', this.canvas.width, 'x', this.canvas.height);
     }
     
     initializeStates() {
         console.log('Game: Adding states...');
+        console.log('Game: Canvas size before state init:', this.canvas.width, 'x', this.canvas.height);
         
         try {
             const startScreen = new StartScreen(this.stateManager);
@@ -1114,14 +1126,12 @@ class Game {
                 throw new Error('Failed to change to start state');
             }
             
-            // Force an immediate render
-            this.stateManager.render();
-            
             this.isInitialized = true;
             console.log('Game: State initialization complete');
             
         } catch (error) {
             console.error('Game: Error initializing states:', error);
+            console.error('Error stack:', error.stack);
             throw error;
         }
     }

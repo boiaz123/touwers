@@ -50,6 +50,10 @@ export class GameStateManager {
             console.warn('GameStateManager: State has no enter method');
         }
         
+        // CRITICAL: Force immediate render after state change
+        console.log('GameStateManager: Forcing immediate render after state change');
+        this.render();
+        
         console.log('GameStateManager: State changed successfully to', name);
         return true;
     }
@@ -65,6 +69,11 @@ export class GameStateManager {
     }
     
     render() {
+        if (!this.ctx || !this.canvas) {
+            console.warn('GameStateManager: Canvas or context not available');
+            return;
+        }
+        
         if (!this.currentState) {
             console.warn('GameStateManager: No current state to render');
             return;
