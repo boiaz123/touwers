@@ -350,6 +350,43 @@ export class BasicTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        // Clickable icon in bottom right corner of 2x2 grid
+        const iconSize = 12;
+        const iconX = this.x + gridSize/2 - iconSize;
+        const iconY = this.y + gridSize/2 - iconSize;
+        
+        // Store click area for detection
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        // Icon background with glow
+        const pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;
+        ctx.fillStyle = `rgba(139, 69, 19, ${pulseIntensity * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize + 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icon circle
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icon border
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Tower icon
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🏰', iconX, iconY + 5);
     }
     
     drawEnvironment(ctx, gridSize) {

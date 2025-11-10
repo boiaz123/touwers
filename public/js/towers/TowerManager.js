@@ -257,33 +257,35 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check tower clicks first for element selection
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const towerSize = cellSize * 2;
-        
+        // Check tower icon clicks first
         for (const tower of this.towers) {
-            // Check if click is within tower bounds
-            const distance = Math.hypot(tower.x - x, tower.y - y);
-            if (distance <= towerSize / 2) {
-                if (tower.constructor.name === 'MagicTower') {
-                    tower.isSelected = true;
-                    return {
-                        type: 'magic_tower_menu',
-                        tower: tower,
-                        elements: [
-                            { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
-                            { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
-                        ],
-                        currentElement: tower.selectedElement
-                    };
+            if (tower.clickArea) {
+                const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
+                const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
+                
+                console.log(`TowerManager: Checking ${tower.constructor.name} icon at (${tower.clickArea.x}, ${tower.clickArea.y}), click within: ${withinX && withinY}`);
+                
+                if (withinX && withinY) {
+                    if (tower.constructor.name === 'MagicTower') {
+                        tower.isSelected = true;
+                        return {
+                            type: 'magic_tower_menu',
+                            tower: tower,
+                            elements: [
+                                { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
+                                { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
+                                { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
+                                { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                            ],
+                            currentElement: tower.selectedElement
+                        };
+                    }
+                    break; // Found a tower, don't check buildings
                 }
-                break; // Found a tower, don't check buildings
             }
         }
         
-        // Then check building clicks with improved detection
+        // Then check building icon clicks
         const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {

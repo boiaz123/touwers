@@ -121,38 +121,32 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check building clicks with proper size calculation
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
-        
+        // Check building icon clicks only
         for (const building of this.buildings) {
-            const buildingSize = building.size * cellSize;
-            
-            // More generous click detection - expand clickable area
-            const halfSize = buildingSize / 2;
-            const expandedHalfSize = halfSize + 15; // Extra 15px on all sides
-            const withinX = x >= building.x - expandedHalfSize && x <= building.x + expandedHalfSize;
-            const withinY = y >= building.y - expandedHalfSize && y <= building.y + expandedHalfSize;
-            
-            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with expanded size ${expandedHalfSize * 2}, bounds: [${building.x - expandedHalfSize}, ${building.x + expandedHalfSize}] x [${building.y - expandedHalfSize}, ${building.y + expandedHalfSize}], click within: ${withinX && withinY}`);
-            
-            if (withinX && withinY) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), expanded size: ${expandedHalfSize * 2}`);
+            if (building.clickArea) {
+                const withinX = x >= building.clickArea.x && x <= building.clickArea.x + building.clickArea.width;
+                const withinY = y >= building.clickArea.y && y <= building.clickArea.y + building.clickArea.height;
                 
-                // Call the building's onClick method directly
-                if (building.onClick) {
-                    const result = building.onClick();
-                    console.log(`BuildingManager: onClick result:`, result);
-                    return result;
-                } else if (building.constructor.name === 'GoldMine') {
-                    // Fallback for GoldMine if onClick doesn't exist
-                    return building.collectGold();
+                console.log(`BuildingManager: Checking ${building.constructor.name} icon at (${building.clickArea.x}, ${building.clickArea.y}), click within: ${withinX && withinY}`);
+                
+                if (withinX && withinY) {
+                    console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon`);
+                    
+                    // Call the building's onClick method directly
+                    if (building.onClick) {
+                        const result = building.onClick();
+                        console.log(`BuildingManager: onClick result:`, result);
+                        return result;
+                    } else if (building.constructor.name === 'GoldMine') {
+                        // Fallback for GoldMine if onClick doesn't exist
+                        return building.collectGold();
+                    }
+                    break;
                 }
-                break;
             }
         }
         
-        console.log('BuildingManager: No building hit');
+        console.log('BuildingManager: No building icon hit');
         return null;
     }
     

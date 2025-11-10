@@ -171,21 +171,30 @@ export class TowerForge extends Building {
         
         // REMOVED YELLOW SELECTION INDICATOR
         
-        // Upgrade indicator with clickable icon
+        // Upgrade indicator with clickable icon in bottom right corner of 4x4 grid
         const iconSize = 15;
-        const iconY = this.y + size/2 + 25;
+        const iconX = this.x + size/2 - iconSize;
+        const iconY = this.y + size/2 - iconSize;
+        
+        // Store click area for detection
+        this.clickArea = {
+            x: iconX - iconSize,
+            y: iconY - iconSize,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
         ctx.fillStyle = `rgba(255, 165, 0, ${pulseIntensity * 0.4})`;
         ctx.beginPath();
-        ctx.arc(this.x, iconY, iconSize + 3, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
         ctx.fill();
         
         // Click icon background
         ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
         ctx.beginPath();
-        ctx.arc(this.x, iconY, iconSize, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Border
@@ -197,12 +206,12 @@ export class TowerForge extends Building {
         ctx.fillStyle = '#654321';
         ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('🔨', this.x, iconY + 6);
+        ctx.fillText('🔨', iconX, iconY + 6);
         
         // "UPGRADES" text below
         ctx.fillStyle = '#FF8C00';
         ctx.font = 'bold 8px Arial';
-        ctx.fillText('UPGRADES', this.x, iconY + 18);
+        ctx.fillText('UPGRADES', iconX, iconY + 18);
     }
 
     renderFrontAreaItems(ctx, size) {

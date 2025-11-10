@@ -773,26 +773,34 @@ export class GoldMine extends Building {
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
+            
+            // Clear click area when not ready
+            this.clickArea = null;
         } else {
-            // Ready indicator with clickable icon
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
+            // Ready indicator with clickable icon in bottom right corner of 4x4 grid
+            const iconSize = 15;
+            const iconX = this.x + size/2 - iconSize;
+            const iconY = this.y + size/2 - iconSize;
             
-            // Clickable collection icon with glow effect
+            // Store click area for detection
+            this.clickArea = {
+                x: iconX - iconSize,
+                y: iconY - iconSize,
+                width: iconSize * 2,
+                height: iconSize * 2
+            };
+            
+            // Glow background with pulse
             const pulseIntensity = Math.sin(this.animationTime * 8) * 0.3 + 0.7;
-            
-            // Glow background
             ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.5})`;
             ctx.beginPath();
-            ctx.arc(this.x, this.y - 20, 18, 0, Math.PI * 2);
+            ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
             ctx.fill();
             
             // Click icon background
-            ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
             ctx.beginPath();
-            ctx.arc(this.x, this.y - 20, 12, 0, Math.PI * 2);
+            ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
             ctx.fill();
             
             // Border
@@ -802,14 +810,9 @@ export class GoldMine extends Building {
             
             // Collection icon
             ctx.fillStyle = '#8B4513';
-            ctx.font = 'bold 16px Arial';
+            ctx.font = 'bold 18px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('💰', this.x, this.y - 15);
-            
-            // "CLICK" text below
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 8px Arial';
-            ctx.fillText('CLICK', this.x, this.y - 5);
+            ctx.fillText('💰', iconX, iconY + 5);
         }
     }
     

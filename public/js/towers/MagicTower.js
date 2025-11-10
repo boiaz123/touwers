@@ -548,37 +548,42 @@ export class MagicTower {
             ctx.stroke();
         }
         
-        // Clickable element selection icon
-        const elementIconY = this.y + towerSize/2 + 20;
+        // Clickable element selection icon in bottom right corner of 2x2 grid
+        const gridSize = cellSize * 2; // 2x2 grid
         const iconSize = 12;
+        const iconX = this.x + gridSize/2 - iconSize;
+        const iconY = this.y + gridSize/2 - iconSize;
+        
+        // Store click area for detection
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
         
         // Glow background for element selection
         const elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
-        ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.3})`;
+        ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
         ctx.beginPath();
-        ctx.arc(this.x, elementIconY, iconSize + 2, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize + 2, 0, Math.PI * 2);
         ctx.fill();
         
         // Element icon background
         ctx.fillStyle = 'rgba(138, 43, 226, 0.8)';
         ctx.beginPath();
-        ctx.arc(this.x, elementIconY, iconSize, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Border
         ctx.strokeStyle = '#4B0082';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.stroke();
         
         // Current element icon
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 16px Arial';
-        ctx.fillText(elementIcons[this.selectedElement], this.x, elementIconY + 5);
-        
-        // "ELEMENT" text below
-        ctx.fillStyle = '#9370DB';
-        ctx.font = 'bold 7px Arial';
-        ctx.fillText('ELEMENT', this.x, elementIconY + 15);
+        ctx.fillText(elementIcons[this.selectedElement], iconX, iconY + 5);
         
         if (this.isSelected) {
             ctx.shadowBlur = 0;
