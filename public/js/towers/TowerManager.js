@@ -258,11 +258,13 @@ export class TowerManager {
         });
         
         // Check tower clicks first for element selection
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const towerSize = cellSize * 2;
+        
         for (const tower of this.towers) {
-            const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-            const towerSize = cellSize * 2;
-            
-            if (tower.isClickable && tower.isClickable(x, y, towerSize)) {
+            // Check if click is within tower bounds
+            const distance = Math.hypot(tower.x - x, tower.y - y);
+            if (distance <= towerSize / 2) {
                 if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
@@ -270,13 +272,14 @@ export class TowerManager {
                         tower: tower,
                         elements: [
                             { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                            { id: 'ice', name: 'Ice', icon: '❄️', description: 'Slows and freezes enemies' },
-                            { id: 'lightning', name: 'Lightning', icon: '⚡', description: 'Chains to nearby enemies' },
+                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
+                            { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
                             { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
                         ],
                         currentElement: tower.selectedElement
                     };
                 }
+                break; // Found a tower, don't check buildings
             }
         }
         

@@ -114,36 +114,24 @@ export class BuildingManager {
     }
     
     handleClick(x, y, canvasSize) {
-        // Add safety check for canvasSize
-        if (!canvasSize || typeof canvasSize !== 'object') {
-            console.warn('BuildingManager: Invalid canvasSize provided to handleClick');
-            return null;
-        }
+        // Clear all selections first
+        this.buildings.forEach(building => {
+            if (building.deselect) building.deselect();
+        });
         
-        // Check building clicks with proper error handling
+        // Check building clicks with proper size calculation
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        
         for (const building of this.buildings) {
-            try {
-                const buildingType = this.getBuildingTypeFromInstance(building);
-                const buildingSize = buildingType ? buildingType.size * 32 : 128;
-                
-                if (building.isPointInside && building.isPointInside(x, y, buildingSize)) {
-                    if (building.onClick) {
-                        const result = building.onClick();
-                        if (result) {
-                            return result;
-                        }
-                    }
-                    
-                    // Handle gold collection for mines
-                    if (building.collectGold && typeof building.collectGold === 'function') {
-                        const gold = building.collectGold();
-                        if (gold > 0) {
-                            return gold;
-                        }
-                    }
+            const buildingSize = building.size * cellSize;
+            
+            // Check if click is within building bounds
+            if (building.isPointInside && building.isPointInside(x, y, buildingSize)) {
+                console.log(`BuildingManager: Clicked on ${building.constructor.name}`);
+                if (building.onClick) {
+                    return building.onClick();
                 }
-            } catch (error) {
-                console.error('BuildingManager: Error handling building click:', error);
+                break;
             }
         }
         

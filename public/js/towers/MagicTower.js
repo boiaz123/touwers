@@ -9,13 +9,14 @@ export class MagicTower {
         this.fireRate = 0.8;
         this.cooldown = 0;
         this.target = null;
+        this.isSelected = false; // Add selection state
         
-        // Element system
+        // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
         this.elementalBonuses = {
             fire: { damageBonus: 0 },
-            ice: { slowBonus: 0 },
-            lightning: { chainRange: 0 },
+            water: { slowBonus: 0 },
+            air: { chainRange: 0 },
             earth: { armorPiercing: 0 }
         };
         
@@ -117,11 +118,11 @@ export class MagicTower {
                     }
                     break;
                     
-                case 'ice':
+                case 'water':
                     this.target.takeDamage(finalDamage);
                     // Apply enhanced slow effect
                     const baseSlowEffect = 0.7;
-                    const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.ice.slowBonus);
+                    const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.water.slowBonus);
                     if (this.target.speed > 20) {
                         this.target.speed *= enhancedSlowEffect;
                     }
@@ -129,7 +130,7 @@ export class MagicTower {
                     this.target.frozenTimer = 0.5;
                     break;
                     
-                case 'lightning':
+                case 'air':
                     this.target.takeDamage(finalDamage);
                     // Chain lightning to nearby enemies
                     this.chainLightning(this.target);
@@ -148,7 +149,7 @@ export class MagicTower {
     }
     
     chainLightning(originalTarget) {
-        const chainRange = 50 + this.elementalBonuses.lightning.chainRange;
+        const chainRange = 50 + this.elementalBonuses.air.chainRange;
         const chainTargets = [];
         
         // Find nearby enemies for chain lightning
@@ -167,11 +168,11 @@ export class MagicTower {
                 boltColor = 'rgba(255, 69, 0, ';
                 impactColor = 'rgba(255, 140, 0, ';
                 break;
-            case 'ice':
-                boltColor = 'rgba(173, 216, 230, ';
+            case 'water':
+                boltColor = 'rgba(64, 164, 223, ';
                 impactColor = 'rgba(135, 206, 250, ';
                 break;
-            case 'lightning':
+            case 'air':
                 boltColor = 'rgba(255, 255, 0, ';
                 impactColor = 'rgba(255, 255, 255, ';
                 break;
@@ -211,7 +212,7 @@ export class MagicTower {
     }
     
     setElement(element) {
-        if (['fire', 'ice', 'lightning', 'earth'].includes(element)) {
+        if (['fire', 'water', 'air', 'earth'].includes(element)) {
             this.selectedElement = element;
             console.log(`MagicTower: Element changed to ${element}`);
             
@@ -236,8 +237,8 @@ export class MagicTower {
     getElementalColor() {
         switch(this.selectedElement) {
             case 'fire': return 'rgba(255, 69, 0, ';
-            case 'ice': return 'rgba(173, 216, 230, ';
-            case 'lightning': return 'rgba(255, 255, 0, ';
+            case 'water': return 'rgba(64, 164, 223, ';
+            case 'air': return 'rgba(255, 255, 0, ';
             case 'earth': return 'rgba(139, 69, 19, ';
             default: return 'rgba(138, 43, 226, ';
         }
@@ -532,7 +533,7 @@ export class MagicTower {
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        const elementIcons = { fire: '🔥', ice: '❄️', lightning: '⚡', earth: '🌍' };
+        const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
         
         // Add selection glow effect
         if (this.isSelected) {

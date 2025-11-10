@@ -9,11 +9,11 @@ export class MagicAcademy extends Building {
         this.magicParticles = [];
         this.isSelected = false;
         
-        // Elemental upgrade system
+        // Elemental upgrade system - CORRECTED elements
         this.elementalUpgrades = {
             fire: { level: 0, maxLevel: 5, baseCost: 150, damageBonus: 5 },
-            ice: { level: 0, maxLevel: 5, baseCost: 150, slowBonus: 0.1 },
-            lightning: { level: 0, maxLevel: 5, baseCost: 150, chainRange: 20 },
+            water: { level: 0, maxLevel: 5, baseCost: 150, slowBonus: 0.1 },
+            air: { level: 0, maxLevel: 5, baseCost: 150, chainRange: 20 },
             earth: { level: 0, maxLevel: 5, baseCost: 150, armorPiercing: 3 }
         };
         
@@ -626,27 +626,27 @@ export class MagicAcademy extends Building {
                 icon: '🔥'
             },
             {
-                id: 'ice',
-                name: 'Ice Mastery', 
-                description: `Increase Magic Tower ice slow effect by ${(this.elementalUpgrades.ice.slowBonus * 100).toFixed(0)}% per level`,
-                level: this.elementalUpgrades.ice.level,
-                maxLevel: this.elementalUpgrades.ice.maxLevel,
-                cost: this.calculateElementalCost('ice'),
-                icon: '❄️'
+                id: 'water',
+                name: 'Water Mastery', 
+                description: `Increase Magic Tower water slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level`,
+                level: this.elementalUpgrades.water.level,
+                maxLevel: this.elementalUpgrades.water.maxLevel,
+                cost: this.calculateElementalCost('water'),
+                icon: '💧'
             },
             {
-                id: 'lightning',
-                name: 'Lightning Mastery',
-                description: `Increase Magic Tower chain lightning range by ${this.elementalUpgrades.lightning.chainRange}px per level`,
-                level: this.elementalUpgrades.lightning.level,
-                maxLevel: this.elementalUpgrades.lightning.maxLevel,
-                cost: this.calculateElementalCost('lightning'),
-                icon: '⚡'
+                id: 'air',
+                name: 'Air Mastery',
+                description: `Increase Magic Tower air chain range by ${this.elementalUpgrades.air.chainRange}px per level`,
+                level: this.elementalUpgrades.air.level,
+                maxLevel: this.elementalUpgrades.air.maxLevel,
+                cost: this.calculateElementalCost('air'),
+                icon: '💨'
             },
             {
                 id: 'earth',
                 name: 'Earth Mastery',
-                description: `Increase Magic Tower armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level`,
+                description: `Increase Magic Tower earth armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level`,
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
@@ -691,11 +691,11 @@ export class MagicAcademy extends Building {
             fire: {
                 damageBonus: this.elementalUpgrades.fire.level * this.elementalUpgrades.fire.damageBonus
             },
-            ice: {
-                slowBonus: this.elementalUpgrades.ice.level * this.elementalUpgrades.ice.slowBonus
+            water: {
+                slowBonus: this.elementalUpgrades.water.level * this.elementalUpgrades.water.slowBonus
             },
-            lightning: {
-                chainRange: this.elementalUpgrades.lightning.level * this.elementalUpgrades.lightning.chainRange
+            air: {
+                chainRange: this.elementalUpgrades.air.level * this.elementalUpgrades.air.chainRange
             },
             earth: {
                 armorPiercing: this.elementalUpgrades.earth.level * this.elementalUpgrades.earth.armorPiercing

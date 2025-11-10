@@ -52,13 +52,13 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 **Magic Academy Features**
 - Unlocks: Magic Tower (elemental damage)
 - Provides: 4 elemental upgrade trees
-- Elements: Fire (🔥), Ice (❄️), Lightning (⚡), Earth (🌍)
+- Elements: Fire (🔥), Water (💧), Air (💨), Earth (🌍)
 - Visual: Magical fortress with moat, towers, and natural surroundings
 
 **Elemental Upgrades** (5 levels each)
 - **Fire Mastery**: +5 burn damage per level
-- **Ice Mastery**: +10% slow effect per level  
-- **Lightning Mastery**: +20px chain range per level
+- **Water Mastery**: +10% slow effect per level  
+- **Air Mastery**: +20px chain range per level
 - **Earth Mastery**: +3 armor piercing per level
 
 **Magic Tower System**
