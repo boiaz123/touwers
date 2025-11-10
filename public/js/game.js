@@ -90,6 +90,16 @@ class GameplayState {
         // CRITICAL: Force an immediate render to ensure click areas are set
         this.forceInitialRender();
         
+        // Add a small delay to ensure everything is properly initialized
+        setTimeout(() => {
+            console.log('GameplayState: Post-initialization setup complete');
+            
+            // Force one more mouse state refresh to ensure interactivity works
+            if (this.mouseX !== undefined && this.mouseY !== undefined) {
+                this.refreshMouseState(this.mouseX, this.mouseY);
+            }
+        }, 100);
+        
         this.updateUI();
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
@@ -188,25 +198,19 @@ class GameplayState {
             this.mouseX = x;
             this.mouseY = y;
             
-            // Enable debugging to see if mouse events are working
-            const debugMouseEvents = true; // Changed to true for debugging
-            
-            if (debugMouseEvents) {
-                console.log(`Game: Mouse move at (${x}, ${y})`);
-            }
+            // Disable excessive debugging that was blocking mouse events
+            const debugMouseEvents = false; // Changed back to false
             
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
-            
-            if (debugMouseEvents) {
-                console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
-            }
             
             // Update cursor based on hover state with proper classes
             if (isHoveringInteractable) {
                 this.stateManager.canvas.style.cursor = 'pointer';
                 this.stateManager.canvas.classList.add('hovering-interactive');
-                console.log('GameplayState: Set cursor to pointer (hovering interactive)');
+                if (debugMouseEvents) {
+                    console.log('GameplayState: Set cursor to pointer (hovering interactive)');
+                }
             } else {
                 this.stateManager.canvas.style.cursor = 'crosshair';
                 this.stateManager.canvas.classList.remove('hovering-interactive');
