@@ -3,7 +3,7 @@ import { Building } from './Building.js';
 export class GoldMine extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.goldReady = true;
+        this.goldReady = false; // FIXED: Start empty, not ready
         this.productionTime = 30; // 30 seconds to produce gold
         this.currentProduction = 0;
         this.sparks = [];
@@ -788,6 +788,10 @@ export class GoldMine extends Building {
     }
     
     onClick() {
+        return this.collectGold();
+    }
+    
+    collectGold() {
         // Only allow collection if gold is ready
         if (!this.goldReady) {
             console.log(`GoldMine: Gold not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
@@ -834,6 +838,7 @@ export class GoldMine extends Building {
     }
     
     collectGold() {
+        // Only allow collection if gold is ready
         if (this.isReady) {
             this.isReady = false;
             this.currentProgress = 0;

@@ -303,8 +303,9 @@ export class TowerManager {
     }
     
     selectMagicTowerElement(tower, element) {
-        if (tower.constructor.name === 'MagicTower') {
+        if (tower && tower.setElement) {
             tower.setElement(element);
+            console.log(`TowerManager: Set magic tower element to ${element}`);
             return true;
         }
         return false;

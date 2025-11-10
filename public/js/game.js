@@ -440,6 +440,141 @@ class GameplayState {
         this.activeMenu = menu;
     }
     
+    showAcademyUpgradeMenu(academyData) {
+        // Clear existing menus
+        this.clearActiveMenus();
+        
+        console.log('GameplayState: Showing academy upgrade menu', academyData);
+        
+        // Create upgrade menu using the same structure as forge
+        const menu = document.createElement('div');
+        menu.id = 'academy-upgrade-menu';
+        menu.className = 'upgrade-menu';
+        
+        let upgradeListHTML = '';
+        
+        // Add elemental upgrades
+        upgradeListHTML += academyData.upgrades.map(upgrade => `
+            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                <div class="upgrade-icon">${upgrade.icon}</div>
+                <div class="upgrade-details">
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-desc">${upgrade.description}</div>
+                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                    <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
+                </div>
+                <div class="upgrade-cost">
+                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
+                </div>
+                <button class="upgrade-btn" 
+                        data-upgrade="${upgrade.id}" 
+                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
+                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                </button>
+            </div>
+        `).join('');
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>🎓 Magic Academy Upgrades</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${upgradeListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Add upgrade button handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                
+                console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
+                
+                if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    
+                    // Refresh the menu
+                    this.showAcademyUpgradeMenu({
+                        type: 'academy_menu',
+                        academy: academyData.academy,
+                        upgrades: academyData.academy.getElementalUpgradeOptions()
+                    });
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
+    }
+    
+    showMagicTowerElementMenu(towerData) {
+        // Clear existing menus
+        this.clearActiveMenus();
+        
+        console.log('GameplayState: Showing magic tower element menu', towerData);
+        
+        // Create element selection menu
+        const menu = document.createElement('div');
+        menu.id = 'magic-tower-menu';
+        menu.className = 'upgrade-menu';
+        
+        let elementListHTML = '';
+        
+        elementListHTML += towerData.elements.map(element => `
+            <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
+                <div class="upgrade-icon">${element.icon}</div>
+                <div class="upgrade-details">
+                    <div class="upgrade-name">${element.name} Element</div>
+                    <div class="upgrade-desc">${element.description}</div>
+                    ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+                </div>
+                <div class="upgrade-cost">
+                    Free
+                </div>
+                <button class="upgrade-btn" 
+                        data-element="${element.id}" 
+                        ${element.id === towerData.currentElement ? 'disabled' : ''}>
+                    ${element.id === towerData.currentElement ? 'Active' : 'Select'}
+                </button>
+            </div>
+        `).join('');
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>⚡ Magic Tower Elements</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${elementListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Add element selection handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const elementId = e.target.dataset.element;
+                
+                console.log(`GameplayState: Magic tower element selected: ${elementId}`);
+                
+                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
+                    // Refresh the menu
+                    this.showMagicTowerElementMenu({
+                        type: 'magic_tower_menu',
+                        tower: towerData.tower,
+                        elements: towerData.elements,
+                        currentElement: elementId
+                    });
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
+    }
+    
     getUpgradeCurrentEffect(upgrade) {
         switch (upgrade.id) {
             case 'towerRange':
@@ -452,6 +587,21 @@ class GameplayState {
                 return upgrade.level > 0 ? 'Active' : 'Inactive';
             case 'explosiveRadius':
                 return `+${upgrade.level * 15}px radius`;
+            default:
+                return '';
+        }
+    }
+    
+    getAcademyUpgradeCurrentEffect(upgrade) {
+        switch (upgrade.id) {
+            case 'fire':
+                return `+${upgrade.level * 5} fire damage`;
+            case 'water':
+                return `+${(upgrade.level * 10)}% slow effect`;
+            case 'air':
+                return `+${upgrade.level * 20}px chain range`;
+            case 'earth':
+                return `+${upgrade.level * 3} armor piercing`;
             default:
                 return '';
         }

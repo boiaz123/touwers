@@ -138,12 +138,14 @@ export class BuildingManager {
             if (withinX && withinY) {
                 console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
                 
-                if (building.constructor.name === 'GoldMine') {
-                    return building.collectGold();
-                } else if (building.onClick) {
+                // Call the building's onClick method directly
+                if (building.onClick) {
                     const result = building.onClick();
                     console.log(`BuildingManager: onClick result:`, result);
                     return result;
+                } else if (building.constructor.name === 'GoldMine') {
+                    // Fallback for GoldMine if onClick doesn't exist
+                    return building.collectGold();
                 }
                 break;
             }
