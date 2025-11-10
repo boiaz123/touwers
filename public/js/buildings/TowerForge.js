@@ -11,13 +11,31 @@ export class TowerForge extends Building {
         this.nextSmokeTime = 0;
         this.fireIntensity = 0;
         
+        // Add workers
+        this.workers = [
+            {
+                x: 15, y: 25, // Front left worker
+                animationOffset: 0,
+                hammerRaised: 0,
+                workCooldown: 0,
+                type: 'blacksmith'
+            },
+            {
+                x: -20, y: 20, // Front right worker
+                animationOffset: Math.PI,
+                hammerRaised: 0,
+                workCooldown: 1.5,
+                type: 'helper'
+            }
+        ];
+        
         // Upgrade system - rebalanced for better progression
         this.upgrades = {
-            towerRange: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 }, // Reduced from 0.1 to 0.05 (5% per level)
-            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 }, // Increased from 2 to 3
-            barricadeDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 }, // Increased from 5 to 8
+            towerRange: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 },
+            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 },
+            barricadeDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 },
             fireArrows: { level: 0, maxLevel: 3, baseCost: 200, effect: 1 },
-            explosiveRadius: { level: 0, maxLevel: 4, baseCost: 180, effect: 15 } // Reduced from 20 to 15
+            explosiveRadius: { level: 0, maxLevel: 4, baseCost: 180, effect: 15 }
         };
     }
     
@@ -27,13 +45,40 @@ export class TowerForge extends Building {
         // Update fire intensity
         this.fireIntensity = Math.sin(this.animationTime * 6) * 0.3 + 0.7;
         
+        // Update workers
+        this.workers.forEach(worker => {
+            worker.workCooldown -= deltaTime;
+            worker.hammerRaised = Math.max(0, worker.hammerRaised - deltaTime * 3);
+            
+            if (worker.workCooldown <= 0) {
+                worker.hammerRaised = 1;
+                worker.workCooldown = 2 + Math.random() * 2;
+                
+                // Create sparks when worker strikes
+                if (worker.type === 'blacksmith') {
+                    for (let i = 0; i < 3; i++) {
+                        this.sparks.push({
+                            x: this.x + worker.x + (Math.random() - 0.5) * 5,
+                            y: this.y + worker.y + (Math.random() - 0.5) * 5,
+                            vx: (Math.random() - 0.5) * 40,
+                            vy: -Math.random() * 60 - 20,
+                            life: 0.8,
+                            maxLife: 0.8,
+                            size: Math.random() * 1.5 + 0.5,
+                            color: Math.random() > 0.5 ? 'orange' : 'yellow'
+                        });
+                    }
+                }
+            }
+        });
+        
         // Generate forge sparks from fire opening
         this.nextSparkTime -= deltaTime;
         if (this.nextSparkTime <= 0) {
             const sparkCount = this.isSelected ? 8 : 5;
             for (let i = 0; i < sparkCount; i++) {
                 this.sparks.push({
-                    x: this.x - 15 + (Math.random() - 0.5) * 25, // From forge opening
+                    x: this.x - 15 + (Math.random() - 0.5) * 25,
                     y: this.y - 10 + (Math.random() - 0.5) * 15,
                     vx: (Math.random() - 0.5) * 60,
                     vy: -Math.random() * 80 - 30,
@@ -46,12 +91,15 @@ export class TowerForge extends Building {
             this.nextSparkTime = 0.1 + Math.random() * 0.2;
         }
         
-        // Generate chimney smoke
+        // Generate chimney smoke - NOW FIXED TO START FROM CHIMNEY TOP
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0) {
+            const chimneyX = this.x + 25; // Bottom right chimney position
+            const chimneyTopY = this.y - 35; // Top of chimney
+            
             this.smokeParticles.push({
-                x: this.x + 35, // From chimney
-                y: this.y - 45,
+                x: chimneyX + (Math.random() - 0.5) * 8, // From chimney opening
+                y: chimneyTopY,
                 vx: (Math.random() - 0.5) * 20,
                 vy: -30 - Math.random() * 20,
                 life: 3,
@@ -66,7 +114,7 @@ export class TowerForge extends Building {
             spark.x += spark.vx * deltaTime;
             spark.y += spark.vy * deltaTime;
             spark.life -= deltaTime;
-            spark.vy += 150 * deltaTime; // gravity
+            spark.vy += 150 * deltaTime;
             spark.size = Math.max(0, spark.size - deltaTime * 2);
             return spark.life > 0 && spark.size > 0;
         });
@@ -76,7 +124,7 @@ export class TowerForge extends Building {
             smoke.y += smoke.vy * deltaTime;
             smoke.life -= deltaTime;
             smoke.size += deltaTime * 3;
-            smoke.vx *= 0.99; // wind resistance
+            smoke.vx *= 0.99;
             return smoke.life > 0;
         });
     }
@@ -91,13 +139,16 @@ export class TowerForge extends Building {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - buildingHeight/2 + 4, buildingWidth, buildingHeight);
         
+        // Render detailed front area items FIRST (behind workers)
+        this.renderFrontAreaItems(ctx, size);
+        
         // Cobblestone wall structure
         this.renderCobblestoneWalls(ctx, buildingWidth, buildingHeight, wallHeight);
         
         // Forge opening with fire
         this.renderForgeOpening(ctx, size);
         
-        // Chimney
+        // Chimney - NOW POSITIONED AT BOTTOM RIGHT
         this.renderChimney(ctx, size);
         
         // Roof
@@ -106,21 +157,335 @@ export class TowerForge extends Building {
         // Forge interior details
         this.renderForgeInterior(ctx, size);
         
+        // Render workers
+        this.renderWorkers(ctx, size);
+        
         // Render particles
         this.renderParticles(ctx);
         
-        // Selection indicator
-        if (this.isSelected) {
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(this.x - size/2, this.y - size/2, size, size);
-        }
+        // REMOVED YELLOW SELECTION INDICATOR
         
         // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFD700' : '#FFA500';
+        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+    }
+    
+    renderFrontAreaItems(ctx, size) {
+        // Storage barrels
+        const barrels = [
+            { x: -25, y: 30, size: 8, type: 'wood' },
+            { x: -10, y: 32, size: 7, type: 'metal' },
+            { x: 30, y: 28, size: 9, type: 'wood' }
+        ];
+        
+        barrels.forEach(barrel => {
+            ctx.save();
+            ctx.translate(this.x + barrel.x, this.y + barrel.y);
+            
+            // Barrel shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(-barrel.size/2 + 2, -barrel.size + 2, barrel.size, barrel.size);
+            
+            if (barrel.type === 'wood') {
+                ctx.fillStyle = '#8B4513';
+                ctx.strokeStyle = '#654321';
+            } else {
+                ctx.fillStyle = '#2F2F2F';
+                ctx.strokeStyle = '#1C1C1C';
+            }
+            
+            ctx.lineWidth = 2;
+            ctx.fillRect(-barrel.size/2, -barrel.size, barrel.size, barrel.size);
+            ctx.strokeRect(-barrel.size/2, -barrel.size, barrel.size, barrel.size);
+            
+            // Barrel bands
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-barrel.size/2, -barrel.size * 0.7);
+            ctx.lineTo(barrel.size/2, -barrel.size * 0.7);
+            ctx.moveTo(-barrel.size/2, -barrel.size * 0.3);
+            ctx.lineTo(barrel.size/2, -barrel.size * 0.3);
+            ctx.stroke();
+            
+            ctx.restore();
+        });
+        
+        // Wooden crates
+        const crates = [
+            { x: 5, y: 35, size: 10, rotation: 0.1 },
+            { x: 20, y: 38, size: 8, rotation: -0.1 }
+        ];
+        
+        crates.forEach(crate => {
+            ctx.save();
+            ctx.translate(this.x + crate.x, this.y + crate.y);
+            ctx.rotate(crate.rotation);
+            
+            // Crate shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(-crate.size/2 + 2, -crate.size + 2, crate.size, crate.size);
+            
+            // Crate body
+            ctx.fillStyle = '#CD853F';
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            ctx.fillRect(-crate.size/2, -crate.size, crate.size, crate.size);
+            ctx.strokeRect(-crate.size/2, -crate.size, crate.size, crate.size);
+            
+            // Wood planks
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const plankY = -crate.size + (crate.size * i / 4);
+                ctx.beginPath();
+                ctx.moveTo(-crate.size/2, plankY);
+                ctx.lineTo(crate.size/2, plankY);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        });
+        
+        // Metal buckets
+        const buckets = [
+            { x: -35, y: 25, size: 6 },
+            { x: 35, y: 35, size: 5 }
+        ];
+        
+        buckets.forEach(bucket => {
+            ctx.save();
+            ctx.translate(this.x + bucket.x, this.y + bucket.y);
+            
+            // Bucket shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(2, 2, bucket.size, bucket.size * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bucket body
+            ctx.fillStyle = '#696969';
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(-bucket.size * 0.8, 0);
+            ctx.lineTo(-bucket.size * 0.6, -bucket.size);
+            ctx.lineTo(bucket.size * 0.6, -bucket.size);
+            ctx.lineTo(bucket.size * 0.8, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Bucket rim
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(-bucket.size * 0.8, -2, bucket.size * 1.6, 4);
+            
+            // Handle
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -bucket.size * 0.5, bucket.size * 0.7, -Math.PI * 0.3, -Math.PI * 0.7, true);
+            ctx.stroke();
+            
+            ctx.restore();
+        });
+        
+        // Metal ingots pile
+        const ingotPile = { x: -5, y: 25 };
+        ctx.save();
+        ctx.translate(this.x + ingotPile.x, this.y + ingotPile.y);
+        
+        // Ingot pile shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(-8, -3, 16, 6);
+        
+        // Individual ingots
+        const ingots = [
+            { x: -6, y: 0, width: 12, height: 3 },
+            { x: -4, y: -3, width: 8, height: 3 },
+            { x: 2, y: -1, width: 10, height: 3 }
+        ];
+        
+        ingots.forEach(ingot => {
+            ctx.fillStyle = '#C0C0C0';
+            ctx.strokeStyle = '#808080';
+            ctx.lineWidth = 1;
+            ctx.fillRect(ingot.x, ingot.y, ingot.width, ingot.height);
+            ctx.strokeRect(ingot.x, ingot.y, ingot.width, ingot.height);
+            
+            // Metal shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fillRect(ingot.x, ingot.y, ingot.width * 0.3, ingot.height * 0.5);
+        });
+        
+        ctx.restore();
+        
+        // Scattered tools
+        const tools = [
+            { x: -30, y: 15, type: 'hammer' },
+            { x: 25, y: 20, type: 'tongs' },
+            { x: 12, y: 28, type: 'file' }
+        ];
+        
+        tools.forEach(tool => {
+            ctx.save();
+            ctx.translate(this.x + tool.x, this.y + tool.y);
+            
+            switch(tool.type) {
+                case 'hammer':
+                    // Hammer handle
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(-1, 0, 2, 12);
+                    // Hammer head
+                    ctx.fillStyle = '#2F2F2F';
+                    ctx.fillRect(-3, 0, 6, 4);
+                    break;
+                    
+                case 'tongs':
+                    // Tongs arms
+                    ctx.strokeStyle = '#2F2F2F';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-2, 10);
+                    ctx.lineTo(-4, 0);
+                    ctx.moveTo(2, 10);
+                    ctx.lineTo(4, 0);
+                    ctx.stroke();
+                    // Tongs pivot
+                    ctx.fillStyle = '#1C1C1C';
+                    ctx.beginPath();
+                    ctx.arc(0, 6, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 'file':
+                    // File body
+                    ctx.fillStyle = '#696969';
+                    ctx.fillRect(-1, 0, 2, 8);
+                    // File handle
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(-0.5, 8, 1, 4);
+                    break;
+            }
+            
+            ctx.restore();
+        });
+        
+        // Coal pile near forge
+        const coalPile = { x: -40, y: 10 };
+        ctx.save();
+        ctx.translate(this.x + coalPile.x, this.y + coalPile.y);
+        
+        ctx.fillStyle = '#1C1C1C';
+        for (let i = 0; i < 8; i++) {
+            const coalX = -6 + (i % 4) * 4;
+            const coalY = -2 + Math.floor(i / 4) * 3;
+            const coalSize = 1.5 + Math.random() * 1;
+            
+            ctx.beginPath();
+            ctx.arc(coalX, coalY, coalSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+    
+    renderWorkers(ctx, size) {
+        this.workers.forEach(worker => {
+            ctx.save();
+            ctx.translate(this.x + worker.x, this.y + worker.y);
+            
+            // Worker shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(1, 1, 3, 1, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (worker.type === 'blacksmith') {
+                // Blacksmith - wearing leather apron
+                ctx.fillStyle = '#654321'; // Brown leather apron
+                ctx.fillRect(-3, -8, 6, 12);
+                
+                // Apron straps
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-2, -8);
+                ctx.lineTo(0, -12);
+                ctx.lineTo(2, -8);
+                ctx.stroke();
+            } else {
+                // Helper - blue work shirt
+                ctx.fillStyle = '#4169E1';
+                ctx.fillRect(-2, -6, 4, 10);
+            }
+            
+            // Worker head
+            ctx.fillStyle = '#DDBEA9';
+            ctx.beginPath();
+            ctx.arc(0, -12, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Worker hair/hat
+            if (worker.type === 'blacksmith') {
+                // Leather cap
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(0, -12, 3, Math.PI, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Simple hair
+                ctx.fillStyle = '#654321';
+                ctx.beginPath();
+                ctx.arc(0, -13, 2, Math.PI, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Arms with tools
+            const armAngle = worker.hammerRaised > 0 ? -Math.PI/2 : Math.PI/6;
+            
+            ctx.strokeStyle = '#DDBEA9';
+            ctx.lineWidth = 2;
+            
+            // Working arm
+            ctx.beginPath();
+            ctx.moveTo(0, -6);
+            ctx.lineTo(Math.cos(armAngle) * 6, -6 + Math.sin(armAngle) * 6);
+            ctx.stroke();
+            
+            // Other arm
+            ctx.beginPath();
+            ctx.moveTo(0, -4);
+            ctx.lineTo(-3, -1);
+            ctx.stroke();
+            
+            // Tool in hand
+            if (worker.hammerRaised > 0.2) {
+                const toolX = Math.cos(armAngle) * 8;
+                const toolY = -6 + Math.sin(armAngle) * 8;
+                
+                if (worker.type === 'blacksmith') {
+                    // Hammer
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(toolX - 1, toolY, 2, 6);
+                    ctx.fillStyle = '#2F2F2F';
+                    ctx.fillRect(toolX - 2, toolY, 4, 2);
+                } else {
+                    // Tongs
+                    ctx.strokeStyle = '#2F2F2F';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(toolX - 1, toolY);
+                    ctx.lineTo(toolX - 2, toolY + 4);
+                    ctx.moveTo(toolX + 1, toolY);
+                    ctx.lineTo(toolX + 2, toolY + 4);
+                    ctx.stroke();
+                }
+            }
+            
+            ctx.restore();
+        });
     }
     
     renderCobblestoneWalls(ctx, buildingWidth, buildingHeight, wallHeight) {
@@ -221,9 +586,9 @@ export class TowerForge extends Building {
     }
     
     renderChimney(ctx, size) {
-        // Chimney position (separate from main building)
-        const chimneyX = this.x + size * 0.35;
-        const chimneyY = this.y - size * 0.1;
+        // Chimney position - NOW AT BOTTOM RIGHT
+        const chimneyX = this.x + size * 0.25; // Moved to bottom right
+        const chimneyY = this.y + size * 0.1;  // Bottom of building
         const chimneyWidth = size * 0.12;
         const chimneyHeight = size * 0.6;
         
