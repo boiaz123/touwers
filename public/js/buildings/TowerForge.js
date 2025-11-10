@@ -137,9 +137,9 @@ export class TowerForge extends Building {
         const buildingHeight = size * 0.6;
         const wallHeight = size * 0.5;
         
-        // Building shadow
+        // Building shadow - FIXED: Only for the actual building, not full 4x4 grid
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - buildingHeight/2 + 4, buildingWidth, buildingHeight);
+        ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - wallHeight + 4, buildingWidth, wallHeight);
         
         // Render detailed front area items FIRST (behind workers)
         this.renderFrontAreaItems(ctx, size);
@@ -173,7 +173,7 @@ export class TowerForge extends Building {
         ctx.textAlign = 'center';
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
     }
-    
+
     renderFrontAreaItems(ctx, size) {
         // Storage barrels
         const barrels = [
@@ -500,7 +500,7 @@ export class TowerForge extends Building {
         wallGradient.addColorStop(0.5, '#808080');
         wallGradient.addColorStop(1, '#696969');
         
-        // Main wall structure with integrated chimney corner
+        // Main wall structure - straight walls on both sides
         ctx.fillStyle = wallGradient;
         ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, wallHeight);
         
@@ -511,12 +511,12 @@ export class TowerForge extends Building {
         const stoneWidth = buildingWidth / 8;
         const stoneHeight = wallHeight / 6;
         
-        // Draw cobblestone pattern
+        // Draw cobblestone pattern for main wall
         for (let row = 0; row < 6; row++) {
             const offsetX = (row % 2) * stoneWidth/2; // Staggered pattern
             const rowY = this.y - wallHeight + (row * stoneHeight);
             
-            for (let col = 0; col < 9; col++) {
+            for (let col = 0; col < 8; col++) { // Only 8 columns for main wall
                 const stoneX = this.x - buildingWidth/2 + offsetX + (col * stoneWidth);
                 
                 // Skip stones where forge opening will be
@@ -541,29 +541,53 @@ export class TowerForge extends Building {
         // Wall top edge
         ctx.fillStyle = '#DCDCDC';
         ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, 3);
+        
+        // STRAIGHT RIGHT SIDE WALL - no protruding bricks
+        ctx.fillStyle = '#696969';
+        ctx.fillRect(this.x + buildingWidth/2, this.y - wallHeight, 3, wallHeight);
+        
+        // Right wall top edge
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(this.x + buildingWidth/2, this.y - wallHeight, 3, 3);
+        
+        // Right wall stone pattern - straight vertical line
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        for (let row = 0; row < 6; row++) {
+            const rowY = this.y - wallHeight + (row * stoneHeight);
+            ctx.strokeRect(this.x + buildingWidth/2, rowY, 3, stoneHeight - 1);
+        }
     }
     
     renderChimney(ctx, size) {
         const buildingWidth = size * 0.9;
         const wallHeight = size * 0.5;
         
-        // INTEGRATED CHIMNEY - part of the building structure
+        // INTEGRATED CHIMNEY - starts from the right corner of the main building
         const chimneyWidth = size * 0.16;
         const chimneyHeight = size * 0.7;
-        const chimneyX = this.x + buildingWidth/2 - chimneyWidth; // Right corner, fully integrated
+        const chimneyX = this.x + buildingWidth/2; // Starts exactly at right wall edge
         const chimneyY = this.y; // Ground level
         
-        // Chimney foundation - extends from building foundation
-        ctx.fillStyle = '#A9A9A9';
+        // Chimney foundation - extends from main building foundation
+        const foundationGradient = ctx.createLinearGradient(
+            chimneyX, chimneyY - wallHeight,
+            chimneyX + chimneyWidth, chimneyY
+        );
+        foundationGradient.addColorStop(0, '#A9A9A9'); // Matches main wall
+        foundationGradient.addColorStop(0.5, '#808080');
+        foundationGradient.addColorStop(1, '#696969');
+        
+        ctx.fillStyle = foundationGradient;
         ctx.fillRect(chimneyX, chimneyY - wallHeight, chimneyWidth, wallHeight);
         
-        // Foundation stones that match main building
+        // Foundation stones that match main building exactly
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         
         const foundationStoneHeight = wallHeight / 6;
         for (let row = 0; row < 6; row++) {
-            const offsetX = (row % 2) * 2; // Slight stagger
+            const offsetX = (row % 2) * 2; // Slight stagger to match main wall
             const rowY = chimneyY - wallHeight + (row * foundationStoneHeight);
             
             const stoneShade = 0.8 + Math.sin(row * 0.5) * 0.2;
@@ -576,6 +600,10 @@ export class TowerForge extends Building {
             ctx.fillStyle = `rgba(200, 200, 200, ${0.3 * stoneShade})`;
             ctx.fillRect(chimneyX + offsetX, rowY, (chimneyWidth - offsetX)/3, foundationStoneHeight/3);
         }
+        
+        // Foundation top edge to match main building
+        ctx.fillStyle = '#DCDCDC';
+        ctx.fillRect(chimneyX, chimneyY - wallHeight, chimneyWidth, 3);
         
         // Chimney shaft - rises above building
         const shaftHeight = chimneyHeight - wallHeight;
@@ -653,22 +681,18 @@ export class TowerForge extends Building {
             openingHeight - 1
         );
         
-        // Chimney shadow on building
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(chimneyX + chimneyWidth, this.y - wallHeight, 3, wallHeight);
-        
-        // 3D edge where chimney meets main building
+        // Chimney side face (3D effect)
         ctx.fillStyle = '#5D5D5D';
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        
         ctx.beginPath();
-        ctx.moveTo(chimneyX, chimneyY - wallHeight);
-        ctx.lineTo(chimneyX - 3, chimneyY - wallHeight + 3);
-        ctx.lineTo(chimneyX - 3, chimneyY + 3);
-        ctx.lineTo(chimneyX, chimneyY);
+        ctx.moveTo(chimneyX + chimneyWidth, chimneyY - wallHeight);
+        ctx.lineTo(chimneyX + chimneyWidth + 3, chimneyY - wallHeight - 3);
+        ctx.lineTo(chimneyX + chimneyWidth + 3, chimneyY - 3);
+        ctx.lineTo(chimneyX + chimneyWidth, chimneyY);
         ctx.closePath();
         ctx.fill();
+        
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
         ctx.stroke();
     }
     
@@ -685,39 +709,26 @@ export class TowerForge extends Building {
         const roofPeakX = this.x;
         const roofPeakY = this.y - wallHeight - buildingHeight * 0.2;
         const leftRoofX = this.x - buildingWidth/2 - 5;
-        const rightRoofX = this.x + buildingWidth/2 + 5;
-        const chimneyRoofX = this.x + buildingWidth/2 - chimneyWidth;
+        const rightRoofX = this.x + buildingWidth/2; // Ends at main building edge
+        const chimneyRoofX = this.x + buildingWidth/2; // Chimney starts here
         
-        // Left side of roof
+        // Main roof (no right overhang since chimney continues the structure)
         ctx.beginPath();
         ctx.moveTo(leftRoofX, this.y - wallHeight);
         ctx.lineTo(roofPeakX, roofPeakY);
-        ctx.lineTo(chimneyRoofX, this.y - wallHeight);
+        ctx.lineTo(rightRoofX, this.y - wallHeight);
         ctx.lineTo(leftRoofX, this.y - wallHeight + 3);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         
-        // Right side roof integration with chimney
-        const chimneyHeight = size * 0.7;
-        const chimneyTopY = this.y - chimneyHeight;
-        
-        ctx.beginPath();
-        ctx.moveTo(chimneyRoofX, this.y - wallHeight);
-        ctx.lineTo(roofPeakX, roofPeakY);
-        ctx.lineTo(rightRoofX, this.y - wallHeight);
-        ctx.lineTo(chimneyRoofX, chimneyTopY + size * 0.1); // Roof meets chimney
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Roof tiles on left side
+        // Roof tiles
         ctx.strokeStyle = '#5D4E37';
         ctx.lineWidth = 1;
         for (let i = 1; i < 4; i++) {
             const tileY = this.y - wallHeight + (3 * i / 4);
             const tileStartX = leftRoofX + (i * 8);
-            const tileEndX = roofPeakX - (i * 10);
+            const tileEndX = rightRoofX - (i * 8);
             
             ctx.beginPath();
             ctx.moveTo(tileStartX, tileY);
@@ -725,26 +736,12 @@ export class TowerForge extends Building {
             ctx.stroke();
         }
         
-        // Roof tiles on right side (partial due to chimney)
-        for (let i = 1; i < 3; i++) {
-            const tileY = this.y - wallHeight + (3 * i / 4);
-            const tileStartX = roofPeakX + (i * 5);
-            const tileEndX = chimneyRoofX - 5;
-            
-            if (tileStartX < tileEndX) {
-                ctx.beginPath();
-                ctx.moveTo(tileStartX, tileY);
-                ctx.lineTo(tileEndX, tileY);
-                ctx.stroke();
-            }
-        }
-        
         // Roof ridge
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(leftRoofX + 10, roofPeakY + 2);
-        ctx.lineTo(chimneyRoofX - 5, roofPeakY + 2);
+        ctx.lineTo(rightRoofX - 10, roofPeakY + 2);
         ctx.stroke();
         
         // Roof flashing where it meets chimney
