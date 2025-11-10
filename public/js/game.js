@@ -131,23 +131,26 @@ class GameplayState {
             
             // Check for building/tower clicks first
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
+            
             if (clickResult) {
                 if (clickResult.type === 'forge_menu') {
-                    this.showForgeUpgradeMenu(clickResult); return;
+                    this.showForgeUpgradeMenu(clickResult);
+                    return;
                 } else if (clickResult.type === 'academy_menu') {
-                    this.showAcademyUpgradeMenu(clickResult); return;
+                    this.showAcademyUpgradeMenu(clickResult);
+                    return;
                 } else if (clickResult.type === 'magic_tower_menu') {
-                    this.showMagicTowerElementMenu(clickResult); return;
-                } else if (clickResult.type === 'tower_info') {
-                    // Simple info popup could be added later; for now just log
-                    console.log('Tower info:', clickResult.info);
+                    this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (typeof clickResult === 'number') {
+                    // Gold collection from mine
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
                 }
             }
+            
+            // Handle regular tower/building placement
             this.handleClick(canvasX, canvasY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
@@ -277,10 +280,6 @@ class GameplayState {
             } else if (clickResult.type === 'magic_tower_menu') {
                 console.log('GameplayState: Magic tower menu detected, showing menu');
                 this.showMagicTowerElementMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'tower_info') {
-                // Simple info popup could be added later; for now just log
-                console.log('Tower info:', clickResult.info);
                 return;
             } else if (typeof clickResult === 'number') {
                 // Gold collection from mine

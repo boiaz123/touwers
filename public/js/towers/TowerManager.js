@@ -250,133 +250,75 @@ export class TowerManager {
         });
     }
     
-    // NEW: unified icon info generator
-    getIconData(entity) {
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, this.level.canvasWidth ? this.level.canvasWidth / baseResolution : 1));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const iconSize = cellSize * 0.9;
-        const typeName = entity.constructor.name;
-        // Pick symbol
-        let symbol = 'ℹ️';
-        switch (typeName) {
-            case 'BasicTower': symbol = '🏰'; break;
-            case 'CannonTower': symbol = '💣'; break;
-            case 'ArcherTower': symbol = '🏹'; break;
-            case 'MagicTower': symbol = '⚡'; break;
-            case 'BarricadeTower': symbol = '🛡️'; break;
-            case 'PoisonArcherTower': symbol = '☠️'; break;
-            case 'TowerForge': symbol = '🔨'; break;
-            case 'GoldMine': symbol = '⛏️'; break;
-            case 'MagicAcademy': symbol = '🎓'; break;
-            case 'SuperWeapon': symbol = '🚀'; break;
-        }
-        // Position icon slightly above entity center
-        return {
-            x: entity.x,
-            y: entity.y - cellSize * 1.2,
-            r: Math.max(18, cellSize * 0.45),
-            symbol,
-            entity
-        };
-    }
-
-    // Helper hit test
-    isIconHit(icon, clickX, clickY) {
-        return Math.hypot(clickX - icon.x, clickY - icon.y) <= icon.r;
-    }
-
     handleClick(x, y, canvasSize) {
-        // Clear previous selection states
-        this.towers.forEach(t => t.isSelected = false);
-        this.buildingManager.buildings.forEach(b => { if (b.deselect) b.deselect(); });
-
-        // Build icon list (towers + buildings)
-        const icons = [];
-        this.towers.forEach(t => icons.push(this.getIconData(t)));
-        this.buildingManager.buildings.forEach(b => icons.push(this.getIconData(b)));
-
-        // Check icon hits (topmost first => iterate reverse so last drawn has priority)
-        for (let i = icons.length - 1; i >= 0; i--) {
-            const icon = icons[i];
-            if (this.isIconHit(icon, x, y)) {
-                const ent = icon.entity;
-                const name = ent.constructor.name;
-
-                // Tower interactions
-                if (name === 'MagicTower') {
-                    ent.isSelected = true;
+        // Clear any previous selections
+        this.towers.forEach(tower => tower.isSelected = false);
+        this.buildingManager.buildings.forEach(building => {
+            if (building.deselect) building.deselect();
+        });
+        
+        // Check tower clicks first for element selection
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const towerSize = cellSize * 2;
+        
+        for (const tower of this.towers) {
+            // Check if click is within tower bounds
+            const distance = Math.hypot(tower.x - x, tower.y - y);
+            if (distance <= towerSize / 2) {
+                if (tower.constructor.name === 'MagicTower') {
+                    tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
-                        tower: ent,
+                        tower: tower,
                         elements: [
                             { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows & minor freeze' },
+                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
                             { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Armor piercing' }
+                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
                         ],
-                        currentElement: ent.selectedElement
+                        currentElement: tower.selectedElement
                     };
                 }
-
-                // Buildings use their own onClick() if available
-                if (ent.onClick) {
-                    return ent.onClick();
-                }
-
-                // Fallback generic tower info (no special menu)
-                if (ent.constructor.getInfo) {
-                    return {
-                        type: 'tower_info',
-                        tower: ent,
-                        info: ent.constructor.getInfo()
-                    };
-                }
-                return null;
+                break; // Found a tower, don't check buildings
             }
         }
+        
+        // Then check building clicks with improved detection
+        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
+        if (buildingResult) {
+            if (buildingResult.type === 'forge_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                return buildingResult;
+            } else if (buildingResult.type === 'academy_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                console.log('TowerManager: Academy menu requested');
+                return buildingResult;
+            } else if (typeof buildingResult === 'number') {
+                // Gold collection
+                return buildingResult;
+            }
+        }
+        
         return null;
+    }
+    
+    selectMagicTowerElement(tower, element) {
+        if (tower && tower.setElement) {
+            tower.setElement(element);
+            console.log(`TowerManager: Set magic tower element to ${element}`);
+            return true;
+        }
+        return false;
     }
     
     render(ctx) {
         // Render all towers
-        this.towers.forEach(t => t.render(ctx));
+        this.towers.forEach(tower => {
+            tower.render(ctx);
+        });
+        
+        // Render all buildings
         this.buildingManager.render(ctx);
-
-        // AFTER normal render: draw interactable icons
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        const fontSize = Math.floor(14 * scaleFactor);
-
-        const drawIcon = (icon) => {
-            ctx.save();
-            // Background circle
-            ctx.beginPath();
-            ctx.fillStyle = 'rgba(30,30,30,0.75)';
-            ctx.strokeStyle = '#d4af37';
-            ctx.lineWidth = 2;
-            ctx.arc(icon.x, icon.y, icon.r, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            // Symbol
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${fontSize}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(icon.symbol, icon.x, icon.y + 1);
-            // Selection glow
-            if (icon.entity.isSelected) {
-                ctx.strokeStyle = '#ffd700';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(icon.x, icon.y, icon.r + 4, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-            ctx.restore();
-        };
-
-        this.towers.forEach(t => drawIcon(this.getIconData(t)));
-        this.buildingManager.buildings.forEach(b => drawIcon(this.getIconData(b)));
     }
     
     getTowerInfo(type) {

@@ -1006,7 +1006,6 @@ export class TowerForge extends Building {
     }
     
     onClick() {
-        // Called via interact icon (TowerManager)
         this.isSelected = true;
         return {
             type: 'forge_menu',
