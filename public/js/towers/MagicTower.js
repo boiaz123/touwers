@@ -574,6 +574,7 @@ export class MagicTower {
         };
         
         console.log(`MagicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
+        console.log(`MagicTower: isHovered=${this.isHovered}, isSelected=${this.isSelected}`);
         
         // Glow background for element selection with hover/selection effects
         let elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
@@ -581,9 +582,11 @@ export class MagicTower {
         if (this.isSelected) {
             elementPulse = 1.0;
             ctx.fillStyle = `rgba(255, 215, 0, ${elementPulse * 0.6})`;
+            console.log('MagicTower: Rendering SELECTED state');
         } else if (this.isHovered) {
             elementPulse = 1.0;
             ctx.fillStyle = `rgba(147, 112, 219, ${elementPulse * 0.6})`;
+            console.log('MagicTower: Rendering HOVERED state');
         } else {
             ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
         }

@@ -369,6 +369,7 @@ export class BasicTower {
         };
         
         console.log(`BasicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
+        console.log(`BasicTower: isHovered=${this.isHovered}, isSelected=${this.isSelected}`);
         
         // Icon background with glow - ENHANCED with hover effects
         let pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;
@@ -378,10 +379,12 @@ export class BasicTower {
             pulseIntensity = 1.0;
             ctx.shadowColor = '#FFD700';
             ctx.shadowBlur = 15;
+            console.log('BasicTower: Rendering SELECTED state');
         } else if (this.isHovered) {
             pulseIntensity = 1.0;
             ctx.shadowColor = '#FFA500';
             ctx.shadowBlur = 10;
+            console.log('BasicTower: Rendering HOVERED state');
         }
         
         ctx.fillStyle = `rgba(139, 69, 19, ${pulseIntensity * 0.8})`;

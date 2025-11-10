@@ -275,6 +275,8 @@ export class TowerManager {
         this.mouseX = x;
         this.mouseY = y;
         
+        console.log(`TowerManager: handleMouseMove at (${x}, ${y}), checking ${this.towers.length} towers`);
+        
         // Check for hover over tower icons
         let foundHover = false;
         
@@ -282,6 +284,9 @@ export class TowerManager {
             if (tower.clickArea) {
                 const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
                 const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
+                
+                console.log(`TowerManager: Checking ${tower.constructor.name} clickArea:`, tower.clickArea);
+                console.log(`TowerManager: withinX=${withinX}, withinY=${withinY}`);
                 
                 if (withinX && withinY) {
                     if (this.hoveredTower !== tower) {
@@ -314,6 +319,8 @@ export class TowerManager {
         
         // Also check building hover
         const buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+        
+        console.log(`TowerManager: foundHover=${foundHover}, buildingHover=${buildingHover}`);
         
         // Return true if hovering over any interactive element
         return foundHover || buildingHover;

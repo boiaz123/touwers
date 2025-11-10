@@ -139,11 +139,20 @@ class GameplayState {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
+            console.log(`Game: Mouse move at (${x}, ${y})`); // Debug mouse position
+            
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
             
+            console.log(`Game: isHoveringInteractable: ${isHoveringInteractable}`); // Debug hover result
+            
             // Update cursor based on hover state
-            this.stateManager.canvas.style.cursor = isHoveringInteractable ? 'pointer' : 'default';
+            if (isHoveringInteractable) {
+                this.stateManager.canvas.style.cursor = 'pointer';
+                console.log('Game: Setting cursor to pointer');
+            } else {
+                this.stateManager.canvas.style.cursor = 'crosshair';
+            }
             
             // Handle placement preview
             this.handleMouseMove(e);

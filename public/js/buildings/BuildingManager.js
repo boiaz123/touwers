@@ -174,9 +174,12 @@ export class BuildingManager {
                 
                 if (withinX && withinY) {
                     console.log(`BuildingManager: Hovering over ${building.constructor.name} at (${building.x}, ${building.y})`);
+                    console.log(`BuildingManager: Mouse at (${x}, ${y}), clickArea:`, building.clickArea);
                     foundHover = true;
                     break;
                 }
+            } else {
+                console.log(`BuildingManager: Building ${building.constructor.name} has no clickArea!`);
             }
         }
         
