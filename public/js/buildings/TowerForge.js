@@ -999,7 +999,7 @@ export class TowerForge extends Building {
         // Check if click is on upgrade icon (higher priority)
         if (this.upgradeIconBounds) {
             const distance = Math.hypot(x - this.upgradeIconBounds.x, y - this.upgradeIconBounds.y);
-            if (distance <= this.upgradeIconBounds.radius) {
+            if (distance <= this.upgradeIconBounds.clickDistance) {
                 return true;
             }
         }
@@ -1379,11 +1379,11 @@ export class TowerForge extends Building {
         ctx.restore();
         
         // Store icon bounds for click detection
-        // The golden circle is drawn at exactly this radius
+        // Use fixed pixel distance from center - much more reliable than radius scaling
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius - 0.5 // Tiny adjustment for stroke rendering, matches the filled circle
+            clickDistance: 15 // Fixed 15px radius from center - adjust this single value to fine-tune
         };
     }
 }
