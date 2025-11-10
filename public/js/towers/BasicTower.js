@@ -350,6 +350,55 @@ export class BasicTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        // Render clickable icon in bottom-right corner (only for magic tower)
+        if (this.constructor.name === 'MagicTower') {
+            this.renderTowerIcon(ctx, gridSize);
+        }
+    }
+    
+    // Render clickable icon for towers
+    renderTowerIcon(ctx, gridSize) {
+        const iconSize = Math.max(16, gridSize * 0.2);
+        const iconX = this.x + gridSize / 2 - iconSize / 2;
+        const iconY = this.y + gridSize / 2 - iconSize / 2;
+        
+        // Icon background
+        const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
+        ctx.fillStyle = `rgba(75, 0, 130, ${pulse * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, iconSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Icon border
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Icon symbol
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `${iconSize * 0.6}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚡', iconX, iconY);
+        
+        // Store icon bounds for click detection
+        this.iconBounds = {
+            x: iconX - iconSize / 2,
+            y: iconY - iconSize / 2,
+            width: iconSize,
+            height: iconSize
+        };
+    }
+    
+    // Check if click is on the icon
+    isIconClicked(x, y) {
+        if (!this.iconBounds) return false;
+        
+        return x >= this.iconBounds.x && 
+               x <= this.iconBounds.x + this.iconBounds.width &&
+               y >= this.iconBounds.y && 
+               y <= this.iconBounds.y + this.iconBounds.height;
     }
     
     drawEnvironment(ctx, gridSize) {

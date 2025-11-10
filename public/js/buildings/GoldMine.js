@@ -780,6 +780,10 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
         }
+        
+        // Render clickable collection icon in bottom-right corner
+        const icon = this.goldReady ? '💰' : '⛏️';
+        this.renderClickableIcon(ctx, size, icon);
     }
     
     getBaseIncome() {

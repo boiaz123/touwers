@@ -169,13 +169,8 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // REMOVED YELLOW SELECTION INDICATOR
-        
-        // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+        // Render clickable upgrade icon in bottom-right corner
+        this.renderClickableIcon(ctx, size, '🔨');
     }
 
     renderFrontAreaItems(ctx, size) {
