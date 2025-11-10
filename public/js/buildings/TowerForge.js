@@ -998,8 +998,10 @@ export class TowerForge extends Building {
     isPointInside(x, y, size) {
         // Check if click is on upgrade icon (higher priority)
         if (this.upgradeIconBounds) {
-            const distance = Math.hypot(x - this.upgradeIconBounds.x, y - this.upgradeIconBounds.y);
-            if (distance <= this.upgradeIconBounds.clickDistance) {
+            const bounds = this.upgradeIconBounds;
+            const isWithinX = x >= bounds.x - bounds.halfSize && x <= bounds.x + bounds.halfSize;
+            const isWithinY = y >= bounds.y - bounds.halfSize && y <= bounds.y + bounds.halfSize;
+            if (isWithinX && isWithinY) {
                 return true;
             }
         }
@@ -1379,11 +1381,12 @@ export class TowerForge extends Building {
         ctx.restore();
         
         // Store icon bounds for click detection
-        // Use fixed pixel distance from center - much more reliable than radius scaling
+        // Use square bounding box around the icon - simple and reliable
+        const iconHalfSize = iconSize / 2; // 17px
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            clickDistance: 15 // Fixed 15px radius from center - adjust this single value to fine-tune
+            halfSize: iconHalfSize // Square box from center
         };
     }
 }
