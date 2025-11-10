@@ -780,6 +780,27 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
         }
+        
+        // Clickable icon indicator at bottom-right corner
+        const iconX = size * 0.45;
+        const iconY = size * 0.45;
+        
+        // Icon background circle
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(iconX, iconY, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Icon content
+        ctx.fillStyle = this.goldReady ? '#228B22' : '#8B4513';
+        ctx.font = `bold ${Math.floor(size * 0.1)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.goldReady ? '💰' : '⛏️', iconX, iconY);
     }
     
     getBaseIncome() {

@@ -169,13 +169,23 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // REMOVED YELLOW SELECTION INDICATOR
+        // Click icon - bottom right corner
+        const iconSize = size * 0.2;
+        const iconX = this.x + size/2 - iconSize/2 - 5;
+        const iconY = this.y + size/2 - iconSize/2 - 5;
         
-        // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.font = `bold ${iconSize * 0.7}px Arial`;
         ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔨', iconX, iconY);
     }
 
     renderFrontAreaItems(ctx, size) {
