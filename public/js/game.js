@@ -133,8 +133,18 @@ class GameplayState {
             btn._touchHandler = touchHandler;
         });
         
-        // Mouse move listener for placement preview
-        this.mouseMoveHandler = (e) => this.handleMouseMove(e);
+        // Mouse move listener for placement preview AND hover effects
+        this.mouseMoveHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Handle tower/building hover effects
+            this.towerManager.handleMouseMove(x, y);
+            
+            // Handle placement preview
+            this.handleMouseMove(e);
+        };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
         // SIMPLIFIED: Canvas click handler with extensive debugging

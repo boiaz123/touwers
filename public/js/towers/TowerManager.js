@@ -27,6 +27,11 @@ export class TowerManager {
         
         // Track occupied grid positions by towers only
         this.occupiedPositions = new Set();
+        
+        // Add hover tracking
+        this.hoveredTower = null;
+        this.mouseX = 0;
+        this.mouseY = 0;
     }
     
     placeTower(type, x, y, gridX, gridY) {
@@ -266,6 +271,49 @@ export class TowerManager {
         });
     }
     
+    handleMouseMove(x, y) {
+        this.mouseX = x;
+        this.mouseY = y;
+        
+        // Check for hover over tower icons
+        let foundHover = false;
+        
+        for (const tower of this.towers) {
+            if (tower.clickArea) {
+                const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
+                const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
+                
+                if (withinX && withinY) {
+                    if (this.hoveredTower !== tower) {
+                        this.hoveredTower = tower;
+                        tower.isHovered = true;
+                        console.log(`TowerManager: Hovering over ${tower.constructor.name}`);
+                    }
+                    foundHover = true;
+                    break;
+                }
+            }
+        }
+        
+        // Clear hover state if no tower is hovered
+        if (!foundHover && this.hoveredTower) {
+            this.hoveredTower.isHovered = false;
+            this.hoveredTower = null;
+        }
+        
+        // Clear hover state from all other towers
+        this.towers.forEach(tower => {
+            if (tower !== this.hoveredTower) {
+                tower.isHovered = false;
+            }
+        });
+        
+        // Also check building hover
+        const buildingResult = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+        
+        return foundHover;
+    }
+    
     handleClick(x, y, canvasSize) {
         console.log(`TowerManager: handleClick at (${x}, ${y})`);
         
@@ -275,21 +323,27 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check tower icon clicks first
-        console.log(`TowerManager: Checking ${this.towers.length} towers`);
-        for (const tower of this.towers) {
+        // Check tower icon clicks first - IMPROVED with better debugging
+        console.log(`TowerManager: Checking ${this.towers.length} towers for icon clicks`);
+        for (let i = 0; i < this.towers.length; i++) {
+            const tower = this.towers[i];
+            
+            console.log(`TowerManager: Checking tower ${i}: ${tower.constructor.name} at (${tower.x}, ${tower.y})`);
+            
             if (tower.clickArea) {
                 const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
                 const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
                 
-                console.log(`TowerManager: ${tower.constructor.name} clickArea:`, tower.clickArea);
-                console.log(`TowerManager: withinX: ${withinX}, withinY: ${withinY}`);
+                console.log(`TowerManager: Tower ${i} clickArea:`, tower.clickArea);
+                console.log(`TowerManager: Click test - withinX: ${withinX}, withinY: ${withinY}`);
                 
                 if (withinX && withinY) {
-                    console.log(`TowerManager: HIT! Clicked on ${tower.constructor.name}`);
+                    console.log(`TowerManager: TOWER ICON HIT! Clicked on ${tower.constructor.name} icon`);
+                    
+                    tower.isSelected = true;
+                    tower.isHovered = false; // Clear hover on click
                     
                     if (tower.constructor.name === 'MagicTower') {
-                        tower.isSelected = true;
                         return {
                             type: 'magic_tower_menu',
                             tower: tower,
@@ -302,11 +356,11 @@ export class TowerManager {
                             currentElement: tower.selectedElement
                         };
                     }
-                    // For other tower types, return basic tower info or null
+                    // For other tower types, return basic tower info
                     return { type: 'tower_info', tower: tower };
                 }
             } else {
-                console.log(`TowerManager: ${tower.constructor.name} has no clickArea`);
+                console.log(`TowerManager: Tower ${i} (${tower.constructor.name}) has NO clickArea!`);
             }
         }
         

@@ -10,6 +10,7 @@ export class MagicTower {
         this.cooldown = 0;
         this.target = null;
         this.isSelected = false; // Add selection state
+        this.isHovered = false; // Add hover state
         
         // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
@@ -529,22 +530,32 @@ export class MagicTower {
             });
         });
         
-        // Element indicator with enhanced visibility when selected - CORRECTED
+        // Element indicator with enhanced visibility when selected/hovered - CORRECTED
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
         
-        // Add selection glow effect
+        // Add selection/hover glow effect
         if (this.isSelected) {
             ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 15;
             
             // Selection ring
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (this.isHovered) {
+            ctx.shadowColor = '#9370DB';
+            ctx.shadowBlur = 10;
+            
+            // Hover ring
+            ctx.strokeStyle = '#9370DB';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, towerSize/2 + 3, 0, Math.PI * 2);
             ctx.stroke();
         }
         
@@ -562,32 +573,48 @@ export class MagicTower {
             height: iconSize * 2
         };
         
-        // Glow background for element selection
-        const elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
-        ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
+        // Glow background for element selection with hover/selection effects
+        let elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
+        
+        if (this.isSelected) {
+            elementPulse = 1.0;
+            ctx.fillStyle = `rgba(255, 215, 0, ${elementPulse * 0.6})`;
+        } else if (this.isHovered) {
+            elementPulse = 1.0;
+            ctx.fillStyle = `rgba(147, 112, 219, ${elementPulse * 0.6})`;
+        } else {
+            ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.4})`;
+        }
+        
         ctx.beginPath();
-        ctx.arc(iconX, iconY, iconSize + 2, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconSize + 3, 0, Math.PI * 2);
         ctx.fill();
         
         // Element icon background
-        ctx.fillStyle = 'rgba(138, 43, 226, 0.8)';
+        if (this.isSelected) {
+            ctx.fillStyle = '#FFD700';
+        } else if (this.isHovered) {
+            ctx.fillStyle = '#9370DB';
+        } else {
+            ctx.fillStyle = 'rgba(138, 43, 226, 0.8)';
+        }
+        
         ctx.beginPath();
         ctx.arc(iconX, iconY, iconSize, 0, Math.PI * 2);
         ctx.fill();
         
         // Border
-        ctx.strokeStyle = '#4B0082';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = this.isSelected ? '#FFD700' : (this.isHovered ? '#9370DB' : '#4B0082');
+        ctx.lineWidth = this.isSelected || this.isHovered ? 3 : 2;
         ctx.stroke();
         
         // Current element icon
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = this.isSelected || this.isHovered ? '#FFF' : '#FFD700';
         ctx.font = 'bold 16px Arial';
         ctx.fillText(elementIcons[this.selectedElement], iconX, iconY + 5);
         
-        if (this.isSelected) {
-            ctx.shadowBlur = 0;
-        }
+        // Clear shadow
+        ctx.shadowBlur = 0;
 
         // Range indicator
         if (this.target) {
