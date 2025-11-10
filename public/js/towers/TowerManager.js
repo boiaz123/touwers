@@ -203,4 +203,24 @@ export class TowerManager {
         
         return null;
     }
+    
+    render(ctx) {
+        // Render all towers
+        this.towers.forEach(tower => {
+            tower.render(ctx);
+        });
+        
+        // Render all buildings
+        this.buildingManager.render(ctx);
+    }
+    
+    getTowerInfo(type) {
+        const towerType = this.towerTypes[type];
+        if (!towerType || !towerType.class.getInfo) return null;
+        return towerType.class.getInfo();
+    }
+    
+    getBuildingInfo(type) {
+        return this.buildingManager.getBuildingInfo(type);
+    }
 }
