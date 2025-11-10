@@ -359,9 +359,11 @@ export class BasicTower {
     
     // Render clickable icon for towers
     renderTowerIcon(ctx, gridSize) {
-        const iconSize = Math.max(16, gridSize * 0.2);
-        const iconX = this.x + gridSize / 2 - iconSize / 2;
-        const iconY = this.y + gridSize / 2 - iconSize / 2;
+        const iconSize = Math.max(20, gridSize * 0.24); // Increased from 16 and 0.2
+        
+        // Position at bottom-right corner of the tower's 2x2 grid area
+        const iconX = this.x + (gridSize / 2) - (iconSize * 0.7);
+        const iconY = this.y + (gridSize / 2) - (iconSize * 0.7);
         
         // Icon background
         const pulse = Math.sin(Date.now() / 500) * 0.2 + 0.8;
@@ -382,7 +384,7 @@ export class BasicTower {
         ctx.textBaseline = 'middle';
         ctx.fillText('⚡', iconX, iconY);
         
-        // Store icon bounds for click detection
+        // Store icon bounds for click detection - exact match to visual position
         this.iconBounds = {
             x: iconX - iconSize / 2,
             y: iconY - iconSize / 2,

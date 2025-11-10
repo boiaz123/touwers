@@ -18,9 +18,11 @@ export class Building {
     
     // Render clickable icon in bottom-right corner
     renderClickableIcon(ctx, buildingSize, icon = '⚙️') {
-        const iconSize = Math.max(20, buildingSize * 0.15);
-        const iconX = this.x + buildingSize / 2 - iconSize / 2;
-        const iconY = this.y + buildingSize / 2 - iconSize / 2;
+        const iconSize = Math.max(24, buildingSize * 0.18); // Increased from 20 and 0.15
+        
+        // Position at bottom-right corner of the building's grid area
+        const iconX = this.x + (buildingSize / 2) - (iconSize * 0.7);
+        const iconY = this.y + (buildingSize / 2) - (iconSize * 0.7);
         
         // Icon background with pulse effect
         const pulse = Math.sin(this.animationTime * 3) * 0.2 + 0.8;
@@ -41,7 +43,7 @@ export class Building {
         ctx.textBaseline = 'middle';
         ctx.fillText(icon, iconX, iconY);
         
-        // Store icon bounds for click detection
+        // Store icon bounds for click detection - exact match to visual position
         this.iconBounds = {
             x: iconX - iconSize / 2,
             y: iconY - iconSize / 2,
