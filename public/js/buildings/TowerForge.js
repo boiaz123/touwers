@@ -1383,7 +1383,7 @@ export class TowerForge extends Building {
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: radius * 0.9 // Reduce to exclude the border rings
+            radius: radius * 0.4 // Reduce to exclude the border rings
         };
     }
 }
