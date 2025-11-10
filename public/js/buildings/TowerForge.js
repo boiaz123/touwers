@@ -171,11 +171,38 @@ export class TowerForge extends Building {
         
         // REMOVED YELLOW SELECTION INDICATOR
         
-        // Upgrade indicator
+        // Upgrade indicator with clickable icon
+        const iconSize = 15;
+        const iconY = this.y + size/2 + 25;
+        
+        // Glow background
+        const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
+        ctx.fillStyle = `rgba(255, 165, 0, ${pulseIntensity * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(this.x, iconY, iconSize + 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Click icon background
         ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.font = 'bold 14px Arial';
+        ctx.beginPath();
+        ctx.arc(this.x, iconY, iconSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Border
+        ctx.strokeStyle = '#B8860B';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Forge icon
+        ctx.fillStyle = '#654321';
+        ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+        ctx.fillText('🔨', this.x, iconY + 6);
+        
+        // "UPGRADES" text below
+        ctx.fillStyle = '#FF8C00';
+        ctx.font = 'bold 8px Arial';
+        ctx.fillText('UPGRADES', this.x, iconY + 18);
     }
 
     renderFrontAreaItems(ctx, size) {

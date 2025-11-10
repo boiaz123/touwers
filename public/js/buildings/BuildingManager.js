@@ -128,15 +128,16 @@ export class BuildingManager {
         for (const building of this.buildings) {
             const buildingSize = building.size * cellSize;
             
-            // Check if click is within building bounds with generous detection
+            // More generous click detection - expand clickable area
             const halfSize = buildingSize / 2;
-            const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
-            const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
+            const expandedHalfSize = halfSize + 15; // Extra 15px on all sides
+            const withinX = x >= building.x - expandedHalfSize && x <= building.x + expandedHalfSize;
+            const withinY = y >= building.y - expandedHalfSize && y <= building.y + expandedHalfSize;
             
-            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with size ${buildingSize}, bounds: [${building.x - halfSize}, ${building.x + halfSize}] x [${building.y - halfSize}, ${building.y + halfSize}], click within: ${withinX && withinY}`);
+            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with expanded size ${expandedHalfSize * 2}, bounds: [${building.x - expandedHalfSize}, ${building.x + expandedHalfSize}] x [${building.y - expandedHalfSize}, ${building.y + expandedHalfSize}], click within: ${withinX && withinY}`);
             
             if (withinX && withinY) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), expanded size: ${expandedHalfSize * 2}`);
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {

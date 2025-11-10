@@ -548,7 +548,37 @@ export class MagicTower {
             ctx.stroke();
         }
         
-        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
+        // Clickable element selection icon
+        const elementIconY = this.y + towerSize/2 + 20;
+        const iconSize = 12;
+        
+        // Glow background for element selection
+        const elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;
+        ctx.fillStyle = `rgba(138, 43, 226, ${elementPulse * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(this.x, elementIconY, iconSize + 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Element icon background
+        ctx.fillStyle = 'rgba(138, 43, 226, 0.8)';
+        ctx.beginPath();
+        ctx.arc(this.x, elementIconY, iconSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Border
+        ctx.strokeStyle = '#4B0082';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Current element icon
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText(elementIcons[this.selectedElement], this.x, elementIconY + 5);
+        
+        // "ELEMENT" text below
+        ctx.fillStyle = '#9370DB';
+        ctx.font = 'bold 7px Arial';
+        ctx.fillText('ELEMENT', this.x, elementIconY + 15);
         
         if (this.isSelected) {
             ctx.shadowBlur = 0;

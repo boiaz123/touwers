@@ -774,11 +774,42 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
-            // Ready indicator
+            // Ready indicator with clickable icon
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
+            
+            // Clickable collection icon with glow effect
+            const pulseIntensity = Math.sin(this.animationTime * 8) * 0.3 + 0.7;
+            
+            // Glow background
+            ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 20, 18, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Click icon background
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - 20, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Border
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Collection icon
+            ctx.fillStyle = '#8B4513';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('💰', this.x, this.y - 15);
+            
+            // "CLICK" text below
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 8px Arial';
+            ctx.fillText('CLICK', this.x, this.y - 5);
         }
     }
     

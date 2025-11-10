@@ -141,6 +141,39 @@ export class MagicAcademy extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
         }
+        
+        // Upgrade indicator when selected or available
+        const iconSize = 15;
+        const iconY = this.y + size/2 + 25;
+        
+        // Glow background
+        const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;
+        ctx.fillStyle = `rgba(75, 0, 130, ${pulseIntensity * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(this.x, iconY, iconSize + 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Click icon background
+        ctx.fillStyle = this.isSelected ? '#9370DB' : '#6A5ACD';
+        ctx.beginPath();
+        ctx.arc(this.x, iconY, iconSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Border
+        ctx.strokeStyle = '#4B0082';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Academy icon
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎓', this.x, iconY + 6);
+        
+        // "RESEARCH" text below
+        ctx.fillStyle = '#9370DB';
+        ctx.font = 'bold 8px Arial';
+        ctx.fillText('RESEARCH', this.x, iconY + 18);
     }
     
     renderFortress(ctx, size) {
