@@ -1064,14 +1064,12 @@ class Game {
             // Setup event listeners
             this.setupEventListeners();
             
-            // START GAME LOOP IMMEDIATELY - before state initialization
-            console.log('Game: Starting game loop BEFORE state initialization');
-            this.startGameLoop();
+            // Initialize states IMMEDIATELY - no delay
+            this.initializeStates();
             
-            // Add states and change to start screen - with small delay to ensure canvas is stable
-            setTimeout(() => {
-                this.initializeStates();
-            }, 10); // Very small delay to let canvas settle
+            // START GAME LOOP AFTER state initialization
+            console.log('Game: Starting game loop');
+            this.startGameLoop();
             
         } catch (error) {
             console.error('Game: Critical error during initialization:', error);
@@ -1118,7 +1116,7 @@ class Game {
             
             console.log('Game: All states added successfully');
             
-            // Change to start state IMMEDIATELY - no delay
+            // Change to start state IMMEDIATELY
             console.log('Game: Changing to start state NOW');
             const stateChanged = this.stateManager.changeState('start');
             

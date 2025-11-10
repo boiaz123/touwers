@@ -144,7 +144,11 @@ export class StartScreen {
             const width = canvas.width;
             const height = canvas.height;
             
-            console.log('StartScreen: Rendering to canvas', width, 'x', height, 'particles:', this.particles.length);
+            // REMOVED excessive logging - only log once
+            if (!this._hasRendered) {
+                console.log('StartScreen: First render - canvas', width, 'x', height, 'particles:', this.particles.length);
+                this._hasRendered = true;
+            }
             
             // Initialize particles on first render if somehow not initialized
             if (!this.particlesInitialized && width > 0 && height > 0) {

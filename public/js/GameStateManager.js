@@ -1,5 +1,9 @@
 export class GameStateManager {
     constructor(canvas, ctx) {
+        if (!canvas || !ctx) {
+            throw new Error('GameStateManager: Canvas and context are required');
+        }
+        
         this.canvas = canvas;
         this.ctx = ctx;
         this.states = {};
@@ -50,9 +54,14 @@ export class GameStateManager {
             console.warn('GameStateManager: State has no enter method');
         }
         
-        // CRITICAL: Force immediate render after state change
-        console.log('GameStateManager: Forcing immediate render after state change');
-        this.render();
+        // CRITICAL: Force TWO immediate renders to ensure canvas is drawn
+        console.log('GameStateManager: Forcing immediate renders after state change');
+        try {
+            this.render();
+            this.render(); // Second render to ensure everything is visible
+        } catch (renderError) {
+            console.error('GameStateManager: Error in immediate render:', renderError);
+        }
         
         console.log('GameStateManager: State changed successfully to', name);
         return true;
