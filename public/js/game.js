@@ -297,35 +297,73 @@ class GameplayState {
         // Clear existing menus
         this.clearActiveMenus();
         
+        // Get unlock system from tower manager
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        
+        // Filter available upgrades based on unlock system
+        const availableUpgrades = forgeData.upgrades.filter(upgrade => 
+            unlockSystem.canUseUpgrade(upgrade.id)
+        );
+        
         // Create upgrade menu with proper currency check
         const menu = document.createElement('div');
         menu.id = 'forge-upgrade-menu';
         menu.className = 'upgrade-menu';
+        
+        let upgradeListHTML = '';
+        
+        // Add forge level upgrade first if available
+        if (forgeData.forgeUpgrade) {
+            const forgeUpgrade = forgeData.forgeUpgrade;
+            upgradeListHTML += `
+                <div class="upgrade-item forge-upgrade ${forgeUpgrade.level >= forgeUpgrade.maxLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${forgeUpgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${forgeUpgrade.name}</div>
+                        <div class="upgrade-desc">${forgeUpgrade.description}</div>
+                        <div class="upgrade-next">${forgeUpgrade.nextUnlock}</div>
+                        <div class="upgrade-level">Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        ${forgeUpgrade.cost ? `$${forgeUpgrade.cost}` : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="${forgeUpgrade.id}" 
+                            ${(!forgeUpgrade.cost || this.gameState.gold < forgeUpgrade.cost) ? 'disabled' : ''}>
+                        ${forgeUpgrade.cost ? 'Upgrade' : 'MAX'}
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Add tower upgrades
+        upgradeListHTML += availableUpgrades.map(upgrade => `
+            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                <div class="upgrade-icon">${upgrade.icon}</div>
+                <div class="upgrade-details">
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-desc">${upgrade.description}</div>
+                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                    <div class="upgrade-current">Current: ${this.getUpgradeCurrentEffect(upgrade)}</div>
+                </div>
+                <div class="upgrade-cost">
+                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
+                </div>
+                <button class="upgrade-btn" 
+                        data-upgrade="${upgrade.id}" 
+                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
+                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                </button>
+            </div>
+        `).join('');
+        
         menu.innerHTML = `
             <div class="menu-header">
                 <h3>🔨 Tower Forge Upgrades</h3>
                 <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
             <div class="upgrade-list">
-                ${forgeData.upgrades.map(upgrade => `
-                    <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                        <div class="upgrade-icon">${upgrade.icon}</div>
-                        <div class="upgrade-details">
-                            <div class="upgrade-name">${upgrade.name}</div>
-                            <div class="upgrade-desc">${upgrade.description}</div>
-                            <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                            <div class="upgrade-current">Current: ${this.getUpgradeCurrentEffect(upgrade)}</div>
-                        </div>
-                        <div class="upgrade-cost">
-                            ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
-                        </div>
-                        <button class="upgrade-btn" 
-                                data-upgrade="${upgrade.id}" 
-                                ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
-                            ${upgrade.cost ? 'Upgrade' : 'MAX'}
-                        </button>
-                    </div>
-                `).join('')}
+                ${upgradeListHTML}
             </div>
         `;
         
@@ -335,15 +373,36 @@ class GameplayState {
         menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
-                if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
-                    this.updateUI();
-                    
-                    // Immediately refresh the menu to show updated values
-                    this.showForgeUpgradeMenu({
-                        type: 'forge_menu',
-                        forge: forgeData.forge,
-                        upgrades: forgeData.forge.getUpgradeOptions()
-                    });
+                
+                if (upgradeId === 'forge_level') {
+                    // Handle forge level upgrade
+                    if (forgeData.forge.purchaseForgeUpgrade(this.gameState)) {
+                        // Notify unlock system of forge upgrade
+                        unlockSystem.onForgeUpgraded(forgeData.forge.getForgeLevel());
+                        this.updateUI();
+                        this.updateUIAvailability(); // Update button visibility
+                        
+                        // Refresh the menu
+                        this.showForgeUpgradeMenu({
+                            type: 'forge_menu',
+                            forge: forgeData.forge,
+                            upgrades: forgeData.forge.getUpgradeOptions(),
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                        });
+                    }
+                } else {
+                    // Handle tower upgrades
+                    if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        
+                        // Refresh the menu
+                        this.showForgeUpgradeMenu({
+                            type: 'forge_menu',
+                            forge: forgeData.forge,
+                            upgrades: forgeData.forge.getUpgradeOptions(),
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                        });
+                    }
                 }
             });
         });
@@ -521,23 +580,45 @@ class GameplayState {
         
         document.getElementById('enemies-remaining').textContent = statusText;
         
-        // Update tower button states based on available gold
+        this.updateUIAvailability();
+    }
+    
+    updateUIAvailability() {
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        
+        // Update tower button states
         document.querySelectorAll('.tower-btn').forEach(btn => {
+            const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
-            if (this.gameState.canAfford(cost)) {
-                btn.classList.remove('disabled');
+            const unlocked = unlockSystem.canBuildTower(type);
+            
+            if (!unlocked) {
+                btn.style.display = 'none';
             } else {
-                btn.classList.add('disabled');
+                btn.style.display = '';
+                if (this.gameState.canAfford(cost)) {
+                    btn.classList.remove('disabled');
+                } else {
+                    btn.classList.add('disabled');
+                }
             }
         });
         
-        // Update building button states based on available gold
+        // Update building button states
         document.querySelectorAll('.building-btn').forEach(btn => {
+            const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
-            if (this.gameState.canAfford(cost)) {
-                btn.classList.remove('disabled');
+            const unlocked = unlockSystem.canBuildBuilding(type);
+            
+            if (!unlocked) {
+                btn.style.display = 'none';
             } else {
-                btn.classList.add('disabled');
+                btn.style.display = '';
+                if (this.gameState.canAfford(cost)) {
+                    btn.classList.remove('disabled');
+                } else {
+                    btn.classList.add('disabled');
+                }
             }
         });
     }

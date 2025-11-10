@@ -14,14 +14,14 @@ export class TowerForge extends Building {
         // Add workers
         this.workers = [
             {
-                x: 15, y: 25, // Front left worker
+                x: 15, y: 25,
                 animationOffset: 0,
                 hammerRaised: 0,
                 workCooldown: 0,
                 type: 'blacksmith'
             },
             {
-                x: -20, y: 20, // Front right worker
+                x: -20, y: 20,
                 animationOffset: Math.PI,
                 hammerRaised: 0,
                 workCooldown: 1.5,
@@ -29,7 +29,11 @@ export class TowerForge extends Building {
             }
         ];
         
-        // Upgrade system - rebalanced for better progression
+        // Forge level and tower upgrades
+        this.forgeLevel = 1;
+        this.maxForgeLevel = 10;
+        
+        // Tower upgrade system - rebalanced for better progression
         this.upgrades = {
             towerRange: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 },
             poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 },
@@ -1006,7 +1010,8 @@ export class TowerForge extends Building {
         return {
             type: 'forge_menu',
             forge: this,
-            upgrades: this.getUpgradeOptions()
+            upgrades: this.getUpgradeOptions(),
+            forgeUpgrade: this.getForgeUpgradeOption()
         };
     }
     
@@ -1060,6 +1065,49 @@ export class TowerForge extends Building {
         ];
     }
     
+    getForgeUpgradeOption() {
+        if (this.forgeLevel >= this.maxForgeLevel) {
+            return null;
+        }
+        
+        const nextLevel = this.forgeLevel + 1;
+        let description = "Upgrade the forge itself to unlock new content and improve mine income.";
+        let nextUnlock = "";
+        
+        switch(nextLevel) {
+            case 2:
+                nextUnlock = "Unlocks: Poison Tower + Poison Upgrades + 2x Mine Income";
+                break;
+            case 3:
+                nextUnlock = "Unlocks: Cannon Tower + Explosive Upgrades + 2.5x Mine Income";
+                break;
+            case 4:
+                nextUnlock = "Unlocks: Magic Academy + Magic Tower + Fire Arrows + 3x Mine Income";
+                break;
+            default:
+                const multiplier = 3.0 + (nextLevel - 4) * 0.2;
+                nextUnlock = `Unlocks: ${multiplier.toFixed(1)}x Mine Income`;
+                break;
+        }
+        
+        return {
+            id: 'forge_level',
+            name: `Forge Level ${nextLevel}`,
+            description: description,
+            nextUnlock: nextUnlock,
+            level: this.forgeLevel,
+            maxLevel: this.maxForgeLevel,
+            cost: this.calculateForgeUpgradeCost(),
+            icon: '🔨'
+        };
+    }
+    
+    calculateForgeUpgradeCost() {
+        if (this.forgeLevel >= this.maxForgeLevel) return null;
+        // Expensive forge upgrades: 400, 800, 1600, 3200, etc.
+        return 400 * Math.pow(2, this.forgeLevel - 1);
+    }
+    
     calculateUpgradeCost(upgradeType) {
         const upgrade = this.upgrades[upgradeType];
         if (upgrade.level >= upgrade.maxLevel) return null;
@@ -1067,6 +1115,10 @@ export class TowerForge extends Building {
     }
     
     purchaseUpgrade(upgradeType, gameState) {
+        if (upgradeType === 'forge_level') {
+            return this.purchaseForgeUpgrade(gameState);
+        }
+        
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
         
@@ -1084,7 +1136,24 @@ export class TowerForge extends Building {
         return true;
     }
     
-    // New method to notify that upgrades have changed
+    purchaseForgeUpgrade(gameState) {
+        const cost = this.calculateForgeUpgradeCost();
+        
+        if (!cost || gameState.gold < cost || this.forgeLevel >= this.maxForgeLevel) {
+            return false;
+        }
+        
+        gameState.gold -= cost;
+        this.forgeLevel++;
+        
+        console.log(`TowerForge: Upgraded forge to level ${this.forgeLevel}`);
+        return true;
+    }
+    
+    getForgeLevel() {
+        return this.forgeLevel;
+    }
+    
     notifyUpgradeChanged() {
         // This will be called by TowerManager to refresh all tower stats
         this.upgradesChanged = true;
@@ -1124,7 +1193,7 @@ export class TowerForge extends Building {
     }
     
     applyEffect(buildingManager) {
-        // Base forge effect - modify the existing towerUpgrades object
+        // Base forge effect
         buildingManager.towerUpgrades.damage *= 1.25;
         buildingManager.towerUpgrades.range *= 1.15;
         
@@ -1132,6 +1201,21 @@ export class TowerForge extends Building {
         if (this.upgrades.towerRange.level > 0) {
             buildingManager.towerUpgrades.range *= (1 + this.upgrades.towerRange.level * this.upgrades.towerRange.effect);
         }
+        
+        // Apply mine income multiplier based on forge level
+        const mineIncomeMultiplier = this.getMineIncomeMultiplier();
+        if (buildingManager.mineIncomeMultiplier) {
+            buildingManager.mineIncomeMultiplier *= mineIncomeMultiplier;
+        } else {
+            buildingManager.mineIncomeMultiplier = mineIncomeMultiplier;
+        }
+    }
+    
+    getMineIncomeMultiplier() {
+        if (this.forgeLevel === 1) return 1.5;
+        if (this.forgeLevel === 2) return 2.0;
+        if (this.forgeLevel === 3) return 2.5;
+        return 3.0 + (this.forgeLevel - 4) * 0.2;
     }
     
     deselect() {

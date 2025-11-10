@@ -745,6 +745,34 @@ export class GoldMine extends Building {
         ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
     }
     
+    getBaseIncome() {
+        // Base income adjusted by forge level via building manager
+        return 15; // This will be multiplied by forge bonus in BuildingManager
+    }
+    
+    onClick() {
+        // Apply forge income multiplier
+        const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
+        this.sparks = [];
+        
+        // Create collection sparks
+        for (let i = 0; i < 8; i++) {
+            this.sparks.push({
+                x: this.x + (Math.random() - 0.5) * 30,
+                y: this.y + (Math.random() - 0.5) * 30,
+                vx: (Math.random() - 0.5) * 100,
+                vy: -Math.random() * 80 - 40,
+                life: 1.5,
+                maxLife: 1.5,
+                size: Math.random() * 3 + 2,
+                color: Math.random() > 0.5 ? 'gold' : 'yellow'
+            });
+        }
+        
+        console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
+        return income;
+    }
+    
     darkenColor(color, factor) {
         const hex = color.replace('#', '');
         const r = parseInt(hex.substr(0, 2), 16);
@@ -781,9 +809,9 @@ export class GoldMine extends Building {
     
     static getInfo() {
         return {
-            name: 'Cave Mine',
-            description: 'Natural cave entrance with mining operations. Click to collect 30 gold when ready (15s cycle).',
-            effect: 'Click to collect',
+            name: 'Gold Mine',
+            description: 'Click to collect gold. Income scales with forge level.',
+            effect: 'Generates gold on click',
             size: '4x4',
             cost: 200
         };

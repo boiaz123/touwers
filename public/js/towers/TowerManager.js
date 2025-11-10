@@ -5,6 +5,7 @@ import { MagicTower } from './MagicTower.js';
 import { BarricadeTower } from './BarricadeTower.js';
 import { PoisonArcherTower } from './PoisonArcherTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
+import { UnlockSystem } from '../UnlockSystem.js';
 
 export class TowerManager {
     constructor(gameState, level) {
@@ -20,7 +21,8 @@ export class TowerManager {
             'poison': { class: PoisonArcherTower, cost: 120 }
         };
         
-        // Initialize building manager
+        // Initialize unlock system and building manager
+        this.unlockSystem = new UnlockSystem();
         this.buildingManager = new BuildingManager(gameState, level);
         
         // Track occupied grid positions by towers only
@@ -28,6 +30,12 @@ export class TowerManager {
     }
     
     placeTower(type, x, y, gridX, gridY) {
+        // Check if tower type is unlocked
+        if (!this.unlockSystem.canBuildTower(type)) {
+            console.log(`TowerManager: ${type} tower not yet unlocked`);
+            return false;
+        }
+        
         const towerType = this.towerTypes[type];
         if (!towerType) return false;
         
@@ -51,7 +59,21 @@ export class TowerManager {
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
-        return this.buildingManager.placeBuilding(type, x, y, gridX, gridY);
+        // Check if building type is unlocked
+        if (!this.unlockSystem.canBuildBuilding(type)) {
+            console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
+            return false;
+        }
+        
+        const result = this.buildingManager.placeBuilding(type, x, y, gridX, gridY);
+        
+        // Handle forge building
+        if (result && type === 'forge') {
+            this.unlockSystem.onForgeBuilt();
+            console.log('TowerManager: Forge built, new content unlocked');
+        }
+        
+        return result;
     }
     
     isBuildingPositionOccupied(gridX, gridY, size) {
@@ -163,30 +185,34 @@ export class TowerManager {
             // Apply range upgrade to ALL towers
             tower.range *= multipliers.rangeMultiplier;
             
-            // Apply specific upgrades based on tower type
+            // Apply specific upgrades based on tower type and unlock status
             const towerType = tower.constructor.name;
             
             switch (towerType) {
                 case 'PoisonArcherTower':
-                    tower.damage += multipliers.poisonDamageBonus;
-                    if (multipliers.fireArrowsEnabled) {
+                    if (this.unlockSystem.canUseUpgrade('poisonDamage')) {
+                        tower.damage += multipliers.poisonDamageBonus;
+                    }
+                    if (this.unlockSystem.canUseUpgrade('fireArrows') && multipliers.fireArrowsEnabled) {
                         tower.hasFireArrows = true;
                     }
                     break;
                     
                 case 'ArcherTower':
-                    if (multipliers.fireArrowsEnabled) {
+                    if (this.unlockSystem.canUseUpgrade('fireArrows') && multipliers.fireArrowsEnabled) {
                         tower.hasFireArrows = true;
                     }
                     break;
                     
                 case 'BarricadeTower':
                 case 'BasicTower':
-                    tower.damage += multipliers.barricadeDamageBonus;
+                    if (this.unlockSystem.canUseUpgrade('barricadeDamage')) {
+                        tower.damage += multipliers.barricadeDamageBonus;
+                    }
                     break;
                     
                 case 'CannonTower':
-                    if (tower.explosionRadius) {
+                    if (this.unlockSystem.canUseUpgrade('explosiveRadius') && tower.explosionRadius) {
                         tower.explosionRadius += multipliers.explosiveRadiusBonus;
                     }
                     break;
@@ -197,11 +223,11 @@ export class TowerManager {
     handleClick(x, y, canvasSize) {
         // First check building clicks (including forge)
         const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
-        if (buildingResult) {
-            return buildingResult;
+        if (buildingResult && buildingResult.type === 'forge_menu') {
+            // Pass unlock system to forge menu
+            buildingResult.unlockSystem = this.unlockSystem;
         }
-        
-        return null;
+        return buildingResult;
     }
     
     render(ctx) {
@@ -217,10 +243,26 @@ export class TowerManager {
     getTowerInfo(type) {
         const towerType = this.towerTypes[type];
         if (!towerType || !towerType.class.getInfo) return null;
-        return towerType.class.getInfo();
+        
+        const info = towerType.class.getInfo();
+        // Add unlock status
+        info.unlocked = this.unlockSystem.canBuildTower(type);
+        return info;
     }
     
     getBuildingInfo(type) {
-        return this.buildingManager.getBuildingInfo(type);
+        const info = this.buildingManager.getBuildingInfo(type);
+        if (info) {
+            info.unlocked = this.unlockSystem.canBuildBuilding(type);
+            if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+                info.disabled = true;
+                info.disableReason = "Only 1 forge allowed";
+            }
+        }
+        return info;
+    }
+    
+    getUnlockSystem() {
+        return this.unlockSystem;
     }
 }

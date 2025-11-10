@@ -75,12 +75,35 @@ export class BuildingManager {
     }
     
     update(deltaTime) {
-        // Update buildings
         this.buildings.forEach(building => {
             building.update(deltaTime);
+            
+            // Apply mine income multiplier to gold mines
+            if (building.constructor.name === 'GoldMine' && this.mineIncomeMultiplier) {
+                building.incomeMultiplier = this.mineIncomeMultiplier;
+            }
         });
         
-        // Remove passive gold generation (gold mines now require clicking)
+        // Recalculate tower upgrades
+        this.calculateTowerUpgrades();
+    }
+    
+    calculateTowerUpgrades() {
+        // Reset to base values
+        this.towerUpgrades = {
+            damage: 1,
+            range: 1,
+            fireRate: 1
+        };
+        
+        this.mineIncomeMultiplier = 1;
+        
+        // Apply effects from all buildings
+        this.buildings.forEach(building => {
+            if (building.applyEffect) {
+                building.applyEffect(this);
+            }
+        });
     }
     
     handleClick(x, y, canvasSize) {
