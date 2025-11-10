@@ -56,12 +56,32 @@ body {
 #gameCanvas {
     flex: 1;
     background: #0a0a0a;
-    cursor: crosshair;
+    cursor: default; /* Changed from crosshair - let JavaScript control it */
     touch-action: none;
     /* Ensure the canvas can receive clicks */
     pointer-events: auto;
     position: relative;
     z-index: 1;
+}
+
+/* Force cursor override when game is active */
+.game-active #gameCanvas {
+    cursor: crosshair !important;
+}
+
+/* Hover states for interactive elements */
+.game-active #gameCanvas.hovering-interactive {
+    cursor: pointer !important;
+}
+
+/* Start screen cursor */
+.start-screen #gameCanvas {
+    cursor: pointer !important;
+}
+
+/* Level select cursor */
+.level-select #gameCanvas {
+    cursor: pointer !important;
 }
 
 /* C&C Style Tower Sidebar */

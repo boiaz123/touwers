@@ -12,6 +12,14 @@ export class LevelSelect {
     }
     
     enter() {
+        // Add level-select class to body for CSS cursor control
+        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
+        document.body.classList.add('level-select');
+        
+        // Force initial cursor for level select
+        this.stateManager.canvas.style.cursor = 'default';
+        console.log('LevelSelect: Set initial cursor to default');
+        
         // Hide game UI when in level select
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -29,6 +37,9 @@ export class LevelSelect {
     }
     
     exit() {
+        // Remove level-select class when leaving
+        document.body.classList.remove('level-select');
+        
         // UI will be shown by the next state (game state)
         this.removeMouseListeners();
     }
@@ -82,9 +93,13 @@ export class LevelSelect {
             }
         });
         
-        // Update cursor style
-        this.stateManager.canvas.style.cursor = 
-            (this.hoveredLevel !== -1 || this.hoveredStartButton) ? 'pointer' : 'default';
+        // Update cursor style with explicit CSS override
+        const shouldShowPointer = (this.hoveredLevel !== -1 || this.hoveredStartButton);
+        this.stateManager.canvas.style.cursor = shouldShowPointer ? 'pointer' : 'default';
+        
+        if (shouldShowPointer) {
+            console.log('LevelSelect: Set cursor to pointer (hovering level/button)');
+        }
     }
     
     render(ctx) {
@@ -204,13 +219,16 @@ export class LevelSelect {
                 
                 if (index === this.selectedLevel) {
                     // Check start button area with corrected positioning
-                    const buttonX = cardX + cardWidth / 2 - 50; // Center the button
+                    const buttonX = cardX + cardWidth / 2 - 50;
                     const buttonY = cardY + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
+                        // Reset cursor before state change
+                        this.stateManager.canvas.style.cursor = 'default';
+                        
                         // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
                         this.stateManager.changeState('game');

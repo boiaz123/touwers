@@ -44,6 +44,14 @@ export class StartScreen {
     enter() {
         console.log('StartScreen: enter called');
         
+        // Add start-screen class to body for CSS cursor control
+        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
+        document.body.classList.add('start-screen');
+        
+        // Force cursor to pointer for start screen
+        this.stateManager.canvas.style.cursor = 'pointer';
+        console.log('StartScreen: Set cursor to pointer');
+        
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -200,6 +208,8 @@ export class StartScreen {
         console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
         // Allow clicking even before animation completes for testing
         if (this.showContinue || this.animationTime > 1) {
+            // Ensure cursor is reset before state change
+            this.stateManager.canvas.style.cursor = 'default';
             this.stateManager.changeState('levelSelect');
         }
     }

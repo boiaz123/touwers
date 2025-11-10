@@ -25,6 +25,14 @@ class GameplayState {
     enter() {
         console.log('GameplayState: entering');
         
+        // Add game-active class to body for CSS cursor control
+        document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
+        document.body.classList.add('game-active');
+        
+        // Force initial cursor state
+        this.stateManager.canvas.style.cursor = 'crosshair';
+        console.log('GameplayState: Set initial cursor to crosshair');
+        
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
         
@@ -86,6 +94,9 @@ class GameplayState {
     }
     
     exit() {
+        // Remove game-active class when leaving
+        document.body.classList.remove('game-active');
+        
         // Clean up event listeners when leaving game state
         this.removeEventListeners();
     }
@@ -150,23 +161,17 @@ class GameplayState {
             this.mouseX = x;
             this.mouseY = y;
             
-            // Only debug on demand to avoid spam
-            if (this.debugMouseEvents) {
-                console.log(`Game: Mouse move at (${x}, ${y})`);
-            }
-            
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
             
-            if (this.debugMouseEvents) {
-                console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
-            }
-            
-            // Update cursor based on hover state
+            // Update cursor based on hover state with proper classes
             if (isHoveringInteractable) {
                 this.stateManager.canvas.style.cursor = 'pointer';
+                this.stateManager.canvas.classList.add('hovering-interactive');
+                console.log('GameplayState: Set cursor to pointer (hovering interactive)');
             } else {
                 this.stateManager.canvas.style.cursor = 'crosshair';
+                this.stateManager.canvas.classList.remove('hovering-interactive');
             }
             
             // Handle placement preview
@@ -405,11 +410,15 @@ class GameplayState {
         // Force immediate hover state check without waiting for mouse movement
         const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
         
-        // Update cursor immediately
+        // Update cursor immediately with proper class management
         if (isHoveringInteractable) {
             this.stateManager.canvas.style.cursor = 'pointer';
+            this.stateManager.canvas.classList.add('hovering-interactive');
+            console.log('GameplayState: Force set cursor to pointer');
         } else {
             this.stateManager.canvas.style.cursor = 'crosshair';
+            this.stateManager.canvas.classList.remove('hovering-interactive');
+            console.log('GameplayState: Force set cursor to crosshair');
         }
         
         console.log(`Game: Force refresh complete - hovering: ${isHoveringInteractable}`);
