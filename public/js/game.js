@@ -129,21 +129,29 @@ class GameplayState {
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
+            console.log(`Game: Canvas click at (${canvasX}, ${canvasY})`);
+            
             // Check for building/tower clicks first
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
             if (clickResult) {
+                console.log('Game: Click result received:', clickResult);
+                
                 if (clickResult.type === 'forge_menu') {
+                    console.log('Game: Opening forge menu');
                     this.showForgeUpgradeMenu(clickResult);
                     return;
                 } else if (clickResult.type === 'academy_menu') {
+                    console.log('Game: Opening academy menu');
                     this.showAcademyUpgradeMenu(clickResult);
                     return;
                 } else if (clickResult.type === 'magic_tower_menu') {
+                    console.log('Game: Opening magic tower menu');
                     this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (typeof clickResult === 'number') {
                     // Gold collection from mine
+                    console.log('Game: Gold collected:', clickResult);
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;

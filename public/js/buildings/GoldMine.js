@@ -782,13 +782,15 @@ export class GoldMine extends Building {
             const iconX = this.x + size/2 - iconSize;
             const iconY = this.y + size/2 - iconSize;
             
-            // Store click area for detection
+            // CRITICAL: Store click area for detection
             this.clickArea = {
                 x: iconX - iconSize,
                 y: iconY - iconSize,
                 width: iconSize * 2,
                 height: iconSize * 2
             };
+            
+            console.log(`GoldMine: Setting clickArea to`, this.clickArea);
             
             // Glow background with pulse
             const pulseIntensity = Math.sin(this.animationTime * 8) * 0.3 + 0.7;

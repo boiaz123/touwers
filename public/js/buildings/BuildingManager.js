@@ -116,13 +116,10 @@ export class BuildingManager {
     handleClick(x, y, canvasSize) {
         console.log(`BuildingManager: Click at (${x}, ${y}), checking ${this.buildings.length} buildings`);
         
-        // Clear all selections first
-        this.buildings.forEach(building => {
-            if (building.deselect) building.deselect();
-        });
-        
-        // Check building icon clicks only
-        for (const building of this.buildings) {
+        // Check building icon clicks - iterate in reverse order for z-index
+        for (let i = this.buildings.length - 1; i >= 0; i--) {
+            const building = this.buildings[i];
+            
             if (building.clickArea) {
                 const withinX = x >= building.clickArea.x && x <= building.clickArea.x + building.clickArea.width;
                 const withinY = y >= building.clickArea.y && y <= building.clickArea.y + building.clickArea.height;
@@ -132,17 +129,27 @@ export class BuildingManager {
                 if (withinX && withinY) {
                     console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon`);
                     
-                    // Call the building's onClick method directly
+                    // Clear other building selections
+                    this.buildings.forEach(b => {
+                        if (b !== building && b.deselect) b.deselect();
+                    });
+                    
+                    // Call the building's onClick method
                     if (building.onClick) {
                         const result = building.onClick();
                         console.log(`BuildingManager: onClick result:`, result);
                         return result;
-                    } else if (building.constructor.name === 'GoldMine') {
-                        // Fallback for GoldMine if onClick doesn't exist
+                    }
+                    
+                    // Fallback for buildings without onClick
+                    if (building.constructor.name === 'GoldMine' && building.collectGold) {
                         return building.collectGold();
                     }
-                    break;
+                    
+                    return null;
                 }
+            } else {
+                console.log(`BuildingManager: ${building.constructor.name} has no clickArea`);
             }
         }
         

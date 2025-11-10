@@ -61,13 +61,29 @@ export class TowerManager {
     placeBuilding(type, x, y, gridX, gridY) {
         // Check if building type is unlocked
         if (!this.unlockSystem.canBuildBuilding(type)) {
-            console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
+            console.log(`TowerManager: ${type} building not yet unlocked`);
+            return false;
+        }
+        
+        // Check building limits BEFORE attempting to place
+        if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+            console.log('TowerManager: Cannot build forge - limit reached');
+            return false;
+        }
+        
+        if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+            console.log('TowerManager: Cannot build mine - limit reached');
+            return false;
+        }
+        
+        if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+            console.log('TowerManager: Cannot build academy - limit reached');
             return false;
         }
         
         const result = this.buildingManager.placeBuilding(type, x, y, gridX, gridY);
         
-        // Handle building placement for unlock system
+        // Handle building placement for unlock system ONLY if placement succeeded
         if (result) {
             if (type === 'forge') {
                 this.unlockSystem.onForgeBuilt();
@@ -330,11 +346,32 @@ export class TowerManager {
         const unlocked = this.unlockSystem.canBuildBuilding(type);
         const canAfford = this.gameState.canAfford(info.cost || 0);
         
+        // Check specific building limits
+        let disabled = false;
+        let disableReason = '';
+        
+        if (!unlocked) {
+            disabled = true;
+            disableReason = 'Not unlocked yet';
+        } else if (!canAfford) {
+            disabled = true;
+            disableReason = 'Not enough gold';
+        } else if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+            disabled = true;
+            disableReason = 'Only 1 forge allowed';
+        } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+            disabled = true;
+            disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
+        } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+            disabled = true;
+            disableReason = 'Only 1 academy allowed';
+        }
+        
         return {
             ...info,
             unlocked: unlocked,
-            disabled: !unlocked || !canAfford,
-            disableReason: !unlocked ? 'Not unlocked yet' : (!canAfford ? 'Not enough gold' : '')
+            disabled: disabled,
+            disableReason: disableReason
         };
     }
     
