@@ -26,6 +26,7 @@ export class GameStateManager {
         if (this.currentState && this.currentState.exit) {
             try {
                 this.currentState.exit();
+                console.log('GameStateManager: Exited previous state');
             } catch (error) {
                 console.error('GameStateManager: Error exiting state:', error);
             }
@@ -34,15 +35,19 @@ export class GameStateManager {
         // Change to new state
         this.currentState = this.states[name];
         this.currentStateName = name;
+        console.log('GameStateManager: Set currentState to', name);
         
         // Enter new state
-        if (this.currentState.enter) {
+        if (this.currentState && this.currentState.enter) {
             try {
                 this.currentState.enter();
+                console.log('GameStateManager: Entered new state successfully');
             } catch (error) {
                 console.error('GameStateManager: Error entering state:', error);
                 return false;
             }
+        } else {
+            console.warn('GameStateManager: State has no enter method');
         }
         
         console.log('GameStateManager: State changed successfully to', name);
@@ -60,11 +65,17 @@ export class GameStateManager {
     }
     
     render() {
-        if (this.currentState && this.currentState.render) {
+        if (!this.currentState) {
+            console.warn('GameStateManager: No current state to render');
+            return;
+        }
+        
+        if (this.currentState.render) {
             try {
                 this.currentState.render(this.ctx);
             } catch (error) {
                 console.error('GameStateManager: Error rendering state:', error);
+                console.error('Error stack:', error.stack);
                 
                 // Fallback rendering
                 this.ctx.fillStyle = '#000';
@@ -72,8 +83,10 @@ export class GameStateManager {
                 this.ctx.fillStyle = '#f00';
                 this.ctx.font = '20px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('Render Error', this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.fillText('Render Error: ' + error.message, this.canvas.width / 2, this.canvas.height / 2);
             }
+        } else {
+            console.warn('GameStateManager: Current state has no render method');
         }
     }
     

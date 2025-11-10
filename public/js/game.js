@@ -1052,14 +1052,18 @@ class Game {
             console.log('Game: GameStateManager created');
             
             // Initialize game loop timing
-            this.lastTime = 0;
+            this.lastTime = performance.now();
             this.isInitialized = false;
             this.isResizing = false;
             
             // Setup event listeners
             this.setupEventListeners();
             
-            // Add states
+            // START GAME LOOP IMMEDIATELY - before state initialization
+            console.log('Game: Starting game loop BEFORE state initialization');
+            this.startGameLoop();
+            
+            // Add states and change to start screen
             this.initializeStates();
             
         } catch (error) {
@@ -1102,19 +1106,19 @@ class Game {
             
             console.log('Game: All states added successfully');
             
-            // CRITICAL: Wait for next frame before changing state to ensure everything is ready
-            requestAnimationFrame(() => {
-                console.log('Game: Changing to start state');
-                const stateChanged = this.stateManager.changeState('start');
-                
-                if (!stateChanged) {
-                    throw new Error('Failed to change to start state');
-                }
-                
-                this.isInitialized = true;
-                console.log('Game: State initialization complete, starting game loop');
-                this.startGameLoop();
-            });
+            // Change to start state IMMEDIATELY - no delay
+            console.log('Game: Changing to start state NOW');
+            const stateChanged = this.stateManager.changeState('start');
+            
+            if (!stateChanged) {
+                throw new Error('Failed to change to start state');
+            }
+            
+            // Force an immediate render
+            this.stateManager.render();
+            
+            this.isInitialized = true;
+            console.log('Game: State initialization complete');
             
         } catch (error) {
             console.error('Game: Error initializing states:', error);
@@ -1224,7 +1228,8 @@ class Game {
     
     startGameLoop() {
         console.log('Game: Game loop starting');
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.gameLoopRunning = true;
+        this.gameLoop(performance.now());
     }
     
     showError(message) {
@@ -1245,26 +1250,26 @@ class Game {
     }
     
     gameLoop(currentTime) {
+        // Calculate delta time
+        const deltaTime = Math.min(0.033, (currentTime - this.lastTime) / 1000); // Cap at 33ms (30fps minimum)
+        this.lastTime = currentTime;
+        
         try {
-            // Continue loop even if not initialized to show loading
-            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
-            this.lastTime = currentTime;
-            
             // Clear the canvas
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             
-            if (this.isInitialized && this.stateManager && this.stateManager.currentState) {
-                // Normal game loop
+            if (this.stateManager && this.stateManager.currentState) {
+                // Normal game loop with state
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
             } else {
-                // Show loading state
+                // Show loading state if no state is active yet
                 this.ctx.fillStyle = '#1a0f0a';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 this.ctx.fillStyle = '#d4af37';
                 this.ctx.font = '24px serif';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.fillText('Initializing...', this.canvas.width / 2, this.canvas.height / 2);
             }
             
         } catch (error) {
@@ -1273,7 +1278,9 @@ class Game {
         }
         
         // Continue the game loop
-        requestAnimationFrame((time) => this.gameLoop(time));
+        if (this.gameLoopRunning) {
+            requestAnimationFrame((time) => this.gameLoop(time));
+        }
     }
 }
 

@@ -48,7 +48,6 @@ export class StartScreen {
         document.body.className = document.body.className.replace(/\b(start-screen|level-select|game-active)\b/g, '').trim();
         document.body.classList.add('start-screen');
         
-        // Let CSS handle cursor - remove manual setting
         console.log('StartScreen: Using CSS cursor styling');
         
         // Ensure game UI is hidden when in start screen
@@ -76,12 +75,15 @@ export class StartScreen {
         this.particles = [];
         this.particlesInitialized = false;
         
-        // Initialize particles immediately if canvas is ready
+        // Initialize particles IMMEDIATELY if canvas is ready
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
+            console.log('StartScreen: Initializing particles immediately in enter()');
             this.initParticles();
+        } else {
+            console.warn('StartScreen: Canvas not ready, particles will initialize on first render');
         }
         
-        console.log('StartScreen: enter completed');
+        console.log('StartScreen: enter completed successfully');
     }
     
     update(deltaTime) {
