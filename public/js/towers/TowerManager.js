@@ -287,16 +287,20 @@ export class TowerManager {
                     if (this.hoveredTower !== tower) {
                         this.hoveredTower = tower;
                         tower.isHovered = true;
-                        console.log(`TowerManager: Hovering over ${tower.constructor.name}`);
+                        console.log(`TowerManager: Started hovering over ${tower.constructor.name} at (${tower.x}, ${tower.y})`);
+                        console.log(`TowerManager: Mouse at (${x}, ${y}), clickArea:`, tower.clickArea);
                     }
                     foundHover = true;
                     break;
                 }
+            } else {
+                console.log(`TowerManager: Tower ${tower.constructor.name} has no clickArea!`);
             }
         }
         
         // Clear hover state if no tower is hovered
         if (!foundHover && this.hoveredTower) {
+            console.log(`TowerManager: Stopped hovering over ${this.hoveredTower.constructor.name}`);
             this.hoveredTower.isHovered = false;
             this.hoveredTower = null;
         }
@@ -309,9 +313,10 @@ export class TowerManager {
         });
         
         // Also check building hover
-        const buildingResult = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+        const buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
         
-        return foundHover;
+        // Return true if hovering over any interactive element
+        return foundHover || buildingHover;
     }
     
     handleClick(x, y, canvasSize) {

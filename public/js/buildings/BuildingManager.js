@@ -163,6 +163,26 @@ export class BuildingManager {
         return null;
     }
     
+    handleMouseMove(x, y) {
+        let foundHover = false;
+        
+        // Check for hover over building icons
+        for (const building of this.buildings) {
+            if (building.clickArea) {
+                const withinX = x >= building.clickArea.x && x <= building.clickArea.x + building.clickArea.width;
+                const withinY = y >= building.clickArea.y && y <= building.clickArea.y + building.clickArea.height;
+                
+                if (withinX && withinY) {
+                    console.log(`BuildingManager: Hovering over ${building.constructor.name} at (${building.x}, ${building.y})`);
+                    foundHover = true;
+                    break;
+                }
+            }
+        }
+        
+        return foundHover;
+    }
+    
     getBuildingTypeFromInstance(building) {
         const className = building.constructor.name;
         switch(className) {

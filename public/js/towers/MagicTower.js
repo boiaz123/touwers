@@ -565,13 +565,15 @@ export class MagicTower {
         const iconX = this.x + gridSize/2 - iconSize;
         const iconY = this.y + gridSize/2 - iconSize;
         
-        // Store click area for detection
+        // Store click area for detection - FIXED: Proper area calculation
         this.clickArea = {
             x: iconX - iconSize/2,
             y: iconY - iconSize/2,
             width: iconSize * 2,
             height: iconSize * 2
         };
+        
+        console.log(`MagicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
         
         // Glow background for element selection with hover/selection effects
         let elementPulse = Math.sin(this.animationTime * 4) * 0.2 + 0.8;

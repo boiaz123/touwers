@@ -174,16 +174,16 @@ export class TowerForge extends Building {
         const iconX = this.x + size/2 - iconSize;
         const iconY = this.y + size/2 - iconSize;
         
-        // Store click area for detection - THIS MUST ALWAYS BE SET
+        // Store click area for detection - FIXED: Proper area centering
         this.clickArea = {
-            x: iconX - iconSize,
-            y: iconY - iconSize,
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
             width: iconSize * 2,
             height: iconSize * 2
         };
         
-        console.log(`TowerForge: Render - setting clickArea at building position (${this.x}, ${this.y})`);
-        console.log(`TowerForge: Icon at (${iconX}, ${iconY}), clickArea:`, this.clickArea);
+        console.log(`TowerForge: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
+        console.log(`TowerForge: Building center at (${this.x}, ${this.y}), size: ${size}`);
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

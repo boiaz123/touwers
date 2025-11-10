@@ -147,15 +147,15 @@ export class MagicAcademy extends Building {
         const iconX = this.x + size/2 - iconSize;
         const iconY = this.y + size/2 - iconSize;
         
-        // Store click area for detection
+        // Store click area for detection - FIXED: Proper area centering
         this.clickArea = {
-            x: iconX - iconSize,
-            y: iconY - iconSize,
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
             width: iconSize * 2,
             height: iconSize * 2
         };
         
-        console.log(`MagicAcademy: Setting clickArea at (${this.clickArea.x}, ${this.clickArea.y}) size ${this.clickArea.width}x${this.clickArea.height}`);
+        console.log(`MagicAcademy: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

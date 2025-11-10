@@ -360,13 +360,15 @@ export class BasicTower {
         const iconX = this.x + gridSize/2 - iconSize;
         const iconY = this.y + gridSize/2 - iconSize;
         
-        // Store click area for detection - THIS MUST ALWAYS BE SET
+        // Store click area for detection - FIXED: Proper centering around icon
         this.clickArea = {
             x: iconX - iconSize/2,
             y: iconY - iconSize/2,
             width: iconSize * 2,
             height: iconSize * 2
         };
+        
+        console.log(`BasicTower: Setting clickArea at icon (${iconX}, ${iconY}), area:`, this.clickArea);
         
         // Icon background with glow - ENHANCED with hover effects
         let pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;

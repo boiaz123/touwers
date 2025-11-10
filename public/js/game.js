@@ -139,8 +139,11 @@ class GameplayState {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // Handle tower/building hover effects
-            this.towerManager.handleMouseMove(x, y);
+            // Handle tower/building hover effects FIRST
+            const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
+            
+            // Update cursor based on hover state
+            this.stateManager.canvas.style.cursor = isHoveringInteractable ? 'pointer' : 'default';
             
             // Handle placement preview
             this.handleMouseMove(e);
