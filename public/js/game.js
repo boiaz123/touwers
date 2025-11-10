@@ -83,14 +83,41 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // CRITICAL: Setup event listeners SYNCHRONOUSLY, not with timeout
+        // CRITICAL: Setup event listeners SYNCHRONOUSLY
         this.setupEventListeners();
         console.log('GameplayState: Event listeners set up synchronously');
+        
+        // CRITICAL: Force an immediate render to ensure click areas are set
+        this.forceInitialRender();
         
         this.updateUI();
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
+    }
+    
+    forceInitialRender() {
+        console.log('GameplayState: Forcing initial render to set click areas');
+        
+        try {
+            // Clear and render once to ensure all click areas are set
+            this.stateManager.ctx.clearRect(0, 0, this.stateManager.canvas.width, this.stateManager.canvas.height);
+            this.render(this.stateManager.ctx);
+            
+            console.log('GameplayState: Initial render complete');
+            
+            // Log tower/building click areas for debugging
+            this.towerManager.towers.forEach((tower, i) => {
+                console.log(`Tower ${i} (${tower.constructor.name}) clickArea:`, tower.clickArea);
+            });
+            
+            this.towerManager.buildingManager.buildings.forEach((building, i) => {
+                console.log(`Building ${i} (${building.constructor.name}) clickArea:`, building.clickArea);
+            });
+            
+        } catch (error) {
+            console.error('GameplayState: Error during initial render:', error);
+        }
     }
     
     exit() {
@@ -375,6 +402,9 @@ class GameplayState {
                     this.level.setPlacementPreview(0, 0, false);
                     
                     console.log('Game: Tower placed successfully');
+                    
+                    // Force render to set click area for new tower
+                    this.forceClickAreaRefresh();
                 }
             }
         } else if (this.selectedBuildingType) {
@@ -391,53 +421,36 @@ class GameplayState {
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
                     
-                    console.log('Game: Building placed successfully, refreshing event listeners');
+                    console.log('Game: Building placed successfully');
                     
-                    // CRITICAL: Force immediate mouse state refresh, not just event listener refresh
+                    // Force render to set click area for new building, then refresh mouse state
+                    this.forceClickAreaRefresh();
                     this.forceMouseStateRefresh(x, y);
                 }
             }
         }
     }
     
-    forceMouseStateRefresh(x, y) {
-        console.log('Game: Force refreshing mouse state after building placement');
+    forceClickAreaRefresh() {
+        console.log('Game: Force refreshing click areas after placement');
         
-        // Update our tracked position
-        this.mouseX = x;
-        this.mouseY = y;
-        
-        // Force immediate hover state check without waiting for mouse movement
-        const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
-        
-        // Update cursor immediately with proper class management
-        if (isHoveringInteractable) {
-            this.stateManager.canvas.style.cursor = 'pointer';
-            this.stateManager.canvas.classList.add('hovering-interactive');
-            console.log('GameplayState: Force set cursor to pointer');
-        } else {
-            this.stateManager.canvas.style.cursor = 'crosshair';
-            this.stateManager.canvas.classList.remove('hovering-interactive');
-            console.log('GameplayState: Force set cursor to crosshair');
+        try {
+            // Force a render to ensure new tower/building click areas are set
+            this.render(this.stateManager.ctx);
+            
+            // Log new click areas for debugging
+            const lastTower = this.towerManager.towers[this.towerManager.towers.length - 1];
+            const lastBuilding = this.towerManager.buildingManager.buildings[this.towerManager.buildingManager.buildings.length - 1];
+            
+            if (lastTower) {
+                console.log(`New tower clickArea:`, lastTower.clickArea);
+            }
+            if (lastBuilding) {
+                console.log(`New building clickArea:`, lastBuilding.clickArea);
+            }
+        } catch (error) {
+            console.error('Game: Error during click area refresh:', error);
         }
-        
-        console.log(`Game: Force refresh complete - hovering: ${isHoveringInteractable}`);
-    }
-    
-    refreshEventListeners() {
-        console.log('Game: Refreshing event listeners after building placement');
-        
-        // Store current mouse position - use our tracked position
-        const currentMouseX = this.mouseX || 0;
-        const currentMouseY = this.mouseY || 0;
-        
-        console.log(`Game: Stored mouse position: ${currentMouseX}, ${currentMouseY}`);
-        
-        // Re-setup event listeners
-        this.setupEventListeners();
-        
-        // Force immediate mouse state refresh
-        this.refreshMouseState(currentMouseX, currentMouseY);
     }
     
     showForgeUpgradeMenu(forgeData) {

@@ -21,7 +21,7 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // More pine trees within 4x4 grid using barricade tower style (±64px from center)
+        // Trees and bushes data...
         this.trees = [
             { x: -55, y: -55, size: 0.8 },
             { x: -25, y: -60, size: 0.6 },
@@ -45,7 +45,6 @@ export class MagicAcademy extends Building {
             { x: 45, y: 55, size: 0.9 }
         ];
         
-        // Bush positions (CONSTRAINED to 4x4 grid)
         this.bushes = [
             { x: -40, y: -35, size: 8 },
             { x: -10, y: -40, size: 6 },
@@ -61,31 +60,9 @@ export class MagicAcademy extends Building {
             { x: 40, y: 35, size: 8 }
         ];
         
-        // CRITICAL: Initialize click area immediately
-        this.initializeClickArea();
-    }
-    
-    initializeClickArea() {
-        // Calculate building size based on default resolution
-        const baseResolution = 1920;
-        const defaultCanvasWidth = 1200;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const size = cellSize * 4; // 4x4 building
-        
-        // Set up clickable icon area
-        const iconSize = 15;
-        const iconX = this.x + size/2 - iconSize;
-        const iconY = this.y + size/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`MagicAcademy: Initialized clickArea in constructor:`, this.clickArea);
+        // Initialize click area as null - will be set during first render
+        this.clickArea = null;
+        console.log(`MagicAcademy: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime) {
@@ -149,6 +126,23 @@ export class MagicAcademy extends Building {
     }
     
     render(ctx, size) {
+        // ALWAYS update click area during render with current canvas size
+        const iconSize = 15;
+        const iconX = this.x + size/2 - iconSize;
+        const iconY = this.y + size/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        if (!this.clickAreaLogged) {
+            console.log(`MagicAcademy: Set clickArea during render:`, this.clickArea, `Size: ${size}, Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
+            this.clickAreaLogged = true;
+        }
+        
         // Render surrounding elements first
         this.renderWaterMoat(ctx, size);
         this.renderTrees(ctx, size);
@@ -167,19 +161,6 @@ export class MagicAcademy extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
         }
-        
-        // Upgrade indicator with clickable icon in bottom right corner of 4x4 grid
-        const iconSize = 15;
-        const iconX = this.x + size/2 - iconSize;
-        const iconY = this.y + size/2 - iconSize;
-        
-        // Update click area for current canvas size
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
         
         // Glow background
         const pulseIntensity = this.isSelected ? Math.sin(this.animationTime * 6) * 0.3 + 0.7 : 0.6;

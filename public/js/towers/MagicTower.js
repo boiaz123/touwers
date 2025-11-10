@@ -9,11 +9,11 @@ export class MagicTower {
         this.fireRate = 0.8;
         this.cooldown = 0;
         this.target = null;
-        this.isSelected = false; // Add selection state
-        this.isHovered = false; // Add hover state
+        this.isSelected = false;
+        this.isHovered = false;
         
         // Element system - CORRECTED elements
-        this.selectedElement = 'fire'; // Default element
+        this.selectedElement = 'fire';
         this.elementalBonuses = {
             fire: { damageBonus: 0 },
             water: { slowBonus: 0 },
@@ -39,31 +39,9 @@ export class MagicTower {
             });
         }
         
-        // CRITICAL: Initialize click area immediately
-        this.initializeClickArea();
-    }
-    
-    initializeClickArea() {
-        // Calculate tower size based on a default resolution
-        const baseResolution = 1920;
-        const defaultCanvasWidth = 1200; // Assume reasonable default
-        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const gridSize = cellSize * 2; // 2x2 grid
-        
-        // Set up clickable icon area in bottom right corner
-        const iconSize = 12;
-        const iconX = this.x + gridSize/2 - iconSize;
-        const iconY = this.y + gridSize/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`MagicTower: Initialized clickArea in constructor:`, this.clickArea);
+        // Initialize click area as null - will be set during first render
+        this.clickArea = null;
+        console.log(`MagicTower: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime, enemies) {
@@ -309,10 +287,10 @@ export class MagicTower {
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
-        const towerSize = cellSize * 2; // FIX: Define towerSize variable
-        const gridSize = cellSize * 2; // 2x2 grid
+        const towerSize = cellSize * 2;
+        const gridSize = cellSize * 2;
         
-        // Update click area for current canvas size
+        // ALWAYS update click area during render with current canvas size
         const iconSize = 12;
         const iconX = this.x + gridSize/2 - iconSize;
         const iconY = this.y + gridSize/2 - iconSize;
@@ -323,6 +301,11 @@ export class MagicTower {
             width: iconSize * 2,
             height: iconSize * 2
         };
+        
+        if (!this.clickAreaLogged) {
+            console.log(`MagicTower: Set clickArea during render:`, this.clickArea, `Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
+            this.clickAreaLogged = true;
+        }
         
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';

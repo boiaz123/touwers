@@ -17,7 +17,7 @@ export class CannonTower {
         
         // Animation properties
         this.trebuchetAngle = 0;
-        this.armPosition = 0; // 0 = ready, 1 = loaded/pulled back, 2 = firing
+        this.armPosition = 0;
         this.armSpeed = 0;
         this.explosions = [];
         this.fireballs = [];
@@ -27,31 +27,9 @@ export class CannonTower {
         // Fixed random seed for consistent texture
         this.randomSeed = Math.random() * 1000;
         
-        // CRITICAL: Initialize click area immediately
-        this.initializeClickArea();
-    }
-    
-    initializeClickArea() {
-        // Calculate tower size based on a default resolution
-        const baseResolution = 1920;
-        const defaultCanvasWidth = 1200; // Assume reasonable default
-        const scaleFactor = Math.max(0.5, Math.min(2.5, defaultCanvasWidth / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const towerSize = cellSize * 2;
-        
-        // Set up clickable icon area
-        const iconSize = 12;
-        const iconX = this.x + towerSize/2 - iconSize;
-        const iconY = this.y + towerSize/2 - iconSize;
-        
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
-        console.log(`CannonTower: Initialized clickArea in constructor:`, this.clickArea);
+        // Initialize click area as null - will be set during first render
+        this.clickArea = null;
+        console.log(`CannonTower: Constructor complete, clickArea will be set during render`);
     }
     
     update(deltaTime, enemies) {
@@ -197,6 +175,23 @@ export class CannonTower {
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
         const towerSize = cellSize * 2;
+        
+        // ALWAYS update click area during render
+        const iconSize = 12;
+        const iconX = this.x + towerSize/2 - iconSize;
+        const iconY = this.y + towerSize/2 - iconSize;
+        
+        this.clickArea = {
+            x: iconX - iconSize/2,
+            y: iconY - iconSize/2,
+            width: iconSize * 2,
+            height: iconSize * 2
+        };
+        
+        if (!this.clickAreaLogged) {
+            console.log(`CannonTower: Set clickArea during render:`, this.clickArea, `Canvas: ${ctx.canvas.width}x${ctx.canvas.height}`);
+            this.clickAreaLogged = true;
+        }
         
         // 3D square tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
@@ -563,18 +558,6 @@ export class CannonTower {
         }
         
         // Add clickable icon in bottom right corner of 2x2 grid
-        const iconSize = 12;
-        const iconX = this.x + towerSize/2 - iconSize;
-        const iconY = this.y + towerSize/2 - iconSize;
-        
-        // Store click area for detection
-        this.clickArea = {
-            x: iconX - iconSize/2,
-            y: iconY - iconSize/2,
-            width: iconSize * 2,
-            height: iconSize * 2
-        };
-        
         // Icon background with hover/selection effects
         let pulseIntensity = Math.sin(Date.now() * 0.004) * 0.2 + 0.8;
         
@@ -615,7 +598,8 @@ export class CannonTower {
         ctx.fillStyle = this.isSelected || this.isHovered ? '#000' : '#FFD700';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('💣', iconX, iconY + 5);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💣', iconX, iconY);
         
         // Clear shadow
         ctx.shadowBlur = 0;
