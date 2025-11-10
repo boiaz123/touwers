@@ -125,9 +125,13 @@ export class BuildingManager {
         for (let i = 0; i < this.buildings.length; i++) {
             const building = this.buildings[i];
             
+            console.log(`BuildingManager: Checking building ${i} (${building.constructor.name})`);
+            
             try {
                 if (building && building.clickArea) {
                     const area = building.clickArea;
+                    
+                    console.log(`BuildingManager: Building ${i} clickArea:`, area);
                     
                     // Validate click area
                     if (typeof area.x === 'number' && typeof area.y === 'number' && 
@@ -136,8 +140,8 @@ export class BuildingManager {
                         const withinX = x >= area.x && x <= area.x + area.width;
                         const withinY = y >= area.y && y <= area.y + area.height;
                         
-                        console.log(`BuildingManager: Building ${i} (${building.constructor.name}) clickArea:`, area);
-                        console.log(`BuildingManager: Click test - withinX: ${withinX}, withinY: ${withinY}`);
+                        console.log(`BuildingManager: Click test - x: ${x} vs [${area.x}, ${area.x + area.width}] = ${withinX}`);
+                        console.log(`BuildingManager: Click test - y: ${y} vs [${area.y}, ${area.y + area.height}] = ${withinY}`);
                         
                         if (withinX && withinY) {
                             console.log(`BuildingManager: BUILDING ICON HIT! Clicked on ${building.constructor.name}`);
@@ -150,9 +154,12 @@ export class BuildingManager {
                                 console.log(`BuildingManager: Building ${building.constructor.name} has no valid onClick method!`);
                             }
                         }
+                    } else {
+                        console.log(`BuildingManager: Building ${i} has invalid clickArea properties:`, area);
                     }
                 } else {
-                    console.log(`BuildingManager: Building ${i} (${building.constructor.name}) has NO valid clickArea!`);
+                    console.log(`BuildingManager: Building ${i} (${building.constructor.name}) has NO clickArea! building:`, building);
+                    console.log(`BuildingManager: Building object keys:`, Object.keys(building));
                 }
             } catch (error) {
                 console.warn(`BuildingManager: Error checking building click for ${building.constructor.name}:`, error);
@@ -169,7 +176,7 @@ export class BuildingManager {
             return false;
         }
         
-        const debugMouse = false; // Set to true for debugging
+        const debugMouse = true; // Enable debugging
         
         if (debugMouse) {
             console.log(`BuildingManager: handleMouseMove at (${x}, ${y}), checking ${this.buildings.length} buildings`);
@@ -178,7 +185,9 @@ export class BuildingManager {
         let foundHover = false;
         
         // Check for hover over building icons with better error handling
-        for (const building of this.buildings) {
+        for (let i = 0; i < this.buildings.length; i++) {
+            const building = this.buildings[i];
+            
             try {
                 if (building && building.clickArea) {
                     const area = building.clickArea;
@@ -191,8 +200,7 @@ export class BuildingManager {
                         const withinY = y >= area.y && y <= area.y + area.height;
                         
                         if (debugMouse) {
-                            console.log(`BuildingManager: Checking ${building.constructor.name} clickArea:`, area);
-                            console.log(`BuildingManager: withinX=${withinX}, withinY=${withinY}`);
+                            console.log(`BuildingManager: Building ${i} (${building.constructor.name}) hover test - withinX=${withinX}, withinY=${withinY}`);
                         }
                         
                         if (withinX && withinY) {
@@ -204,11 +212,15 @@ export class BuildingManager {
                         }
                     }
                 } else if (debugMouse) {
-                    console.log(`BuildingManager: Building ${building.constructor.name} has no valid clickArea!`);
+                    console.log(`BuildingManager: Building ${i} (${building.constructor.name}) has no valid clickArea!`);
                 }
             } catch (error) {
                 console.warn(`BuildingManager: Error checking building hover for ${building.constructor.name}:`, error);
             }
+        }
+        
+        if (debugMouse) {
+            console.log(`BuildingManager: Mouse move result: ${foundHover}`);
         }
         
         return foundHover;

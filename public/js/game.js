@@ -188,8 +188,19 @@ class GameplayState {
             this.mouseX = x;
             this.mouseY = y;
             
+            // Enable debugging to see if mouse events are working
+            const debugMouseEvents = true; // Changed to true for debugging
+            
+            if (debugMouseEvents) {
+                console.log(`Game: Mouse move at (${x}, ${y})`);
+            }
+            
             // Handle tower/building hover effects FIRST
             const isHoveringInteractable = this.towerManager.handleMouseMove(x, y);
+            
+            if (debugMouseEvents) {
+                console.log(`Game: TowerManager returned hover: ${isHoveringInteractable}`);
+            }
             
             // Update cursor based on hover state with proper classes
             if (isHoveringInteractable) {
@@ -217,6 +228,8 @@ class GameplayState {
             this.mouseY = canvasY;
             
             console.log(`Game: CANVAS CLICK DETECTED at (${canvasX}, ${canvasY})`);
+            console.log(`Game: Canvas rect:`, rect);
+            console.log(`Game: Event clientX/Y:`, e.clientX, e.clientY);
             
             // Verify we're actually clicking the canvas
             if (e.target !== this.stateManager.canvas) {
@@ -225,15 +238,19 @@ class GameplayState {
             }
             
             // CRITICAL: Check for building/tower icon clicks FIRST
+            console.log(`Game: Calling towerManager.handleClick...`);
             const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
             if (clickResult) {
+                console.log(`Game: TowerManager returned result:`, clickResult);
                 // Handle the result and refresh mouse state
                 this.handleClickResult(clickResult);
                 
                 // Force refresh mouse state after any interaction - IMMEDIATE, not delayed
                 this.refreshMouseState(canvasX, canvasY);
                 return;
+            } else {
+                console.log(`Game: TowerManager returned null, handling normal placement`);
             }
             
             // Handle normal placement click

@@ -281,11 +281,11 @@ export class TowerManager {
         this.mouseX = x;
         this.mouseY = y;
         
-        // Only debug when needed to avoid spam
-        const debugMouse = false; // Set to true for debugging
+        // Enable debugging temporarily to see what's happening
+        const debugMouse = true; // Changed to true for debugging
         
         if (debugMouse) {
-            console.log(`TowerManager: handleMouseMove at (${x}, ${y}), checking ${this.towers.length} towers`);
+            console.log(`TowerManager: handleMouseMove at (${x}, ${y}), checking ${this.towers.length} towers and ${this.buildingManager.buildings.length} buildings`);
         }
         
         // Check for hover over tower icons
@@ -344,107 +344,59 @@ export class TowerManager {
         let buildingHover = false;
         try {
             buildingHover = this.buildingManager.handleMouseMove && this.buildingManager.handleMouseMove(x, y);
+            if (debugMouse) {
+                console.log(`TowerManager: Building hover result: ${buildingHover}`);
+            }
         } catch (error) {
             console.warn('TowerManager: Error in building mouse move:', error);
         }
         
         if (debugMouse) {
-            console.log(`TowerManager: foundHover=${foundHover}, buildingHover=${buildingHover}`);
+            console.log(`TowerManager: Final result - foundHover=${foundHover}, buildingHover=${buildingHover}`);
         }
         
         // Return true if hovering over any interactive element
         return foundHover || buildingHover;
     }
     
-    isValidClickArea(clickArea) {
-        return clickArea && 
-               typeof clickArea.x === 'number' && 
-               typeof clickArea.y === 'number' && 
-               typeof clickArea.width === 'number' && 
-               typeof clickArea.height === 'number' &&
-               isFinite(clickArea.x) && 
-               isFinite(clickArea.y) && 
-               isFinite(clickArea.width) && 
-               isFinite(clickArea.height) &&
-               clickArea.width > 0 && 
-               clickArea.height > 0;
-    }
-    
-    handleClick(x, y, canvasSize) {
+    handleClick(x, y, rect) {
+        // Enable click debugging
         console.log(`TowerManager: handleClick at (${x}, ${y})`);
+        console.log(`TowerManager: Checking ${this.towers.length} towers and ${this.buildingManager.buildings.length} buildings`);
         
-        // Clear any previous selections
-        this.towers.forEach(tower => tower.isSelected = false);
-        this.buildingManager.buildings.forEach(building => {
-            if (building.deselect) building.deselect();
-        });
-        
-        // Check tower icon clicks first - IMPROVED with better debugging
-        console.log(`TowerManager: Checking ${this.towers.length} towers for icon clicks`);
-        for (let i = 0; i < this.towers.length; i++) {
-            const tower = this.towers[i];
-            
-            console.log(`TowerManager: Checking tower ${i}: ${tower.constructor.name} at (${tower.x}, ${tower.y})`);
-            
-            if (tower.clickArea) {
+        // Check tower clicks first
+        for (const tower of this.towers) {
+            if (tower.clickArea && this.isValidClickArea(tower.clickArea)) {
                 const withinX = x >= tower.clickArea.x && x <= tower.clickArea.x + tower.clickArea.width;
                 const withinY = y >= tower.clickArea.y && y <= tower.clickArea.y + tower.clickArea.height;
                 
-                console.log(`TowerManager: Tower ${i} clickArea:`, tower.clickArea);
-                console.log(`TowerManager: Click test - withinX: ${withinX}, withinY: ${withinY}`);
+                console.log(`TowerManager: Checking ${tower.constructor.name} click - withinX=${withinX}, withinY=${withinY}`);
+                console.log(`TowerManager: Tower clickArea:`, tower.clickArea);
                 
                 if (withinX && withinY) {
-                    console.log(`TowerManager: TOWER ICON HIT! Clicked on ${tower.constructor.name} icon`);
+                    console.log(`TowerManager: TOWER CLICK HIT on ${tower.constructor.name}`);
                     
-                    tower.isSelected = true;
-                    tower.isHovered = false; // Clear hover on click
-                    
-                    if (tower.constructor.name === 'MagicTower') {
-                        return {
-                            type: 'magic_tower_menu',
-                            tower: tower,
-                            elements: [
-                                { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                                { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
-                                { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                                { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
-                            ],
-                            currentElement: tower.selectedElement
-                        };
+                    if (tower.onClick && typeof tower.onClick === 'function') {
+                        return tower.onClick();
+                    } else {
+                        console.log(`TowerManager: Tower has no onClick method`);
                     }
-                    // For other tower types, return basic tower info
-                    return { type: 'tower_info', tower: tower };
                 }
-            } else {
-                console.log(`TowerManager: Tower ${i} (${tower.constructor.name}) has NO clickArea!`);
             }
         }
         
-        // Then check building icon clicks
-        console.log(`TowerManager: Checking buildings through BuildingManager`);
-        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
+        // Check building clicks
+        console.log(`TowerManager: No tower clicks, checking buildings...`);
+        const buildingResult = this.buildingManager.handleClick(x, y, rect);
         if (buildingResult) {
-            console.log(`TowerManager: Building result received:`, buildingResult);
-            
-            if (buildingResult.type === 'forge_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                return buildingResult;
-            } else if (buildingResult.type === 'academy_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                console.log('TowerManager: Academy menu requested');
-                return buildingResult;
-            } else if (typeof buildingResult === 'number') {
-                // Gold collection
-                console.log(`TowerManager: Gold collection: ${buildingResult}`);
-                return buildingResult;
-            }
+            console.log(`TowerManager: Building click returned:`, buildingResult);
             return buildingResult;
         }
         
-        console.log(`TowerManager: No click hits detected`);
+        console.log(`TowerManager: No clicks detected`);
         return null;
     }
-
+    
     selectMagicTowerElement(tower, elementId) {
         if (tower && tower.setElement) {
             tower.setElement(elementId);
