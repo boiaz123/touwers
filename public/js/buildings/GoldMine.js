@@ -911,11 +911,11 @@ export class GoldMine extends Building {
             ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
         }
         
-        // New: Render toggle icon at the top if gem mining is unlocked
+        // New: Render toggle icon at the top LEFT if gem mining is unlocked
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
-            const toggleX = this.x;
-            const toggleY = this.y - size/2 - 15;
+            const toggleX = this.x - size/2 + 12; // Top-left corner, offset inward
+            const toggleY = this.y - size/2 + 12;
             
             // Toggle background
             ctx.fillStyle = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
@@ -946,11 +946,11 @@ export class GoldMine extends Building {
             return true;
         }
         
-        // New: Check toggle icon area if unlocked
+        // New: Check toggle icon area if unlocked (top-left corner)
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
-            const toggleX = this.x;
-            const toggleY = this.y - size/2 - 15;
+            const toggleX = this.x - size/2 + 12;
+            const toggleY = this.y - size/2 + 12;
             return x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
                    y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
         }
@@ -958,21 +958,38 @@ export class GoldMine extends Building {
         return false;
     }
     
-    onClick() {
-        // New: If clicking on toggle icon, toggle mode instead of collecting
-        if (this.gemMiningUnlocked && this.isClickOnToggle()) {
-            this.toggleGemMode();
-            return 0; // No collection
-        } else {
-            return this.collectGold();
+    onClick(x, y, size) {
+        // New: Check if clicking on toggle icon
+        if (this.gemMiningUnlocked) {
+            const toggleIconSize = 25;
+            const toggleX = this.x - size/2 + 12;
+            const toggleY = this.y - size/2 + 12;
+            
+            if (x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
+                y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2) {
+                // Toggle mode and reset production
+                this.toggleGemMode();
+                this.goldReady = false;
+                this.currentProduction = 0;
+                console.log(`GoldMine: Toggled to ${this.gemMode ? 'gem' : 'gold'} mode, production reset`);
+                return 0; // No collection on toggle
+            }
         }
+        
+        // Otherwise collect normally
+        return this.collectGold();
     }
     
-    // New: Helper to check if click is on toggle
-    isClickOnToggle() {
-        // This would need mouse coordinates, but for simplicity, assume it's handled in handleClick
-        // In practice, modify handleClick in game.js to pass coordinates
-        return false; // Placeholder - implement based on click position
+    // New: Helper to check if click is on toggle (kept for compatibility)
+    isClickOnToggle(x, y, size) {
+        if (!this.gemMiningUnlocked) return false;
+        
+        const toggleIconSize = 25;
+        const toggleX = this.x - size/2 + 12;
+        const toggleY = this.y - size/2 + 12;
+        
+        return x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
+               y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
     }
     
     getBaseIncome() {

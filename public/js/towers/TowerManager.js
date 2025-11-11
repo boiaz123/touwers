@@ -317,6 +317,25 @@ export class TowerManager {
             }
         }
         
+        // Check buildings first (they have interactive elements like toggle icons)
+        if (this.buildingManager) {
+            for (const building of this.buildingManager.buildings) {
+                if (building.isPointInside(x, y, building.size || 256)) {
+                    // Pass coordinates to onClick so it can handle toggle icons
+                    const result = building.onClick ? building.onClick(x, y, building.size || 256) : null;
+                    
+                    // Handle different result types
+                    if (result !== undefined && result !== null) {
+                        if (typeof result === 'number') {
+                            return result; // Gold/gem collection
+                        } else if (typeof result === 'object') {
+                            return result; // Menu data
+                        }
+                    }
+                }
+            }
+        }
+        
         return null;
     }
     

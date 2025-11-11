@@ -143,7 +143,7 @@ class GameplayState {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine
+                    // Gold collection from mine (clickResult already handles toggle internally)
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
@@ -265,8 +265,7 @@ class GameplayState {
     }
     
     handleClick(x, y) {
-        // REMOVED: Old logic that was preventing menu detection
-        // First check if clicking on a building (like gold mine or academy)
+        // Check for building/tower clicks first
         const clickResult = this.towerManager.handleClick(x, y, { 
             width: this.stateManager.canvas.width, 
             height: this.stateManager.canvas.height 
@@ -285,7 +284,7 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
-                // Gold collection from mine
+                // Gold collection from mine (clickResult already handles toggle internally)
                 this.gameState.gold += clickResult;
                 this.updateUI();
                 return;
