@@ -1,19 +1,39 @@
-<!-- Add to stats-bar section: -->
-<div id="gems-display" style="display: flex; gap: 10px; padding: 5px; align-items: center;">
-    <div style="display: flex; align-items: center; gap: 3px;">
-        <span>🔥</span>
-        <span id="gems-fire" style="color: #FF4500; font-weight: bold; min-width: 20px;">0</span>
+<div id="stats-bar" class="stats-bar">
+    <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span>❤️</span>
+            <span id="health" style="font-weight: bold;">20</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span>💰</span>
+            <span id="gold" style="font-weight: bold; color: #FFD700;">500</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span>🌊</span>
+            <span id="wave" style="font-weight: bold;">1/10</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <span id="enemies-remaining" style="font-size: 0.9em;">Preparing...</span>
+        </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 3px;">
-        <span>💧</span>
-        <span id="gems-water" style="color: #40A4DF; font-weight: bold; min-width: 20px;">0</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 3px;">
-        <span>💨</span>
-        <span id="gems-air" style="color: #FFFF00; font-weight: bold; min-width: 20px;">0</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 3px;">
-        <span>🪨</span>
-        <span id="gems-earth" style="color: #8B4513; font-weight: bold; min-width: 20px;">0</span>
+    
+    <!-- Gems Display -->
+    <div id="gems-display" style="display: flex; gap: 10px; padding: 0 10px; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 3px;">
+            <span>🔥</span>
+            <span id="gems-fire" style="color: #FF4500; font-weight: bold; min-width: 20px;">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 3px;">
+            <span>💧</span>
+            <span id="gems-water" style="color: #40A4DF; font-weight: bold; min-width: 20px;">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 3px;">
+            <span>💨</span>
+            <span id="gems-air" style="color: #FFFF00; font-weight: bold; min-width: 20px;">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 3px;">
+            <span>🪨</span>
+            <span id="gems-earth" style="color: #8B4513; font-weight: bold; min-width: 20px;">0</span>
+        </div>
     </div>
 </div>

@@ -749,7 +749,7 @@ class GameplayState {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
         
-        // Update gem display
+        // Update gem display - ensure all gem elements exist and update them
         const gemElements = {
             fire: document.getElementById('gems-fire'),
             water: document.getElementById('gems-water'),
@@ -759,7 +759,11 @@ class GameplayState {
         
         for (const [gemType, element] of Object.entries(gemElements)) {
             if (element) {
-                element.textContent = this.gameState.gems[gemType] || 0;
+                const gemCount = this.gameState.gems[gemType] || 0;
+                element.textContent = gemCount;
+                console.log(`GameplayState: Updated ${gemType} gems to ${gemCount}`);
+            } else {
+                console.warn(`GameplayState: gems-${gemType} element not found`);
             }
         }
         

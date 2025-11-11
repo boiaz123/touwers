@@ -250,15 +250,43 @@ export class TowerManager {
         });
     }
     
-    handleClick(x, y, canvasSize) {
-        // Clear any previous selections
-        this.towers.forEach(tower => tower.isSelected = false);
-        this.buildingManager.buildings.forEach(building => {
-            if (building.deselect) building.deselect();
-        });
+    handleClick(canvasX, canvasY, rect) {
+        // Check buildings first (they have priority for clicks)
+        for (const building of this.buildingManager.buildings) {
+            const result = building.isPointInside(canvasX, canvasY, 128); // 128 is the size used for buildings
+            
+            if (result) {
+                // If it's a gem toggle, return it immediately
+                if (typeof result === 'object' && result.type === 'gem_toggle') {
+                    console.log('TowerManager: Gem toggle detected, returning to game state');
+                    return result;
+                }
+                
+                // If it's a gem collection, return it
+                if (typeof result === 'object' && result.type === 'gem') {
+                    console.log('TowerManager: Gem collection detected');
+                    return result;
+                }
+                
+                // If it's a number (gold), return it
+                if (typeof result === 'number') {
+                    console.log('TowerManager: Gold collection detected');
+                    return result;
+                }
+                
+                // If it's a menu request, return it
+                if (typeof result === 'object' && (result.type === 'forge_menu' || result.type === 'academy_menu' || result.type === 'magic_tower_menu')) {
+                    console.log('TowerManager: Menu detected:', result.type);
+                    return result;
+                }
+                
+                // Otherwise check the next building
+                continue;
+            }
+        }
         
         // Check tower icon clicks first for element selection
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, rect.width / 1920)));
         const iconSize = 30; // Increased for better clickability
         
         for (const tower of this.towers) {
@@ -268,8 +296,8 @@ export class TowerManager {
             
             // Add small buffer for easier clicking
             const clickBuffer = 5;
-            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
-                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
+            if (canvasX >= iconX - (iconSize/2 + clickBuffer) && canvasX <= iconX + (iconSize/2 + clickBuffer) &&
+                canvasY >= iconY - (iconSize/2 + clickBuffer) && canvasY <= iconY + (iconSize/2 + clickBuffer)) {
                 if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
@@ -288,23 +316,7 @@ export class TowerManager {
             }
         }
         
-        // Then check building icon clicks with improved detection
-        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
-        if (buildingResult) {
-            if (buildingResult.type === 'forge_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                return buildingResult;
-            } else if (buildingResult.type === 'academy_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                console.log('TowerManager: Academy menu requested');
-                return buildingResult;
-            } else if (typeof buildingResult === 'number') {
-                // Gold collection
-                return buildingResult;
-            }
-        }
-        
-        return null;
+        return false;
     }
     
     selectMagicTowerElement(tower, element) {
