@@ -734,13 +734,6 @@ export class GoldMine extends Building {
         if (this.goldReady) { // Use goldReady consistently
             ctx.fillStyle = '#FFD700';
             ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
-            
-            // Ready indicator
-            const readyPulse = Math.sin(this.animationTime * 4) * 0.3 + 0.7;
-            ctx.fillStyle = `rgba(255, 215, 0, ${readyPulse})`;
-            ctx.font = 'bold 10px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('CLICK TO COLLECT!', this.x, this.y + size/2 + 20);
         } else {
             ctx.fillStyle = '#D2691E';
             ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth * progressRatio, barHeight);
@@ -783,7 +776,7 @@ export class GoldMine extends Building {
         
         // Floating icon in bottom right of 4x4 grid
         const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 20;
+        const iconSize = 35; // Increased size for better visibility
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
         
@@ -835,6 +828,17 @@ export class GoldMine extends Building {
             // Add subtle gold highlight on symbol
             ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
             ctx.fillText('💰', iconX, iconY);
+        }
+        
+        // Add distinguishable flash effect when gold is ready
+        if (this.goldReady) {
+            const flashIntensity = Math.sin(this.animationTime * 8) * 0.5 + 0.5; // Faster, more noticeable pulse
+            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
+            flashGradient.addColorStop(0, `rgba(255, 215, 0, ${flashIntensity * 0.4})`);
+            flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${flashIntensity * 0.2})`);
+            flashGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = flashGradient;
+            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
         }
     }
     
@@ -906,9 +910,24 @@ export class GoldMine extends Building {
     }
     
     isPointInside(x, y, size) {
+        // Check building area
         const dx = x - this.x;
         const dy = y - this.y;
-        return Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2;
+        if (Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2) {
+            return true;
+        }
+        
+        // If gold is ready, also check the icon area
+        if (this.goldReady) {
+            const cellSize = size / 4;
+            const iconSize = 35; // Match the updated icon size
+            const iconX = (this.gridX + 3.5) * cellSize;
+            const iconY = (this.gridY + 3.5) * cellSize - 5;
+            return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
+                   y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
+        }
+        
+        return false;
     }
     
     applyEffect(towerManager) {
