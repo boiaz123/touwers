@@ -548,6 +548,26 @@ export class MagicTower {
             ctx.stroke();
         }
         
+        // Element icon box
+        const iconBoxSize = 24;
+        const iconBoxX = this.x - iconBoxSize / 2;
+        const iconBoxY = this.y - towerSize / 2 - 35;
+        
+        // Icon box background with elemental color
+        const elementColor = this.getElementalColor();
+        ctx.fillStyle = elementColor + '0.8)';
+        ctx.strokeStyle = elementColor + '1)';
+        ctx.lineWidth = 2;
+        ctx.fillRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
+        ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
+        
+        // Element icon
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(elementIcons[this.selectedElement], this.x, iconBoxY + iconBoxSize / 2);
+        
         ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
         
         if (this.isSelected) {

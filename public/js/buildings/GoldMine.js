@@ -352,7 +352,7 @@ export class GoldMine extends Building {
         }
         
         // Update flash opacity (fade out quickly over 0.1 seconds for one-time flash)
-        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 10);
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 5);
     }
     
     render(ctx, size) {
