@@ -169,8 +169,13 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // CLICKABLE UPGRADE ICON - Bottom right of 4x4 grid
-        this.renderUpgradeIcon(ctx, size);
+        // REMOVED YELLOW SELECTION INDICATOR
+        
+        // Upgrade indicator
+        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -996,17 +1001,6 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
-        // High priority: Check clickbox first for upgrade icon
-        const iconRadius = 20;
-        const iconX = this.x + size/2 - iconRadius - 8;
-        const iconY = this.y + size/2 - iconRadius - 8;
-        
-        const distToIcon = Math.hypot(x - iconX, y - iconY);
-        if (distToIcon <= iconRadius) {
-            return true;
-        }
-        
-        // Check if click is on the building itself (4x4 grid area)
         return x >= this.x - size/2 && x <= this.x + size/2 &&
                y >= this.y - size/2 && y <= this.y + size/2;
     }
@@ -1248,143 +1242,6 @@ export class TowerForge extends Building {
             effect: 'Global tower boost + upgrade menu',
             size: '4x4',
             cost: 300
-        };
-    }
-    
-    renderUpgradeIcon(ctx, size) {
-        // Clickbox dimensions - base size before any scaling
-        const baseIconRadius = 20;
-        
-        // Calculate scaling factor based on canvas resolution
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        
-        // Apply scaling to icon radius
-        const iconRadius = baseIconRadius * scaleFactor;
-        const baseIconX = this.x + size/2 - iconRadius - 8;
-        const baseIconY = this.y + size/2 - iconRadius - 8;
-        
-        // Hover animation - slight bob effect
-        const hoverOffset = Math.sin(this.animationTime * 3) * 2;
-        const iconX = baseIconX;
-        const iconY = baseIconY - hoverOffset;
-        
-        // Ground shadow for depth
-        ctx.save();
-        ctx.globalAlpha = 0.3 - (hoverOffset * 0.03);
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.ellipse(baseIconX, baseIconY + iconRadius + 2, iconRadius * 0.7, iconRadius * 0.2, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        
-        // Main icon background - golden circle
-        const bgGradient = ctx.createRadialGradient(iconX - 3, iconY - 3, 0, iconX, iconY, iconRadius);
-        bgGradient.addColorStop(0, '#FFFF99');
-        bgGradient.addColorStop(0.3, '#FFD700');
-        bgGradient.addColorStop(0.7, '#FFA500');
-        bgGradient.addColorStop(1, '#FF8C00');
-        
-        ctx.fillStyle = bgGradient;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconRadius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Outer ring (dark iron)
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Inner decorative ring
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, iconRadius - 3, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Bright shine highlight (3D effect)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.beginPath();
-        ctx.arc(iconX - 5, iconY - 5, iconRadius * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Dark shadow spot (3D depth)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.beginPath();
-        ctx.arc(iconX + 4, iconY + 4, iconRadius * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Corner studs (4 decorative gems)
-        const studs = [
-            { angle: -Math.PI * 0.75, color: '#FFD700' },   // Top-left
-            { angle: -Math.PI * 0.25, color: '#FF6347' },   // Top-right
-            { angle: Math.PI * 0.25, color: '#FFD700' },    // Bottom-right
-            { angle: Math.PI * 0.75, color: '#FF6347' }     // Bottom-left
-        ];
-        
-        studs.forEach(stud => {
-            const studX = iconX + Math.cos(stud.angle) * (iconRadius - 4);
-            const studY = iconY + Math.sin(stud.angle) * (iconRadius - 4);
-            
-            // Stud shadow
-            ctx.fillStyle = '#1A1A1A';
-            ctx.beginPath();
-            ctx.arc(studX + 0.5, studY + 0.5, 2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Stud color
-            ctx.fillStyle = stud.color;
-            ctx.beginPath();
-            ctx.arc(studX, studY, 2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Stud shine
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.arc(studX - 0.6, studY - 0.6, 0.8, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Icon content - Hammer and Anvil (scaled properly)
-        ctx.save();
-        ctx.translate(iconX, iconY);
-        ctx.scale(scaleFactor, scaleFactor); // Scale all content by the same factor
-        
-        // Anvil - center (dark metal)
-        ctx.fillStyle = '#1C1C1C';
-        ctx.fillRect(-6, 1, 12, 5);    // Body
-        ctx.fillRect(-4, -2, 8, 3);    // Top surface
-        
-        // Anvil horn (small pointy part)
-        ctx.beginPath();
-        ctx.moveTo(5, -1);
-        ctx.lineTo(8, -2);
-        ctx.lineTo(6, 1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Hammer head - top left (dark gray)
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(-9, -8, 5, 3);
-        
-        // Hammer handle - brown
-        ctx.fillStyle = '#8B6F47';
-        ctx.fillRect(-8, -5, 2, 8);
-        
-        // Hammer highlight
-        ctx.fillStyle = '#A0826D';
-        ctx.fillRect(-8, -5, 1, 8);
-        
-        ctx.restore();
-        
-        // Store clickbox bounds for detection - now scaled with icon
-        this.upgradeIconBounds = {
-            x: iconX,
-            y: iconY,
-            radius: iconRadius * 0.9, // Match the visual icon size with slight margin
-            type: 'circle'
         };
     }
 }
