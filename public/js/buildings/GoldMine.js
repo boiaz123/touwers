@@ -1046,18 +1046,18 @@ export class GoldMine extends Building {
         }
         
         // Check gem mining toggle icon (at top-left of mine)
-        // Always returns gem_toggle result so game can check research status
         const toggleIconSize = 28;
         const toggleIconX = this.x - size/2 + toggleIconSize/2;
         const toggleIconY = this.y - size/2 - toggleIconSize/2;
         const clickSize = 40; // Larger click area
-        
+
+        // Only return gem_toggle if toggle icon is clicked
         if (x >= toggleIconX - clickSize/2 && x <= toggleIconX + clickSize/2 &&
             y >= toggleIconY - clickSize/2 && y <= toggleIconY + clickSize/2) {
-            console.log('GoldMine: Toggle icon clicked');
+            // Always return this result so game.js can check research status
             return { type: 'gem_toggle', mine: this };
         }
-        
+
         // If gold is ready, also check the collection icon area
         if (this.goldReady) {
             const iconSize = 35;

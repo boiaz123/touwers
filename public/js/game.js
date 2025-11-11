@@ -780,12 +780,18 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
-        
+
         // Ensure gems object exists before updating
         if (!this.gameState.gems) {
             this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
         }
-        
+
+        // Show gem display if hidden
+        const gemsDisplay = document.getElementById('gems-display');
+        if (gemsDisplay && gemsDisplay.style.display === 'none') {
+            gemsDisplay.style.display = 'flex';
+        }
+
         // Update gem display - ensure all gem elements exist and update them
         const gemElements = {
             fire: document.getElementById('gems-fire'),
@@ -793,11 +799,13 @@ class GameplayState {
             air: document.getElementById('gems-air'),
             earth: document.getElementById('gems-earth')
         };
-        
+
         for (const [gemType, element] of Object.entries(gemElements)) {
             if (element) {
                 const gemCount = this.gameState.gems[gemType] || 0;
                 element.textContent = gemCount;
+                // Debug log to confirm update
+                console.log(`[UI] Gem ${gemType}: ${gemCount}`);
             }
         }
         
