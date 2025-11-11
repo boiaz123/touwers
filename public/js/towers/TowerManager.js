@@ -190,6 +190,19 @@ export class TowerManager {
         }
     }
     
+    // New: Get gem stocks for UI display
+    getGemStocks() {
+        const academies = this.buildingManager.buildings.filter(building =>
+            building.constructor.name === 'MagicAcademy'
+        );
+        
+        if (academies.length > 0) {
+            return academies[0].gems;
+        }
+        
+        return { fire: 0, water: 0, air: 0, earth: 0 };
+    }
+    
     recalculateAllTowerStats() {
         // Force recalculation of all tower stats when forge upgrades change
         this.towers.forEach(tower => {

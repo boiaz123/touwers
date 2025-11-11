@@ -9,14 +9,26 @@
 <body>
     <div id="game-container">
         <!-- Stats bar at the top -->
-        <div id="stats-bar">
-            <div id="stats">
-                <span class="stat-item">❤️ <span id="health">20</span></span>
-                <span class="stat-item">💰 <span id="gold">100</span></span>
-                <span class="stat-item">🌊 <span id="wave">1</span></span>
+        <div id="stats-bar" style="display: none;">
+            <div class="stat">
+                <span class="stat-icon">❤️</span>
+                <span id="health">100</span>
             </div>
-            <div id="wave-status">
-                <span class="stat-item" id="enemies-remaining">Enemies: 0</span>
+            <div class="stat">
+                <span class="stat-icon">💰</span>
+                <span id="gold">500</span>
+            </div>
+            <div class="stat">
+                <span class="stat-icon">🌊</span>
+                <span id="wave">1/10</span>
+            </div>
+            <div class="stat">
+                <span class="stat-icon">👹</span>
+                <span id="enemies-remaining">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-icon">💎</span>
+                <span id="gems">🔥0 💧0 💨0 🌍0</span>
             </div>
         </div>
 

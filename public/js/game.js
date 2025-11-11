@@ -460,11 +460,16 @@ class GameplayState {
         upgradeListHTML += academyData.upgrades.map(upgrade => {
             // Determine if button should be disabled based on currency type
             let isDisabled = false;
+            let costDisplay = '';
+            
             if (upgrade.isResearch) {
                 isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost;
+                costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
             } else {
                 // Elemental upgrades use gems
-                isDisabled = !upgrade.cost || academyData.academy.gems[upgrade.gemType] < upgrade.cost;
+                const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
+                isDisabled = !upgrade.cost || gemCount < upgrade.cost;
+                costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
             }
             
             return `
@@ -477,7 +482,7 @@ class GameplayState {
                         <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
                     </div>
                     <div class="upgrade-cost">
-                        ${upgrade.cost ? `${upgrade.isResearch ? '$' : upgrade.icon}${upgrade.cost}` : 'MAX'}
+                        ${costDisplay}
                     </div>
                     <button class="upgrade-btn" 
                             data-upgrade="${upgrade.id}" 
@@ -508,11 +513,14 @@ class GameplayState {
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
                 if (upgradeId === 'gemMiningTools') {
-                    // New: Handle gem mining tools research
+                    // Handle gem mining tools research
                     if (academyData.academy.researchGemMiningTools(this.gameState)) {
-                        // Update all mines with academy reference
-                        this.towerManager.getBuildings().forEach(building => {
-                            if (building instanceof GoldMine) {
+                        // Notify unlock system
+                        this.towerManager.getUnlockSystem().onGemMiningResearched();
+                        
+                        // Update mines with academy reference
+                        this.towerManager.buildingManager.buildings.forEach(building => {
+                            if (building.constructor.name === 'GoldMine') {
                                 building.setAcademy(academyData.academy);
                             }
                         });
@@ -526,7 +534,7 @@ class GameplayState {
                         });
                     }
                 } else {
-                    // Modified: Elemental upgrades now use gems
+                    // Handle elemental upgrades
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
                         this.updateUI();
                         
@@ -799,21 +807,12 @@ class GameplayState {
         
         document.getElementById('enemies-remaining').textContent = statusText;
         
-        // New: Update gem display in top bar
-        const academies = this.towerManager.buildingManager.buildings.filter(building =>
-            building.constructor.name === 'MagicAcademy'
-        );
-        if (academies.length > 0) {
-            const academy = academies[0];
-            const gemText = `🔥${academy.gems.fire} 💧${academy.gems.water} 💨${academy.gems.air} 🌍${academy.gems.earth}`;
-            // Assuming there's a span with id 'gems' in the stats bar; if not, this will need HTML modification
-            const gemsElement = document.getElementById('gems');
-            if (gemsElement) {
-                gemsElement.textContent = gemText;
-            } else {
-                // Fallback: append to gold display
-                document.getElementById('gold').textContent = Math.floor(this.gameState.gold) + ' ' + gemText;
-            }
+        // Update gem display in top bar
+        const gems = this.towerManager.getGemStocks();
+        const gemsElement = document.getElementById('gems');
+        if (gemsElement) {
+            const gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🌍${gems.earth}`;
+            gemsElement.textContent = gemText;
         }
         
         this.updateUIAvailability();

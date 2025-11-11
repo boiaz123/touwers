@@ -649,7 +649,7 @@ export class MagicAcademy extends Building {
             ctx.fill();
         });
         
-        // Mana indicator
+        // Mana indicator (removed gem display from here)
         const manaBarWidth = size * 0.6;
         const manaBarHeight = 6;
         const manaBarY = this.y + size/2 + 10;
@@ -759,11 +759,13 @@ export class MagicAcademy extends Building {
         const cost = this.calculateElementalCost(element);
         
         if (!cost || upgrade.level >= upgrade.maxLevel) {
+            console.log(`MagicAcademy: Cannot upgrade ${element} - invalid cost or max level`);
             return false;
         }
         
-        // New: Check if player has enough gems instead of gold
+        // Check if player has enough gems
         if (this.gems[element] < cost) {
+            console.log(`MagicAcademy: Not enough ${element} gems. Need ${cost}, have ${this.gems[element]}`);
             return false;
         }
         
@@ -774,16 +776,19 @@ export class MagicAcademy extends Building {
         return true;
     }
     
-    // New: Method to research gem mining tools
+    // Modified: Method to research gem mining tools
     researchGemMiningTools(gameState) {
-        if (this.gemMiningResearched || gameState.gold < 500) {
+        if (this.gemMiningResearched || !gameState.canAfford(500)) {
+            console.log('MagicAcademy: Cannot research gem mining tools');
             return false;
         }
         
-        gameState.gold -= 500;
-        this.gemMiningResearched = true;
-        console.log('MagicAcademy: Researched gem mining tools');
-        return true;
+        if (gameState.spend(500)) {
+            this.gemMiningResearched = true;
+            console.log('MagicAcademy: Researched gem mining tools');
+            return true;
+        }
+        return false;
     }
     
     // New: Method to add gems (called by mines)

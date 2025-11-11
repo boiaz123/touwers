@@ -15,6 +15,9 @@ export class UnlockSystem {
         this.unlockedTowers = new Set(['basic', 'barricade']);
         this.unlockedBuildings = new Set(['forge']);
         this.unlockedUpgrades = new Set();
+        
+        // New: Track gem mining research
+        this.gemMiningResearched = false;
     }
     
     onForgeBuilt() {
@@ -50,6 +53,17 @@ export class UnlockSystem {
         this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
         console.log('UnlockSystem: Academy built - unlocked magic tower and gem mining research');
         return true;
+    }
+    
+    // New: Method to handle gem mining research
+    onGemMiningResearched() {
+        this.gemMiningResearched = true;
+        console.log('UnlockSystem: Gem mining tools researched');
+    }
+    
+    // New: Check if gem mining is available
+    canResearchGemMining() {
+        return this.academyCount > 0 && !this.gemMiningResearched;
     }
     
     getMaxMines() {
