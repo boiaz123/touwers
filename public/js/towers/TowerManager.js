@@ -396,7 +396,18 @@ export class TowerManager {
         if (info) {
             info.unlocked = this.unlockSystem.canBuildBuilding(type);
             
-            if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+            // New: Check super weapon unlock from academy
+            if (type === 'superweapon') {
+                const academies = this.buildingManager.buildings.filter(building =>
+                    building.constructor.name === 'MagicAcademy'
+                );
+                info.unlocked = academies.length > 0 && academies[0].superWeaponUnlocked;
+                
+                if (!info.unlocked) {
+                    info.disabled = true;
+                    info.disableReason = 'Unlock at Academy Level 3';
+                }
+            } else if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
                 info.disabled = true;
                 info.disableReason = "Only 1 forge allowed";
             } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {

@@ -18,10 +18,19 @@ export class MagicAcademy extends Building {
         };
         
         // New: Gem storage for each element
-        this.gems = { fire: 0, water: 0, air: 0, earth: 0 };
+        this.gems = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         
         // New: Gem mining tools research
         this.gemMiningResearched = false;
+        
+        // New: Academy upgrade system
+        this.academyLevel = 0;
+        this.maxAcademyLevel = 3;
+        
+        // New: Track which features are unlocked
+        this.combinationSpellsUnlocked = false;
+        this.diamondMiningUnlocked = false;
+        this.superWeaponUnlocked = false;
         
         // Water ripples animation
         this.waterRipples = [];
@@ -688,7 +697,15 @@ export class MagicAcademy extends Building {
     }
     
     getElementalUpgradeOptions() {
-        const options = [
+        const options = [];
+        
+        // New: Add academy building upgrades first
+        if (this.academyLevel < this.maxAcademyLevel) {
+            options.push(this.getAcademyUpgradeOption());
+        }
+        
+        // Add elemental upgrades
+        options.push(
             {
                 id: 'fire',
                 name: 'Fire Mastery',
@@ -730,23 +747,97 @@ export class MagicAcademy extends Building {
                 gemType: 'earth',
                 color: '#8B6F47'
             }
-        ];
+        );
         
         // New: Add gem mining tools research if not yet researched
         if (!this.gemMiningResearched) {
-            options.unshift({
+            options.push({
                 id: 'gemMiningTools',
                 name: 'Gem Mining Tools',
                 description: 'Research tools to mine elemental gems in gold mines. Allows toggling mines to gem mode.',
                 level: 0,
                 maxLevel: 1,
-                cost: 500, // Gold cost for research
+                cost: 500,
                 icon: '⛏️💎',
                 isResearch: true
             });
         }
         
         return options;
+    }
+    
+    // New: Get academy upgrade option
+    getAcademyUpgradeOption() {
+        const nextLevel = this.academyLevel + 1;
+        let description = '';
+        let nextUnlock = '';
+        let cost = 0;
+        
+        switch(nextLevel) {
+            case 1:
+                description = 'Enhance the academy to unlock combination spells for Magic Towers.';
+                nextUnlock = 'Unlocks: 4 Combination Spells (Steam, Magma, Tempest, Meteor)';
+                cost = 1000;
+                break;
+            case 2:
+                description = 'Further enhance the academy to unlock diamond mining capabilities.';
+                nextUnlock = 'Unlocks: Diamond Mining in Gold Mines + Diamond gem currency';
+                cost = 1500;
+                break;
+            case 3:
+                description = 'Achieve maximum academy power to unlock Super Weapon construction.';
+                nextUnlock = 'Unlocks: Super Weapon Lab building';
+                cost = 2000;
+                break;
+        }
+        
+        return {
+            id: 'academy_upgrade',
+            name: `Academy Level ${nextLevel}`,
+            description: description,
+            nextUnlock: nextUnlock,
+            level: this.academyLevel,
+            maxLevel: this.maxAcademyLevel,
+            cost: cost,
+            icon: '🎓',
+            isAcademyUpgrade: true
+        };
+    }
+    
+    // New: Purchase academy upgrade
+    purchaseAcademyUpgrade(gameState) {
+        if (this.academyLevel >= this.maxAcademyLevel) {
+            return false;
+        }
+        
+        const upgradeOption = this.getAcademyUpgradeOption();
+        const cost = upgradeOption.cost;
+        
+        if (!gameState.canAfford(cost)) {
+            console.log('MagicAcademy: Not enough gold for academy upgrade');
+            return false;
+        }
+        
+        gameState.spend(cost);
+        this.academyLevel++;
+        
+        // Apply upgrades based on new level
+        switch(this.academyLevel) {
+            case 1:
+                this.combinationSpellsUnlocked = true;
+                console.log('MagicAcademy: Combination spells unlocked!');
+                break;
+            case 2:
+                this.diamondMiningUnlocked = true;
+                console.log('MagicAcademy: Diamond mining unlocked!');
+                break;
+            case 3:
+                this.superWeaponUnlocked = true;
+                console.log('MagicAcademy: Super weapon construction unlocked!');
+                break;
+        }
+        
+        return true;
     }
     
     calculateElementalCost(element) {
@@ -778,6 +869,12 @@ export class MagicAcademy extends Building {
         
         console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} using ${cost} ${element} gems`);
         return true;
+    }
+    
+    // New: Add diamond gem
+    addDiamond() {
+        this.gems.diamond++;
+        console.log(`MagicAcademy: Added 1 diamond, total: ${this.gems.diamond}`);
     }
     
     // Modified: Method to research gem mining tools
@@ -838,5 +935,26 @@ export class MagicAcademy extends Building {
             size: '4x4',
             cost: 250
         };
+    }
+    
+    // New: Method to unlock academy features
+    unlockAcademyFeature(feature) {
+        switch(feature) {
+            case 'combinationSpells':
+                this.combinationSpellsUnlocked = true;
+                break;
+            case 'diamondMining':
+                this.diamondMiningUnlocked = true;
+                break;
+            case 'superWeapon':
+                this.superWeaponUnlocked = true;
+                break;
+            default:
+                console.log(`MagicAcademy: Unknown feature ${feature}`);
+                return false;
+        }
+        
+        console.log(`MagicAcademy: Unlocked ${feature}`);
+        return true;
     }
 }

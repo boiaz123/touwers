@@ -51,7 +51,7 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 
 **Magic Academy Features**
 - Unlocks: Magic Tower (elemental damage)
-- Provides: 4 elemental upgrade trees
+- Provides: 4 elemental upgrade trees + Building upgrade system
 - Elements: Fire (🔥), Water (💧), Air (💨), Earth (🌍)
 - Visual: Magical fortress with moat, towers, and natural surroundings
 
@@ -61,9 +61,35 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 - **Air Mastery**: +20px chain range per level
 - **Earth Mastery**: +3 armor piercing per level
 
+**Academy Building Upgrades** (3 levels)
+
+**Level 1: Combination Spells** ($1000)
+- Unlocks 4 new Magic Tower spell options
+- **Steam** (Fire + Water): Burn + Slow effects
+- **Magma** (Fire + Earth): Burn + Armor Piercing effects
+- **Tempest** (Air + Water): Chain + Slow effects
+- **Meteor** (Air + Earth): Chain + Armor Piercing effects
+- All combination spells deal 10-15% bonus damage
+
+**Level 2: Diamond Mining** ($1500)
+- Unlocks diamond gem type in gold mines
+- Diamonds appear in UI and can be used as currency
+- Players can toggle mines between gold and diamond production
+
+**Level 3: Super Weapon Lab** ($2000)
+- Unlocks Super Weapon Lab building
+- Enables access to advanced technologies
+
+**Gem Mining** (Researched at Academy)
+- Cost: $500 gold
+- Allows gold mines to produce elemental gems
+- Players can toggle mines between gold and gem modes
+- Gems are required to upgrade Magic Tower elements
+
 **Magic Tower System**
 - Click placed Magic Towers to select element type
 - Each element has unique effects and academy bonuses
+- Combination spells available after Academy Level 1
 - Visual indicators show selected element
 
 ## Project Structure

@@ -455,9 +455,35 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
+        // Add academy building upgrades first
+        const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
+        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
+            const isDisabled = !academyUpgrade.cost || this.gameState.gold < academyUpgrade.cost;
+            upgradeListHTML += `
+                <div class="upgrade-item ${academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${academyUpgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${academyUpgrade.name}</div>
+                        <div class="upgrade-desc">${academyUpgrade.description}</div>
+                        <div class="upgrade-next">${academyUpgrade.nextUnlock}</div>
+                        <div class="upgrade-level">Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        ${academyUpgrade.cost ? `$${academyUpgrade.cost}` : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="academy_upgrade" 
+                            ${isDisabled ? 'disabled' : ''}>
+                        ${academyUpgrade.cost ? 'Upgrade' : 'MAX'}
+                    </button>
+                </div>
+            `;
+        }
+        
         // Add elemental upgrades
         upgradeListHTML += academyData.upgrades.map(upgrade => {
-            // Determine if button should be disabled based on currency type
+            if (upgrade.isAcademyUpgrade) return ''; // Skip academy upgrade
+            
             let isDisabled = false;
             let costDisplay = '';
             
@@ -511,7 +537,20 @@ class GameplayState {
                 
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
-                if (upgradeId === 'gemMiningTools') {
+                if (upgradeId === 'academy_upgrade') {
+                    // New: Handle academy level upgrade
+                    if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
+                        this.updateUI();
+                        this.updateUIAvailability();
+                        
+                        // Refresh the menu
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else if (upgradeId === 'gemMiningTools') {
                     // Handle gem mining tools research
                     if (academyData.academy.researchGemMiningTools(this.gameState)) {
                         // Notify unlock system
@@ -817,7 +856,11 @@ class GameplayState {
         const gems = this.towerManager.getGemStocks();
         const gemsElement = document.getElementById('gems');
         if (gemsElement) {
-            const gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🪨${gems.earth}`;
+            // Check if diamonds are available
+            let gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🪨${gems.earth}`;
+            if (gems.diamond !== undefined && gems.diamond > 0) {
+                gemText += ` 💎${gems.diamond}`;
+            }
             gemsElement.textContent = gemText;
         }
         
