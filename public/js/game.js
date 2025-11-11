@@ -82,43 +82,51 @@ class GameplayState {
             // Try to place buildings automatically
             let buildingGrid = { ...centerGrid };
             
-            // Place forge
+            // Place forge first and notify unlock system
             if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                this.towerManager.placeBuilding('forge', screenX, screenY, buildingGrid.x, buildingGrid.y);
-                this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                buildingGrid.x += 6;
+                if (this.towerManager.placeBuilding('forge', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
+                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
+                    this.towerManager.getUnlockSystem().onForgeBuilt();
+                    buildingGrid.x += 6;
+                }
             }
             
-            // Place academy
+            // Place academy and notify unlock system
             if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                this.towerManager.placeBuilding('academy', screenX, screenY, buildingGrid.x, buildingGrid.y);
-                this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                buildingGrid.x += 6;
+                if (this.towerManager.placeBuilding('academy', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
+                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
+                    this.towerManager.getUnlockSystem().onAcademyBuilt();
+                    buildingGrid.x += 6;
+                }
             }
             
             // Place super weapon lab
             if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                this.towerManager.placeBuilding('superweapon', screenX, screenY, buildingGrid.x, buildingGrid.y);
-                this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
+                if (this.towerManager.placeBuilding('superweapon', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
+                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
+                    this.towerManager.getUnlockSystem().onSuperWeaponBuilt();
+                }
             }
             
-            // Place mines
+            // Place mines and notify unlock system for each
             buildingGrid.y += 6;
             buildingGrid.x = centerGrid.x;
             for (let i = 0; i < 4; i++) {
                 if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
                     const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                    this.towerManager.placeBuilding('mine', screenX, screenY, buildingGrid.x, buildingGrid.y);
-                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                    buildingGrid.x += 6;
+                    if (this.towerManager.placeBuilding('mine', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
+                        this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
+                        this.towerManager.getUnlockSystem().onMineBuilt();
+                        buildingGrid.x += 6;
+                    }
                 }
             }
         }
         
-        // Initialize sandbox gems AFTER everything is set up
+        // Initialize sandbox gems AFTER everything is set up and buildings are placed
         if (this.isSandbox) {
             const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
             if (academy) {
@@ -153,9 +161,12 @@ class GameplayState {
                     academy.gems.air = 1000;
                     academy.gems.earth = 1000;
                     academy.gems.diamond = 1000;
+                    
+                    // Research gem mining tools immediately
+                    this.towerManager.getUnlockSystem().onGemMiningResearched();
                 }
                 
-                // Now set academy reference on all mines
+                // Set academy reference on all mines AFTER building placement
                 this.towerManager.buildingManager.buildings.forEach(building => {
                     if (building.constructor.name === 'GoldMine') {
                         building.setAcademy(academy);
@@ -164,6 +175,9 @@ class GameplayState {
                 });
                 
                 console.log('GameplayState: Initialized sandbox gems and unlocks for', this.levelType);
+                console.log('GameplayState: Academy gems after setup:', academy.gems);
+            } else {
+                console.warn('GameplayState: No academy found for sandbox initialization');
             }
         }
         

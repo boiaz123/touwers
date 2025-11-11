@@ -95,6 +95,13 @@ export class UnlockSystem {
         return true;
     }
     
+    // New: Method to handle super weapon lab
+    onSuperWeaponBuilt() {
+        this.unlockedBuildings.add('superweapon');
+        console.log('UnlockSystem: Super Weapon Lab built');
+        return true;
+    }
+    
     // New: Method to handle gem mining research
     onGemMiningResearched() {
         this.gemMiningResearched = true;
