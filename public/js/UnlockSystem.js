@@ -18,6 +18,9 @@ export class UnlockSystem {
         
         // New: Track gem mining research
         this.gemMiningResearched = false;
+        
+        // New: Track combination spells unlocked (for tower availability)
+        this.unlockedCombinationSpells = new Set();
     }
     
     onForgeBuilt() {
@@ -64,6 +67,23 @@ export class UnlockSystem {
     // New: Check if gem mining is available
     canResearchGemMining() {
         return this.academyCount > 0 && !this.gemMiningResearched;
+    }
+    
+    // New: Method to unlock a combination spell
+    onCombinationSpellUnlocked(spellId) {
+        this.unlockedCombinationSpells.add(spellId);
+        console.log(`UnlockSystem: Combination spell ${spellId} unlocked`);
+        
+        // If ANY combination spell is unlocked, unlock the combination tower
+        if (this.unlockedCombinationSpells.size > 0) {
+            this.unlockedTowers.add('combination');
+            console.log('UnlockSystem: Combination Tower unlocked!');
+        }
+    }
+    
+    // New: Check if combination tower can be built
+    canBuildCombinationTower() {
+        return this.unlockedCombinationSpells.size > 0;
     }
     
     getMaxMines() {

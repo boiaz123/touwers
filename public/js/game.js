@@ -71,10 +71,11 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // New: Initialize sandbox gems AFTER everything is set up
+        // NEW: Initialize sandbox gems AFTER everything is set up and BEFORE setting references
         if (this.isSandbox) {
             const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
             if (academy) {
+                // Initialize gems first
                 academy.gems.fire = 100;
                 academy.gems.water = 100;
                 academy.gems.air = 100;
@@ -84,14 +85,16 @@ class GameplayState {
                 // Unlock diamond mining for sandbox
                 academy.diamondMiningUnlocked = true;
                 
-                // Set academy reference on all mines
+                // Now set academy reference on all mines
                 this.towerManager.buildingManager.buildings.forEach(building => {
                     if (building.constructor.name === 'GoldMine') {
                         building.setAcademy(academy);
+                        console.log('GameplayState: Set academy reference on mine, gemMiningUnlocked:', building.gemMiningUnlocked);
                     }
                 });
                 
                 console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds) and diamond mining unlocked');
+                console.log('GameplayState: Sandbox academy gems:', academy.gems);
             }
         }
         
@@ -593,7 +596,10 @@ class GameplayState {
                     }
                 } else if (upgradeId.startsWith('unlock_')) {
                     // New: Handle combination spell unlocks
-                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                    const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
+                    if (result && result.success) {
+                        // Notify unlock system of the spell unlock
+                        this.towerManager.getUnlockSystem().onCombinationSpellUnlocked(result.spellId);
                         this.updateUI();
                         this.updateUIAvailability();
                         
@@ -618,6 +624,7 @@ class GameplayState {
                         });
                         
                         this.updateUI();
+                        this.updateUIAvailability();
                         
                         // Refresh the menu
                         this.showAcademyUpgradeMenu({

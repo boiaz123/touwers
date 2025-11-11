@@ -946,7 +946,9 @@ export class MagicAcademy extends Building {
             
             this.unlockedCombinations.add(spellId);
             console.log(`MagicAcademy: Unlocked ${spell.name} combination spell!`);
-            return true;
+            
+            // NEW: Notify unlock system
+            return { success: true, spellId: spellId };
         }
         
         // Handle regular elemental upgrades
