@@ -47,7 +47,8 @@ export class UnlockSystem {
     onAcademyBuilt() {
         this.academyCount++;
         this.unlockedTowers.add('magic');
-        console.log('UnlockSystem: Academy built - unlocked magic tower');
+        this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
+        console.log('UnlockSystem: Academy built - unlocked magic tower and gem mining research');
         return true;
     }
     

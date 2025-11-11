@@ -496,15 +496,36 @@ class GameplayState {
                 
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
-                if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
-                    this.updateUI();
-                    
-                    // Refresh the menu
-                    this.showAcademyUpgradeMenu({
-                        type: 'academy_menu',
-                        academy: academyData.academy,
-                        upgrades: academyData.academy.getElementalUpgradeOptions()
-                    });
+                if (upgradeId === 'gemMiningTools') {
+                    // New: Handle gem mining tools research
+                    if (academyData.academy.researchGemMiningTools(this.gameState)) {
+                        // Update all mines with academy reference
+                        this.towerManager.getBuildings().forEach(building => {
+                            if (building instanceof GoldMine) {
+                                building.setAcademy(academyData.academy);
+                            }
+                        });
+                        this.updateUI();
+                        
+                        // Refresh the menu
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else {
+                    // Modified: Elemental upgrades now use gems
+                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        
+                        // Refresh the menu
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
                 }
             });
         });
@@ -596,6 +617,10 @@ class GameplayState {
     }
     
     getAcademyUpgradeCurrentEffect(upgrade) {
+        if (upgrade.isResearch) {
+            return upgrade.level > 0 ? 'Researched' : 'Not Researched';
+        }
+        
         switch (upgrade.id) {
             case 'fire':
                 return `+${upgrade.level * 5} fire damage`;

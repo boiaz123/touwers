@@ -17,6 +17,12 @@ export class MagicAcademy extends Building {
             earth: { level: 0, maxLevel: 5, baseCost: 150, armorPiercing: 3 }
         };
         
+        // New: Gem storage for each element
+        this.gems = { fire: 0, water: 0, air: 0, earth: 0 };
+        
+        // New: Gem mining tools research
+        this.gemMiningResearched = false;
+        
         // Water ripples animation
         this.waterRipples = [];
         this.nextRippleTime = 0;
@@ -194,6 +200,17 @@ export class MagicAcademy extends Building {
         // Add subtle gold highlight on symbol
         ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
         ctx.fillText('📖', iconX, iconY);
+        
+        // New: Display gem counts in the academy render
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        const gemEmojis = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
+        let gemText = 'Gems: ';
+        Object.keys(this.gems).forEach(element => {
+            gemText += `${gemEmojis[element]}${this.gems[element]} `;
+        });
+        ctx.fillText(gemText, this.x, this.y + size/2 + 45);
     }
     
     renderFortress(ctx, size) {
@@ -682,7 +699,7 @@ export class MagicAcademy extends Building {
     }
     
     getElementalUpgradeOptions() {
-        return [
+        const options = [
             {
                 id: 'fire',
                 name: 'Fire Mastery',
@@ -690,7 +707,8 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
-                icon: '🔥'
+                icon: '🔥',
+                gemType: 'fire'
             },
             {
                 id: 'water',
@@ -699,7 +717,8 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
-                icon: '💧'
+                icon: '💧',
+                gemType: 'water'
             },
             {
                 id: 'air',
@@ -708,7 +727,8 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
-                icon: '💨'
+                icon: '💨',
+                gemType: 'air'
             },
             {
                 id: 'earth',
@@ -717,9 +737,26 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🌍'
+                icon: '🌍',
+                gemType: 'earth'
             }
         ];
+        
+        // New: Add gem mining tools research if not yet researched
+        if (!this.gemMiningResearched) {
+            options.unshift({
+                id: 'gemMiningTools',
+                name: 'Gem Mining Tools',
+                description: 'Research tools to mine elemental gems in gold mines. Allows toggling mines to gem mode.',
+                level: 0,
+                maxLevel: 1,
+                cost: 500, // Gold cost for research
+                icon: '⛏️💎',
+                isResearch: true
+            });
+        }
+        
+        return options;
     }
     
     calculateElementalCost(element) {
@@ -732,15 +769,40 @@ export class MagicAcademy extends Building {
         const upgrade = this.elementalUpgrades[element];
         const cost = this.calculateElementalCost(element);
         
-        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
+        if (!cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         
-        gameState.gold -= cost;
+        // New: Check if player has enough gems instead of gold
+        if (this.gems[element] < cost) {
+            return false;
+        }
+        
+        this.gems[element] -= cost;
         upgrade.level++;
         
-        console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level}`);
+        console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} using ${cost} ${element} gems`);
         return true;
+    }
+    
+    // New: Method to research gem mining tools
+    researchGemMiningTools(gameState) {
+        if (this.gemMiningResearched || gameState.gold < 500) {
+            return false;
+        }
+        
+        gameState.gold -= 500;
+        this.gemMiningResearched = true;
+        console.log('MagicAcademy: Researched gem mining tools');
+        return true;
+    }
+    
+    // New: Method to add gems (called by mines)
+    addGem(gemType) {
+        if (this.gems.hasOwnProperty(gemType)) {
+            this.gems[gemType]++;
+            console.log(`MagicAcademy: Added 1 ${gemType} gem, total: ${this.gems[gemType]}`);
+        }
     }
     
     deselect() {

@@ -10,6 +10,10 @@ export class GoldMine extends Building {
         this.nextSparkTime = 0;
         this.incomeMultiplier = 1;
         
+        // New: Gem mining mode
+        this.gemMode = false;
+        this.gemMiningUnlocked = false; // Will be set by academy
+        
         // Initialize missing properties
         this.smokePuffs = [];
         this.nextSmokeTime = 0;
@@ -261,7 +265,7 @@ export class GoldMine extends Building {
     update(deltaTime) {
         super.update(deltaTime);
         
-        // Only produce gold if not ready
+        // Only produce if not ready
         if (!this.goldReady) {
             this.currentProduction += deltaTime;
             
@@ -269,7 +273,7 @@ export class GoldMine extends Building {
                 this.goldReady = true;
                 this.currentProduction = 0;
                 this.flashOpacity = 1; // Trigger one-time flash
-                console.log('GoldMine: Gold production completed, ready to collect');
+                console.log(`GoldMine: ${this.gemMode ? 'Gem' : 'Gold'} production completed, ready to collect`);
             }
         }
         
@@ -353,6 +357,66 @@ export class GoldMine extends Building {
         
         // Update flash opacity (fade out quickly over 0.1 seconds for one-time flash)
         this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 5);
+    }
+    
+    collectGold() {
+        // Only allow collection if ready
+        if (!this.goldReady) {
+            console.log(`GoldMine: ${this.gemMode ? 'Gem' : 'Gold'} not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
+            return 0;
+        }
+        
+        // Reset production cycle
+        this.goldReady = false;
+        this.currentProduction = 0;
+        
+        // New: If in gem mode, produce a random gem instead of gold
+        if (this.gemMode) {
+            const gemTypes = ['fire', 'water', 'air', 'earth'];
+            const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            
+            // Assume academy reference is available (set by game state)
+            if (this.academy) {
+                this.academy.addGem(randomGem);
+                console.log(`GoldMine: Collected 1 ${randomGem} gem`);
+            }
+            return 0; // No gold collected
+        } else {
+            // Original gold collection logic
+            const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
+            
+            // Create collection sparks
+            this.sparks = [];
+            for (let i = 0; i < 8; i++) {
+                this.sparks.push({
+                    x: this.x + (Math.random() - 0.5) * 30,
+                    y: this.y + (Math.random() - 0.5) * 30,
+                    vx: (Math.random() - 0.5) * 100,
+                    vy: -Math.random() * 80 - 40,
+                    life: 1.5,
+                    maxLife: 1.5,
+                    size: Math.random() * 3 + 2,
+                    color: Math.random() > 0.5 ? 'gold' : 'yellow'
+                });
+            }
+            
+            console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
+            return income;
+        }
+    }
+    
+    // New: Method to toggle gem mode
+    toggleGemMode() {
+        if (this.gemMiningUnlocked) {
+            this.gemMode = !this.gemMode;
+            console.log(`GoldMine: Gem mode ${this.gemMode ? 'enabled' : 'disabled'}`);
+        }
+    }
+    
+    // New: Set academy reference and check if gem mining is unlocked
+    setAcademy(academy) {
+        this.academy = academy;
+        this.gemMiningUnlocked = academy && academy.gemMiningResearched;
     }
     
     render(ctx, size) {
@@ -778,7 +842,7 @@ export class GoldMine extends Building {
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
+            ctx.fillText(this.gemMode ? '💎 READY' : '💰 READY', this.x, this.y - size/2 - 10);
         }
         
         // Floating icon in bottom right of 4x4 grid
@@ -846,48 +910,74 @@ export class GoldMine extends Building {
             ctx.fillStyle = flashGradient;
             ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
         }
+        
+        // New: Render toggle icon at the top if gem mining is unlocked
+        if (this.gemMiningUnlocked) {
+            const toggleIconSize = 25;
+            const toggleX = this.x;
+            const toggleY = this.y - size/2 - 15;
+            
+            // Toggle background
+            ctx.fillStyle = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
+            ctx.fillRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+            
+            // Toggle icon
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
+            
+            // Label
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 8px Arial';
+            ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
+        }
+    }
+    
+    isPointInside(x, y, size) {
+        // Check building area
+        const dx = x - this.x;
+        const dy = y - this.y;
+        if (Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2) {
+            return true;
+        }
+        
+        // New: Check toggle icon area if unlocked
+        if (this.gemMiningUnlocked) {
+            const toggleIconSize = 25;
+            const toggleX = this.x;
+            const toggleY = this.y - size/2 - 15;
+            return x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
+                   y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
+        }
+        
+        return false;
+    }
+    
+    onClick() {
+        // New: If clicking on toggle icon, toggle mode instead of collecting
+        if (this.gemMiningUnlocked && this.isClickOnToggle()) {
+            this.toggleGemMode();
+            return 0; // No collection
+        } else {
+            return this.collectGold();
+        }
+    }
+    
+    // New: Helper to check if click is on toggle
+    isClickOnToggle() {
+        // This would need mouse coordinates, but for simplicity, assume it's handled in handleClick
+        // In practice, modify handleClick in game.js to pass coordinates
+        return false; // Placeholder - implement based on click position
     }
     
     getBaseIncome() {
         // Base income adjusted by forge level via building manager
         return 15; // This will be multiplied by forge bonus in BuildingManager
-    }
-    
-    onClick() {
-        return this.collectGold();
-    }
-    
-    collectGold() {
-        // Only allow collection if gold is ready
-        if (!this.goldReady) {
-            console.log(`GoldMine: Gold not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
-            return 0;
-        }
-        
-        // Apply forge income multiplier
-        const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
-        
-        // Reset production cycle
-        this.goldReady = false;
-        this.currentProduction = 0;
-        
-        // Create collection sparks
-        this.sparks = [];
-        for (let i = 0; i < 8; i++) {
-            this.sparks.push({
-                x: this.x + (Math.random() - 0.5) * 30,
-                y: this.y + (Math.random() - 0.5) * 30,
-                vx: (Math.random() - 0.5) * 100,
-                vy: -Math.random() * 80 - 40,
-                life: 1.5,
-                maxLife: 1.5,
-                size: Math.random() * 3 + 2,
-                color: Math.random() > 0.5 ? 'gold' : 'yellow'
-            });
-        }
-        
-        console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
-        return income;
     }
     
     darkenColor(color, factor) {
@@ -901,27 +991,6 @@ export class GoldMine extends Building {
         const newB = Math.floor(b * (1 - factor));
         
         return `rgb(${newR}, ${newG}, ${newB})`;
-    }
-    
-    isPointInside(x, y, size) {
-        // Check building area
-        const dx = x - this.x;
-        const dy = y - this.y;
-        if (Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2) {
-            return true;
-        }
-        
-        // If gold is ready, also check the icon area (larger click area for easier clicking)
-        if (this.goldReady) {
-            const iconSize = 35; // Render size
-            const clickSize = 50; // Larger click area
-            const iconX = this.x + size/2 - 10; // Bottom right area relative to building center
-            const iconY = this.y + size/2 - 15;
-            return x >= iconX - clickSize/2 && x <= iconX + clickSize/2 &&
-                   y >= iconY - clickSize/2 && y <= iconY + clickSize/2;
-        }
-        
-        return false;
     }
     
     applyEffect(towerManager) {
