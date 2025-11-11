@@ -1252,8 +1252,15 @@ export class TowerForge extends Building {
     }
     
     renderUpgradeIcon(ctx, size) {
-        // Clickbox dimensions - fixed 20px radius circle
-        const iconRadius = 20;
+        // Clickbox dimensions - base size before any scaling
+        const baseIconRadius = 20;
+        
+        // Calculate scaling factor based on canvas resolution
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        
+        // Apply scaling to icon radius
+        const iconRadius = baseIconRadius * scaleFactor;
         const baseIconX = this.x + size/2 - iconRadius - 8;
         const baseIconY = this.y + size/2 - iconRadius - 8;
         
@@ -1340,9 +1347,10 @@ export class TowerForge extends Building {
             ctx.fill();
         });
         
-        // Icon content - Hammer and Anvil (simplified and scaled to fit clickbox)
+        // Icon content - Hammer and Anvil (scaled properly)
         ctx.save();
         ctx.translate(iconX, iconY);
+        ctx.scale(scaleFactor, scaleFactor); // Scale all content by the same factor
         
         // Anvil - center (dark metal)
         ctx.fillStyle = '#1C1C1C';
@@ -1371,11 +1379,11 @@ export class TowerForge extends Building {
         
         ctx.restore();
         
-        // Store clickbox bounds for detection
+        // Store clickbox bounds for detection - now scaled with icon
         this.upgradeIconBounds = {
             x: iconX,
             y: iconY,
-            radius: iconRadius,
+            radius: iconRadius * 0.9, // Match the visual icon size with slight margin
             type: 'circle'
         };
     }
