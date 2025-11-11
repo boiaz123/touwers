@@ -818,9 +818,9 @@ export class GoldMine extends Building {
         
         // NEW: Render toggle icon at TOP LEFT if gem mining is unlocked
         if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
+            const toggleIconSize = 40; // Increased from 25 for better clickability
             const toggleX = this.x - size/2 + 15; // Top left corner
-            const toggleY = this.y - size/2 + 15; // Top left corner
+            const toggleY = this.y - size/2 + 20; // Adjusted position for better visibility
             
             // Toggle background
             ctx.fillStyle = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
@@ -831,7 +831,7 @@ export class GoldMine extends Building {
             
             // Toggle icon
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Arial';
+            ctx.font = 'bold 16px Arial'; // Slightly larger font
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
@@ -952,9 +952,9 @@ export class GoldMine extends Building {
     onClick(x, y, size) {
         // NEW: Check if clicking on toggle icon first (if unlocked)
         if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
+            const toggleIconSize = 40; // Match the updated render size
             const toggleX = this.x - size/2 + 15; // Top left corner
-            const toggleY = this.y - size/2 + 15; // Top left corner
+            const toggleY = this.y - size/2 + 20; // Match the updated render position
             
             // Check if click is within toggle icon bounds
             if (x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
