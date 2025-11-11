@@ -145,7 +145,7 @@ class GameplayState {
                 } else if (typeof clickResult === 'number') {
                     // Gold/gem collection from mine
                     this.gameState.gold += clickResult;
-                    this.updateUI(); // Immediately update UI after collection
+                    this.updateUI(); // Immediately update UI after collection (includes gems)
                     return;
                 }
             }
@@ -817,7 +817,7 @@ class GameplayState {
         const gems = this.towerManager.getGemStocks();
         const gemsElement = document.getElementById('gems');
         if (gemsElement) {
-            const gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🌍${gems.earth}`;
+            const gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🪨${gems.earth}`;
             gemsElement.textContent = gemText;
         }
         

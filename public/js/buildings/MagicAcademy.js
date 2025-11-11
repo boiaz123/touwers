@@ -727,7 +727,8 @@ export class MagicAcademy extends Building {
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
                 icon: '🪨',
-                gemType: 'earth'
+                gemType: 'earth',
+                color: '#8B6F47'
             }
         ];
         

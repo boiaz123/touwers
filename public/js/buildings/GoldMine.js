@@ -371,8 +371,8 @@ export class GoldMine extends Building {
             return text.life > 0;
         });
         
-        // Update flash opacity (fade out slowly over 0.2 seconds for noticeable effect)
-        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 2.5);
+        // Update flash opacity (very subtle fade)
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 1.2);
     }
     
     collectGold() {
@@ -1023,27 +1023,40 @@ export class GoldMine extends Building {
             ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
         }
         
-        // Add one-time flash effect when gold becomes ready (improved balance)
+        // Add subtle magical flash effect when gold becomes ready
         if (this.flashOpacity > 0) {
             let flashColor = '#FFD700'; // Gold by default
             
             if (this.gemMode && this.currentGemType) {
                 switch(this.currentGemType) {
-                    case 'fire': flashColor = '#FF4500'; break;
-                    case 'water': flashColor = '#40A4DF'; break;
-                    case 'air': flashColor = '#FFFF00'; break;
-                    case 'earth': flashColor = '#654321'; break;
+                    case 'fire': flashColor = '#FF6B35'; break;
+                    case 'water': flashColor = '#4ECDC4'; break;
+                    case 'air': flashColor = '#FFE66D'; break;
+                    case 'earth': flashColor = '#8B6F47'; break;
                 }
             }
             
-            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
-            flashGradient.addColorStop(0, `${flashColor}EE`);
-            flashGradient.addColorStop(0.4, `${flashColor}99`);
-            flashGradient.addColorStop(0.8, `${flashColor}44`);
-            flashGradient.addColorStop(1, `${flashColor}00`);
+            // Create a soft, magical glow that pulses outward
+            const maxRadius = size * 2;
+            const pulseRadius = maxRadius * (1 - this.flashOpacity);
             
-            ctx.fillStyle = flashGradient;
-            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
+            // Outer expanding ring with soft edges
+            const ringGradient = ctx.createRadialGradient(this.x, this.y, pulseRadius * 0.8, this.x, this.y, pulseRadius * 1.2);
+            ringGradient.addColorStop(0, `${flashColor}00`);
+            ringGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 40).toString(16).padStart(2, '0')}`);
+            ringGradient.addColorStop(1, `${flashColor}00`);
+            
+            ctx.fillStyle = ringGradient;
+            ctx.fillRect(this.x - pulseRadius * 1.5, this.y - pulseRadius * 1.5, pulseRadius * 3, pulseRadius * 3);
+            
+            // Inner soft glow that fades
+            const glowGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 0.8);
+            glowGradient.addColorStop(0, `${flashColor}${Math.floor(this.flashOpacity * 30).toString(16).padStart(2, '0')}`);
+            glowGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 15).toString(16).padStart(2, '0')}`);
+            glowGradient.addColorStop(1, `${flashColor}00`);
+            
+            ctx.fillStyle = glowGradient;
+            ctx.fillRect(this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
         }
         
         // Render floating collection text

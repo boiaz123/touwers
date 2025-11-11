@@ -236,10 +236,10 @@ export class MagicTower {
     
     getElementalColor() {
         switch(this.selectedElement) {
-            case 'fire': return 'rgba(255, 69, 0, ';
-            case 'water': return 'rgba(64, 164, 223, ';
-            case 'air': return 'rgba(255, 255, 0, ';
-            case 'earth': return 'rgba(101, 67, 33, ';
+            case 'fire': return 'rgba(255, 107, 53, ';
+            case 'water': return 'rgba(78, 205, 196, ';
+            case 'air': return 'rgba(255, 230, 109, ';
+            case 'earth': return 'rgba(139, 111, 71, ';
             default: return 'rgba(138, 43, 226, ';
         }
     }
