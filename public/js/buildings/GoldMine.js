@@ -239,6 +239,9 @@ export class GoldMine extends Building {
                 layers: pos.type === 'rockPile' && pos.size !== 'small' ? 2 + Math.floor(seededRandom() * 2) : 1
             });
         });
+        
+        // Add flash opacity for one-time flash effect
+        this.flashOpacity = 0;
     }
     
     generateFixedBushSegments(radius, segments, randomFunc) {
@@ -265,6 +268,7 @@ export class GoldMine extends Building {
             if (this.currentProduction >= this.productionTime) {
                 this.goldReady = true;
                 this.currentProduction = 0;
+                this.flashOpacity = 1; // Trigger one-time flash
                 console.log('GoldMine: Gold production completed, ready to collect');
             }
         }
@@ -346,6 +350,9 @@ export class GoldMine extends Building {
                 this.bobAnimations.push({ time: Math.random() * Math.PI * 2 });
             }
         }
+        
+        // Update flash opacity (fade out over 0.5 seconds)
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 2);
     }
     
     render(ctx, size) {
