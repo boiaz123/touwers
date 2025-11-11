@@ -123,18 +123,17 @@ export class BuildingManager {
         
         // Check building icon clicks with proper size calculation
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const iconSize = 20;
-        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
+        const iconSize = 30; // Increased for better clickability
         
         for (const building of this.buildings) {
             // Icon position: bottom right of building grid, slightly floating up
             const iconX = (building.gridX + building.size - 0.5) * cellSize;
             const iconY = (building.gridY + building.size - 0.5) * cellSize - 5; // Float up slightly
             
-            console.log(`BuildingManager: Checking ${building.constructor.name} icon at (${iconX}, ${iconY}) with size ${iconSize}`);
-            
-            if (x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-                y >= iconY - iconSize/2 && y <= iconY + iconSize/2) {
+            // Add small buffer for easier clicking
+            const clickBuffer = 5;
+            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
+                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
                 console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon`);
                 
                 // Call the building's onClick method directly
@@ -152,17 +151,6 @@ export class BuildingManager {
         
         console.log('BuildingManager: No building icon hit');
         return null;
-    }
-    
-    getBuildingTypeFromInstance(building) {
-        const className = building.constructor.name;
-        switch(className) {
-            case 'TowerForge': return { size: 4 };
-            case 'MagicAcademy': return { size: 4 };
-            case 'GoldMine': return { size: 4 };
-            case 'SuperWeaponLab': return { size: 4 };
-            default: return { size: 4 };
-        }
     }
     
     render(ctx) {

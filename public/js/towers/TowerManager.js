@@ -259,15 +259,17 @@ export class TowerManager {
         
         // Check tower icon clicks first for element selection
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const iconSize = 20;
+        const iconSize = 30; // Increased for better clickability
         
         for (const tower of this.towers) {
             // Icon position: bottom right of 2x2 grid, slightly floating up
             const iconX = (tower.gridX + 1.5) * cellSize;
             const iconY = (tower.gridY + 1.5) * cellSize - 5; // Float up slightly
             
-            if (x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-                y >= iconY - iconSize/2 && y <= iconY + iconSize/2) {
+            // Add small buffer for easier clicking
+            const clickBuffer = 5;
+            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
+                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
                 if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
