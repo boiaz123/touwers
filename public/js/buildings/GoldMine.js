@@ -351,8 +351,8 @@ export class GoldMine extends Building {
             }
         }
         
-        // Update flash opacity (fade out over 0.5 seconds)
-        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 2);
+        // Update flash opacity (fade out quickly over 0.1 seconds for one-time flash)
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 10);
     }
     
     render(ctx, size) {
@@ -924,14 +924,15 @@ export class GoldMine extends Building {
             return true;
         }
         
-        // If gold is ready, also check the icon area
+        // If gold is ready, also check the icon area (larger click area for easier clicking)
         if (this.goldReady) {
             const cellSize = size / 4;
-            const iconSize = 35; // Match the updated icon size
+            const iconSize = 35; // Render size
+            const clickSize = 50; // Larger click area
             const iconX = (this.gridX + 3.5) * cellSize;
             const iconY = (this.gridY + 3.5) * cellSize - 5;
-            return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-                   y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
+            return x >= iconX - clickSize/2 && x <= iconX + clickSize/2 &&
+                   y >= iconY - clickSize/2 && y <= iconY + clickSize/2;
         }
         
         return false;
