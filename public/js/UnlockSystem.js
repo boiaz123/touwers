@@ -23,6 +23,43 @@ export class UnlockSystem {
         this.unlockedCombinationSpells = new Set();
     }
     
+    // New: Method to unlock everything for sandbox2 mode
+    unlockEverything() {
+        // Max out all progress
+        this.forgeLevel = 10;
+        this.hasForge = true;
+        this.forgeCount = 1;
+        this.mineCount = 4;
+        this.academyCount = 1;
+        
+        // Unlock all towers
+        this.unlockedTowers = new Set([
+            'basic', 'barricade', 'archer', 'poison', 'cannon', 'magic', 'combination'
+        ]);
+        
+        // Unlock all buildings
+        this.unlockedBuildings = new Set([
+            'forge', 'mine', 'academy', 'superweapon'
+        ]);
+        
+        // Unlock all upgrades
+        this.unlockedUpgrades = new Set([
+            'towerRange', 'barricadeDamage', 'poisonDamage', 'explosiveRadius',
+            'fireArrows', 'gemMining'
+        ]);
+        
+        // Research everything
+        this.gemMiningResearched = true;
+        
+        // Unlock all combination spells
+        this.unlockedCombinationSpells = new Set([
+            'unlock_steam', 'unlock_mud', 'unlock_lightning', 'unlock_lava',
+            'unlock_ice', 'unlock_hurricane'
+        ]);
+        
+        console.log('UnlockSystem: Everything unlocked for sandbox2 mode');
+    }
+    
     onForgeBuilt() {
         if (this.forgeCount < this.maxForges) {
             this.hasForge = true;

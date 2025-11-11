@@ -96,14 +96,17 @@ export class SuperWeaponLab extends Building {
     
     applyEffect(buildingManager) {
         buildingManager.superWeaponUnlocked = true;
-        // Don't try to modify buildingTypes here as it may cause issues
+        // Notify unlock system that super weapon is available
+        if (buildingManager.unlockSystem) {
+            buildingManager.unlockSystem.onSuperWeaponBuilt();
+        }
     }
     
     static getInfo() {
         return {
             name: 'Super Weapon Lab',
-            description: 'Unlocks combo towers and ultimate abilities.',
-            effect: 'Advanced tech',
+            description: 'Unlocks advanced combination towers and ultimate abilities. Perfect for experimental builds.',
+            effect: 'Advanced tech & combination towers',
             size: '4x4',
             cost: 500
         };
