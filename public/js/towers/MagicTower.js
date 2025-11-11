@@ -550,8 +550,8 @@ export class MagicTower {
         
         // Element icon box
         const iconBoxSize = 24;
-        const iconBoxX = this.x - iconBoxSize / 2;
-        const iconBoxY = this.y - towerSize / 2 - 35;
+        const iconBoxX = this.x + towerSize / 2 - iconBoxSize;
+        const iconBoxY = this.y + towerSize / 2 - iconBoxSize;
         
         // Icon box background with elemental color
         const elementColor = this.getElementalColor();
@@ -566,7 +566,7 @@ export class MagicTower {
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(elementIcons[this.selectedElement], this.x, iconBoxY + iconBoxSize / 2);
+        ctx.fillText(elementIcons[this.selectedElement], this.x + towerSize / 2 - iconBoxSize / 2, this.y + towerSize / 2 - iconBoxSize / 2);
         
         ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
         
