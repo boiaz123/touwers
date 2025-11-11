@@ -10,6 +10,12 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
+        
+        // Add gem initialization to ensure currencies are available
+        if (!this.gameState.gems) {
+            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
+        }
+        
         this.level = new Level();
         this.towerManager = new TowerManager(this.gameState, this.level);
         this.enemyManager = null;
@@ -30,6 +36,12 @@ class GameplayState {
         
         // Reset game state for new level
         this.gameState = new GameState();
+        
+        // Ensure gems are initialized for the new game state
+        if (!this.gameState.gems) {
+            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
+        }
+        
         this.currentLevel = 1;
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
