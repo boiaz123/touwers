@@ -121,22 +121,24 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Calculate scale factor matching the render method
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, canvasSize.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        
-        console.log(`BuildingManager: Cell size calculated as ${cellSize}, scale factor: ${scaleFactor}`);
+        // Check building clicks with proper size calculation
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        console.log(`BuildingManager: Cell size calculated as ${cellSize}`);
         
         for (const building of this.buildings) {
-            // Calculate the actual rendered size matching render() method
-            const renderedSize = cellSize * building.size;
+            const buildingSize = building.size * cellSize;
             
-            // Use the building's isPointInside method which has the correct hitbox logic
-            if (building.isPointInside(x, y, cellSize)) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y})`);
+            // Check if click is within building bounds with generous detection
+            const halfSize = buildingSize / 2;
+            const withinX = x >= building.x - halfSize && x <= building.x + halfSize;
+            const withinY = y >= building.y - halfSize && y <= building.y + halfSize;
+            
+            console.log(`BuildingManager: Checking ${building.constructor.name} at (${building.x}, ${building.y}) with size ${buildingSize}, bounds: [${building.x - halfSize}, ${building.x + halfSize}] x [${building.y - halfSize}, ${building.y + halfSize}], click within: ${withinX && withinY}`);
+            
+            if (withinX && withinY) {
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} at (${building.x}, ${building.y}), size: ${buildingSize}`);
                 
-                // Call the building's onClick method
+                // Call the building's onClick method directly
                 if (building.onClick) {
                     const result = building.onClick();
                     console.log(`BuildingManager: onClick result:`, result);

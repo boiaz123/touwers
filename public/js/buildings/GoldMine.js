@@ -849,12 +849,10 @@ export class GoldMine extends Building {
         return 0;
     }
     
-    isPointInside(x, y, cellSize) {
-        // Building occupies 4x4 grid cells
-        const buildingSize = cellSize * 4;
-        const halfSize = buildingSize / 2;
-        return x >= this.x - halfSize && x <= this.x + halfSize &&
-               y >= this.y - halfSize && y <= this.y + halfSize;
+    isPointInside(x, y, size) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        return Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2;
     }
     
     applyEffect(towerManager) {
