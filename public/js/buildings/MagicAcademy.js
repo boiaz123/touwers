@@ -802,30 +802,13 @@ export class MagicAcademy extends Building {
         gameState.gold -= 500;
         this.gemMiningResearched = true;
         
-        console.log('MagicAcademy: Gem mining research purchased!');
+        console.log('MagicAcademy: Gem mining research purchased! All gold mines can now toggle gem mining.');
         return true;
     }
     
     setActiveMineForGems(mine) {
-        if (!this.gemMiningResearched) {
-            console.warn('MagicAcademy: Gem mining not researched yet');
-            return false;
-        }
-        
-        // If a mine was previously active, switch it back to gold
-        if (this.activeMineForGems && this.activeMineForGems !== mine) {
-            this.activeMineForGems.setMiningMode('gold');
-        }
-        
-        // Set new mine to gem mode with random gem
-        const gemTypes = ['fire', 'water', 'air', 'earth'];
-        const selectedGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
-        
-        this.activeMineForGems = mine;
-        mine.setMiningMode('gems', selectedGem);
-        
-        console.log(`MagicAcademy: Mine converted to ${selectedGem} gem mining`);
-        return true;
+        // This function is no longer needed - gems are toggled per mine
+        return false;
     }
     
     deselect() {

@@ -142,14 +142,24 @@ class GameplayState {
                 } else if (clickResult.type === 'magic_tower_menu') {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'gem_toggle') {
+                    // Handle gem mining toggle
+                    clickResult.mine.toggleGemMining(this.gameState);
+                    this.updateUI();
+                    return;
                 } else if (typeof clickResult === 'number') {
                     // Gold collection from mine
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
+                } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
+                    // Gem collection from gem mine
+                    this.gameState.gems[clickResult.gem]++;
+                    this.updateUI();
+                    return;
                 }
             }
-            
+    
             // Handle regular tower/building placement
             this.handleClick(canvasX, canvasY);
         };
@@ -284,9 +294,19 @@ class GameplayState {
                 console.log('GameplayState: Magic tower menu detected, showing menu');
                 this.showMagicTowerElementMenu(clickResult);
                 return;
+            } else if (clickResult.type === 'gem_toggle') {
+                // Handle gem mining toggle
+                clickResult.mine.toggleGemMining(this.gameState);
+                this.updateUI();
+                return;
             } else if (typeof clickResult === 'number') {
                 // Gold collection from mine
                 this.gameState.gold += clickResult;
+                this.updateUI();
+                return;
+            } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
+                // Gem collection from gem mine
+                this.gameState.gems[clickResult.gem]++;
                 this.updateUI();
                 return;
             }
@@ -553,36 +573,8 @@ class GameplayState {
             return;
         }
         
-        const mineList = mines.map((mine, index) => 
-            `<button onclick="window.selectedMineIndex = ${index}; this.parentElement.style.display='none';" style="display: block; margin: 5px; padding: 10px;">
-                Mine ${index + 1} (Grid: ${mine.gridX}, ${mine.gridY})
-            </button>`
-        ).join('');
-        
-        const dialog = document.createElement('div');
-        dialog.innerHTML = `
-            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: #1a0f0a; border: 3px gold solid; padding: 20px; z-index: 1000;">
-                <h3 style="color: gold;">Select a Gold Mine to Convert to Gem Mining</h3>
-                <div>${mineList}</div>
-                <button onclick="this.parentElement.parentElement.remove();" style="display: block; margin: 5px; padding: 10px;">Cancel</button>
-            </div>
-            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;"
-                 onclick="this.parentElement.remove();"></div>
-        `;
-        
-        document.body.appendChild(dialog);
-        
-        // Handle selection
-        const originalSelectedIndex = window.selectedMineIndex;
-        setTimeout(() => {
-            if (window.selectedMineIndex !== undefined && window.selectedMineIndex !== originalSelectedIndex) {
-                const selectedMine = mines[window.selectedMineIndex];
-                academy.setActiveMineForGems(selectedMine);
-                this.updateUI();
-                delete window.selectedMineIndex;
-            }
-        }, 100);
+        // Just show a message that gem mining is now unlocked
+        alert('Gem Mining Unlocked!\n\nYou can now toggle gem mining on any gold mine by clicking the ⛏️ icon at the top of the mine.\n\nEach mine can independently switch between gold and gem mining modes.');
     }
     
     getUpgradeCurrentEffect(upgrade) {

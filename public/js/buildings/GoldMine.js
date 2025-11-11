@@ -790,70 +790,95 @@ export class GoldMine extends Building {
             ctx.fillText(readyIcon, this.x, this.y - size/2 - 10);
         }
         
-        // Floating icon in bottom right of 4x4 grid
-        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 35; // Increased size for better visibility
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
+        // Add gem mining toggle icon at top of mine
+        const cellSize = size / 4;
+        const toggleIconSize = 28;
+        const toggleIconX = (this.gridX + 0.5) * cellSize;
+        const toggleIconY = (this.gridY - 0.5) * cellSize;
         
-        // Render floating icon only when gold is ready
-        if (this.goldReady) {
-            // Dynamic pulse for medieval glow effect
-            const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
-            
-            // Enhanced shadow for floating effect with medieval depth
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-            
-            // Parchment-like background with medieval gradient
-            const parchmentGradient = ctx.createRadialGradient(
-                iconX - iconSize/4, iconY - iconSize/4, 0,
-                iconX, iconY, iconSize
-            );
-            parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-            parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-            parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
-            
-            ctx.fillStyle = parchmentGradient;
-            ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-            
-            // Ornate gold border with medieval styling
-            ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-            ctx.lineWidth = 2;
-            ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-            
-            // Inner gold accent border
-            ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
-            ctx.lineWidth = 1;
-            ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-            
-            // Subtle medieval glow effect
-            const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-            glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
-            glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            ctx.fillStyle = glowGradient;
-            ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-            
-            // Symbol with enhanced medieval styling
-            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-            ctx.font = 'bold 18px serif'; // Serif font for medieval feel
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('💰', iconX, iconY);
-            
-            // Add subtle gold highlight on symbol
-            ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-            ctx.fillText('💰', iconX, iconY);
+        // Toggle icon background
+        const toggleBgColor = this.miningMode === 'gems' ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
+        ctx.fillStyle = toggleBgColor;
+        ctx.fillRect(toggleIconX - toggleIconSize/2, toggleIconY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+        
+        // Toggle icon border
+        const toggleBorderColor = this.miningMode === 'gems' ? '#8A2BE2' : '#A9A9A9';
+        ctx.strokeStyle = toggleBorderColor;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(toggleIconX - toggleIconSize/2, toggleIconY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+        
+        // Toggle icon symbol
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const toggleSymbol = this.miningMode === 'gems' ? '💎' : '⛏️';
+        ctx.fillText(toggleSymbol, toggleIconX, toggleIconY);
+        
+        // Mine cart track on excavated ground
+        const trackY = this.y + size * 0.2;
+        const trackStartX = this.x - size * 0.08;
+        const trackEndX = this.x + size * 0.35;
+        
+        // Track rails
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 3;
+        
+        // Left rail
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY - size * 0.015);
+        ctx.lineTo(trackEndX, trackY - size * 0.015);
+        ctx.stroke();
+        
+        // Right rail
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY + size * 0.015);
+        ctx.lineTo(trackEndX, trackY + size * 0.015);
+        ctx.stroke();
+        
+        // Railroad ties on excavated ground
+        ctx.fillStyle = '#654321';
+        for (let i = 0; i < 6; i++) {
+            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
+            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
         }
         
-        // Add one-time flash effect when gold becomes ready (fades out quickly)
-        if (this.flashOpacity > 0) {
-            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
-            flashGradient.addColorStop(0, `rgba(255, 215, 0, ${this.flashOpacity * 0.6})`);
-            flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${this.flashOpacity * 0.3})`);
-            flashGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            ctx.fillStyle = flashGradient;
-            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
+        // Mine cart
+        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
+        
+        // Cart shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
+        
+        // Cart body
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        
+        // Cart wheels
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Gold ore in cart (if ready)
+        if (this.goldReady && this.cartPosition > 0.5) { // Use goldReady instead of isReady
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 3; i++) {
+                const oreX = cartX - size * 0.02 + (i * size * 0.013);
+                const oreY = trackY - size * 0.07;
+                ctx.beginPath();
+                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
     
@@ -867,18 +892,16 @@ export class GoldMine extends Building {
     }
     
     collectGold() {
-        // Only allow collection if gold is ready
+        // Only allow collection if gold/gems are ready
         if (!this.goldReady) {
-            console.log(`GoldMine: Gold not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
+            console.log(`GoldMine: Production not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
             return 0;
         }
         
         if (this.miningMode === 'gems') {
             // Collect gems instead
-            const gemTypes = ['fire', 'water', 'air', 'earth'];
-            const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            const randomGem = this.currentGem;
             
-            this.currentGem = randomGem;
             this.goldReady = false;
             this.currentProduction = 0;
             
@@ -901,7 +924,7 @@ export class GoldMine extends Building {
             return { type: 'gem', gem: randomGem };
         }
         
-        // Apply forge income multiplier
+        // Apply forge income multiplier for gold
         const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
         
         // Reset production cycle
@@ -975,21 +998,45 @@ export class GoldMine extends Building {
             return true;
         }
         
+        // Check gem mining toggle icon (at top of mine)
+        const cellSize = size / 4;
+        const toggleIconSize = 28;
+        const toggleIconX = (this.gridX + 0.5) * cellSize;
+        const toggleIconY = (this.gridY - 0.5) * cellSize;
+        const clickSize = 40; // Larger click area
+        
+        if (x >= toggleIconX - clickSize/2 && x <= toggleIconX + clickSize/2 &&
+            y >= toggleIconY - clickSize/2 && y <= toggleIconY + clickSize/2) {
+            return { type: 'gem_toggle', mine: this };
+        }
+        
         // If gold is ready, also check the icon area (larger click area for easier clicking)
         if (this.goldReady) {
             const iconSize = 35; // Render size
-            const clickSize = 50; // Larger click area
+            const clickSize2 = 50; // Larger click area
             const iconX = this.x + size/2 - 10; // Bottom right area relative to building center
             const iconY = this.y + size/2 - 15;
-            return x >= iconX - clickSize/2 && x <= iconX + clickSize/2 &&
-                   y >= iconY - clickSize/2 && y <= iconY + clickSize/2;
+            return x >= iconX - clickSize2/2 && x <= iconX + clickSize2/2 &&
+                   y >= iconY - clickSize2/2 && y <= iconY + clickSize2/2;
         }
         
         return false;
     }
     
-    applyEffect(towerManager) {
-        // No passive gold generation anymore
+    toggleGemMining(gameState) {
+        if (this.miningMode === 'gems') {
+            // Switch back to gold mining
+            this.setMiningMode('gold');
+            console.log('GoldMine: Switched back to gold mining');
+            return true;
+        } else {
+            // Switch to gem mining - select random gem
+            const gemTypes = ['fire', 'water', 'air', 'earth'];
+            const selectedGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            this.setMiningMode('gems', selectedGem);
+            console.log(`GoldMine: Switched to ${selectedGem} gem mining`);
+            return true;
+        }
     }
     
     static getInfo() {
@@ -1253,71 +1300,5 @@ export class GoldMine extends Building {
         // Horizontal beam
         ctx.fillRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
         ctx.strokeRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
-        
-        // Mine cart track on excavated ground
-        const trackY = this.y + size * 0.2;
-        const trackStartX = this.x - size * 0.08;
-        const trackEndX = this.x + size * 0.35;
-        
-        // Track rails
-        ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3;
-        
-        // Left rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY - size * 0.015);
-        ctx.lineTo(trackEndX, trackY - size * 0.015);
-        ctx.stroke();
-        
-        // Right rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY + size * 0.015);
-        ctx.lineTo(trackEndX, trackY + size * 0.015);
-        ctx.stroke();
-        
-        // Railroad ties on excavated ground
-        ctx.fillStyle = '#654321';
-        for (let i = 0; i < 6; i++) {
-            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
-            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
-        }
-        
-        // Mine cart
-        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
-        
-        // Cart shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
-        
-        // Cart body
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        
-        // Cart wheels
-        ctx.fillStyle = '#2F2F2F';
-        ctx.beginPath();
-        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Gold ore in cart (if ready)
-        if (this.goldReady && this.cartPosition > 0.5) { // Use goldReady instead of isReady
-            ctx.fillStyle = '#FFD700';
-            for (let i = 0; i < 3; i++) {
-                const oreX = cartX - size * 0.02 + (i * size * 0.013);
-                const oreY = trackY - size * 0.07;
-                ctx.beginPath();
-                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
     }
 }
