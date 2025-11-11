@@ -35,9 +35,9 @@ export class Level { // Changed from Level3D to Level
     }
     
     // Add method to set level type
-    setLevelType(levelType) {
+    setLevelType(levelType, isSandbox = false) {
         this.levelType = levelType || 'campaign';
-        this.isSandbox = this.levelType === 'sandbox';
+        this.isSandbox = isSandbox || this.levelType === 'sandbox';
         console.log('Level: Set level type to', this.levelType, 'isSandbox:', this.isSandbox);
     }
     

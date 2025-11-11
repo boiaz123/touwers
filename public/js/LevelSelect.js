@@ -3,7 +3,7 @@ export class LevelSelect {
         this.stateManager = stateManager;
         this.levels = [
             { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' },
+            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox', isSandbox: true },
             { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false, type: 'campaign' }
         ];
         this.selectedLevel = 0;

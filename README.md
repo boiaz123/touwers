@@ -24,6 +24,14 @@ Visit `http://localhost:3000`
 - **Barricade Tower** (🛡️) - $90  
 - **Tower Forge** (🔨) - $300
 
+### Sandbox Mode
+In Sandbox Mode, players start with:
+- **100,000 Gold** for unlimited building
+- **100 of each elemental gem** (Fire, Water, Air, Earth)
+- **100 Diamonds** for immediate access to all features
+- **All research unlocked** including gem mining and academy upgrades
+- **Infinite waves** with gradually increasing difficulty
+
 ### Tower Forge Upgrades
 The Tower Forge is the key to progression. Only 1 forge can be built per game.
 

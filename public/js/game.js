@@ -34,16 +34,15 @@ class GameplayState {
         this.currentLevel = 1;
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
+        this.isSandbox = levelInfo.isSandbox || this.levelType === 'sandbox';
         
         // Configure level-specific settings
-        if (this.levelType === 'sandbox') {
+        if (this.isSandbox) {
             this.gameState.initializeSandbox(); // Use new method
             this.maxWavesForLevel = Infinity;
-            this.isSandbox = true;
             console.log('GameplayState: Sandbox mode initialized');
         } else {
             this.maxWavesForLevel = 10;
-            this.isSandbox = false;
         }
         
         this.waveInProgress = false;
@@ -63,7 +62,7 @@ class GameplayState {
         }
         
         // Set level type BEFORE initializing
-        this.level.setLevelType(this.levelType);
+        this.level.setLevelType(this.levelType, this.isSandbox);
         
         // Initialize level for current canvas size first
         console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
@@ -76,9 +75,10 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // FIXED: Initialize sandbox gems AFTER tower manager is created and BEFORE any other operations
+        // NEW: Initialize sandbox mode in unlock system if applicable
         if (this.isSandbox) {
-            console.log('GameplayState: Setting up sandbox mode...');
+            this.towerManager.getUnlockSystem().initializeSandboxMode();
+            console.log('GameplayState: Sandbox unlock system initialized');
             
             // Wait for next frame to ensure everything is properly initialized
             setTimeout(() => {
@@ -96,30 +96,13 @@ class GameplayState {
     initializeSandboxGems() {
         console.log('GameplayState: Initializing sandbox gems...');
         
-        // Find the academy building
-        const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+        // Create academy automatically for sandbox mode with full unlocks
+        const academy = this.towerManager.buildingManager.createSandboxAcademy();
         
         if (academy) {
-            console.log('GameplayState: Found academy, setting gems...');
+            console.log('GameplayState: Created sandbox academy with gems:', academy.gems);
             
-            // Initialize gems directly
-            academy.gems = {
-                fire: 100,
-                water: 100,
-                air: 100,
-                earth: 100,
-                diamond: 100
-            };
-            
-            // Unlock all research
-            academy.gemMiningResearched = true;
-            academy.diamondMiningUnlocked = true;
-            academy.academyLevel = 3; // Max level for sandbox
-            
-            console.log('GameplayState: Academy gems set to:', academy.gems);
-            console.log('GameplayState: Academy research unlocked');
-            
-            // Update all mines with academy reference
+            // Update all existing and future mines with academy reference
             this.towerManager.buildingManager.buildings.forEach(building => {
                 if (building.constructor.name === 'GoldMine') {
                     building.setAcademy(academy);
@@ -133,7 +116,7 @@ class GameplayState {
             
             console.log('GameplayState: Sandbox gems initialization complete');
         } else {
-            console.warn('GameplayState: Academy not found for sandbox initialization');
+            console.warn('GameplayState: Failed to create sandbox academy');
         }
     }
     
