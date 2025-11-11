@@ -704,22 +704,15 @@ export class Level { // Changed from Level3D to Level
             ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
             
             const size = this.previewSize * this.cellSize;
-            ctx.fillRect(
-                this.previewGridX * this.cellSize,
-                this.previewGridY * this.cellSize,
-                size,
-                size
-            );
+            // Center the preview on the grid cell
+            const centerX = (this.previewGridX + this.previewSize / 2) * this.cellSize;
+            const centerY = (this.previewGridY + this.previewSize / 2) * this.cellSize;
+            ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size);
             
             // Add border to preview
             ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(
-                this.previewGridX * this.cellSize,
-                this.previewGridY * this.cellSize,
-                size,
-                size
-            );
+            ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
         }
     }
     
