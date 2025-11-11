@@ -837,12 +837,11 @@ export class GoldMine extends Building {
             ctx.fillText('💰', iconX, iconY);
         }
         
-        // Add distinguishable flash effect when gold is ready
-        if (this.goldReady) {
-            const flashIntensity = Math.sin(this.animationTime * 8) * 0.5 + 0.5; // Faster, more noticeable pulse
+        // Add one-time flash effect when gold becomes ready (fades out quickly)
+        if (this.flashOpacity > 0) {
             const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
-            flashGradient.addColorStop(0, `rgba(255, 215, 0, ${flashIntensity * 0.4})`);
-            flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${flashIntensity * 0.2})`);
+            flashGradient.addColorStop(0, `rgba(255, 215, 0, ${this.flashOpacity * 0.6})`);
+            flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${this.flashOpacity * 0.3})`);
             flashGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
             ctx.fillStyle = flashGradient;
             ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
