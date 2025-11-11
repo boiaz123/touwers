@@ -34,6 +34,10 @@ export class GoldMine extends Building {
         this.cartDirection = 1;
         this.cartSpeed = 0.15; // Reduced from 0.3 to 0.15
         
+        // Gem mining mode
+        this.miningMode = 'gold'; // 'gold' or 'gems'
+        this.currentGem = null; // Current gem being mined (fire, water, air, earth)
+        
         // Natural environment elements within the mine area
         this.trees = [];
         this.environmentRocks = [];
@@ -738,8 +742,9 @@ export class GoldMine extends Building {
         ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
         ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
         
-        if (this.goldReady) { // Use goldReady consistently
-            ctx.fillStyle = '#FFD700';
+        if (this.goldReady) {
+            const barColor = this.miningMode === 'gems' ? this.getGemColor(this.currentGem) : '#FFD700';
+            ctx.fillStyle = barColor;
             ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
         } else {
             ctx.fillStyle = '#D2691E';
@@ -747,10 +752,11 @@ export class GoldMine extends Building {
         }
         
         // Mine indicator
+        const mineIcon = this.miningMode === 'gems' ? '💎' : '⛏️💰';
         ctx.fillStyle = '#8B4513';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
+        ctx.fillText(mineIcon, this.x, this.y + size/2 + 35);
         
         // Add production status indicator
         if (!this.goldReady) {
@@ -760,7 +766,8 @@ export class GoldMine extends Building {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50, 8);
             
-            ctx.fillStyle = '#4CAF50';
+            const progressColor = this.miningMode === 'gems' ? this.getGemColor(this.currentGem) : '#4CAF50';
+            ctx.fillStyle = progressColor;
             ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50 * progress, 8);
             
             ctx.strokeStyle = '#FFF';
@@ -775,10 +782,12 @@ export class GoldMine extends Building {
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
             // Ready indicator
-            ctx.fillStyle = '#FFD700';
+            const readyIcon = this.miningMode === 'gems' ? `💎 ${this.currentGem.toUpperCase()}` : '💰 READY';
+            const readyColor = this.miningMode === 'gems' ? this.getGemColor(this.currentGem) : '#FFD700';
+            ctx.fillStyle = readyColor;
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
+            ctx.fillText(readyIcon, this.x, this.y - size/2 - 10);
         }
         
         // Floating icon in bottom right of 4x4 grid
@@ -864,6 +873,34 @@ export class GoldMine extends Building {
             return 0;
         }
         
+        if (this.miningMode === 'gems') {
+            // Collect gems instead
+            const gemTypes = ['fire', 'water', 'air', 'earth'];
+            const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            
+            this.currentGem = randomGem;
+            this.goldReady = false;
+            this.currentProduction = 0;
+            
+            // Create gem collection sparks
+            this.sparks = [];
+            for (let i = 0; i < 8; i++) {
+                this.sparks.push({
+                    x: this.x + (Math.random() - 0.5) * 30,
+                    y: this.y + (Math.random() - 0.5) * 30,
+                    vx: (Math.random() - 0.5) * 100,
+                    vy: -Math.random() * 80 - 40,
+                    life: 1.5,
+                    maxLife: 1.5,
+                    size: Math.random() * 3 + 2,
+                    color: this.getGemColor(randomGem)
+                });
+            }
+            
+            console.log(`GoldMine: Collected ${randomGem} gem`);
+            return { type: 'gem', gem: randomGem };
+        }
+        
         // Apply forge income multiplier
         const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
         
@@ -888,6 +925,33 @@ export class GoldMine extends Building {
         
         console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
         return income;
+    }
+    
+    setMiningMode(mode, gemType = null) {
+        if (mode === 'gems' && !gemType) {
+            console.warn('GoldMine: Gem mining requires a gem type');
+            return false;
+        }
+        
+        this.miningMode = mode;
+        this.currentGem = gemType;
+        
+        // Reset production cycle
+        this.goldReady = false;
+        this.currentProduction = 0;
+        
+        console.log(`GoldMine: Mining mode changed to ${mode}${gemType ? ' (' + gemType + ')' : ''}`);
+        return true;
+    }
+    
+    getGemColor(gemType) {
+        switch(gemType) {
+            case 'fire': return '#FF4500';
+            case 'water': return '#40A4DF';
+            case 'air': return '#FFFF00';
+            case 'earth': return '#8B4513';
+            default: return '#FFD700';
+        }
     }
     
     darkenColor(color, factor) {

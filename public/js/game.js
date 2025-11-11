@@ -456,30 +456,50 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
-        // Add elemental upgrades
-        upgradeListHTML += academyData.upgrades.map(upgrade => `
-            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                <div class="upgrade-icon">${upgrade.icon}</div>
-                <div class="upgrade-details">
-                    <div class="upgrade-name">${upgrade.name}</div>
-                    <div class="upgrade-desc">${upgrade.description}</div>
-                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                    <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
+        // Add elemental upgrades and research options
+        upgradeListHTML += academyData.upgrades.map(upgrade => {
+            let costDisplay = '';
+            let buttonDisabled = false;
+            
+            if (upgrade.isResearch) {
+                // Research option
+                if (upgrade.cost) {
+                    costDisplay = `$${upgrade.cost}`;
+                    buttonDisabled = this.gameState.gold < upgrade.cost;
+                } else {
+                    costDisplay = 'RESEARCHED';
+                    buttonDisabled = true;
+                }
+            } else {
+                // Elemental upgrade - costs gems
+                costDisplay = `${upgrade.cost}${upgrade.icon}`;
+                buttonDisabled = !this.gameState.gems[upgrade.gemType] || this.gameState.gems[upgrade.gemType] < upgrade.cost;
+            }
+            
+            return `
+                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${upgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${upgrade.name}</div>
+                        <div class="upgrade-desc">${upgrade.description}</div>
+                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                        ${!upgrade.isResearch ? `<div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>` : ''}
+                    </div>
+                    <div class="upgrade-cost">
+                        ${upgrade.cost ? costDisplay : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="${upgrade.id}" 
+                            ${(!upgrade.cost || buttonDisabled) ? 'disabled' : ''}>
+                        ${upgrade.cost ? (upgrade.isResearch ? 'Research' : 'Upgrade') : 'MAX'}
+                    </button>
                 </div>
-                <div class="upgrade-cost">
-                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
-                </div>
-                <button class="upgrade-btn" 
-                        data-upgrade="${upgrade.id}" 
-                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
-                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         menu.innerHTML = `
             <div class="menu-header">
-                <h3>🎓 Magic Academy Upgrades</h3>
+                <h3>🎓 Magic Academy</h3>
                 <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
             <div class="upgrade-list">
@@ -496,15 +516,27 @@ class GameplayState {
                 
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
-                if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
-                    this.updateUI();
-                    
-                    // Refresh the menu
-                    this.showAcademyUpgradeMenu({
-                        type: 'academy_menu',
-                        academy: academyData.academy,
-                        upgrades: academyData.academy.getElementalUpgradeOptions()
-                    });
+                if (upgradeId === 'gem_mining_research') {
+                    if (academyData.academy.purchaseGemMiningResearch(this.gameState)) {
+                        this.updateUI();
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else if (upgradeId === 'gem_mining_unlocked') {
+                    // Show mine selection for gem conversion
+                    this.showMineSelectionForGems(academyData.academy);
+                } else {
+                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
                 }
             });
         });
@@ -512,70 +544,45 @@ class GameplayState {
         this.activeMenu = menu;
     }
     
-    showMagicTowerElementMenu(towerData) {
-        // Clear existing menus
-        this.clearActiveMenus();
+    showMineSelectionForGems(academy) {
+        // Create a simple dialog to select which mine to convert
+        const mines = this.towerManager.buildings.filter(b => b.constructor.name === 'GoldMine');
         
-        console.log('GameplayState: Showing magic tower element menu', towerData);
+        if (mines.length === 0) {
+            alert('No gold mines available to convert');
+            return;
+        }
         
-        // Create element selection menu
-        const menu = document.createElement('div');
-        menu.id = 'magic-tower-menu';
-        menu.className = 'upgrade-menu';
+        const mineList = mines.map((mine, index) => 
+            `<button onclick="window.selectedMineIndex = ${index}; this.parentElement.style.display='none';" style="display: block; margin: 5px; padding: 10px;">
+                Mine ${index + 1} (Grid: ${mine.gridX}, ${mine.gridY})
+            </button>`
+        ).join('');
         
-        let elementListHTML = '';
-        
-        elementListHTML += towerData.elements.map(element => `
-            <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
-                <div class="upgrade-icon">${element.icon}</div>
-                <div class="upgrade-details">
-                    <div class="upgrade-name">${element.name} Element</div>
-                    <div class="upgrade-desc">${element.description}</div>
-                    ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
-                </div>
-                <div class="upgrade-cost">
-                    Free
-                </div>
-                <button class="upgrade-btn" 
-                        data-element="${element.id}" 
-                        ${element.id === towerData.currentElement ? 'disabled' : ''}>
-                    ${element.id === towerData.currentElement ? 'Active' : 'Select'}
-                </button>
+        const dialog = document.createElement('div');
+        dialog.innerHTML = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                        background: #1a0f0a; border: 3px gold solid; padding: 20px; z-index: 1000;">
+                <h3 style="color: gold;">Select a Gold Mine to Convert to Gem Mining</h3>
+                <div>${mineList}</div>
+                <button onclick="this.parentElement.parentElement.remove();" style="display: block; margin: 5px; padding: 10px;">Cancel</button>
             </div>
-        `).join('');
-        
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>⚡ Magic Tower Elements</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${elementListHTML}
-            </div>
+            <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999;"
+                 onclick="this.parentElement.remove();"></div>
         `;
         
-        document.body.appendChild(menu);
+        document.body.appendChild(dialog);
         
-        // Add element selection handlers
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const elementId = e.target.dataset.element;
-                
-                console.log(`GameplayState: Magic tower element selected: ${elementId}`);
-                
-                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
-                    // Refresh the menu
-                    this.showMagicTowerElementMenu({
-                        type: 'magic_tower_menu',
-                        tower: towerData.tower,
-                        elements: towerData.elements,
-                        currentElement: elementId
-                    });
-                }
-            });
-        });
-        
-        this.activeMenu = menu;
+        // Handle selection
+        const originalSelectedIndex = window.selectedMineIndex;
+        setTimeout(() => {
+            if (window.selectedMineIndex !== undefined && window.selectedMineIndex !== originalSelectedIndex) {
+                const selectedMine = mines[window.selectedMineIndex];
+                academy.setActiveMineForGems(selectedMine);
+                this.updateUI();
+                delete window.selectedMineIndex;
+            }
+        }, 100);
     }
     
     getUpgradeCurrentEffect(upgrade) {
@@ -746,6 +753,20 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
+        
+        // Update gem display
+        const gemElements = {
+            fire: document.getElementById('gems-fire'),
+            water: document.getElementById('gems-water'),
+            air: document.getElementById('gems-air'),
+            earth: document.getElementById('gems-earth')
+        };
+        
+        for (const [gemType, element] of Object.entries(gemElements)) {
+            if (element) {
+                element.textContent = this.gameState.gems[gemType] || 0;
+            }
+        }
         
         // Show wave info differently for sandbox mode
         if (this.isSandbox) {
