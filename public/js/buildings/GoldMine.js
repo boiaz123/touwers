@@ -404,6 +404,21 @@ export class GoldMine extends Building {
                     maxLife: 1.5,
                     gemType: gemType
                 });
+                
+                // New: 10% chance to also get a diamond if diamond mining is unlocked
+                if (this.academy.diamondMiningUnlocked && Math.random() < 0.1) {
+                    this.academy.addDiamond();
+                    console.log(`GoldMine: Bonus! Collected 1 diamond`);
+                    
+                    this.floatingTexts.push({
+                        x: this.x,
+                        y: this.y - 20,
+                        text: '+1 DIAMOND',
+                        life: 1.5,
+                        maxLife: 1.5,
+                        gemType: 'diamond'
+                    });
+                }
             }
             this.currentGemType = null; // Reset for next cycle
             return 0; // No gold collected
@@ -1087,6 +1102,9 @@ export class GoldMine extends Building {
                 case 'earth':
                     ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
                     break;
+                case 'diamond':
+                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`; // Light blue/cyan for diamond
+                    break;
                 default: // gold
                     ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
             }
@@ -1402,6 +1420,8 @@ export class GoldMine extends Building {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+        
+        
         
         // Cave entrance (dark oval opening)
         const caveGradient = ctx.createRadialGradient(

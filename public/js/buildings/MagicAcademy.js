@@ -23,6 +23,9 @@ export class MagicAcademy extends Building {
         // New: Gem mining tools research
         this.gemMiningResearched = false;
         
+        // New: Diamond mining unlock
+        this.diamondMiningUnlocked = false;
+        
         // New: Academy upgrade system
         this.academyLevel = 0;
         this.maxAcademyLevel = 3;

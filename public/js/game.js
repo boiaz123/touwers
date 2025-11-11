@@ -36,11 +36,11 @@ class GameplayState {
         
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
-            this.gameState.gold = 100000; // Increased from 10000 to 100000
-            this.maxWavesForLevel = Infinity; // No wave limit
+            this.gameState.gold = 100000;
+            this.maxWavesForLevel = Infinity;
             this.isSandbox = true;
         } else {
-            this.maxWavesForLevel = 10; // Level 1 has 10 waves
+            this.maxWavesForLevel = 10;
             this.isSandbox = false;
         }
         
@@ -71,7 +71,7 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // New: Initialize sandbox gems
+        // New: Initialize sandbox gems AFTER everything is set up
         if (this.isSandbox) {
             const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
             if (academy) {
@@ -80,7 +80,18 @@ class GameplayState {
                 academy.gems.air = 100;
                 academy.gems.earth = 100;
                 academy.gems.diamond = 100;
-                console.log('GameplayState: Initialized sandbox gems - 100 of each type');
+                
+                // Unlock diamond mining for sandbox
+                academy.diamondMiningUnlocked = true;
+                
+                // Set academy reference on all mines
+                this.towerManager.buildingManager.buildings.forEach(building => {
+                    if (building.constructor.name === 'GoldMine') {
+                        building.setAcademy(academy);
+                    }
+                });
+                
+                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds) and diamond mining unlocked');
             }
         }
         
@@ -959,13 +970,13 @@ class GameplayState {
         
         document.getElementById('enemies-remaining').textContent = statusText;
         
-        // Update gem display in top bar
+        // Update gem display in top bar - now includes diamonds
         const gems = this.towerManager.getGemStocks();
         const gemsElement = document.getElementById('gems');
         if (gemsElement) {
-            // Check if diamonds are available
             let gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🪨${gems.earth}`;
-            if (gems.diamond !== undefined && gems.diamond > 0) {
+            // Always show diamond count if available
+            if (gems.diamond !== undefined) {
                 gemText += ` 💎${gems.diamond}`;
             }
             gemsElement.textContent = gemText;
