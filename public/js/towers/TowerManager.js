@@ -29,6 +29,9 @@ export class TowerManager {
         
         // Track occupied grid positions by towers only
         this.occupiedPositions = new Set();
+        
+        // Sandbox academy reference for gem display
+        this.sandboxAcademy = null;
     }
     
     placeTower(type, x, y, gridX, gridY) {
@@ -78,29 +81,54 @@ export class TowerManager {
                 this.unlockSystem.onMineBuilt();
                 console.log('TowerManager: Mine built');
                 
-                // New: Set academy reference on newly built mine if academy exists and gem mining researched
-                const academies = this.buildingManager.buildings.filter(building =>
-                    building.constructor.name === 'MagicAcademy'
-                );
-                if (academies.length > 0) {
-                    const newMine = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
-                    newMine.setAcademy(academies[0]);
-                    console.log('TowerManager: Set academy reference on new mine');
+                // Set academy reference on newly built mine
+                const newMine = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
+                if (this.sandboxAcademy) {
+                    // Use sandbox academy if available
+                    newMine.setAcademy(this.sandboxAcademy);
+                    newMine.gemMiningUnlocked = this.sandboxAcademy.gemMiningToolsResearched;
+                    console.log('TowerManager: Set sandbox academy reference on new mine');
+                } else {
+                    // Find real academy
+                    const academies = this.buildingManager.buildings.filter(building =>
+                        building.constructor.name === 'MagicAcademy'
+                    );
+                    if (academies.length > 0) {
+                        newMine.setAcademy(academies[0]);
+                        console.log('TowerManager: Set real academy reference on new mine');
+                    }
                 }
             } else if (type === 'academy') {
                 this.unlockSystem.onAcademyBuilt();
                 console.log('TowerManager: Academy built, Magic Tower unlocked');
                 
-                // New: When academy is built, set it as reference on all existing mines
+                // When real academy is built, update all existing mines and replace sandbox academy
+                const realAcademy = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
+                
+                // If we had a sandbox academy, copy its gems to the real academy
+                if (this.sandboxAcademy) {
+                    Object.assign(realAcademy.gems, this.sandboxAcademy.gems);
+                    realAcademy.elementalLevels = { ...this.sandboxAcademy.elementalLevels };
+                    realAcademy.academyLevel = this.sandboxAcademy.academyLevel;
+                    realAcademy.gemMiningToolsResearched = this.sandboxAcademy.gemMiningToolsResearched;
+                    realAcademy.diamondMiningUnlocked = this.sandboxAcademy.diamondMiningUnlocked;
+                    if (this.sandboxAcademy.unlockedCombinationSpells) {
+                        realAcademy.unlockedCombinationSpells = new Set(this.sandboxAcademy.unlockedCombinationSpells);
+                    }
+                    console.log('TowerManager: Transferred sandbox academy data to real academy');
+                    this.sandboxAcademy = null; // Clear sandbox academy
+                }
+                
+                // Update all existing mines with real academy reference
                 this.buildingManager.buildings.forEach(building => {
                     if (building.constructor.name === 'GoldMine') {
-                        const academy = this.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-                        if (academy) {
-                            building.setAcademy(academy);
-                            console.log('TowerManager: Set academy reference on existing mine');
-                        }
+                        building.setAcademy(realAcademy);
+                        console.log('TowerManager: Updated mine with real academy reference');
                     }
                 });
+            } else if (type === 'superweapon') {
+                this.unlockSystem.onSuperWeaponBuilt();
+                console.log('TowerManager: Super Weapon Lab built');
             }
         }
         
@@ -236,15 +264,39 @@ export class TowerManager {
     
     // New: Get gem stocks for UI display
     getGemStocks() {
-        const academies = this.buildingManager.buildings.filter(building =>
+        // Check sandbox academy first, then real academy
+        if (this.sandboxAcademy) {
+            return {
+                fire: this.sandboxAcademy.gems?.fire || 0,
+                water: this.sandboxAcademy.gems?.water || 0,
+                air: this.sandboxAcademy.gems?.air || 0,
+                earth: this.sandboxAcademy.gems?.earth || 0,
+                diamond: this.sandboxAcademy.gems?.diamond || 0
+            };
+        }
+        
+        // Find academy building
+        const academy = this.buildingManager.buildings.find(building => 
             building.constructor.name === 'MagicAcademy'
         );
         
-        if (academies.length > 0) {
-            return academies[0].gems;
+        if (academy) {
+            return {
+                fire: academy.gems?.fire || 0,
+                water: academy.gems?.water || 0,
+                air: academy.gems?.air || 0,
+                earth: academy.gems?.earth || 0,
+                diamond: academy.gems?.diamond || 0
+            };
         }
         
-        return { fire: 0, water: 0, air: 0, earth: 0 };
+        return {
+            fire: 0,
+            water: 0, 
+            air: 0,
+            earth: 0,
+            diamond: 0
+        };
     }
     
     recalculateAllTowerStats() {
@@ -439,32 +491,46 @@ export class TowerManager {
     
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
-        if (info) {
-            info.unlocked = this.unlockSystem.canBuildBuilding(type);
-            
-            // New: Check super weapon unlock from academy
-            if (type === 'superweapon') {
-                const academies = this.buildingManager.buildings.filter(building =>
-                    building.constructor.name === 'MagicAcademy'
-                );
-                info.unlocked = academies.length > 0 && academies[0].superWeaponUnlocked;
-                
-                if (!info.unlocked) {
-                    info.disabled = true;
-                    info.disableReason = 'Unlock at Academy Level 3';
-                }
-            } else if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-                info.disabled = true;
-                info.disableReason = "Only 1 forge allowed";
-            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-                info.disabled = true;
-                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
-            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-                info.disabled = true;
-                info.disableReason = "Only 1 academy allowed";
+        if (!info) return null;
+        
+        // Add unlock status
+        const unlocked = this.unlockSystem.canBuildBuilding(type);
+        const disabled = !unlocked;
+        
+        let disableReason = '';
+        if (!unlocked) {
+            switch (type) {
+                case 'mine':
+                    if (this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+                        disableReason = `Max mines: ${this.unlockSystem.getMaxMines()} (Forge level ${this.unlockSystem.forgeLevel})`;
+                    } else if (!this.unlockSystem.hasForge) {
+                        disableReason = 'Requires Tower Forge';
+                    }
+                    break;
+                case 'academy':
+                    if (this.unlockSystem.academyCount >= 1) {
+                        disableReason = 'Only 1 academy allowed';
+                    } else if (this.unlockSystem.forgeLevel < 4) {
+                        disableReason = 'Requires Forge level 4';
+                    }
+                    break;
+                case 'superweapon':
+                    disableReason = 'Advanced technology required';
+                    break;
+                case 'forge':
+                    if (this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+                        disableReason = 'Only 1 forge allowed';
+                    }
+                    break;
             }
         }
-        return info;
+        
+        return {
+            ...info,
+            unlocked,
+            disabled,
+            disableReason
+        };
     }
     
     getUnlockSystem() {

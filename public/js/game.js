@@ -71,113 +71,76 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // NEW: Handle sandbox2 mode - unlock everything
+        // NEW: Handle sandbox2 mode - unlock everything but don't pre-build
         if (this.levelType === 'sandbox2') {
             // Unlock everything in the unlock system
             this.towerManager.getUnlockSystem().unlockEverything();
+            console.log('GameplayState: Unlocked everything for sandbox2 mode');
             
-            // Build initial buildings for full experience
-            const centerGrid = { x: Math.floor(this.level.gridWidth / 4), y: Math.floor(this.level.gridHeight / 4) };
-            
-            // Try to place buildings automatically
-            let buildingGrid = { ...centerGrid };
-            
-            // Place forge first and notify unlock system
-            if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                if (this.towerManager.placeBuilding('forge', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
-                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                    this.towerManager.getUnlockSystem().onForgeBuilt();
-                    buildingGrid.x += 6;
-                }
-            }
-            
-            // Place academy and notify unlock system
-            if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                if (this.towerManager.placeBuilding('academy', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
-                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                    this.towerManager.getUnlockSystem().onAcademyBuilt();
-                    buildingGrid.x += 6;
-                }
-            }
-            
-            // Place super weapon lab
-            if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                if (this.towerManager.placeBuilding('superweapon', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
-                    this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                    this.towerManager.getUnlockSystem().onSuperWeaponBuilt();
-                }
-            }
-            
-            // Place mines and notify unlock system for each
-            buildingGrid.y += 6;
-            buildingGrid.x = centerGrid.x;
-            for (let i = 0; i < 4; i++) {
-                if (this.level.canPlaceBuilding(buildingGrid.x, buildingGrid.y, 4, this.towerManager)) {
-                    const { screenX, screenY } = this.level.gridToScreen(buildingGrid.x, buildingGrid.y, 4);
-                    if (this.towerManager.placeBuilding('mine', screenX, screenY, buildingGrid.x, buildingGrid.y)) {
-                        this.level.placeBuilding(buildingGrid.x, buildingGrid.y, 4);
-                        this.towerManager.getUnlockSystem().onMineBuilt();
-                        buildingGrid.x += 6;
-                    }
-                }
-            }
+            // Don't pre-build buildings, just unlock them all
+            // Buildings will be available to build in the UI
         }
         
-        // Initialize sandbox gems AFTER everything is set up and buildings are placed
+        // Initialize sandbox gems AFTER tower manager is set up
         if (this.isSandbox) {
-            const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-            if (academy) {
-                // Initialize gems first
-                academy.gems.fire = 100;
-                academy.gems.water = 100;
-                academy.gems.air = 100;
-                academy.gems.earth = 100;
-                academy.gems.diamond = 100;
-                
-                // Unlock diamond mining for sandbox
-                academy.diamondMiningUnlocked = true;
-                
-                // For sandbox2, max out all elemental levels and unlock all spells
-                if (this.levelType === 'sandbox2') {
-                    academy.elementalLevels.fire = 5;
-                    academy.elementalLevels.water = 5;
-                    academy.elementalLevels.air = 5;
-                    academy.elementalLevels.earth = 5;
-                    academy.academyLevel = 3;
-                    academy.gemMiningToolsResearched = true;
-                    
-                    // Unlock all combination spells
-                    academy.unlockedCombinationSpells = new Set([
+            // For sandbox2, we need to create a temporary academy to initialize gems
+            if (this.levelType === 'sandbox2') {
+                // Create a temporary academy instance to set up gems
+                const tempAcademy = {
+                    gems: {
+                        fire: 1000,
+                        water: 1000,
+                        air: 1000,
+                        earth: 1000,
+                        diamond: 1000
+                    },
+                    elementalLevels: {
+                        fire: 5,
+                        water: 5,
+                        air: 5,
+                        earth: 5
+                    },
+                    academyLevel: 3,
+                    gemMiningToolsResearched: true,
+                    diamondMiningUnlocked: true,
+                    unlockedCombinationSpells: new Set([
                         'unlock_steam', 'unlock_mud', 'unlock_lightning', 
                         'unlock_lava', 'unlock_ice', 'unlock_hurricane'
-                    ]);
-                    
-                    // Give tons of gems for experimentation
-                    academy.gems.fire = 1000;
-                    academy.gems.water = 1000;
-                    academy.gems.air = 1000;
-                    academy.gems.earth = 1000;
-                    academy.gems.diamond = 1000;
-                    
-                    // Research gem mining tools immediately
-                    this.towerManager.getUnlockSystem().onGemMiningResearched();
-                }
-                
-                // Set academy reference on all mines AFTER building placement
-                this.towerManager.buildingManager.buildings.forEach(building => {
-                    if (building.constructor.name === 'GoldMine') {
-                        building.setAcademy(academy);
-                        console.log('GameplayState: Set academy reference on mine, gemMiningUnlocked:', building.gemMiningUnlocked);
+                    ]),
+                    addGem: function(type) {
+                        this.gems[type] = (this.gems[type] || 0) + 1;
+                    },
+                    addDiamond: function() {
+                        this.gems.diamond = (this.gems.diamond || 0) + 1;
                     }
-                });
+                };
                 
-                console.log('GameplayState: Initialized sandbox gems and unlocks for', this.levelType);
-                console.log('GameplayState: Academy gems after setup:', academy.gems);
+                // Set this temporary academy as the reference for the tower manager
+                this.towerManager.sandboxAcademy = tempAcademy;
+                
+                console.log('GameplayState: Created sandbox2 academy with gems:', tempAcademy.gems);
             } else {
-                console.warn('GameplayState: No academy found for sandbox initialization');
+                // Regular sandbox - just basic gems
+                const basicAcademy = {
+                    gems: {
+                        fire: 100,
+                        water: 100,
+                        air: 100,
+                        earth: 100,
+                        diamond: 100
+                    },
+                    diamondMiningUnlocked: true,
+                    gemMiningToolsResearched: false,
+                    addGem: function(type) {
+                        this.gems[type] = (this.gems[type] || 0) + 1;
+                    },
+                    addDiamond: function() {
+                        this.gems.diamond = (this.gems.diamond || 0) + 1;
+                    }
+                };
+                
+                this.towerManager.sandboxAcademy = basicAcademy;
+                console.log('GameplayState: Created sandbox academy with gems:', basicAcademy.gems);
             }
         }
         
