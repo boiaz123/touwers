@@ -695,7 +695,7 @@ export class MagicAcademy extends Building {
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
                 icon: '🔥',
-                costType: 'gems', // Costs gems instead of gold
+                costType: 'gems',
                 gemType: 'fire'
             },
             {
@@ -727,7 +727,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🌍',
+                icon: '🪨',
                 costType: 'gems',
                 gemType: 'earth'
             }
@@ -738,7 +738,7 @@ export class MagicAcademy extends Building {
             options.unshift({
                 id: 'gem_mining_research',
                 name: 'Gem Mining Research',
-                description: 'Unlock gem mining capability. Convert 1 gold mine to mine gems instead.',
+                description: 'Unlock gem mining capability. Toggle any gold mine to mine gems instead.',
                 level: 0,
                 maxLevel: 1,
                 cost: 500, // Gold cost for research
@@ -750,7 +750,7 @@ export class MagicAcademy extends Building {
             options.unshift({
                 id: 'gem_mining_unlocked',
                 name: 'Gem Mining Unlocked',
-                description: 'Select a gold mine to convert to gem mining mode.',
+                description: 'Click the ⛏️ icon on any gold mine to toggle gem mining mode.',
                 level: 1,
                 maxLevel: 1,
                 cost: null,

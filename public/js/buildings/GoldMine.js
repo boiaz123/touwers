@@ -1045,8 +1045,8 @@ export class GoldMine extends Building {
             return true;
         }
         
-        // Check gem mining toggle icon (at top of mine)
-        // Convert grid position to screen position for accurate click detection
+        // Check gem mining toggle icon (at top-left of mine)
+        // Always clickable regardless of production state
         const toggleIconSize = 28;
         const toggleIconX = this.x - size/2 + toggleIconSize/2; // Top left of mine grid
         const toggleIconY = this.y - size/2 - toggleIconSize/2; // Above the mine
@@ -1054,6 +1054,7 @@ export class GoldMine extends Building {
         
         if (x >= toggleIconX - clickSize/2 && x <= toggleIconX + clickSize/2 &&
             y >= toggleIconY - clickSize/2 && y <= toggleIconY + clickSize/2) {
+            console.log('GoldMine: Toggle icon clicked at', toggleIconX, toggleIconY);
             return { type: 'gem_toggle', mine: this };
         }
         
@@ -1063,8 +1064,10 @@ export class GoldMine extends Building {
             const clickSize2 = 50; // Larger click area
             const iconX = this.x + size/2 - 10; // Bottom right area relative to building center
             const iconY = this.y + size/2 - 15;
-            return x >= iconX - clickSize2/2 && x <= iconX + clickSize2/2 &&
-                   y >= iconY - clickSize2/2 && y <= iconY + clickSize2/2;
+            if (x >= iconX - clickSize2/2 && x <= iconX + clickSize2/2 &&
+                y >= iconY - clickSize2/2 && y <= iconY + clickSize2/2) {
+                return this.onClick();
+            }
         }
         
         return false;

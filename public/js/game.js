@@ -541,17 +541,17 @@ class GameplayState {
                 
                 if (upgradeId === 'gem_mining_research') {
                     if (academyData.academy.purchaseGemMiningResearch(this.gameState)) {
+                        console.log('GameplayState: Gem mining research purchased');
                         this.updateUI();
+                        this.updateUIAvailability();
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
                             upgrades: academyData.academy.getElementalUpgradeOptions()
                         });
                     }
-                } else if (upgradeId === 'gem_mining_unlocked') {
-                    // Show mine selection for gem conversion
-                    this.showMineSelectionForGems(academyData.academy);
                 } else {
+                    // Handle elemental upgrades
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
                         this.updateUI();
                         this.showAcademyUpgradeMenu({
