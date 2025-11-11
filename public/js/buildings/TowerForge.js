@@ -177,7 +177,7 @@ export class TowerForge extends Building {
         
         // Floating icon in bottom right of 4x4 grid
         const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 20;
+        const iconSize = 30; // Increased from 20 for better visibility
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
         
@@ -1050,8 +1050,15 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
-        return x >= this.x - size/2 && x <= this.x + size/2 &&
-               y >= this.y - size/2 && y <= this.y + size/2;
+        // Calculate icon position and size for precise click detection
+        const cellSize = size / 4;
+        const iconSize = 30; // Matches the updated render size
+        const iconX = (this.gridX + 3.5) * cellSize;
+        const iconY = (this.gridY + 3.5) * cellSize - 5;
+        
+        // Check if the point is within the icon's bounds
+        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
+               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
     }
     
     onClick() {
