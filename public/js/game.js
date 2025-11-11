@@ -129,8 +129,8 @@ class GameplayState {
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Check for building/tower clicks first - PASS COORDINATES
-            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect, canvasX, canvasY);
+            // Check for building/tower clicks first
+            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
             if (clickResult) {
                 if (clickResult.type === 'forge_menu') {
@@ -142,12 +142,8 @@ class GameplayState {
                 } else if (clickResult.type === 'magic_tower_menu') {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
-                } else if (clickResult.type === 'mine_toggle') {
-                    // Handle mine toggle - no UI update needed, just mode switch
-                    console.log('GameplayState: Mine mode toggled');
-                    return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine
+                    // Gold collection from mine or gem toggle - pass coordinates for toggle detection
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
