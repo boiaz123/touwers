@@ -457,25 +457,36 @@ class GameplayState {
         let upgradeListHTML = '';
         
         // Add elemental upgrades
-        upgradeListHTML += academyData.upgrades.map(upgrade => `
-            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                <div class="upgrade-icon">${upgrade.icon}</div>
-                <div class="upgrade-details">
-                    <div class="upgrade-name">${upgrade.name}</div>
-                    <div class="upgrade-desc">${upgrade.description}</div>
-                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                    <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
+        upgradeListHTML += academyData.upgrades.map(upgrade => {
+            // Determine if button should be disabled based on currency type
+            let isDisabled = false;
+            if (upgrade.isResearch) {
+                isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost;
+            } else {
+                // Elemental upgrades use gems
+                isDisabled = !upgrade.cost || academyData.academy.gems[upgrade.gemType] < upgrade.cost;
+            }
+            
+            return `
+                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${upgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${upgrade.name}</div>
+                        <div class="upgrade-desc">${upgrade.description}</div>
+                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                        <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        ${upgrade.cost ? `${upgrade.isResearch ? '$' : upgrade.icon}${upgrade.cost}` : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="${upgrade.id}" 
+                            ${isDisabled ? 'disabled' : ''}>
+                        ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                    </button>
                 </div>
-                <div class="upgrade-cost">
-                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
-                </div>
-                <button class="upgrade-btn" 
-                        data-upgrade="${upgrade.id}" 
-                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
-                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         menu.innerHTML = `
             <div class="menu-header">
@@ -787,6 +798,23 @@ class GameplayState {
         }
         
         document.getElementById('enemies-remaining').textContent = statusText;
+        
+        // New: Update gem display in top bar
+        const academies = this.towerManager.buildingManager.buildings.filter(building =>
+            building.constructor.name === 'MagicAcademy'
+        );
+        if (academies.length > 0) {
+            const academy = academies[0];
+            const gemText = `🔥${academy.gems.fire} 💧${academy.gems.water} 💨${academy.gems.air} 🌍${academy.gems.earth}`;
+            // Assuming there's a span with id 'gems' in the stats bar; if not, this will need HTML modification
+            const gemsElement = document.getElementById('gems');
+            if (gemsElement) {
+                gemsElement.textContent = gemText;
+            } else {
+                // Fallback: append to gold display
+                document.getElementById('gold').textContent = Math.floor(this.gameState.gold) + ' ' + gemText;
+            }
+        }
         
         this.updateUIAvailability();
     }

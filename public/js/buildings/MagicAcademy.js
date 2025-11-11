@@ -200,17 +200,6 @@ export class MagicAcademy extends Building {
         // Add subtle gold highlight on symbol
         ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
         ctx.fillText('📖', iconX, iconY);
-        
-        // New: Display gem counts in the academy render
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 10px Arial';
-        ctx.textAlign = 'center';
-        const gemEmojis = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
-        let gemText = 'Gems: ';
-        Object.keys(this.gems).forEach(element => {
-            gemText += `${gemEmojis[element]}${this.gems[element]} `;
-        });
-        ctx.fillText(gemText, this.x, this.y + size/2 + 45);
     }
     
     renderFortress(ctx, size) {
