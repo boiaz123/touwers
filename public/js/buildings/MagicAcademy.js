@@ -17,10 +17,6 @@ export class MagicAcademy extends Building {
             earth: { level: 0, maxLevel: 5, baseCost: 150, armorPiercing: 3 }
         };
         
-        // Gem mining research
-        this.gemMiningResearched = false;
-        this.activeMineForGems = null; // Reference to which mine is in gem mode
-        
         // Water ripples animation
         this.waterRipples = [];
         this.nextRippleTime = 0;
@@ -686,7 +682,7 @@ export class MagicAcademy extends Building {
     }
     
     getElementalUpgradeOptions() {
-        const options = [
+        return [
             {
                 id: 'fire',
                 name: 'Fire Mastery',
@@ -694,9 +690,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
-                icon: '🔥',
-                costType: 'gems',
-                gemType: 'fire'
+                icon: '🔥'
             },
             {
                 id: 'water',
@@ -705,9 +699,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
-                icon: '💧',
-                costType: 'gems',
-                gemType: 'water'
+                icon: '💧'
             },
             {
                 id: 'air',
@@ -716,9 +708,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
-                icon: '💨',
-                costType: 'gems',
-                gemType: 'air'
+                icon: '💨'
             },
             {
                 id: 'earth',
@@ -727,88 +717,30 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🪨',
-                costType: 'gems',
-                gemType: 'earth'
+                icon: '🌍'
             }
         ];
-        
-        // Add gem mining research option if not researched
-        if (!this.gemMiningResearched) {
-            options.unshift({
-                id: 'gem_mining_research',
-                name: 'Gem Mining Research',
-                description: 'Unlock gem mining capability. Toggle any gold mine to mine gems instead.',
-                level: 0,
-                maxLevel: 1,
-                cost: 500, // Gold cost for research
-                icon: '⛏️💎',
-                costType: 'gold',
-                isResearch: true
-            });
-        } else {
-            options.unshift({
-                id: 'gem_mining_unlocked',
-                name: 'Gem Mining Unlocked',
-                description: 'Click the ⛏️ icon on any gold mine to toggle gem mining mode.',
-                level: 1,
-                maxLevel: 1,
-                cost: null,
-                icon: '⛏️💎',
-                costType: 'none',
-                isResearch: true
-            });
-        }
-        
-        return options;
     }
     
     calculateElementalCost(element) {
         const upgrade = this.elementalUpgrades[element];
         if (upgrade.level >= upgrade.maxLevel) return null;
-        // Cost in gems instead of gold
-        return Math.floor(5 * Math.pow(1.3, upgrade.level)); // 5, 6, 8, 10, 13, 16 gems
+        return Math.floor(upgrade.baseCost * Math.pow(1.4, upgrade.level));
     }
     
     purchaseElementalUpgrade(element, gameState) {
         const upgrade = this.elementalUpgrades[element];
         const cost = this.calculateElementalCost(element);
         
-        if (!cost || upgrade.level >= upgrade.maxLevel) {
+        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         
-        // Check gem cost instead of gold
-        if (gameState.gems[element] < cost) {
-            return false;
-        }
-        
-        gameState.gems[element] -= cost;
+        gameState.gold -= cost;
         upgrade.level++;
         
-        console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} for ${cost} gems`);
+        console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level}`);
         return true;
-    }
-    
-    purchaseGemMiningResearch(gameState) {
-        if (this.gemMiningResearched) {
-            return false;
-        }
-        
-        if (gameState.gold < 500) {
-            return false;
-        }
-        
-        gameState.gold -= 500;
-        this.gemMiningResearched = true;
-        
-        console.log('MagicAcademy: Gem mining research purchased! All gold mines can now toggle gem mining.');
-        return true;
-    }
-    
-    setActiveMineForGems(mine) {
-        // This function is no longer needed - gems are toggled per mine
-        return false;
     }
     
     deselect() {

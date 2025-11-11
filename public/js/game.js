@@ -10,12 +10,6 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
-        
-        // Add gem initialization to ensure currencies are available
-        if (!this.gameState.gems) {
-            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
-        }
-        
         this.level = new Level();
         this.towerManager = new TowerManager(this.gameState, this.level);
         this.enemyManager = null;
@@ -36,12 +30,6 @@ class GameplayState {
         
         // Reset game state for new level
         this.gameState = new GameState();
-        
-        // Ensure gems are initialized for the new game state
-        if (!this.gameState.gems) {
-            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
-        }
-        
         this.currentLevel = 1;
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
@@ -135,23 +123,16 @@ class GameplayState {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // FIXED: Click handler - check buildings first, then handle tower/building placement
+        // FIXED: Unified click handler that properly routes all menu types
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Scale coordinates if needed
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const scaledX = canvasX * scaleX;
-            const scaledY = canvasY * scaleY;
+            // Check for building/tower clicks first
+            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
             
-            // First, check if clicking on a building icon/menu
-            const clickResult = this.towerManager.handleClick(scaledX, scaledY, rect);
-
             if (clickResult) {
-                // If we got a result from a building, handle it
                 if (clickResult.type === 'forge_menu') {
                     this.showForgeUpgradeMenu(clickResult);
                     return;
@@ -161,37 +142,16 @@ class GameplayState {
                 } else if (clickResult.type === 'magic_tower_menu') {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
-                } else if (clickResult.type === 'gem_toggle') {
-                    // Handle gem mining toggle - check if research is unlocked
-                    const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-                    const gemMiningResearched = academy ? academy.gemMiningResearched : false;
-
-                    // FIX: Only allow toggling if researched
-                    if (gemMiningResearched) {
-                        clickResult.mine.toggleGemMining(this.gameState, gemMiningResearched);
-                        this.updateUI();
-                    } else {
-                        // Optionally show a message or feedback
-                        alert('Gem Mining not researched yet! Research it in the Magic Academy.');
-                    }
-                    return;
-                } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
-                    // Gem collection from gem mine
-                    this.gameState.gems[clickResult.gem] = (this.gameState.gems[clickResult.gem] || 0) + 1;
-                    this.updateUI();
-                    return;
                 } else if (typeof clickResult === 'number') {
                     // Gold collection from mine
-                    console.log(`GameplayState: Gold collected: ${clickResult}`);
                     this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
                 }
-                // If result is true (just building area hit), fall through to tower placement
             }
             
-            // If no building menu was triggered, handle tower/building placement
-            this.handleClick(scaledX, scaledY);
+            // Handle regular tower/building placement
+            this.handleClick(canvasX, canvasY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
@@ -323,21 +283,6 @@ class GameplayState {
             } else if (clickResult.type === 'magic_tower_menu') {
                 console.log('GameplayState: Magic tower menu detected, showing menu');
                 this.showMagicTowerElementMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'gem_toggle') {
-                // Handle gem mining toggle - check if research is unlocked
-                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-                const gemMiningResearched = academy ? academy.gemMiningResearched : false;
-                
-                if (gemMiningResearched) {
-                    clickResult.mine.toggleGemMining(this.gameState, gemMiningResearched);
-                    this.updateUI();
-                }
-                return;
-            } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
-                // Gem collection from gem mine
-                this.gameState.gems[clickResult.gem]++;
-                this.updateUI();
                 return;
             } else if (typeof clickResult === 'number') {
                 // Gold collection from mine
@@ -511,50 +456,30 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
-        // Add elemental upgrades and research options
-        upgradeListHTML += academyData.upgrades.map(upgrade => {
-            let costDisplay = '';
-            let buttonDisabled = false;
-            
-            if (upgrade.isResearch) {
-                // Research option
-                if (upgrade.cost) {
-                    costDisplay = `$${upgrade.cost}`;
-                    buttonDisabled = this.gameState.gold < upgrade.cost;
-                } else {
-                    costDisplay = 'RESEARCHED';
-                    buttonDisabled = true;
-                }
-            } else {
-                // Elemental upgrade - costs gems
-                costDisplay = `${upgrade.cost}${upgrade.icon}`;
-                buttonDisabled = !this.gameState.gems[upgrade.gemType] || this.gameState.gems[upgrade.gemType] < upgrade.cost;
-            }
-            
-            return `
-                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${upgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${upgrade.name}</div>
-                        <div class="upgrade-desc">${upgrade.description}</div>
-                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                        ${!upgrade.isResearch ? `<div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>` : ''}
-                    </div>
-                    <div class="upgrade-cost">
-                        ${upgrade.cost ? costDisplay : 'MAX'}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="${upgrade.id}" 
-                            ${(!upgrade.cost || buttonDisabled) ? 'disabled' : ''}>
-                        ${upgrade.cost ? (upgrade.isResearch ? 'Research' : 'Upgrade') : 'MAX'}
-                    </button>
+        // Add elemental upgrades
+        upgradeListHTML += academyData.upgrades.map(upgrade => `
+            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                <div class="upgrade-icon">${upgrade.icon}</div>
+                <div class="upgrade-details">
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-desc">${upgrade.description}</div>
+                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                    <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
                 </div>
-            `;
-        }).join('');
+                <div class="upgrade-cost">
+                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
+                </div>
+                <button class="upgrade-btn" 
+                        data-upgrade="${upgrade.id}" 
+                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
+                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                </button>
+            </div>
+        `).join('');
         
         menu.innerHTML = `
             <div class="menu-header">
-                <h3>🎓 Magic Academy</h3>
+                <h3>🎓 Magic Academy Upgrades</h3>
                 <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
             <div class="upgrade-list">
@@ -571,27 +496,15 @@ class GameplayState {
                 
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
-                if (upgradeId === 'gem_mining_research') {
-                    if (academyData.academy.purchaseGemMiningResearch(this.gameState)) {
-                        console.log('GameplayState: Gem mining research purchased');
-                        this.updateUI();
-                        this.updateUIAvailability();
-                        this.showAcademyUpgradeMenu({
-                            type: 'academy_menu',
-                            academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
-                        });
-                    }
-                } else {
-                    // Handle elemental upgrades
-                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
-                        this.updateUI();
-                        this.showAcademyUpgradeMenu({
-                            type: 'academy_menu',
-                            academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
-                        });
-                    }
+                if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    
+                    // Refresh the menu
+                    this.showAcademyUpgradeMenu({
+                        type: 'academy_menu',
+                        academy: academyData.academy,
+                        upgrades: academyData.academy.getElementalUpgradeOptions()
+                    });
                 }
             });
         });
@@ -599,17 +512,70 @@ class GameplayState {
         this.activeMenu = menu;
     }
     
-    showMineSelectionForGems(academy) {
-        // Create a simple dialog to select which mine to convert
-        const mines = this.towerManager.buildings.filter(b => b.constructor.name === 'GoldMine');
+    showMagicTowerElementMenu(towerData) {
+        // Clear existing menus
+        this.clearActiveMenus();
         
-        if (mines.length === 0) {
-            alert('No gold mines available to convert');
-            return;
-        }
+        console.log('GameplayState: Showing magic tower element menu', towerData);
         
-        // Just show a message that gem mining is now unlocked
-        alert('Gem Mining Unlocked!\n\nYou can now toggle gem mining on any gold mine by clicking the ⛏️ icon at the top of the mine.\n\nEach mine can independently switch between gold and gem mining modes.');
+        // Create element selection menu
+        const menu = document.createElement('div');
+        menu.id = 'magic-tower-menu';
+        menu.className = 'upgrade-menu';
+        
+        let elementListHTML = '';
+        
+        elementListHTML += towerData.elements.map(element => `
+            <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
+                <div class="upgrade-icon">${element.icon}</div>
+                <div class="upgrade-details">
+                    <div class="upgrade-name">${element.name} Element</div>
+                    <div class="upgrade-desc">${element.description}</div>
+                    ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+                </div>
+                <div class="upgrade-cost">
+                    Free
+                </div>
+                <button class="upgrade-btn" 
+                        data-element="${element.id}" 
+                        ${element.id === towerData.currentElement ? 'disabled' : ''}>
+                    ${element.id === towerData.currentElement ? 'Active' : 'Select'}
+                </button>
+            </div>
+        `).join('');
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>⚡ Magic Tower Elements</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${elementListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Add element selection handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const elementId = e.target.dataset.element;
+                
+                console.log(`GameplayState: Magic tower element selected: ${elementId}`);
+                
+                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
+                    // Refresh the menu
+                    this.showMagicTowerElementMenu({
+                        type: 'magic_tower_menu',
+                        tower: towerData.tower,
+                        elements: towerData.elements,
+                        currentElement: elementId
+                    });
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
     }
     
     getUpgradeCurrentEffect(upgrade) {
@@ -780,34 +746,6 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
-
-        // Ensure gems object exists before updating
-        if (!this.gameState.gems) {
-            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
-        }
-
-        // Show gem display if hidden
-        const gemsDisplay = document.getElementById('gems-display');
-        if (gemsDisplay && gemsDisplay.style.display === 'none') {
-            gemsDisplay.style.display = 'flex';
-        }
-
-        // Update gem display - ensure all gem elements exist and update them
-        const gemElements = {
-            fire: document.getElementById('gems-fire'),
-            water: document.getElementById('gems-water'),
-            air: document.getElementById('gems-air'),
-            earth: document.getElementById('gems-earth')
-        };
-
-        for (const [gemType, element] of Object.entries(gemElements)) {
-            if (element) {
-                const gemCount = this.gameState.gems[gemType] || 0;
-                element.textContent = gemCount;
-                // Debug log to confirm update
-                console.log(`[UI] Gem ${gemType}: ${gemCount}`);
-            }
-        }
         
         // Show wave info differently for sandbox mode
         if (this.isSandbox) {

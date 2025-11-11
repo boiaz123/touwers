@@ -250,40 +250,27 @@ export class TowerManager {
         });
     }
     
-    handleClick(canvasX, canvasY, rect) {
-        // Check buildings first for icon clicks (they have priority for clicks)
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, rect.width / 1920)));
-        const iconSize = 30;
+    handleClick(x, y, canvasSize) {
+        // Clear any previous selections
+        this.towers.forEach(tower => tower.isSelected = false);
+        this.buildingManager.buildings.forEach(building => {
+            if (building.deselect) building.deselect();
+        });
         
-        for (const building of this.buildingManager.buildings) {
-            // Icon position: bottom right of building grid
-            const iconX = (building.gridX + building.size - 0.5) * cellSize;
-            const iconY = (building.gridY + building.size - 0.5) * cellSize - 5;
-            
-            const clickBuffer = 5;
-            if (canvasX >= iconX - (iconSize/2 + clickBuffer) && canvasX <= iconX + (iconSize/2 + clickBuffer) &&
-                canvasY >= iconY - (iconSize/2 + clickBuffer) && canvasY <= iconY + (iconSize/2 + clickBuffer)) {
-                console.log(`TowerManager: HIT! Clicked on ${building.constructor.name} icon`);
-                
-                // Call the building's onClick method
-                if (building.onClick) {
-                    const result = building.onClick();
-                    console.log(`TowerManager: onClick result:`, result);
-                    return result;
-                }
-                return null;
-            }
-        }
+        // Check tower icon clicks first for element selection
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const iconSize = 30; // Increased for better clickability
         
-        // Check for magic tower icon clicks
         for (const tower of this.towers) {
-            if (tower.constructor.name === 'MagicTower') {
-                const iconX = (tower.gridX + 1.5) * cellSize;
-                const iconY = (tower.gridY + 1.5) * cellSize - 5;
-                
-                const clickBuffer = 5;
-                if (canvasX >= iconX - (iconSize/2 + clickBuffer) && canvasX <= iconX + (iconSize/2 + clickBuffer) &&
-                    canvasY >= iconY - (iconSize/2 + clickBuffer) && canvasY <= iconY + (iconSize/2 + clickBuffer)) {
+            // Icon position: bottom right of 2x2 grid, slightly floating up
+            const iconX = (tower.gridX + 1.5) * cellSize;
+            const iconY = (tower.gridY + 1.5) * cellSize - 5; // Float up slightly
+            
+            // Add small buffer for easier clicking
+            const clickBuffer = 5;
+            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
+                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
+                if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
@@ -292,15 +279,31 @@ export class TowerManager {
                             { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
                             { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
                             { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🪨', description: 'Pierces armor' }
+                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
                         ],
                         currentElement: tower.selectedElement
                     };
                 }
+                break; // Found a tower icon click, don't check buildings
             }
         }
         
-        // No building or tower icon was clicked
+        // Then check building icon clicks with improved detection
+        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
+        if (buildingResult) {
+            if (buildingResult.type === 'forge_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                return buildingResult;
+            } else if (buildingResult.type === 'academy_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                console.log('TowerManager: Academy menu requested');
+                return buildingResult;
+            } else if (typeof buildingResult === 'number') {
+                // Gold collection
+                return buildingResult;
+            }
+        }
+        
         return null;
     }
     
