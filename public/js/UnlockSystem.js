@@ -28,9 +28,9 @@ export class UnlockSystem {
         // Max out all progress
         this.forgeLevel = 10;
         this.hasForge = true;
-        this.forgeCount = 1;
-        this.mineCount = 4;
-        this.academyCount = 1;
+        this.forgeCount = 0; // Reset to 0 so we can still build forge
+        this.mineCount = 0;  // Reset to 0 so we can still build mines
+        this.academyCount = 0; // Reset to 0 so we can still build academy
         
         // Unlock all towers
         this.unlockedTowers = new Set([
