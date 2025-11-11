@@ -36,7 +36,7 @@ class GameplayState {
         
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
-            this.gameState.gold = 10000; // High starting gold for testing
+            this.gameState.gold = 100000; // Increased from 10000 to 100000
             this.maxWavesForLevel = Infinity; // No wave limit
             this.isSandbox = true;
         } else {
@@ -70,6 +70,19 @@ class GameplayState {
         
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
+        
+        // New: Initialize sandbox gems
+        if (this.isSandbox) {
+            const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+            if (academy) {
+                academy.gems.fire = 100;
+                academy.gems.water = 100;
+                academy.gems.air = 100;
+                academy.gems.earth = 100;
+                academy.gems.diamond = 100;
+                console.log('GameplayState: Initialized sandbox gems - 100 of each type');
+            }
+        }
         
         this.setupEventListeners();
         this.updateUI();
