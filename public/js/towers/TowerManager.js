@@ -324,6 +324,8 @@ export class TowerManager {
                     // Pass coordinates to onClick so it can handle toggle icons
                     const result = building.onClick ? building.onClick(x, y, building.size || 256) : null;
                     
+                    console.log(`TowerManager: Building clicked at (${x}, ${y}), result:`, result);
+                    
                     // Handle different result types
                     if (result !== undefined && result !== null) {
                         if (typeof result === 'number') {

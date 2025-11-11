@@ -417,6 +417,7 @@ export class GoldMine extends Building {
     setAcademy(academy) {
         this.academy = academy;
         this.gemMiningUnlocked = academy && academy.gemMiningResearched;
+        console.log(`GoldMine: setAcademy called, gemMiningUnlocked = ${this.gemMiningUnlocked}`);
     }
     
     render(ctx, size) {
@@ -946,20 +947,26 @@ export class GoldMine extends Building {
             return true;
         }
         
-        // New: Check toggle icon area if unlocked (top-left corner)
+        // Check toggle icon area if unlocked (top-left corner)
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
             const toggleX = this.x - size/2 + 12;
             const toggleY = this.y - size/2 + 12;
-            return x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
-                   y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
+            
+            const inToggle = x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
+                           y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
+            
+            if (inToggle) {
+                console.log('GoldMine: Click detected on toggle icon');
+            }
+            return inToggle;
         }
         
         return false;
     }
     
     onClick(x, y, size) {
-        // New: Check if clicking on toggle icon
+        // Check if clicking on toggle icon
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
             const toggleX = this.x - size/2 + 12;
@@ -971,7 +978,7 @@ export class GoldMine extends Building {
                 this.toggleGemMode();
                 this.goldReady = false;
                 this.currentProduction = 0;
-                console.log(`GoldMine: Toggled to ${this.gemMode ? 'gem' : 'gold'} mode, production reset`);
+                console.log(`GoldMine: Clicked toggle - now in ${this.gemMode ? 'gem' : 'gold'} mode, production reset`);
                 return 0; // No collection on toggle
             }
         }

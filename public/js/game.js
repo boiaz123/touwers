@@ -517,12 +517,14 @@ class GameplayState {
                         // Notify unlock system
                         this.towerManager.getUnlockSystem().onGemMiningResearched();
                         
-                        // Update mines with academy reference
+                        // Update ALL mines with academy reference immediately
                         this.towerManager.buildingManager.buildings.forEach(building => {
                             if (building.constructor.name === 'GoldMine') {
                                 building.setAcademy(academyData.academy);
+                                console.log('GameplayState: Updated mine with academy reference, gemMiningUnlocked:', building.gemMiningUnlocked);
                             }
                         });
+                        
                         this.updateUI();
                         
                         // Refresh the menu
