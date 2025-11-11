@@ -213,6 +213,7 @@ export class LevelSelect {
                         y >= buttonY && y <= buttonY + buttonHeight) {
                         // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
+                        console.log('LevelSelect: Starting level:', this.stateManager.selectedLevelInfo);
                         this.stateManager.changeState('game');
                     }
                 } else {

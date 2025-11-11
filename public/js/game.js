@@ -27,6 +27,7 @@ class GameplayState {
         
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
+        console.log('GameplayState: Level info received:', levelInfo);
         
         // Reset game state for new level
         this.gameState = new GameState();
@@ -36,9 +37,10 @@ class GameplayState {
         
         // Configure level-specific settings
         if (this.levelType === 'sandbox') {
-            this.gameState.gold = 100000;
+            this.gameState.initializeSandbox(); // Use new method
             this.maxWavesForLevel = Infinity;
             this.isSandbox = true;
+            console.log('GameplayState: Sandbox mode initialized');
         } else {
             this.maxWavesForLevel = 10;
             this.isSandbox = false;
@@ -60,6 +62,9 @@ class GameplayState {
             console.log('GameplayState: Sidebar shown');
         }
         
+        // Set level type BEFORE initializing
+        this.level.setLevelType(this.levelType);
+        
         // Initialize level for current canvas size first
         console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
@@ -71,31 +76,14 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // NEW: Initialize sandbox gems AFTER everything is set up and BEFORE setting references
+        // FIXED: Initialize sandbox gems AFTER tower manager is created and BEFORE any other operations
         if (this.isSandbox) {
-            const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-            if (academy) {
-                // Initialize gems first
-                academy.gems.fire = 100;
-                academy.gems.water = 100;
-                academy.gems.air = 100;
-                academy.gems.earth = 100;
-                academy.gems.diamond = 100;
-                
-                // Unlock diamond mining for sandbox
-                academy.diamondMiningUnlocked = true;
-                
-                // Now set academy reference on all mines
-                this.towerManager.buildingManager.buildings.forEach(building => {
-                    if (building.constructor.name === 'GoldMine') {
-                        building.setAcademy(academy);
-                        console.log('GameplayState: Set academy reference on mine, gemMiningUnlocked:', building.gemMiningUnlocked);
-                    }
-                });
-                
-                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds) and diamond mining unlocked');
-                console.log('GameplayState: Sandbox academy gems:', academy.gems);
-            }
+            console.log('GameplayState: Setting up sandbox mode...');
+            
+            // Wait for next frame to ensure everything is properly initialized
+            setTimeout(() => {
+                this.initializeSandboxGems();
+            }, 0);
         }
         
         this.setupEventListeners();
@@ -103,6 +91,50 @@ class GameplayState {
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
+    }
+    
+    initializeSandboxGems() {
+        console.log('GameplayState: Initializing sandbox gems...');
+        
+        // Find the academy building
+        const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+        
+        if (academy) {
+            console.log('GameplayState: Found academy, setting gems...');
+            
+            // Initialize gems directly
+            academy.gems = {
+                fire: 100,
+                water: 100,
+                air: 100,
+                earth: 100,
+                diamond: 100
+            };
+            
+            // Unlock all research
+            academy.gemMiningResearched = true;
+            academy.diamondMiningUnlocked = true;
+            academy.academyLevel = 3; // Max level for sandbox
+            
+            console.log('GameplayState: Academy gems set to:', academy.gems);
+            console.log('GameplayState: Academy research unlocked');
+            
+            // Update all mines with academy reference
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.constructor.name === 'GoldMine') {
+                    building.setAcademy(academy);
+                    building.gemMiningUnlocked = true;
+                    console.log('GameplayState: Updated mine with academy reference');
+                }
+            });
+            
+            // Force UI update to show gems
+            this.updateUI();
+            
+            console.log('GameplayState: Sandbox gems initialization complete');
+        } else {
+            console.warn('GameplayState: Academy not found for sandbox initialization');
+        }
     }
     
     exit() {

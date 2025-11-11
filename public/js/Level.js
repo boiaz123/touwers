@@ -17,6 +17,10 @@ export class Level { // Changed from Level3D to Level
         this.isInitialized = false;
         this.isInitializing = false; // Initialization flag to prevent recursion
         
+        // Add level type tracking
+        this.levelType = 'campaign'; // Default to campaign
+        this.isSandbox = false;
+        
         // Cached visual elements - will be generated once
         this.grassPatches = [];
         this.grassGenerated = false;
@@ -28,6 +32,13 @@ export class Level { // Changed from Level3D to Level
         this.visualElementsGenerated = false;
         
         console.log('Level: Constructor completed');
+    }
+    
+    // Add method to set level type
+    setLevelType(levelType) {
+        this.levelType = levelType || 'campaign';
+        this.isSandbox = this.levelType === 'sandbox';
+        console.log('Level: Set level type to', this.levelType, 'isSandbox:', this.isSandbox);
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {
