@@ -66,6 +66,11 @@ export class UnlockSystem {
         return this.academyCount > 0 && !this.gemMiningResearched;
     }
     
+    // New: Check if gem mining is unlocked
+    isGemMiningUnlocked() {
+        return this.gemMiningResearched;
+    }
+    
     getMaxMines() {
         if (this.forgeLevel >= 10) return 4;
         if (this.forgeLevel >= 8) return 3;

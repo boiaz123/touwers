@@ -797,24 +797,59 @@ export class GoldMine extends Building {
         // Progress bar and indicators
         const barWidth = size * 0.6;
         const barHeight = 4;
-        const progressRatio = this.currentProduction / this.productionTime; // Use consistent properties
+        const progressRatio = this.currentProduction / this.productionTime;
+        const barY = this.y + size/2 + 5;
         
-        ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
-        ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
-        
-        if (this.goldReady) { // Use goldReady consistently
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
-        } else {
-            ctx.fillStyle = '#D2691E';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth * progressRatio, barHeight);
+        // NEW: Render toggle icon to the left of progress bar if unlocked
+        if (this.gemMiningUnlocked) {
+            const toggleSize = 20;
+            const toggleX = this.x - barWidth/2 - toggleSize - 5; // Left of progress bar
+            const toggleY = barY + barHeight/2; // Aligned with progress bar center
+            
+            // Store toggle position for click detection
+            this.toggleIcon = { x: toggleX, y: toggleY, size: toggleSize };
+            
+            // Toggle background with mode-specific colors
+            ctx.fillStyle = this.gemMode ? 'rgba(138, 43, 226, 0.9)' : 'rgba(255, 215, 0, 0.8)';
+            ctx.fillRect(toggleX - toggleSize/2, toggleY - toggleSize/2, toggleSize, toggleSize);
+            
+            // Toggle border
+            ctx.strokeStyle = this.gemMode ? '#4B0082' : '#B8860B';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(toggleX - toggleSize/2, toggleY - toggleSize/2, toggleSize, toggleSize);
+            
+            // Toggle icon and mode indicator
+            ctx.fillStyle = '#FFF';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY - 1);
+            
+            // Small mode label below
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 7px Arial';
+            ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleSize/2 + 8);
         }
         
-        // Mine indicator
+        // Progress bar background
+        ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
+        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        
+        // Progress bar fill
+        if (this.goldReady) {
+            ctx.fillStyle = this.gemMode ? '#9932CC' : '#FFD700'; // Purple for gems, gold for gold
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        } else {
+            ctx.fillStyle = this.gemMode ? '#8A2BE2' : '#D2691E'; // Different progress colors
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth * progressRatio, barHeight);
+        }
+        
+        // Mine type indicator to the right of progress bar
         ctx.fillStyle = '#8B4513';
         ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
+        ctx.textAlign = 'left';
+        const indicatorX = this.x + barWidth/2 + 5;
+        ctx.fillText(this.gemMode ? '💎⛏️' : '⛏️💰', indicatorX, barY + barHeight/2 + 4);
         
         // Add production status indicator
         if (!this.goldReady) {
@@ -824,7 +859,7 @@ export class GoldMine extends Building {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50, 8);
             
-            ctx.fillStyle = '#4CAF50';
+            ctx.fillStyle = this.gemMode ? '#9932CC' : '#4CAF50';
             ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50 * progress, 8);
             
             ctx.strokeStyle = '#FFF';
@@ -838,8 +873,8 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
-            // Ready indicator
-            ctx.fillStyle = '#FFD700';
+            // Ready indicator with appropriate icon
+            ctx.fillStyle = this.gemMode ? '#9932CC' : '#FFD700';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(this.gemMode ? '💎 READY' : '💰 READY', this.x, this.y - size/2 - 10);
@@ -939,40 +974,38 @@ export class GoldMine extends Building {
     }
     
     isPointInside(x, y, size) {
-        // Check building area
+        // Check toggle icon area if unlocked
+        if (this.gemMiningUnlocked && this.toggleIcon) {
+            const dx = x - this.toggleIcon.x;
+            const dy = y - this.toggleIcon.y;
+            if (Math.abs(dx) <= this.toggleIcon.size/2 && Math.abs(dy) <= this.toggleIcon.size/2) {
+                return 'toggle'; // Return special identifier for toggle
+            }
+        }
+        
+        // Check building area for collection
         const dx = x - this.x;
         const dy = y - this.y;
         if (Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2) {
-            return true;
-        }
-        
-        // New: Check toggle icon area if unlocked
-        if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
-            const toggleX = this.x;
-            const toggleY = this.y - size/2 - 15;
-            return x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
-                   y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
+            return 'collect';
         }
         
         return false;
     }
     
-    onClick() {
-        // New: If clicking on toggle icon, toggle mode instead of collecting
-        if (this.gemMiningUnlocked && this.isClickOnToggle()) {
+    onClick(clickX, clickY, size) {
+        const clickType = this.isPointInside(clickX, clickY, size);
+        
+        if (clickType === 'toggle' && this.gemMiningUnlocked) {
+            // Toggle gem mode
             this.toggleGemMode();
-            return 0; // No collection
-        } else {
+            return { type: 'mine_toggle' };
+        } else if (clickType === 'collect') {
+            // Collect gold/gems
             return this.collectGold();
         }
-    }
-    
-    // New: Helper to check if click is on toggle
-    isClickOnToggle() {
-        // This would need mouse coordinates, but for simplicity, assume it's handled in handleClick
-        // In practice, modify handleClick in game.js to pass coordinates
-        return false; // Placeholder - implement based on click position
+        
+        return 0;
     }
     
     getBaseIncome() {
