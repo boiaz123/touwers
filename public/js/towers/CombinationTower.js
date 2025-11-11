@@ -1,0 +1,461 @@
+export class CombinationTower {
+    constructor(x, y, gridX, gridY) {
+        this.x = x;
+        this.y = y;
+        this.gridX = gridX;
+        this.gridY = gridY;
+        this.range = 110;
+        this.damage = 35;
+        this.fireRate = 0.7;
+        this.cooldown = 0;
+        this.target = null;
+        this.isSelected = false;
+        
+        // Combination spell system
+        this.selectedSpell = null; // Will be set to first unlocked spell
+        this.availableSpells = []; // Set by tower manager when academy provides spells
+        this.combinationBonuses = {
+            steam: { damageBonus: 0, slowBonus: 0 },
+            magma: { damageBonus: 0, piercingBonus: 0 },
+            tempest: { chainRange: 0, slowBonus: 0 },
+            meteor: { chainRange: 0, piercingBonus: 0 }
+        };
+        
+        // Animation properties
+        this.animationTime = 0;
+        this.crystalPulse = 0;
+        this.runeRotation = 0;
+        this.lightningBolts = [];
+        this.magicParticles = [];
+        this.runePositions = [];
+        
+        // Initialize floating runes
+        for (let i = 0; i < 6; i++) {
+            this.runePositions.push({
+                angle: (i / 6) * Math.PI * 2,
+                radius: 40,
+                floatOffset: Math.random() * Math.PI * 2,
+                symbol: ['◊', '☆', '◇', '※', '❋', '⚡'][i]
+            });
+        }
+    }
+    
+    setAvailableSpells(spells) {
+        this.availableSpells = spells;
+        if (spells.length > 0 && !this.selectedSpell) {
+            this.selectedSpell = spells[0].id;
+            console.log(`CombinationTower: Set initial spell to ${this.selectedSpell}`);
+        }
+    }
+    
+    update(deltaTime, enemies) {
+        this.cooldown = Math.max(0, this.cooldown - deltaTime);
+        this.animationTime += deltaTime;
+        this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
+        this.runeRotation += deltaTime * 0.5;
+        
+        this.target = this.findTarget(enemies);
+        
+        if (this.target && this.cooldown === 0) {
+            this.shoot();
+            this.cooldown = 1 / this.fireRate;
+        }
+        
+        // Update lightning bolts
+        this.lightningBolts = this.lightningBolts.filter(bolt => {
+            bolt.life -= deltaTime;
+            return bolt.life > 0;
+        });
+        
+        // Update magic particles
+        this.magicParticles = this.magicParticles.filter(particle => {
+            particle.x += particle.vx * deltaTime;
+            particle.y += particle.vy * deltaTime;
+            particle.life -= deltaTime;
+            particle.size = particle.maxSize * (particle.life / particle.maxLife);
+            return particle.life > 0;
+        });
+        
+        // Generate ambient magic particles
+        if (Math.random() < deltaTime * 3) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * 50 + 20;
+            this.magicParticles.push({
+                x: this.x + Math.cos(angle) * radius,
+                y: this.y + Math.sin(angle) * radius,
+                vx: (Math.random() - 0.5) * 50,
+                vy: (Math.random() - 0.5) * 50 - 30,
+                life: 2,
+                maxLife: 2,
+                size: 0,
+                maxSize: Math.random() * 4 + 2,
+                color: Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, '
+            });
+        }
+    }
+    
+    findTarget(enemies) {
+        let closest = null;
+        let closestDist = this.range;
+        
+        for (const enemy of enemies) {
+            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (dist <= this.range && dist < closestDist) {
+                closest = enemy;
+                closestDist = dist;
+            }
+        }
+        
+        return closest;
+    }
+    
+    shoot() {
+        if (this.target && this.selectedSpell) {
+            let finalDamage = this.damage;
+            const spell = this.combinationBonuses[this.selectedSpell];
+            
+            // Apply combination spell effects
+            switch(this.selectedSpell) {
+                case 'steam':
+                    finalDamage += spell.damageBonus;
+                    this.target.takeDamage(finalDamage);
+                    // Burn effect
+                    if (this.target.burnTimer) {
+                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                    } else {
+                        this.target.burnTimer = 3;
+                        this.target.burnDamage = 5;
+                    }
+                    // Slow effect
+                    const baseSlowEffect = 0.7;
+                    const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - spell.slowBonus);
+                    if (this.target.speed > 20) {
+                        this.target.speed *= enhancedSlowEffect;
+                    }
+                    break;
+                    
+                case 'magma':
+                    finalDamage += spell.damageBonus;
+                    const piercingDamage = finalDamage + spell.piercingBonus;
+                    this.target.takeDamage(piercingDamage, true);
+                    // Burn effect
+                    if (this.target.burnTimer) {
+                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                    } else {
+                        this.target.burnTimer = 3;
+                        this.target.burnDamage = 5;
+                    }
+                    break;
+                    
+                case 'tempest':
+                    this.target.takeDamage(finalDamage);
+                    // Slow effect
+                    const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
+                    if (this.target.speed > 20) {
+                        this.target.speed *= slowEffect;
+                    }
+                    // Chain to nearby enemies (simplified)
+                    break;
+                    
+                case 'meteor':
+                    const meteorPiercingDamage = finalDamage + spell.piercingBonus;
+                    this.target.takeDamage(meteorPiercingDamage, true);
+                    // Chain to nearby enemies (simplified)
+                    break;
+            }
+            
+            // Create visual effect
+            this.createCombinationEffect();
+        }
+    }
+    
+    createCombinationEffect() {
+        if (!this.target) return;
+        
+        let boltColor, impactColor;
+        
+        switch(this.selectedSpell) {
+            case 'steam':
+                boltColor = 'rgba(100, 200, 255, ';
+                impactColor = 'rgba(150, 220, 255, ';
+                break;
+            case 'magma':
+                boltColor = 'rgba(255, 100, 50, ';
+                impactColor = 'rgba(255, 150, 100, ';
+                break;
+            case 'tempest':
+                boltColor = 'rgba(255, 255, 100, ';
+                impactColor = 'rgba(255, 255, 150, ';
+                break;
+            case 'meteor':
+                boltColor = 'rgba(200, 100, 50, ';
+                impactColor = 'rgba(220, 150, 100, ';
+                break;
+        }
+        
+        this.lightningBolts.push({
+            startX: this.x,
+            startY: this.y,
+            endX: this.target.x,
+            endY: this.target.y,
+            life: 0.3,
+            maxLife: 0.3,
+            segments: this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y),
+            color: boltColor
+        });
+        
+        // Create impact particles
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const speed = Math.random() * 100 + 50;
+            this.magicParticles.push({
+                x: this.target.x,
+                y: this.target.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                maxLife: 1,
+                size: 0,
+                maxSize: 5,
+                color: impactColor
+            });
+        }
+    }
+    
+    setSpell(spellId) {
+        if (this.availableSpells.some(s => s.id === spellId)) {
+            this.selectedSpell = spellId;
+            console.log(`CombinationTower: Spell changed to ${spellId}`);
+            return true;
+        }
+        return false;
+    }
+    
+    generateLightningSegments(startX, startY, endX, endY) {
+        const segments = [];
+        const segmentCount = 8;
+        const variance = 20;
+        
+        let currentX = startX;
+        let currentY = startY;
+        
+        for (let i = 1; i <= segmentCount; i++) {
+            const t = i / segmentCount;
+            let targetX = startX + (endX - startX) * t;
+            let targetY = startY + (endY - startY) * t;
+            
+            if (i < segmentCount) {
+                targetX += (Math.random() - 0.5) * variance;
+                targetY += (Math.random() - 0.5) * variance;
+            }
+            
+            segments.push({
+                fromX: currentX,
+                fromY: currentY,
+                toX: targetX,
+                toY: targetY
+            });
+            
+            currentX = targetX;
+            currentY = targetY;
+        }
+        
+        return segments;
+    }
+    
+    isClickable(x, y, towerSize) {
+        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
+    }
+    
+    applySpellBonuses(bonuses) {
+        Object.assign(this.combinationBonuses, bonuses);
+    }
+    
+    getCombinationColor() {
+        switch(this.selectedSpell) {
+            case 'steam': return 'rgba(100, 200, 255, ';
+            case 'magma': return 'rgba(255, 100, 50, ';
+            case 'tempest': return 'rgba(255, 255, 100, ';
+            case 'meteor': return 'rgba(200, 100, 50, ';
+            default: return 'rgba(138, 43, 226, ';
+        }
+    }
+    
+    render(ctx) {
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const towerSize = cellSize * 2;
+        
+        // 3D shadow
+        ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
+        ctx.beginPath();
+        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // ...existing code from MagicTower render method...
+        // (Tower base, walls, windows, etc. - similar to MagicTower)
+        
+        const baseRadius = towerSize * 0.35;
+        const towerHeight = towerSize * 0.5;
+        
+        // Tower foundation (using combination color instead of purple)
+        const combinationColor = this.getCombinationColor();
+        const foundationGradient = ctx.createRadialGradient(
+            this.x - baseRadius * 0.3, this.y - baseRadius * 0.3, 0,
+            this.x, this.y, baseRadius
+        );
+        foundationGradient.addColorStop(0, combinationColor + '1)');
+        foundationGradient.addColorStop(0.7, combinationColor + '0.8)');
+        foundationGradient.addColorStop(1, combinationColor + '0.6)');
+        
+        ctx.fillStyle = foundationGradient;
+        ctx.strokeStyle = combinationColor + '1)';
+        ctx.lineWidth = 2;
+        
+        // Draw octagonal tower base
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const x = this.x + Math.cos(angle) * baseRadius;
+            const y = this.y + Math.sin(angle) * baseRadius;
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        // Tower cylinder (combination colored)
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - towerHeight/2, baseRadius * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Stone blocks texture
+        ctx.strokeStyle = '#2E0A4F';
+        ctx.lineWidth = 1;
+        for (let ring = 0; ring < 4; ring++) {
+            const ringY = this.y - towerHeight + (ring * towerHeight/4);
+            ctx.beginPath();
+            ctx.arc(this.x, ringY, baseRadius * 0.85, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Mystical windows with combination glow
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
+            const windowY = this.y - towerHeight/2;
+            
+            const windowGlow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, 8);
+            windowGlow.addColorStop(0, combinationColor + `${this.crystalPulse})`);
+            windowGlow.addColorStop(1, combinationColor + '0)');
+            ctx.fillStyle = windowGlow;
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#2E0A4F';
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Tesla coil base (similar to MagicTower but with combination coloring)
+        const coilBaseRadius = baseRadius * 0.6;
+        const coilBaseY = this.y - towerHeight;
+        
+        ctx.fillStyle = combinationColor + '0.7)';
+        ctx.strokeStyle = combinationColor + '1)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Render magic particles with combination colors
+        this.magicParticles.forEach(particle => {
+            const alpha = particle.life / particle.maxLife;
+            ctx.fillStyle = particle.color + alpha + ')';
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Render lightning bolts
+        this.lightningBolts.forEach(bolt => {
+            const alpha = bolt.life / bolt.maxLife;
+            
+            ctx.strokeStyle = (bolt.color || combinationColor) + alpha + ')';
+            ctx.lineWidth = 4;
+            bolt.segments.forEach(segment => {
+                ctx.beginPath();
+                ctx.moveTo(segment.fromX, segment.fromY);
+                ctx.lineTo(segment.toX, segment.toY);
+                ctx.stroke();
+            });
+        });
+        
+        // Spell indicator
+        if (this.selectedSpell) {
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            const spellIcons = { steam: '💨', magma: '🌋', tempest: '⛈️', meteor: '☄️' };
+            
+            if (this.isSelected) {
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            const iconBoxSize = 24;
+            const iconBoxX = this.x + towerSize / 2 - iconBoxSize;
+            const iconBoxY = this.y + towerSize / 2 - iconBoxSize;
+            
+            ctx.fillStyle = combinationColor + '0.8)';
+            ctx.strokeStyle = combinationColor + '1)';
+            ctx.lineWidth = 2;
+            ctx.fillRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
+            ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(spellIcons[this.selectedSpell] || '✦', this.x + towerSize / 2 - iconBoxSize / 2, this.y + towerSize / 2 - iconBoxSize / 2);
+            ctx.fillText(spellIcons[this.selectedSpell] || '✦', this.x, this.y + towerSize/2 + 15);
+            
+            if (this.isSelected) {
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        // Range indicator
+        if (this.target) {
+            ctx.strokeStyle = 'rgba(138, 43, 226, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+    
+    static getInfo() {
+        return {
+            name: 'Combination Tower',
+            description: 'Advanced tower that casts combination spells. Requires Academy Level 1 and gem investments to unlock spells.',
+            damage: '35',
+            range: '110',
+            fireRate: '0.7/sec',
+            cost: 200
+        };
+    }
+}

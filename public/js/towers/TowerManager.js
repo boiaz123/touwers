@@ -4,6 +4,7 @@ import { ArcherTower } from './ArcherTower.js';
 import { MagicTower } from './MagicTower.js';
 import { BarricadeTower } from './BarricadeTower.js';
 import { PoisonArcherTower } from './PoisonArcherTower.js';
+import { CombinationTower } from './CombinationTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../UnlockSystem.js';
 
@@ -18,7 +19,8 @@ export class TowerManager {
             'archer': { class: ArcherTower, cost: 75 },
             'magic': { class: MagicTower, cost: 150 },
             'barricade': { class: BarricadeTower, cost: 90 },
-            'poison': { class: PoisonArcherTower, cost: 120 }
+            'poison': { class: PoisonArcherTower, cost: 120 },
+            'combination': { class: CombinationTower, cost: 200 }
         };
         
         // Initialize unlock system and building manager
@@ -209,6 +211,27 @@ export class TowerManager {
                 tower.applyElementalBonuses(elementalBonuses);
             }
         }
+        
+        // New: Apply combination spell bonuses to Combination Towers
+        if (tower.constructor.name === 'CombinationTower') {
+            const academies = this.buildingManager.buildings.filter(building =>
+                building.constructor.name === 'MagicAcademy'
+            );
+            
+            if (academies.length > 0) {
+                const academy = academies[0];
+                
+                // Set available spells
+                const availableSpells = academy.combinationSpells.filter(spell =>
+                    academy.unlockedCombinations.has(spell.id)
+                );
+                tower.setAvailableSpells(availableSpells);
+                
+                // Apply bonuses based on elemental upgrades
+                const elementalBonuses = academy.getElementalBonuses();
+                tower.applySpellBonuses(elementalBonuses);
+            }
+        }
     }
     
     // New: Get gem stocks for UI display
@@ -298,9 +321,8 @@ export class TowerManager {
         for (const tower of this.towers) {
             // Icon position: bottom right of 2x2 grid, slightly floating up
             const iconX = (tower.gridX + 1.5) * cellSize;
-            const iconY = (tower.gridY + 1.5) * cellSize - 5; // Float up slightly
+            const iconY = (tower.gridY + 1.5) * cellSize - 5;
             
-            // Add small buffer for easier clicking
             const clickBuffer = 5;
             if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
                 y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
@@ -317,8 +339,22 @@ export class TowerManager {
                         ],
                         currentElement: tower.selectedElement
                     };
+                } else if (tower.constructor.name === 'CombinationTower') {
+                    // New: Handle combination tower spell selection
+                    tower.isSelected = true;
+                    return {
+                        type: 'combination_tower_menu',
+                        tower: tower,
+                        spells: tower.availableSpells.map(spell => ({
+                            id: spell.id,
+                            name: spell.name,
+                            icon: spell.icon,
+                            description: spell.description
+                        })),
+                        currentSpell: tower.selectedSpell
+                    };
                 }
-                break; // Found a tower icon click, don't check buildings
+                break;
             }
         }
         
@@ -366,6 +402,16 @@ export class TowerManager {
         if (tower && tower.setElement) {
             tower.setElement(element);
             console.log(`TowerManager: Set magic tower element to ${element}`);
+            return true;
+        }
+        return false;
+    }
+    
+    // New: Select combination tower spell
+    selectCombinationTowerSpell(tower, spellId) {
+        if (tower && tower.setSpell) {
+            tower.setSpell(spellId);
+            console.log(`TowerManager: Set combination tower spell to ${spellId}`);
             return true;
         }
         return false;

@@ -32,6 +32,47 @@ export class MagicAcademy extends Building {
         this.diamondMiningUnlocked = false;
         this.superWeaponUnlocked = false;
         
+        // New: Track unlocked combination spells (requires gem investment)
+        this.unlockedCombinations = new Set();
+        this.combinationSpells = [
+            {
+                id: 'steam',
+                name: 'Steam',
+                elements: ['fire', 'water'],
+                icon: '💨',
+                description: 'Fire + Water: Burn + Slow effects',
+                gemsRequired: { fire: 2, water: 2 },
+                damageMultiplier: 1.15
+            },
+            {
+                id: 'magma',
+                name: 'Magma',
+                elements: ['fire', 'earth'],
+                icon: '🌋',
+                description: 'Fire + Earth: Burn + Piercing effects',
+                gemsRequired: { fire: 2, earth: 2 },
+                damageMultiplier: 1.15
+            },
+            {
+                id: 'tempest',
+                name: 'Tempest',
+                elements: ['air', 'water'],
+                icon: '⛈️',
+                description: 'Air + Water: Chain + Slow effects',
+                gemsRequired: { air: 2, water: 2 },
+                damageMultiplier: 1.10
+            },
+            {
+                id: 'meteor',
+                name: 'Meteor',
+                elements: ['air', 'earth'],
+                icon: '☄️',
+                description: 'Air + Earth: Chain + Piercing effects',
+                gemsRequired: { air: 2, earth: 2 },
+                damageMultiplier: 1.10
+            }
+        ];
+        
         // Water ripples animation
         this.waterRipples = [];
         this.nextRippleTime = 0;
@@ -763,6 +804,27 @@ export class MagicAcademy extends Building {
             });
         }
         
+        // New: Add combination spell unlocks if academy level 1 is reached
+        if (this.combinationSpellsUnlocked) {
+            this.combinationSpells.forEach(spell => {
+                if (!this.unlockedCombinations.has(spell.id)) {
+                    options.push({
+                        id: `unlock_${spell.id}`,
+                        name: `Unlock ${spell.name} Spell`,
+                        description: `Invest gems to unlock the ${spell.name} combination spell for Combination Towers`,
+                        level: 0,
+                        maxLevel: 1,
+                        cost: spell.gemsRequired,
+                        icon: spell.icon,
+                        isCombinationUnlock: true,
+                        gemType: 'combination',
+                        spellId: spell.id,
+                        requiredElements: spell.elements
+                    });
+                }
+            });
+        }
+        
         return options;
     }
     
@@ -850,6 +912,41 @@ export class MagicAcademy extends Building {
     }
     
     purchaseElementalUpgrade(element, gameState) {
+        // Handle combination spell unlocks
+        if (element.startsWith('unlock_')) {
+            const spellId = element.substring(7); // Remove 'unlock_' prefix
+            const spell = this.combinationSpells.find(s => s.id === spellId);
+            
+            if (!spell) {
+                console.log(`MagicAcademy: Unknown combination spell ${spellId}`);
+                return false;
+            }
+            
+            // Check if already unlocked
+            if (this.unlockedCombinations.has(spellId)) {
+                console.log(`MagicAcademy: ${spellId} already unlocked`);
+                return false;
+            }
+            
+            // Check if enough gems for all required elements
+            for (const [gemType, amount] of Object.entries(spell.gemsRequired)) {
+                if ((this.gems[gemType] || 0) < amount) {
+                    console.log(`MagicAcademy: Not enough ${gemType} gems for ${spellId}. Need ${amount}, have ${this.gems[gemType] || 0}`);
+                    return false;
+                }
+            }
+            
+            // Deduct gems and unlock spell
+            for (const [gemType, amount] of Object.entries(spell.gemsRequired)) {
+                this.gems[gemType] -= amount;
+            }
+            
+            this.unlockedCombinations.add(spellId);
+            console.log(`MagicAcademy: Unlocked ${spell.name} combination spell!`);
+            return true;
+        }
+        
+        // Handle regular elemental upgrades
         const upgrade = this.elementalUpgrades[element];
         const cost = this.calculateElementalCost(element);
         
@@ -869,6 +966,16 @@ export class MagicAcademy extends Building {
         
         console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} using ${cost} ${element} gems`);
         return true;
+    }
+    
+    // New: Check if combination spell is unlocked
+    isCombinationUnlocked(spellId) {
+        return this.unlockedCombinations.has(spellId);
+    }
+    
+    // New: Get unlocked combination spells
+    getUnlockedCombinations() {
+        return Array.from(this.unlockedCombinations);
     }
     
     // New: Add diamond gem

@@ -142,6 +142,10 @@ class GameplayState {
                 } else if (clickResult.type === 'magic_tower_menu') {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'combination_tower_menu') {
+                    // New: Handle combination tower menu
+                    this.showCombinationTowerMenu(clickResult);
+                    return;
                 } else if (typeof clickResult === 'number') {
                     // Gold/gem collection from mine
                     this.gameState.gold += clickResult;
@@ -265,7 +269,6 @@ class GameplayState {
     }
     
     handleClick(x, y) {
-        // Check for building/tower clicks first
         const clickResult = this.towerManager.handleClick(x, y, { 
             width: this.stateManager.canvas.width, 
             height: this.stateManager.canvas.height 
@@ -276,17 +279,18 @@ class GameplayState {
                 this.showForgeUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'academy_menu') {
-                console.log('GameplayState: Academy menu detected, showing menu');
                 this.showAcademyUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'magic_tower_menu') {
-                console.log('GameplayState: Magic tower menu detected, showing menu');
                 this.showMagicTowerElementMenu(clickResult);
                 return;
+            } else if (clickResult.type === 'combination_tower_menu') {
+                // New: Handle combination tower menu
+                this.showCombinationTowerMenu(clickResult);
+                return;
             } else if (typeof clickResult === 'number') {
-                // Gold/gem collection from mine
                 this.gameState.gold += clickResult;
-                this.updateUI(); // Immediately update UI after collection
+                this.updateUI();
                 return;
             }
         }
@@ -482,16 +486,30 @@ class GameplayState {
         
         // Add elemental upgrades
         upgradeListHTML += academyData.upgrades.map(upgrade => {
-            if (upgrade.isAcademyUpgrade) return ''; // Skip academy upgrade
+            if (upgrade.isAcademyUpgrade) return '';
             
             let isDisabled = false;
             let costDisplay = '';
             
-            if (upgrade.isResearch) {
+            // New: Handle combination spell unlocks
+            if (upgrade.isCombinationUnlock) {
+                let allGemsAvailable = true;
+                const gemCosts = [];
+                
+                for (const [gemType, amount] of Object.entries(upgrade.cost)) {
+                    const gemCount = academyData.academy.gems[gemType] || 0;
+                    gemCosts.push(`${upgrade.icon || gemType[0]}${amount}`);
+                    if (gemCount < amount) {
+                        allGemsAvailable = false;
+                    }
+                }
+                
+                isDisabled = !allGemsAvailable;
+                costDisplay = gemCosts.join(' + ');
+            } else if (upgrade.isResearch) {
                 isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost;
                 costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
             } else {
-                // Elemental upgrades use gems
                 const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
                 isDisabled = !upgrade.cost || gemCount < upgrade.cost;
                 costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
@@ -503,8 +521,7 @@ class GameplayState {
                     <div class="upgrade-details">
                         <div class="upgrade-name">${upgrade.name}</div>
                         <div class="upgrade-desc">${upgrade.description}</div>
-                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                        <div class="upgrade-current">Current: ${this.getAcademyUpgradeCurrentEffect(upgrade)}</div>
+                        <div class="upgrade-level">${upgrade.isCombinationUnlock ? 'Investment' : 'Level'}: ${upgrade.level}/${upgrade.maxLevel}</div>
                     </div>
                     <div class="upgrade-cost">
                         ${costDisplay}
@@ -512,7 +529,7 @@ class GameplayState {
                     <button class="upgrade-btn" 
                             data-upgrade="${upgrade.id}" 
                             ${isDisabled ? 'disabled' : ''}>
-                        ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                        ${upgrade.cost ? (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade') : 'MAX'}
                     </button>
                 </div>
             `;
@@ -544,6 +561,18 @@ class GameplayState {
                         this.updateUIAvailability();
                         
                         // Refresh the menu
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else if (upgradeId.startsWith('unlock_')) {
+                    // New: Handle combination spell unlocks
+                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        this.updateUIAvailability();
+                        
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -655,6 +684,71 @@ class GameplayState {
                         tower: towerData.tower,
                         elements: towerData.elements,
                         currentElement: elementId
+                    });
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
+    }
+    
+    showCombinationTowerMenu(towerData) {
+        // New: Menu for selecting combination spells
+        this.clearActiveMenus();
+        
+        console.log('GameplayState: Showing combination tower spell menu', towerData);
+        
+        const menu = document.createElement('div');
+        menu.id = 'combination-tower-menu';
+        menu.className = 'upgrade-menu';
+        
+        let spellListHTML = '';
+        
+        spellListHTML += towerData.spells.map(spell => {
+            return `
+                <div class="upgrade-item ${spell.id === towerData.currentSpell ? 'selected-element' : ''}">
+                    <div class="upgrade-icon">${spell.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${spell.name} Spell</div>
+                        <div class="upgrade-desc">${spell.description}</div>
+                        ${spell.id === towerData.currentSpell ? '<div class="upgrade-current">Currently Active</div>' : ''}
+                    </div>
+                    <div class="upgrade-cost">
+                        Free
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-spell="${spell.id}" 
+                            ${spell.id === towerData.currentSpell ? 'disabled' : ''}>
+                        ${spell.id === towerData.currentSpell ? 'Active' : 'Select'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>✨ Combination Tower Spells</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${spellListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const spellId = e.target.dataset.spell;
+                
+                console.log(`GameplayState: Combination tower spell selected: ${spellId}`);
+                
+                if (this.towerManager.selectCombinationTowerSpell(towerData.tower, spellId)) {
+                    this.showCombinationTowerMenu({
+                        type: 'combination_tower_menu',
+                        tower: towerData.tower,
+                        spells: towerData.spells,
+                        currentSpell: spellId
                     });
                 }
             });
