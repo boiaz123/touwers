@@ -567,8 +567,8 @@ class GameplayState {
         let elementListHTML = '';
         
         elementListHTML += towerData.elements.map(element => {
-            // Update earth icon
-            const icon = element.id === 'earth' ? '🪨' : element.icon;
+            // Use provided icon (already has 🪨 for earth)
+            const icon = element.icon;
             
             return `
                 <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">

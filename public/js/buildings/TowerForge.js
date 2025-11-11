@@ -133,6 +133,9 @@ export class TowerForge extends Building {
             smoke.vx *= 0.99;
             return smoke.life > 0;
         });
+        
+        // Update flash opacity (fade out slowly over 0.4 seconds for balanced effect)
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 1.5);
     }
     
     render(ctx, size) {

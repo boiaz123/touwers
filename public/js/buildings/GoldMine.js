@@ -952,7 +952,7 @@ export class GoldMine extends Building {
                     case 'fire': symbol = '🔥'; break;
                     case 'water': symbol = '💧'; break;
                     case 'air': symbol = '💨'; break;
-                    case 'earth': symbol = '🌍'; break;
+                    case 'earth': symbol = '🪨'; break;
                 }
             }
             
@@ -1023,7 +1023,7 @@ export class GoldMine extends Building {
             ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
         }
         
-        // Add one-time flash effect when gold becomes ready (fades out slowly)
+        // Add one-time flash effect when gold becomes ready (improved balance)
         if (this.flashOpacity > 0) {
             let flashColor = '#FFD700'; // Gold by default
             
@@ -1032,13 +1032,14 @@ export class GoldMine extends Building {
                     case 'fire': flashColor = '#FF4500'; break;
                     case 'water': flashColor = '#40A4DF'; break;
                     case 'air': flashColor = '#FFFF00'; break;
-                    case 'earth': flashColor = '#8B4513'; break;
+                    case 'earth': flashColor = '#654321'; break;
                 }
             }
             
             const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
-            flashGradient.addColorStop(0, `${flashColor}CC`);
-            flashGradient.addColorStop(0.5, `${flashColor}66`);
+            flashGradient.addColorStop(0, `${flashColor}EE`);
+            flashGradient.addColorStop(0.4, `${flashColor}99`);
+            flashGradient.addColorStop(0.8, `${flashColor}44`);
             flashGradient.addColorStop(1, `${flashColor}00`);
             
             ctx.fillStyle = flashGradient;
@@ -1071,7 +1072,7 @@ export class GoldMine extends Building {
                     ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
                     break;
                 case 'earth':
-                    ctx.fillStyle = `rgba(139, 105, 20, ${alpha})`;
+                    ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
                     break;
                 default: // gold
                     ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;

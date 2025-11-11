@@ -239,7 +239,7 @@ export class MagicTower {
             case 'fire': return 'rgba(255, 69, 0, ';
             case 'water': return 'rgba(64, 164, 223, ';
             case 'air': return 'rgba(255, 255, 0, ';
-            case 'earth': return 'rgba(139, 69, 19, ';
+            case 'earth': return 'rgba(101, 67, 33, ';
             default: return 'rgba(138, 43, 226, ';
         }
     }
@@ -529,7 +529,7 @@ export class MagicTower {
             });
         });
         
-        // Element indicator with enhanced visibility when selected - CORRECTED
+        // Element indicator with enhanced visibility when selected
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
