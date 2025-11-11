@@ -317,6 +317,22 @@ export class TowerManager {
             }
         }
         
+        // Check building clicks
+        for (const building of this.buildingManager.buildings) {
+            if (building.isPointInside && building.isPointInside(x, y, this.buildingManager.getBuildingSize())) {
+                if (building.onClick) {
+                    // Pass coordinates to onClick for proper toggle detection
+                    const result = building.onClick(x, y, this.buildingManager.getBuildingSize());
+                    if (typeof result === 'object') {
+                        return result; // Menu result
+                    } else if (typeof result === 'number') {
+                        return result; // Gold collection result
+                    }
+                }
+                return null;
+            }
+        }
+        
         return null;
     }
     
