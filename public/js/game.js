@@ -123,16 +123,23 @@ class GameplayState {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         
-        // FIXED: Unified click handler that properly routes all menu types
+        // FIXED: Click handler - check buildings first, then handle tower/building placement
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Check for building/tower clicks first
-            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
+            // Scale coordinates if needed
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const scaledX = canvasX * scaleX;
+            const scaledY = canvasY * scaleY;
+            
+            // First, check if clicking on a building icon/menu
+            const clickResult = this.towerManager.handleClick(scaledX, scaledY, rect);
             
             if (clickResult) {
+                // If we got a result from a building, handle it
                 if (clickResult.type === 'forge_menu') {
                     this.showForgeUpgradeMenu(clickResult);
                     return;
@@ -144,7 +151,7 @@ class GameplayState {
                     return;
                 } else if (clickResult.type === 'gem_toggle') {
                     // Handle gem mining toggle - check if research is unlocked
-                    const academy = this.towerManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                    const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                     const gemMiningResearched = academy ? academy.gemMiningResearched : false;
                     
                     if (gemMiningResearched) {
@@ -168,10 +175,11 @@ class GameplayState {
                     this.updateUI();
                     return;
                 }
+                // If result is true (just building area hit), fall through to tower placement
             }
-    
-            // Handle regular tower/building placement
-            this.handleClick(canvasX, canvasY);
+            
+            // If no building menu was triggered, handle tower/building placement
+            this.handleClick(scaledX, scaledY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }

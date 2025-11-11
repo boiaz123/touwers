@@ -251,56 +251,39 @@ export class TowerManager {
     }
     
     handleClick(canvasX, canvasY, rect) {
-        // Check buildings first (they have priority for clicks)
-        for (const building of this.buildings) {
-            const result = building.isPointInside(canvasX, canvasY, 128); // 128 is the size used for buildings
-            
-            if (result) {
-                // If it's a gem toggle, need to check unlock status before returning
-                if (typeof result === 'object' && result.type === 'gem_toggle') {
-                    console.log('TowerManager: Gem toggle detected');
-                    return result;
-                }
-                
-                // If it's a gem collection, return it
-                if (typeof result === 'object' && result.type === 'gem') {
-                    console.log('TowerManager: Gem collection detected');
-                    return result;
-                }
-                
-                // If it's gold (number), return it
-                if (typeof result === 'number') {
-                    console.log('TowerManager: Gold collection detected');
-                    return result;
-                }
-                
-                // If it's a menu or other object result, return it
-                if (typeof result === 'object') {
-                    console.log('TowerManager: Menu or object detected:', result.type);
-                    return result;
-                }
-                
-                // If it's true (just a hit on building area), continue checking
-                if (result === true) {
-                    continue;
-                }
-            }
-        }
-        
-        // Check tower icon clicks first for element selection
+        // Check buildings first for icon clicks (they have priority for clicks)
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, rect.width / 1920)));
-        const iconSize = 30; // Increased for better clickability
+        const iconSize = 30;
         
-        for (const tower of this.towers) {
-            // Icon position: bottom right of 2x2 grid, slightly floating up
-            const iconX = (tower.gridX + 1.5) * cellSize;
-            const iconY = (tower.gridY + 1.5) * cellSize - 5; // Float up slightly
+        for (const building of this.buildingManager.buildings) {
+            // Icon position: bottom right of building grid
+            const iconX = (building.gridX + building.size - 0.5) * cellSize;
+            const iconY = (building.gridY + building.size - 0.5) * cellSize - 5;
             
-            // Add small buffer for easier clicking
             const clickBuffer = 5;
             if (canvasX >= iconX - (iconSize/2 + clickBuffer) && canvasX <= iconX + (iconSize/2 + clickBuffer) &&
                 canvasY >= iconY - (iconSize/2 + clickBuffer) && canvasY <= iconY + (iconSize/2 + clickBuffer)) {
-                if (tower.constructor.name === 'MagicTower') {
+                console.log(`TowerManager: HIT! Clicked on ${building.constructor.name} icon`);
+                
+                // Call the building's onClick method
+                if (building.onClick) {
+                    const result = building.onClick();
+                    console.log(`TowerManager: onClick result:`, result);
+                    return result;
+                }
+                return null;
+            }
+        }
+        
+        // Check for magic tower icon clicks
+        for (const tower of this.towers) {
+            if (tower.constructor.name === 'MagicTower') {
+                const iconX = (tower.gridX + 1.5) * cellSize;
+                const iconY = (tower.gridY + 1.5) * cellSize - 5;
+                
+                const clickBuffer = 5;
+                if (canvasX >= iconX - (iconSize/2 + clickBuffer) && canvasX <= iconX + (iconSize/2 + clickBuffer) &&
+                    canvasY >= iconY - (iconSize/2 + clickBuffer) && canvasY <= iconY + (iconSize/2 + clickBuffer)) {
                     tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
@@ -309,16 +292,16 @@ export class TowerManager {
                             { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
                             { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
                             { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                            { id: 'earth', name: 'Earth', icon: '🪨', description: 'Pierces armor' }
                         ],
                         currentElement: tower.selectedElement
                     };
                 }
-                break; // Found a tower icon click, don't check buildings
             }
         }
         
-        return false;
+        // No building or tower icon was clicked
+        return null;
     }
     
     selectMagicTowerElement(tower, element) {
