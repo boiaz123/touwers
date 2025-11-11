@@ -180,8 +180,11 @@ class GameplayState {
         }
         
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Account for CSS scaling
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
         
         const size = this.selectedBuildingType ? 4 : 2;
         this.level.setPlacementPreview(x, y, true, this.towerManager, size);
@@ -990,9 +993,12 @@ class Game {
             this.canvas.addEventListener('click', (e) => {
                 try {
                     const rect = this.canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    this.stateManager.handleClick(x, y);
+                    // Account for CSS scaling
+                    const scaleX = this.canvas.width / rect.width;
+                    const scaleY = this.canvas.height / rect.height;
+                    const canvasX = (e.clientX - rect.left) * scaleX;
+                    const canvasY = (e.clientY - rect.top) * scaleY;
+                    this.stateManager.handleClick(canvasX, canvasY);
                 } catch (error) {
                     console.error('Game: Error handling click:', error);
                 }
