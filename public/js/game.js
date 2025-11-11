@@ -326,7 +326,7 @@ class GameplayState {
                 return;
             } else if (clickResult.type === 'gem_toggle') {
                 // Handle gem mining toggle - check if research is unlocked
-                const academy = this.towerManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                 const gemMiningResearched = academy ? academy.gemMiningResearched : false;
                 
                 if (gemMiningResearched) {
@@ -780,6 +780,11 @@ class GameplayState {
     updateUI() {
         document.getElementById('health').textContent = this.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameState.gold);
+        
+        // Ensure gems object exists before updating
+        if (!this.gameState.gems) {
+            this.gameState.gems = { fire: 0, water: 0, air: 0, earth: 0 };
+        }
         
         // Update gem display - ensure all gem elements exist and update them
         const gemElements = {
