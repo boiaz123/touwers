@@ -1046,10 +1046,10 @@ export class GoldMine extends Building {
         }
         
         // Check gem mining toggle icon (at top-left of mine)
-        // Always clickable regardless of production state
+        // Only clickable if gem mining has been researched
         const toggleIconSize = 28;
-        const toggleIconX = this.x - size/2 + toggleIconSize/2; // Top left of mine grid
-        const toggleIconY = this.y - size/2 - toggleIconSize/2; // Above the mine
+        const toggleIconX = this.x - size/2 + toggleIconSize/2;
+        const toggleIconY = this.y - size/2 - toggleIconSize/2;
         const clickSize = 40; // Larger click area
         
         if (x >= toggleIconX - clickSize/2 && x <= toggleIconX + clickSize/2 &&
@@ -1058,11 +1058,11 @@ export class GoldMine extends Building {
             return { type: 'gem_toggle', mine: this };
         }
         
-        // If gold is ready, also check the collection icon area (larger click area for easier clicking)
+        // If gold is ready, also check the collection icon area
         if (this.goldReady) {
-            const iconSize = 35; // Render size
-            const clickSize2 = 50; // Larger click area
-            const iconX = this.x + size/2 - 10; // Bottom right area relative to building center
+            const iconSize = 35;
+            const clickSize2 = 50;
+            const iconX = this.x + size/2 - 10;
             const iconY = this.y + size/2 - 15;
             if (x >= iconX - clickSize2/2 && x <= iconX + clickSize2/2 &&
                 y >= iconY - clickSize2/2 && y <= iconY + clickSize2/2) {
@@ -1073,7 +1073,13 @@ export class GoldMine extends Building {
         return false;
     }
     
-    toggleGemMining(gameState) {
+    toggleGemMining(gameState, gemMiningResearched) {
+        // Check if gem mining has been researched
+        if (!gemMiningResearched) {
+            console.log('GoldMine: Gem mining not yet researched');
+            return false;
+        }
+        
         if (this.miningMode === 'gems') {
             // Switch back to gold mining
             this.setMiningMode('gold');

@@ -143,10 +143,17 @@ class GameplayState {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (clickResult.type === 'gem_toggle') {
-                    // Handle gem mining toggle
-                    console.log('GameplayState: Gem toggle clicked');
-                    clickResult.mine.toggleGemMining(this.gameState);
-                    this.updateUI();
+                    // Handle gem mining toggle - check if research is unlocked
+                    const academy = this.towerManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                    const gemMiningResearched = academy ? academy.gemMiningResearched : false;
+                    
+                    if (gemMiningResearched) {
+                        console.log('GameplayState: Gem toggle clicked with research unlocked');
+                        clickResult.mine.toggleGemMining(this.gameState, gemMiningResearched);
+                        this.updateUI();
+                    } else {
+                        console.log('GameplayState: Gem toggle clicked but research not unlocked');
+                    }
                     return;
                 } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
                     // Gem collection from gem mine
@@ -298,9 +305,14 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (clickResult.type === 'gem_toggle') {
-                // Handle gem mining toggle
-                clickResult.mine.toggleGemMining(this.gameState);
-                this.updateUI();
+                // Handle gem mining toggle - check if research is unlocked
+                const academy = this.towerManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                const gemMiningResearched = academy ? academy.gemMiningResearched : false;
+                
+                if (gemMiningResearched) {
+                    clickResult.mine.toggleGemMining(this.gameState, gemMiningResearched);
+                    this.updateUI();
+                }
                 return;
             } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
                 // Gem collection from gem mine

@@ -252,13 +252,13 @@ export class TowerManager {
     
     handleClick(canvasX, canvasY, rect) {
         // Check buildings first (they have priority for clicks)
-        for (const building of this.buildingManager.buildings) {
+        for (const building of this.buildings) {
             const result = building.isPointInside(canvasX, canvasY, 128); // 128 is the size used for buildings
             
             if (result) {
-                // If it's a gem toggle, return it immediately
+                // If it's a gem toggle, need to check unlock status before returning
                 if (typeof result === 'object' && result.type === 'gem_toggle') {
-                    console.log('TowerManager: Gem toggle detected, returning to game state');
+                    console.log('TowerManager: Gem toggle detected');
                     return result;
                 }
                 
@@ -268,20 +268,22 @@ export class TowerManager {
                     return result;
                 }
                 
-                // If it's a number (gold), return it
+                // If it's gold (number), return it
                 if (typeof result === 'number') {
                     console.log('TowerManager: Gold collection detected');
                     return result;
                 }
                 
-                // If it's a menu request, return it
-                if (typeof result === 'object' && (result.type === 'forge_menu' || result.type === 'academy_menu' || result.type === 'magic_tower_menu')) {
-                    console.log('TowerManager: Menu detected:', result.type);
+                // If it's a menu or other object result, return it
+                if (typeof result === 'object') {
+                    console.log('TowerManager: Menu or object detected:', result.type);
                     return result;
                 }
                 
-                // Otherwise check the next building
-                continue;
+                // If it's true (just a hit on building area), continue checking
+                if (result === true) {
+                    continue;
+                }
             }
         }
         
