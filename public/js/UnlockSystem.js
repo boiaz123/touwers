@@ -21,38 +21,6 @@ export class UnlockSystem {
         
         // New: Track combination spells unlocked (for tower availability)
         this.unlockedCombinationSpells = new Set();
-        
-        // New: Track sandbox mode
-        this.isSandboxMode = false;
-    }
-    
-    // New: Initialize sandbox mode with everything unlocked
-    initializeSandboxMode() {
-        this.isSandboxMode = true;
-        this.forgeLevel = 10; // Max forge level
-        this.hasForge = true;
-        this.forgeCount = 1;
-        this.academyCount = 1;
-        
-        // Unlock all towers
-        this.unlockedTowers = new Set(['basic', 'barricade', 'archer', 'poison', 'cannon', 'magic', 'combination']);
-        
-        // Unlock all buildings
-        this.unlockedBuildings = new Set(['forge', 'mine', 'academy', 'superweapon']);
-        
-        // Unlock all upgrades
-        this.unlockedUpgrades = new Set([
-            'towerRange', 'barricadeDamage', 'poisonDamage', 'explosiveRadius', 
-            'fireArrows', 'gemMining'
-        ]);
-        
-        // Research everything
-        this.gemMiningResearched = true;
-        
-        // Unlock all combination spells
-        this.unlockedCombinationSpells = new Set(['steam', 'magma', 'tempest', 'meteor']);
-        
-        console.log('UnlockSystem: Sandbox mode initialized - all content unlocked');
     }
     
     onForgeBuilt() {

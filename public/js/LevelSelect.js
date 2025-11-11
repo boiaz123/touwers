@@ -3,7 +3,7 @@ export class LevelSelect {
         this.stateManager = stateManager;
         this.levels = [
             { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox', isSandbox: true },
+            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' },
             { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false, type: 'campaign' }
         ];
         this.selectedLevel = 0;
@@ -213,7 +213,6 @@ export class LevelSelect {
                         y >= buttonY && y <= buttonY + buttonHeight) {
                         // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
-                        console.log('LevelSelect: Starting level:', this.stateManager.selectedLevelInfo);
                         this.stateManager.changeState('game');
                     }
                 } else {
