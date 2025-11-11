@@ -149,7 +149,7 @@ class GameplayState {
             
             // First, check if clicking on a building icon/menu
             const clickResult = this.towerManager.handleClick(scaledX, scaledY, rect);
-            
+
             if (clickResult) {
                 // If we got a result from a building, handle it
                 if (clickResult.type === 'forge_menu') {
@@ -165,19 +165,19 @@ class GameplayState {
                     // Handle gem mining toggle - check if research is unlocked
                     const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                     const gemMiningResearched = academy ? academy.gemMiningResearched : false;
-                    
+
+                    // FIX: Only allow toggling if researched
                     if (gemMiningResearched) {
-                        console.log('GameplayState: Gem toggle clicked with research unlocked');
                         clickResult.mine.toggleGemMining(this.gameState, gemMiningResearched);
                         this.updateUI();
                     } else {
-                        console.log('GameplayState: Gem toggle clicked but research not unlocked');
+                        // Optionally show a message or feedback
+                        alert('Gem Mining not researched yet! Research it in the Magic Academy.');
                     }
                     return;
                 } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
                     // Gem collection from gem mine
-                    console.log(`GameplayState: Gem collected: ${clickResult.gem}`);
-                    this.gameState.gems[clickResult.gem]++;
+                    this.gameState.gems[clickResult.gem] = (this.gameState.gems[clickResult.gem] || 0) + 1;
                     this.updateUI();
                     return;
                 } else if (typeof clickResult === 'number') {
@@ -798,9 +798,6 @@ class GameplayState {
             if (element) {
                 const gemCount = this.gameState.gems[gemType] || 0;
                 element.textContent = gemCount;
-                console.log(`GameplayState: Updated ${gemType} gems to ${gemCount}`);
-            } else {
-                console.warn(`GameplayState: gems-${gemType} element not found`);
             }
         }
         
