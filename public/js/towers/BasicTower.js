@@ -350,6 +350,40 @@ export class BasicTower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        // Floating icon in bottom right of 2x2 grid
+        const iconSize = 20;
+        const iconX = (this.gridX + 1.5) * cellSize;
+        const iconY = (this.gridY + 1.5) * cellSize - 5; // Float up slightly
+        
+        // Shadow for floating effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize, iconSize);
+        
+        // Icon background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Symbol based on tower type
+        ctx.fillStyle = '#000';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let symbol = '🏰'; // default
+        switch(this.constructor.name) {
+            case 'BasicTower': symbol = '🏰'; break;
+            case 'CannonTower': symbol = '🎯'; break;
+            case 'ArcherTower': symbol = '🏹'; break;
+            case 'MagicTower': symbol = '⚡'; break;
+            case 'BarricadeTower': symbol = '🛡️'; break;
+            case 'PoisonArcherTower': symbol = '🌿'; break;
+        }
+        ctx.fillText(symbol, iconX, iconY);
     }
     
     drawEnvironment(ctx, gridSize) {

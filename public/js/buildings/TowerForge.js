@@ -169,13 +169,37 @@ export class TowerForge extends Building {
         // Render particles
         this.renderParticles(ctx);
         
-        // REMOVED YELLOW SELECTION INDICATOR
-        
         // Upgrade indicator
         ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
+        
+        // Floating icon in bottom right of 4x4 grid
+        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
+        const iconSize = 20;
+        const iconX = (this.gridX + 3.5) * cellSize;
+        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
+        
+        // Shadow for floating effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize, iconSize);
+        
+        // Icon background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Symbol
+        ctx.fillStyle = '#000';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔨', iconX, iconY);
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -348,7 +372,7 @@ export class TowerForge extends Building {
                     ctx.fillRect(-1, 0, 2, 12);
                     // Hammer head
                     ctx.fillStyle = '#2F2F2F';
-                    ctx.fillRect(-3, 0, 6, 4);
+                    ctx.fillRect(-3, 0, 4, 2);
                     break;
                     
                 case 'tongs':
@@ -599,10 +623,10 @@ export class TowerForge extends Building {
                 
                 if (worker.type === 'blacksmith') {
                     // Hammer
-                    ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(toolX - 1, toolY, 2, 6);
                     ctx.fillStyle = '#2F2F2F';
                     ctx.fillRect(toolX - 2, toolY, 4, 2);
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(toolX - 1, toolY + 2, 2, 6);
                 } else {
                     // Tongs
                     ctx.strokeStyle = '#2F2F2F';
@@ -864,8 +888,6 @@ export class TowerForge extends Building {
             ctx.lineTo(tileEndX, tileY);
             ctx.stroke();
         }
-        
-        // REMOVED: Roof ridge that was causing the bar on top
         
         // Roof flashing where it meets chimney
         ctx.fillStyle = '#2F2F2F';

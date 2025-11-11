@@ -780,6 +780,32 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('💰 READY', this.x, this.y - size/2 - 10);
         }
+        
+        // Floating icon in bottom right of 4x4 grid
+        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
+        const iconSize = 20;
+        const iconX = (this.gridX + 3.5) * cellSize;
+        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
+        
+        // Shadow for floating effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize, iconSize);
+        
+        // Icon background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Border
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+        
+        // Symbol
+        ctx.fillStyle = '#000';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⛏️', iconX, iconY);
     }
     
     getBaseIncome() {
@@ -889,13 +915,13 @@ export class GoldMine extends Building {
         
         // Add natural grass patches that blend organically (repositioned to avoid track area)
         const grassPatches = [
-            {x: -maxArea * 0.8, y: -maxArea * 0.6, radius: 15, intensity: 0.6},
-            {x: -maxArea * 0.9, y: maxArea * 0.8, radius: 18, intensity: 0.7}, // Moved to bottom left
-            {x: -maxArea * 0.7, y: maxArea * 0.9, radius: 16, intensity: 0.6}, // Moved to bottom left
-            {x: maxArea * 0.9, y: maxArea * 0.4, radius: 14, intensity: 0.5},
-            {x: -maxArea * 1.0, y: maxArea * 0.1, radius: 20, intensity: 0.9},
-            {x: -maxArea * 0.6, y: maxArea * 1.0, radius: 14, intensity: 0.8}, // Moved to bottom left
-            {x: -maxArea * 0.2, y: -maxArea * 1.0, radius: 13, intensity: 0.7}
+            { x: -maxArea * 0.8, y: -maxArea * 0.6, radius: 15, intensity: 0.6 },
+            { x: -maxArea * 0.9, y: maxArea * 0.8, radius: 18, intensity: 0.7 }, // Moved to bottom left
+            { x: -maxArea * 0.7, y: maxArea * 0.9, radius: 16, intensity: 0.6 }, // Moved to bottom left
+            { x: maxArea * 0.9, y: maxArea * 0.4, radius: 14, intensity: 0.5 },
+            { x: -maxArea * 1.0, y: maxArea * 0.1, radius: 20, intensity: 0.9 },
+            { x: -maxArea * 0.6, y: maxArea * 1.0, radius: 14, intensity: 0.8 }, // Moved to bottom left
+            { x: -maxArea * 0.2, y: -maxArea * 1.0, radius: 13, intensity: 0.7 }
         ];
         
         grassPatches.forEach(patch => {
@@ -904,7 +930,7 @@ export class GoldMine extends Building {
                 this.x + patch.x, this.y + patch.y, patch.radius
             );
             grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
-            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
+            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.8})`);
             grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
             
             ctx.fillStyle = grassGradient;
@@ -915,11 +941,11 @@ export class GoldMine extends Building {
         
         // Add dirt/excavated patches in the center
         const dirtPatches = [
-            {x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.7},
-            {x: maxArea * 0.1, y: -maxArea * 0.4, radius: 10, intensity: 0.6},
-            {x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.8},
-            {x: maxArea * 0.4, y: maxArea * 0.1, radius: 8, intensity: 0.5},
-            {x: 0, y: 0, radius: 16, intensity: 0.9}
+            { x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.7 },
+            { x: maxArea * 0.1, y: -maxArea * 0.4, radius: 10, intensity: 0.6 },
+            { x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.8 },
+            { x: maxArea * 0.4, y: maxArea * 0.1, radius: 8, intensity: 0.5 },
+            { x: 0, y: 0, radius: 16, intensity: 0.9 }
         ];
         
         dirtPatches.forEach(patch => {
@@ -976,12 +1002,12 @@ export class GoldMine extends Building {
         
         // Reeds around the water pool (fixed positions to prevent flickering)
         const reedPositions = [
-            {x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12},
-            {x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15},
-            {x: poolX + poolRadius * 1.0, y: poolY - poolRadius * 0.4, height: 10},
-            {x: poolX + poolRadius * 0.7, y: poolY + poolRadius * 0.9, height: 14},
-            {x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.1, height: 8},
-            {x: poolX + poolRadius * 1.1, y: poolY + poolRadius * 0.5, height: 11}
+            { x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12 },
+            { x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15 },
+            { x: poolX + poolRadius * 1.0, y: poolY - poolRadius * 0.4, height: 10 },
+            { x: poolX + poolRadius * 0.7, y: poolY + poolRadius * 0.9, height: 14 },
+            { x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.1, height: 8 },
+            { x: poolX + poolRadius * 1.1, y: poolY + poolRadius * 0.5, height: 11 }
         ];
         
         reedPositions.forEach((reed, index) => {
@@ -1005,9 +1031,9 @@ export class GoldMine extends Building {
         
         // Add cattails near water (repositioned)
         const cattailPositions = [
-            {x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.6},
-            {x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 0.8},
-            {x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.4}
+            { x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.6 },
+            { x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 0.8 },
+            { x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.4 }
         ];
         
         cattailPositions.forEach(cattail => {
@@ -1028,11 +1054,11 @@ export class GoldMine extends Building {
         
         // Scattered grass blades (fixed positions, avoid bottom right clearing)
         const grassBlades = [
-            {x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6, bend: 1},
-            {x: -maxArea * 0.8, y: maxArea * 0.7, length: 4, bend: -1},
-            {x: -maxArea * 0.6, y: maxArea * 0.9, length: 5, bend: 1},
-            {x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5, bend: -1},
-            {x: -maxArea * 0.5, y: maxArea * 0.8, length: 6, bend: 1}
+            { x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6, bend: 1 },
+            { x: -maxArea * 0.8, y: maxArea * 0.7, length: 4, bend: -1 },
+            { x: -maxArea * 0.6, y: maxArea * 0.9, length: 5, bend: 1 },
+            { x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5, bend: -1 },
+            { x: -maxArea * 0.5, y: maxArea * 0.8, length: 6, bend: 1 }
             // Removed grass blades from bottom right clearing area
         ];
         
@@ -1046,14 +1072,14 @@ export class GoldMine extends Building {
         });
         
         // Fixed excavation tool marks for realism
-        ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
+        ctx.strokeStyle = 'rgba(101, 67, 33, 0.3)';
         ctx.lineWidth = 2;
         
         const toolMarks = [
-            {x1: -maxArea * 0.6, y1: -maxArea * 0.3, x2: -maxArea * 0.2, y2: -maxArea * 0.1},
-            {x1: maxArea * 0.1, y1: -maxArea * 0.5, x2: maxArea * 0.4, y2: -maxArea * 0.2},
-            {x1: -maxArea * 0.3, y1: maxArea * 0.2, x2: maxArea * 0.1, y2: maxArea * 0.4},
-            {x1: maxArea * 0.2, y1: 0, x2: maxArea * 0.5, y2: maxArea * 0.3}
+            { x1: -maxArea * 0.6, y1: -maxArea * 0.3, x2: -maxArea * 0.2, y2: -maxArea * 0.1 },
+            { x1: maxArea * 0.1, y1: -maxArea * 0.5, x2: maxArea * 0.4, y2: -maxArea * 0.2 },
+            { x1: -maxArea * 0.3, y1: maxArea * 0.2, x2: maxArea * 0.1, y2: maxArea * 0.4 },
+            { x1: maxArea * 0.2, y1: 0, x2: maxArea * 0.5, y2: maxArea * 0.3 }
         ];
         
         toolMarks.forEach(mark => {
