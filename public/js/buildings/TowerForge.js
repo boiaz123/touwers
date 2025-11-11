@@ -996,17 +996,14 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
-        // Check if click is on upgrade icon (higher priority)
-        if (this.upgradeIconBounds) {
-            const bounds = this.upgradeIconBounds;
-            
-            // Use circular hit detection - much tighter and more accurate
-            if (bounds.type === 'circle') {
-                const distance = Math.hypot(x - bounds.x, y - bounds.y);
-                if (distance <= bounds.radius) {
-                    return true;
-                }
-            }
+        // High priority: Check clickbox first for upgrade icon
+        const iconRadius = 20;
+        const iconX = this.x + size/2 - iconRadius - 8;
+        const iconY = this.y + size/2 - iconRadius - 8;
+        
+        const distToIcon = Math.hypot(x - iconX, y - iconY);
+        if (distToIcon <= iconRadius) {
+            return true;
         }
         
         // Check if click is on the building itself (4x4 grid area)
@@ -1255,164 +1252,131 @@ export class TowerForge extends Building {
     }
     
     renderUpgradeIcon(ctx, size) {
-        // Position at bottom right of 4x4 grid
-        const iconSize = 34;
-        const radius = iconSize / 2; // 17px
-        const baseIconX = this.x + size/2 - radius - 2;
-        const baseIconY = this.y + size/2 - radius - 2;
+        // Clickbox dimensions - fixed 20px radius circle
+        const iconRadius = 20;
+        const baseIconX = this.x + size/2 - iconRadius - 8;
+        const baseIconY = this.y + size/2 - iconRadius - 8;
         
-        // Hover animation - bob up and down
-        const hoverOffset = Math.sin(this.animationTime * 3) * 3; // Bob 3px up/down
+        // Hover animation - slight bob effect
+        const hoverOffset = Math.sin(this.animationTime * 3) * 2;
         const iconX = baseIconX;
-        const iconY = baseIconY - hoverOffset; // Move up when hovering
+        const iconY = baseIconY - hoverOffset;
         
-        // Ground shadow (directly below the icon)
-        const shadowX = baseIconX;
-        const shadowY = baseIconY + 2; // Slightly below the base position
+        // Ground shadow for depth
         ctx.save();
-        ctx.globalAlpha = 0.4 - (hoverOffset * 0.05); // Fade shadow as icon rises
+        ctx.globalAlpha = 0.3 - (hoverOffset * 0.03);
         ctx.fillStyle = '#000000';
         ctx.beginPath();
-        ctx.ellipse(shadowX, shadowY, radius * 0.8, radius * 0.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(baseIconX, baseIconY + iconRadius + 2, iconRadius * 0.7, iconRadius * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         
-        // Icon background - golden metallic circle with 3D effect
-        const bgGradient = ctx.createRadialGradient(iconX - 3, iconY - 3, 0, iconX, iconY, radius);
-        bgGradient.addColorStop(0, '#FFFF99'); // Bright highlight
-        bgGradient.addColorStop(0.3, '#FFD700'); // Gold
-        bgGradient.addColorStop(0.6, '#FFA500'); // Orange-gold
-        bgGradient.addColorStop(1, '#FF8C00'); // Dark orange edge
+        // Main icon background - golden circle
+        const bgGradient = ctx.createRadialGradient(iconX - 3, iconY - 3, 0, iconX, iconY, iconRadius);
+        bgGradient.addColorStop(0, '#FFFF99');
+        bgGradient.addColorStop(0.3, '#FFD700');
+        bgGradient.addColorStop(0.7, '#FFA500');
+        bgGradient.addColorStop(1, '#FF8C00');
         
         ctx.fillStyle = bgGradient;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconRadius, 0, Math.PI * 2);
         ctx.fill();
         
-        // 3D rim/edge effect
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, radius, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Outer dark ring (iron)
+        // Outer ring (dark iron)
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, radius + 1, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconRadius, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Middle decorative ring (brass/gold)
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(iconX, iconY, radius - 1, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Inner dark ring (shadow)
+        // Inner decorative ring
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(iconX, iconY, radius - 3, 0, Math.PI * 2);
+        ctx.arc(iconX, iconY, iconRadius - 3, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Decorative corner gems (medieval studs)
-        const gemPositions = [
-            { angle: 0, dist: radius * 0.85 },           // Right
-            { angle: Math.PI/2, dist: radius * 0.85 },   // Bottom
-            { angle: Math.PI, dist: radius * 0.85 },     // Left
-            { angle: -Math.PI/2, dist: radius * 0.85 }   // Top
+        // Bright shine highlight (3D effect)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(iconX - 5, iconY - 5, iconRadius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dark shadow spot (3D depth)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.beginPath();
+        ctx.arc(iconX + 4, iconY + 4, iconRadius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Corner studs (4 decorative gems)
+        const studs = [
+            { angle: -Math.PI * 0.75, color: '#FFD700' },   // Top-left
+            { angle: -Math.PI * 0.25, color: '#FF6347' },   // Top-right
+            { angle: Math.PI * 0.25, color: '#FFD700' },    // Bottom-right
+            { angle: Math.PI * 0.75, color: '#FF6347' }     // Bottom-left
         ];
         
-        gemPositions.forEach(gem => {
-            const gemX = iconX + Math.cos(gem.angle) * gem.dist;
-            const gemY = iconY + Math.sin(gem.angle) * gem.dist;
+        studs.forEach(stud => {
+            const studX = iconX + Math.cos(stud.angle) * (iconRadius - 4);
+            const studY = iconY + Math.sin(stud.angle) * (iconRadius - 4);
             
-            // Gem shadow
+            // Stud shadow
             ctx.fillStyle = '#1A1A1A';
             ctx.beginPath();
-            ctx.arc(gemX + 0.5, gemY + 0.5, 1.5, 0, Math.PI * 2);
+            ctx.arc(studX + 0.5, studY + 0.5, 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Gem highlight (alternating colors)
-            ctx.fillStyle = gem.angle === 0 || gem.angle === Math.PI ? '#FFD700' : '#FF6347';
+            // Stud color
+            ctx.fillStyle = stud.color;
             ctx.beginPath();
-            ctx.arc(gemX, gemY, 1.5, 0, Math.PI * 2);
+            ctx.arc(studX, studY, 2, 0, Math.PI * 2);
             ctx.fill();
             
-            // Gem shine
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            // Stud shine
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.beginPath();
-            ctx.arc(gemX - 0.5, gemY - 0.5, 0.6, 0, Math.PI * 2);
+            ctx.arc(studX - 0.6, studY - 0.6, 0.8, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Inner highlight (bright spot for 3D effect)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.beginPath();
-        ctx.arc(iconX - 4, iconY - 4, radius * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Inner shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.beginPath();
-        ctx.arc(iconX + 3, iconY + 3, radius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon content - forge tools (hammer, anvil, tongs) - scaled to 70%
+        // Icon content - Hammer and Anvil (simplified and scaled to fit clickbox)
         ctx.save();
         ctx.translate(iconX, iconY);
-        ctx.scale(0.7, 0.7); // Scale down to 70% of original doubled size
         
-        // ANVIL - center bottom (dark gray)
+        // Anvil - center (dark metal)
         ctx.fillStyle = '#1C1C1C';
-        // Anvil base/body
-        ctx.fillRect(-10, 2, 20, 8);
-        ctx.fillRect(-6, -2, 12, 4);
-        // Anvil horn (pointy part on right)
+        ctx.fillRect(-6, 1, 12, 5);    // Body
+        ctx.fillRect(-4, -2, 8, 3);    // Top surface
+        
+        // Anvil horn (small pointy part)
         ctx.beginPath();
-        ctx.moveTo(8, 0);
-        ctx.lineTo(14, -2);
-        ctx.lineTo(12, 2);
+        ctx.moveTo(5, -1);
+        ctx.lineTo(8, -2);
+        ctx.lineTo(6, 1);
         ctx.closePath();
         ctx.fill();
         
-        // HAMMER - top left (brown handle with dark head)
-        ctx.fillStyle = '#8B6F47';
-        ctx.fillRect(-14, -12, 4, 16); // Handle
+        // Hammer head - top left (dark gray)
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(-16, -14, 8, 4); // Hammer head
-        ctx.fillRect(-16, -10, 8, 2); // Hammer face detail
+        ctx.fillRect(-9, -8, 5, 3);
         
-        // TONGS - top right (metal gray)
-        ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3;
-        // Left tong arm
-        ctx.beginPath();
-        ctx.moveTo(8, -10);
-        ctx.lineTo(6, -2);
-        ctx.stroke();
-        // Right tong arm
-        ctx.beginPath();
-        ctx.moveTo(16, -10);
-        ctx.lineTo(14, -2);
-        ctx.stroke();
-        // Tong pivot/hinge
-        ctx.fillStyle = '#2F2F2F';
-        ctx.beginPath();
-        ctx.arc(11, -3, 2, 0, Math.PI * 2);
-        ctx.fill();
+        // Hammer handle - brown
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillRect(-8, -5, 2, 8);
+        
+        // Hammer highlight
+        ctx.fillStyle = '#A0826D';
+        ctx.fillRect(-8, -5, 1, 8);
         
         ctx.restore();
         
-        // Store icon bounds for click detection - dynamic, follows hover animation
-        // Use circular bounds that match the visible icon (17px radius)
+        // Store clickbox bounds for detection
         this.upgradeIconBounds = {
             x: iconX,
-            y: iconY, // Animated Y position - updates every frame with hover bob
-            radius: radius * 0.9, // Slightly smaller than visual radius for precision
-            type: 'circle' // Use circular hit detection instead of square
+            y: iconY,
+            radius: iconRadius,
+            type: 'circle'
         };
     }
 }
