@@ -121,14 +121,37 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check building icon clicks with proper size calculation
+        // Check for ANY building interaction (icon clicks or regular clicks)
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const iconSize = 30; // Increased for better clickability
+        const iconSize = 30;
         
+        // First check toggle icon clicks for gold mines
+        for (const building of this.buildings) {
+            if (building.constructor.name === 'GoldMine' && building.gemMiningUnlocked) {
+                const toggleIconSize = 25;
+                const toggleX = building.x - (cellSize * 4) / 2 + 12; // Top-left corner
+                const toggleY = building.y - (cellSize * 4) / 2 + 12;
+                
+                const clickBuffer = 5;
+                if (x >= toggleX - (toggleIconSize/2 + clickBuffer) && x <= toggleX + (toggleIconSize/2 + clickBuffer) &&
+                    y >= toggleY - (toggleIconSize/2 + clickBuffer) && y <= toggleY + (toggleIconSize/2 + clickBuffer)) {
+                    console.log(`BuildingManager: HIT! Clicked on toggle icon`);
+                    
+                    // Call toggle method
+                    building.toggleGemMode();
+                    building.goldReady = false;
+                    building.currentProduction = 0;
+                    console.log(`BuildingManager: Toggled mine to ${building.gemMode ? 'gem' : 'gold'} mode`);
+                    return 0; // No gold collected on toggle
+                }
+            }
+        }
+        
+        // Then check regular building icon clicks
         for (const building of this.buildings) {
             // Icon position: bottom right of building grid, slightly floating up
             const iconX = (building.gridX + building.size - 0.5) * cellSize;
-            const iconY = (building.gridY + building.size - 0.5) * cellSize - 5; // Float up slightly
+            const iconY = (building.gridY + building.size - 0.5) * cellSize - 5;
             
             // Add small buffer for easier clicking
             const clickBuffer = 5;

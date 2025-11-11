@@ -75,9 +75,30 @@ export class TowerManager {
             } else if (type === 'mine') {
                 this.unlockSystem.onMineBuilt();
                 console.log('TowerManager: Mine built');
+                
+                // New: Set academy reference on newly built mine if academy exists and gem mining researched
+                const academies = this.buildingManager.buildings.filter(building =>
+                    building.constructor.name === 'MagicAcademy'
+                );
+                if (academies.length > 0) {
+                    const newMine = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
+                    newMine.setAcademy(academies[0]);
+                    console.log('TowerManager: Set academy reference on new mine');
+                }
             } else if (type === 'academy') {
                 this.unlockSystem.onAcademyBuilt();
                 console.log('TowerManager: Academy built, Magic Tower unlocked');
+                
+                // New: When academy is built, set it as reference on all existing mines
+                this.buildingManager.buildings.forEach(building => {
+                    if (building.constructor.name === 'GoldMine') {
+                        const academy = this.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                        if (academy) {
+                            building.setAcademy(academy);
+                            console.log('TowerManager: Set academy reference on existing mine');
+                        }
+                    }
+                });
             }
         }
         
