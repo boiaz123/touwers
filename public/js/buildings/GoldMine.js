@@ -903,18 +903,6 @@ export class GoldMine extends Building {
         return `rgb(${newR}, ${newG}, ${newB})`;
     }
     
-    collectGold() {
-        // Only allow collection if gold is ready
-        if (this.isReady) {
-            this.isReady = false;
-            this.currentProgress = 0;
-            this.goldPiles = [];
-            this.bobAnimations = [];
-            return this.goldPerCollection;
-        }
-        return 0;
-    }
-    
     isPointInside(x, y, size) {
         // Check building area
         const dx = x - this.x;
@@ -925,11 +913,10 @@ export class GoldMine extends Building {
         
         // If gold is ready, also check the icon area (larger click area for easier clicking)
         if (this.goldReady) {
-            const cellSize = size / 4;
             const iconSize = 35; // Render size
             const clickSize = 50; // Larger click area
-            const iconX = (this.gridX + 3.5) * cellSize;
-            const iconY = (this.gridY + 3.5) * cellSize - 5;
+            const iconX = this.x + size/2 - 10; // Bottom right area relative to building center
+            const iconY = this.y + size/2 - 15;
             return x >= iconX - clickSize/2 && x <= iconX + clickSize/2 &&
                    y >= iconY - clickSize/2 && y <= iconY + clickSize/2;
         }
