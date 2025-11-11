@@ -143,7 +143,7 @@ class GameplayState {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine
+                    // Gold/gem collection from mine
                     this.gameState.gold += clickResult;
                     this.updateUI(); // Immediately update UI after collection
                     return;
@@ -284,7 +284,7 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
-                // Gold collection from mine
+                // Gold/gem collection from mine
                 this.gameState.gold += clickResult;
                 this.updateUI(); // Immediately update UI after collection
                 return;
@@ -566,24 +566,29 @@ class GameplayState {
         
         let elementListHTML = '';
         
-        elementListHTML += towerData.elements.map(element => `
-            <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
-                <div class="upgrade-icon">${element.icon}</div>
-                <div class="upgrade-details">
-                    <div class="upgrade-name">${element.name} Element</div>
-                    <div class="upgrade-desc">${element.description}</div>
-                    ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+        elementListHTML += towerData.elements.map(element => {
+            // Update earth icon
+            const icon = element.id === 'earth' ? '🪨' : element.icon;
+            
+            return `
+                <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
+                    <div class="upgrade-icon">${icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${element.name} Element</div>
+                        <div class="upgrade-desc">${element.description}</div>
+                        ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+                    </div>
+                    <div class="upgrade-cost">
+                        Free
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-element="${element.id}" 
+                            ${element.id === towerData.currentElement ? 'disabled' : ''}>
+                        ${element.id === towerData.currentElement ? 'Active' : 'Select'}
+                    </button>
                 </div>
-                <div class="upgrade-cost">
-                    Free
-                </div>
-                <button class="upgrade-btn" 
-                        data-element="${element.id}" 
-                        ${element.id === towerData.currentElement ? 'disabled' : ''}>
-                    ${element.id === towerData.currentElement ? 'Active' : 'Select'}
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         menu.innerHTML = `
             <div class="menu-header">

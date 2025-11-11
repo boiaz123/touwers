@@ -533,7 +533,7 @@ export class MagicTower {
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🌍' };
+        const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨' };
         
         // Add selection glow effect
         if (this.isSelected) {

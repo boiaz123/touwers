@@ -726,7 +726,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🌍',
+                icon: '🪨',
                 gemType: 'earth'
             }
         ];
@@ -751,7 +751,10 @@ export class MagicAcademy extends Building {
     calculateElementalCost(element) {
         const upgrade = this.elementalUpgrades[element];
         if (upgrade.level >= upgrade.maxLevel) return null;
-        return Math.floor(upgrade.baseCost * Math.pow(1.4, upgrade.level));
+        
+        // Progressive cost: 1, 3, 7, 15, 30
+        const costs = [1, 3, 7, 15, 30];
+        return costs[upgrade.level] || null;
     }
     
     purchaseElementalUpgrade(element, gameState) {

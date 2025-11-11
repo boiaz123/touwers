@@ -371,8 +371,8 @@ export class GoldMine extends Building {
             return text.life > 0;
         });
         
-        // Update flash opacity (fade out quickly over 0.1 seconds for one-time flash)
-        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 5);
+        // Update flash opacity (fade out slowly over 0.2 seconds for noticeable effect)
+        this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 2.5);
     }
     
     collectGold() {
@@ -1023,7 +1023,7 @@ export class GoldMine extends Building {
             ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
         }
         
-        // Add one-time flash effect when gold becomes ready (fades out quickly)
+        // Add one-time flash effect when gold becomes ready (fades out slowly)
         if (this.flashOpacity > 0) {
             let flashColor = '#FFD700'; // Gold by default
             
@@ -1071,7 +1071,7 @@ export class GoldMine extends Building {
                     ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
                     break;
                 case 'earth':
-                    ctx.fillStyle = `rgba(160, 82, 45, ${alpha})`;
+                    ctx.fillStyle = `rgba(139, 105, 20, ${alpha})`;
                     break;
                 default: // gold
                     ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
