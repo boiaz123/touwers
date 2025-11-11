@@ -144,17 +144,20 @@ class GameplayState {
                     return;
                 } else if (clickResult.type === 'gem_toggle') {
                     // Handle gem mining toggle
+                    console.log('GameplayState: Gem toggle clicked');
                     clickResult.mine.toggleGemMining(this.gameState);
-                    this.updateUI();
-                    return;
-                } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine
-                    this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
                 } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
                     // Gem collection from gem mine
+                    console.log(`GameplayState: Gem collected: ${clickResult.gem}`);
                     this.gameState.gems[clickResult.gem]++;
+                    this.updateUI();
+                    return;
+                } else if (typeof clickResult === 'number') {
+                    // Gold collection from mine
+                    console.log(`GameplayState: Gold collected: ${clickResult}`);
+                    this.gameState.gold += clickResult;
                     this.updateUI();
                     return;
                 }
@@ -299,14 +302,14 @@ class GameplayState {
                 clickResult.mine.toggleGemMining(this.gameState);
                 this.updateUI();
                 return;
-            } else if (typeof clickResult === 'number') {
-                // Gold collection from mine
-                this.gameState.gold += clickResult;
-                this.updateUI();
-                return;
             } else if (typeof clickResult === 'object' && clickResult.type === 'gem') {
                 // Gem collection from gem mine
                 this.gameState.gems[clickResult.gem]++;
+                this.updateUI();
+                return;
+            } else if (typeof clickResult === 'number') {
+                // Gold collection from mine
+                this.gameState.gold += clickResult;
                 this.updateUI();
                 return;
             }

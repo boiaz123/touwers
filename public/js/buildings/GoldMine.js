@@ -790,11 +790,10 @@ export class GoldMine extends Building {
             ctx.fillText(readyIcon, this.x, this.y - size/2 - 10);
         }
         
-        // Add gem mining toggle icon at top of mine
-        const cellSize = size / 4;
+        // Add gem mining toggle icon at top-left of mine
         const toggleIconSize = 28;
-        const toggleIconX = (this.gridX + 0.5) * cellSize;
-        const toggleIconY = (this.gridY - 0.5) * cellSize;
+        const toggleIconX = this.x - size/2 + toggleIconSize/2;
+        const toggleIconY = this.y - size/2 - toggleIconSize/2;
         
         // Toggle icon background
         const toggleBgColor = this.miningMode === 'gems' ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
@@ -815,70 +814,118 @@ export class GoldMine extends Building {
         const toggleSymbol = this.miningMode === 'gems' ? '💎' : '⛏️';
         ctx.fillText(toggleSymbol, toggleIconX, toggleIconY);
         
-        // Mine cart track on excavated ground
-        const trackY = this.y + size * 0.2;
-        const trackStartX = this.x - size * 0.08;
-        const trackEndX = this.x + size * 0.35;
-        
-        // Track rails
-        ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3;
-        
-        // Left rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY - size * 0.015);
-        ctx.lineTo(trackEndX, trackY - size * 0.015);
-        ctx.stroke();
-        
-        // Right rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY + size * 0.015);
-        ctx.lineTo(trackEndX, trackY + size * 0.015);
-        ctx.stroke();
-        
-        // Railroad ties on excavated ground
-        ctx.fillStyle = '#654321';
-        for (let i = 0; i < 6; i++) {
-            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
-            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
+        // Floating icon in bottom right of 4x4 grid - only when ready
+        if (this.goldReady) {
+            const iconSize = 35;
+            const iconX = this.x + size/2 - 10;
+            const iconY = this.y + size/2 - 15;
+            
+            // Dynamic pulse for medieval glow effect
+            const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
+            
+            // Enhanced shadow for floating effect with medieval depth
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
+            
+            // Parchment-like background
+            let parchmentGradient;
+            let bgColor;
+            
+            if (this.miningMode === 'gems') {
+                // Gem-themed background
+                const gemColor = this.getGemColor(this.currentGem);
+                parchmentGradient = ctx.createRadialGradient(
+                    iconX - iconSize/4, iconY - iconSize/4, 0,
+                    iconX, iconY, iconSize
+                );
+                parchmentGradient.addColorStop(0, `${gemColor}${Math.floor(pulseIntensity * 255).toString(16).padStart(2, '0')}`);
+                parchmentGradient.addColorStop(0.7, `${gemColor}${Math.floor(pulseIntensity * 200).toString(16).padStart(2, '0')}`);
+                parchmentGradient.addColorStop(1, `${gemColor}${Math.floor(pulseIntensity * 150).toString(16).padStart(2, '0')}`);
+                bgColor = gemColor;
+            } else {
+                // Gold-themed background
+                parchmentGradient = ctx.createRadialGradient(
+                    iconX - iconSize/4, iconY - iconSize/4, 0,
+                    iconX, iconY, iconSize
+                );
+                parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`);
+                parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`);
+                parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`);
+                bgColor = '#FFD700';
+            }
+            
+            ctx.fillStyle = parchmentGradient;
+            ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+            
+            // Ornate border
+            ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+            
+            // Inner accent border
+            ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
+            
+            // Glow effect
+            const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
+            glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
+            glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = glowGradient;
+            ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
+            
+            // Symbol - gem-specific or gold
+            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
+            ctx.font = 'bold 18px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            if (this.miningMode === 'gems') {
+                // Gem-specific icon
+                const gemIcons = {
+                    fire: '🔥',
+                    water: '💧',
+                    air: '💨',
+                    earth: '🪨'
+                };
+                const gemIcon = gemIcons[this.currentGem] || '💎';
+                ctx.fillText(gemIcon, iconX, iconY);
+            } else {
+                // Gold icon
+                ctx.fillText('💰', iconX, iconY);
+            }
+            
+            // Add highlight
+            ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
+            if (this.miningMode === 'gems') {
+                const gemIcons = {
+                    fire: '🔥',
+                    water: '💧',
+                    air: '💨',
+                    earth: '🪨'
+                };
+                const gemIcon = gemIcons[this.currentGem] || '💎';
+                ctx.fillText(gemIcon, iconX, iconY);
+            } else {
+                ctx.fillText('💰', iconX, iconY);
+            }
         }
         
-        // Mine cart
-        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
-        
-        // Cart shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
-        
-        // Cart body
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        
-        // Cart wheels
-        ctx.fillStyle = '#2F2F2F';
-        ctx.beginPath();
-        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Gold ore in cart (if ready)
-        if (this.goldReady && this.cartPosition > 0.5) { // Use goldReady instead of isReady
-            ctx.fillStyle = '#FFD700';
-            for (let i = 0; i < 3; i++) {
-                const oreX = cartX - size * 0.02 + (i * size * 0.013);
-                const oreY = trackY - size * 0.07;
-                ctx.beginPath();
-                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
-                ctx.fill();
+        // Add one-time flash effect when production becomes ready (fades out quickly)
+        if (this.flashOpacity > 0) {
+            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
+            if (this.miningMode === 'gems') {
+                const gemColor = this.getGemColor(this.currentGem);
+                flashGradient.addColorStop(0, `${gemColor}${Math.floor(this.flashOpacity * 150).toString(16).padStart(2, '0')}`);
+                flashGradient.addColorStop(0.5, `${gemColor}${Math.floor(this.flashOpacity * 75).toString(16).padStart(2, '0')}`);
+                flashGradient.addColorStop(1, `${gemColor}00`);
+            } else {
+                flashGradient.addColorStop(0, `rgba(255, 215, 0, ${this.flashOpacity * 0.6})`);
+                flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${this.flashOpacity * 0.3})`);
+                flashGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
             }
+            ctx.fillStyle = flashGradient;
+            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
         }
     }
     
@@ -999,10 +1046,10 @@ export class GoldMine extends Building {
         }
         
         // Check gem mining toggle icon (at top of mine)
-        const cellSize = size / 4;
+        // Convert grid position to screen position for accurate click detection
         const toggleIconSize = 28;
-        const toggleIconX = (this.gridX + 0.5) * cellSize;
-        const toggleIconY = (this.gridY - 0.5) * cellSize;
+        const toggleIconX = this.x - size/2 + toggleIconSize/2; // Top left of mine grid
+        const toggleIconY = this.y - size/2 - toggleIconSize/2; // Above the mine
         const clickSize = 40; // Larger click area
         
         if (x >= toggleIconX - clickSize/2 && x <= toggleIconX + clickSize/2 &&
@@ -1010,7 +1057,7 @@ export class GoldMine extends Building {
             return { type: 'gem_toggle', mine: this };
         }
         
-        // If gold is ready, also check the icon area (larger click area for easier clicking)
+        // If gold is ready, also check the collection icon area (larger click area for easier clicking)
         if (this.goldReady) {
             const iconSize = 35; // Render size
             const clickSize2 = 50; // Larger click area
