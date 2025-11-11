@@ -176,4 +176,12 @@ export class BuildingManager {
         
         return buildingType.class.getInfo();
     }
+    
+    updatePositions(level) {
+        this.buildings.forEach(building => {
+            const { screenX, screenY } = level.gridToScreen(building.gridX, building.gridY, 4);
+            building.x = screenX;
+            building.y = screenY;
+        });
+    }
 }

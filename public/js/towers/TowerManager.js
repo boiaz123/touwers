@@ -358,4 +358,12 @@ export class TowerManager {
     getUnlockSystem() {
         return this.unlockSystem;
     }
+    
+    updatePositions(level) {
+        this.towers.forEach(tower => {
+            const { screenX, screenY } = level.gridToScreen(tower.gridX, tower.gridY);
+            tower.screenX = screenX;
+            tower.screenY = screenY;
+        });
+    }
 }

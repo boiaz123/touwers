@@ -808,6 +808,12 @@ class GameplayState {
             }
         });
     }
+    
+    resize() {
+        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        this.buildingManager.updatePositions(this.level);
+        this.towerManager.updatePositions(this.level);
+    }
 }
 
 class Game {
