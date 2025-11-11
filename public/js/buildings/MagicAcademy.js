@@ -786,18 +786,9 @@ export class MagicAcademy extends Building {
         if (gameState.spend(500)) {
             this.gemMiningResearched = true;
             console.log('MagicAcademy: Researched gem mining tools');
-            
-            // Notify all existing mines that gem mining is now available
-            this.notifyMinesOfGemMiningUnlock();
             return true;
         }
         return false;
-    }
-    
-    // New: Notify all mines about gem mining unlock
-    notifyMinesOfGemMiningUnlock() {
-        // This would typically be called through the building manager
-        console.log('MagicAcademy: Notifying mines of gem mining unlock');
     }
     
     // New: Method to add gems (called by mines)

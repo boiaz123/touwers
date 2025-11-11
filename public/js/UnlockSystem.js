@@ -58,7 +58,7 @@ export class UnlockSystem {
     // New: Method to handle gem mining research
     onGemMiningResearched() {
         this.gemMiningResearched = true;
-        console.log('UnlockSystem: Gem mining tools researched - mines can now be toggled to gem mode');
+        console.log('UnlockSystem: Gem mining tools researched');
     }
     
     // New: Check if gem mining is available
