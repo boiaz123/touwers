@@ -143,9 +143,9 @@ class GameplayState {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold collection from mine (clickResult already handles toggle internally)
+                    // Gold collection from mine
                     this.gameState.gold += clickResult;
-                    this.updateUI();
+                    this.updateUI(); // Immediately update UI after collection
                     return;
                 }
             }
@@ -284,9 +284,9 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
-                // Gold collection from mine (clickResult already handles toggle internally)
+                // Gold collection from mine
                 this.gameState.gold += clickResult;
-                this.updateUI();
+                this.updateUI(); // Immediately update UI after collection
                 return;
             }
         }

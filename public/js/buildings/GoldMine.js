@@ -3,8 +3,8 @@ import { Building } from './Building.js';
 export class GoldMine extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.goldReady = false; // FIXED: Start empty, not ready
-        this.productionTime = 30; // 30 seconds to produce gold
+        this.goldReady = false;
+        this.productionTime = 30;
         this.currentProduction = 0;
         this.sparks = [];
         this.nextSparkTime = 0;
@@ -12,7 +12,8 @@ export class GoldMine extends Building {
         
         // New: Gem mining mode
         this.gemMode = false;
-        this.gemMiningUnlocked = false; // Will be set by academy
+        this.gemMiningUnlocked = false;
+        this.currentGemType = null; // Track which gem is being mined
         
         // Initialize missing properties
         this.smokePuffs = [];
@@ -246,6 +247,7 @@ export class GoldMine extends Building {
         
         // Add flash opacity for one-time flash effect
         this.flashOpacity = 0;
+        this.floatingTexts = []; // For collection text
     }
     
     generateFixedBushSegments(radius, segments, randomFunc) {
@@ -273,6 +275,13 @@ export class GoldMine extends Building {
                 this.goldReady = true;
                 this.currentProduction = 0;
                 this.flashOpacity = 1; // Trigger one-time flash
+                
+                // Pre-select gem type when production completes
+                if (this.gemMode && this.gemMiningUnlocked) {
+                    const gemTypes = ['fire', 'water', 'air', 'earth'];
+                    this.currentGemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+                }
+                
                 console.log(`GoldMine: ${this.gemMode ? 'Gem' : 'Gold'} production completed, ready to collect`);
             }
         }
@@ -355,6 +364,13 @@ export class GoldMine extends Building {
             }
         }
         
+        // Update floating texts
+        this.floatingTexts = this.floatingTexts.filter(text => {
+            text.y -= deltaTime * 40; // Rise upward
+            text.life -= deltaTime;
+            return text.life > 0;
+        });
+        
         // Update flash opacity (fade out quickly over 0.1 seconds for one-time flash)
         this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 5);
     }
@@ -372,14 +388,24 @@ export class GoldMine extends Building {
         
         // New: If in gem mode, produce a random gem instead of gold
         if (this.gemMode) {
-            const gemTypes = ['fire', 'water', 'air', 'earth'];
-            const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            const gemType = this.currentGemType || 'fire'; // Fallback to fire
             
             // Assume academy reference is available (set by game state)
             if (this.academy) {
-                this.academy.addGem(randomGem);
-                console.log(`GoldMine: Collected 1 ${randomGem} gem`);
+                this.academy.addGem(gemType);
+                console.log(`GoldMine: Collected 1 ${gemType} gem`);
+                
+                // Add floating text for gem collection
+                this.floatingTexts.push({
+                    x: this.x,
+                    y: this.y,
+                    text: `+1 ${gemType.toUpperCase()}`,
+                    life: 1.5,
+                    maxLife: 1.5,
+                    gemType: gemType
+                });
             }
+            this.currentGemType = null; // Reset for next cycle
             return 0; // No gold collected
         } else {
             // Original gold collection logic
@@ -399,6 +425,16 @@ export class GoldMine extends Building {
                     color: Math.random() > 0.5 ? 'gold' : 'yellow'
                 });
             }
+            
+            // Add floating text for gold collection
+            this.floatingTexts.push({
+                x: this.x,
+                y: this.y,
+                text: `+${income} GOLD`,
+                life: 1.5,
+                maxLife: 1.5,
+                gemType: 'gold'
+            });
             
             console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
             return income;
@@ -854,76 +890,125 @@ export class GoldMine extends Building {
         
         // Render floating icon only when gold is ready
         if (this.goldReady) {
-            // Dynamic pulse for medieval glow effect
             const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
             
-            // Enhanced shadow for floating effect with medieval depth
+            // Enhanced shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
             ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
             
-            // Parchment-like background with medieval gradient
+            // Parchment background
             const parchmentGradient = ctx.createRadialGradient(
                 iconX - iconSize/4, iconY - iconSize/4, 0,
                 iconX, iconY, iconSize
             );
-            parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-            parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-            parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
+            parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`);
+            parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`);
+            parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`);
             
             ctx.fillStyle = parchmentGradient;
             ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
             
-            // Ornate gold border with medieval styling
-            ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-            ctx.lineWidth = 2;
-            ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
+            // Ornate medieval border with gem-specific color
+            let borderColor = '#B8860B'; // Gold border by default
+            if (this.gemMode && this.currentGemType) {
+                switch(this.currentGemType) {
+                    case 'fire': borderColor = '#FF4500'; break;
+                    case 'water': borderColor = '#40A4DF'; break;
+                    case 'air': borderColor = '#FFD700'; break;
+                    case 'earth': borderColor = '#8B4513'; break;
+                }
+            }
             
-            // Inner gold accent border
-            ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
+            // Outer ornate border
+            ctx.strokeStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity})`;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(iconX - iconSize/2 - 1, iconY - iconSize/2 - 1, iconSize + 2, iconSize + 2);
+            
+            // Inner decorative border
+            ctx.strokeStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity * 0.6})`;
             ctx.lineWidth = 1;
             ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
             
-            // Subtle medieval glow effect
+            // Corner ornaments
+            const ornamentSize = 3;
+            ctx.fillStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity})`;
+            // Corners
+            ctx.fillRect(iconX - iconSize/2 - 1, iconY - iconSize/2 - 1, ornamentSize, ornamentSize);
+            ctx.fillRect(iconX + iconSize/2 - ornamentSize + 1, iconY - iconSize/2 - 1, ornamentSize, ornamentSize);
+            ctx.fillRect(iconX - iconSize/2 - 1, iconY + iconSize/2 - ornamentSize + 1, ornamentSize, ornamentSize);
+            ctx.fillRect(iconX + iconSize/2 - ornamentSize + 1, iconY + iconSize/2 - ornamentSize + 1, ornamentSize, ornamentSize);
+            
+            // Subtle medieval glow
             const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
             glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
             glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
             ctx.fillStyle = glowGradient;
             ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
             
-            // Symbol with enhanced medieval styling
-            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-            ctx.font = 'bold 18px serif'; // Serif font for medieval feel
+            // Symbol - changes based on gem type
+            let symbol = '💰';
+            if (this.gemMode && this.currentGemType) {
+                switch(this.currentGemType) {
+                    case 'fire': symbol = '🔥'; break;
+                    case 'water': symbol = '💧'; break;
+                    case 'air': symbol = '💨'; break;
+                    case 'earth': symbol = '🌍'; break;
+                }
+            }
+            
+            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
+            ctx.font = 'bold 20px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('💰', iconX, iconY);
+            ctx.fillText(symbol, iconX, iconY);
             
-            // Add subtle gold highlight on symbol
+            // Highlight
             ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-            ctx.fillText('💰', iconX, iconY);
+            ctx.fillText(symbol, iconX, iconY);
         }
         
-        // Add one-time flash effect when gold becomes ready (fades out quickly)
-        if (this.flashOpacity > 0) {
-            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
-            flashGradient.addColorStop(0, `rgba(255, 215, 0, ${this.flashOpacity * 0.6})`);
-            flashGradient.addColorStop(0.5, `rgba(255, 215, 0, ${this.flashOpacity * 0.3})`);
-            flashGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            ctx.fillStyle = flashGradient;
-            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
-        }
-        
-        // New: Render toggle icon at the top LEFT if gem mining is unlocked
+        // Toggle icon with medieval border
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
-            const toggleX = this.x - size/2 + 12; // Top-left corner, offset inward
+            const toggleX = this.x - size/2 + 12;
             const toggleY = this.y - size/2 + 12;
             
-            // Toggle background
-            ctx.fillStyle = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
+            const togglePulse = 0.7 + 0.3 * Math.sin(this.animationTime * 3);
+            
+            // Enhanced shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize, toggleIconSize);
+            
+            // Toggle background - gem color if in gem mode
+            let toggleBg = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
+            ctx.fillStyle = toggleBg;
             ctx.fillRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
+            
+            // Medieval ornate border with gem color
+            let toggleBorder = this.gemMode ? '#8A2BE2' : '#696969';
+            ctx.strokeStyle = toggleBorder;
+            ctx.lineWidth = 2;
             ctx.strokeRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+            
+            // Inner decorative line
+            ctx.strokeStyle = this.gemMode ? '#DA70D6' : '#A9A9A9';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize - 4, toggleIconSize - 4);
+            
+            // Corner ornaments on toggle
+            const cornSize = 2;
+            ctx.fillStyle = toggleBorder;
+            ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
+            ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
+            ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
+            ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
+            
+            // Toggle glow
+            const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
+            toggleGlow.addColorStop(0, `${this.gemMode ? 'rgba(138, 43, 226, ' : 'rgba(200, 200, 200, '}${togglePulse * 0.2})`);
+            toggleGlow.addColorStop(1, `${this.gemMode ? 'rgba(138, 43, 226, ' : 'rgba(200, 200, 200, '}0)`);
+            ctx.fillStyle = toggleGlow;
+            ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
             
             // Toggle icon
             ctx.fillStyle = '#FFD700';
@@ -937,6 +1022,62 @@ export class GoldMine extends Building {
             ctx.font = 'bold 8px Arial';
             ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
         }
+        
+        // Add one-time flash effect when gold becomes ready (fades out quickly)
+        if (this.flashOpacity > 0) {
+            let flashColor = '#FFD700'; // Gold by default
+            
+            if (this.gemMode && this.currentGemType) {
+                switch(this.currentGemType) {
+                    case 'fire': flashColor = '#FF4500'; break;
+                    case 'water': flashColor = '#40A4DF'; break;
+                    case 'air': flashColor = '#FFFF00'; break;
+                    case 'earth': flashColor = '#8B4513'; break;
+                }
+            }
+            
+            const flashGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 1.5);
+            flashGradient.addColorStop(0, `${flashColor}CC`);
+            flashGradient.addColorStop(0.5, `${flashColor}66`);
+            flashGradient.addColorStop(1, `${flashColor}00`);
+            
+            ctx.fillStyle = flashGradient;
+            ctx.fillRect(this.x - size * 1.5, this.y - size * 1.5, size * 3, size * 3);
+        }
+        
+        // Render floating collection text
+        this.floatingTexts.forEach(text => {
+            const alpha = text.life / text.maxLife;
+            const size = 16 + (1 - alpha) * 6; // Grow slightly as it fades
+            
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.font = `bold ${size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Add shadow for better visibility
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.7})`;
+            ctx.fillText(text.text, this.x + 2, text.y + 2);
+            
+            // Main text with color
+            switch(text.gemType) {
+                case 'fire':
+                    ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
+                    break;
+                case 'water':
+                    ctx.fillStyle = `rgba(64, 164, 223, ${alpha})`;
+                    break;
+                case 'air':
+                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                    break;
+                case 'earth':
+                    ctx.fillStyle = `rgba(160, 82, 45, ${alpha})`;
+                    break;
+                default: // gold
+                    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+            }
+            ctx.fillText(text.text, this.x, text.y);
+        });
     }
     
     isPointInside(x, y, size) {
