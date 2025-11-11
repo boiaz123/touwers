@@ -1001,8 +1001,11 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
-        return x >= this.x - size/2 && x <= this.x + size/2 &&
-               y >= this.y - size/2 && y <= this.y + size/2;
+        // size parameter is now the cell size from the level
+        // Building occupies 4x4 grid cells
+        const buildingSize = size * 4;
+        return x >= this.x - buildingSize/2 && x <= this.x + buildingSize/2 &&
+               y >= this.y - buildingSize/2 && y <= this.y + buildingSize/2;
     }
     
     onClick() {
