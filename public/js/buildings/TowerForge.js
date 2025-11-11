@@ -181,8 +181,8 @@ export class TowerForge extends Building {
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
         
-        // Dynamic pulse for medieval glow effect
-        const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
+        // Dynamic pulse for medieval glow effect - reduced intensity
+        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
         
         // Enhanced shadow for floating effect with medieval depth
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
