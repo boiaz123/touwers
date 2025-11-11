@@ -187,6 +187,12 @@ export class UnlockSystem {
     }
     
     canBuildBuilding(type) {
+        // Check if building type is in unlocked buildings set
+        if (!this.unlockedBuildings.has(type)) {
+            return false;
+        }
+        
+        // Check specific limits
         if (type === 'forge' && this.forgeCount >= this.maxForges) {
             return false;
         }
@@ -194,9 +200,10 @@ export class UnlockSystem {
             return false;
         }
         if (type === 'academy' && this.academyCount >= 1) {
-            return false; // Only 1 academy allowed
+            return false;
         }
-        return this.unlockedBuildings.has(type);
+        
+        return true;
     }
     
     canUseUpgrade(upgradeId) {

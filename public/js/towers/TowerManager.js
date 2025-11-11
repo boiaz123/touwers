@@ -493,34 +493,38 @@ export class TowerManager {
         const info = this.buildingManager.getBuildingInfo(type);
         if (!info) return null;
         
-        // Add unlock status
+        // Check unlock status from unlock system
         const unlocked = this.unlockSystem.canBuildBuilding(type);
         const disabled = !unlocked;
         
         let disableReason = '';
         if (!unlocked) {
+            // Get the specific reason from unlock system
             switch (type) {
                 case 'mine':
                     if (this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-                        disableReason = `Max mines: ${this.unlockSystem.getMaxMines()} (Forge level ${this.unlockSystem.forgeLevel})`;
-                    } else if (!this.unlockSystem.hasForge) {
+                        disableReason = `Max mines: ${this.unlockSystem.getMaxMines()}`;
+                    } else {
                         disableReason = 'Requires Tower Forge';
                     }
                     break;
                 case 'academy':
                     if (this.unlockSystem.academyCount >= 1) {
                         disableReason = 'Only 1 academy allowed';
-                    } else if (this.unlockSystem.forgeLevel < 4) {
+                    } else {
                         disableReason = 'Requires Forge level 4';
                     }
                     break;
                 case 'superweapon':
-                    disableReason = 'Advanced technology required';
+                    disableReason = 'Requires Academy level 3';
                     break;
                 case 'forge':
                     if (this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
                         disableReason = 'Only 1 forge allowed';
                     }
+                    break;
+                default:
+                    disableReason = 'Not unlocked yet';
                     break;
             }
         }
