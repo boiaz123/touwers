@@ -20,6 +20,14 @@ export class Building {
         // Override in subclasses
     }
     
+    isPointInside(x, y, cellSize) {
+        // Default: building occupies 4x4 grid cells
+        const buildingSize = cellSize * this.size;
+        const halfSize = buildingSize / 2;
+        return x >= this.x - halfSize && x <= this.x + halfSize &&
+               y >= this.y - halfSize && y <= this.y + halfSize;
+    }
+    
     static getInfo() {
         return {
             name: 'Base Building',

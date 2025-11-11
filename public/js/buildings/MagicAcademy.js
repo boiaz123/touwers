@@ -602,9 +602,12 @@ export class MagicAcademy extends Building {
                      manaBarWidth * (this.currentMana / this.maxMana), manaBarHeight);
     }
     
-    isPointInside(x, y, size) {
-        return x >= this.x - size/2 && x <= this.x + size/2 &&
-               y >= this.y - size/2 && y <= this.y + size/2;
+    isPointInside(x, y, cellSize) {
+        // Building occupies 4x4 grid cells
+        const buildingSize = cellSize * 4;
+        const halfSize = buildingSize / 2;
+        return x >= this.x - halfSize && x <= this.x + halfSize &&
+               y >= this.y - halfSize && y <= this.y + halfSize;
     }
     
     onClick() {
