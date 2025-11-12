@@ -280,6 +280,9 @@ class GameplayState {
         this.selectedBuildingType = null;
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
         
+        // Clear any active menus when starting tower placement
+        this.clearActiveMenus();
+        
         this.showTowerInfo(towerType);
     }
     
@@ -883,15 +886,15 @@ class GameplayState {
         };
         
         menu.innerHTML = `
-            <div style="padding: 10px; font-size: 12px;">
+            <div style="padding: 10px; font-size: 12px; position: relative; min-height: 100px;">
                 <div style="font-weight: bold; margin-bottom: 5px; color: #FFD700;">${stats.name}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Damage: ${stats.damage}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Range: ${stats.range}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Fire Rate: ${stats.fireRate}/sec</div>
                 <div style="margin-bottom: 10px; font-size: 11px; color: #a88; line-height: 1.3;">${stats.description}</div>
-                <div style="display: flex; gap: 5px; justify-content: center;">
-                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 10px; white-space: nowrap; flex: 1; min-width: 50px;">Sell</button>
-                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 10px; white-space: nowrap; flex: 1; min-width: 40px;">✕</button>
+                <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px;">
+                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap;">Sell</button>
+                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">✕</button>
                 </div>
             </div>
         `;

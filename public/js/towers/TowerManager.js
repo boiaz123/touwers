@@ -354,14 +354,16 @@ export class TowerManager {
                         currentSpell: tower.selectedSpell
                     };
                 } else if (tower.constructor.name === 'BasicTower') {
-                    // New: Handle BasicTower icon click
-                    tower.isSelected = true;
-                    tower.showRange = true; // Show range when selected
-                    return {
-                        type: 'basic_tower_stats',
-                        tower: tower,
-                        position: { x: tower.x, y: tower.y } // Add position for menu placement
-                    };
+                    // New: Only show menu if NOT in placement mode
+                    if (!this.gameState || !this.gameState.isPlacingTower) {
+                        tower.isSelected = true;
+                        tower.showRange = true; // Show range when selected
+                        return {
+                            type: 'basic_tower_stats',
+                            tower: tower,
+                            position: { x: tower.x, y: tower.y } // Add position for menu placement
+                        };
+                    }
                 }
                 break;
             }
