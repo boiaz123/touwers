@@ -886,13 +886,13 @@ class GameplayState {
         };
         
         menu.innerHTML = `
-            <div style="padding: 10px; font-size: 12px; position: relative; min-height: 100px;">
+            <div style="padding: 10px; font-size: 12px;">
                 <div style="font-weight: bold; margin-bottom: 5px; color: #FFD700;">${stats.name}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Damage: ${stats.damage}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Range: ${stats.range}</div>
                 <div style="color: #c9a876; margin-bottom: 8px;">Fire Rate: ${stats.fireRate}/sec</div>
-                <div style="margin-bottom: 10px; font-size: 11px; color: #a88; line-height: 1.3;">${stats.description}</div>
-                <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 3px;">
+                <div style="margin-bottom: 8px; font-size: 11px; color: #a88; line-height: 1.3; padding-right: 50px;">${stats.description}</div>
+                <div style="display: flex; gap: 3px; justify-content: flex-end;">
                     <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap;">Sell</button>
                     <button class="close-btn" style="background: #666; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">✕</button>
                 </div>
