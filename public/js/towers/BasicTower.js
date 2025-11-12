@@ -209,17 +209,25 @@ export class BasicTower {
         ctx.fillStyle = '#D3D3D3';
         ctx.fillRect(this.x - baseSize/2, baseY - baseHeight, baseSize, 2);
         
-        // Stone texture
+        // Stone texture - add more lines for detail
         ctx.strokeStyle = '#696969';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - baseSize/2, baseY - baseHeight, baseSize, baseHeight);
+        // Add horizontal stone lines
+        for (let i = 1; i < 3; i++) {
+            const stoneY = baseY - baseHeight + (baseHeight * i / 3);
+            ctx.beginPath();
+            ctx.moveTo(this.x - baseSize/2, stoneY);
+            ctx.lineTo(this.x + baseSize/2, stoneY);
+            ctx.stroke();
+        }
         
         // Tower structure - perfectly centered
         const towerY = baseY - baseHeight - towerHeight;
         const platformY = towerY - platformHeight;
         const roofY = platformY - roofHeight;
         
-        // Four aligned corner posts
+        // Four aligned corner posts - add texture
         const postSize = 3;
         const postOffset = towerSize/2 - postSize/2;
         const posts = [
@@ -229,18 +237,29 @@ export class BasicTower {
             {x: postOffset, y: 0}
         ];
         
-        // Draw posts
+        // Draw posts with wood grain
         ctx.fillStyle = '#8B4513';
         posts.forEach(post => {
             ctx.fillRect(this.x + post.x, towerY, postSize, towerHeight);
+            // Wood grain lines
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < 4; i++) {
+                const grainY = towerY + (towerHeight * i / 4);
+                ctx.beginPath();
+                ctx.moveTo(this.x + post.x, grainY);
+                ctx.lineTo(this.x + post.x + postSize, grainY);
+                ctx.stroke();
+            }
         });
         
-        // Horizontal braces
+        // Horizontal braces - add more for detail
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
         
         const braceY1 = towerY + towerHeight * 0.3;
         const braceY2 = towerY + towerHeight * 0.7;
+        const braceY3 = towerY + towerHeight * 0.5; // Additional brace
         
         ctx.beginPath();
         ctx.moveTo(this.x - postOffset, braceY1);
@@ -252,7 +271,12 @@ export class BasicTower {
         ctx.lineTo(this.x + postOffset, braceY2);
         ctx.stroke();
         
-        // Platform - centered and aligned
+        ctx.beginPath();
+        ctx.moveTo(this.x - postOffset, braceY3);
+        ctx.lineTo(this.x + postOffset, braceY3);
+        ctx.stroke();
+        
+        // Platform - centered and aligned, add more plank details
         ctx.fillStyle = '#D2B48C';
         ctx.fillRect(this.x - platformSize/2, platformY, platformSize, platformHeight);
         
@@ -260,35 +284,47 @@ export class BasicTower {
         ctx.fillStyle = '#DEB887';
         ctx.fillRect(this.x - platformSize/2, platformY, platformSize, 2);
         
-        // Platform planks
+        // Platform planks - increase to 6 for more detail
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 5; i++) {
-            const plankX = this.x - platformSize/2 + (platformSize * i / 5);
+        for (let i = 1; i < 6; i++) {
+            const plankX = this.x - platformSize/2 + (platformSize * i / 6);
             ctx.beginPath();
             ctx.moveTo(plankX, platformY);
             ctx.lineTo(plankX, platformY + platformHeight);
             ctx.stroke();
         }
         
-        // Roof structure - aligned with platform
+        // Roof structure - aligned with platform, add more details
         const roofPostOffset = platformSize/2 - 2;
         
-        // Roof posts
+        // Roof posts - add texture
         ctx.fillStyle = '#654321';
         ctx.fillRect(this.x - roofPostOffset, platformY, 2, -roofHeight);
         ctx.fillRect(this.x + roofPostOffset, platformY, 2, -roofHeight);
         ctx.fillRect(this.x, platformY, 2, -roofHeight); // Center post
+        // Wood grain on posts
+        ctx.strokeStyle = '#5D4037';
+        ctx.lineWidth = 1;
+        [this.x - roofPostOffset, this.x, this.x + roofPostOffset].forEach(px => {
+            for (let i = 1; i < 3; i++) {
+                const grainY = platformY - (roofHeight * i / 3);
+                ctx.beginPath();
+                ctx.moveTo(px, grainY);
+                ctx.lineTo(px + 2, grainY);
+                ctx.stroke();
+            }
+        });
         
         // Roof surface
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(this.x - roofSize/2, roofY, roofSize, 4);
         
-        // Roof planks
+        // Roof planks - increase to 5 for more detail
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankX = this.x - roofSize/2 + (roofSize * i / 4);
+        for (let i = 1; i < 5; i++) {
+            const plankX = this.x - roofSize/2 + (roofSize * i / 5);
             ctx.beginPath();
             ctx.moveTo(plankX, roofY);
             ctx.lineTo(plankX, roofY + 4);
@@ -311,6 +347,14 @@ export class BasicTower {
         // Defender body with blue shirt
         ctx.fillStyle = '#4169E1';
         ctx.fillRect(-2, -3, 4, 6);
+        
+        // Simple armor: gray chest plate over shirt
+        ctx.fillStyle = '#696969';
+        ctx.fillRect(-2.5, -2.5, 5, 4);
+        // Armor edges
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-2.5, -2.5, 5, 4);
         
         // Head
         ctx.fillStyle = '#DDBEA9';
