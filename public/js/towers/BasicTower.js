@@ -29,9 +29,6 @@ export class BasicTower {
         this._suppressSelectionUntilClick = true;
         this._clickHandlerAttached = false;
         this._onCanvasClick = null;
-
-        // deterministic env seed to avoid per-frame flicker
-        this._envSeed = (gridX * 1031 + gridY * 7919 + Math.floor(x) * 37 + Math.floor(y)) % 100000;
     }
     
     update(deltaTime, enemies) {
@@ -92,12 +89,6 @@ export class BasicTower {
         return closest;
     }
     
-    // simple deterministic pseudo-random based on tower seed + index
-	_rand(i) {
-		const v = Math.sin(this._envSeed * 1.2345 + i * 12.9898) * 43758.5453;
-		return v - Math.floor(v);
-	}
-
     shoot() {
         if (this.target) {
             this.target.takeDamage(this.damage);
@@ -120,13 +111,10 @@ export class BasicTower {
                 
                 const dx = this.target.x - defenderX;
                 const dy = this.target.y - defenderY;
-                const distance = Math.hypot(dx, dy) || 1;
+                const distance = Math.hypot(dx, dy);
                 const throwSpeed = 300;
                 const arcHeight = distance * 0.15;
                 
-                // store per-rock deterministic variance so rendering is stable
-                const variance = new Array(6).fill(0).map((_, vi) => 0.75 + Math.random() * 0.35);
-
                 this.rocks.push({
                     x: defenderX,
                     y: defenderY,
@@ -136,8 +124,7 @@ export class BasicTower {
                     rotationSpeed: Math.random() * 10 + 5,
                     life: distance / throwSpeed + 1,
                     size: Math.random() * 2 + 3,
-                    target: this.target,
-                    variance
+                    target: this.target
                 });
             }
         }
@@ -441,34 +428,34 @@ export class BasicTower {
 
         ctx.restore();
         
-        // Render flying rocks (use per-rock variance instead of per-frame randomness)
+        // Render flying rocks
         this.rocks.forEach(rock => {
             ctx.save();
             ctx.translate(rock.x, rock.y);
             ctx.rotate(rock.rotation);
-
+            
             const rockGradient = ctx.createRadialGradient(-1, -1, 0, 0, 0, rock.size);
             rockGradient.addColorStop(0, '#A9A9A9');
             rockGradient.addColorStop(1, '#696969');
-
+            
             ctx.fillStyle = rockGradient;
             ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 0.5;
-
+            
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
                 const angle = (i / 6) * Math.PI * 2;
-                // use stored variance (fallback to 0.8 if missing)
-                const variance = (rock.variance && rock.variance[i]) ? rock.variance[i] : 0.8;
+                const variance = 0.7 + Math.random() * 0.3;
                 const x = Math.cos(angle) * rock.size * variance;
                 const y = Math.sin(angle) * rock.size * variance;
+                
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-
+            
             ctx.restore();
         });
         
@@ -545,124 +532,121 @@ export class BasicTower {
         ctx.fillText(symbol, iconX, iconY);
     }
     
-    // Replace drawEnvironment with natural pine trees like barricade tower and bushes like poison tower
-	drawEnvironment(ctx, gridSize) {
-		// All elements within ±0.45 * gridSize to stay inside the 2x2 grid
-		const clamp = v => Math.max(-0.45, Math.min(0.45, v));
-		const place = (fx, fy) => ({
-			x: this.x + clamp(fx) * gridSize,
-			y: this.y + clamp(fy) * gridSize
-		});
+    drawEnvironment(ctx, gridSize) {
+        // Keep trees/bushes/rocks within the 2x2 grid; tweak positions and add small grass patches.
+        const trees = [
+            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 },
+            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 },
+            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 },
+            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 }
+        ];
+        
+        trees.forEach(tree => {
+            const treeX = this.x + tree.x;
+            const treeY = this.y + tree.y;
+            const scale = tree.size;
+            
+            // Tree shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+            ctx.save();
+            ctx.translate(treeX + 2, treeY + 2);
+            ctx.scale(1, 0.45);
+            ctx.beginPath();
+            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Trunk
+            ctx.fillStyle = '#5a341d';
+            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
 
-		// Pine trees: 3, natural cone shape like barricade tower
-		const towerHeight = gridSize * 0.4;
-		const pineHeight = towerHeight * 0.5;
-		const pineBase = gridSize * 0.13;
-		const pines = [
-			place(-0.32, 0.32),
-			place(0.32, 0.32),
-			place(0.0, -0.36)
-		];
-		pines.forEach((t, i) => {
-			// shadow
-			ctx.save();
-			ctx.translate(t.x, t.y + pineBase * 0.8);
-			ctx.scale(1, 0.45);
-			ctx.fillStyle = 'rgba(0,0,0,0.18)';
-			ctx.beginPath();
-			ctx.ellipse(0, 0, pineBase * 2.5, pineBase * 1.2, 0, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.restore();
+            // Pine layers (slightly rebalanced colors)
+            const layers = [
+                { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
+                { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
+                { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
+            ];
+            
+            layers.forEach(layer => {
+                ctx.fillStyle = layer.color;
+                ctx.beginPath();
+                ctx.moveTo(treeX, treeY + layer.y);
+                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#0b2b0b';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+        });
+        
+        // Bushes (adjusted positions)
+        const bushes = [
+            { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
+            { x: gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
+            { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
+        ];
+        
+        bushes.forEach(bush => {
+            const bushX = this.x + bush.x;
+            const bushY = this.y + bush.y;
+            const scale = bush.size;
 
-			// trunk
-			const trunkW = pineBase * 0.3;
-			const trunkH = pineHeight * 0.4;
-			ctx.fillStyle = '#654321';
-			ctx.fillRect(t.x - trunkW / 2, t.y, trunkW, -trunkH);
+            ctx.fillStyle = '#1f6f1f';
+            ctx.beginPath();
+            ctx.arc(bushX, bushY, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
 
-			// foliage: 4 layers for natural cone shape
-			const greens = ['#0F3B0F', '#1E5A1E', '#228B22', '#32CD32'];
-			for (let layer = 0; layer < 4; layer++) {
-				const width = pineBase * (3.2 - layer * 0.8);
-				const ly = t.y - trunkH + layer * pineHeight * 0.15;
-				ctx.fillStyle = greens[layer];
-				ctx.beginPath();
-				ctx.moveTo(t.x, ly);
-				ctx.lineTo(t.x - width / 2, ly + width * 0.85);
-				ctx.lineTo(t.x + width / 2, ly + width * 0.85);
-				ctx.closePath();
-				ctx.fill();
+            ctx.fillStyle = '#28a028';
+            ctx.beginPath();
+            ctx.arc(bushX - scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
+            ctx.fill();
 
-				ctx.strokeStyle = '#0F3B0F';
-				ctx.lineWidth = 0.7;
-				ctx.stroke();
-			}
-		});
-
-		// Bushes: 2, natural clustered style like poison tower
-		const bushRadius = gridSize * 0.09;
-		const bushes = [
-			place(-0.22, 0.18),
-			place(0.22, -0.18)
-		];
-		bushes.forEach((b, idx) => {
-			// shadow
-			ctx.save();
-			ctx.translate(b.x, b.y + bushRadius * 0.6);
-			ctx.scale(1, 0.45);
-			ctx.fillStyle = 'rgba(0,0,0,0.15)';
-			ctx.beginPath();
-			ctx.ellipse(0, 0, bushRadius * 1.8, bushRadius * 0.9, 0, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.restore();
-
-			// clustered circles for natural bush look
-			const shades = ['#228B22', '#2EA62E', '#1F7A1F', '#32CD32'];
-			for (let k = 0; k < 5; k++) {
-				const ox = b.x + (k - 2) * bushRadius * 0.8 + (this._rand(idx * 10 + k) - 0.5) * bushRadius * 0.5;
-				const oy = b.y - Math.abs(k - 2) * bushRadius * 0.4 + (this._rand(idx * 20 + k) - 0.5) * bushRadius * 0.3;
-				const rad = bushRadius * (0.8 - k * 0.1);
-				ctx.fillStyle = shades[k % shades.length];
-				ctx.beginPath();
-				ctx.arc(ox, oy, rad, 0, Math.PI * 2);
-				ctx.fill();
-
-				ctx.strokeStyle = 'rgba(8,30,8,0.4)';
-				ctx.lineWidth = 0.5;
-				ctx.stroke();
-			}
-		});
-
-		// Rocks: 2, proportionally sized
-		const rockRadius = gridSize * 0.06;
-		const rocks = [
-			place(-0.28, -0.22),
-			place(0.28, 0.22)
-		];
-		rocks.forEach((r, i) => {
-			// shadow
-			ctx.save();
-			ctx.translate(r.x, r.y + rockRadius * 0.5);
-			ctx.scale(1, 0.45);
-			ctx.fillStyle = 'rgba(0,0,0,0.12)';
-			ctx.beginPath();
-			ctx.ellipse(0, 0, rockRadius * 1.2, rockRadius, 0, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.restore();
-
-			const grad = ctx.createRadialGradient(r.x - rockRadius * 0.25, r.y - rockRadius * 0.25, 0, r.x, r.y, rockRadius);
-			grad.addColorStop(0, '#bdbdbd');
-			grad.addColorStop(1, '#696969');
-			ctx.fillStyle = grad;
-			ctx.beginPath();
-			ctx.ellipse(r.x, r.y, rockRadius, rockRadius * 0.8, Math.PI * 0.05 * i, 0, Math.PI * 2);
-			ctx.fill();
-
-			ctx.strokeStyle = '#5c5c5c';
-			ctx.lineWidth = 0.6;
-			ctx.stroke();
-		});
-	}
+            ctx.beginPath();
+            ctx.arc(bushX + scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Small rocks (unchanged but ensure they fit)
+        const rocks = [
+            { x: -gridSize * 0.3, y: gridSize * 0.28, size: 0.22 },
+            { x: gridSize * 0.25, y: gridSize * 0.18, size: 0.15 },
+            { x: gridSize * 0.28, y: -gridSize * 0.24, size: 0.25 }
+        ];
+        
+        rocks.forEach(rock => {
+            const rockX = this.x + rock.x;
+            const rockY = this.y + rock.y;
+            const scale = rock.size;
+            ctx.fillStyle = '#807f80';
+            ctx.beginPath();
+            ctx.arc(rockX, rockY, 2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#696969';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+        
+        // Small grass patches for variety (keeps within grid)
+        const grasses = [
+            { x: -gridSize * 0.12, y: gridSize * 0.18 },
+            { x: gridSize * 0.08, y: -gridSize * 0.12 }
+        ];
+        ctx.strokeStyle = '#2e8b2e';
+        ctx.lineWidth = 1;
+        grasses.forEach(g => {
+            const gx = this.x + g.x;
+            const gy = this.y + g.y;
+            for (let i = 0; i < 4; i++) {
+                const angle = -Math.PI/2 + (i-1.5)*0.2;
+                ctx.beginPath();
+                ctx.moveTo(gx, gy);
+                ctx.lineTo(gx + Math.cos(angle)*6, gy + Math.sin(angle)*6);
+                ctx.stroke();
+            }
+        });
+    }
     
     static getInfo() {
         return {
