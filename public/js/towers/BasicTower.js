@@ -12,6 +12,7 @@ export class BasicTower {
         this.showRange = false; // Add property to control range display
         
         // Animation properties
+        this.animationTime = 0; // Add missing initialization
         this.throwingDefender = -1; // Which defender is throwing
         this.throwAnimationTime = 0;
         this.rocks = [];
