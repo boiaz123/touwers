@@ -14,6 +14,7 @@ export class BasicTower {
         // Animation properties
         this.throwingDefender = -1; // Which defender is throwing
         this.throwAnimationTime = 0;
+        this.animationTime = 0; // Add this line
         this.rocks = [];
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },
@@ -25,6 +26,7 @@ export class BasicTower {
     
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
+        this.animationTime += deltaTime; // Add this line
         
         this.target = this.findTarget(enemies);
         
