@@ -80,7 +80,7 @@ class GameplayState {
             // Don't pre-build buildings, just unlock them all
             // Buildings will be available to build in the UI
             
-            // Create a temporary sandbox academy for gem display only
+            // Create a temporary sandbox academy for gem display AND combination spells
             const tempAcademy = {
                 gems: {
                     fire: 1000,
@@ -89,17 +89,68 @@ class GameplayState {
                     earth: 1000,
                     diamond: 1000
                 },
+                // Set up academy levels and unlocks for sandbox2
+                academyLevel: 3,
+                combinationSpellsUnlocked: true,
+                diamondMiningUnlocked: true,
+                gemMiningToolsResearched: true,
+                // Unlock all combination spells for sandbox2
+                unlockedCombinationSpells: new Set([
+                    'steam', 'magma', 'tempest', 'meteor'
+                ]),
+                unlockedCombinations: new Set([
+                    'steam', 'magma', 'tempest', 'meteor'
+                ]),
+                // Define combination spells
+                combinationSpells: [
+                    {
+                        id: 'steam',
+                        name: 'Steam',
+                        icon: '💨',
+                        description: 'Fire + Water: Burn + Slow effects',
+                        damageMultiplier: 1.15
+                    },
+                    {
+                        id: 'magma',
+                        name: 'Magma',
+                        icon: '🌋',
+                        description: 'Fire + Earth: Burn + Piercing effects',
+                        damageMultiplier: 1.15
+                    },
+                    {
+                        id: 'tempest',
+                        name: 'Tempest',
+                        icon: '⛈️',
+                        description: 'Air + Water: Chain + Slow effects',
+                        damageMultiplier: 1.10
+                    },
+                    {
+                        id: 'meteor',
+                        name: 'Meteor',
+                        icon: '☄️',
+                        description: 'Air + Earth: Chain + Piercing effects',
+                        damageMultiplier: 1.10
+                    }
+                ],
                 addGem: function(type) {
                     this.gems[type] = (this.gems[type] || 0) + 1;
                 },
                 addDiamond: function() {
                     this.gems.diamond = (this.gems.diamond || 0) + 1;
+                },
+                getElementalBonuses: function() {
+                    return {
+                        fire: { damageBonus: 25 },
+                        water: { slowBonus: 0.5 },
+                        air: { chainRange: 100 },
+                        earth: { armorPiercing: 15 }
+                    };
                 }
             };
             
             // Set this temporary academy as the reference for the tower manager
             this.towerManager.sandboxAcademy = tempAcademy;
-            console.log('GameplayState: Created sandbox2 gem display with gems:', tempAcademy.gems);
+            console.log('GameplayState: Created sandbox2 gem display with gems and combination spells:', tempAcademy.gems);
         }
         
         // Initialize sandbox gems AFTER tower manager is set up

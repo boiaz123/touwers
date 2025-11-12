@@ -229,35 +229,52 @@ export class TowerManager {
     
     applyAcademyUpgrades(tower) {
         if (tower.constructor.name === 'MagicTower') {
-            // Get elemental bonuses from academies
-            const academies = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'MagicAcademy'
-            );
+            // Get elemental bonuses from academies (real or sandbox)
+            let elementalBonuses = {};
             
-            if (academies.length > 0) {
-                const elementalBonuses = academies[0].getElementalBonuses();
-                tower.applyElementalBonuses(elementalBonuses);
+            if (this.sandboxAcademy && this.sandboxAcademy.getElementalBonuses) {
+                elementalBonuses = this.sandboxAcademy.getElementalBonuses();
+            } else {
+                const academies = this.buildingManager.buildings.filter(building =>
+                    building.constructor.name === 'MagicAcademy'
+                );
+                
+                if (academies.length > 0) {
+                    elementalBonuses = academies[0].getElementalBonuses();
+                }
             }
+            
+            tower.applyElementalBonuses(elementalBonuses);
         }
         
-        // New: Apply combination spell bonuses to Combination Towers
+        // Apply combination spell bonuses to Combination Towers
         if (tower.constructor.name === 'CombinationTower') {
-            const academies = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'MagicAcademy'
-            );
+            let academy = null;
             
-            if (academies.length > 0) {
-                const academy = academies[0];
-                
-                // Set available spells
+            // Check sandbox academy first, then real academy
+            if (this.sandboxAcademy) {
+                academy = this.sandboxAcademy;
+            } else {
+                const academies = this.buildingManager.buildings.filter(building =>
+                    building.constructor.name === 'MagicAcademy'
+                );
+                if (academies.length > 0) {
+                    academy = academies[0];
+                }
+            }
+            
+            if (academy && academy.combinationSpells) {
+                // Set available spells from academy
                 const availableSpells = academy.combinationSpells.filter(spell =>
-                    academy.unlockedCombinations.has(spell.id)
+                    academy.unlockedCombinations && academy.unlockedCombinations.has(spell.id)
                 );
                 tower.setAvailableSpells(availableSpells);
                 
                 // Apply bonuses based on elemental upgrades
-                const elementalBonuses = academy.getElementalBonuses();
+                const elementalBonuses = academy.getElementalBonuses ? academy.getElementalBonuses() : {};
                 tower.applySpellBonuses(elementalBonuses);
+                
+                console.log(`TowerManager: Set ${availableSpells.length} available spells for combination tower`);
             }
         }
     }
