@@ -71,14 +71,10 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // SANDBOX: Force initialize gems right after tower manager is created
+        // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
         if (this.isSandbox) {
-            console.log('GameplayState: SANDBOX MODE - Forcing gem initialization');
-            
-            // Use setTimeout to ensure building manager is fully initialized
-            setTimeout(() => {
-                this.forceSandboxGemInitialization();
-            }, 0);
+            console.log('GameplayState: SANDBOX MODE - Initializing gems immediately');
+            this.initializeSandboxGems();
         }
         
         this.setupEventListeners();
@@ -88,47 +84,61 @@ class GameplayState {
         console.log('GameplayState: enter completed');
     }
     
-    forceSandboxGemInitialization() {
-        console.log('GameplayState: Force initializing sandbox gems...');
+    initializeSandboxGems() {
+        // Called ONLY in sandbox mode to force gem initialization
+        console.log('GameplayState: initializeSandboxGems called');
         
-        // Find academy in building manager
-        const academy = this.towerManager?.buildingManager?.buildings?.find(b => 
-            b.constructor.name === 'MagicAcademy'
-        );
+        // Access building manager directly
+        if (!this.towerManager || !this.towerManager.buildingManager) {
+            console.error('GameplayState: Tower manager or building manager not available!');
+            return;
+        }
+        
+        const buildingManager = this.towerManager.buildingManager;
+        console.log('GameplayState: Building manager found, buildings:', buildingManager.buildings.length);
+        
+        // Find academy
+        let academy = buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
         
         if (academy) {
-            console.log('GameplayState: Found academy, initializing gems...');
+            console.log('GameplayState: Academy found! Initializing gems...');
             
-            // Force set gems
+            // Force initialize all gem values
+            if (!academy.gems) {
+                academy.gems = {};
+            }
+            
             academy.gems.fire = 100;
             academy.gems.water = 100;
             academy.gems.air = 100;
             academy.gems.earth = 100;
             academy.gems.diamond = 100;
             
-            // Unlock features
+            // Unlock diamond mining
             academy.diamondMiningUnlocked = true;
-            academy.gemMiningResearched = false; // Keep as research option
             
-            console.log('GameplayState: Academy gems set to:', academy.gems);
+            // Do NOT set gemMiningResearched - keep it as an available research
+            academy.gemMiningResearched = false;
             
-            // Enable gem mining toggle on all mines
-            this.towerManager.buildingManager.buildings.forEach(building => {
+            console.log('GameplayState: Sandbox gems initialized:', academy.gems);
+            console.log('GameplayState: Diamond mining unlocked:', academy.diamondMiningUnlocked);
+            
+            // Enable gem toggle on all existing mines
+            buildingManager.buildings.forEach(building => {
                 if (building.constructor.name === 'GoldMine') {
                     building.setAcademy(academy);
-                    building.gemMiningUnlocked = true;
-                    console.log('GameplayState: Mine gem toggle enabled');
+                    building.gemMiningUnlocked = true; // Force enable toggle
+                    console.log('GameplayState: Mine gem toggle enabled for sandbox');
                 }
             });
             
-            // Force UI update
-            this.updateUI();
-            console.log('GameplayState: Sandbox gems initialized successfully!');
+            console.log('GameplayState: Sandbox gem initialization complete!');
         } else {
-            console.error('GameplayState: NO ACADEMY FOUND! Cannot initialize gems.');
+            console.error('GameplayState: Academy NOT FOUND in building manager!');
             console.log('GameplayState: Available buildings:', 
-                this.towerManager?.buildingManager?.buildings?.map(b => b.constructor.name)
+                buildingManager.buildings.map(b => b.constructor.name)
             );
+            console.log('GameplayState: Will retry gem initialization when academy is built');
         }
     }
     
@@ -373,6 +383,13 @@ class GameplayState {
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, 4);
+                    
+                    // SANDBOX: If academy was just built, initialize gems immediately
+                    if (this.isSandbox && this.selectedBuildingType === 'academy') {
+                        console.log('GameplayState: Academy just built in sandbox, initializing gems...');
+                        setTimeout(() => this.initializeSandboxGems(), 50); // Small delay to ensure building is registered
+                    }
+                    
                     this.updateUI();
                     
                     this.selectedBuildingType = null;
@@ -1004,16 +1021,24 @@ class GameplayState {
         
         document.getElementById('enemies-remaining').textContent = statusText;
         
-        // Update gem display in top bar - now includes diamonds
+        // Update gem display in top bar - force check for sandbox
         const gems = this.towerManager.getGemStocks();
         const gemsElement = document.getElementById('gems');
         if (gemsElement) {
-            let gemText = `🔥${gems.fire} 💧${gems.water} 💨${gems.air} 🪨${gems.earth}`;
-            // Always show diamond count if available
-            if (gems.diamond !== undefined) {
-                gemText += ` 💎${gems.diamond}`;
+            // In sandbox, show gems even if all are 0 (they should be 100)
+            let gemText = `🔥${gems.fire || 0} 💧${gems.water || 0} 💨${gems.air || 0} 🪨${gems.earth || 0}`;
+            
+            // Always show diamond count in sandbox
+            if (gems.diamond !== undefined || this.isSandbox) {
+                gemText += ` 💎${gems.diamond || 0}`;
             }
+            
             gemsElement.textContent = gemText;
+            
+            // Debug logging for sandbox
+            if (this.isSandbox) {
+                console.log('GameplayState: updateUI - Current gems:', gems);
+            }
         }
         
         this.updateUIAvailability();
