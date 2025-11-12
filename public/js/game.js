@@ -210,6 +210,13 @@ class GameplayState {
                     // New: Handle combination tower menu
                     this.showCombinationTowerMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'tower_selected') {
+                    // Tower was selected, clear placement mode
+                    this.selectedTowerType = null;
+                    this.selectedBuildingType = null;
+                    document.querySelectorAll('.tower-btn, .building-btn').forEach(b => b.classList.remove('selected'));
+                    this.level.setPlacementPreview(0, 0, false);
+                    return;
                 } else if (typeof clickResult === 'number') {
                     // Gold/gem collection from mine
                     this.gameState.gold += clickResult;
@@ -349,8 +356,14 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (clickResult.type === 'combination_tower_menu') {
-                // New: Handle combination tower menu
                 this.showCombinationTowerMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'tower_selected') {
+                // Tower was selected, clear placement mode
+                this.selectedTowerType = null;
+                this.selectedBuildingType = null;
+                document.querySelectorAll('.tower-btn, .building-btn').forEach(b => b.classList.remove('selected'));
+                this.level.setPlacementPreview(0, 0, false);
                 return;
             } else if (typeof clickResult === 'number') {
                 this.gameState.gold += clickResult;
