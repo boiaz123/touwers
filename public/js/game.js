@@ -94,41 +94,49 @@ class GameplayState {
                 combinationSpellsUnlocked: true,
                 diamondMiningUnlocked: true,
                 gemMiningToolsResearched: true,
-                // Unlock all combination spells for sandbox2
+                // Unlock all combination spells for sandbox2 - FIXED property names
                 unlockedCombinationSpells: new Set([
                     'steam', 'magma', 'tempest', 'meteor'
                 ]),
                 unlockedCombinations: new Set([
                     'steam', 'magma', 'tempest', 'meteor'
                 ]),
-                // Define combination spells
+                // Define combination spells - matches MagicAcademy format
                 combinationSpells: [
                     {
                         id: 'steam',
                         name: 'Steam',
+                        elements: ['fire', 'water'],
                         icon: '💨',
                         description: 'Fire + Water: Burn + Slow effects',
+                        gemsRequired: { fire: 2, water: 2 },
                         damageMultiplier: 1.15
                     },
                     {
                         id: 'magma',
                         name: 'Magma',
+                        elements: ['fire', 'earth'],
                         icon: '🌋',
                         description: 'Fire + Earth: Burn + Piercing effects',
+                        gemsRequired: { fire: 2, earth: 2 },
                         damageMultiplier: 1.15
                     },
                     {
                         id: 'tempest',
                         name: 'Tempest',
+                        elements: ['air', 'water'],
                         icon: '⛈️',
                         description: 'Air + Water: Chain + Slow effects',
+                        gemsRequired: { air: 2, water: 2 },
                         damageMultiplier: 1.10
                     },
                     {
                         id: 'meteor',
                         name: 'Meteor',
+                        elements: ['air', 'earth'],
                         icon: '☄️',
                         description: 'Air + Earth: Chain + Piercing effects',
+                        gemsRequired: { air: 2, earth: 2 },
                         damageMultiplier: 1.10
                     }
                 ],
