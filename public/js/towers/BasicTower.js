@@ -9,9 +9,11 @@ export class BasicTower {
         this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
+        this.isSelected = false; // Add selection state
         
         // Animation properties
-        this.throwingDefender = -1; // Which defender is throwing
+        this.animationTime = 0; // Initialize animation time
+        this.throwingDefender = -1;
         this.throwAnimationTime = 0;
         this.rocks = [];
         this.defenders = [
@@ -23,6 +25,7 @@ export class BasicTower {
     }
     
     update(deltaTime, enemies) {
+        this.animationTime += deltaTime; // Update animation time
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         
         this.target = this.findTarget(enemies);
@@ -340,8 +343,8 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Range indicator when targeting
-        if (this.target) {
+        // Range indicator when targeting or selected
+        if (this.target || this.isSelected) {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
@@ -354,7 +357,7 @@ export class BasicTower {
         // Floating icon in bottom right of 2x2 grid
         const iconSize = 20;
         const iconX = (this.gridX + 1.5) * cellSize;
-        const iconY = (this.gridY + 1.5) * cellSize - 5; // Float up slightly
+        const iconY = (this.gridY + 1.5) * cellSize - 5;
         
         // Dynamic pulse for medieval glow effect
         const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
@@ -368,20 +371,20 @@ export class BasicTower {
             iconX - iconSize/4, iconY - iconSize/4, 0,
             iconX, iconY, iconSize
         );
-        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
+        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`);
+        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`);
+        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`);
         
         ctx.fillStyle = parchmentGradient;
         ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
         
         // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
+        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`;
         ctx.lineWidth = 2;
         ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
         
         // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
+        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`;
         ctx.lineWidth = 1;
         ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
         
@@ -393,24 +396,24 @@ export class BasicTower {
         ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
         
         // Symbol with enhanced medieval styling
-        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
+        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
+        ctx.font = 'bold 18px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        let symbol = '🏰'; // default
-        switch(this.constructor.name) {
-            case 'BasicTower': symbol = '🏰'; break;
-            case 'CannonTower': symbol = '🎯'; break;
-            case 'ArcherTower': symbol = '🏹'; break;
-            case 'MagicTower': symbol = '⚡'; break;
-            case 'BarricadeTower': symbol = '🛡️'; break;
-            case 'PoisonArcherTower': symbol = '🌿'; break;
-        }
-        ctx.fillText(symbol, iconX, iconY);
+        ctx.fillText('🏰', iconX, iconY);
         
         // Add subtle gold highlight on symbol
         ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText(symbol, iconX, iconY);
+        ctx.fillText('🏰', iconX, iconY);
+        
+        // Selection highlight on icon
+        if (this.isSelected) {
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(iconX, iconY, iconSize/2 + 3, 0, Math.PI * 2);
+            ctx.stroke();
+        }
     }
     
     drawEnvironment(ctx, gridSize) {
@@ -523,6 +526,33 @@ export class BasicTower {
             ctx.lineWidth = 1;
             ctx.stroke();
         });
+    }
+    
+    // Add click detection for icon
+    isIconClicked(x, y, cellSize) {
+        const iconSize = 20;
+        const iconX = (this.gridX + 1.5) * cellSize;
+        const iconY = (this.gridY + 1.5) * cellSize - 5;
+        
+        return Math.hypot(x - iconX, y - iconY) <= iconSize/2 + 3;
+    }
+    
+    // Toggle selection
+    toggleSelection() {
+        this.isSelected = !this.isSelected;
+        return this.isSelected;
+    }
+    
+    // Get tower stats for UI display
+    getStats() {
+        return {
+            name: 'Basic Tower',
+            damage: this.damage,
+            range: this.range,
+            fireRate: this.fireRate,
+            cost: 50,
+            sellValue: Math.floor(50 * 0.7)
+        };
     }
     
     static getInfo() {

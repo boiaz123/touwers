@@ -314,7 +314,7 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check tower icon clicks first for element selection
+        // Check tower icon clicks first for element selection or stats
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
         const iconSize = 30; // Increased for better clickability
         
@@ -326,8 +326,10 @@ export class TowerManager {
             const clickBuffer = 5;
             if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
                 y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
+                
+                tower.isSelected = true;
+                
                 if (tower.constructor.name === 'MagicTower') {
-                    tower.isSelected = true;
                     return {
                         type: 'magic_tower_menu',
                         tower: tower,
@@ -335,13 +337,11 @@ export class TowerManager {
                             { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
                             { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
                             { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                            { id: 'earth', name: 'Earth', icon: '🪨', description: 'Pierces armor' }
                         ],
                         currentElement: tower.selectedElement
                     };
                 } else if (tower.constructor.name === 'CombinationTower') {
-                    // New: Handle combination tower spell selection
-                    tower.isSelected = true;
                     return {
                         type: 'combination_tower_menu',
                         tower: tower,
@@ -352,6 +352,20 @@ export class TowerManager {
                             description: spell.description
                         })),
                         currentSpell: tower.selectedSpell
+                    };
+                } else if (tower.constructor.name === 'BasicTower') {
+                    // New: BasicTower stat UI with sell option
+                    return {
+                        type: 'tower_stats_menu',
+                        tower: tower,
+                        stats: {
+                            name: 'Basic Tower',
+                            damage: tower.damage,
+                            range: tower.range,
+                            fireRate: tower.fireRate,
+                            cost: 50,
+                            sellPrice: Math.floor(50 * 0.7)
+                        }
                     };
                 }
                 break;
