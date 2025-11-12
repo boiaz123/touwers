@@ -545,7 +545,7 @@ export class BasicTower {
         ctx.fillText(symbol, iconX, iconY);
     }
     
-    // Replace drawEnvironment with new proportional pine trees, bushes, and rocks
+    // Replace drawEnvironment with natural pine trees like barricade tower and bushes like poison tower
 	drawEnvironment(ctx, gridSize) {
 		// All elements within ±0.45 * gridSize to stay inside the 2x2 grid
 		const clamp = v => Math.max(-0.45, Math.min(0.45, v));
@@ -554,53 +554,52 @@ export class BasicTower {
 			y: this.y + clamp(fy) * gridSize
 		});
 
-		// Pine trees: 3, each about half the tower support beam height
+		// Pine trees: 3, natural cone shape like barricade tower
 		const towerHeight = gridSize * 0.4;
-		const pineHeight = towerHeight * 0.5; // Half the support beam height
-		const pineBase = gridSize * 0.13; // Wider base for natural look
+		const pineHeight = towerHeight * 0.5;
+		const pineBase = gridSize * 0.13;
 		const pines = [
 			place(-0.32, 0.32),
 			place(0.32, 0.32),
 			place(0.0, -0.36)
 		];
 		pines.forEach((t, i) => {
-			const scale = 1;
 			// shadow
 			ctx.save();
-			ctx.translate(t.x, t.y + pineBase * 0.7);
+			ctx.translate(t.x, t.y + pineBase * 0.8);
 			ctx.scale(1, 0.45);
-			ctx.fillStyle = 'rgba(0,0,0,0.15)';
+			ctx.fillStyle = 'rgba(0,0,0,0.18)';
 			ctx.beginPath();
-			ctx.ellipse(0, 0, pineBase * 2.2, pineBase * 1.1, 0, 0, Math.PI * 2);
+			ctx.ellipse(0, 0, pineBase * 2.5, pineBase * 1.2, 0, 0, Math.PI * 2);
 			ctx.fill();
 			ctx.restore();
 
-			// trunk (taller and slightly narrower for realism)
-			const trunkW = pineBase * 0.35;
-			const trunkH = pineHeight * 0.35;
+			// trunk
+			const trunkW = pineBase * 0.3;
+			const trunkH = pineHeight * 0.4;
 			ctx.fillStyle = '#654321';
 			ctx.fillRect(t.x - trunkW / 2, t.y, trunkW, -trunkH);
 
-			// foliage: 3 layers, wider and more overlapping for natural look
-			const greens = ['#0F3B0F', '#228B22', '#32CD32'];
-			for (let layer = 0; layer < 3; layer++) {
-				const width = pineBase * (2.6 - layer * 0.7);
-				const ly = t.y - trunkH + layer * pineHeight * 0.18;
+			// foliage: 4 layers for natural cone shape
+			const greens = ['#0F3B0F', '#1E5A1E', '#228B22', '#32CD32'];
+			for (let layer = 0; layer < 4; layer++) {
+				const width = pineBase * (3.2 - layer * 0.8);
+				const ly = t.y - trunkH + layer * pineHeight * 0.15;
 				ctx.fillStyle = greens[layer];
 				ctx.beginPath();
 				ctx.moveTo(t.x, ly);
-				ctx.lineTo(t.x - width / 2, ly + width * 0.9);
-				ctx.lineTo(t.x + width / 2, ly + width * 0.9);
+				ctx.lineTo(t.x - width / 2, ly + width * 0.85);
+				ctx.lineTo(t.x + width / 2, ly + width * 0.85);
 				ctx.closePath();
 				ctx.fill();
 
-				ctx.strokeStyle = '#145214';
-				ctx.lineWidth = 0.8;
+				ctx.strokeStyle = '#0F3B0F';
+				ctx.lineWidth = 0.7;
 				ctx.stroke();
 			}
 		});
 
-		// Bushes: 2, proportionally sized
+		// Bushes: 2, natural clustered style like poison tower
 		const bushRadius = gridSize * 0.09;
 		const bushes = [
 			place(-0.22, 0.18),
@@ -609,25 +608,27 @@ export class BasicTower {
 		bushes.forEach((b, idx) => {
 			// shadow
 			ctx.save();
-			ctx.translate(b.x, b.y + bushRadius * 0.5);
+			ctx.translate(b.x, b.y + bushRadius * 0.6);
 			ctx.scale(1, 0.45);
-			ctx.fillStyle = 'rgba(0,0,0,0.12)';
+			ctx.fillStyle = 'rgba(0,0,0,0.15)';
 			ctx.beginPath();
-			ctx.ellipse(0, 0, bushRadius * 1.5, bushRadius, 0, 0, Math.PI * 2);
+			ctx.ellipse(0, 0, bushRadius * 1.8, bushRadius * 0.9, 0, 0, Math.PI * 2);
 			ctx.fill();
 			ctx.restore();
 
-			const shades = ['#228B22', '#2EA62E', '#1F7A1F'];
-			for (let k = 0; k < 3; k++) {
-				const ox = b.x + (k - 1) * bushRadius * 1.1;
-				const oy = b.y - Math.abs(k - 1) * bushRadius * 0.3;
-				ctx.fillStyle = shades[(k + idx) % shades.length];
+			// clustered circles for natural bush look
+			const shades = ['#228B22', '#2EA62E', '#1F7A1F', '#32CD32'];
+			for (let k = 0; k < 5; k++) {
+				const ox = b.x + (k - 2) * bushRadius * 0.8 + (this._rand(idx * 10 + k) - 0.5) * bushRadius * 0.5;
+				const oy = b.y - Math.abs(k - 2) * bushRadius * 0.4 + (this._rand(idx * 20 + k) - 0.5) * bushRadius * 0.3;
+				const rad = bushRadius * (0.8 - k * 0.1);
+				ctx.fillStyle = shades[k % shades.length];
 				ctx.beginPath();
-				ctx.arc(ox, oy, bushRadius * (1 - k * 0.18), 0, Math.PI * 2);
+				ctx.arc(ox, oy, rad, 0, Math.PI * 2);
 				ctx.fill();
 
-				ctx.strokeStyle = 'rgba(8,30,8,0.35)';
-				ctx.lineWidth = 0.6;
+				ctx.strokeStyle = 'rgba(8,30,8,0.4)';
+				ctx.lineWidth = 0.5;
 				ctx.stroke();
 			}
 		});
@@ -658,8 +659,8 @@ export class BasicTower {
 			ctx.fill();
 
 			ctx.strokeStyle = '#5c5c5c';
-		 ctx.lineWidth = 0.6;
-		 ctx.stroke();
+			ctx.lineWidth = 0.6;
+			ctx.stroke();
 		});
 	}
     
