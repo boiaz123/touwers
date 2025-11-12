@@ -533,12 +533,12 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Tweak: Increased tree sizes and adjusted positions to make them taller, almost as high as the tower
+        // Keep trees/bushes/rocks within the 2x2 grid; tweak positions and add small grass patches.
         const trees = [
-            { x: -gridSize * 0.4, y: -gridSize * 0.25, size: 3 },
-            { x: gridSize * 0.35, y: -gridSize * 0.25, size: 3 },
-            { x: -gridSize * 0.45, y: -gridSize * 0.25, size: 3.5 },
-            { x: gridSize * 0.4, y: -gridSize * 0.25, size: 2.5 }
+            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 },
+            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 },
+            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 },
+            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 }
         ];
         
         trees.forEach(tree => {
@@ -547,10 +547,10 @@ export class BasicTower {
             const scale = tree.size;
             
             // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
             ctx.save();
             ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.4);
+            ctx.scale(1, 0.45);
             ctx.beginPath();
             ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
             ctx.fill();
@@ -559,12 +559,12 @@ export class BasicTower {
             // Trunk
             ctx.fillStyle = '#5a341d';
             ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
-            
-            // Foliage layers - adjusted for taller trees
+
+            // Pine layers (slightly rebalanced colors)
             const layers = [
-                { y: -15 * scale, width: 12 * scale, color: '#0e3a0e' },
-                { y: -10 * scale, width: 9 * scale, color: '#1f6f1f' },
-                { y: -5 * scale, width: 6 * scale, color: '#2fa02f' }
+                { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
+                { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
+                { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
             ];
             
             layers.forEach(layer => {
@@ -581,38 +581,38 @@ export class BasicTower {
             });
         });
         
-        // Bushes
+        // Bushes (adjusted positions)
         const bushes = [
-            { x: -gridSize * 0.25, y: gridSize * 0.25, size: 0.35 },
-            { x: gridSize * 0.2, y: -gridSize * 0.2, size: 0.27 },
-            { x: -gridSize * 0.3, y: -gridSize * 0.35, size: 0.4 }
+            { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
+            { x: gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
+            { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
         ];
         
         bushes.forEach(bush => {
             const bushX = this.x + bush.x;
             const bushY = this.y + bush.y;
             const scale = bush.size;
-            
+
             ctx.fillStyle = '#1f6f1f';
             ctx.beginPath();
             ctx.arc(bushX, bushY, 3 * scale, 0, Math.PI * 2);
             ctx.fill();
-            
+
             ctx.fillStyle = '#28a028';
             ctx.beginPath();
             ctx.arc(bushX - scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
             ctx.fill();
-            
+
             ctx.beginPath();
             ctx.arc(bushX + scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Rocks
+        // Small rocks (unchanged but ensure they fit)
         const rocks = [
-            { x: -gridSize * 0.32, y: gridSize * 0.3, size: 0.24 },
-            { x: gridSize * 0.27, y: gridSize * 0.2, size: 0.17 },
-            { x: gridSize * 0.3, y: -gridSize * 0.26, size: 0.27 }
+            { x: -gridSize * 0.3, y: gridSize * 0.28, size: 0.22 },
+            { x: gridSize * 0.25, y: gridSize * 0.18, size: 0.15 },
+            { x: gridSize * 0.28, y: -gridSize * 0.24, size: 0.25 }
         ];
         
         rocks.forEach(rock => {
@@ -628,21 +628,10 @@ export class BasicTower {
             ctx.stroke();
         });
         
-        // Unique boulder for BasicTower distinction
-        const boulderX = this.x + gridSize * 0.1;
-        const boulderY = this.y - gridSize * 0.15;
-        ctx.fillStyle = '#6b6b6b';
-        ctx.beginPath();
-        ctx.arc(boulderX, boulderY, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#4a4a4a';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        
-        // Grass patches
+        // Small grass patches for variety (keeps within grid)
         const grasses = [
-            { x: -gridSize * 0.15, y: gridSize * 0.2 },
-            { x: gridSize * 0.1, y: -gridSize * 0.15 }
+            { x: -gridSize * 0.12, y: gridSize * 0.18 },
+            { x: gridSize * 0.08, y: -gridSize * 0.12 }
         ];
         ctx.strokeStyle = '#2e8b2e';
         ctx.lineWidth = 1;
