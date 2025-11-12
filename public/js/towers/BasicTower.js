@@ -9,12 +9,10 @@ export class BasicTower {
         this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
-        this.isSelected = false; // Add selection state
         
         // Animation properties
         this.throwingDefender = -1; // Which defender is throwing
         this.throwAnimationTime = 0;
-        this.animationTime = 0; // Add this line
         this.rocks = [];
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },
@@ -26,7 +24,6 @@ export class BasicTower {
     
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime; // Add this line
         
         this.target = this.findTarget(enemies);
         
@@ -48,7 +45,7 @@ export class BasicTower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update flying rocks - FIXED collision detection
+        // Update flying rocks - check for enemy hits
         this.rocks = this.rocks.filter(rock => {
             rock.x += rock.vx * deltaTime;
             rock.y += rock.vy * deltaTime;
@@ -60,12 +57,10 @@ export class BasicTower {
             if (rock.target && !rock.target.isDead) {
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
                 if (dist <= 15) { // Hit radius
-                    rock.target.takeDamage(this.damage);
-                    return false; // Remove rock on hit
+                    return false; // Remove rock
                 }
             }
             
-            // Remove if lifetime expired
             return rock.life > 0;
         });
     }
@@ -75,7 +70,6 @@ export class BasicTower {
         let closestDist = this.range;
         
         for (const enemy of enemies) {
-            if (enemy.isDead) continue; // Skip dead enemies
             const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
             if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
@@ -88,8 +82,7 @@ export class BasicTower {
     
     shoot() {
         if (this.target) {
-            // Don't damage immediately, let the rock hit
-            // this.target.takeDamage(this.damage); // REMOVED
+            this.target.takeDamage(this.damage);
             
             // Select a defender to throw
             const availableDefenders = this.defenders
@@ -126,13 +119,6 @@ export class BasicTower {
                 });
             }
         }
-    }
-    
-    isClickable(x, y, towerSize) {
-        const cellSize = towerSize / 2; // Since tower is 2x2
-        const centerX = (this.gridX + 1) * cellSize;
-        const centerY = (this.gridY + 1) * cellSize;
-        return Math.hypot(centerX - x, centerY - y) <= towerSize/2;
     }
     
     render(ctx) {
@@ -354,58 +340,8 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Add selection indicator before rendering other elements
-        if (this.isSelected) {
-            const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, ctx.canvas.width / 1920)));
-            const gridSize = cellSize * 2;
-            
-            // Selection ring
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, gridSize * 0.45, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Range indicator (always show when selected)
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Stat UI box
-            const statBoxWidth = 140;
-            const statBoxHeight = 70;
-            const statBoxX = this.x + gridSize * 0.5;
-            const statBoxY = this.y - gridSize * 0.5;
-            
-            // Background
-            ctx.fillStyle = 'rgba(40, 30, 20, 0.9)';
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
-            ctx.fillRect(statBoxX, statBoxY, statBoxWidth, statBoxHeight);
-            ctx.strokeRect(statBoxX, statBoxY, statBoxWidth, statBoxHeight);
-            
-            // Title
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('Basic Tower', statBoxX + 5, statBoxY + 15);
-            
-            // Stats
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '10px serif';
-            ctx.fillText(`Damage: ${this.damage}`, statBoxX + 5, statBoxY + 30);
-            ctx.fillText(`Range: ${this.range}`, statBoxX + 5, statBoxY + 43);
-            ctx.fillText(`Rate: ${this.fireRate.toFixed(1)}/s`, statBoxX + 5, statBoxY + 56);
-        }
-        
-        // Range indicator when targeting (only if not selected)
-        if (this.target && !this.isSelected) {
+        // Range indicator when targeting
+        if (this.target) {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);

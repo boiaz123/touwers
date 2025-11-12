@@ -90,7 +90,6 @@ export class MagicTower {
         let closestDist = this.range;
         
         for (const enemy of enemies) {
-            if (enemy.isDead) continue; // Skip dead enemies
             const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
             if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
