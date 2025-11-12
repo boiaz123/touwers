@@ -748,12 +748,7 @@ export class MagicAcademy extends Building {
             options.push(this.getAcademyUpgradeOption());
         }
         
-        // Add elemental upgrades (now expose emblemIcon + gem currency metadata)
-        const fireCost = this.calculateElementalCost('fire');
-        const waterCost = this.calculateElementalCost('water');
-        const airCost = this.calculateElementalCost('air');
-        const earthCost = this.calculateElementalCost('earth');
-        
+        // Add elemental upgrades
         options.push(
             {
                 id: 'fire',
@@ -761,11 +756,9 @@ export class MagicAcademy extends Building {
                 description: `Increase Magic Tower fire damage by ${this.elementalUpgrades.fire.damageBonus} per level`,
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
-                costGems: fireCost,                 // gem currency cost
-                currencyType: 'fire',               // which gem is required
-                emblemIcon: '🔥',                   // upgrade emblem (element symbol)
-                // metadata UI can use to render the gem currency (e.g. canvas helper)
-                currencyMeta: { colors: this.getGemColors('fire'), shape: 'roundDiamond' }
+                cost: this.calculateElementalCost('fire'),
+                icon: '🔥',
+                gemType: 'fire'
             },
             {
                 id: 'water',
@@ -773,10 +766,9 @@ export class MagicAcademy extends Building {
                 description: `Increase Magic Tower water slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level`,
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
-                costGems: waterCost,
-                currencyType: 'water',
-                emblemIcon: '💧',
-                currencyMeta: { colors: this.getGemColors('water'), shape: 'teardrop' }
+                cost: this.calculateElementalCost('water'),
+                icon: '💧',
+                gemType: 'water'
             },
             {
                 id: 'air',
@@ -784,10 +776,9 @@ export class MagicAcademy extends Building {
                 description: `Increase Magic Tower air chain range by ${this.elementalUpgrades.air.chainRange}px per level`,
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
-                costGems: airCost,
-                currencyType: 'air',
-                emblemIcon: '💨',
-                currencyMeta: { colors: this.getGemColors('air'), shape: 'prism' }
+                cost: this.calculateElementalCost('air'),
+                icon: '💨',
+                gemType: 'air'
             },
             {
                 id: 'earth',
@@ -795,10 +786,10 @@ export class MagicAcademy extends Building {
                 description: `Increase Magic Tower earth armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level`,
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
-                costGems: earthCost,
-                currencyType: 'earth',
-                emblemIcon: '⛰️',
-                currencyMeta: { colors: this.getGemColors('earth'), shape: 'rawShard' }
+                cost: this.calculateElementalCost('earth'),
+                icon: '🪨',
+                gemType: 'earth',
+                color: '#8B6F47'
             }
         );
         
@@ -1077,137 +1068,5 @@ export class MagicAcademy extends Building {
         
         console.log(`MagicAcademy: Unlocked ${feature}`);
         return true;
-    }
-    
-    // New helper: small palette for each gem type (used by UI to render gem art)
-    getGemColors(type) {
-        switch (type) {
-            case 'fire':
-                return ['#FFB07C', '#FF4A00', '#FFD78C']; // warm orange/red highlights
-            case 'water':
-                return ['#BFF0FF', '#2FB6E6', '#0B83C6']; // pale to deep blue
-            case 'air':
-                return ['#E6FFFF', '#7EE7F7', '#3ADFEA']; // cyan/teal icy
-            case 'earth':
-                return ['#C7E47A', '#7AA23A', '#6B4F29']; // green->brown
-            case 'diamond':
-            default:
-                return ['#FFFFFF', '#CFEFFF', '#9FD5FF']; // icy/white for diamond
-        }
-    }
-
-    // New helper: draw a small, natural-looking gem on a canvas at (x,y). 
-    // shape: 'roundDiamond'|'teardrop'|'prism'|'rawShard'|'hex'
-    drawNaturalGem(ctx, x, y, size, type, shape = 'roundDiamond') {
-        const colors = this.getGemColors(type);
-        ctx.save();
-        ctx.translate(x, y);
-        
-        // subtle shadow
-        ctx.shadowColor = 'rgba(0,0,0,0.25)';
-        ctx.shadowBlur = 6;
-        ctx.shadowOffsetY = 2;
-        
-        // main gradient
-        const g = ctx.createLinearGradient(-size, -size, size, size);
-        g.addColorStop(0, colors[0]);
-        g.addColorStop(0.6, colors[1] || colors[0]);
-        g.addColorStop(1, colors[2] || colors[1] || colors[0]);
-        ctx.fillStyle = g;
-        
-        ctx.beginPath();
-        if (shape === 'teardrop') {
-            ctx.moveTo(0, -size * 0.9);
-            ctx.bezierCurveTo(size * 0.9, -size * 0.2, size * 0.5, size * 0.95, 0, size);
-            ctx.bezierCurveTo(-size * 0.5, size * 0.95, -size * 0.9, -size * 0.2, 0, -size * 0.9);
-            ctx.closePath();
-            ctx.fill();
-            
-            // highlight
-            ctx.fillStyle = 'rgba(255,255,255,0.18)';
-            ctx.beginPath();
-            ctx.ellipse(-size*0.18, -size*0.18, size*0.26, size*0.46, -0.5, 0, Math.PI*2);
-            ctx.fill();
-        } else if (shape === 'prism') {
-            ctx.moveTo(-size*0.4, -size);
-            ctx.lineTo(size*0.6, -size*0.5);
-            ctx.lineTo(size*0.6, size*0.6);
-            ctx.lineTo(-size*0.4, size);
-            ctx.lineTo(-size*0.9, 0);
-            ctx.closePath();
-            ctx.fill();
-            
-            // thin facet lines
-            ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-            ctx.lineWidth = 0.8;
-            ctx.beginPath();
-            ctx.moveTo(-size*0.15, -size*0.55);
-            ctx.lineTo(size*0.18, 0);
-            ctx.lineTo(-size*0.18, size*0.6);
-            ctx.stroke();
-        } else if (shape === 'rawShard') {
-            ctx.moveTo(-size*0.6, -size*0.45);
-            ctx.lineTo(0, -size);
-            ctx.lineTo(size*0.7, -size*0.1);
-            ctx.lineTo(size*0.45, size*0.7);
-            ctx.lineTo(-size*0.45, size*0.55);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.fillStyle = 'rgba(0,0,0,0.12)';
-            ctx.beginPath();
-            ctx.moveTo(-size*0.05, -size*0.18);
-            ctx.lineTo(size*0.22, -size*0.08);
-            ctx.lineTo(size*0.12, size*0.34);
-            ctx.closePath();
-            ctx.fill();
-        } else if (shape === 'hex') {
-            const r = size*0.9;
-            ctx.moveTo(0, -r);
-            ctx.lineTo(r*0.6, -r*0.35);
-            ctx.lineTo(r*0.6, r*0.35);
-            ctx.lineTo(0, r);
-            ctx.lineTo(-r*0.6, r*0.35);
-            ctx.lineTo(-r*0.6, -r*0.35);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            ctx.beginPath();
-            ctx.moveTo(0, -r*0.2);
-            ctx.lineTo(r*0.24, 0);
-            ctx.lineTo(0, r*0.14);
-            ctx.lineTo(-r*0.24, 0);
-            ctx.closePath();
-            ctx.fill();
-        } else { // default roundDiamond
-            ctx.moveTo(0, -size);
-            ctx.lineTo(size*0.7, 0);
-            ctx.lineTo(0, size);
-            ctx.lineTo(-size*0.7, 0);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-            ctx.lineWidth = 0.9;
-            ctx.stroke();
-            
-            ctx.fillStyle = 'rgba(255,255,255,0.18)';
-            ctx.beginPath();
-            ctx.moveTo(0, -size*0.9);
-            ctx.lineTo(size*0.22, 0);
-            ctx.lineTo(0, size*0.4);
-            ctx.closePath();
-            ctx.fill();
-        }
-        
-        // subtle outer stroke to define shape
-        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        
-        // reset shadow
-        ctx.shadowColor = 'transparent';
-        ctx.restore();
     }
 }
