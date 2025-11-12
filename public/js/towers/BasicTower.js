@@ -554,10 +554,10 @@ export class BasicTower {
 			y: this.y + clamp(fy) * gridSize
 		});
 
-		// Pine trees: 3, each about half the tower height
+		// Pine trees: 3, each about half the tower support beam height
 		const towerHeight = gridSize * 0.4;
-		const pineHeight = towerHeight * 0.5;
-		const pineBase = gridSize * 0.09;
+		const pineHeight = towerHeight * 0.5; // Half the support beam height
+		const pineBase = gridSize * 0.13; // Wider base for natural look
 		const pines = [
 			place(-0.32, 0.32),
 			place(0.32, 0.32),
@@ -567,33 +567,35 @@ export class BasicTower {
 			const scale = 1;
 			// shadow
 			ctx.save();
-			ctx.translate(t.x, t.y + pineBase * 0.5);
+			ctx.translate(t.x, t.y + pineBase * 0.7);
 			ctx.scale(1, 0.45);
 			ctx.fillStyle = 'rgba(0,0,0,0.15)';
 			ctx.beginPath();
-			ctx.ellipse(0, 0, pineBase * 2, pineBase, 0, 0, Math.PI * 2);
+			ctx.ellipse(0, 0, pineBase * 2.2, pineBase * 1.1, 0, 0, Math.PI * 2);
 			ctx.fill();
 			ctx.restore();
 
-			// trunk
+			// trunk (taller and slightly narrower for realism)
+			const trunkW = pineBase * 0.35;
+			const trunkH = pineHeight * 0.35;
 			ctx.fillStyle = '#654321';
-			ctx.fillRect(t.x - pineBase * 0.25, t.y, pineBase * 0.5, -pineHeight * 0.25);
+			ctx.fillRect(t.x - trunkW / 2, t.y, trunkW, -trunkH);
 
-			// foliage: 3 layers
+			// foliage: 3 layers, wider and more overlapping for natural look
 			const greens = ['#0F3B0F', '#228B22', '#32CD32'];
 			for (let layer = 0; layer < 3; layer++) {
-				const width = pineBase * (2.2 - layer * 0.6);
-				const ly = t.y - pineHeight * 0.25 + layer * pineHeight * 0.18;
+				const width = pineBase * (2.6 - layer * 0.7);
+				const ly = t.y - trunkH + layer * pineHeight * 0.18;
 				ctx.fillStyle = greens[layer];
 				ctx.beginPath();
 				ctx.moveTo(t.x, ly);
-				ctx.lineTo(t.x - width / 2, ly + width * 0.8);
-				ctx.lineTo(t.x + width / 2, ly + width * 0.8);
+				ctx.lineTo(t.x - width / 2, ly + width * 0.9);
+				ctx.lineTo(t.x + width / 2, ly + width * 0.9);
 				ctx.closePath();
 				ctx.fill();
 
-				ctx.strokeStyle = '#0F3B0F';
-				ctx.lineWidth = 0.7;
+				ctx.strokeStyle = '#145214';
+				ctx.lineWidth = 0.8;
 				ctx.stroke();
 			}
 		});
@@ -656,8 +658,8 @@ export class BasicTower {
 			ctx.fill();
 
 			ctx.strokeStyle = '#5c5c5c';
-			ctx.lineWidth = 0.6;
-			ctx.stroke();
+		 ctx.lineWidth = 0.6;
+		 ctx.stroke();
 		});
 	}
     
