@@ -22,6 +22,13 @@ export class BasicTower {
             { angle: Math.PI, armRaised: 0, throwCooldown: 0.6 },
             { angle: 3 * Math.PI / 2, armRaised: 0, throwCooldown: 0.9 }
         ];
+
+        // Prevent stat panel from opening immediately after build.
+        // The panel will be allowed only when the tower icon is clicked.
+        this.isSelected = false;
+        this._suppressSelectionUntilClick = true;
+        this._clickHandlerAttached = false;
+        this._onCanvasClick = null;
     }
     
     update(deltaTime, enemies) {
@@ -130,7 +137,46 @@ export class BasicTower {
         const cellSize = Math.floor(32 * scaleFactor);
         const gridSize = cellSize * 2; // 2x2 grid
         this.gridSize = gridSize; // Store for rock calculations
-        
+
+        // If the tower was auto-selected during build, suppress that selection
+        // until the user explicitly clicks the tower icon.
+        if (this._suppressSelectionUntilClick && this.isSelected) {
+            this.isSelected = false;
+        }
+
+        // Attach click handler once to detect clicks on the tower icon.
+        if (!this._clickHandlerAttached) {
+            const canvas = ctx.canvas;
+            this._clickHandlerAttached = true;
+            this._onCanvasClick = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                // Map mouse to canvas pixel coordinates
+                const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+                // Recompute icon position using same logic as render
+                const baseResolutionLocal = 1920;
+                const scaleFactorLocal = Math.max(0.5, Math.min(2.5, canvas.width / baseResolutionLocal));
+                const cellSizeLocal = Math.floor(32 * scaleFactorLocal);
+                const iconSize = 20;
+                const iconX = (this.gridX + 1.5) * cellSizeLocal;
+                const iconY = (this.gridY + 1.5) * cellSizeLocal - 5;
+
+                // Hit test against icon bounding box
+                if (
+                    clickX >= iconX - iconSize / 2 &&
+                    clickX <= iconX + iconSize / 2 &&
+                    clickY >= iconY - iconSize / 2 &&
+                    clickY <= iconY + iconSize / 2
+                ) {
+                    // Allow selection and open stat panel
+                    this._suppressSelectionUntilClick = false;
+                    this.isSelected = true;
+                }
+            };
+            canvas.addEventListener('click', this._onCanvasClick);
+        }
+
         // Compact, aligned tower dimensions
         const baseSize = gridSize * 0.35;
         const baseHeight = gridSize * 0.1;
