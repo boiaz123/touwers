@@ -730,10 +730,14 @@ export class MagicAcademy extends Building {
         console.log('MagicAcademy: onClick called');
         this.isSelected = true;
         
+        // Make sure we have upgrade options
+        const upgrades = this.getElementalUpgradeOptions();
+        console.log('MagicAcademy: Generated upgrade options:', upgrades.length);
+        
         const result = {
             type: 'academy_menu',
             academy: this,
-            upgrades: this.getElementalUpgradeOptions()
+            upgrades: upgrades
         };
         
         console.log('MagicAcademy: returning menu data:', result);
@@ -743,13 +747,17 @@ export class MagicAcademy extends Building {
     getElementalUpgradeOptions() {
         const options = [];
         
+        console.log('MagicAcademy: Generating upgrade options. Level:', this.academyLevel, 'MaxLevel:', this.maxAcademyLevel);
+        
         // New: Add academy building upgrades first - only if not at max level
         if (this.academyLevel < this.maxAcademyLevel) {
-            options.push(this.getAcademyUpgradeOption());
+            const academyUpgrade = this.getAcademyUpgradeOption();
+            console.log('MagicAcademy: Adding academy upgrade option:', academyUpgrade.name);
+            options.push(academyUpgrade);
         }
         
         // Add elemental upgrades
-        options.push(
+        const elementalUpgrades = [
             {
                 id: 'fire',
                 name: 'Fire Mastery',
@@ -791,7 +799,9 @@ export class MagicAcademy extends Building {
                 gemType: 'earth',
                 color: '#8B6F47'
             }
-        );
+        ];
+        
+        options.push(...elementalUpgrades);
         
         // New: Add gem mining tools research if not yet researched
         if (!this.gemMiningResearched) {
@@ -809,8 +819,10 @@ export class MagicAcademy extends Building {
         
         // New: Add combination spell unlocks if academy level 1 is reached
         if (this.combinationSpellsUnlocked) {
+            console.log('MagicAcademy: Combination spells unlocked. Checking for available spells.');
             this.combinationSpells.forEach(spell => {
                 if (!this.unlockedCombinations.has(spell.id)) {
+                    console.log(`MagicAcademy: Adding unlock option for ${spell.name} spell`);
                     options.push({
                         id: `unlock_${spell.id}`,
                         name: `Unlock ${spell.name} Spell`,
@@ -828,6 +840,7 @@ export class MagicAcademy extends Building {
             });
         }
         
+        console.log('MagicAcademy: Total upgrade options generated:', options.length);
         return options;
     }
     

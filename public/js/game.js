@@ -627,6 +627,8 @@ class GameplayState {
         this.clearActiveMenus();
         
         console.log('GameplayState: Showing academy upgrade menu', academyData);
+        console.log('GameplayState: Academy has', academyData.upgrades.length, 'upgrades');
+        console.log('GameplayState: Academy combination spells unlocked?', academyData.academy.combinationSpellsUnlocked);
         
         // Create upgrade menu using the same structure as forge
         const menu = document.createElement('div');
