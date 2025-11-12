@@ -29,6 +29,9 @@ export class BasicTower {
         this._suppressSelectionUntilClick = true;
         this._clickHandlerAttached = false;
         this._onCanvasClick = null;
+
+        // deterministic env seed to avoid per-frame flicker
+        this._envSeed = (gridX * 1031 + gridY * 7919 + Math.floor(x) * 37 + Math.floor(y)) % 100000;
     }
     
     update(deltaTime, enemies) {
@@ -89,6 +92,12 @@ export class BasicTower {
         return closest;
     }
     
+    // simple deterministic pseudo-random based on tower seed + index
+	_rand(i) {
+		const v = Math.sin(this._envSeed * 1.2345 + i * 12.9898) * 43758.5453;
+		return v - Math.floor(v);
+	}
+
     shoot() {
         if (this.target) {
             this.target.takeDamage(this.damage);
@@ -111,10 +120,13 @@ export class BasicTower {
                 
                 const dx = this.target.x - defenderX;
                 const dy = this.target.y - defenderY;
-                const distance = Math.hypot(dx, dy);
+                const distance = Math.hypot(dx, dy) || 1;
                 const throwSpeed = 300;
                 const arcHeight = distance * 0.15;
                 
+                // store per-rock deterministic variance so rendering is stable
+                const variance = new Array(6).fill(0).map((_, vi) => 0.75 + Math.random() * 0.35);
+
                 this.rocks.push({
                     x: defenderX,
                     y: defenderY,
@@ -124,7 +136,8 @@ export class BasicTower {
                     rotationSpeed: Math.random() * 10 + 5,
                     life: distance / throwSpeed + 1,
                     size: Math.random() * 2 + 3,
-                    target: this.target
+                    target: this.target,
+                    variance
                 });
             }
         }
@@ -428,34 +441,34 @@ export class BasicTower {
 
         ctx.restore();
         
-        // Render flying rocks
+        // Render flying rocks (use per-rock variance instead of per-frame randomness)
         this.rocks.forEach(rock => {
             ctx.save();
             ctx.translate(rock.x, rock.y);
             ctx.rotate(rock.rotation);
-            
+
             const rockGradient = ctx.createRadialGradient(-1, -1, 0, 0, 0, rock.size);
             rockGradient.addColorStop(0, '#A9A9A9');
             rockGradient.addColorStop(1, '#696969');
-            
+
             ctx.fillStyle = rockGradient;
             ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 0.5;
-            
+
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
                 const angle = (i / 6) * Math.PI * 2;
-                const variance = 0.7 + Math.random() * 0.3;
+                // use stored variance (fallback to 0.8 if missing)
+                const variance = (rock.variance && rock.variance[i]) ? rock.variance[i] : 0.8;
                 const x = Math.cos(angle) * rock.size * variance;
                 const y = Math.sin(angle) * rock.size * variance;
-                
                 if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-            
+
             ctx.restore();
         });
         
@@ -532,15 +545,12 @@ export class BasicTower {
         ctx.fillText(symbol, iconX, iconY);
     }
     
-    drawEnvironment(ctx, gridSize) {
-		// New environment: multiple pines, one broadleaf, clustered bushes, rock piles,
-		// stump, fallen log, grass patches and small flowers. All positions stay within the 2x2 grid.
+    // Replace drawEnvironment with deterministic, larger forest elements
+	drawEnvironment(ctx, gridSize) {
+		// keep everything inside ~±0.45 grid units
 		const clamp = v => Math.max(-0.45, Math.min(0.45, v));
-
-		// Helper: place coords inside grid
 		const place = (fx, fy) => ({ x: this.x + clamp(fx) * gridSize, y: this.y + clamp(fy) * gridSize });
 
-		// Simple shadow helper
 		const drawShadow = (cx, cy, rX, rY, alpha = 0.18) => {
 			ctx.save();
 			ctx.translate(cx + 2, cy + 2);
@@ -552,25 +562,27 @@ export class BasicTower {
 			ctx.restore();
 		};
 
-		// Pine trees (3 variations)
-		const pines = [
-			place(-0.38, 0.32),
-			place(0.34, 0.36),
-			place(-0.42, -0.28),
-			place(0.36, -0.36),
-			place(0.12, 0.05) // a small near-center pine
+		// Bigger pine tree presence - 5 pines with larger scale to read as a small forest
+		const pinePositions = [
+			place(-0.42, 0.28),
+			place(-0.22, 0.40),
+			place(0.30, 0.32),
+			place(-0.36, -0.30),
+			place(0.36, -0.36)
 		];
-		pines.forEach((pos, i) => {
-			const scale = [0.8,0.65,1.0,0.5,0.45][i] || 0.6;
-			const trunkH = 6 * scale;
-			const trunkW = 2 * scale;
-			drawShadow(pos.x, pos.y + 2, 6*scale, 3*scale, 0.14);
-			// trunk
-			ctx.fillStyle = '#5a341d';
+		pinePositions.forEach((pos, i) => {
+			// larger base scale, vary deterministically per index
+			const baseScale = 0.9 + (i * 0.08);
+			const scale = baseScale;
+			const trunkH = 7.5 * scale;
+			const trunkW = 2.5 * scale;
+			drawShadow(pos.x, pos.y + 2, 8*scale, 4*scale, 0.16);
+
+			ctx.fillStyle = '#4f2b17';
 			ctx.fillRect(pos.x - trunkW/2, pos.y, trunkW, -trunkH);
-			// rings/texture on trunk
-			ctx.strokeStyle = '#482814';
-			ctx.lineWidth = 0.5;
+
+			ctx.strokeStyle = '#3f1f10';
+			ctx.lineWidth = 0.6;
 			for (let r = 1; r <= 2; r++) {
 				const ry = pos.y - trunkH * (r/3);
 				ctx.beginPath();
@@ -578,179 +590,174 @@ export class BasicTower {
 				ctx.lineTo(pos.x + trunkW/2, ry);
 				ctx.stroke();
 			}
-			// pine layers (3)
-			const greens = ['#0f3b0f','#1f6f1f','#2fa02f'];
+
+			const greens = ['#0e3a0e','#1e6f1f','#2ea02f'];
 			for (let layer = 0; layer < 3; layer++) {
-				const width = (8 - layer*2) * scale;
-				const ly = pos.y + (-10 * scale) + layer * (2.8 * scale);
+				const width = (10 - layer*2.5) * scale;
+				const ly = pos.y + (-12 * scale) + layer * (3.4 * scale);
 				ctx.fillStyle = greens[layer];
 				ctx.beginPath();
 				ctx.moveTo(pos.x, ly);
-				ctx.lineTo(pos.x - width/2, ly + width*0.75);
-				ctx.lineTo(pos.x + width/2, ly + width*0.75);
+				ctx.lineTo(pos.x - width/2, ly + width*0.72);
+				ctx.lineTo(pos.x + width/2, ly + width*0.72);
 				ctx.closePath();
 				ctx.fill();
-				// outline
-				ctx.strokeStyle = '#0b2b0b';
+				ctx.strokeStyle = '#072007';
 				ctx.lineWidth = 0.7;
 				ctx.stroke();
 			}
 		});
 
-		// Broadleaf tree (one) for variety
-		const oak = place(-0.08, -0.12);
+		// One prominent broadleaf tree to add depth (bigger canopy)
+		const oak = place(-0.08, -0.08);
 		{
-			const s = 0.9;
-			drawShadow(oak.x, oak.y + 2, 10*s, 5*s, 0.16);
-			// trunk
+			const s = 1.15;
+			drawShadow(oak.x, oak.y + 2, 14*s, 7*s, 0.18);
 			ctx.fillStyle = '#5a341d';
-			ctx.fillRect(oak.x - 2*s, oak.y, 4*s, -10*s);
-			// canopy: layered circles
-			const canopyCols = ['#2e6b2e','#3a8f3a','#4fbf4f'];
+			ctx.fillRect(oak.x - 2.2*s, oak.y, 4.4*s, -12*s);
+
+			const canopyCols = ['#2f6b2f','#3b8f3b','#50bf50'];
 			for (let i = 0; i < 4; i++) {
 				ctx.fillStyle = canopyCols[i%canopyCols.length];
 				ctx.beginPath();
-				ctx.arc(oak.x + (i-1.5)*2*s, oak.y - 10*s - (i*1.5*s), 8*s - i*1.2*s, 0, Math.PI*2);
+				ctx.arc(oak.x + (i-1.5)*2.2*s, oak.y - 12*s - (i*1.6*s), 10*s - i*1.6*s, 0, Math.PI*2);
 				ctx.fill();
-				ctx.strokeStyle = 'rgba(10,30,10,0.35)';
-				ctx.lineWidth = 0.6;
+				ctx.strokeStyle = 'rgba(8,28,8,0.34)';
+				ctx.lineWidth = 0.7;
 				ctx.stroke();
 			}
-			// small fruit/flowers (dots)
-			for (let i=0;i<6;i++){
-				ctx.fillStyle = i%2 ? '#f6e27a' : '#e36b6b';
-				const angle = Math.random()*Math.PI*2;
-				const r = Math.random()*6*s;
+			// deterministic small fruit dots (no Math.random)
+			for (let f = 0; f < 6; f++) {
+				const angle = (this._rand(100 + f) * Math.PI * 2);
+				const r = 4 * s + (f % 3) * 0.7;
+				ctx.fillStyle = (f % 2) ? '#f6e27a' : '#e36b6b';
 				ctx.beginPath();
-				ctx.arc(oak.x + Math.cos(angle)*r, oak.y - 10*s + Math.sin(angle)*r, 0.9, 0, Math.PI*2);
+				ctx.arc(oak.x + Math.cos(angle) * r, oak.y - 12*s + Math.sin(angle) * r, 1.1, 0, Math.PI*2);
 				ctx.fill();
 			}
 		}
 
-		// Bush clusters: group of 3-4 rounded bushes at different locations
+		// Denser bush clusters - larger sizes
 		const bushClusters = [
-			place(-0.22, 0.22),
+			place(-0.28, 0.20),
 			place(0.18, -0.18),
-			place(-0.28, -0.32),
-			place(0.28, 0.12)
+			place(-0.18, -0.32),
+			place(0.30, 0.12)
 		];
 		bushClusters.forEach((c, idx) => {
-			const base = 3.5 * (0.6 + (idx%2)*0.15);
-			drawShadow(c.x, c.y + 2, base*0.9, base*0.45, 0.12);
-			const shades = ['#1f6f1f', '#27a027', '#2fc82f'];
-			for (let b=0;b<3;b++){
-				const ox = c.x + (b-1)*6;
-				const oy = c.y - Math.abs(b-1)*1.5;
+			const base = 5.0 * (0.7 + (idx%2)*0.18);
+			drawShadow(c.x, c.y + 2, base*0.95, base*0.5, 0.14);
+			const shades = ['#1c6f1c', '#27a027', '#33c233'];
+			for (let b = 0; b < 4; b++) {
+				const ox = c.x + (b-1.5) * (base * 0.9 / 3);
+				const oy = c.y - Math.abs(b-1.5) * 1.8;
 				ctx.fillStyle = shades[(b+idx)%shades.length];
 				ctx.beginPath();
-				ctx.arc(ox, oy, base - b*0.9, 0, Math.PI*2);
+				ctx.arc(ox, oy, base - b*1.0, 0, Math.PI*2);
 				ctx.fill();
-				ctx.strokeStyle = 'rgba(8,30,8,0.35)';
-				ctx.lineWidth = 0.6;
+				ctx.strokeStyle = 'rgba(6,28,6,0.35)';
+				ctx.lineWidth = 0.7;
 				ctx.stroke();
 			}
 		});
 
-		// Rocks: small piles with shading and strokes
+		// Larger rock piles
 		const rockPiles = [
-			place(-0.3, 0.28),
-			place(0.25, 0.16),
-			place(0.3, -0.22)
+			place(-0.32, 0.28),
+			place(0.26, 0.18),
+			place(0.32, -0.24)
 		];
 		rockPiles.forEach((r, idx) => {
-			const base = 2.6 * (0.6 + (idx%2)*0.2);
-			drawShadow(r.x, r.y + 1, base*0.7, base*0.35, 0.12);
-			// draw 3 stones
-			for (let s=0; s<3; s++){
-				const rx = r.x + (s-1)*3.5 + (s%2?1:-1);
-				const ry = r.y - s*0.8;
-				const rad = base*(0.6 - s*0.12);
-				const grad = ctx.createRadialGradient(rx-rad*0.3, ry-rad*0.3, 0, rx, ry, rad);
+			const base = 3.2 * (0.9 + (idx%2)*0.25);
+			drawShadow(r.x, r.y + 1, base*0.8, base*0.4, 0.13);
+			for (let s = 0; s < 3; s++) {
+				const rx = r.x + (s-1) * 4.2 + ((s%2)?1.0:-1.0);
+				const ry = r.y - s * 0.9;
+				const rad = base * (0.7 - s*0.12);
+				const grad = ctx.createRadialGradient(rx - rad*0.25, ry - rad*0.25, 0, rx, ry, rad);
 				grad.addColorStop(0, '#bdbdbd');
 				grad.addColorStop(1, '#6e6e6e');
 				ctx.fillStyle = grad;
 				ctx.beginPath();
-				ctx.ellipse(rx, ry, rad, rad*0.8, Math.PI*0.1*s, 0, Math.PI*2);
+				ctx.ellipse(rx, ry, rad, rad*0.82, Math.PI*0.07*s, 0, Math.PI*2);
 				ctx.fill();
-				ctx.strokeStyle = '#5c5c5c';
+				ctx.strokeStyle = '#5b5b5b';
 				ctx.lineWidth = 0.6;
 				ctx.stroke();
 			}
 		});
 
-		// Stump and fallen log near each other
-		const stump = place(0.02, 0.34);
-		{
-			drawShadow(stump.x, stump.y + 1, 3.5, 1.6, 0.12);
-			ctx.fillStyle = '#6b3b18';
-			ctx.fillRect(stump.x - 2.5, stump.y, 5, -4);
-			// rings on top
-			ctx.fillStyle = '#8c5a32';
+		// Stump and log (bigger)
+		const stump = place(0.02, 0.36);
+		drawShadow(stump.x, stump.y + 1, 4.5, 2.0, 0.13);
+		ctx.fillStyle = '#6b3b18';
+		ctx.fillRect(stump.x - 3.0, stump.y, 6.0, -5.0);
+		ctx.fillStyle = '#8c5a32';
+		ctx.beginPath();
+		ctx.ellipse(stump.x, stump.y - 5, 2.6, 1.4, 0, 0, Math.PI*2);
+		ctx.fill();
+		ctx.strokeStyle = '#5a341d';
+		ctx.lineWidth = 0.6;
+		ctx.stroke();
+
+		const log = place(-0.06, 0.40);
+		drawShadow(log.x, log.y + 2, 7, 2.6, 0.12);
+		ctx.save();
+		ctx.translate(log.x, log.y - 1);
+		ctx.rotate(-0.28);
+		ctx.fillStyle = '#6b3b18';
+		ctx.fillRect(-7.5, 0, 15, 4.5);
+		ctx.strokeStyle = '#4d2e14';
+		ctx.lineWidth = 0.7;
+		for (let g = 0; g < 4; g++) {
 			ctx.beginPath();
-			ctx.ellipse(stump.x, stump.y - 4, 2.2, 1.2, 0, 0, Math.PI*2);
-			ctx.fill();
-			ctx.strokeStyle = '#5a341d';
-			ctx.lineWidth = 0.6;
+			ctx.moveTo(-7.5 + g*4.5, 0);
+			ctx.lineTo(-7.5 + g*4.5, 4.5);
 			ctx.stroke();
 		}
-		const log = place(-0.08, 0.38);
-		{
-			drawShadow(log.x, log.y + 2, 6, 2.2, 0.12);
-			ctx.save();
-			ctx.translate(log.x, log.y - 1);
-			ctx.rotate(-0.25);
-			ctx.fillStyle = '#6b3b18';
-			ctx.fillRect(-6, 0, 12, 3.5);
-			ctx.strokeStyle = '#4d2e14';
-			ctx.lineWidth = 0.6;
-			for (let g=0; g<3; g++){
-				ctx.beginPath();
-				ctx.moveTo(-6 + g*4, 0);
-				ctx.lineTo(-6 + g*4, 3.5);
-				ctx.stroke();
-			}
-			ctx.restore();
-		}
+		ctx.restore();
 
-		// Grass patches and small flowers
+		// Grass patches (slightly larger blades) and small deterministic flowers
 		const grassPatches = [
-			place(-0.12, 0.18),
+			place(-0.12, 0.20),
 			place(0.08, -0.12),
-			place(0.18, 0.06)
+			place(0.18, 0.06),
+			place(0.04, 0.26)
 		];
-		ctx.lineWidth = 0.9;
+		ctx.lineWidth = 1.0;
 		grassPatches.forEach((g, idx) => {
-			const blades = 5 + idx;
-			for (let i=0;i<blades;i++){
-				const angle = -Math.PI/2 + (i - blades/2)*0.12;
-				ctx.strokeStyle = '#2e8b2e';
+			const blades = 6 + idx;
+			for (let i = 0; i < blades; i++) {
+				const angle = -Math.PI/2 + (i - blades/2) * 0.11;
+				ctx.strokeStyle = '#2f8b2f';
 				ctx.beginPath();
 				ctx.moveTo(g.x, g.y);
-				ctx.lineTo(g.x + Math.cos(angle)*6, g.y + Math.sin(angle)*6);
+				ctx.lineTo(g.x + Math.cos(angle) * 8, g.y + Math.sin(angle) * 8);
 				ctx.stroke();
 			}
-			// tiny flowers
-			for (let f=0; f<3; f++){
-				ctx.fillStyle = f%2 ? '#ffd1e0' : '#fff1a8';
+			// deterministic small flowers
+			for (let f = 0; f < 3; f++) {
+				const flowerOffset = (f - 1) * 3.0;
+				ctx.fillStyle = (f % 2) ? '#ffd1e0' : '#fff1a8';
 				ctx.beginPath();
-				ctx.arc(g.x + (f-1)*2.5, g.y - 2 - f*0.6, 0.9, 0, Math.PI*2);
+				ctx.arc(g.x + flowerOffset, g.y - 2 - f * 0.7, 1.1, 0, Math.PI*2);
 				ctx.fill();
 			}
 		});
 
-		// Final subtle ground texture: small pebbles in front area
-		const pebbles = [
+		// Pebbles - deterministic placement (no Math.random)
+		const pebbleBases = [
 			place(-0.05, 0.12),
 			place(0.12, 0.2),
 			place(-0.18, -0.08)
 		];
-		pebbles.forEach(p => {
-			for (let i=0;i<6;i++){
+		pebbleBases.forEach((p, pi) => {
+			for (let i = 0; i < 6; i++) {
+				const rdx = (this._rand(pi * 10 + i) - 0.5) * 10;
+				const rdy = (this._rand(pi * 20 + i) - 0.5) * 6;
 				ctx.fillStyle = '#7f7f7f';
 				ctx.beginPath();
-				const rx = p.x + (Math.random()-0.5) * 8;
-				const ry = p.y + (Math.random()-0.5) * 5;
-				ctx.arc(rx, ry, 0.8 + Math.random()*0.8, 0, Math.PI*2);
+				ctx.arc(p.x + rdx, p.y + rdy, 0.9 + (this._rand(pi*30 + i) * 0.8), 0, Math.PI*2);
 				ctx.fill();
 			}
 		});
