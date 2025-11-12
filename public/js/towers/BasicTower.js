@@ -9,10 +9,12 @@ export class BasicTower {
         this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
+        this.isSelected = false; // Add selection state
         
         // Animation properties
-        this.throwingDefender = -1; // Which defender is throwing
+        this.throwingDefender = -1;
         this.throwAnimationTime = 0;
+        this.animationTime = 0; // FIXED: Add missing animation time
         this.rocks = [];
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },
@@ -20,10 +22,12 @@ export class BasicTower {
             { angle: Math.PI, armRaised: 0, throwCooldown: 0.6 },
             { angle: 3 * Math.PI / 2, armRaised: 0, throwCooldown: 0.9 }
         ];
+        this.gridSize = 64; // Default, will be set in render
     }
     
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
+        this.animationTime += deltaTime; // FIXED: Update animation time
         
         this.target = this.findTarget(enemies);
         
@@ -45,7 +49,7 @@ export class BasicTower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update flying rocks - check for enemy hits
+        // Update flying rocks with proper collision detection
         this.rocks = this.rocks.filter(rock => {
             rock.x += rock.vx * deltaTime;
             rock.y += rock.vy * deltaTime;
@@ -53,15 +57,21 @@ export class BasicTower {
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
-            // Check collision with target enemy
+            // FIXED: Check collision with target enemy - improved hit detection
             if (rock.target && !rock.target.isDead) {
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
-                if (dist <= 15) { // Hit radius
-                    return false; // Remove rock
+                if (dist < 20) { // Hit radius
+                    rock.target.takeDamage(rock.damage);
+                    return false; // Remove rock on hit
                 }
             }
             
-            return rock.life > 0;
+            // Remove rock if it goes off screen or lifetime expires
+            if (rock.life <= 0) {
+                return false;
+            }
+            
+            return true;
         });
     }
     
@@ -82,8 +92,6 @@ export class BasicTower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
-            
             // Select a defender to throw
             const availableDefenders = this.defenders
                 .map((def, index) => ({ def, index }))
@@ -96,9 +104,9 @@ export class BasicTower {
                 this.throwingDefender = index;
                 
                 // Create rock projectile from defender position
-                const platformY = this.y - (this.gridSize || 64) * 0.12 - (this.gridSize || 64) * 0.45 - (this.gridSize || 64) * 0.08;
-                const defenderX = this.x + (this.gridSize || 64) * 0.32 * 0.1;
-                const defenderY = platformY - (this.gridSize || 64) * 0.32 * 0.05 - 12;
+                const platformY = this.y - this.gridSize * 0.5;
+                const defenderX = this.x;
+                const defenderY = platformY - 10;
                 
                 const dx = this.target.x - defenderX;
                 const dy = this.target.y - defenderY;
@@ -114,11 +122,17 @@ export class BasicTower {
                     rotation: 0,
                     rotationSpeed: Math.random() * 10 + 5,
                     life: distance / throwSpeed + 1,
+                    maxLife: distance / throwSpeed + 1,
                     size: Math.random() * 2 + 3,
-                    target: this.target
+                    target: this.target,
+                    damage: this.damage // FIXED: Store damage on rock
                 });
             }
         }
+    }
+    
+    isClickable(x, y, towerSize) {
+        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
     }
     
     render(ctx) {
@@ -126,8 +140,8 @@ export class BasicTower {
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
-        const gridSize = cellSize * 2; // 2x2 grid
-        this.gridSize = gridSize; // Store for rock calculations
+        const gridSize = cellSize * 2;
+        this.gridSize = gridSize;
         
         // Compact, aligned tower dimensions
         const baseSize = gridSize * 0.35;
@@ -283,7 +297,7 @@ export class BasicTower {
         const throwingDefender = this.defenders[0];
         const armAngle = this.target && this.throwingDefender === 0 ? 
             -Math.PI / 2 - throwingDefender.armRaised * Math.PI / 3 : 
-            Math.sin(Date.now() * 0.002) * 0.2;
+            Math.sin(this.animationTime * 2) * 0.2;
         
         // Throwing arm
         ctx.beginPath();
@@ -340,9 +354,24 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Range indicator when targeting
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
+        // FIXED: Add selection glow and range indicator
+        if (this.isSelected) {
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 10;
+            
+            // Selection ring
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, gridSize/2 + 5, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        // Range indicator
+        if (this.target || this.isSelected) {
+            ctx.strokeStyle = this.isSelected ? 'rgba(184, 134, 11, 0.4)' : 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
@@ -354,7 +383,7 @@ export class BasicTower {
         // Floating icon in bottom right of 2x2 grid
         const iconSize = 20;
         const iconX = (this.gridX + 1.5) * cellSize;
-        const iconY = (this.gridY + 1.5) * cellSize - 5; // Float up slightly
+        const iconY = (this.gridY + 1.5) * cellSize - 5;
         
         // Dynamic pulse for medieval glow effect
         const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
@@ -368,20 +397,20 @@ export class BasicTower {
             iconX - iconSize/4, iconY - iconSize/4, 0,
             iconX, iconY, iconSize
         );
-        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
+        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`);
+        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`);
+        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`);
         
         ctx.fillStyle = parchmentGradient;
         ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
         
         // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
+        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`;
         ctx.lineWidth = 2;
         ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
         
         // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
+        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`;
         ctx.lineWidth = 1;
         ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
         
@@ -392,25 +421,16 @@ export class BasicTower {
         ctx.fillStyle = glowGradient;
         ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
         
-        // Symbol with enhanced medieval styling
-        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
+        // Symbol
+        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
+        ctx.font = 'bold 18px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        let symbol = '🏰'; // default
-        switch(this.constructor.name) {
-            case 'BasicTower': symbol = '🏰'; break;
-            case 'CannonTower': symbol = '🎯'; break;
-            case 'ArcherTower': symbol = '🏹'; break;
-            case 'MagicTower': symbol = '⚡'; break;
-            case 'BarricadeTower': symbol = '🛡️'; break;
-            case 'PoisonArcherTower': symbol = '🌿'; break;
-        }
-        ctx.fillText(symbol, iconX, iconY);
+        ctx.fillText('🏰', iconX, iconY);
         
-        // Add subtle gold highlight on symbol
+        // Add subtle gold highlight
         ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText(symbol, iconX, iconY);
+        ctx.fillText('🏰', iconX, iconY);
     }
     
     drawEnvironment(ctx, gridSize) {
