@@ -545,58 +545,45 @@ export class BasicTower {
         ctx.fillText(symbol, iconX, iconY);
     }
     
-    // Replace drawEnvironment with deterministic, larger forest elements
+    // Replace drawEnvironment with new proportional pine trees, bushes, and rocks
 	drawEnvironment(ctx, gridSize) {
-		// Simple, stable nature elements in the same style as the barricade tower.
-		// All positions are within ±0.45 * gridSize to stay inside the 2x2 placement.
+		// All elements within ±0.45 * gridSize to stay inside the 2x2 grid
 		const clamp = v => Math.max(-0.45, Math.min(0.45, v));
-		const place = (fx, fy) => ({ x: this.x + clamp(fx) * gridSize, y: this.y + clamp(fy) * gridSize });
+		const place = (fx, fy) => ({
+			x: this.x + clamp(fx) * gridSize,
+			y: this.y + clamp(fy) * gridSize
+		});
 
-		// small shadow helper
-		const drawShadow = (cx, cy, rx, ry, a = 0.18) => {
+		// Pine trees: 3, each about half the tower height
+		const towerHeight = gridSize * 0.4;
+		const pineHeight = towerHeight * 0.5;
+		const pineBase = gridSize * 0.09;
+		const pines = [
+			place(-0.32, 0.32),
+			place(0.32, 0.32),
+			place(0.0, -0.36)
+		];
+		pines.forEach((t, i) => {
+			const scale = 1;
+			// shadow
 			ctx.save();
-			ctx.translate(cx + 2, cy + 2);
+			ctx.translate(t.x, t.y + pineBase * 0.5);
 			ctx.scale(1, 0.45);
-			ctx.fillStyle = `rgba(0,0,0,${a})`;
+			ctx.fillStyle = 'rgba(0,0,0,0.15)';
 			ctx.beginPath();
-			ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+			ctx.ellipse(0, 0, pineBase * 2, pineBase, 0, 0, Math.PI * 2);
 			ctx.fill();
 			ctx.restore();
-		};
-
-		// Pines - three larger pines around the tower, similar to barricade style
-		const trees = [
-			place(-0.36, 0.34),
-			place(0.34, 0.30),
-			place(-0.30, -0.28)
-		];
-
-		trees.forEach((t, i) => {
-			const scale = [0.9, 0.85, 1.0][i] || 0.9;
-			drawShadow(t.x, t.y + 2, 7 * scale, 3.5 * scale, 0.16);
 
 			// trunk
-			const trunkW = 2 * scale;
-			const trunkH = 6 * scale;
 			ctx.fillStyle = '#654321';
-			ctx.fillRect(t.x - trunkW / 2, t.y, trunkW, -trunkH);
+			ctx.fillRect(t.x - pineBase * 0.25, t.y, pineBase * 0.5, -pineHeight * 0.25);
 
-			// trunk texture
-			ctx.strokeStyle = '#5D4037';
-			ctx.lineWidth = 0.6;
-			for (let g = 1; g <= 2; g++) {
-				const gy = t.y - (trunkH * g / 3);
-				ctx.beginPath();
-				ctx.moveTo(t.x - trunkW / 2, gy);
-				ctx.lineTo(t.x + trunkW / 2, gy);
-				ctx.stroke();
-			}
-
-			// three layered pine foliage
+			// foliage: 3 layers
 			const greens = ['#0F3B0F', '#228B22', '#32CD32'];
 			for (let layer = 0; layer < 3; layer++) {
-				const width = (8 - layer * 2) * scale;
-				const ly = t.y + (-10 * scale) + layer * (3 * scale);
+				const width = pineBase * (2.2 - layer * 0.6);
+				const ly = t.y - pineHeight * 0.25 + layer * pineHeight * 0.18;
 				ctx.fillStyle = greens[layer];
 				ctx.beginPath();
 				ctx.moveTo(t.x, ly);
@@ -605,31 +592,36 @@ export class BasicTower {
 				ctx.closePath();
 				ctx.fill();
 
-				// outline
 				ctx.strokeStyle = '#0F3B0F';
 				ctx.lineWidth = 0.7;
 				ctx.stroke();
 			}
 		});
 
-		// Bush clusters - compact, grouped close to tower edges
+		// Bushes: 2, proportionally sized
+		const bushRadius = gridSize * 0.09;
 		const bushes = [
-			place(-0.22, 0.20),
-			place(0.18, -0.18),
-			place(0.28, 0.12)
+			place(-0.22, 0.18),
+			place(0.22, -0.18)
 		];
-
 		bushes.forEach((b, idx) => {
-			const scale = 0.9 - idx * 0.12;
-			drawShadow(b.x, b.y + 1.5, 4.5 * scale, 2.2 * scale, 0.12);
+			// shadow
+			ctx.save();
+			ctx.translate(b.x, b.y + bushRadius * 0.5);
+			ctx.scale(1, 0.45);
+			ctx.fillStyle = 'rgba(0,0,0,0.12)';
+			ctx.beginPath();
+			ctx.ellipse(0, 0, bushRadius * 1.5, bushRadius, 0, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
 
 			const shades = ['#228B22', '#2EA62E', '#1F7A1F'];
 			for (let k = 0; k < 3; k++) {
-				const ox = b.x + (k - 1) * (3.5 * scale);
-				const oy = b.y - Math.abs(k - 1) * 1.2;
+				const ox = b.x + (k - 1) * bushRadius * 1.1;
+				const oy = b.y - Math.abs(k - 1) * bushRadius * 0.3;
 				ctx.fillStyle = shades[(k + idx) % shades.length];
 				ctx.beginPath();
-				ctx.arc(ox, oy, 3.2 * scale - k * 0.6, 0, Math.PI * 2);
+				ctx.arc(ox, oy, bushRadius * (1 - k * 0.18), 0, Math.PI * 2);
 				ctx.fill();
 
 				ctx.strokeStyle = 'rgba(8,30,8,0.35)';
@@ -638,64 +630,34 @@ export class BasicTower {
 			}
 		});
 
-		// Rock clumps
+		// Rocks: 2, proportionally sized
+		const rockRadius = gridSize * 0.06;
 		const rocks = [
-			place(-0.28, 0.28),
-			place(0.24, 0.18),
-			place(0.30, -0.24)
+			place(-0.28, -0.22),
+			place(0.28, 0.22)
 		];
-
 		rocks.forEach((r, i) => {
-			const base = 2.6 * (1 + i * 0.05);
-			drawShadow(r.x, r.y + 1, base * 0.8, base * 0.4, 0.12);
+			// shadow
+			ctx.save();
+			ctx.translate(r.x, r.y + rockRadius * 0.5);
+			ctx.scale(1, 0.45);
+			ctx.fillStyle = 'rgba(0,0,0,0.12)';
+			ctx.beginPath();
+			ctx.ellipse(0, 0, rockRadius * 1.2, rockRadius, 0, 0, Math.PI * 2);
+			ctx.fill();
+			ctx.restore();
 
-			for (let s = 0; s < 3; s++) {
-				const rx = r.x + (s - 1) * 3.8;
-				const ry = r.y - s * 0.8;
-				const rad = base * (0.7 - s * 0.12);
-				const grad = ctx.createRadialGradient(rx - rad * 0.25, ry - rad * 0.25, 0, rx, ry, rad);
-				grad.addColorStop(0, '#bdbdbd');
-				grad.addColorStop(1, '#696969');
-				ctx.fillStyle = grad;
-				ctx.beginPath();
-				ctx.ellipse(rx, ry, rad, rad * 0.8, Math.PI * 0.05 * s, 0, Math.PI * 2);
-				ctx.fill();
+			const grad = ctx.createRadialGradient(r.x - rockRadius * 0.25, r.y - rockRadius * 0.25, 0, r.x, r.y, rockRadius);
+			grad.addColorStop(0, '#bdbdbd');
+			grad.addColorStop(1, '#696969');
+			ctx.fillStyle = grad;
+			ctx.beginPath();
+			ctx.ellipse(r.x, r.y, rockRadius, rockRadius * 0.8, Math.PI * 0.05 * i, 0, Math.PI * 2);
+			ctx.fill();
 
-				ctx.strokeStyle = '#5c5c5c';
-				ctx.lineWidth = 0.6;
-				ctx.stroke();
-			}
-		});
-
-		// Small grass tufts near platform corners to blend tower into forest
-		const grass = [
-			place(-0.12, 0.18),
-			place(0.10, -0.12)
-		];
-		ctx.lineWidth = 0.9;
-		grass.forEach((g, gi) => {
-			const blades = 5 + gi;
-			for (let b = 0; b < blades; b++) {
-				const angle = -Math.PI / 2 + (b - blades / 2) * 0.12;
-				ctx.strokeStyle = '#2e8b2e';
-				ctx.beginPath();
-				ctx.moveTo(g.x, g.y);
-				ctx.lineTo(g.x + Math.cos(angle) * 6.5, g.y + Math.sin(angle) * 6.5);
-				ctx.stroke();
-			}
-		});
-
-		// A couple of small pebbles for texture (deterministic positions using _rand)
-		const pebBases = [place(-0.05, 0.12), place(0.12, 0.2)];
-		pebBases.forEach((p, pi) => {
-			for (let n = 0; n < 5; n++) {
-				const dx = (this._rand(pi * 10 + n) - 0.5) * 6;
-				const dy = (this._rand(pi * 20 + n) - 0.5) * 3;
-				ctx.fillStyle = '#7f7f7f';
-				ctx.beginPath();
-				ctx.arc(p.x + dx, p.y + dy, 0.8 + this._rand(pi * 30 + n) * 0.6, 0, Math.PI * 2);
-				ctx.fill();
-			}
+			ctx.strokeStyle = '#5c5c5c';
+			ctx.lineWidth = 0.6;
+			ctx.stroke();
 		});
 	}
     
