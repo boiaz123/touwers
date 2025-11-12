@@ -637,9 +637,10 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
-        // Add academy building upgrades first
-        const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
+        // Add academy building upgrades ALWAYS if not maxed
         if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
+            const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
+            console.log('GameplayState: Adding academy upgrade to menu:', academyUpgrade.name);
             const isDisabled = !academyUpgrade.cost || this.gameState.gold < academyUpgrade.cost;
             upgradeListHTML += `
                 <div class="upgrade-item ${academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel ? 'maxed' : ''}">
@@ -660,6 +661,8 @@ class GameplayState {
                     </button>
                 </div>
             `;
+        } else {
+            console.log('GameplayState: Academy at max level, not adding upgrade option');
         }
         
         // Add elemental upgrades
