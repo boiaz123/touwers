@@ -1112,14 +1112,14 @@ class GameplayState {
         const gemsElement = document.getElementById('gems');
         if (gemsElement) {
             // In sandbox, show gems even if all are 0 (they should be 100)
-            let gemText = `🔥${gems.fire || 0} 💧${gems.water || 0} 💨${gems.air || 0} 🪨${gems.earth || 0}`;
+            let gemText = `<span style="color:#ff4444">💎</span>${gems.fire || 0} <span style="color:#4444ff">💎</span>${gems.water || 0} <span style="color:#ffff44">💎</span>${gems.air || 0} <span style="color:#44ff44">💎</span>${gems.earth || 0}`;
             
             // Always show diamond count in sandbox
             if (gems.diamond !== undefined || this.isSandbox) {
-                gemText += ` 💎${gems.diamond || 0}`;
+                gemText += ` <span style="color:#ffffff">💎</span>${gems.diamond || 0}`;
             }
             
-            gemsElement.textContent = gemText;
+            gemsElement.innerHTML = gemText;  // Changed from textContent to innerHTML for styled spans
             
             // Debug logging for sandbox
             if (this.isSandbox) {

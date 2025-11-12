@@ -533,7 +533,8 @@ export class MagicTower {
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨' };
+        const elementIcons = { fire: '💎', water: '💎', air: '💎', earth: '💎' };  // Changed to all 💎 for gem look
+        const elementColors = { fire: '#ff4444', water: '#4444ff', air: '#ffff44', earth: '#44ff44' };  // Added color mapping
         
         // Add selection glow effect
         if (this.isSelected) {
@@ -562,13 +563,13 @@ export class MagicTower {
         ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
         
         // Element icon
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = elementColors[this.selectedElement] || '#ffffff';  // Set color based on element
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(elementIcons[this.selectedElement], this.x + towerSize / 2 - iconBoxSize / 2, this.y + towerSize / 2 - iconBoxSize / 2);
         
-        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);
+        ctx.fillText(elementIcons[this.selectedElement], this.x, this.y + towerSize/2 + 15);  // Also apply color here if needed
         
         if (this.isSelected) {
             ctx.shadowBlur = 0;

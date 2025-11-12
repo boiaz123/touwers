@@ -474,6 +474,54 @@ export class GoldMine extends Building {
         console.log(`GoldMine: setAcademy called, gemMiningUnlocked = ${this.gemMiningUnlocked}`);
     }
     
+    // New helper function to draw gem icons as shapes
+    drawGemIcon(ctx, x, y, gemType, size = 10) {
+        ctx.save();
+        ctx.translate(x, y);
+        
+        let color;
+        switch(gemType) {
+            case 'fire': color = '#ff4444'; break;  // Red (ruby)
+            case 'water': color = '#4444ff'; break;  // Blue (sapphire)
+            case 'air': color = '#ffff44'; break;  // Yellow (topaz)
+            case 'earth': color = '#44ff44'; break;  // Green (emerald)
+            case 'diamond': color = '#ffffff'; break;  // White/clear
+            default: color = '#ffffff';
+        }
+        
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#cccccc';  // Subtle outline for gem facets
+        ctx.lineWidth = 1;
+        
+        if (gemType === 'diamond') {
+            // Draw faceted diamond shape
+            ctx.beginPath();
+            ctx.moveTo(0, -size/2);  // Top point
+            ctx.lineTo(size/3, -size/6);  // Upper right facet
+            ctx.lineTo(size/2, 0);  // Right point
+            ctx.lineTo(size/3, size/6);  // Lower right facet
+            ctx.lineTo(0, size/2);  // Bottom point
+            ctx.lineTo(-size/3, size/6);  // Lower left facet
+            ctx.lineTo(-size/2, 0);  // Left point
+            ctx.lineTo(-size/3, -size/6);  // Upper left facet
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            // Draw simplified gem as colored diamond
+            ctx.beginPath();
+            ctx.moveTo(0, -size/2);
+            ctx.lineTo(size/2, 0);
+            ctx.lineTo(0, size/2);
+            ctx.lineTo(-size/2, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    }
+    
     render(ctx, size) {
         // Render excavated ground base first
         this.renderExcavatedGround(ctx, size);
@@ -964,17 +1012,14 @@ export class GoldMine extends Building {
             ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
             
             // Symbol - changes based on gem type
-            let symbol = '💰';
+            let symbol = '💎';  // Always use gem emoji
+            let symbolColor = '#FFD700';  // Default gold
+            
             if (this.gemMode && this.currentGemType) {
-                switch(this.currentGemType) {
-                    case 'fire': symbol = '🔥'; break;
-                    case 'water': symbol = '💧'; break;
-                    case 'air': symbol = '💨'; break;
-                    case 'earth': symbol = '🪨'; break;
-                }
+                symbolColor = { fire: '#ff4444', water: '#4444ff', air: '#ffff44', earth: '#44ff44' }[this.currentGemType] || '#ff4444';
             }
             
-            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
+            ctx.fillStyle = symbolColor;
             ctx.font = 'bold 20px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -985,7 +1030,7 @@ export class GoldMine extends Building {
             ctx.fillText(symbol, iconX, iconY);
         }
         
-        // Toggle icon with medieval border
+        // Toggle icon with colored gem
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
             const toggleX = this.x - size/2 + 12;
@@ -1033,7 +1078,15 @@ export class GoldMine extends Building {
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
+            
+            if (this.gemMode) {
+                // Color the gem based on current gem type (or default to fire)
+                const gemColor = this.currentGemType ? 
+                    ({ fire: '#ff4444', water: '#4444ff', air: '#ffff44', earth: '#44ff44' }[this.currentGemType] || '#ff4444') : '#ff4444';
+                ctx.fillStyle = gemColor;
+            }
+            
+            ctx.fillText('💎', toggleX, toggleY);  // Changed from conditional emoji to always 💎, colored appropriately
             
             // Label
             ctx.fillStyle = '#000';
@@ -1077,41 +1130,28 @@ export class GoldMine extends Building {
             ctx.fillRect(this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
         }
         
-        // Render floating collection text
+        // Render floating collection text with gem icons
         this.floatingTexts.forEach(text => {
             const alpha = text.life / text.maxLife;
-            const size = 16 + (1 - alpha) * 6; // Grow slightly as it fades
+            const gemType = text.gemType;
             
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-            ctx.font = `bold ${size}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // Add shadow for better visibility
-            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.7})`;
-            ctx.fillText(text.text, this.x + 2, text.y + 2);
-            
-            // Main text with color
-            switch(text.gemType) {
-                case 'fire':
-                    ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
-                    break;
-                case 'water':
-                    ctx.fillStyle = `rgba(64, 164, 223, ${alpha})`;
-                    break;
-                case 'air':
-                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
-                    break;
-                case 'earth':
-                    ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
-                    break;
-                case 'diamond':
-                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`; // Light blue/cyan for diamond
-                    break;
-                default: // gold
-                    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+            if (gemType && gemType !== 'gold') {
+                // Draw gem icon for gem collections
+                this.drawGemIcon(ctx, this.x - 15, text.y, gemType, 12);
+                
+                // Draw amount text next to it
+                const amount = text.text.split(' ')[0];  // e.g., "+1"
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.font = `bold 14px Arial`;
+                ctx.textAlign = 'left';
+                ctx.fillText(amount, this.x, text.y);
+            } else {
+                // Keep original text rendering for gold
+                ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+                ctx.font = `bold 14px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(text.text, this.x, text.y);
             }
-            ctx.fillText(text.text, this.x, text.y);
         });
     }
     
