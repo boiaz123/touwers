@@ -356,7 +356,7 @@ export class TowerManager {
                 } else if (tower.constructor.name === 'BasicTower') {
                     // New: Handle BasicTower icon click
                     tower.isSelected = true;
-                    tower.showRange = !tower.showRange; // Toggle range display
+                    tower.showRange = true; // Show range when selected
                     return {
                         type: 'basic_tower_stats',
                         tower: tower,

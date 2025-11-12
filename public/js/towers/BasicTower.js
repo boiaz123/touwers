@@ -342,8 +342,8 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Range indicator when showRange is enabled
-        if (this.showRange) {
+        // Range indicator only when tower is selected AND showRange is enabled
+        if (this.isSelected && this.showRange) {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);

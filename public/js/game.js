@@ -858,7 +858,7 @@ class GameplayState {
         const menu = document.createElement('div');
         menu.id = 'basic-tower-stats-menu';
         menu.className = 'upgrade-menu';
-        menu.style.minWidth = '180px'; // Make more compact
+        menu.style.minWidth = '200px'; // Make more compact
         menu.style.position = 'absolute'; // Position absolutely
         
         // Position next to the tower (above it)
@@ -884,14 +884,14 @@ class GameplayState {
         
         menu.innerHTML = `
             <div style="padding: 10px; font-size: 12px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">${stats.name}</div>
-                <div>Damage: ${stats.damage}</div>
-                <div>Range: ${stats.range}</div>
-                <div>Fire Rate: ${stats.fireRate}/sec</div>
-                <div style="margin: 5px 0; font-size: 10px; color: #888;">${stats.description}</div>
-                <div style="display: flex; gap: 5px; justify-content: flex-end; margin-top: 10px;">
-                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Sell $${Math.floor(stats.cost * 0.7)}</button>
-                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Close</button>
+                <div style="font-weight: bold; margin-bottom: 5px; color: #FFD700;">${stats.name}</div>
+                <div style="color: #c9a876; margin-bottom: 8px;">Damage: ${stats.damage}</div>
+                <div style="color: #c9a876; margin-bottom: 8px;">Range: ${stats.range}</div>
+                <div style="color: #c9a876; margin-bottom: 8px;">Fire Rate: ${stats.fireRate}/sec</div>
+                <div style="margin-bottom: 10px; font-size: 11px; color: #a88; line-height: 1.3;">${stats.description}</div>
+                <div style="display: flex; gap: 5px; justify-content: center;">
+                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 10px; white-space: nowrap; flex: 1; min-width: 50px;">Sell</button>
+                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 10px; white-space: nowrap; flex: 1; min-width: 40px;">✕</button>
                 </div>
             </div>
         `;
@@ -907,6 +907,8 @@ class GameplayState {
         
         // Add close button handler
         menu.querySelector('.close-btn').addEventListener('click', () => {
+            tower.isSelected = false;
+            tower.showRange = false;
             menu.remove();
         });
         
