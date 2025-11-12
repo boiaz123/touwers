@@ -850,7 +850,7 @@ class GameplayState {
     }
     
     showBasicTowerStatsMenu(towerData) {
-        // New: Menu for displaying Basic Tower stats
+        // New: Compact menu positioned next to the tower
         this.clearActiveMenus();
         
         console.log('GameplayState: Showing basic tower stats menu', towerData);
@@ -858,6 +858,19 @@ class GameplayState {
         const menu = document.createElement('div');
         menu.id = 'basic-tower-stats-menu';
         menu.className = 'upgrade-menu';
+        menu.style.minWidth = '180px'; // Make more compact
+        menu.style.position = 'absolute'; // Position absolutely
+        
+        // Position next to the tower (above it)
+        const canvasRect = this.stateManager.canvas.getBoundingClientRect();
+        const scaleX = this.stateManager.canvas.width / canvasRect.width;
+        const scaleY = this.stateManager.canvas.height / canvasRect.height;
+        const screenX = canvasRect.left + (towerData.position.x / scaleX);
+        const screenY = canvasRect.top + (towerData.position.y / scaleY) - 120; // Position above tower
+        
+        menu.style.left = `${screenX}px`;
+        menu.style.top = `${screenY}px`;
+        menu.style.transform = 'none'; // Remove center transform
         
         const tower = towerData.tower;
         const stats = {
@@ -865,29 +878,35 @@ class GameplayState {
             damage: tower.damage,
             range: tower.range,
             fireRate: tower.fireRate,
-            description: 'A reliable wooden watchtower with defenders hurling rocks.'
+            description: 'A reliable wooden watchtower with defenders hurling rocks.',
+            cost: tower.constructor.getInfo().cost
         };
         
         menu.innerHTML = `
-            <div class="menu-header">
-                <h3>🏰 Basic Tower Stats</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                <div class="upgrade-item">
-                    <div class="upgrade-icon">🏰</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${stats.name}</div>
-                        <div class="upgrade-desc">${stats.description}</div>
-                        <div class="upgrade-level">Damage: ${stats.damage}</div>
-                        <div class="upgrade-level">Range: ${stats.range}</div>
-                        <div class="upgrade-level">Fire Rate: ${stats.fireRate}/sec</div>
-                    </div>
-                </div>
+            <div style="padding: 10px; font-size: 12px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">${stats.name}</div>
+                <div>Damage: ${stats.damage}</div>
+                <div>Range: ${stats.range}</div>
+                <div>Fire Rate: ${stats.fireRate}/sec</div>
+                <div style="margin: 5px 0; font-size: 10px; color: #888;">${stats.description}</div>
+                <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px;">Sell for $${Math.floor(stats.cost * 0.7)}</button>
+                <button class="close-btn" style="background: #666; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 5px;">Close</button>
             </div>
         `;
         
         document.body.appendChild(menu);
+        
+        // Add sell button handler
+        menu.querySelector('.sell-btn').addEventListener('click', () => {
+            this.towerManager.sellTower(tower);
+            this.updateUI();
+            menu.remove();
+        });
+        
+        // Add close button handler
+        menu.querySelector('.close-btn').addEventListener('click', () => {
+            menu.remove();
+        });
         
         this.activeMenu = menu;
     }

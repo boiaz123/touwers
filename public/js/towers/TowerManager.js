@@ -359,7 +359,8 @@ export class TowerManager {
                     tower.showRange = !tower.showRange; // Toggle range display
                     return {
                         type: 'basic_tower_stats',
-                        tower: tower
+                        tower: tower,
+                        position: { x: tower.x, y: tower.y } // Add position for menu placement
                     };
                 }
                 break;
@@ -485,5 +486,12 @@ export class TowerManager {
             tower.screenX = screenX;
             tower.screenY = screenY;
         });
+    }
+    
+    sellTower(tower) {
+        const refund = Math.floor(tower.constructor.getInfo().cost * 0.7);
+        this.gameState.gold += refund;
+        this.removeTower(tower);
+        console.log(`TowerManager: Sold ${tower.constructor.name} for $${refund}`);
     }
 }
