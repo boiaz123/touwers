@@ -733,7 +733,7 @@ class GameplayState {
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
                 if (upgradeId === 'academy_upgrade') {
-                    // New: Handle academy level upgrade
+                    // Handle academy level upgrade
                     if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
                         this.updateUI();
                         this.updateUIAvailability();
@@ -746,7 +746,7 @@ class GameplayState {
                         });
                     }
                 } else if (upgradeId.startsWith('unlock_')) {
-                    // New: Handle combination spell unlocks
+                    // Handle combination spell unlocks
                     const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
                     if (result && result.success) {
                         // Notify unlock system of the spell unlock
