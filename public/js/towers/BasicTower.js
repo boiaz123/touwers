@@ -533,12 +533,12 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Tweak: Slightly adjusted tree positions and added a unique boulder for distinction
+        // Tweak: Increased tree sizes and adjusted positions to make them taller, almost as high as the tower
         const trees = [
-            { x: -gridSize * 0.4, y: gridSize * 0.3, size: 0.75 },
-            { x: gridSize * 0.35, y: gridSize * 0.35, size: 0.65 },
-            { x: -gridSize * 0.45, y: -gridSize * 0.3, size: 0.85 },
-            { x: gridSize * 0.4, y: -gridSize * 0.4, size: 0.55 }
+            { x: -gridSize * 0.4, y: -gridSize * 0.25, size: 3 },
+            { x: gridSize * 0.35, y: -gridSize * 0.25, size: 3 },
+            { x: -gridSize * 0.45, y: -gridSize * 0.25, size: 3.5 },
+            { x: gridSize * 0.4, y: -gridSize * 0.25, size: 2.5 }
         ];
         
         trees.forEach(tree => {
@@ -560,11 +560,11 @@ export class BasicTower {
             ctx.fillStyle = '#5a341d';
             ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
             
-            // Foliage layers
+            // Foliage layers - adjusted for taller trees
             const layers = [
-                { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
-                { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
-                { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
+                { y: -15 * scale, width: 12 * scale, color: '#0e3a0e' },
+                { y: -10 * scale, width: 9 * scale, color: '#1f6f1f' },
+                { y: -5 * scale, width: 6 * scale, color: '#2fa02f' }
             ];
             
             layers.forEach(layer => {
