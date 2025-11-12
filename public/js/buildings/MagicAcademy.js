@@ -207,6 +207,9 @@ export class MagicAcademy extends Building {
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
         
+        // Render gem icons near the floating icon
+        this.renderGemIcons(ctx, size, iconX, iconY);
+        
         // Dynamic pulse for medieval glow effect - reduced intensity
         const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
         
@@ -757,7 +760,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
-                icon: '🔥',
+                icon: '🔺',
                 gemType: 'fire'
             },
             {
@@ -767,7 +770,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
-                icon: '💧',
+                icon: '🔷',
                 gemType: 'water'
             },
             {
@@ -777,7 +780,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
-                icon: '💨',
+                icon: '⬜',
                 gemType: 'air'
             },
             {
@@ -787,7 +790,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🪨',
+                icon: '🟤',
                 gemType: 'earth',
                 color: '#8B6F47'
             }
@@ -1068,5 +1071,182 @@ export class MagicAcademy extends Building {
         
         console.log(`MagicAcademy: Unlocked ${feature}`);
         return true;
+    }
+    
+    // New: Render shiny, faceted gem icons near the floating academy icon
+    renderGemIcons(ctx, size, iconX, iconY) {
+        // configuration
+        const gems = ['fire', 'water', 'air', 'earth', 'diamond'];
+        const gemColors = {
+            fire: ['#FF6B00','#FF2D00'],      // orange->red
+            water: ['#5FD3FF','#0A86C2'],     // light blue->deep
+            air: ['#BFF7FF','#69E6FF'],       // pale cyan
+            earth: ['#9ACD32','#6B4F29'],     // green->brown
+            diamond: ['#FFFFFF','#A8E0FF']    // white->icy blue
+        };
+        const spacing = 18;
+        const gemSize = 12;
+        const totalWidth = (gems.length - 1) * (gemSize + spacing);
+        const startX = iconX - totalWidth/2;
+        const y = iconY - 36; // position above icon
+        
+        gems.forEach((type, i) => {
+            const x = startX + i * (gemSize + spacing);
+            
+            // draw main faceted gem
+            this._drawGemShape(ctx, x, y, gemSize, type, gemColors[type]);
+            
+            // small sparkle
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.arc(x - gemSize*0.35, y - gemSize*0.45, 1.6, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + gemSize*0.4, y - gemSize*0.2, 1.1, 0, Math.PI*2);
+            ctx.fill();
+            
+            // draw count
+            const count = this.gems[type] || 0;
+            if (count > 0) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(count.toString(), x, y + gemSize + 2);
+                
+                // light outline for readability
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 0.8;
+                ctx.strokeText(count.toString(), x, y + gemSize + 2);
+            }
+        });
+    }
+    
+    // New helper: draw different gem shapes with facets and gradient
+    _drawGemShape(ctx, cx, cy, size, type, colors) {
+        // base gradient
+        const g = ctx.createLinearGradient(cx - size, cy - size, cx + size, cy + size);
+        g.addColorStop(0, colors[0]);
+        g.addColorStop(1, colors[1] || colors[0]);
+        
+        // choose shape by type
+        ctx.save();
+        ctx.translate(cx, cy);
+        
+        ctx.beginPath();
+        if (type === 'fire') {
+            // classic rotated square (diamond) with inner facets
+            ctx.moveTo(0, -size);
+            ctx.lineTo(size * 0.7, 0);
+            ctx.lineTo(0, size);
+            ctx.lineTo(-size * 0.7, 0);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            
+            // facets
+            ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -size);
+            ctx.lineTo(0, 0);
+            ctx.lineTo(size * 0.35, 0);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-size * 0.35, 0);
+            ctx.stroke();
+        } else if (type === 'water') {
+            // teardrop
+            ctx.moveTo(0, -size * 0.8);
+            ctx.bezierCurveTo(size * 0.8, -size * 0.2, size * 0.4, size * 0.9, 0, size);
+            ctx.bezierCurveTo(-size * 0.4, size * 0.9, -size * 0.8, -size * 0.2, 0, -size * 0.8);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            
+            // inner highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            ctx.beginPath();
+            ctx.ellipse(-size*0.18, -size*0.2, size*0.28, size*0.5, -0.5, 0, Math.PI*2);
+            ctx.fill();
+        } else if (type === 'air') {
+            // elongated crystal prism
+            ctx.moveTo(-size * 0.5, -size);
+            ctx.lineTo(size * 0.6, -size * 0.6);
+            ctx.lineTo(size * 0.6, size * 0.6);
+            ctx.lineTo(-size * 0.5, size);
+            ctx.lineTo(-size * 0.9, 0);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            
+            // thin facet lines
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(-size*0.2, -size*0.6);
+            ctx.lineTo(size*0.2, 0);
+            ctx.lineTo(-size*0.2, size*0.6);
+            ctx.stroke();
+        } else if (type === 'earth') {
+            // irregular shard / rough gem
+            ctx.moveTo(-size * 0.6, -size * 0.5);
+            ctx.lineTo(0, -size);
+            ctx.lineTo(size * 0.7, -size * 0.2);
+            ctx.lineTo(size * 0.4, size * 0.7);
+            ctx.lineTo(-size * 0.5, size * 0.5);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            
+            // darker inner facets
+            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            ctx.beginPath();
+            ctx.moveTo(-size*0.1, -size*0.2);
+            ctx.lineTo(size*0.25, -size*0.1);
+            ctx.lineTo(size*0.15, size*0.35);
+            ctx.closePath();
+            ctx.fill();
+        } else { // diamond
+            // hexagonal faceted diamond
+            const r = size * 0.9;
+            ctx.moveTo(0, -r);
+            ctx.lineTo(r * 0.65, -r * 0.35);
+            ctx.lineTo(r * 0.65, r * 0.35);
+            ctx.lineTo(0, r);
+            ctx.lineTo(-r * 0.65, r * 0.35);
+            ctx.lineTo(-r * 0.65, -r * 0.35);
+            ctx.closePath();
+            ctx.fillStyle = g;
+            ctx.fill();
+            
+            // bright center facet
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath();
+            ctx.moveTo(0, -r*0.2);
+            ctx.lineTo(r*0.25, 0);
+            ctx.lineTo(0, r*0.15);
+            ctx.lineTo(-r*0.25, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // global outline and subtle glow
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        
+        // outer subtle shadow for depth
+        ctx.shadowColor = 'rgba(0,0,0,0.25)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        // redraw a faint outer stroke to pick up shadow
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.restore();
     }
 }
