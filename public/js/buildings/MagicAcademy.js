@@ -841,13 +841,13 @@ export class MagicAcademy extends Building {
     
     // New: Get academy upgrade option
     getAcademyUpgradeOption() {
-        if (this.academyLevel >= this.maxAcademyLevel) {
+        if ((this.academyLevel || 0) >= this.maxAcademyLevel) {
             return {
                 id: 'academy_upgrade',
                 name: 'Academy Level MAX',
                 description: 'Academy is at maximum level.',
                 nextUnlock: 'All features unlocked!',
-                level: this.academyLevel,
+                level: this.academyLevel || 0,
                 maxLevel: this.maxAcademyLevel,
                 cost: null,
                 icon: '🎓',
@@ -855,7 +855,7 @@ export class MagicAcademy extends Building {
             };
         }
         
-        const nextLevel = this.academyLevel + 1;
+        const nextLevel = (this.academyLevel || 0) + 1;
         let description = '';
         let nextUnlock = '';
         let cost = 0;
@@ -883,7 +883,7 @@ export class MagicAcademy extends Building {
             name: `Academy Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
-            level: this.academyLevel,
+            level: this.academyLevel || 0,
             maxLevel: this.maxAcademyLevel,
             cost: cost,
             icon: '🎓',
