@@ -883,15 +883,15 @@ class GameplayState {
         };
         
         menu.innerHTML = `
-            <div style="padding: 10px; font-size: 12px; position: relative; min-height: 80px;">
+            <div style="padding: 10px; font-size: 12px;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${stats.name}</div>
                 <div>Damage: ${stats.damage}</div>
                 <div>Range: ${stats.range}</div>
                 <div>Fire Rate: ${stats.fireRate}/sec</div>
                 <div style="margin: 5px 0; font-size: 10px; color: #888;">${stats.description}</div>
-                <div style="position: absolute; bottom: 10px; right: 10px; display: flex; gap: 5px;">
-                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Sell $${Math.floor(stats.cost * 0.7)}</button>
-                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Close</button>
+                <div style="display: flex; gap: 5px; justify-content: flex-end; margin-top: 10px;">
+                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Sell $${Math.floor(stats.cost * 0.7)}</button>
+                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-size: 11px; white-space: nowrap;">Close</button>
                 </div>
             </div>
         `;
