@@ -85,15 +85,17 @@ class GameplayState {
                 // Unlock diamond mining for sandbox
                 academy.diamondMiningUnlocked = true;
                 
-                // Now set academy reference on all mines
+                // IMPORTANT: Do NOT unlock gem mining research - keep it as a research option
+                // But DO enable gem mode on all mines from the start
                 this.towerManager.buildingManager.buildings.forEach(building => {
                     if (building.constructor.name === 'GoldMine') {
                         building.setAcademy(academy);
-                        console.log('GameplayState: Set academy reference on mine, gemMiningUnlocked:', building.gemMiningUnlocked);
+                        building.gemMiningUnlocked = true; // Enable gem toggle in sandbox
+                        console.log('GameplayState: Set academy reference on mine with gem mode enabled for sandbox');
                     }
                 });
                 
-                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds) and diamond mining unlocked');
+                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds)');
                 console.log('GameplayState: Sandbox academy gems:', academy.gems);
             }
         }

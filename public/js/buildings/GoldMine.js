@@ -467,7 +467,10 @@ export class GoldMine extends Building {
     // New: Set academy reference and check if gem mining is unlocked
     setAcademy(academy) {
         this.academy = academy;
-        this.gemMiningUnlocked = academy && academy.gemMiningResearched;
+        // Only unlock gem mining if research is complete OR if manually enabled (sandbox)
+        if (academy) {
+            this.gemMiningUnlocked = this.gemMiningUnlocked || academy.gemMiningResearched;
+        }
         console.log(`GoldMine: setAcademy called, gemMiningUnlocked = ${this.gemMiningUnlocked}`);
     }
     

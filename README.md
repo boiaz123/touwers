@@ -24,6 +24,16 @@ Visit `http://localhost:3000`
 - **Barricade Tower** (🛡️) - $90  
 - **Tower Forge** (🔨) - $300
 
+### Sandbox Mode
+In sandbox mode, players start with:
+- **100,000 gold**
+- **100 of each elemental gem** (🔥💧💨🪨💎)
+- **Gem mining toggle enabled** on all mines
+- **Diamond mining unlocked**
+- Unlimited waves with progressive difficulty
+
+Note: Gem mining research is still available as an option but not required in sandbox.
+
 ### Tower Forge Upgrades
 The Tower Forge is the key to progression. Only 1 forge can be built per game.
 
@@ -82,9 +92,10 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 
 **Gem Mining** (Researched at Academy)
 - Cost: $500 gold
-- Allows gold mines to produce elemental gems
-- Players can toggle mines between gold and gem modes
+- Allows gold mines to toggle between gold and gem production modes
+- Players can switch mines between gold and gem modes
 - Gems are required to upgrade Magic Tower elements
+- In sandbox mode, this toggle is available from the start
 
 **Magic Tower System**
 - Click placed Magic Towers to select element type
