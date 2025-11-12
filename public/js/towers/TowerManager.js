@@ -353,6 +353,14 @@ export class TowerManager {
                         })),
                         currentSpell: tower.selectedSpell
                     };
+                } else if (tower.constructor.name === 'BasicTower') {
+                    // New: Handle BasicTower icon click
+                    tower.isSelected = true;
+                    tower.showRange = !tower.showRange; // Toggle range display
+                    return {
+                        type: 'basic_tower_stats',
+                        tower: tower
+                    };
                 }
                 break;
             }

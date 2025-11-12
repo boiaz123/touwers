@@ -9,6 +9,7 @@ export class BasicTower {
         this.fireRate = 1;
         this.cooldown = 0;
         this.target = null;
+        this.showRange = false; // Add property to control range display
         
         // Animation properties
         this.throwingDefender = -1; // Which defender is throwing
@@ -340,8 +341,8 @@ export class BasicTower {
             ctx.restore();
         });
         
-        // Range indicator when targeting
-        if (this.target) {
+        // Range indicator when targeting or showRange is enabled
+        if (this.showRange || this.target) {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 5]);

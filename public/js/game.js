@@ -210,10 +210,14 @@ class GameplayState {
                     // New: Handle combination tower menu
                     this.showCombinationTowerMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'basic_tower_stats') {
+                    // New: Handle basic tower stats menu
+                    this.showBasicTowerStatsMenu(clickResult);
+                    return;
                 } else if (typeof clickResult === 'number') {
-                    // Gold/gem collection from mine
+                    // Gold collection
                     this.gameState.gold += clickResult;
-                    this.updateUI(); // Immediately update UI after collection (includes gems)
+                    this.updateUI();
                     return;
                 }
             }
@@ -351,6 +355,10 @@ class GameplayState {
             } else if (clickResult.type === 'combination_tower_menu') {
                 // New: Handle combination tower menu
                 this.showCombinationTowerMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'basic_tower_stats') {
+                // New: Handle basic tower stats menu
+                this.showBasicTowerStatsMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
                 this.gameState.gold += clickResult;
@@ -837,6 +845,49 @@ class GameplayState {
                 }
             });
         });
+        
+        this.activeMenu = menu;
+    }
+    
+    showBasicTowerStatsMenu(towerData) {
+        // New: Menu for displaying Basic Tower stats
+        this.clearActiveMenus();
+        
+        console.log('GameplayState: Showing basic tower stats menu', towerData);
+        
+        const menu = document.createElement('div');
+        menu.id = 'basic-tower-stats-menu';
+        menu.className = 'upgrade-menu';
+        
+        const tower = towerData.tower;
+        const stats = {
+            name: 'Basic Tower',
+            damage: tower.damage,
+            range: tower.range,
+            fireRate: tower.fireRate,
+            description: 'A reliable wooden watchtower with defenders hurling rocks.'
+        };
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>🏰 Basic Tower Stats</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+            </div>
+            <div class="upgrade-list">
+                <div class="upgrade-item">
+                    <div class="upgrade-icon">🏰</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${stats.name}</div>
+                        <div class="upgrade-desc">${stats.description}</div>
+                        <div class="upgrade-level">Damage: ${stats.damage}</div>
+                        <div class="upgrade-level">Range: ${stats.range}</div>
+                        <div class="upgrade-level">Fire Rate: ${stats.fireRate}/sec</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
         
         this.activeMenu = menu;
     }
