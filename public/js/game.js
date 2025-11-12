@@ -35,7 +35,7 @@ class GameplayState {
         this.levelName = levelInfo.name || 'Unknown Level';
         
         // Configure level-specific settings
-        if (this.levelType === 'sandbox' || this.levelType === 'sandbox2') {
+        if (this.levelType === 'sandbox') {
             this.gameState.gold = 100000;
             this.maxWavesForLevel = Infinity;
             this.isSandbox = true;
@@ -71,180 +71,31 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // NEW: Handle sandbox2 mode - unlock everything but don't pre-build
-        if (this.levelType === 'sandbox2') {
-            // Unlock everything in the unlock system
-            this.towerManager.getUnlockSystem().unlockEverything();
-            console.log('GameplayState: Unlocked everything for sandbox2 mode');
-            
-            // Don't pre-build buildings, just unlock them all
-            // Buildings will be available to build in the UI
-            
-            // Create a temporary sandbox academy for gem display AND combination spells
-            const tempAcademy = {
-                gems: {
-                    fire: 1000,
-                    water: 1000,
-                    air: 1000,
-                    earth: 1000,
-                    diamond: 1000
-                },
-                // Set up academy levels and unlocks for sandbox2
-                academyLevel: 3,
-                maxAcademyLevel: 3,
-                combinationSpellsUnlocked: true,
-                diamondMiningUnlocked: true,
-                gemMiningToolsResearched: true,
-                // Fix: Add the correct property name
-                gemMiningResearched: true,
-                // Unlock all combination spells for sandbox2 - FIXED property names
-                unlockedCombinationSpells: new Set([
-                    'steam', 'magma', 'tempest', 'meteor'
-                ]),
-                unlockedCombinations: new Set([
-                    'steam', 'magma', 'tempest', 'meteor'
-                ]),
-                // Define combination spells - matches MagicAcademy format
-                combinationSpells: [
-                    {
-                        id: 'steam',
-                        name: 'Steam',
-                        elements: ['fire', 'water'],
-                        icon: '💨',
-                        description: 'Fire + Water: Burn + Slow effects',
-                        gemsRequired: { fire: 2, water: 2 },
-                        damageMultiplier: 1.15
-                    },
-                    {
-                        id: 'magma',
-                        name: 'Magma',
-                        elements: ['fire', 'earth'],
-                        icon: '🌋',
-                        description: 'Fire + Earth: Burn + Piercing effects',
-                        gemsRequired: { fire: 2, earth: 2 },
-                        damageMultiplier: 1.15
-                    },
-                    {
-                        id: 'tempest',
-                        name: 'Tempest',
-                        elements: ['air', 'water'],
-                        icon: '⛈️',
-                        description: 'Air + Water: Chain + Slow effects',
-                        gemsRequired: { air: 2, water: 2 },
-                        damageMultiplier: 1.10
-                    },
-                    {
-                        id: 'meteor',
-                        name: 'Meteor',
-                        elements: ['air', 'earth'],
-                        icon: '☄️',
-                        description: 'Air + Earth: Chain + Piercing effects',
-                        gemsRequired: { air: 2, earth: 2 },
-                        damageMultiplier: 1.10
+        // NEW: Initialize sandbox gems AFTER everything is set up and BEFORE setting references
+        if (this.isSandbox) {
+            const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+            if (academy) {
+                // Initialize gems first
+                academy.gems.fire = 100;
+                academy.gems.water = 100;
+                academy.gems.air = 100;
+                academy.gems.earth = 100;
+                academy.gems.diamond = 100;
+                
+                // Unlock diamond mining for sandbox
+                academy.diamondMiningUnlocked = true;
+                
+                // Now set academy reference on all mines
+                this.towerManager.buildingManager.buildings.forEach(building => {
+                    if (building.constructor.name === 'GoldMine') {
+                        building.setAcademy(academy);
+                        console.log('GameplayState: Set academy reference on mine, gemMiningUnlocked:', building.gemMiningUnlocked);
                     }
-                ],
-                addGem: function(type) {
-                    this.gems[type] = (this.gems[type] || 0) + 1;
-                },
-                addDiamond: function() {
-                    this.gems.diamond = (this.gems.diamond || 0) + 1;
-                },
-                getElementalBonuses: function() {
-                    return {
-                        fire: { damageBonus: 25 },
-                        water: { slowBonus: 0.5 },
-                        air: { chainRange: 100 },
-                        earth: { armorPiercing: 15 }
-                    };
-                },
-                getElementalUpgradeOptions: function() {
-                    // Provide a basic set of upgrade options for sandbox2
-                    return [
-                        {
-                            id: 'fire',
-                            name: 'Fire Mastery',
-                            description: 'Increase Magic Tower fire damage by 5 per level',
-                            level: 5,
-                            maxLevel: 5,
-                            cost: null,
-                            icon: '🔥',
-                            gemType: 'fire'
-                        },
-                        {
-                            id: 'water',
-                            name: 'Water Mastery',
-                            description: 'Increase Magic Tower water slow effect by 10% per level',
-                            level: 5,
-                            maxLevel: 5,
-                            cost: null,
-                            icon: '💧',
-                            gemType: 'water'
-                        },
-                        {
-                            id: 'air',
-                            name: 'Air Mastery',
-                            description: 'Increase Magic Tower air chain range by 20px per level',
-                            level: 5,
-                            maxLevel: 5,
-                            cost: null,
-                            icon: '💨',
-                            gemType: 'air'
-                        },
-                        {
-                            id: 'earth',
-                            name: 'Earth Mastery',
-                            description: 'Increase Magic Tower earth armor piercing by 3 per level',
-                            level: 5,
-                            maxLevel: 5,
-                            cost: null,
-                            icon: '🪨',
-                            gemType: 'earth'
-                        }
-                    ];
-                },
-                getAcademyUpgradeOption: function() {
-                    return {
-                        id: 'academy_upgrade',
-                        name: 'Academy Level MAX',
-                        description: 'Academy is at maximum level in sandbox mode.',
-                        nextUnlock: 'All features unlocked!',
-                        level: 3,
-                        maxLevel: 3,
-                        cost: null,
-                        icon: '🎓',
-                        isAcademyUpgrade: true
-                    };
-                }
-            };
-            
-            // Set this temporary academy as the reference for the tower manager
-            this.towerManager.sandboxAcademy = tempAcademy;
-            console.log('GameplayState: Created sandbox2 gem display with gems and combination spells:', tempAcademy.gems);
-        }
-        
-        // Initialize sandbox gems AFTER tower manager is set up
-        if (this.isSandbox && this.levelType === 'sandbox') {
-            // Regular sandbox - just basic gems
-            const basicAcademy = {
-                gems: {
-                    fire: 100,
-                    water: 100,
-                    air: 100,
-                    earth: 100,
-                    diamond: 100
-                },
-                diamondMiningUnlocked: true,
-                gemMiningToolsResearched: false,
-                addGem: function(type) {
-                    this.gems[type] = (this.gems[type] || 0) + 1;
-                },
-                addDiamond: function() {
-                    this.gems.diamond = (this.gems.diamond || 0) + 1;
-                }
-            };
-            
-            this.towerManager.sandboxAcademy = basicAcademy;
-            console.log('GameplayState: Created sandbox academy with gems:', basicAcademy.gems);
+                });
+                
+                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds) and diamond mining unlocked');
+                console.log('GameplayState: Sandbox academy gems:', academy.gems);
+            }
         }
         
         this.setupEventListeners();
@@ -627,8 +478,6 @@ class GameplayState {
         this.clearActiveMenus();
         
         console.log('GameplayState: Showing academy upgrade menu', academyData);
-        console.log('GameplayState: Academy has', academyData.upgrades.length, 'upgrades');
-        console.log('GameplayState: Academy combination spells unlocked?', academyData.academy.combinationSpellsUnlocked);
         
         // Create upgrade menu using the same structure as forge
         const menu = document.createElement('div');
@@ -637,8 +486,35 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
-        // Add elemental upgrades (including academy upgrade from getElementalUpgradeOptions)
+        // Add academy building upgrades first
+        const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
+        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
+            const isDisabled = !academyUpgrade.cost || this.gameState.gold < academyUpgrade.cost;
+            upgradeListHTML += `
+                <div class="upgrade-item ${academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${academyUpgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${academyUpgrade.name}</div>
+                        <div class="upgrade-desc">${academyUpgrade.description}</div>
+                        <div class="upgrade-next">${academyUpgrade.nextUnlock}</div>
+                        <div class="upgrade-level">Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        ${academyUpgrade.cost ? `$${academyUpgrade.cost}` : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="academy_upgrade" 
+                            ${isDisabled ? 'disabled' : ''}>
+                        ${academyUpgrade.cost ? 'Upgrade' : 'MAX'}
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Add elemental upgrades
         upgradeListHTML += academyData.upgrades.map(upgrade => {
+            if (upgrade.isAcademyUpgrade) return '';
+            
             let isDisabled = false;
             let costDisplay = '';
             
@@ -706,7 +582,7 @@ class GameplayState {
                 console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
                 
                 if (upgradeId === 'academy_upgrade') {
-                    // Handle academy level upgrade
+                    // New: Handle academy level upgrade
                     if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
                         this.updateUI();
                         this.updateUIAvailability();
@@ -719,7 +595,7 @@ class GameplayState {
                         });
                     }
                 } else if (upgradeId.startsWith('unlock_')) {
-                    // Handle combination spell unlocks
+                    // New: Handle combination spell unlocks
                     const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
                     if (result && result.success) {
                         // Notify unlock system of the spell unlock

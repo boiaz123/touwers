@@ -23,43 +23,6 @@ export class UnlockSystem {
         this.unlockedCombinationSpells = new Set();
     }
     
-    // New: Method to unlock everything for sandbox2 mode
-    unlockEverything() {
-        // Max out all progress
-        this.forgeLevel = 10;
-        this.hasForge = true;
-        this.forgeCount = 0; // Reset to 0 so we can still build forge
-        this.mineCount = 0;  // Reset to 0 so we can still build mines
-        this.academyCount = 0; // Reset to 0 so we can still build academy
-        
-        // Unlock all towers
-        this.unlockedTowers = new Set([
-            'basic', 'barricade', 'archer', 'poison', 'cannon', 'magic', 'combination'
-        ]);
-        
-        // Unlock all buildings
-        this.unlockedBuildings = new Set([
-            'forge', 'mine', 'academy', 'superweapon'
-        ]);
-        
-        // Unlock all upgrades
-        this.unlockedUpgrades = new Set([
-            'towerRange', 'barricadeDamage', 'poisonDamage', 'explosiveRadius',
-            'fireArrows', 'gemMining'
-        ]);
-        
-        // Research everything
-        this.gemMiningResearched = true;
-        
-        // Unlock all combination spells
-        this.unlockedCombinationSpells = new Set([
-            'unlock_steam', 'unlock_mud', 'unlock_lightning', 'unlock_lava',
-            'unlock_ice', 'unlock_hurricane'
-        ]);
-        
-        console.log('UnlockSystem: Everything unlocked for sandbox2 mode');
-    }
-    
     onForgeBuilt() {
         if (this.forgeCount < this.maxForges) {
             this.hasForge = true;
@@ -92,13 +55,6 @@ export class UnlockSystem {
         this.unlockedTowers.add('magic');
         this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
         console.log('UnlockSystem: Academy built - unlocked magic tower and gem mining research');
-        return true;
-    }
-    
-    // New: Method to handle super weapon lab
-    onSuperWeaponBuilt() {
-        this.unlockedBuildings.add('superweapon');
-        console.log('UnlockSystem: Super Weapon Lab built');
         return true;
     }
     
@@ -187,12 +143,6 @@ export class UnlockSystem {
     }
     
     canBuildBuilding(type) {
-        // Check if building type is in unlocked buildings set
-        if (!this.unlockedBuildings.has(type)) {
-            return false;
-        }
-        
-        // Check specific limits
         if (type === 'forge' && this.forgeCount >= this.maxForges) {
             return false;
         }
@@ -200,10 +150,9 @@ export class UnlockSystem {
             return false;
         }
         if (type === 'academy' && this.academyCount >= 1) {
-            return false;
+            return false; // Only 1 academy allowed
         }
-        
-        return true;
+        return this.unlockedBuildings.has(type);
     }
     
     canUseUpgrade(upgradeId) {
