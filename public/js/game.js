@@ -567,9 +567,18 @@ class GameplayState {
                 let allGemsAvailable = true;
                 const gemCosts = [];
                 
+                // Map gem types to their icons
+                const gemIcons = {
+                    fire: '🔥',
+                    water: '💧',
+                    air: '💨',
+                    earth: '🪨'
+                };
+                
                 for (const [gemType, amount] of Object.entries(upgrade.cost)) {
                     const gemCount = academyData.academy.gems[gemType] || 0;
-                    gemCosts.push(`${upgrade.icon || gemType[0]}${amount}`);
+                    const icon = gemIcons[gemType] || gemType[0];
+                    gemCosts.push(`${icon}${amount}`);
                     if (gemCount < amount) {
                         allGemsAvailable = false;
                     }
