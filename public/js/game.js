@@ -34,14 +34,14 @@ class GameplayState {
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
         
-        // Configure level-specific settings
-        if (this.levelType === 'sandbox') {
+        // Configure level-specific settings - STORE sandbox flag BEFORE creating managers
+        this.isSandbox = (this.levelType === 'sandbox');
+        
+        if (this.isSandbox) {
             this.gameState.gold = 100000;
             this.maxWavesForLevel = Infinity;
-            this.isSandbox = true;
         } else {
             this.maxWavesForLevel = 10;
-            this.isSandbox = false;
         }
         
         this.waveInProgress = false;
@@ -71,33 +71,14 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // NEW: Initialize sandbox gems AFTER everything is set up and BEFORE setting references
+        // SANDBOX: Force initialize gems right after tower manager is created
         if (this.isSandbox) {
-            const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-            if (academy) {
-                // Initialize gems first
-                academy.gems.fire = 100;
-                academy.gems.water = 100;
-                academy.gems.air = 100;
-                academy.gems.earth = 100;
-                academy.gems.diamond = 100;
-                
-                // Unlock diamond mining for sandbox
-                academy.diamondMiningUnlocked = true;
-                
-                // IMPORTANT: Do NOT unlock gem mining research - keep it as a research option
-                // But DO enable gem mode on all mines from the start
-                this.towerManager.buildingManager.buildings.forEach(building => {
-                    if (building.constructor.name === 'GoldMine') {
-                        building.setAcademy(academy);
-                        building.gemMiningUnlocked = true; // Enable gem toggle in sandbox
-                        console.log('GameplayState: Set academy reference on mine with gem mode enabled for sandbox');
-                    }
-                });
-                
-                console.log('GameplayState: Initialized sandbox gems - 100 of each type (including diamonds)');
-                console.log('GameplayState: Sandbox academy gems:', academy.gems);
-            }
+            console.log('GameplayState: SANDBOX MODE - Forcing gem initialization');
+            
+            // Use setTimeout to ensure building manager is fully initialized
+            setTimeout(() => {
+                this.forceSandboxGemInitialization();
+            }, 0);
         }
         
         this.setupEventListeners();
@@ -105,6 +86,50 @@ class GameplayState {
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
+    }
+    
+    forceSandboxGemInitialization() {
+        console.log('GameplayState: Force initializing sandbox gems...');
+        
+        // Find academy in building manager
+        const academy = this.towerManager?.buildingManager?.buildings?.find(b => 
+            b.constructor.name === 'MagicAcademy'
+        );
+        
+        if (academy) {
+            console.log('GameplayState: Found academy, initializing gems...');
+            
+            // Force set gems
+            academy.gems.fire = 100;
+            academy.gems.water = 100;
+            academy.gems.air = 100;
+            academy.gems.earth = 100;
+            academy.gems.diamond = 100;
+            
+            // Unlock features
+            academy.diamondMiningUnlocked = true;
+            academy.gemMiningResearched = false; // Keep as research option
+            
+            console.log('GameplayState: Academy gems set to:', academy.gems);
+            
+            // Enable gem mining toggle on all mines
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.constructor.name === 'GoldMine') {
+                    building.setAcademy(academy);
+                    building.gemMiningUnlocked = true;
+                    console.log('GameplayState: Mine gem toggle enabled');
+                }
+            });
+            
+            // Force UI update
+            this.updateUI();
+            console.log('GameplayState: Sandbox gems initialized successfully!');
+        } else {
+            console.error('GameplayState: NO ACADEMY FOUND! Cannot initialize gems.');
+            console.log('GameplayState: Available buildings:', 
+                this.towerManager?.buildingManager?.buildings?.map(b => b.constructor.name)
+            );
+        }
     }
     
     exit() {
