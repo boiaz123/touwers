@@ -637,38 +637,8 @@ class GameplayState {
         
         let upgradeListHTML = '';
         
-        // Add academy building upgrades ALWAYS if not maxed
-        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
-            const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
-            console.log('GameplayState: Adding academy upgrade to menu:', academyUpgrade.name);
-            const isDisabled = !academyUpgrade.cost || this.gameState.gold < academyUpgrade.cost;
-            upgradeListHTML += `
-                <div class="upgrade-item ${academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${academyUpgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${academyUpgrade.name}</div>
-                        <div class="upgrade-desc">${academyUpgrade.description}</div>
-                        <div class="upgrade-next">${academyUpgrade.nextUnlock}</div>
-                        <div class="upgrade-level">Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}</div>
-                    </div>
-                    <div class="upgrade-cost">
-                        ${academyUpgrade.cost ? `$${academyUpgrade.cost}` : 'MAX'}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="academy_upgrade" 
-                            ${isDisabled ? 'disabled' : ''}>
-                        ${academyUpgrade.cost ? 'Upgrade' : 'MAX'}
-                    </button>
-                </div>
-            `;
-        } else {
-            console.log('GameplayState: Academy at max level, not adding upgrade option');
-        }
-        
-        // Add elemental upgrades
+        // Add elemental upgrades (including academy upgrade from getElementalUpgradeOptions)
         upgradeListHTML += academyData.upgrades.map(upgrade => {
-            if (upgrade.isAcademyUpgrade) return '';
-            
             let isDisabled = false;
             let costDisplay = '';
             
