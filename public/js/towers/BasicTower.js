@@ -533,120 +533,228 @@ export class BasicTower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Keep trees/bushes/rocks within the 2x2 grid; tweak positions and add small grass patches.
-        const trees = [
-            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 },
-            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 },
-            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 },
-            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 }
-        ];
-        
-        trees.forEach(tree => {
-            const treeX = this.x + tree.x;
-            const treeY = this.y + tree.y;
-            const scale = tree.size;
-            
-            // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-            ctx.save();
-            ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.45);
-            ctx.beginPath();
-            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            
-            // Trunk
-            ctx.fillStyle = '#5a341d';
-            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
+		// New environment: multiple pines, one broadleaf, clustered bushes, rock piles,
+		// stump, fallen log, grass patches and small flowers. All positions stay within the 2x2 grid.
+		const clamp = v => Math.max(-0.45, Math.min(0.45, v));
 
-            // Pine layers (slightly rebalanced colors)
-            const layers = [
-                { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
-                { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
-                { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
-            ];
-            
-            layers.forEach(layer => {
-                ctx.fillStyle = layer.color;
-                ctx.beginPath();
-                ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#0b2b0b';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            });
-        });
-        
-        // Bushes (adjusted positions)
-        const bushes = [
-            { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
-            { x: gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
-            { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
-        ];
-        
-        bushes.forEach(bush => {
-            const bushX = this.x + bush.x;
-            const bushY = this.y + bush.y;
-            const scale = bush.size;
+		// Helper: place coords inside grid
+		const place = (fx, fy) => ({ x: this.x + clamp(fx) * gridSize, y: this.y + clamp(fy) * gridSize });
 
-            ctx.fillStyle = '#1f6f1f';
-            ctx.beginPath();
-            ctx.arc(bushX, bushY, 3 * scale, 0, Math.PI * 2);
-            ctx.fill();
+		// Simple shadow helper
+		const drawShadow = (cx, cy, rX, rY, alpha = 0.18) => {
+			ctx.save();
+			ctx.translate(cx + 2, cy + 2);
+			ctx.scale(1, 0.45);
+			ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+			ctx.beginPath();
+			ctx.ellipse(0, 0, rX, rY, 0, 0, Math.PI*2);
+			ctx.fill();
+			ctx.restore();
+		};
 
-            ctx.fillStyle = '#28a028';
-            ctx.beginPath();
-            ctx.arc(bushX - scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
+		// Pine trees (3 variations)
+		const pines = [
+			place(-0.38, 0.32),
+			place(0.34, 0.36),
+			place(-0.42, -0.28),
+			place(0.36, -0.36),
+			place(0.12, 0.05) // a small near-center pine
+		];
+		pines.forEach((pos, i) => {
+			const scale = [0.8,0.65,1.0,0.5,0.45][i] || 0.6;
+			const trunkH = 6 * scale;
+			const trunkW = 2 * scale;
+			drawShadow(pos.x, pos.y + 2, 6*scale, 3*scale, 0.14);
+			// trunk
+			ctx.fillStyle = '#5a341d';
+			ctx.fillRect(pos.x - trunkW/2, pos.y, trunkW, -trunkH);
+			// rings/texture on trunk
+			ctx.strokeStyle = '#482814';
+			ctx.lineWidth = 0.5;
+			for (let r = 1; r <= 2; r++) {
+				const ry = pos.y - trunkH * (r/3);
+				ctx.beginPath();
+				ctx.moveTo(pos.x - trunkW/2, ry);
+				ctx.lineTo(pos.x + trunkW/2, ry);
+				ctx.stroke();
+			}
+			// pine layers (3)
+			const greens = ['#0f3b0f','#1f6f1f','#2fa02f'];
+			for (let layer = 0; layer < 3; layer++) {
+				const width = (8 - layer*2) * scale;
+				const ly = pos.y + (-10 * scale) + layer * (2.8 * scale);
+				ctx.fillStyle = greens[layer];
+				ctx.beginPath();
+				ctx.moveTo(pos.x, ly);
+				ctx.lineTo(pos.x - width/2, ly + width*0.75);
+				ctx.lineTo(pos.x + width/2, ly + width*0.75);
+				ctx.closePath();
+				ctx.fill();
+				// outline
+				ctx.strokeStyle = '#0b2b0b';
+				ctx.lineWidth = 0.7;
+				ctx.stroke();
+			}
+		});
 
-            ctx.beginPath();
-            ctx.arc(bushX + scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Small rocks (unchanged but ensure they fit)
-        const rocks = [
-            { x: -gridSize * 0.3, y: gridSize * 0.28, size: 0.22 },
-            { x: gridSize * 0.25, y: gridSize * 0.18, size: 0.15 },
-            { x: gridSize * 0.28, y: -gridSize * 0.24, size: 0.25 }
-        ];
-        
-        rocks.forEach(rock => {
-            const rockX = this.x + rock.x;
-            const rockY = this.y + rock.y;
-            const scale = rock.size;
-            ctx.fillStyle = '#807f80';
-            ctx.beginPath();
-            ctx.arc(rockX, rockY, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#696969';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        });
-        
-        // Small grass patches for variety (keeps within grid)
-        const grasses = [
-            { x: -gridSize * 0.12, y: gridSize * 0.18 },
-            { x: gridSize * 0.08, y: -gridSize * 0.12 }
-        ];
-        ctx.strokeStyle = '#2e8b2e';
-        ctx.lineWidth = 1;
-        grasses.forEach(g => {
-            const gx = this.x + g.x;
-            const gy = this.y + g.y;
-            for (let i = 0; i < 4; i++) {
-                const angle = -Math.PI/2 + (i-1.5)*0.2;
-                ctx.beginPath();
-                ctx.moveTo(gx, gy);
-                ctx.lineTo(gx + Math.cos(angle)*6, gy + Math.sin(angle)*6);
-                ctx.stroke();
-            }
-        });
-    }
+		// Broadleaf tree (one) for variety
+		const oak = place(-0.08, -0.12);
+		{
+			const s = 0.9;
+			drawShadow(oak.x, oak.y + 2, 10*s, 5*s, 0.16);
+			// trunk
+			ctx.fillStyle = '#5a341d';
+			ctx.fillRect(oak.x - 2*s, oak.y, 4*s, -10*s);
+			// canopy: layered circles
+			const canopyCols = ['#2e6b2e','#3a8f3a','#4fbf4f'];
+			for (let i = 0; i < 4; i++) {
+				ctx.fillStyle = canopyCols[i%canopyCols.length];
+				ctx.beginPath();
+				ctx.arc(oak.x + (i-1.5)*2*s, oak.y - 10*s - (i*1.5*s), 8*s - i*1.2*s, 0, Math.PI*2);
+				ctx.fill();
+				ctx.strokeStyle = 'rgba(10,30,10,0.35)';
+				ctx.lineWidth = 0.6;
+				ctx.stroke();
+			}
+			// small fruit/flowers (dots)
+			for (let i=0;i<6;i++){
+				ctx.fillStyle = i%2 ? '#f6e27a' : '#e36b6b';
+				const angle = Math.random()*Math.PI*2;
+				const r = Math.random()*6*s;
+				ctx.beginPath();
+				ctx.arc(oak.x + Math.cos(angle)*r, oak.y - 10*s + Math.sin(angle)*r, 0.9, 0, Math.PI*2);
+				ctx.fill();
+			}
+		}
+
+		// Bush clusters: group of 3-4 rounded bushes at different locations
+		const bushClusters = [
+			place(-0.22, 0.22),
+			place(0.18, -0.18),
+			place(-0.28, -0.32),
+			place(0.28, 0.12)
+		];
+		bushClusters.forEach((c, idx) => {
+			const base = 3.5 * (0.6 + (idx%2)*0.15);
+			drawShadow(c.x, c.y + 2, base*0.9, base*0.45, 0.12);
+			const shades = ['#1f6f1f', '#27a027', '#2fc82f'];
+			for (let b=0;b<3;b++){
+				const ox = c.x + (b-1)*6;
+				const oy = c.y - Math.abs(b-1)*1.5;
+				ctx.fillStyle = shades[(b+idx)%shades.length];
+				ctx.beginPath();
+				ctx.arc(ox, oy, base - b*0.9, 0, Math.PI*2);
+				ctx.fill();
+				ctx.strokeStyle = 'rgba(8,30,8,0.35)';
+				ctx.lineWidth = 0.6;
+				ctx.stroke();
+			}
+		});
+
+		// Rocks: small piles with shading and strokes
+		const rockPiles = [
+			place(-0.3, 0.28),
+			place(0.25, 0.16),
+			place(0.3, -0.22)
+		];
+		rockPiles.forEach((r, idx) => {
+			const base = 2.6 * (0.6 + (idx%2)*0.2);
+			drawShadow(r.x, r.y + 1, base*0.7, base*0.35, 0.12);
+			// draw 3 stones
+			for (let s=0; s<3; s++){
+				const rx = r.x + (s-1)*3.5 + (s%2?1:-1);
+				const ry = r.y - s*0.8;
+				const rad = base*(0.6 - s*0.12);
+				const grad = ctx.createRadialGradient(rx-rad*0.3, ry-rad*0.3, 0, rx, ry, rad);
+				grad.addColorStop(0, '#bdbdbd');
+				grad.addColorStop(1, '#6e6e6e');
+				ctx.fillStyle = grad;
+				ctx.beginPath();
+				ctx.ellipse(rx, ry, rad, rad*0.8, Math.PI*0.1*s, 0, Math.PI*2);
+				ctx.fill();
+				ctx.strokeStyle = '#5c5c5c';
+				ctx.lineWidth = 0.6;
+				ctx.stroke();
+			}
+		});
+
+		// Stump and fallen log near each other
+		const stump = place(0.02, 0.34);
+		{
+			drawShadow(stump.x, stump.y + 1, 3.5, 1.6, 0.12);
+			ctx.fillStyle = '#6b3b18';
+			ctx.fillRect(stump.x - 2.5, stump.y, 5, -4);
+			// rings on top
+			ctx.fillStyle = '#8c5a32';
+			ctx.beginPath();
+			ctx.ellipse(stump.x, stump.y - 4, 2.2, 1.2, 0, 0, Math.PI*2);
+			ctx.fill();
+			ctx.strokeStyle = '#5a341d';
+			ctx.lineWidth = 0.6;
+			ctx.stroke();
+		}
+		const log = place(-0.08, 0.38);
+		{
+			drawShadow(log.x, log.y + 2, 6, 2.2, 0.12);
+			ctx.save();
+			ctx.translate(log.x, log.y - 1);
+			ctx.rotate(-0.25);
+			ctx.fillStyle = '#6b3b18';
+			ctx.fillRect(-6, 0, 12, 3.5);
+			ctx.strokeStyle = '#4d2e14';
+			ctx.lineWidth = 0.6;
+			for (let g=0; g<3; g++){
+				ctx.beginPath();
+				ctx.moveTo(-6 + g*4, 0);
+				ctx.lineTo(-6 + g*4, 3.5);
+				ctx.stroke();
+			}
+			ctx.restore();
+		}
+
+		// Grass patches and small flowers
+		const grassPatches = [
+			place(-0.12, 0.18),
+			place(0.08, -0.12),
+			place(0.18, 0.06)
+		];
+		ctx.lineWidth = 0.9;
+		grassPatches.forEach((g, idx) => {
+			const blades = 5 + idx;
+			for (let i=0;i<blades;i++){
+				const angle = -Math.PI/2 + (i - blades/2)*0.12;
+				ctx.strokeStyle = '#2e8b2e';
+				ctx.beginPath();
+				ctx.moveTo(g.x, g.y);
+				ctx.lineTo(g.x + Math.cos(angle)*6, g.y + Math.sin(angle)*6);
+				ctx.stroke();
+			}
+			// tiny flowers
+			for (let f=0; f<3; f++){
+				ctx.fillStyle = f%2 ? '#ffd1e0' : '#fff1a8';
+				ctx.beginPath();
+				ctx.arc(g.x + (f-1)*2.5, g.y - 2 - f*0.6, 0.9, 0, Math.PI*2);
+				ctx.fill();
+			}
+		});
+
+		// Final subtle ground texture: small pebbles in front area
+		const pebbles = [
+			place(-0.05, 0.12),
+			place(0.12, 0.2),
+			place(-0.18, -0.08)
+		];
+		pebbles.forEach(p => {
+			for (let i=0;i<6;i++){
+				ctx.fillStyle = '#7f7f7f';
+				ctx.beginPath();
+				const rx = p.x + (Math.random()-0.5) * 8;
+				const ry = p.y + (Math.random()-0.5) * 5;
+				ctx.arc(rx, ry, 0.8 + Math.random()*0.8, 0, Math.PI*2);
+				ctx.fill();
+			}
+		});
+	}
     
     static getInfo() {
         return {
