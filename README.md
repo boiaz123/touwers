@@ -64,12 +64,14 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 **Academy Building Upgrades** (3 levels)
 
 **Level 1: Combination Spells** ($1000)
-- Unlocks 4 new Magic Tower spell options
-- **Steam** (Fire + Water): Burn + Slow effects
-- **Magma** (Fire + Earth): Burn + Armor Piercing effects
-- **Tempest** (Air + Water): Chain + Slow effects
-- **Meteor** (Air + Earth): Chain + Armor Piercing effects
+- Unlocks Combination Tower building type
+- Unlocks 4 combination spell investments using gems:
+- **Steam** (Fire + Water): Burn + Slow effects with unique vapor animation
+- **Magma** (Fire + Earth): Burn + Piercing effects with lava eruption animation  
+- **Tempest** (Air + Water): Chain + Slow effects with lightning storm animation
+- **Meteor** (Air + Earth): Chain + Piercing effects with meteor impact animation
 - All combination spells deal 10-15% bonus damage
+- Combination Tower features enhanced visual design with floating elemental orbs
 
 **Level 2: Diamond Mining** ($1500)
 - Unlocks diamond gem type in gold mines
@@ -80,17 +82,20 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 - Unlocks Super Weapon Lab building
 - Enables access to advanced technologies
 
-**Gem Mining** (Researched at Academy)
-- Cost: $500 gold
-- Allows gold mines to produce elemental gems
-- Players can toggle mines between gold and gem modes
-- Gems are required to upgrade Magic Tower elements
+### Combination Tower System
+**NEW: Combination Tower** (🏗️✨) - $200
+- Available after unlocking any combination spell at Magic Academy Level 1
+- Click placed Combination Towers to select active spell
+- Each spell has unique visual effects and elemental combinations
+- Enhanced appearance with floating elemental orbs, crystal structure, and energy rings
+- Spell-specific animations: steam clouds, magma eruptions, lightning tempests, meteor impacts
+- More visually impressive than regular Magic Tower
 
-**Magic Tower System**
-- Click placed Magic Towers to select element type
-- Each element has unique effects and academy bonuses
-- Combination spells available after Academy Level 1
-- Visual indicators show selected element
+**Combination Spells** (Unlocked via Magic Academy gem investment)
+- **Steam** (2🔥 + 2💧): Spiraling vapor effects, burn + enhanced slow
+- **Magma** (2🔥 + 2🪨): Erupting lava effects, burn + armor piercing  
+- **Tempest** (2💨 + 2💧): Lightning storm effects, chain + slow
+- **Meteor** (2💨 + 2🪨): Falling meteor effects, chain + armor piercing
 
 ## Project Structure
 

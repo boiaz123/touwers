@@ -743,7 +743,7 @@ export class MagicAcademy extends Building {
     getElementalUpgradeOptions() {
         const options = [];
         
-        // New: Add academy building upgrades first
+        // New: Add academy building upgrades first - only if not at max level
         if (this.academyLevel < this.maxAcademyLevel) {
             options.push(this.getAcademyUpgradeOption());
         }

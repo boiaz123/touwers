@@ -91,9 +91,12 @@ class GameplayState {
                 },
                 // Set up academy levels and unlocks for sandbox2
                 academyLevel: 3,
+                maxAcademyLevel: 3,
                 combinationSpellsUnlocked: true,
                 diamondMiningUnlocked: true,
                 gemMiningToolsResearched: true,
+                // Fix: Add the correct property name
+                gemMiningResearched: true,
                 // Unlock all combination spells for sandbox2 - FIXED property names
                 unlockedCombinationSpells: new Set([
                     'steam', 'magma', 'tempest', 'meteor'
@@ -152,6 +155,64 @@ class GameplayState {
                         water: { slowBonus: 0.5 },
                         air: { chainRange: 100 },
                         earth: { armorPiercing: 15 }
+                    };
+                },
+                getElementalUpgradeOptions: function() {
+                    // Provide a basic set of upgrade options for sandbox2
+                    return [
+                        {
+                            id: 'fire',
+                            name: 'Fire Mastery',
+                            description: 'Increase Magic Tower fire damage by 5 per level',
+                            level: 5,
+                            maxLevel: 5,
+                            cost: null,
+                            icon: '🔥',
+                            gemType: 'fire'
+                        },
+                        {
+                            id: 'water',
+                            name: 'Water Mastery',
+                            description: 'Increase Magic Tower water slow effect by 10% per level',
+                            level: 5,
+                            maxLevel: 5,
+                            cost: null,
+                            icon: '💧',
+                            gemType: 'water'
+                        },
+                        {
+                            id: 'air',
+                            name: 'Air Mastery',
+                            description: 'Increase Magic Tower air chain range by 20px per level',
+                            level: 5,
+                            maxLevel: 5,
+                            cost: null,
+                            icon: '💨',
+                            gemType: 'air'
+                        },
+                        {
+                            id: 'earth',
+                            name: 'Earth Mastery',
+                            description: 'Increase Magic Tower earth armor piercing by 3 per level',
+                            level: 5,
+                            maxLevel: 5,
+                            cost: null,
+                            icon: '🪨',
+                            gemType: 'earth'
+                        }
+                    ];
+                },
+                getAcademyUpgradeOption: function() {
+                    return {
+                        id: 'academy_upgrade',
+                        name: 'Academy Level MAX',
+                        description: 'Academy is at maximum level in sandbox mode.',
+                        nextUnlock: 'All features unlocked!',
+                        level: 3,
+                        maxLevel: 3,
+                        cost: null,
+                        icon: '🎓',
+                        isAcademyUpgrade: true
                     };
                 }
             };
