@@ -7,6 +7,8 @@ A modular tower defense game built with Node.js and HTML5 Canvas.
 ```bash
 npm install
 npm start
+# Or for hot-reload during development:
+npm run dev
 ```
 
 Visit `http://localhost:3000`
