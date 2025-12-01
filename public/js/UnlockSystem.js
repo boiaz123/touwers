@@ -22,7 +22,7 @@ export class UnlockSystem {
         // New: Track combination spells unlocked (for tower availability)
         this.unlockedCombinationSpells = new Set();
         
-        // New: Track superweapon unlock
+        // IMPORTANT: Superweapon starts LOCKED - only unlocked at Academy Level 3
         this.superweaponUnlocked = false;
     }
     

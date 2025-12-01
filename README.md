@@ -89,6 +89,7 @@ Unlocked at Forge Level 4. Only 1 academy allowed per game.
 **Level 3: Super Weapon Lab** ($2000)
 - Unlocks Super Weapon Lab building
 - Enables access to advanced technologies
+- Button only appears after purchasing this upgrade
 
 **Gem Mining** (Researched at Academy)
 - Cost: $500 gold

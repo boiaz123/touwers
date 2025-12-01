@@ -1191,22 +1191,19 @@ class GameplayState {
             }
         });
         
-        // Update building button states
+        // Update building button states - SAME LOGIC FOR ALL BUILDINGS
         document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const info = this.towerManager.getBuildingInfo(type);
             
-            // NEW: Always check if info exists first
             if (!info) {
                 btn.style.display = 'none';
                 return;
             }
             
-            // NEW: Superweapon has special unlock logic
-            const isUnlocked = type === 'superweapon' ? 
-                unlockSystem.superweaponUnlocked : 
-                info.unlocked;
+            // Use info.unlocked for ALL buildings (same as mines, forge, academy)
+            const isUnlocked = info.unlocked;
             
             if (!isUnlocked) {
                 btn.style.display = 'none';

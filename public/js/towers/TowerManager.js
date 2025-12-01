@@ -459,25 +459,21 @@ export class TowerManager {
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
         if (info) {
-            // NEW: Check unlock status first
-            if (type === 'superweapon') {
-                info.unlocked = this.unlockSystem.superweaponUnlocked;
-                info.disabled = false; // Don't disable it, let updateUIAvailability handle visibility
+            // Check unlock status for ALL buildings using the same logic
+            info.unlocked = this.unlockSystem.canBuildBuilding(type);
+            
+            // ...existing code for disabled checks...
+            if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
+                info.disabled = true;
+                info.disableReason = "Only 1 forge allowed";
+            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+                info.disabled = true;
+                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
+            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+                info.disabled = true;
+                info.disableReason = "Only 1 academy allowed";
             } else {
-                info.unlocked = this.unlockSystem.canBuildBuilding(type);
-                
-                if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-                    info.disabled = true;
-                    info.disableReason = "Only 1 forge allowed";
-                } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-                    info.disabled = true;
-                    info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
-                } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-                    info.disabled = true;
-                    info.disableReason = "Only 1 academy allowed";
-                } else {
-                    info.disabled = false;
-                }
+                info.disabled = false;
             }
         }
         return info;
