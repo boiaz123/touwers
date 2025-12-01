@@ -324,7 +324,7 @@ export class TowerManager {
         
         // Check tower icon clicks first for element selection
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const iconSize = 30; // Increased for better clickability
+        const iconSize = 30;
         
         for (const tower of this.towers) {
             // Icon position: bottom right of 2x2 grid, slightly floating up
@@ -386,6 +386,10 @@ export class TowerManager {
             } else if (buildingResult.type === 'academy_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
                 console.log('TowerManager: Academy menu requested');
+                return buildingResult;
+            } else if (buildingResult.type === 'superweapon_menu') {
+                // New: Handle super weapon menu
+                console.log('TowerManager: Super Weapon menu requested');
                 return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection

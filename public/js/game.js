@@ -15,10 +15,13 @@ class GameplayState {
         this.enemyManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
-        this.currentLevel = 1; // Track current level
-        this.maxWavesForLevel = 10; // Level 1 has 10 waves
+        this.currentLevel = 1;
+        this.maxWavesForLevel = 10;
         this.waveInProgress = false;
         this.waveCompleted = false;
+        
+        // New: Track super weapon lab reference
+        this.superWeaponLab = null;
         console.log('GameplayState constructor completed');
     }
     
@@ -85,6 +88,7 @@ class GameplayState {
         }
         
         this.setupEventListeners();
+        this.setupSpellUI(); // New: Setup spell UI
         this.updateUI();
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
@@ -221,6 +225,10 @@ class GameplayState {
                     // New: Handle basic tower stats menu
                     this.showBasicTowerStatsMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'superweapon_menu') {
+                    // New: Handle super weapon menu
+                    this.showSuperWeaponMenu(clickResult);
+                    return;
                 } else if (typeof clickResult === 'number') {
                     // Gold collection
                     this.gameState.gold += clickResult;
@@ -237,7 +245,7 @@ class GameplayState {
     
     removeEventListeners() {
         // Clean up event listeners properly
-        document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+        document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
         
@@ -359,6 +367,164 @@ class GameplayState {
         `;
     }
     
+    setupSpellUI() {
+        // Spells are now integrated into the sidebar, no floating panel needed
+        // Spell buttons will be created dynamically when super weapon lab is built
+    }
+    
+    updateSpellUI() {
+        const spellSection = document.getElementById('spell-section');
+        const spellGrid = document.getElementById('spell-grid');
+        
+        // Find super weapon lab
+        this.superWeaponLab = this.towerManager.buildingManager.buildings.find(
+            b => b.constructor.name === 'SuperWeaponLab'
+        );
+        
+        if (!this.superWeaponLab) {
+            if (spellSection) spellSection.style.display = 'none';
+            return;
+        }
+        
+        spellSection.style.display = 'block';
+        
+        const availableSpells = this.superWeaponLab.getAvailableSpells();
+        
+        spellGrid.innerHTML = availableSpells.map(spell => {
+            const isReady = spell.currentCooldown === 0;
+            
+            return `
+                <button class="spell-btn ${isReady ? 'ready' : 'cooling'}" 
+                        data-spell-id="${spell.id}"
+                        ${!isReady ? 'disabled' : ''}
+                        title="${spell.name}: ${spell.description}">
+                    <div class="spell-icon">${spell.icon}</div>
+                    <div class="spell-name">${spell.name}</div>
+                    ${!isReady ? `<div class="spell-cooldown">${Math.ceil(spell.currentCooldown)}s</div>` : ''}
+                </button>
+            `;
+        }).join('');
+        
+        // Add click handlers to ready spells only
+        spellGrid.querySelectorAll('.spell-btn.ready').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const spellId = e.currentTarget.dataset.spellId;
+                this.activateSpellTargeting(spellId);
+            });
+        });
+    }
+    
+    activateSpellTargeting(spellId) {
+        this.selectedSpell = spellId;
+        this.stateManager.canvas.style.cursor = 'crosshair';
+        
+        // Add temporary click handler for spell targeting
+        this.spellTargetHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            this.castSpellAtPosition(this.selectedSpell, x, y);
+            this.cancelSpellTargeting();
+        };
+        
+        this.stateManager.canvas.addEventListener('click', this.spellTargetHandler, { once: true });
+        
+        // Allow right-click to cancel
+        this.spellCancelHandler = (e) => {
+            e.preventDefault();
+            this.cancelSpellTargeting();
+        };
+        this.stateManager.canvas.addEventListener('contextmenu', this.spellCancelHandler, { once: true });
+    }
+    
+    cancelSpellTargeting() {
+        this.selectedSpell = null;
+        this.stateManager.canvas.style.cursor = 'default';
+        
+        if (this.spellTargetHandler) {
+            this.stateManager.canvas.removeEventListener('click', this.spellTargetHandler);
+            this.spellTargetHandler = null;
+        }
+        if (this.spellCancelHandler) {
+            this.stateManager.canvas.removeEventListener('contextmenu', this.spellCancelHandler);
+            this.spellCancelHandler = null;
+        }
+    }
+    
+    castSpellAtPosition(spellId, x, y) {
+        if (!this.superWeaponLab) return;
+        
+        const result = this.superWeaponLab.castSpell(spellId, this.enemyManager.enemies, x, y);
+        if (!result) return;
+        
+        const { spell } = result;
+        
+        // Apply spell effects to enemies
+        switch(spellId) {
+            case 'arcaneBlast':
+                this.enemyManager.enemies.forEach(enemy => {
+                    const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                    if (dist <= spell.radius) {
+                        const damage = spell.damage * (1 - dist / spell.radius * 0.5);
+                        enemy.takeDamage(damage);
+                    }
+                });
+                this.createSpellEffect('arcaneBlast', x, y, spell);
+                break;
+                
+            case 'frostNova':
+                this.enemyManager.enemies.forEach(enemy => {
+                    const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                    if (dist <= spell.radius) {
+                        enemy.freezeTimer = spell.freezeDuration;
+                        enemy.originalSpeed = enemy.originalSpeed || enemy.speed;
+                        enemy.speed = 0;
+                    }
+                });
+                this.createSpellEffect('frostNova', x, y, spell);
+                break;
+                
+            case 'meteorStrike':
+                // Delayed damage for meteor
+                setTimeout(() => {
+                    this.enemyManager.enemies.forEach(enemy => {
+                        const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                        if (dist <= 80) {
+                            enemy.takeDamage(spell.damage);
+                            enemy.burnTimer = spell.burnDuration;
+                            enemy.burnDamage = spell.burnDamage;
+                        }
+                    });
+                }, 500);
+                this.createSpellEffect('meteorStrike', x, y, spell);
+                break;
+                
+            case 'chainLightning':
+                let targets = [...this.enemyManager.enemies]
+                    .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))
+                    .slice(0, spell.chainCount);
+                
+                targets.forEach((enemy, index) => {
+                    setTimeout(() => {
+                        enemy.takeDamage(spell.damage * Math.pow(0.8, index));
+                    }, index * 100);
+                });
+                this.createSpellEffect('chainLightning', x, y, spell, targets);
+                break;
+        }
+        
+        this.updateSpellUI();
+    }
+    
+    createSpellEffect(type, x, y, spell, targets) {
+        // Visual spell effects would be rendered here
+        // For now, just log
+        console.log(`Spell effect: ${type} at (${x}, ${y})`);
+    }
+    
     handleClick(x, y) {
         const clickResult = this.towerManager.handleClick(x, y, { 
             width: this.stateManager.canvas.width, 
@@ -376,12 +542,14 @@ class GameplayState {
                 this.showMagicTowerElementMenu(clickResult);
                 return;
             } else if (clickResult.type === 'combination_tower_menu') {
-                // New: Handle combination tower menu
                 this.showCombinationTowerMenu(clickResult);
                 return;
             } else if (clickResult.type === 'basic_tower_stats') {
-                // New: Handle basic tower stats menu
                 this.showBasicTowerStatsMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'superweapon_menu') {
+                // New: Handle super weapon menu
+                this.showSuperWeaponMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
                 this.gameState.gold += clickResult;
@@ -958,6 +1126,144 @@ class GameplayState {
         this.activeMenu = menu;
     }
     
+    showSuperWeaponMenu(menuData) {
+        this.clearActiveMenus();
+        
+        const menu = document.createElement('div');
+        menu.id = 'superweapon-upgrade-menu';
+        menu.className = 'upgrade-menu';
+        
+        let upgradeListHTML = '';
+        
+        // Add lab level upgrade
+        const labUpgrade = menuData.building.getLabUpgradeOption();
+        if (labUpgrade) {
+            upgradeListHTML += `
+                <div class="upgrade-item">
+                    <div class="upgrade-icon">${labUpgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${labUpgrade.name}</div>
+                        <div class="upgrade-desc">${labUpgrade.description}</div>
+                        <div class="upgrade-next">${labUpgrade.nextUnlock}</div>
+                        <div class="upgrade-level">Level: ${labUpgrade.level}/${labUpgrade.maxLevel}</div>
+                    </div>
+                    <div class="upgrade-cost">$${labUpgrade.cost}</div>
+                    <button class="upgrade-btn" data-upgrade="lab_upgrade" 
+                            ${this.gameState.gold < labUpgrade.cost ? 'disabled' : ''}>
+                        Upgrade
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Add spell unlocks and upgrades
+        menuData.spells.forEach(spell => {
+            if (!spell.unlocked) {
+                // Unlock option
+                upgradeListHTML += `
+                    <div class="upgrade-item locked">
+                        <div class="upgrade-icon">${spell.icon}</div>
+                        <div class="upgrade-details">
+                            <div class="upgrade-name">${spell.name}</div>
+                            <div class="upgrade-desc">${spell.description}</div>
+                            <div class="upgrade-level">🔒 Locked</div>
+                        </div>
+                        <div class="upgrade-cost">$${spell.unlockCost}</div>
+                        <button class="upgrade-btn" data-unlock="${spell.id}"
+                                ${this.gameState.gold < spell.unlockCost ? 'disabled' : ''}>
+                            Unlock
+                        </button>
+                    </div>
+                `;
+            } else {
+                // Upgrade option
+                const upgradeCost = spell.upgradeCost * spell.level;
+                const isMaxed = spell.level >= spell.maxLevel;
+                
+                upgradeListHTML += `
+                    <div class="upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-icon">${spell.icon}</div>
+                        <div class="upgrade-details">
+                            <div class="upgrade-name">${spell.name}</div>
+                            <div class="upgrade-desc">${spell.description}</div>
+                            <div class="upgrade-level">Level: ${spell.level}/${spell.maxLevel}</div>
+                            <div class="upgrade-current">Cooldown: ${spell.cooldown.toFixed(1)}s</div>
+                        </div>
+                        <div class="upgrade-cost">${isMaxed ? 'MAX' : `$${upgradeCost}`}</div>
+                        <button class="upgrade-btn" data-spell-upgrade="${spell.id}"
+                                ${isMaxed || this.gameState.gold < upgradeCost ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : 'Upgrade'}
+                        </button>
+                    </div>
+                `;
+            }
+        });
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>🗼 Super Weapon Lab</h3>
+                <button class="close-btn">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${upgradeListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Close button handler
+        menu.querySelector('.close-btn').addEventListener('click', () => {
+            menu.remove();
+        });
+        
+        // Upgrade handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                const unlockId = e.target.dataset.unlock;
+                const spellUpgradeId = e.target.dataset.spellUpgrade;
+                
+                if (upgradeId === 'lab_upgrade') {
+                    if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu({
+                            type: 'superweapon_menu',
+                            building: menuData.building,
+                            spells: menuData.building.getAllSpells(),
+                            labLevel: menuData.building.labLevel,
+                            maxLabLevel: menuData.building.maxLabLevel
+                        });
+                    }
+                } else if (unlockId) {
+                    if (menuData.building.unlockSpell(unlockId, this.gameState)) {
+                        this.updateUI();
+                        this.updateSpellUI();
+                        this.showSuperWeaponMenu({
+                            type: 'superweapon_menu',
+                            building: menuData.building,
+                            spells: menuData.building.getAllSpells(),
+                            labLevel: menuData.building.labLevel,
+                            maxLabLevel: menuData.building.maxLabLevel
+                        });
+                    }
+                } else if (spellUpgradeId) {
+                    if (menuData.building.upgradeSpell(spellUpgradeId, this.gameState)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu({
+                            type: 'superweapon_menu',
+                            building: menuData.building,
+                            spells: menuData.building.getAllSpells(),
+                            labLevel: menuData.building.labLevel,
+                            maxLabLevel: menuData.building.maxLabLevel
+                        });
+                    }
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
+    }
+    
     getUpgradeCurrentEffect(upgrade) {
         switch (upgrade.id) {
             case 'towerRange':
@@ -1086,6 +1392,16 @@ class GameplayState {
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         
+        // Update freeze timers on enemies
+        this.enemyManager.enemies.forEach(enemy => {
+            if (enemy.freezeTimer > 0) {
+                enemy.freezeTimer -= deltaTime;
+                if (enemy.freezeTimer <= 0 && enemy.originalSpeed) {
+                    enemy.speed = enemy.originalSpeed;
+                }
+            }
+        });
+        
         const reachedEnd = this.enemyManager.checkReachedEnd();
         if (reachedEnd > 0) {
             this.gameState.health -= reachedEnd;
@@ -1100,7 +1416,6 @@ class GameplayState {
         
         const killedEnemies = this.enemyManager.removeDeadEnemies();
         if (killedEnemies > 0) {
-            // Gold reward scales slightly with wave number
             const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
             this.gameState.gold += killedEnemies * goldPerEnemy;
             this.updateUI();
@@ -1113,12 +1428,14 @@ class GameplayState {
             
             console.log(`Wave ${this.gameState.wave} completed`);
             
-            // Move to next wave after a short delay
             setTimeout(() => {
                 this.gameState.wave++;
                 this.startWave();
             }, 2000);
         }
+        
+        // Update spell UI
+        this.updateSpellUI();
     }
     
     render(ctx) {
@@ -1226,7 +1543,6 @@ class GameplayState {
     
     resize() {
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
-        this.buildingManager.updatePositions(this.level);
         this.towerManager.updatePositions(this.level);
     }
 }

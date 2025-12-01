@@ -350,6 +350,219 @@ body {
     color: #FFD700;
 }
 
+/* Spell Panel Styles */
+.spell-panel {
+    position: fixed;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #1a0f0a 0%, #2d1810 100%);
+    border: 2px solid #8B5CF6;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    min-width: 80px;
+}
+
+.spell-panel-header {
+    color: #C4B5FD;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #6366F1;
+}
+
+.spell-button {
+    background: linear-gradient(135deg, #374151 0%, #1F2937 100%);
+    border: 2px solid #6366F1;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 60px;
+}
+
+.spell-button.ready {
+    border-color: #8B5CF6;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.spell-button.ready:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.7);
+}
+
+.spell-button.cooling {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spell-icon {
+    font-size: 24px;
+}
+
+.spell-name {
+    color: #C4B5FD;
+    font-size: 9px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.spell-cooldown-bar {
+    width: 100%;
+    height: 4px;
+    background: #1F2937;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.spell-cooldown-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366F1, #8B5CF6);
+    transition: width 0.1s linear;
+}
+
+.spell-cooldown-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #FFF;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 0 0 5px #000;
+}
+
+/* Locked spell item in menu */
+.upgrade-item.locked {
+    opacity: 0.7;
+    background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+}
+
+.upgrade-item.locked .upgrade-name {
+    color: #9CA3AF;
+}
+
+/* New Spells Section */
+#spell-section {
+    border-top: 2px solid #8B7355;
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+#spell-label {
+    color: #D4AF37;
+    font-weight: bold;
+    font-size: 10px;
+    text-align: center;
+    margin-bottom: 6px;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+}
+
+#spell-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    padding: 0 4px;
+}
+
+.spell-btn {
+    background: linear-gradient(135deg, #4B2E5F 0%, #2D1B3D 100%);
+    border: 2px solid #8B5CF6;
+    color: #E9D5FF;
+    padding: 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.spell-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #6D28D9 0%, #4B2E5F 100%);
+    border-color: #C084FC;
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+}
+
+.spell-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #6B7280;
+}
+
+.spell-btn.ready {
+    animation: spellPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes spellPulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(139, 92, 246, 0.4); }
+    50% { box-shadow: 0 0 12px rgba(139, 92, 246, 0.8); }
+}
+
+.spell-icon {
+    font-size: 16px;
+}
+
+.spell-cost {
+    font-size: 8px;
+    opacity: 0.9;
+}
+
+/* Fixed Description Box */
+#tower-info-box {
+    border-top: 2px solid #8B7355;
+    margin-top: 8px;
+    padding-top: 8px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+#tower-info-scroll {
+    overflow-y: auto;
+    flex: 1;
+    padding-right: 4px;
+}
+
+#tower-info-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+#tower-info-scroll::-webkit-scrollbar-track {
+    background: #1a0f0a;
+    border-radius: 3px;
+}
+
+#tower-info-scroll::-webkit-scrollbar-thumb {
+    background: #8B7355;
+    border-radius: 3px;
+}
+
+#tower-info-scroll::-webkit-scrollbar-thumb:hover {
+    background: #B8860B;
+}
+
+#tower-info {
+    padding: 0 4px;
+}
+
 /* Mobile optimizations */
 @media (max-width: 1024px) {
     #stats {
