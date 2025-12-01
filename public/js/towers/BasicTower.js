@@ -534,53 +534,54 @@ export class BasicTower {
     
     drawEnvironment(ctx, gridSize) {
         // Keep trees/bushes/rocks within the 2x2 grid; tweak positions and add small grass patches.
+        // Tree sizes increased by 4x for a larger visual impact.
         const trees = [
-            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 },
-            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 },
-            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 },
-            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 }
+            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 * 4 },
+            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 * 4 },
+            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 * 4 },
+            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 * 4 }
         ];
         
         trees.forEach(tree => {
-            const treeX = this.x + tree.x;
-            const treeY = this.y + tree.y;
-            const scale = tree.size;
-            
-            // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-            ctx.save();
-            ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.45);
-            ctx.beginPath();
-            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            
-            // Trunk
-            ctx.fillStyle = '#5a341d';
-            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
+	        const treeX = this.x + tree.x;
+	        const treeY = this.y + tree.y;
+	        const scale = tree.size;
+	        
+	        // Tree shadow
+	        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+	        ctx.save();
+	        ctx.translate(treeX + 2, treeY + 2);
+	        ctx.scale(1, 0.45);
+	        ctx.beginPath();
+	        ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+	        ctx.fill();
+	        ctx.restore();
+	        
+	        // Trunk
+	        ctx.fillStyle = '#5a341d';
+	        ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
 
-            // Pine layers (slightly rebalanced colors)
-            const layers = [
-                { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
-                { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
-                { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
-            ];
-            
-            layers.forEach(layer => {
-                ctx.fillStyle = layer.color;
-                ctx.beginPath();
-                ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#0b2b0b';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            });
-        });
-        
+	        // Pine layers (slightly rebalanced colors)
+	        const layers = [
+	            { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
+	            { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
+	            { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
+	        ];
+	        
+	        layers.forEach(layer => {
+	            ctx.fillStyle = layer.color;
+	            ctx.beginPath();
+	            ctx.moveTo(treeX, treeY + layer.y);
+	            ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
+	            ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
+	            ctx.closePath();
+	            ctx.fill();
+	            ctx.strokeStyle = '#0b2b0b';
+	            ctx.lineWidth = 1;
+	            ctx.stroke();
+	        });
+	    });
+	    
         // Bushes (adjusted positions)
         const bushes = [
             { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },

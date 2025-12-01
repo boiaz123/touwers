@@ -71,6 +71,13 @@ class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
+        // New: Initialize unlock system with superweapon unlocked in sandbox
+        if (this.isSandbox) {
+            const unlockSystem = this.towerManager.getUnlockSystem();
+            unlockSystem.superweaponUnlocked = true;
+            console.log('GameplayState: SANDBOX MODE - superweapon unlocked');
+        }
+        
         // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
         if (this.isSandbox) {
             console.log('GameplayState: SANDBOX MODE - Initializing gems immediately');
@@ -328,6 +335,18 @@ class GameplayState {
         if (!info) return;
         
         const infoPanel = document.getElementById('tower-info');
+        
+        // Check if building is disabled
+        const buildingBtn = document.querySelector(`.building-btn[data-type="${buildingType}"]`);
+        let disabledNote = '';
+        
+        if (buildingType === 'superweapon') {
+            const unlockSystem = this.towerManager.getUnlockSystem();
+            if (!unlockSystem.superweaponUnlocked) {
+                disabledNote = '<div style="color: #ff6b6b; margin-top: 8px; font-size: 10px;">⚠️ Unlock at Academy Level 3</div>';
+            }
+        }
+        
         infoPanel.innerHTML = `
             <div class="info-title">${info.name}</div>
             <div class="info-stats">
@@ -336,6 +355,7 @@ class GameplayState {
                 <div>Cost: $${info.cost}</div>
             </div>
             <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
+            ${disabledNote}
         `;
     }
     
@@ -629,7 +649,7 @@ class GameplayState {
         menu.innerHTML = `
             <div class="menu-header">
                 <h3>🎓 Magic Academy Upgrades</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
+                <button class="close-btn">×</button>
             </div>
             <div class="upgrade-list">
                 ${upgradeListHTML}
@@ -638,20 +658,40 @@ class GameplayState {
         
         document.body.appendChild(menu);
         
-        // Add upgrade button handlers
+        // Add close button handler FIRST
+        menu.querySelector('.close-btn').addEventListener('click', () => {
+            menu.remove();
+        });
+        
+        // Add upgrade button handlers - GET FRESH REFERENCE TO academy
         menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
                 
-                console.log(`GameplayState: Academy upgrade clicked: ${upgradeId}`);
-                
                 if (upgradeId === 'academy_upgrade') {
-                    // New: Handle academy level upgrade
-                    if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
+                    console.log(`GameplayState: Attempting academy upgrade purchase`);
+                    
+                    // Purchase FIRST
+                    const purchased = academyData.academy.purchaseAcademyUpgrade(this.gameState);
+                    console.log(`GameplayState: Purchase returned: ${purchased}`);
+                    
+                    if (purchased) {
+                        console.log(`GameplayState: Purchase succeeded`);
+                        const newLevel = academyData.academy.academyLevel;
+                        console.log(`GameplayState: Academy new level: ${newLevel}`);
+                        
+                        // NOW unlock
+                        if (newLevel === 3) {
+                            console.log('GameplayState: *** LEVEL 3 REACHED - UNLOCKING SUPERWEAPON ***');
+                            const unlockSystem = this.towerManager.getUnlockSystem();
+                            unlockSystem.onAcademyLevelThree();
+                            console.log(`GameplayState: After unlock, superweaponUnlocked is: ${unlockSystem.superweaponUnlocked}`);
+                        }
+                        
                         this.updateUI();
                         this.updateUIAvailability();
                         
-                        // Refresh the menu
+                        // Refresh menu
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -1157,7 +1197,18 @@ class GameplayState {
             const cost = parseInt(btn.dataset.cost);
             const info = this.towerManager.getBuildingInfo(type);
             
-            if (!info || !info.unlocked) {
+            // NEW: Always check if info exists first
+            if (!info) {
+                btn.style.display = 'none';
+                return;
+            }
+            
+            // NEW: Superweapon has special unlock logic
+            const isUnlocked = type === 'superweapon' ? 
+                unlockSystem.superweaponUnlocked : 
+                info.unlocked;
+            
+            if (!isUnlocked) {
                 btn.style.display = 'none';
             } else {
                 btn.style.display = '';

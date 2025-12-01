@@ -12,7 +12,7 @@ export class BuildingManager {
             'mine': { class: GoldMine, cost: 200, size: 4 },
             'forge': { class: TowerForge, cost: 300, size: 4 },
             'academy': { class: MagicAcademy, cost: 250, size: 4 },
-            'superweapon': { class: SuperWeaponLab, cost: 500, size: 4 }
+            'superweapon': { class: SuperWeaponLab, cost: 1000, size: 4 }
         };
         this.occupiedPositions = new Set();
         
@@ -36,13 +36,21 @@ export class BuildingManager {
     
     placeBuilding(type, x, y, gridX, gridY) {
         const buildingType = this.buildingTypes[type];
-        if (!buildingType) return false;
+        if (!buildingType) {
+            console.error(`BuildingManager: Building type '${type}' not found in buildingTypes!`);
+            console.log('Available types:', Object.keys(this.buildingTypes));
+            return false;
+        }
+        
+        console.log(`BuildingManager: Attempting to place ${type} at grid (${gridX}, ${gridY})`);
         
         // Check if the 4x4 position is available
         if (this.isBuildingPositionOccupied(gridX, gridY, buildingType.size)) {
-            console.log('BuildingManager: Building position occupied');
+            console.log(`BuildingManager: ${type} position occupied at (${gridX}, ${gridY})`);
             return false;
         }
+        
+        console.log(`BuildingManager: Position available, spending ${buildingType.cost} gold`);
         
         if (this.gameState.spend(buildingType.cost)) {
             const building = new buildingType.class(x, y, gridX, gridY);
@@ -54,8 +62,10 @@ export class BuildingManager {
             // Apply building effects to this manager
             building.applyEffect(this);
             
-            console.log(`BuildingManager: Placed ${type} building at grid (${gridX}, ${gridY})`);
+            console.log(`BuildingManager: Successfully placed ${type} building at grid (${gridX}, ${gridY})`);
             return true;
+        } else {
+            console.log(`BuildingManager: Not enough gold to place ${type}`);
         }
         return false;
     }

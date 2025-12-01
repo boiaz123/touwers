@@ -517,8 +517,8 @@ export class Level { // Changed from Level3D to Level
     }
     
     renderPath(ctx) {
-        // Reduced path width to match the smaller exclusion zone
-        const pathWidth = Math.max(30, Math.min(60, this.cellSize * 2)); // Reduced from 3x to 2x cellSize
+        // REDUCED path width to match smaller exclusion zone
+        const pathWidth = Math.max(20, Math.min(40, this.cellSize * 1.5)); // Reduced from 2x to 1.5x cellSize
         
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
@@ -713,6 +713,16 @@ export class Level { // Changed from Level3D to Level
             ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
             ctx.lineWidth = 2;
             ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
+        }
+        
+        // DEBUG: Render occupied cells (REMOVE THIS AFTER DEBUGGING)
+        const showDebug = false; // Set to true to see occupied cells
+        if (showDebug) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+            for (const posStr of this.occupiedCells) {
+                const [x, y] = posStr.split(',').map(Number);
+                ctx.fillRect(x * this.cellSize, y * this.cellSize, this.cellSize, this.cellSize);
+            }
         }
     }
     

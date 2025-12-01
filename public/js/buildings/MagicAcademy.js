@@ -872,6 +872,7 @@ export class MagicAcademy extends Building {
     // New: Purchase academy upgrade
     purchaseAcademyUpgrade(gameState) {
         if (this.academyLevel >= this.maxAcademyLevel) {
+            console.log('MagicAcademy: Already at max academy level');
             return false;
         }
         
@@ -886,7 +887,9 @@ export class MagicAcademy extends Building {
         gameState.spend(cost);
         this.academyLevel++;
         
-        // Apply upgrades based on new level
+        console.log(`MagicAcademy: Purchased academy upgrade, level is now:`, this.academyLevel);
+        
+        // Apply unlocks based on new level
         switch(this.academyLevel) {
             case 1:
                 this.combinationSpellsUnlocked = true;

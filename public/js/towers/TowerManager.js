@@ -61,6 +61,12 @@ export class TowerManager {
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
+        // NEW: Debug log for superweapon specifically
+        if (type === 'superweapon') {
+            console.log(`TowerManager: placeBuilding - superweapon unlock status: ${this.unlockSystem.superweaponUnlocked}`);
+            console.log(`TowerManager: placeBuilding - canBuildBuilding result: ${this.unlockSystem.canBuildBuilding(type)}`);
+        }
+        
         // Check if building type is unlocked
         if (!this.unlockSystem.canBuildBuilding(type)) {
             console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
@@ -101,6 +107,8 @@ export class TowerManager {
                         }
                     }
                 });
+            } else if (type === 'superweapon') {
+                console.log('TowerManager: Super Weapon Lab built!');
             }
         }
         
@@ -451,28 +459,25 @@ export class TowerManager {
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
         if (info) {
-            info.unlocked = this.unlockSystem.canBuildBuilding(type);
-            
-            // New: Check super weapon unlock from academy
+            // NEW: Check unlock status first
             if (type === 'superweapon') {
-                const academies = this.buildingManager.buildings.filter(building =>
-                    building.constructor.name === 'MagicAcademy'
-                );
-                info.unlocked = academies.length > 0 && academies[0].superWeaponUnlocked;
+                info.unlocked = this.unlockSystem.superweaponUnlocked;
+                info.disabled = false; // Don't disable it, let updateUIAvailability handle visibility
+            } else {
+                info.unlocked = this.unlockSystem.canBuildBuilding(type);
                 
-                if (!info.unlocked) {
+                if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
                     info.disabled = true;
-                    info.disableReason = 'Unlock at Academy Level 3';
+                    info.disableReason = "Only 1 forge allowed";
+                } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
+                    info.disabled = true;
+                    info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
+                } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
+                    info.disabled = true;
+                    info.disableReason = "Only 1 academy allowed";
+                } else {
+                    info.disabled = false;
                 }
-            } else if (type === 'forge' && this.unlockSystem.forgeCount >= this.unlockSystem.maxForges) {
-                info.disabled = true;
-                info.disableReason = "Only 1 forge allowed";
-            } else if (type === 'mine' && this.unlockSystem.mineCount >= this.unlockSystem.getMaxMines()) {
-                info.disabled = true;
-                info.disableReason = `Max ${this.unlockSystem.getMaxMines()} mines allowed`;
-            } else if (type === 'academy' && this.unlockSystem.academyCount >= 1) {
-                info.disabled = true;
-                info.disableReason = "Only 1 academy allowed";
             }
         }
         return info;

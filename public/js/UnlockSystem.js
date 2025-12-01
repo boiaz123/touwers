@@ -21,6 +21,9 @@ export class UnlockSystem {
         
         // New: Track combination spells unlocked (for tower availability)
         this.unlockedCombinationSpells = new Set();
+        
+        // New: Track superweapon unlock
+        this.superweaponUnlocked = false;
     }
     
     onForgeBuilt() {
@@ -58,6 +61,16 @@ export class UnlockSystem {
         return true;
     }
     
+    // New: Method to unlock superweapon when academy reaches level 3
+    onAcademyLevelThree() {
+        console.log('UnlockSystem: onAcademyLevelThree() called!');
+        this.superweaponUnlocked = true;
+        this.unlockedBuildings.add('superweapon');
+        console.log('UnlockSystem: Set superweaponUnlocked to true');
+        console.log('UnlockSystem: superweaponUnlocked is now:', this.superweaponUnlocked);
+        console.log('UnlockSystem: Academy Level 3 reached - Super Weapon Lab unlocked!');
+    }
+    
     // New: Method to handle gem mining research
     onGemMiningResearched() {
         this.gemMiningResearched = true;
@@ -84,6 +97,13 @@ export class UnlockSystem {
     // New: Check if combination tower can be built
     canBuildCombinationTower() {
         return this.unlockedCombinationSpells.size > 0;
+    }
+    
+    // New: Method to unlock superweapon
+    onSuperweaponUnlocked() {
+        this.superweaponUnlocked = true;
+        this.unlockedBuildings.add('superweapon');
+        console.log('UnlockSystem: Super Weapon Lab building unlocked!');
     }
     
     getMaxMines() {
@@ -151,6 +171,9 @@ export class UnlockSystem {
         }
         if (type === 'academy' && this.academyCount >= 1) {
             return false; // Only 1 academy allowed
+        }
+        if (type === 'superweapon' && this.superweaponUnlocked === false) {
+            return false; // Only unlocked at Academy level 3
         }
         return this.unlockedBuildings.has(type);
     }
