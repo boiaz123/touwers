@@ -626,10 +626,20 @@ export class SuperWeaponLab extends Building {
     }
     
     purchaseLabUpgrade(gameState) {
-        if (this.labLevel >= this.maxLabLevel) return false;
+        console.log(`SuperWeaponLab: purchaseLabUpgrade called, current level: ${this.labLevel}`);
+        
+        if (this.labLevel >= this.maxLabLevel) {
+            console.error('SuperWeaponLab: Lab already at max level');
+            return false;
+        }
         
         const upgradeOption = this.getLabUpgradeOption();
-        if (!gameState.canAfford(upgradeOption.cost)) return false;
+        console.log(`SuperWeaponLab: Lab upgrade cost: ${upgradeOption.cost}, player gold: ${gameState.gold}`);
+        
+        if (!gameState.canAfford(upgradeOption.cost)) {
+            console.error('SuperWeaponLab: Cannot afford lab upgrade');
+            return false;
+        }
         
         gameState.spend(upgradeOption.cost);
         this.labLevel++;
@@ -640,6 +650,7 @@ export class SuperWeaponLab extends Building {
             Object.values(this.spells).forEach(spell => {
                 spell.cooldown *= 0.8;
             });
+            console.log('SuperWeaponLab: Applied lab level 2 bonus (20% cooldown reduction)');
         }
         if (this.labLevel >= 3) {
             // Additional damage bonus
@@ -647,32 +658,70 @@ export class SuperWeaponLab extends Building {
                 if (spell.damage) spell.damage *= 1.3;
                 if (spell.burnDamage) spell.burnDamage *= 1.3;
             });
+            console.log('SuperWeaponLab: Applied lab level 3 bonus (30% damage increase)');
         }
         
-        console.log(`SuperWeaponLab: Upgraded to level ${this.labLevel}`);
+        console.log(`SuperWeaponLab: ✓ Upgraded lab to level ${this.labLevel}`);
         return true;
     }
     
     unlockSpell(spellId, gameState) {
-        const spell = this.spells[spellId];
-        if (!spell || spell.unlocked) return false;
+        console.log(`SuperWeaponLab: unlockSpell called for ${spellId}`);
+        console.log(`SuperWeaponLab: Available spells:`, Object.keys(this.spells));
         
-        if (!gameState.canAfford(spell.unlockCost)) return false;
+        const spell = this.spells[spellId];
+        if (!spell) {
+            console.error(`SuperWeaponLab: Spell ${spellId} not found!`);
+            return false;
+        }
+        
+        if (spell.unlocked) {
+            console.error(`SuperWeaponLab: Spell ${spellId} already unlocked`);
+            return false;
+        }
+        
+        console.log(`SuperWeaponLab: Spell unlock cost: ${spell.unlockCost}, player gold: ${gameState.gold}`);
+        if (!gameState.canAfford(spell.unlockCost)) {
+            console.error(`SuperWeaponLab: Cannot afford to unlock ${spellId}`);
+            return false;
+        }
         
         gameState.spend(spell.unlockCost);
         spell.unlocked = true;
         spell.level = 1;
+        spell.currentCooldown = 0;
         
-        console.log(`SuperWeaponLab: Unlocked ${spell.name}!`);
+        console.log(`SuperWeaponLab: ✓ Unlocked ${spell.name}!`);
+        console.log(`SuperWeaponLab: Spell now:`, spell);
         return true;
     }
     
     upgradeSpell(spellId, gameState) {
+        console.log(`SuperWeaponLab: upgradeSpell called for ${spellId}`);
+        
         const spell = this.spells[spellId];
-        if (!spell || !spell.unlocked || spell.level >= spell.maxLevel) return false;
+        if (!spell) {
+            console.error(`SuperWeaponLab: Spell ${spellId} not found!`);
+            return false;
+        }
+        
+        if (!spell.unlocked) {
+            console.error(`SuperWeaponLab: Spell ${spellId} not unlocked`);
+            return false;
+        }
+        
+        if (spell.level >= spell.maxLevel) {
+            console.error(`SuperWeaponLab: Spell ${spellId} already at max level`);
+            return false;
+        }
         
         const cost = spell.upgradeCost * spell.level;
-        if (!gameState.canAfford(cost)) return false;
+        console.log(`SuperWeaponLab: Spell upgrade cost: ${cost}, player gold: ${gameState.gold}`);
+        
+        if (!gameState.canAfford(cost)) {
+            console.error(`SuperWeaponLab: Cannot afford to upgrade ${spellId}`);
+            return false;
+        }
         
         gameState.spend(cost);
         spell.level++;
@@ -684,7 +733,8 @@ export class SuperWeaponLab extends Building {
         if (spell.chainCount) spell.chainCount += 1;
         spell.cooldown *= 0.95; // 5% cooldown reduction per level
         
-        console.log(`SuperWeaponLab: Upgraded ${spell.name} to level ${spell.level}`);
+        console.log(`SuperWeaponLab: ✓ Upgraded ${spell.name} to level ${spell.level}`);
+        console.log(`SuperWeaponLab: New stats:`, spell);
         return true;
     }
     

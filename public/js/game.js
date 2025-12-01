@@ -194,6 +194,26 @@ class GameplayState {
             });
         });
         
+        // PERMANENT: Event delegation for dynamically created spell buttons
+        // This listener stays active for the entire game session
+        const spellGrid = document.getElementById('spell-grid');
+        if (spellGrid && !spellGrid.dataset.delegationSetup) {
+            console.log('GameplayState: Setting up PERMANENT spell button delegation');
+            spellGrid.addEventListener('click', (e) => {
+                console.log('GameplayState: Spell grid clicked, target:', e.target.className);
+                const spellBtn = e.target.closest('.spell-btn.ready');
+                if (spellBtn && !spellBtn.disabled) {
+                    console.log('GameplayState: ✓ SPELL BUTTON CLICKED via delegation');
+                    const spellId = spellBtn.dataset.spellId;
+                    console.log(`GameplayState: Spell ID: ${spellId}`);
+                    this.activateSpellTargeting(spellId);
+                } else {
+                    console.log('GameplayState: Click was on non-ready spell button or not a spell button');
+                }
+            });
+            spellGrid.dataset.delegationSetup = 'true';
+        }
+        
         // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -390,6 +410,50 @@ class GameplayState {
         
         const availableSpells = this.superWeaponLab.getAvailableSpells();
         
+        // IMPORTANT: Only update if spell states have actually changed
+        // Check if we need to rebuild the UI
+        const currentButtonCount = spellGrid.querySelectorAll('.spell-btn').length;
+        const currentReadyCount = spellGrid.querySelectorAll('.spell-btn.ready').length;
+        
+        // Only rebuild if the number of ready spells changed or button count is 0
+        const needsRebuild = currentButtonCount === 0 || this.lastSpellReadyCount !== currentReadyCount;
+        
+        if (!needsRebuild) {
+            // Just update cooldown displays without rebuilding buttons
+            availableSpells.forEach(spell => {
+                const btn = spellGrid.querySelector(`[data-spell-id="${spell.id}"]`);
+                if (btn) {
+                    const isReady = spell.currentCooldown === 0;
+                    const cooldownDisplay = btn.querySelector('.spell-cooldown');
+                    
+                    if (isReady && !btn.classList.contains('ready')) {
+                        btn.classList.remove('cooling');
+                        btn.classList.add('ready');
+                        btn.disabled = false;
+                        if (cooldownDisplay) cooldownDisplay.remove();
+                    } else if (!isReady && btn.classList.contains('ready')) {
+                        btn.classList.remove('ready');
+                        btn.classList.add('cooling');
+                        btn.disabled = true;
+                        if (!cooldownDisplay) {
+                            const div = document.createElement('div');
+                            div.className = 'spell-cooldown';
+                            div.textContent = Math.ceil(spell.currentCooldown) + 's';
+                            btn.appendChild(div);
+                        } else {
+                            cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                        }
+                    } else if (!isReady && cooldownDisplay) {
+                        cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                    }
+                }
+            });
+            return;
+        }
+        
+        // REBUILD: Only happens when spells are newly unlocked
+        console.log('GameplayState: Rebuilding spell UI - spell state changed');
+        
         spellGrid.innerHTML = availableSpells.map(spell => {
             const isReady = spell.currentCooldown === 0;
             
@@ -405,13 +469,10 @@ class GameplayState {
             `;
         }).join('');
         
-        // Add click handlers to ready spells only
-        spellGrid.querySelectorAll('.spell-btn.ready').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const spellId = e.currentTarget.dataset.spellId;
-                this.activateSpellTargeting(spellId);
-            });
-        });
+        this.lastSpellReadyCount = currentReadyCount;
+        
+        const buttons = spellGrid.querySelectorAll('.spell-btn.ready');
+        console.log(`GameplayState: Rebuilt UI with ${buttons.length} ready spell buttons`);
     }
     
     activateSpellTargeting(spellId) {
@@ -1129,6 +1190,8 @@ class GameplayState {
     showSuperWeaponMenu(menuData) {
         this.clearActiveMenus();
         
+        console.log('GameplayState: showSuperWeaponMenu called with:', menuData);
+        
         const menu = document.createElement('div');
         menu.id = 'superweapon-upgrade-menu';
         menu.className = 'upgrade-menu';
@@ -1138,6 +1201,7 @@ class GameplayState {
         // Add lab level upgrade
         const labUpgrade = menuData.building.getLabUpgradeOption();
         if (labUpgrade) {
+            console.log('GameplayState: Adding lab upgrade option:', labUpgrade);
             upgradeListHTML += `
                 <div class="upgrade-item">
                     <div class="upgrade-icon">${labUpgrade.icon}</div>
@@ -1157,9 +1221,13 @@ class GameplayState {
         }
         
         // Add spell unlocks and upgrades
-        menuData.spells.forEach(spell => {
+        console.log('GameplayState: Processing spells:', menuData.spells.length);
+        menuData.spells.forEach((spell, index) => {
+            console.log(`GameplayState: Spell ${index}:`, spell.id, 'unlocked:', spell.unlocked, 'level:', spell.level);
+            
             if (!spell.unlocked) {
-                // Unlock option
+                // Unlock option - use unique data attribute
+                console.log(`GameplayState: Creating unlock button for ${spell.id}`);
                 upgradeListHTML += `
                     <div class="upgrade-item locked">
                         <div class="upgrade-icon">${spell.icon}</div>
@@ -1169,7 +1237,7 @@ class GameplayState {
                             <div class="upgrade-level">🔒 Locked</div>
                         </div>
                         <div class="upgrade-cost">$${spell.unlockCost}</div>
-                        <button class="upgrade-btn" data-unlock="${spell.id}"
+                        <button class="upgrade-btn" data-spell-unlock="${spell.id}"
                                 ${this.gameState.gold < spell.unlockCost ? 'disabled' : ''}>
                             Unlock
                         </button>
@@ -1180,6 +1248,7 @@ class GameplayState {
                 const upgradeCost = spell.upgradeCost * spell.level;
                 const isMaxed = spell.level >= spell.maxLevel;
                 
+                console.log(`GameplayState: Creating upgrade button for ${spell.id}, cost: ${upgradeCost}, maxed: ${isMaxed}`);
                 upgradeListHTML += `
                     <div class="upgrade-item ${isMaxed ? 'maxed' : ''}">
                         <div class="upgrade-icon">${spell.icon}</div>
@@ -1210,58 +1279,96 @@ class GameplayState {
         `;
         
         document.body.appendChild(menu);
+        console.log('GameplayState: Super Weapon menu appended to DOM');
         
         // Close button handler
         menu.querySelector('.close-btn').addEventListener('click', () => {
+            console.log('GameplayState: Close button clicked');
             menu.remove();
         });
         
-        // Upgrade handlers
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        // Upgrade handlers - SPELL UNLOCK BUTTONS - use event delegation
+        const allUnlockButtons = menu.querySelectorAll('[data-spell-unlock]');
+        console.log(`GameplayState: Found ${allUnlockButtons.length} unlock buttons`);
+        allUnlockButtons.forEach(btn => {
+            console.log(`GameplayState: Attaching handler to unlock button for:`, btn.dataset.spellUnlock);
             btn.addEventListener('click', (e) => {
-                const upgradeId = e.target.dataset.upgrade;
-                const unlockId = e.target.dataset.unlock;
-                const spellUpgradeId = e.target.dataset.spellUpgrade;
+                e.preventDefault();
+                e.stopPropagation();
+                const spellId = e.currentTarget.dataset.spellUnlock;
+                console.log(`GameplayState: UNLOCK BUTTON CLICKED for: ${spellId}`);
                 
-                if (upgradeId === 'lab_upgrade') {
-                    if (menuData.building.purchaseLabUpgrade(this.gameState)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu({
-                            type: 'superweapon_menu',
-                            building: menuData.building,
-                            spells: menuData.building.getAllSpells(),
-                            labLevel: menuData.building.labLevel,
-                            maxLabLevel: menuData.building.maxLabLevel
-                        });
-                    }
-                } else if (unlockId) {
-                    if (menuData.building.unlockSpell(unlockId, this.gameState)) {
-                        this.updateUI();
-                        this.updateSpellUI();
-                        this.showSuperWeaponMenu({
-                            type: 'superweapon_menu',
-                            building: menuData.building,
-                            spells: menuData.building.getAllSpells(),
-                            labLevel: menuData.building.labLevel,
-                            maxLabLevel: menuData.building.maxLabLevel
-                        });
-                    }
-                } else if (spellUpgradeId) {
-                    if (menuData.building.upgradeSpell(spellUpgradeId, this.gameState)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu({
-                            type: 'superweapon_menu',
-                            building: menuData.building,
-                            spells: menuData.building.getAllSpells(),
-                            labLevel: menuData.building.labLevel,
-                            maxLabLevel: menuData.building.maxLabLevel
-                        });
-                    }
+                if (menuData.building.unlockSpell(spellId, this.gameState)) {
+                    console.log(`GameplayState: Successfully unlocked ${spellId}`);
+                    this.updateUI();
+                    this.updateSpellUI();
+                    this.showSuperWeaponMenu({
+                        type: 'superweapon_menu',
+                        building: menuData.building,
+                        spells: menuData.building.getAllSpells(),
+                        labLevel: menuData.building.labLevel,
+                        maxLabLevel: menuData.building.maxLabLevel
+                    });
+                } else {
+                    console.error(`GameplayState: Failed to unlock ${spellId}`);
                 }
             });
         });
         
+        // SPELL UPGRADE BUTTONS
+        const allUpgradeButtons = menu.querySelectorAll('[data-spell-upgrade]');
+        console.log(`GameplayState: Found ${allUpgradeButtons.length} upgrade buttons`);
+        allUpgradeButtons.forEach(btn => {
+            console.log(`GameplayState: Attaching handler to upgrade button for:`, btn.dataset.spellUpgrade);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const spellId = e.currentTarget.dataset.spellUpgrade;
+                console.log(`GameplayState: UPGRADE BUTTON CLICKED for: ${spellId}`);
+                
+                if (menuData.building.upgradeSpell(spellId, this.gameState)) {
+                    console.log(`GameplayState: Successfully upgraded ${spellId}`);
+                    this.updateUI();
+                    this.showSuperWeaponMenu({
+                        type: 'superweapon_menu',
+                        building: menuData.building,
+                        spells: menuData.building.getAllSpells(),
+                        labLevel: menuData.building.labLevel,
+                        maxLabLevel: menuData.building.maxLabLevel
+                    });
+                } else {
+                    console.error(`GameplayState: Failed to upgrade ${spellId}`);
+                }
+            });
+        });
+        
+        // LAB UPGRADE BUTTON
+        const labBtn = menu.querySelector('[data-upgrade="lab_upgrade"]');
+        if (labBtn) {
+            console.log('GameplayState: Attaching handler to lab upgrade button');
+            labBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('GameplayState: LAB UPGRADE BUTTON CLICKED');
+                
+                if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                    console.log('GameplayState: Successfully upgraded lab');
+                    this.updateUI();
+                    this.showSuperWeaponMenu({
+                        type: 'superweapon_menu',
+                        building: menuData.building,
+                        spells: menuData.building.getAllSpells(),
+                        labLevel: menuData.building.labLevel,
+                        maxLabLevel: menuData.building.maxLabLevel
+                    });
+                } else {
+                    console.error('GameplayState: Failed to upgrade lab');
+                }
+            });
+        }
+        
         this.activeMenu = menu;
+        console.log('GameplayState: Super Weapon menu ready with all handlers attached');
     }
     
     getUpgradeCurrentEffect(upgrade) {
@@ -1434,7 +1541,7 @@ class GameplayState {
             }, 2000);
         }
         
-        // Update spell UI
+        // Update spell UI - only updates displays, doesn't recreate every frame
         this.updateSpellUI();
     }
     
