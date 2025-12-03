@@ -14,25 +14,10 @@ export class FrogEnemy {
         this.skinColor = this.getRandomSkinColor();
         this.sizeMultiplier = 1.0;
         
-        // Jump mechanics - consistent jump distance
-        this.isJumping = false;
-        this.jumpTimer = 0;
-        this.jumpDuration = 0.35;
-        this.jumpDistance = 60; // Fixed jump distance
-        this.jumpHeight = 20; // Fixed jump height
-        this.jumpStartX = this.x;
-        this.jumpStartY = this.y;
-        this.jumpEndX = this.x;
-        this.jumpEndY = this.y;
-        this.jumpDirection = 0; // Direction angle along path
-        
-        // Path following
-        this.distanceAlongPath = 0; // Distance traveled along current path segment
-        this.currentSegmentDistance = this.calculateSegmentDistance(0); // Total distance of current segment
-        
-        // Jump cooldown - wait before next jump
-        this.jumpCooldown = 0;
-        this.jumpCooldownDuration = 0.5;
+        // Jump animation (visual only - position follows standard path logic)
+        this.jumpAnimationTimer = 0;
+        this.jumpAnimationDuration = 0.4;
+        this.jumpHeight = 20;
         
         // Magic effects
         this.magicParticles = [];
@@ -119,9 +104,10 @@ export class FrogEnemy {
             return particle.life > 0;
         });
         
-        // Update jump cooldown
-        if (this.jumpCooldown > 0) {
-            this.jumpCooldown -= deltaTime;
+        // Update jump animation timer
+        this.jumpAnimationTimer += deltaTime;
+        if (this.jumpAnimationTimer >= this.jumpAnimationDuration) {
+            this.jumpAnimationTimer = 0;
         }
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
@@ -132,47 +118,29 @@ export class FrogEnemy {
             return;
         }
         
-        // Handle jumping mechanics - only jump if cooldown is finished
-        if (!this.isJumping && this.jumpCooldown <= 0) {
-            this.startJump();
+        const target = this.path[this.currentPathIndex + 1];
+        if (!target) {
+            this.reachedEnd = true;
+            console.log('FrogEnemy: No target waypoint, reached end');
+            return;
         }
         
-        if (this.isJumping) {
-            this.jumpTimer += deltaTime;
-            
-            if (this.jumpTimer >= this.jumpDuration) {
-                // Jump complete - update position
-                this.x = this.jumpEndX;
-                this.y = this.jumpEndY;
-                this.isJumping = false;
-                this.jumpTimer = 0;
-                
-                // Update distance along path
-                this.distanceAlongPath += this.jumpDistance;
-                
-                // Check if we've reached or passed the next waypoint
-                this.advanceAlongPath();
-                
-                // Set cooldown for next jump
-                this.jumpCooldown = this.jumpCooldownDuration;
-                
-                // Spawn burst of particles on landing
-                for (let i = 0; i < 3; i++) {
-                    this.spawnMagicParticle();
-                }
-            } else {
-                // Mid-jump - update position with arc
-                const progress = this.jumpTimer / this.jumpDuration;
-                const easeProgress = progress < 0.5 ? 2 * progress * progress : -1 + 4 * progress - 2 * progress * progress;
-                
-                this.x = this.jumpStartX + (this.jumpEndX - this.jumpStartX) * easeProgress;
-                this.y = this.jumpStartY + (this.jumpEndY - this.jumpStartY) * easeProgress;
-                
-                // Arc height (parabola - peaks at 0.5 progress)
-                const arcHeight = 4 * this.jumpHeight * progress * (1 - progress);
-                this.y -= arcHeight;
-            }
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const distance = Math.hypot(dx, dy);
+        
+        const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
+        
+        if (distance < reachThreshold) {
+            this.currentPathIndex++;
+            this.x = target.x;
+            this.y = target.y;
+            return;
         }
+        
+        const moveDistance = this.speed * deltaTime;
+        this.x += (dx / distance) * moveDistance;
+        this.y += (dy / distance) * moveDistance;
     }
     
     advanceAlongPath() {
@@ -203,12 +171,19 @@ export class FrogEnemy {
         // Direction along path
         this.jumpDirection = Math.atan2(dy, dx);
         
+        // Calculate remaining distance in current segment
+        const remainingDistance = segmentDistance - this.distanceAlongPath;
+        
+        // Adaptive jump distance - reduce if approaching waypoint
+        // Use 60% of remaining distance if less than full jump, otherwise use full jump
+        const adaptiveJumpDistance = Math.min(this.jumpDistance, Math.max(remainingDistance * 0.6, this.jumpDistance * 0.5));
+        
         // Calculate jump end position
         this.jumpStartX = this.x;
         this.jumpStartY = this.y;
         
-        const jumpX = this.jumpDistance * Math.cos(this.jumpDirection);
-        const jumpY = this.jumpDistance * Math.sin(this.jumpDirection);
+        const jumpX = adaptiveJumpDistance * Math.cos(this.jumpDirection);
+        const jumpY = adaptiveJumpDistance * Math.sin(this.jumpDirection);
         
         this.jumpEndX = this.jumpStartX + jumpX;
         this.jumpEndY = this.jumpStartY + jumpY;
@@ -255,7 +230,12 @@ export class FrogEnemy {
         ctx.fill();
         
         ctx.save();
-        ctx.translate(this.x, this.y);
+        
+        // Calculate jump arc for visual effect only
+        const jumpProgress = this.jumpAnimationTimer / this.jumpAnimationDuration;
+        const jumpArc = 4 * this.jumpHeight * jumpProgress * (1 - jumpProgress);
+        
+        ctx.translate(this.x, this.y - jumpArc);
         
         // --- FROG BODY ---
         
