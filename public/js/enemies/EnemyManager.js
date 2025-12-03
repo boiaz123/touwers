@@ -1,4 +1,5 @@
 import { BasicEnemy } from './BasicEnemy.js';
+import { BeefyEnemy } from './BeefyEnemy.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -18,15 +19,15 @@ export class EnemyManager {
         console.log('EnemyManager path updated:', this.path);
     }
     
-    spawnWave(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0) {
-        console.log(`Spawning wave ${waveNumber} with ${count} enemies (HP: ${health}, Speed: ${speed})`);
+    spawnWave(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0, enemyType = 'basic') {
+        console.log(`Spawning wave ${waveNumber} with ${count} enemies (HP: ${health}, Speed: ${speed}, Type: ${enemyType})`);
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnInterval = spawnInterval;
         
         for (let i = 0; i < count; i++) {
             this.spawnQueue.push({
-                type: 'basic',
+                type: enemyType,
                 health: health,
                 speed: speed
             });
@@ -39,10 +40,17 @@ export class EnemyManager {
             
             if (this.spawnTimer >= this.spawnInterval) {
                 const enemyData = this.spawnQueue.shift();
-                const enemy = new BasicEnemy(this.path, enemyData.health, enemyData.speed);
+                let enemy;
+                
+                if (enemyData.type === 'beefyenemy' || enemyData.type === 'beefyEnemy') {
+                    enemy = new BeefyEnemy(this.path, enemyData.health, enemyData.speed);
+                } else {
+                    enemy = new BasicEnemy(this.path, enemyData.health, enemyData.speed);
+                }
+                
                 this.enemies.push(enemy);
                 this.spawnTimer = 0;
-                console.log(`Spawned enemy, total enemies: ${this.enemies.length}`);
+                console.log(`Spawned ${enemyData.type} enemy, total enemies: ${this.enemies.length}`);
             }
         } else {
             this.spawning = false;
