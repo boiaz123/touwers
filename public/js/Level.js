@@ -27,6 +27,7 @@ export class Level { // Changed from Level3D to Level
         this.pathLeaves = [];
         this.visualElementsGenerated = false;
         
+        this.castle = null;
         console.log('Level: Constructor completed');
     }
     
@@ -72,6 +73,9 @@ export class Level { // Changed from Level3D to Level
             this.createMeanderingPath(canvasWidth, canvasHeight);
             console.log('Level: Created path with', this.path.length, 'waypoints');
             
+            // Create castle at the end of the path
+            this.createCastle();
+            
             // Clear and recalculate occupied cells
             this.occupiedCells.clear();
             this.markPathCells();
@@ -115,13 +119,12 @@ export class Level { // Changed from Level3D to Level
             { x: safeWidth * 0.55, y: safeHeight * 0.8 },
             { x: safeWidth * 0.55, y: safeHeight * 0.2 },
             
-            // Fourth turn - go right and down
-            { x: safeWidth * 0.75, y: safeHeight * 0.2 },
-            { x: safeWidth * 0.75, y: safeHeight * 0.6 },
+            // Fourth turn - go right and down (but NOT all the way to edge)
+            { x: safeWidth * 0.72, y: safeHeight * 0.2 },
+            { x: safeWidth * 0.72, y: safeHeight * 0.6 },
             
-            // Final stretch to exit
-            { x: safeWidth * 0.9, y: safeHeight * 0.6 },
-            { x: safeWidth, y: safeHeight * 0.6 }
+            // Final stretch - end before right edge for castle placement
+            { x: safeWidth * 0.85, y: safeHeight * 0.6 }
         ];
         
         // Ensure all path points are within canvas bounds
@@ -650,6 +653,31 @@ export class Level { // Changed from Level3D to Level
         });
     }
     
+    createCastle() {
+        // Import Castle at top of file - for now create placeholder
+        const pathEnd = this.path[this.path.length - 1];
+        const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2; // Place castle further right from path
+        const castleGridY = Math.floor(pathEnd.y / this.cellSize) - 2;
+        
+        const castleScreenX = (castleGridX + 1.5) * this.cellSize; // Center of 3x3
+        const castleScreenY = (castleGridY + 1.5) * this.cellSize;
+        
+        // Dynamic import to avoid circular dependencies
+        import('./buildings/Castle.js').then(module => {
+            this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
+            console.log('Level: Castle created at grid', castleGridX, castleGridY);
+        }).catch(err => {
+            console.warn('Level: Could not load Castle:', err);
+        });
+        
+        // Mark castle cells as occupied immediately (3x3 size)
+        for (let x = castleGridX; x < castleGridX + 3; x++) {
+            for (let y = castleGridY; y < castleGridY + 3; y++) {
+                this.occupiedCells.add(`${x},${y}`);
+            }
+        }
+    }
+    
     render(ctx) {
         // Only initialize if we have valid canvas dimensions AND not already initializing
         if (ctx.canvas.width > 0 && ctx.canvas.height > 0 && !this.isInitializing) {
@@ -664,15 +692,23 @@ export class Level { // Changed from Level3D to Level
         // Render grass background first
         this.renderGrassBackground(ctx);
         
+        // Render the path
+        this.renderPath(ctx);
+        
+        // Render castle
+        if (this.castle) {
+            this.castle.render(ctx);
+        }
+        
         // Render grid with adaptive opacity based on cell size - ADJUSTED for new cell size
-        const gridOpacity = Math.max(0.03, Math.min(0.12, this.cellSize / 80)); // Adjusted for doubled cell size
-        ctx.strokeStyle = `rgba(139, 69, 19, ${gridOpacity})`; // Brown grid lines to blend with grass
+        const gridOpacity = Math.max(0.03, Math.min(0.12, this.cellSize / 80));
+        ctx.strokeStyle = `rgba(139, 69, 19, ${gridOpacity})`;
         ctx.lineWidth = 1;
         
         // Only render grid if cells are large enough to be useful
-        if (this.cellSize >= 20) { // Adjusted threshold for new cell size
+        if (this.cellSize >= 20) {
             // Vertical lines - only render every few lines if cells are very small
-            const lineStep = this.cellSize < 30 ? 2 : 1; // Adjusted threshold
+            const lineStep = this.cellSize < 30 ? 2 : 1;
             for (let x = 0; x <= this.gridWidth; x += lineStep) {
                 const screenX = x * this.cellSize;
                 ctx.beginPath();
@@ -690,9 +726,6 @@ export class Level { // Changed from Level3D to Level
                 ctx.stroke();
             }
         }
-        
-        // Render the updated path
-        this.renderPath(ctx);
         
         // Highlight valid placement areas when tower/building is selected
         if (this.showPlacementPreview && this.previewGridX !== undefined && this.previewGridY !== undefined) {
