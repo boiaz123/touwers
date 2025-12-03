@@ -338,8 +338,8 @@ export class BeefyEnemy {
         
         // --- SWORD ---
         
-        // Sword angle follows arm swing for dynamic movement
-        const swordAngle = Math.atan2(rightWristY - rightElbowY, rightWristX - rightElbowX) + 0.3;
+        // Sword points mostly upright with slight forward tilt
+        const swordAngle = -Math.PI / 2 + 0.3;
         const swordLength = baseSize * 1.8;
         const swordTipX = rightWristX + Math.cos(swordAngle) * swordLength;
         const swordTipY = rightWristY + Math.sin(swordAngle) * swordLength;

@@ -1474,14 +1474,21 @@ class GameplayState {
         this.waveInProgress = true;
         this.waveCompleted = false;
         
-        const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
-        this.enemyManager.spawnWave(
-            this.gameState.wave, 
-            waveConfig.enemyCount,
-            waveConfig.enemyHealth,
-            waveConfig.enemySpeed,
-            waveConfig.spawnInterval
-        );
+        if (this.isSandbox) {
+            // Sandbox mode: continuous spawning with all enemy types
+            console.log('GameplayState: Starting sandbox continuous spawn mode');
+            this.enemyManager.startContinuousSpawn(0.6, ['basic', 'villager', 'beefyenemy', 'archer']);
+        } else {
+            // Campaign mode: traditional wave spawning
+            const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
+            this.enemyManager.spawnWave(
+                this.gameState.wave, 
+                waveConfig.enemyCount,
+                waveConfig.enemyHealth,
+                waveConfig.enemySpeed,
+                waveConfig.spawnInterval
+            );
+        }
         
         this.updateUI();
     }
