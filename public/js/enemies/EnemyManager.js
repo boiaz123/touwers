@@ -5,6 +5,7 @@ import { MageEnemy } from './MageEnemy.js';
 import { VillagerEnemy } from './VillagerEnemy.js';
 import { KnightEnemy } from './KnightEnemy.js';
 import { ShieldKnightEnemy } from './ShieldKnightEnemy.js';
+import { FrogEnemy } from './FrogEnemy.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -18,8 +19,8 @@ export class EnemyManager {
         // Continuous spawn mode: alternates between enemy types
         this.continuousMode = true;
         this.spawnPatternIndex = 0;
-        // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer
-        this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer'];
+        // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer, 1 frog
+        this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer', 'frog'];
         
         console.log('EnemyManager initialized with path:', this.path);
     }
@@ -80,6 +81,9 @@ export class EnemyManager {
             } else if (enemyType === 'mage') {
                 health = 110;
                 speed = 45;
+            } else if (enemyType === 'frog') {
+                health = 85;
+                speed = 55; // Fast jumper
             }
             
             this.spawnQueue.push({
@@ -117,6 +121,9 @@ export class EnemyManager {
                         break;
                     case 'archer':
                         enemy = new ArcherEnemy(this.path, enemyData.health, enemyData.speed);
+                        break;
+                    case 'frog':
+                        enemy = new FrogEnemy(this.path, enemyData.health, enemyData.speed);
                         break;
                     case 'basic':
                     default:
