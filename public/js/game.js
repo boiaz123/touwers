@@ -1521,6 +1521,12 @@ class GameplayState {
             }
         });
         
+        // Check if castle is destroyed
+        if (this.level.castle && this.level.castle.isDestroyed()) {
+            this.gameOver();
+            return;
+        }
+        
         const killedEnemies = this.enemyManager.removeDeadEnemies();
         if (killedEnemies > 0) {
             const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
@@ -1543,6 +1549,12 @@ class GameplayState {
         
         // Update spell UI - only updates displays, doesn't recreate every frame
         this.updateSpellUI();
+    }
+    
+    gameOver() {
+        console.log('Game Over! Castle destroyed.');
+        this.waveInProgress = false;
+        this.stateManager.changeState('levelSelect');
     }
     
     render(ctx) {
