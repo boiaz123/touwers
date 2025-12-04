@@ -5,7 +5,7 @@ export class BarricadeTower {
         this.gridX = gridX;
         this.gridY = gridY;
         this.range = 120;
-        this.fireRate = 0.4;
+        this.fireRate = 0.15; // Reduced from 0.4 - now fires every ~6.7 seconds
         this.cooldown = 0;
         this.target = null;
         
@@ -20,6 +20,9 @@ export class BarricadeTower {
         
         // Static environmental elements - generated once
         this.staticEnvironment = this.generateStaticEnvironment();
+        
+        // Store original values for upgrade calculations
+        this.originalRange = this.range;
     }
     
     update(deltaTime, enemies) {

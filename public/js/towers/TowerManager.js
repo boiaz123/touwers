@@ -277,8 +277,13 @@ export class TowerManager {
         forges.forEach(forge => {
             const multipliers = forge.getUpgradeMultipliers();
             
-            // Apply range upgrade to ALL towers
-            tower.range *= multipliers.rangeMultiplier;
+            // Store original range if not already stored
+            if (!tower.originalRange) {
+                tower.originalRange = tower.range;
+            }
+            
+            // Apply range upgrade based on ORIGINAL range, not current
+            tower.range = tower.originalRange * multipliers.rangeMultiplier;
             
             // Apply specific upgrades based on tower type and unlock status
             const towerType = tower.constructor.name;
