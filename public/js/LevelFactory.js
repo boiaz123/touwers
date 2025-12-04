@@ -46,10 +46,10 @@ export class LevelFactory {
     static getLevelList() {
         return [
             { id: 'level1', name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { id: 'level2', name: 'Forest Path', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { id: 'level3', name: 'Mountain Pass', difficulty: 'Medium', unlocked: true, type: 'campaign' },
-            { id: 'level4', name: 'River Crossing', difficulty: 'Medium', unlocked: true, type: 'campaign' },
-            { id: 'level5', name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false, type: 'campaign' },
+            { id: 'level2', name: 'Braab\'s Path', difficulty: 'Easy', unlocked: true, type: 'campaign' },
+            { id: 'level3', name: 'Crazy Frogs', difficulty: 'Medium', unlocked: true, type: 'campaign' },
+            { id: 'level4', name: 'De rest', difficulty: 'Medium', unlocked: true, type: 'campaign' },
+            { id: 'level5', name: 'Placeholder', difficulty: 'Hard', unlocked: false, type: 'campaign' },
             { id: 'sandbox', name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' }
         ];
     }
