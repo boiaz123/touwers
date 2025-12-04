@@ -1505,7 +1505,7 @@ class GameplayState {
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         
-        // Update freeze timers on enemies
+        // Update freeze timers and handle castle attacks
         this.enemyManager.enemies.forEach(enemy => {
             if (enemy.freezeTimer > 0) {
                 enemy.freezeTimer -= deltaTime;
@@ -1514,18 +1514,10 @@ class GameplayState {
                 }
             }
             
-            // Have enemies attack the castle if they reached it
-            if (enemy.isAttackingCastle && this.level.castle) {
-                const castleX = this.level.castle.x;
-                const castleY = this.level.castle.y;
-                const distToCastle = Math.hypot(enemy.x - castleX, enemy.y - castleY);
-                
-                // Only attack if close enough
-                if (distToCastle < (enemy.attackRange || 30) + 50) {
-                    if (typeof enemy.attackCastle === 'function') {
-                        enemy.attackCastle(this.level.castle, deltaTime);
-                    }
-                }
+            // Have enemies attack the castle if they reached the end
+            if (enemy.reachedEnd && this.level.castle) {
+                enemy.isAttackingCastle = true;
+                enemy.attackCastle(this.level.castle, deltaTime);
             }
         });
         
