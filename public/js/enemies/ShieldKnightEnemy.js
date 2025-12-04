@@ -9,6 +9,13 @@ export class ShieldKnightEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Attack properties - NEW
+        this.attackDamage = 5;
+        this.attackSpeed = 0.6;
+        this.attackCooldown = 0;
+        this.attackRange = 30;
+        this.isAttackingCastle = false;
+        
         // Animation and appearance properties
         this.animationTime = 0;
         this.tunicColor = this.getRandomTunicColor();
@@ -426,6 +433,21 @@ export class ShieldKnightEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
     
     drawKiteShield(ctx, handX, handY, baseSize, armSwing) {

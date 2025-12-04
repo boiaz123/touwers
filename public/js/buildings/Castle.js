@@ -7,6 +7,12 @@ export class Castle {
         this.size = 3;
         this.animationTime = 0;
         
+        // Castle health system
+        this.health = 100;
+        this.maxHealth = 100;
+        this.damageFlashTimer = 0;
+        this.damageFlashDuration = 0.2;
+        
         // Main structure dimensions
         this.wallWidth = 120;
         this.wallHeight = 80;
@@ -43,11 +49,26 @@ export class Castle {
     update(deltaTime) {
         this.animationTime += deltaTime;
         
+        // Update damage flash effect
+        if (this.damageFlashTimer > 0) {
+            this.damageFlashTimer -= deltaTime;
+        }
+        
         this.lights.forEach((light, i) => {
             this.windowFlicker[i] += Math.random() - 0.5;
             this.windowFlicker[i] = Math.max(0, Math.min(1, this.windowFlicker[i]));
             light.intensity = 0.4 + this.windowFlicker[i] * 0.6;
         });
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+        this.damageFlashTimer = this.damageFlashDuration;
+        console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
+    }
+    
+    isDestroyed() {
+        return this.health <= 0;
     }
     
     render(ctx) {
@@ -59,6 +80,13 @@ export class Castle {
         ctx.beginPath();
         ctx.ellipse(0, this.wallHeight/2 + 10, this.wallWidth/2 + 60, 15, 0, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Damage flash effect
+        if (this.damageFlashTimer > 0) {
+            const flashIntensity = this.damageFlashTimer / this.damageFlashDuration;
+            ctx.fillStyle = `rgba(255, 100, 100, ${flashIntensity * 0.5})`;
+            ctx.fillRect(-this.wallWidth/2 - 50, -this.wallHeight/2 - 50, this.wallWidth + 100, this.wallHeight + 100);
+        }
         
         // Draw main wall first (background)
         this.drawMainWall(ctx);
@@ -82,6 +110,38 @@ export class Castle {
         this.drawFlags(ctx);
         
         ctx.restore();
+        
+        // Draw health bar above castle (world space, not translated)
+        this.drawHealthBar(ctx);
+    }
+    
+    drawHealthBar(ctx) {
+        const barWidth = 120;
+        const barHeight = 12;
+        const barX = this.x - barWidth / 2;
+        const barY = this.y - 140;
+        
+        // Background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        // Health fill
+        const healthPercent = Math.max(0, this.health / this.maxHealth);
+        const fillColor = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+        
+        // Border
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+        
+        // Health text
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${Math.ceil(this.health)}/${this.maxHealth}`, this.x, barY + barHeight / 2);
     }
     
     drawBridge(ctx) {

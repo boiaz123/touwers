@@ -23,6 +23,12 @@ export class FrogEnemy {
         this.magicParticles = [];
         this.particleSpawnCounter = 0;
         
+        // Attack properties
+        this.attackDamage = 10;
+        this.attackSpeed = 1.0;
+        this.attackCooldown = 0;
+        this.isAttackingCastle = false;
+        
         console.log('FrogEnemy: Created at position', this.x, this.y, 'with wizard abilities');
     }
     
@@ -141,6 +147,21 @@ export class FrogEnemy {
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
     
     advanceAlongPath() {

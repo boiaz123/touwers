@@ -9,6 +9,13 @@ export class BeefyEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Attack properties - NEW
+        this.attackDamage = 9;
+        this.attackSpeed = 0.8;
+        this.attackCooldown = 0;
+        this.attackRange = 30;
+        this.isAttackingCastle = false;
+        
         // Animation and appearance properties
         this.animationTime = 0;
         this.tunicColor = this.getRandomTunicColor();
@@ -487,5 +494,20 @@ export class BeefyEnemy {
             return `rgb(${newR}, ${newG}, ${newB})`;
         }
         return color;
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
 }

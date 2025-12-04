@@ -609,7 +609,6 @@ class GameplayState {
                 this.showBasicTowerStatsMenu(clickResult);
                 return;
             } else if (clickResult.type === 'superweapon_menu') {
-                // New: Handle super weapon menu
                 this.showSuperWeaponMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
@@ -1514,19 +1513,21 @@ class GameplayState {
                     enemy.speed = enemy.originalSpeed;
                 }
             }
-        });
-        
-        const reachedEnd = this.enemyManager.checkReachedEnd();
-        if (reachedEnd > 0) {
-            this.gameState.health -= reachedEnd;
-            this.updateUI();
             
-            if (this.gameState.health <= 0) {
-                alert(`Game Over!\n\nYou reached Wave ${this.gameState.wave} of Level ${this.currentLevel}\nTry again!`);
-                this.stateManager.changeState('start');
-                return;
+            // Have enemies attack the castle if they reached it
+            if (enemy.isAttackingCastle && this.level.castle) {
+                const castleX = this.level.castle.x;
+                const castleY = this.level.castle.y;
+                const distToCastle = Math.hypot(enemy.x - castleX, enemy.y - castleY);
+                
+                // Only attack if close enough
+                if (distToCastle < (enemy.attackRange || 30) + 50) {
+                    if (typeof enemy.attackCastle === 'function') {
+                        enemy.attackCastle(this.level.castle, deltaTime);
+                    }
+                }
             }
-        }
+        });
         
         const killedEnemies = this.enemyManager.removeDeadEnemies();
         if (killedEnemies > 0) {
@@ -1926,7 +1927,7 @@ window.addEventListener('load', () => {
         // Show error message on page if canvas is available
         const canvas = document.getElementById('gameCanvas');
         if (canvas) {
-            const ctx = canvas.getContext('2d');
+                       const ctx = canvas.getContext('2d');
             if (ctx) {
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);

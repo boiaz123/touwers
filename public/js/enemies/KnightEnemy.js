@@ -9,6 +9,13 @@ export class KnightEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Attack properties - NEW
+        this.attackDamage = 7;
+        this.attackSpeed = 0.7;
+        this.attackCooldown = 0;
+        this.attackRange = 30;
+        this.isAttackingCastle = false;
+        
         // Animation and appearance properties
         this.animationTime = 0;
         this.sizeMultiplier = 1.15; // Slightly shorter than beefy (1.2)
@@ -491,6 +498,21 @@ export class KnightEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.2;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
     
     drawTwoHandedSword(ctx, leftHandX, leftHandY, rightHandX, rightHandY, baseSize, armAngle, walkCycle) {

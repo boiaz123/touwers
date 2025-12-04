@@ -9,6 +9,13 @@ export class MageEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Attack properties - NEW
+        this.attackDamage = 6;
+        this.attackSpeed = 1.2;
+        this.attackCooldown = 0;
+        this.attackRange = 30;
+        this.isAttackingCastle = false;
+        
         // Animation and appearance properties
         this.animationTime = 0;
         this.robeColor = '#1A3A7A'; // Deep wizard blue
@@ -56,6 +63,7 @@ export class MageEnemy {
     
     update(deltaTime) {
         this.animationTime += deltaTime;
+        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         this.spellCastTimer += deltaTime;
         
         // Staff glow animation - more pronounced pulsing
@@ -91,7 +99,8 @@ export class MageEnemy {
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
-            console.log('MageEnemy: Reached end of path');
+            this.isAttackingCastle = true;
+            console.log('MageEnemy: Reached castle, ready to attack!');
             return;
         }
         
@@ -499,6 +508,21 @@ export class MageEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
     
     drawRobeStars(ctx, baseSize) {

@@ -654,15 +654,32 @@ export class Level { // Changed from Level3D to Level
     }
     
     createCastle() {
-        // Import Castle at top of file - for now create placeholder
         const pathEnd = this.path[this.path.length - 1];
-        const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2; // Place castle further right from path
+        const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2;
         const castleGridY = Math.floor(pathEnd.y / this.cellSize) - 2;
         
-        const castleScreenX = (castleGridX + 1.5) * this.cellSize; // Center of 3x3
+        const castleScreenX = (castleGridX + 1.5) * this.cellSize;
         const castleScreenY = (castleGridY + 1.5) * this.cellSize;
         
-        // Dynamic import to avoid circular dependencies
+        // Create castle immediately (import at top of file)
+        // For now, create placeholder that will be replaced
+        this.castle = {
+            x: castleScreenX,
+            y: castleScreenY,
+            gridX: castleGridX,
+            gridY: castleGridY,
+            health: 100,
+            maxHealth: 100,
+            takeDamage: function(amount) {
+                this.health -= amount;
+                console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
+            },
+            isDestroyed: function() {
+                return this.health <= 0;
+            }
+        };
+        
+        // Then load the real Castle class and replace
         import('./buildings/Castle.js').then(module => {
             this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
             console.log('Level: Castle created at grid', castleGridX, castleGridY);

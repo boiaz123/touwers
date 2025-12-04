@@ -9,6 +9,13 @@ export class BasicEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Attack properties
+        this.attackDamage = 5;
+        this.attackSpeed = 1.0; // Attacks per second
+        this.attackCooldown = 0;
+        this.attackRange = 30;
+        this.isAttackingCastle = false;
+        
         // Animation and appearance properties
         this.animationTime = 0;
         this.tunicColor = this.getRandomTunicColor();
@@ -67,20 +74,23 @@ export class BasicEnemy {
     
     update(deltaTime) {
         this.animationTime += deltaTime;
+        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
-        // Safety check for path index
+        // Check if reached end of path
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
-            console.log('BasicEnemy: Reached end of path');
+            this.isAttackingCastle = true;
+            console.log('BasicEnemy: Reached castle, ready to attack!');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-            console.log('BasicEnemy: No target waypoint, reached end');
+            this.isAttackingCastle = true;
+            console.log('BasicEnemy: No target waypoint, reached castle!');
             return;
         }
         
@@ -102,6 +112,22 @@ export class BasicEnemy {
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
+    }
+    
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            console.log(`Enemy: Attacking castle for ${damage} damage`);
+            return damage;
+        }
+        
+        return 0;
     }
     
     takeDamage(amount) {
