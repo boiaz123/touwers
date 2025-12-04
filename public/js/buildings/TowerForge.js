@@ -139,6 +139,10 @@ export class TowerForge extends Building {
     }
     
     render(ctx, size) {
+        // CRITICAL: Receive size parameter which is already cellSize * 4 for 4x4 building
+        // size = cellSize * 4
+        const cellSize = size / 4; // Extract cellSize from size parameter
+        
         // Calculate building dimensions
         const buildingWidth = size * 0.9;
         const buildingHeight = size * 0.6;
@@ -179,8 +183,7 @@ export class TowerForge extends Building {
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
         
         // Floating icon in bottom right of 4x4 grid
-        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 30; // Increased from 20 for better visibility
+        const iconSize = 30;
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
         
@@ -1053,9 +1056,9 @@ export class TowerForge extends Building {
     }
     
     isPointInside(x, y, size) {
-        // Calculate icon position and size for precise click detection
-        const cellSize = size / 4;
-        const iconSize = 30; // Matches the updated render size
+        // Calculate cellSize from size parameter
+        const cellSize = size / 4; // size is cellSize * 4
+        const iconSize = 30;
         const iconX = (this.gridX + 3.5) * cellSize;
         const iconY = (this.gridY + 3.5) * cellSize - 5;
         

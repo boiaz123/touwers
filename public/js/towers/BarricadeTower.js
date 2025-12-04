@@ -176,9 +176,12 @@ export class BarricadeTower {
     }
     
     generateStaticEnvironment() {
-        // Use even tighter bounds to ensure everything stays within 2x2 grid
-        const cellSize = 32;
-        const halfGrid = cellSize * 0.8; // Much tighter - 80% of cell size from center
+        // CRITICAL: Use exact same cellSize calculation as Level.js for consistency
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, 1920 / baseResolution)); // Standard resolution
+        const cellSize = Math.floor(32 * scaleFactor); // = 32 at standard res
+        const towerGridSize = cellSize * 2; // 2x2 tower
+        const halfGrid = towerGridSize * 0.5; // Half distance = 1 cell from center
         
         return {
             // Forest floor elements strictly within tower 2x2 grid
@@ -246,6 +249,7 @@ export class BarricadeTower {
     }
 
     render(ctx) {
+        // CRITICAL: Use EXACT same calculation as Level.js and BasicTower.js
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);

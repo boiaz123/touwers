@@ -132,10 +132,11 @@ export class BasicTower {
     
     render(ctx) {
         // Calculate tower size based on grid cell size (2x2 cells)
+        // CRITICAL: Use EXACT same calculation as Level.js cellSize
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
-        const gridSize = cellSize * 2; // 2x2 grid
+        const gridSize = cellSize * 2; // 2x2 grid = 2 cells wide
         this.gridSize = gridSize; // Store for rock calculations
 
         // If the tower was auto-selected during build, suppress that selection
@@ -473,7 +474,7 @@ export class BasicTower {
         // Floating icon in bottom right of 2x2 grid
         const iconSize = 20;
         const iconX = (this.gridX + 1.5) * cellSize;
-        const iconY = (this.gridY + 1.5) * cellSize - 5; // Float up slightly
+        const iconY = (this.gridY + 1.5) * cellSize - 5;
         
         // Dynamic pulse for medieval glow effect
         const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);

@@ -137,9 +137,10 @@ export class Level { // Changed from Level3D to Level
     }
     
     markPathCells() {
-        // Mark path and surrounding cells as occupied to prevent tower placement
-        // Reduced exclusion zone - only mark the actual path plus 1 cell buffer
-        const pathWidthCells = Math.max(1, Math.floor(30 / this.cellSize)); // Reduced from 60 to 30
+        // Mark path cells - path should occupy exactly 2 cells width for consistency
+        // This creates a clear 2-cell-wide corridor that towers can border
+        const pathWidthCells = 2; // Exactly 2 cells wide - clear and consistent
+        const pathWidthPixels = pathWidthCells * this.cellSize;
         
         for (let i = 0; i < this.path.length - 1; i++) {
             const start = this.path[i];
@@ -148,7 +149,7 @@ export class Level { // Changed from Level3D to Level
             const dx = end.x - start.x;
             const dy = end.y - start.y;
             const distance = Math.hypot(dx, dy);
-            const steps = Math.ceil(distance / (this.cellSize / 2)); // More granular path marking
+            const steps = Math.ceil(distance / (this.cellSize / 2)); // Granular marking
             
             for (let step = 0; step <= steps; step++) {
                 const t = step / steps;
@@ -158,12 +159,44 @@ export class Level { // Changed from Level3D to Level
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
                 
-                // Mark cells around the path with smaller buffer
-                for (let offsetX = -pathWidthCells; offsetX <= pathWidthCells; offsetX++) {
-                    for (let offsetY = -pathWidthCells; offsetY <= pathWidthCells; offsetY++) {
+                // Mark all cells that the path stroke passes through
+                // Path is stroked from center, so check distance from path line to cell center
+                for (let offsetX = -2; offsetX <= 2; offsetX++) {
+                    for (let offsetY = -2; offsetY <= 2; offsetY++) {
                         const cellX = gridX + offsetX;
                         const cellY = gridY + offsetY;
-                        if (this.isValidGridPosition(cellX, cellY)) {
+                        
+                        if (!this.isValidGridPosition(cellX, cellY)) continue;
+                        
+                        // Get cell center in world space
+                        const cellCenterX = (cellX + 0.5) * this.cellSize;
+                        const cellCenterY = (cellY + 0.5) * this.cellSize;
+                        
+                        // Calculate distance from cell center to path line
+                        // Using perpendicular distance formula
+                        const pathDx = end.x - start.x;
+                        const pathDy = end.y - start.y;
+                        const pathLen = Math.hypot(pathDx, pathDy);
+                        
+                        if (pathLen === 0) continue;
+                        
+                        // Vector from start to cell
+                        const cellDx = cellCenterX - start.x;
+                        const cellDy = cellCenterY - start.y;
+                        
+                        // Project cell onto path line
+                        const t2 = (cellDx * pathDx + cellDy * pathDy) / (pathLen * pathLen);
+                        const clampedT = Math.max(0, Math.min(1, t2));
+                        
+                        // Closest point on path segment
+                        const closestX = start.x + clampedT * pathDx;
+                        const closestY = start.y + clampedT * pathDy;
+                        
+                        // Distance from cell center to closest point on path
+                        const distToPath = Math.hypot(cellCenterX - closestX, cellCenterY - closestY);
+                        
+                        // Mark cell if it's within the path width
+                        if (distToPath <= pathWidthPixels * 0.5) {
                             this.occupiedCells.add(`${cellX},${cellY}`);
                         }
                     }
@@ -520,55 +553,167 @@ export class Level { // Changed from Level3D to Level
     }
     
     renderPath(ctx) {
-        // REDUCED path width to match smaller exclusion zone
-        const pathWidth = Math.max(20, Math.min(40, this.cellSize * 1.5)); // Reduced from 2x to 1.5x cellSize
+        // Path width should be exactly 2 grid cells wide for alignment
+        const pathWidthPixels = this.cellSize * 2;
         
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
-        // Path outer shadow
-        ctx.strokeStyle = 'rgba(45, 31, 22, 0.8)';
-        ctx.lineWidth = pathWidth + 8; // Reduced from +12
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(this.path[0].x, this.path[0].y);
-        for (let i = 1; i < this.path.length; i++) {
-            ctx.lineTo(this.path[i].x, this.path[i].y);
-        }
-        ctx.stroke();
+        // Build path geometry using the same marked cells
+        const pathCells = new Set();
         
-        // Path base (dark dirt)
-        ctx.strokeStyle = '#5d4e37';
-        ctx.lineWidth = pathWidth + 3; // Reduced from +4
-        ctx.beginPath();
-        ctx.moveTo(this.path[0].x, this.path[0].y);
-        for (let i = 1; i < this.path.length; i++) {
-            ctx.lineTo(this.path[i].x, this.path[i].y);
+        for (let i = 0; i < this.path.length - 1; i++) {
+            const start = this.path[i];
+            const end = this.path[i + 1];
+            
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const distance = Math.hypot(dx, dy);
+            const steps = Math.ceil(distance / (this.cellSize / 2));
+            
+            for (let step = 0; step <= steps; step++) {
+                const t = step / steps;
+                const x = start.x + dx * t;
+                const y = start.y + dy * t;
+                
+                const gridX = Math.floor(x / this.cellSize);
+                const gridY = Math.floor(y / this.cellSize);
+                
+                // Check distance exactly as in markPathCells
+                for (let offsetX = -2; offsetX <= 2; offsetX++) {
+                    for (let offsetY = -2; offsetY <= 2; offsetY++) {
+                        const cellX = gridX + offsetX;
+                        const cellY = gridY + offsetY;
+                        
+                        if (!this.isValidGridPosition(cellX, cellY)) continue;
+                        
+                        const cellCenterX = (cellX + 0.5) * this.cellSize;
+                        const cellCenterY = (cellY + 0.5) * this.cellSize;
+                        
+                        const pathDx = end.x - start.x;
+                        const pathDy = end.y - start.y;
+                        const pathLen = Math.hypot(pathDx, pathDy);
+                        
+                        if (pathLen === 0) continue;
+                        
+                        const cellDx = cellCenterX - start.x;
+                        const cellDy = cellCenterY - start.y;
+                        
+                        const t2 = (cellDx * pathDx + cellDy * pathDy) / (pathLen * pathLen);
+                        const clampedT = Math.max(0, Math.min(1, t2));
+                        
+                        const closestX = start.x + clampedT * pathDx;
+                        const closestY = start.y + clampedT * pathDy;
+                        
+                        const distToPath = Math.hypot(cellCenterX - closestX, cellCenterY - closestY);
+                        
+                        if (distToPath <= pathWidthPixels * 0.5) {
+                            pathCells.add(`${cellX},${cellY}`);
+                        }
+                    }
+                }
+            }
         }
-        ctx.stroke();
         
-        // Main path surface (lighter dirt/sand mix)
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = pathWidth;
-        ctx.beginPath();
-        ctx.moveTo(this.path[0].x, this.path[0].y);
-        for (let i = 1; i < this.path.length; i++) {
-            ctx.lineTo(this.path[i].x, this.path[i].y);
-        }
-        ctx.stroke();
+        // Get all border cells (cells adjacent to path but not part of it)
+        const borderCells = new Set();
+        pathCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const borderX = cellX + dx;
+                    const borderY = cellY + dy;
+                    const borderStr = `${borderX},${borderY}`;
+                    if (!pathCells.has(borderStr) && this.isValidGridPosition(borderX, borderY)) {
+                        borderCells.add(borderStr);
+                    }
+                }
+            }
+        });
         
-        // Path center highlights (sandy areas)
-        ctx.strokeStyle = '#d2b48c';
-        ctx.lineWidth = pathWidth * 0.4;
-        ctx.beginPath();
-        ctx.moveTo(this.path[0].x, this.path[0].y);
-        for (let i = 1; i < this.path.length; i++) {
-            ctx.lineTo(this.path[i].x, this.path[i].y);
-        }
-        ctx.stroke();
+        // Render path border first (darkened grass)
+        ctx.fillStyle = '#5a6b52';
+        borderCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            const screenX = cellX * this.cellSize;
+            const screenY = cellY * this.cellSize;
+            ctx.fillRect(screenX, screenY, this.cellSize, this.cellSize);
+        });
         
-        // Render cached path texture elements
+        // Add subtle border texture variation
+        borderCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            const screenX = cellX * this.cellSize;
+            const screenY = cellY * this.cellSize;
+            
+            // Seeded random for consistent appearance
+            const seed = cellX * 73856093 ^ cellY * 19349663;
+            const noise = Math.sin(seed * 0.0001) * 0.5 + 0.5;
+            
+            // Subtle color variation on border
+            ctx.fillStyle = `rgba(101, 67, 33, ${noise * 0.1})`;
+            ctx.fillRect(screenX, screenY, this.cellSize, this.cellSize);
+        });
+        
+        // Base path color - consistent dirt brown across all cells
+        ctx.fillStyle = '#8b7355';
+        pathCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            const screenX = cellX * this.cellSize;
+            const screenY = cellY * this.cellSize;
+            ctx.fillRect(screenX, screenY, this.cellSize, this.cellSize);
+        });
+        
+        // Add random details per cell for texture variety without grid appearance
+        pathCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            const screenX = cellX * this.cellSize;
+            const screenY = cellY * this.cellSize;
+            const centerX = screenX + this.cellSize / 2;
+            const centerY = screenY + this.cellSize / 2;
+            
+            // Seeded random for consistent but unique details per cell
+            const seed = cellX * 73856093 ^ cellY * 19349663;
+            const detailType = Math.abs(Math.sin(seed * 0.001)) % 1;
+            
+            if (detailType < 0.25) {
+                // Worn dirt patch
+                ctx.fillStyle = 'rgba(101, 67, 33, 0.15)';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, this.cellSize * 0.35, this.cellSize * 0.25, 0.4, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (detailType < 0.5) {
+                // Sandy area
+                ctx.fillStyle = 'rgba(194, 178, 128, 0.12)';
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, this.cellSize * 0.3, this.cellSize * 0.22, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (detailType < 0.75) {
+                // Small pebbles
+                const pebbleCount = 2;
+                for (let p = 0; p < pebbleCount; p++) {
+                    const pebbleSeed = seed + p * 17;
+                    const pX = centerX + (Math.sin(pebbleSeed * 0.01) - 0.5) * this.cellSize * 0.3;
+                    const pY = centerY + (Math.cos(pebbleSeed * 0.01) - 0.5) * this.cellSize * 0.3;
+                    
+                    ctx.fillStyle = `rgba(128, 128, 128, 0.18)`;
+                    ctx.beginPath();
+                    ctx.arc(pX, pY, 1.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                // Light weathering marks
+                ctx.strokeStyle = 'rgba(101, 67, 33, 0.08)';
+                ctx.lineWidth = 1;
+                const wearAngle = Math.sin(seed * 0.005);
+                ctx.beginPath();
+                ctx.moveTo(centerX - this.cellSize * 0.2, centerY + Math.sin(wearAngle) * this.cellSize * 0.1);
+                ctx.lineTo(centerX + this.cellSize * 0.2, centerY + Math.cos(wearAngle) * this.cellSize * 0.1);
+                ctx.stroke();
+            }
+        });
+        
+        // Render path texture elements (dust, leaves, etc. on top)
         this.pathTexture.forEach(element => {
             ctx.save();
             ctx.translate(element.x, element.y);
@@ -594,7 +739,6 @@ export class Level { // Changed from Level3D to Level
                 case 2: // Wood chips
                     ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
                     ctx.fillRect(-element.size, -element.size * 0.3, element.size * 2, element.size * 0.6);
-                    // Add wood grain
                     ctx.strokeStyle = `rgba(101, 67, 33, ${alpha * 0.8})`;
                     ctx.lineWidth = 0.5;
                     ctx.beginPath();
@@ -617,7 +761,6 @@ export class Level { // Changed from Level3D to Level
                         ctx.closePath();
                         ctx.fill();
                         
-                        // Stone highlight
                         ctx.fillStyle = `rgba(160, 160, 160, ${alpha * 0.5})`;
                         ctx.beginPath();
                         ctx.arc(-element.size * 0.3, -element.size * 0.3, element.size * 0.3, 0, Math.PI * 2);
@@ -629,19 +772,17 @@ export class Level { // Changed from Level3D to Level
             ctx.restore();
         });
         
-        // Render cached path leaves
+        // Render path leaves
         this.pathLeaves.forEach(leaf => {
             ctx.save();
             ctx.translate(leaf.x, leaf.y);
             ctx.rotate(leaf.rotation);
             
-            // Draw leaf
             ctx.fillStyle = leaf.color;
             ctx.beginPath();
             ctx.ellipse(0, 0, leaf.size, leaf.size * 0.6, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Leaf vein
             ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -650,6 +791,139 @@ export class Level { // Changed from Level3D to Level
             ctx.stroke();
             
             ctx.restore();
+        });
+        
+        // Draw inner path edge line and add edge vegetation
+        this.renderPathEdge(ctx, pathCells);
+    }
+    
+    renderPathEdge(ctx, pathCells) {
+        // Collect all unique edge cells (cells on the boundary of the path)
+        const edgeCells = new Set();
+        
+        pathCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            
+            // Check if this path cell is on the edge (has at least one non-path neighbor)
+            let isEdgeCell = false;
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const adjX = cellX + dx;
+                    const adjY = cellY + dy;
+                    const adjKey = `${adjX},${adjY}`;
+                    
+                    if (!pathCells.has(adjKey) && this.isValidGridPosition(adjX, adjY)) {
+                        isEdgeCell = true;
+                        break;
+                    }
+                }
+                if (isEdgeCell) break;
+            }
+            
+            if (isEdgeCell) {
+                edgeCells.add(posStr);
+            }
+        });
+        
+        // Generate vegetation only on edge cells with natural spreading
+        const edgeVegetation = [];
+        const processedCells = new Set();
+        
+        edgeCells.forEach(posStr => {
+            const [cellX, cellY] = posStr.split(',').map(Number);
+            
+            // Skip if already processed nearby
+            const cellKey = `${Math.floor(cellX / 2)},${Math.floor(cellY / 2)}`;
+            if (processedCells.has(cellKey)) return;
+            
+            // Random chance to place vegetation on this edge cell
+            const seed = cellX * 73856093 ^ cellY * 19349663;
+            const placementChance = Math.abs(Math.sin(seed * 0.007));
+            
+            if (placementChance > 0.4) {
+                processedCells.add(cellKey);
+                
+                // Place vegetation in center of path edge cell
+                const centerX = (cellX + 0.5) * this.cellSize;
+                const centerY = (cellY + 0.5) * this.cellSize;
+                
+                // Add some natural randomness to position within cell
+                const offsetX = (Math.sin(seed * 0.01) - 0.5) * this.cellSize * 0.4;
+                const offsetY = (Math.cos(seed * 0.015) - 0.5) * this.cellSize * 0.3;
+                
+                edgeVegetation.push({
+                    x: centerX + offsetX,
+                    y: centerY + offsetY,
+                    type: Math.floor(Math.abs(Math.sin(seed * 0.005)) * 3),
+                    seed: seed,
+                    cellX: cellX,
+                    cellY: cellY
+                });
+            }
+        });
+        
+        // Render edge vegetation - bushes, rocks, plants
+        edgeVegetation.forEach(veg => {
+            const seed = veg.seed;
+            
+            switch (veg.type) {
+                case 0: // Small bushes
+                    ctx.fillStyle = '#1f6f1f';
+                    ctx.beginPath();
+                    ctx.arc(veg.x, veg.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#28a028';
+                    ctx.beginPath();
+                    ctx.arc(veg.x - 4, veg.y - 3, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(veg.x + 4, veg.y - 3, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 1: // Rocks
+                    ctx.fillStyle = '#807f80';
+                    ctx.beginPath();
+                    ctx.arc(veg.x, veg.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#696969';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // Rock highlight
+                    ctx.fillStyle = '#969696';
+                    ctx.beginPath();
+                    ctx.arc(veg.x - 1.5, veg.y - 1.5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 2: // Grass clumps and wildflowers
+                    ctx.strokeStyle = '#2e8b2e';
+                    ctx.lineWidth = 1.5;
+                    for (let j = 0; j < 5; j++) {
+                        const angle = (j / 5) * Math.PI * 2 + (seed * 0.01);
+                        const length = 7 + Math.sin(seed * 0.02) * 2;
+                        ctx.beginPath();
+                        ctx.moveTo(veg.x, veg.y);
+                        ctx.lineTo(
+                            veg.x + Math.cos(angle) * length,
+                            veg.y + Math.sin(angle) * length
+                        );
+                        ctx.stroke();
+                    }
+                    
+                    // Small flower in center
+                    if (Math.sin(seed * 0.005) > 0) {
+                        ctx.fillStyle = '#FFD700';
+                        ctx.beginPath();
+                        ctx.arc(veg.x, veg.y, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+            }
         });
     }
     
@@ -717,14 +991,16 @@ export class Level { // Changed from Level3D to Level
             this.castle.render(ctx);
         }
         
-        // Render grid with adaptive opacity based on cell size - ADJUSTED for new cell size
-        const gridOpacity = Math.max(0.03, Math.min(0.12, this.cellSize / 80));
-        ctx.strokeStyle = `rgba(139, 69, 19, ${gridOpacity})`;
-        ctx.lineWidth = 1;
+        // Grid is now disabled visually - grid calculations remain active for gameplay
+        // To re-enable the grid for debugging, set showDebugGrid to true
+        const showDebugGrid = false;
         
-        // Only render grid if cells are large enough to be useful
-        if (this.cellSize >= 20) {
-            // Vertical lines - only render every few lines if cells are very small
+        if (showDebugGrid && this.cellSize >= 20) {
+            // DEBUG GRID ONLY - normally disabled
+            const gridOpacity = 0.08;
+            ctx.strokeStyle = `rgba(139, 69, 19, ${gridOpacity})`;
+            ctx.lineWidth = 1;
+            
             const lineStep = this.cellSize < 30 ? 2 : 1;
             for (let x = 0; x <= this.gridWidth; x += lineStep) {
                 const screenX = x * this.cellSize;
@@ -734,7 +1010,6 @@ export class Level { // Changed from Level3D to Level
                 ctx.stroke();
             }
             
-            // Horizontal lines
             for (let y = 0; y <= this.gridHeight; y += lineStep) {
                 const screenY = y * this.cellSize;
                 ctx.beginPath();
@@ -766,8 +1041,8 @@ export class Level { // Changed from Level3D to Level
         }
         
         // DEBUG: Render occupied cells (REMOVE THIS AFTER DEBUGGING)
-        const showDebug = false; // Set to true to see occupied cells
-        if (showDebug) {
+        const showDebugOccupied = false; // Set to true to see occupied cells
+        if (showDebugOccupied) {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
             for (const posStr of this.occupiedCells) {
                 const [x, y] = posStr.split(',').map(Number);
