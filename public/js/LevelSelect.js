@@ -1,11 +1,9 @@
+import { LevelFactory } from './LevelFactory.js';
+
 export class LevelSelect {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.levels = [
-            { name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' },
-            { name: 'Dragon\'s Lair', difficulty: 'Hard', unlocked: false, type: 'campaign' }
-        ];
+        this.levels = LevelFactory.getLevelList();
         this.selectedLevel = 0;
         this.hoveredLevel = -1;
         this.hoveredStartButton = false;
@@ -204,7 +202,7 @@ export class LevelSelect {
                 
                 if (index === this.selectedLevel) {
                     // Check start button area with corrected positioning
-                    const buttonX = cardX + cardWidth / 2 - 50; // Center the button
+                    const buttonX = cardX + cardWidth / 2 - 50;
                     const buttonY = cardY + 100;
                     const buttonWidth = 100;
                     const buttonHeight = 30;

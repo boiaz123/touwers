@@ -1,6 +1,6 @@
 import { TowerManager } from './towers/TowerManager.js';
 import { EnemyManager } from './enemies/EnemyManager.js';
-import { Level } from './Level.js';
+import { LevelFactory } from './LevelFactory.js';
 import { GameState } from './GameState.js';
 import { GameStateManager } from './GameStateManager.js';
 import { StartScreen } from './StartScreen.js';
@@ -10,8 +10,8 @@ class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.gameState = new GameState();
-        this.level = new Level();
-        this.towerManager = new TowerManager(this.gameState, this.level);
+        this.level = null; // Will be created in enter()
+        this.towerManager = null;
         this.enemyManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
@@ -19,25 +19,33 @@ class GameplayState {
         this.maxWavesForLevel = 10;
         this.waveInProgress = false;
         this.waveCompleted = false;
-        
-        // New: Track super weapon lab reference
         this.superWeaponLab = null;
         console.log('GameplayState constructor completed');
     }
     
-    enter() {
+    async enter() {
         console.log('GameplayState: entering');
         
         // Get level info from state manager
-        const levelInfo = this.stateManager.selectedLevelInfo || { name: 'The King\'s Road', type: 'campaign' };
+        const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign' };
+        
+        // Create the level using LevelFactory
+        try {
+            this.level = await LevelFactory.createLevel(levelInfo.id);
+            console.log(`GameplayState: Level created - ${this.level.levelName}`);
+        } catch (error) {
+            console.error('GameplayState: Failed to create level:', error);
+            this.level = null;
+            return;
+        }
         
         // Reset game state for new level
         this.gameState = new GameState();
-        this.currentLevel = 1;
+        this.currentLevel = levelInfo.id;
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
         
-        // Configure level-specific settings - STORE sandbox flag BEFORE creating managers
+        // Configure level-specific settings
         this.isSandbox = (this.levelType === 'sandbox');
         
         if (this.isSandbox) {
@@ -1433,28 +1441,26 @@ class GameplayState {
             const baseSpeed = 40;
             
             return {
-                enemyCount: baseEnemies + Math.floor(wave * 1.2), // Gradual increase
-                enemyHealth: baseHealth + (wave - 1) * 5, // Slower health scaling
-                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2), // Cap speed at 100
-                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03) // Faster spawning over time
+                enemyCount: baseEnemies + Math.floor(wave * 1.2),
+                enemyHealth: baseHealth + (wave - 1) * 5,
+                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2),
+                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03)
             };
         }
         
-        // Level 1 wave configuration - 10 waves with gradual difficulty increase
-        if (level === 1) {
-            const baseEnemies = 5;
-            const baseHealth = 40;
-            const baseSpeed = 45;
-            
+        // Get wave config from the level itself
+        if (this.level && typeof this.level.getWaveConfig === 'function') {
+            const config = this.level.getWaveConfig(wave);
             return {
-                enemyCount: baseEnemies + Math.floor(wave * 1.5), // 5, 6, 8, 9, 11, 12, 14, 15, 17, 18
-                enemyHealth: baseHealth + (wave - 1) * 8, // 40, 48, 56, 64, 72, 80, 88, 96, 104, 112
-                enemySpeed: baseSpeed + (wave - 1) * 3, // 45, 48, 51, 54, 57, 60, 63, 66, 69, 72
-                spawnInterval: Math.max(0.5, 1.2 - (wave - 1) * 0.05) // 1.2s down to 0.75s
+                enemyCount: config.enemyCount,
+                enemyHealth: config.enemyHealth,
+                enemySpeed: config.enemySpeed,
+                spawnInterval: config.spawnInterval,
+                wavePattern: config.pattern
             };
         }
         
-        // Default fallback (for future levels)
+        // Fallback default
         return {
             enemyCount: 10,
             enemyHealth: 100,
@@ -1480,13 +1486,27 @@ class GameplayState {
         } else {
             // Campaign mode: traditional wave spawning
             const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
-            this.enemyManager.spawnWave(
-                this.gameState.wave, 
-                waveConfig.enemyCount,
-                waveConfig.enemyHealth,
-                waveConfig.enemySpeed,
-                waveConfig.spawnInterval
-            );
+            
+            if (waveConfig.wavePattern) {
+                // Use custom pattern from level
+                this.enemyManager.spawnWaveWithPattern(
+                    this.gameState.wave,
+                    waveConfig.enemyCount,
+                    waveConfig.enemyHealth,
+                    waveConfig.enemySpeed,
+                    waveConfig.spawnInterval,
+                    waveConfig.wavePattern
+                );
+            } else {
+                // Use standard spawning
+                this.enemyManager.spawnWave(
+                    this.gameState.wave, 
+                    waveConfig.enemyCount,
+                    waveConfig.enemyHealth,
+                    waveConfig.enemySpeed,
+                    waveConfig.spawnInterval
+                );
+            }
         }
         
         this.updateUI();

@@ -14,7 +14,7 @@ export class EnemyManager {
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnTimer = 0;
-        this.spawnInterval = 0.8; // seconds between spawns
+        this.spawnInterval = 1.2; // Increased from 0.8 for more spacing
         
         // Continuous spawn mode: alternates between enemy types
         this.continuousMode = true;
@@ -46,7 +46,25 @@ export class EnemyManager {
         }
     }
     
-    startContinuousSpawn(spawnInterval = 0.6, pattern = null) {
+    spawnWaveWithPattern(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0, pattern) {
+        console.log(`Spawning wave ${waveNumber} with pattern`, pattern);
+        this.continuousMode = false;
+        this.spawning = true;
+        this.spawnQueue = [];
+        this.spawnInterval = spawnInterval;
+        
+        for (let i = 0; i < count; i++) {
+            const enemyType = pattern[i % pattern.length];
+            this.spawnQueue.push({
+                type: enemyType,
+                health: health,
+                speed: speed
+            });
+        }
+    }
+    
+    startContinuousSpawn(spawnInterval = 0.8, pattern = null) {
+        // Increased from 0.6 to 0.8 for sandbox mode
         this.continuousMode = true;
         this.spawning = true;
         this.spawnInterval = spawnInterval;
