@@ -1,100 +1,14 @@
-export class ArcherEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class ArcherEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 60) {
-        this.path = path;
-        this.health = 120 * health_multiplier;
-        this.maxHealth = 120 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
-        
-        // Attack properties - NEW
-        this.attackDamage = 8;
-        this.attackSpeed = 1.5;
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
-        
-        // Animation and appearance properties
-        this.animationTime = 0;
+        super(path, 120 * health_multiplier, speed);
         this.tunicColor = '#2D5016'; // Dark green ranger tunic
         
-        console.log('ArcherEnemy: Created at position', this.x, this.y, 'with path length', path ? path.length : 0);
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('ArcherEnemy: Received invalid path');
-            return;
-        }
+        this.attackDamage = 8;
+        this.attackSpeed = 1.5;
         
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
-        
-        console.log('ArcherEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
-    }
-    
-    update(deltaTime) {
-        this.animationTime += deltaTime;
-        
-        if (this.reachedEnd || !this.path || this.path.length === 0) return;
-        
-        if (this.currentPathIndex >= this.path.length - 1) {
-            this.reachedEnd = true;
-            console.log('ArcherEnemy: Reached end of path');
-            return;
-        }
-        
-        const target = this.path[this.currentPathIndex + 1];
-        if (!target) {
-            this.reachedEnd = true;
-            console.log('ArcherEnemy: No target waypoint, reached end');
-            return;
-        }
-        
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const distance = Math.hypot(dx, dy);
-        
-        const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        
-        if (distance < reachThreshold) {
-            this.currentPathIndex++;
-            this.x = target.x;
-            this.y = target.y;
-            return;
-        }
-        
-        const moveDistance = this.speed * deltaTime;
-        this.x += (dx / distance) * moveDistance;
-        this.y += (dy / distance) * moveDistance;
-    }
-    
-    takeDamage(amount) {
-        this.health -= amount;
-    }
-    
-    isDead() {
-        return this.health <= 0;
+        console.log('ArcherEnemy: Created at position', this.x, this.y);
     }
     
     render(ctx) {
@@ -521,21 +435,5 @@ export class ArcherEnemy {
         ctx.fill();
         
         ctx.restore();
-    }
-    
-    darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
     }
 }

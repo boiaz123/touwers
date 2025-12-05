@@ -1,141 +1,21 @@
-export class BasicEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class BasicEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 50) {
-        this.path = path;
-        this.health = 100 * health_multiplier;
-        this.maxHealth = 100 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
-        
-        // Attack properties
-        this.attackDamage = 5;
-        this.attackSpeed = 1.0; // Attacks per second
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
-        
-        // Animation and appearance properties
-        this.animationTime = 0;
+        super(path, 100 * health_multiplier, speed);
         this.tunicColor = this.getRandomTunicColor();
         
-        console.log('BasicEnemy: Created at position', this.x, this.y, 'with path length', path ? path.length : 0);
+        this.attackDamage = 5;
+        this.attackSpeed = 1.0;
+        
+        console.log('BasicEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {
-        // Set of tunic colors for visual variety
         const tunicColors = [
-            '#8B4513', // Brown
-            '#4169E1', // Royal Blue
-            '#DC143C', // Crimson Red
-            '#2F4F4F', // Dark Slate Gray
-            '#556B2F', // Dark Olive Green
-            '#8B008B'  // Dark Magenta
+            '#8B4513', '#4169E1', '#DC143C', '#2F4F4F', '#556B2F', '#8B008B'
         ];
-        
         return tunicColors[Math.floor(Math.random() * tunicColors.length)];
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('BasicEnemy: Received invalid path');
-            return;
-        }
-        
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        // Try to maintain relative position on the new path
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            // Calculate progress along old path
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            // Apply same progress to new path
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            // Update position to nearest point on new path
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            // Reset to start of new path
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
-        
-        console.log('BasicEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
-    }
-    
-    update(deltaTime) {
-        this.animationTime += deltaTime;
-        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
-        
-        if (this.reachedEnd || !this.path || this.path.length === 0) return;
-        
-        // Check if reached end of path
-        if (this.currentPathIndex >= this.path.length - 1) {
-            this.reachedEnd = true;
-            this.isAttackingCastle = true;
-            console.log('BasicEnemy: Reached castle, ready to attack!');
-            return;
-        }
-        
-        const target = this.path[this.currentPathIndex + 1];
-        if (!target) {
-            this.reachedEnd = true;
-            this.isAttackingCastle = true;
-            console.log('BasicEnemy: No target waypoint, reached castle!');
-            return;
-        }
-        
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const distance = Math.hypot(dx, dy);
-        
-        // Larger threshold for reaching waypoints to prevent getting stuck
-        const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        
-        if (distance < reachThreshold) {
-            this.currentPathIndex++;
-            // Snap to waypoint to prevent drift
-            this.x = target.x;
-            this.y = target.y;
-            return;
-        }
-        
-        const moveDistance = this.speed * deltaTime;
-        this.x += (dx / distance) * moveDistance;
-        this.y += (dy / distance) * moveDistance;
-    }
-    
-    attackCastle(castle, deltaTime) {
-        if (!this.isAttackingCastle || !castle) return 0;
-        
-        this.attackCooldown -= deltaTime;
-        
-        if (this.attackCooldown <= 0) {
-            const damage = this.attackDamage;
-            castle.takeDamage(damage);
-            this.attackCooldown = 1.0 / this.attackSpeed;
-            console.log(`Enemy: Attacking castle for ${damage} damage`);
-            return damage;
-        }
-        
-        return 0;
-    }
-    
-    takeDamage(amount) {
-        this.health -= amount;
-    }
-    
-    isDead() {
-        return this.health <= 0;
     }
     
     render(ctx) {
@@ -489,19 +369,6 @@ export class BasicEnemy {
     }
     
     darkenColor(color, factor) {
-        // Helper method to darken colors for 3D shading
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
+        return super.darkenColor(color, factor);
     }
 }

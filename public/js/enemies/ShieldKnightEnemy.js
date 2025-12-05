@@ -1,115 +1,22 @@
-export class ShieldKnightEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class ShieldKnightEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 35) {
-        this.path = path;
-        this.health = 180 * health_multiplier;
-        this.maxHealth = 180 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
+        super(path, 180 * health_multiplier, speed);
+        this.tunicColor = this.getRandomTunicColor();
+        this.sizeMultiplier = 1.05;
         
-        // Attack properties - NEW
         this.attackDamage = 5;
         this.attackSpeed = 0.6;
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
         
-        // Animation and appearance properties
-        this.animationTime = 0;
-        this.tunicColor = this.getRandomTunicColor();
-        this.sizeMultiplier = 1.05; // Slightly taller than knight, shorter than beefy
-        
-        console.log('ShieldKnightEnemy: Created at position', this.x, this.y, 'with path length', path ? path.length : 0);
+        console.log('ShieldKnightEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {
-        // Shield knights get sophisticated metallic armor colors
         const tunicColors = [
-            '#4A5568', // Steel Blue
-            '#2C3E50', // Dark Blue-Gray
-            '#34495E', // Slate Gray
-            '#1A252F', // Charcoal
-            '#3E4C59', // Gun Metal
-            '#556B82'  // Grayish Blue
+            '#4A5568', '#2C3E50', '#34495E', '#1A252F', '#3E4C59', '#556B82'
         ];
-        
         return tunicColors[Math.floor(Math.random() * tunicColors.length)];
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('ShieldKnightEnemy: Received invalid path');
-            return;
-        }
-        
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
-        
-        console.log('ShieldKnightEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
-    }
-    
-    update(deltaTime) {
-        this.animationTime += deltaTime;
-        
-        if (this.reachedEnd || !this.path || this.path.length === 0) return;
-        
-        if (this.currentPathIndex >= this.path.length - 1) {
-            this.reachedEnd = true;
-            console.log('ShieldKnightEnemy: Reached end of path');
-            return;
-        }
-        
-        const target = this.path[this.currentPathIndex + 1];
-        if (!target) {
-            this.reachedEnd = true;
-            console.log('ShieldKnightEnemy: No target waypoint, reached end');
-            return;
-        }
-        
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const distance = Math.hypot(dx, dy);
-        
-        const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        
-        if (distance < reachThreshold) {
-            this.currentPathIndex++;
-            this.x = target.x;
-            this.y = target.y;
-            return;
-        }
-        
-        const moveDistance = this.speed * deltaTime;
-        this.x += (dx / distance) * moveDistance;
-        this.y += (dy / distance) * moveDistance;
-    }
-    
-    takeDamage(amount) {
-        this.health -= amount;
-    }
-    
-    isDead() {
-        return this.health <= 0;
     }
     
     render(ctx) {
@@ -644,18 +551,6 @@ export class ShieldKnightEnemy {
     }
     
     darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
+        return super.darkenColor(color, factor);
     }
 }

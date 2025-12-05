@@ -1,30 +1,19 @@
-export class VillagerEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class VillagerEnemy extends BaseEnemy {
     // Static counter to alternate weapon types across spawns
     static weaponSpawnCounter = 0;
     
     constructor(path, health_multiplier = 1.0, speed = 50) {
-        this.path = path;
-        this.health = 100 * health_multiplier;
-        this.maxHealth = 100 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
-        
-        // Attack properties - NEW
-        this.attackDamage = 4;
-        this.attackSpeed = 0.8;
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
-        
-        // Animation and appearance properties
-        this.animationTime = 0;
+        super(path, 100 * health_multiplier, speed);
         this.tunicColor = this.getRandomTunicColor();
         // Alternate weapon type: even spawns get torch, odd get pitchfork
         this.weaponType = (VillagerEnemy.weaponSpawnCounter % 2) === 0 ? 'torch' : 'pitchfork';
         VillagerEnemy.weaponSpawnCounter++;
+        
+        // Attack properties - NEW
+        this.attackDamage = 4;
+        this.attackSpeed = 0.8;
         
         console.log('VillagerEnemy: Created at position', this.x, this.y, 'with weapon:', this.weaponType);
     }
@@ -591,18 +580,6 @@ export class VillagerEnemy {
     }
     
     darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
+        return super.darkenColor(color, factor);
     }
 }

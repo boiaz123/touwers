@@ -1,101 +1,34 @@
-export class FrogEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class FrogEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 55) {
-        this.path = path;
-        this.health = 85 * health_multiplier;
-        this.maxHealth = 85 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
-        
-        // Animation and appearance properties
-        this.animationTime = 0;
+        super(path, 85 * health_multiplier, speed);
         this.skinColor = this.getRandomSkinColor();
         this.sizeMultiplier = 1.0;
         
-        // Jump animation (visual only - position follows standard path logic)
+        this.attackDamage = 10;
+        this.attackSpeed = 1.0;
+        
+        this.magicParticles = [];
+        this.particleSpawnCounter = 0;
         this.jumpAnimationTimer = 0;
         this.jumpAnimationDuration = 0.4;
         this.jumpHeight = 20;
         
-        // Magic effects
-        this.magicParticles = [];
-        this.particleSpawnCounter = 0;
-        
-        // Attack properties
-        this.attackDamage = 10;
-        this.attackSpeed = 1.0;
-        this.attackCooldown = 0;
-        this.isAttackingCastle = false;
-        
-        console.log('FrogEnemy: Created at position', this.x, this.y, 'with wizard abilities');
+        console.log('FrogEnemy: Created at position', this.x, this.y);
     }
     
     getRandomSkinColor() {
         const skinColors = [
-            '#2D5016', // Dark Green
-            '#3D6B1F', // Forest Green
-            '#4A7C3E', // Medium Green
-            '#5A8C4E', // Light Green
-            '#1F3E1F', // Deep Green
-            '#6B9D54'  // Sage Green
+            '#2D5016', '#3D6B1F', '#4A7C3E', '#5A8C4E', '#1F3E1F', '#6B9D54'
         ];
-        
         return skinColors[Math.floor(Math.random() * skinColors.length)];
     }
     
-    calculateSegmentDistance(segmentIndex) {
-        if (!this.path || segmentIndex >= this.path.length - 1) {
-            return 0;
-        }
-        
-        const currentPoint = this.path[segmentIndex];
-        const nextPoint = this.path[segmentIndex + 1];
-        const dx = nextPoint.x - currentPoint.x;
-        const dy = nextPoint.y - currentPoint.y;
-        return Math.hypot(dx, dy);
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('FrogEnemy: Received invalid path');
-            return;
-        }
-        
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
-        
-        // Recalculate segment distance for new path
-        this.distanceAlongPath = 0;
-        this.currentSegmentDistance = this.calculateSegmentDistance(this.currentPathIndex);
-        
-        console.log('FrogEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
-    }
-    
     update(deltaTime) {
-        this.animationTime += deltaTime;
-        this.particleSpawnCounter += deltaTime;
+        super.update(deltaTime);
         
-        // Generate magic particles occasionally
+        this.particleSpawnCounter += deltaTime;
         if (this.particleSpawnCounter > 0.15) {
             this.spawnMagicParticle();
             this.particleSpawnCounter = 0;

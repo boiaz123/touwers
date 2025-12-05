@@ -1,72 +1,26 @@
-export class MageEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class MageEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 45) {
-        this.path = path;
-        this.health = 110 * health_multiplier;
-        this.maxHealth = 110 * health_multiplier;
-        this.speed = speed;
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
+        super(path, 110 * health_multiplier, speed);
+        this.robeColor = '#1A3A7A';
+        this.sizeMultiplier = 1.1;
         
-        // Attack properties - NEW
         this.attackDamage = 6;
         this.attackSpeed = 1.2;
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
         
-        // Animation and appearance properties
-        this.animationTime = 0;
-        this.robeColor = '#1A3A7A'; // Deep wizard blue
-        this.sizeMultiplier = 1.1; // 10% taller than basic enemy
-        
-        // Magic effects
         this.magicParticles = [];
         this.staffGlow = 0;
         this.staffPulse = 0;
         this.spellCastTimer = 0;
         this.isCastingSpell = false;
         
-        console.log('MageEnemy: Created at position', this.x, this.y, 'with wizard robes');
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('MageEnemy: Received invalid path');
-            return;
-        }
-        
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
-        
-        console.log('MageEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
+        console.log('MageEnemy: Created at position', this.x, this.y);
     }
     
     update(deltaTime) {
-        this.animationTime += deltaTime;
-        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
-        this.spellCastTimer += deltaTime;
+        super.update(deltaTime);
         
-        // Staff glow animation - more pronounced pulsing
         this.staffGlow = 0.6 + 0.4 * Math.sin(this.animationTime * 3);
         this.staffPulse = 0.7 + 0.3 * Math.sin(this.animationTime * 2.5);
         
@@ -135,11 +89,6 @@ export class MageEnemy {
     
     isDead() {
         return this.health <= 0;
-    }
-    
-    getMagicParticleColor() {
-        const colors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
-        return colors[Math.floor(Math.random() * colors.length)];
     }
     
     render(ctx) {
@@ -717,6 +666,11 @@ export class MageEnemy {
         }
         
         ctx.restore();
+    }
+    
+    getMagicParticleColor() {
+        const colors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
+        return colors[Math.floor(Math.random() * colors.length)];
     }
     
     darkenColor(color, factor) {

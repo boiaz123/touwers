@@ -1,27 +1,15 @@
-export class KnightEnemy {
+import { BaseEnemy } from './BaseEnemy.js';
+
+export class KnightEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 40) {
-        this.path = path;
-        this.health = 160 * health_multiplier;
-        this.maxHealth = 160 * health_multiplier;
-        this.speed = speed; // Slowest enemy
-        this.currentPathIndex = 0;
-        this.x = path && path.length > 0 ? path[0].x : 0;
-        this.y = path && path.length > 0 ? path[0].y : 0;
-        this.reachedEnd = false;
+        super(path, 160 * health_multiplier, speed);
+        this.armorColor = '#4A5568';
+        this.sizeMultiplier = 1.15;
         
-        // Attack properties - NEW
         this.attackDamage = 7;
         this.attackSpeed = 0.7;
-        this.attackCooldown = 0;
-        this.attackRange = 30;
-        this.isAttackingCastle = false;
         
-        // Animation and appearance properties
-        this.animationTime = 0;
-        this.sizeMultiplier = 1.15; // Slightly shorter than beefy (1.2)
-        this.armorColor = '#4A5568'; // Steel gray
-        
-        console.log('KnightEnemy: Created at position', this.x, this.y, 'heavy knight with two-handed sword');
+        console.log('KnightEnemy: Created at position', this.x, this.y);
     }
     
     updatePath(newPath) {
@@ -655,19 +643,162 @@ export class KnightEnemy {
         ctx.restore();
     }
     
-    darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
+    attackCastle(castle, deltaTime) {
+        if (!this.isAttackingCastle || !castle) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            castle.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
         }
-        return color;
+        
+        return 0;
+    }
+    
+    drawTwoHandedSword(ctx, leftHandX, leftHandY, rightHandX, rightHandY, baseSize, armAngle, walkCycle) {
+        ctx.save();
+        
+        // Calculate sword angle based on both hand positions and walking motion
+        const swordCenterX = (leftHandX + rightHandX) / 2;
+        const swordCenterY = (leftHandY + rightHandY) / 2;
+        
+        // Sword tilts forward and back with the walking cycle - REDUCED
+        const swordTilt = walkCycle * 0.08; // Reduced from 0.2 to 0.08
+        const swordAngle = armAngle + Math.PI / 2 + swordTilt;
+        
+        ctx.translate(swordCenterX, swordCenterY);
+        ctx.rotate(swordAngle);
+        
+        // Massive two-handed sword - very long blade
+        const swordLength = baseSize * 2.4;
+        const bladeWidth = baseSize * 0.35;
+        
+        // Sword shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.lineWidth = bladeWidth + baseSize * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.15, baseSize * 0.1);
+        ctx.lineTo(baseSize * 0.15, -swordLength);
+        ctx.stroke();
+        
+        // Sword blade - steel with gradient
+        const bladeGradient = ctx.createLinearGradient(0, 0, bladeWidth, 0);
+        bladeGradient.addColorStop(0, '#E8E8E8');
+        bladeGradient.addColorStop(0.4, '#C0C0C0');
+        bladeGradient.addColorStop(0.5, '#A9A9A9');
+        bladeGradient.addColorStop(0.6, '#C0C0C0');
+        bladeGradient.addColorStop(1, '#808080');
+        
+        ctx.fillStyle = bladeGradient;
+        ctx.beginPath();
+        ctx.moveTo(-bladeWidth/2, 0);
+        ctx.lineTo(bladeWidth/2, 0);
+        ctx.lineTo(baseSize * 0.15, -swordLength);
+        ctx.lineTo(-baseSize * 0.15, -swordLength);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Blade edge highlight - sharp
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = baseSize * 0.1;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.08, 0);
+        ctx.lineTo(baseSize * 0.12, -swordLength);
+        ctx.stroke();
+        
+        // Blade outline
+        ctx.strokeStyle = '#505050';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-bladeWidth/2, 0);
+        ctx.lineTo(bladeWidth/2, 0);
+        ctx.lineTo(baseSize * 0.15, -swordLength);
+        ctx.lineTo(-baseSize * 0.15, -swordLength);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Blade blood grooves
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([baseSize * 0.15, baseSize * 0.1]);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -swordLength);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // --- SWORD CROSS-GUARD (LARGE) ---
+        
+        ctx.fillStyle = '#D4AF37';
+        ctx.fillRect(-baseSize * 0.45, -baseSize * 0.12, baseSize * 0.9, baseSize * 0.24);
+        
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(-baseSize * 0.45, -baseSize * 0.12, baseSize * 0.9, baseSize * 0.24);
+        
+        // Cross-guard decorative gems
+        ctx.fillStyle = '#FF6B6B';
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.2, 0, baseSize * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.2, 0, baseSize * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // --- SWORD HANDLE (LONG TWO-HANDED GRIP) ---
+        
+        const handleLength = baseSize * 0.6;
+        const handleGradient = ctx.createLinearGradient(0, 0, 0, handleLength);
+        handleGradient.addColorStop(0, '#8B4513');
+        handleGradient.addColorStop(0.5, '#654321');
+        handleGradient.addColorStop(1, '#3E2723');
+        
+        ctx.fillStyle = handleGradient;
+        ctx.fillRect(-baseSize * 0.14, baseSize * 0.12, baseSize * 0.28, handleLength);
+        
+        // Handle wrapping
+        ctx.strokeStyle = '#A0826D';
+        ctx.lineWidth = baseSize * 0.08;
+        for (let i = 0; i < 6; i++) {
+            const wrapY = baseSize * 0.12 + (handleLength * i / 6);
+            ctx.beginPath();
+            ctx.moveTo(-baseSize * 0.18, wrapY);
+            ctx.lineTo(baseSize * 0.18, wrapY);
+            ctx.stroke();
+        }
+        
+        // --- SWORD POMMEL (LARGE COUNTERWEIGHT) ---
+        
+        ctx.fillStyle = '#D4AF37';
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.8, baseSize * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.8, baseSize * 0.22, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Pommel detail - cross
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.08, baseSize * 0.72);
+        ctx.lineTo(-baseSize * 0.08, baseSize * 0.88);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.08, baseSize * 0.72);
+        ctx.lineTo(baseSize * 0.08, baseSize * 0.88);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+    
+    darkenColor(color, factor) {
+        return super.darkenColor(color, factor);
     }
 }
