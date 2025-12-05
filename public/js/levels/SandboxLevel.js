@@ -11,20 +11,22 @@ export class SandboxLevel extends LevelBase {
         // Customize visuals for sandbox - bright and vibrant
         this.setVisualConfig({
             grassColors: {
-                top: '#5a7a5a',
-                upper: '#6a8a6a',
-                lower: '#7a9a7a',
-                bottom: '#4a6a4a'
+                top: '#2a2a3a',
+                upper: '#3a3a4a',
+                lower: '#4a4a5a',
+                bottom: '#1a1a2a'
             },
-            grassPatchDensity: 6000,
-            grassPatchSizeMin: 8,
-            grassPatchSizeMax: 20,
-            dirtPatchCount: 6,
-            flowerDensity: 15000,
-            pathBaseColor: '#a0956b',
-            edgeBushColor: '#2a7a2a',
-            edgeBushAccentColor: '#3aaa3a',
-            edgeGrassColor: '#2a9a2a'
+            grassPatchDensity: 12000,
+            grassPatchSizeMin: 4,
+            grassPatchSizeMax: 12,
+            dirtPatchCount: 20,
+            dirtPatchAlpha: 0.25,
+            flowerDensity: 50000,
+            pathBaseColor: '#6b6b5b',
+            pathEdgeVegetationChance: 0.6,
+            edgeBushColor: '#0f3f0f',
+            edgeRockColor: '#666666',
+            edgeGrassColor: '#1a6a1a'
         });
         
         console.log('SandboxLevel: Initialized');
