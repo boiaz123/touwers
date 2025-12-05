@@ -939,30 +939,33 @@ export class LevelBase {
         const castleScreenX = (castleGridX + 1.5) * this.cellSize;
         const castleScreenY = (castleGridY + 1.5) * this.cellSize;
         
-        // Create castle immediately (import at top of file)
-        // For now, create placeholder that will be replaced
-        this.castle = {
-            x: castleScreenX,
-            y: castleScreenY,
-            gridX: castleGridX,
-            gridY: castleGridY,
-            health: 100,
-            maxHealth: 100,
-            takeDamage: function(amount) {
-                this.health -= amount;
-                console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
-            },
-            isDestroyed: function() {
-                return this.health <= 0;
-            }
-        };
-        
-        // Then load the real Castle class and replace
+        // Load the real Castle class and create instance
         import('../buildings/Castle.js').then(module => {
             this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
             console.log('Level: Castle created at grid', castleGridX, castleGridY);
         }).catch(err => {
-            console.warn('Level: Could not load Castle:', err);
+            console.error('Level: Could not load Castle:', err);
+            // Create fallback placeholder with render method
+            this.castle = {
+                x: castleScreenX,
+                y: castleScreenY,
+                gridX: castleGridX,
+                gridY: castleGridY,
+                health: 100,
+                maxHealth: 100,
+                takeDamage: function(amount) {
+                    this.health -= amount;
+                    console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
+                },
+                isDestroyed: function() {
+                    return this.health <= 0;
+                },
+                render: function(ctx) {
+                    // Minimal fallback render - just shows a red square
+                    ctx.fillStyle = '#cc0000';
+                    ctx.fillRect(this.x - 40, this.y - 40, 80, 80);
+                }
+            };
         });
         
         // Mark castle cells as occupied immediately (3x3 size)
