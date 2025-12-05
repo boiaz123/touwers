@@ -1,8 +1,8 @@
 export class KnightEnemy {
-    constructor(path, health = 160, speed = 40) {
+    constructor(path, health_multiplier = 1.0, speed = 40) {
         this.path = path;
-        this.health = health;
-        this.maxHealth = health;
+        this.health = 160 * health_multiplier;
+        this.maxHealth = 160 * health_multiplier;
         this.speed = speed; // Slowest enemy
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

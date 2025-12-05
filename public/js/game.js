@@ -16,7 +16,6 @@ class GameplayState {
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
         this.currentLevel = 1;
-        this.maxWavesForLevel = 10;
         this.waveInProgress = false;
         this.waveCompleted = false;
         this.superWeaponLab = null;
@@ -52,7 +51,7 @@ class GameplayState {
             this.gameState.gold = 100000;
             this.maxWavesForLevel = Infinity;
         } else {
-            this.maxWavesForLevel = 10;
+            this.maxWavesForLevel = 100;
         }
         
         this.waveInProgress = false;
@@ -1437,12 +1436,12 @@ class GameplayState {
         if (this.levelType === 'sandbox') {
             // Sandbox mode: continuously increasing difficulty
             const baseEnemies = 8;
-            const baseHealth = 50;
+            const baseHealth_multiplier = 1.0;
             const baseSpeed = 40;
             
             return {
                 enemyCount: baseEnemies + Math.floor(wave * 1.2),
-                enemyHealth: baseHealth + (wave - 1) * 5,
+                enemyHealth_multiplier: baseHealth_multiplier + (wave - 1) * 0.05,
                 enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2),
                 spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03)
             };
@@ -1453,7 +1452,7 @@ class GameplayState {
             const config = this.level.getWaveConfig(wave);
             return {
                 enemyCount: config.enemyCount,
-                enemyHealth: config.enemyHealth,
+                enemyHealth_multiplier: config.enemyHealth_multiplier,
                 enemySpeed: config.enemySpeed,
                 spawnInterval: config.spawnInterval,
                 wavePattern: config.pattern
@@ -1492,7 +1491,7 @@ class GameplayState {
                 this.enemyManager.spawnWaveWithPattern(
                     this.gameState.wave,
                     waveConfig.enemyCount,
-                    waveConfig.enemyHealth,
+                    waveConfig.enemyHealth_multiplier,
                     waveConfig.enemySpeed,
                     waveConfig.spawnInterval,
                     waveConfig.wavePattern
@@ -1502,7 +1501,7 @@ class GameplayState {
                 this.enemyManager.spawnWave(
                     this.gameState.wave, 
                     waveConfig.enemyCount,
-                    waveConfig.enemyHealth,
+                    waveConfig.enemyHealth_multiplier,
                     waveConfig.enemySpeed,
                     waveConfig.spawnInterval
                 );

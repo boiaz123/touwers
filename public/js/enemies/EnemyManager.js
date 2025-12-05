@@ -46,7 +46,7 @@ export class EnemyManager {
         }
     }
     
-    spawnWaveWithPattern(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0, pattern) {
+    spawnWaveWithPattern(waveNumber, count, health_multiplier = 1, speed = 50, spawnInterval = 1.0, pattern) {
         console.log(`Spawning wave ${waveNumber} with pattern`, pattern);
         this.continuousMode = false;
         this.spawning = true;
@@ -57,7 +57,7 @@ export class EnemyManager {
             const enemyType = pattern[i % pattern.length];
             this.spawnQueue.push({
                 type: enemyType,
-                health: health,
+                health_multiplier: health_multiplier,
                 speed: speed
             });
         }
@@ -123,29 +123,29 @@ export class EnemyManager {
                 
                 switch(enemyData.type) {
                     case 'beefyenemy':
-                        enemy = new BeefyEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new BeefyEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'knight':
-                        enemy = new KnightEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new KnightEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'shieldknight':
-                        enemy = new ShieldKnightEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new ShieldKnightEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'mage':
-                        enemy = new MageEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new MageEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'villager':
-                        enemy = new VillagerEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new VillagerEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'archer':
-                        enemy = new ArcherEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new ArcherEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'frog':
-                        enemy = new FrogEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new FrogEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                     case 'basic':
                     default:
-                        enemy = new BasicEnemy(this.path, enemyData.health, enemyData.speed);
+                        enemy = new BasicEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
                         break;
                 }
                 

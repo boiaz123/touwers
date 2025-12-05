@@ -1,8 +1,8 @@
 export class MageEnemy {
-    constructor(path, health = 110, speed = 45) {
+    constructor(path, health_multiplier = 1.0, speed = 45) {
         this.path = path;
-        this.health = health;
-        this.maxHealth = health;
+        this.health = 110 * health_multiplier;
+        this.maxHealth = 110 * health_multiplier;
         this.speed = speed;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

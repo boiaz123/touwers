@@ -1,8 +1,8 @@
 export class FrogEnemy {
-    constructor(path, health = 85, speed = 55) {
+    constructor(path, health_multiplier = 1.0, speed = 55) {
         this.path = path;
-        this.health = health;
-        this.maxHealth = health;
+        this.health = 85 * health_multiplier;
+        this.maxHealth = 85 * health_multiplier;
         this.speed = speed;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

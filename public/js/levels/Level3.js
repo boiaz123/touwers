@@ -43,26 +43,16 @@ export class Level3 extends LevelBase {
     getWaveConfig(wave) {
         // Wave configuration - 10 waves with only basic, villager, archer
         const waveConfigs = [
-            // Wave 1: Very easy intro - weak basic enemies only
-            { enemyCount: 40, enemyHealth: 25, enemySpeed: 35, spawnInterval: 2.0, pattern: ['frog'] },
-            // Wave 2: Add villagers, still easy
-            { enemyCount: 40, enemyHealth: 28, enemySpeed: 36, spawnInterval: 1.7, pattern: ['frog'] },
-            // Wave 3: More enemies, more variety
-            { enemyCount: 40, enemyHealth: 32, enemySpeed: 38, spawnInterval: 1.5, pattern: ['frog'] },
-            // Wave 4: Introduce archers
-            { enemyCount: 40, enemyHealth: 35, enemySpeed: 40, spawnInterval: 1.3, pattern: ['frog'] },
-            // Wave 5: Balanced mix
-            { enemyCount: 40, enemyHealth: 38, enemySpeed: 42, spawnInterval: 1.1, pattern: ['frog'] },
-            // Wave 6: More archers
-            { enemyCount: 60, enemyHealth: 42, enemySpeed: 44, spawnInterval: 1.3, pattern: ['frog'] },
-            // Wave 7: Ramp up difficulty
-            { enemyCount: 60, enemyHealth: 45, enemySpeed: 46, spawnInterval: 1.2, pattern: ['frog'] },
-            // Wave 8: Heavy pressure
-            { enemyCount: 60, enemyHealth: 48, enemySpeed: 48, spawnInterval: 1.1, pattern: ['frog'] },
-            // Wave 9: Challenging
-            { enemyCount: 80, enemyHealth: 52, enemySpeed: 50, spawnInterval: 1.2, pattern: ['frog'] },
-            // Wave 10: Boss wave
-            { enemyCount: 100, enemyHealth: 55, enemySpeed: 52, spawnInterval: 1.0, pattern: ['frog'] }
+            { enemyCount: 40, enemyHealth_multiplier: 0.1,enemySpeed: 395, spawnInterval: 2.0, pattern: ['frog'] },
+            { enemyCount: 40, enemyHealth_multiplier: 0.5,enemySpeed: 669, spawnInterval: 1.7, pattern: ['frog'] },
+            { enemyCount: 40, enemyHealth_multiplier: 0.6,enemySpeed: 1389, spawnInterval: 1.5, pattern: ['frog'] },
+            { enemyCount: 40, enemyHealth_multiplier: 0.7,enemySpeed: 2409, spawnInterval: 1.3, pattern: ['frog'] },
+            { enemyCount: 40, enemyHealth_multiplier: 0.8,enemySpeed: 5429, spawnInterval: 1.1, pattern: ['frog'] },
+            { enemyCount: 60, enemyHealth_multiplier: 1.5,enemySpeed: 6449, spawnInterval: 1.3, pattern: ['frog'] },
+            { enemyCount: 60, enemyHealth_multiplier: 1.6,enemySpeed: 7469, spawnInterval: 1.2, pattern: ['frog'] },
+            { enemyCount: 60, enemyHealth_multiplier: 1.7,enemySpeed: 8489, spawnInterval: 1.1, pattern: ['frog'] },
+            { enemyCount: 80, enemyHealth_multiplier: 1.8,enemySpeed: 9509, spawnInterval: 1.2, pattern: ['frog'] },
+            { enemyCount: 100, enemyHealth_multiplier:1.9, enemySpeed: 100529, spawnInterval: 10, pattern: ['frog'] }
         ];
         
         if (wave > 0 && wave <= waveConfigs.length) {
@@ -72,7 +62,7 @@ export class Level3 extends LevelBase {
         // Fallback for waves beyond 10
         return {
             enemyCount: 10,
-            enemyHealth: 60,
+            enemyHealth_multiplier: 1.0,
             enemySpeed: 55,
             spawnInterval: 0.6,
             pattern: ['basic', 'villager', 'archer']

@@ -1,8 +1,8 @@
 export class ShieldKnightEnemy {
-    constructor(path, health = 180, speed = 35) {
+    constructor(path, health_multiplier = 1.0, speed = 35) {
         this.path = path;
-        this.health = health;
-        this.maxHealth = health;
+        this.health = 180 * health_multiplier;
+        this.maxHealth = 180 * health_multiplier;
         this.speed = speed;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

@@ -1,8 +1,8 @@
 export class BeefyEnemy {
-    constructor(path, health = 150, speed = 60) {
+    constructor(path, health_multiplier = 1.0, speed = 60) {
         this.path = path;
-        this.health = health;
-        this.maxHealth = health;
+        this.health = 150 * health_multiplier;
+        this.maxHealth = 150 * health_multiplier;
         this.speed = speed;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

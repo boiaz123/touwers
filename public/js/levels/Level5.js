@@ -43,26 +43,16 @@ export class Level5 extends LevelBase {
     getWaveConfig(wave) {
         // Wave configuration - 10 waves with only basic, villager, archer
         const waveConfigs = [
-            // Wave 1: Very easy intro - weak basic enemies only
-            { enemyCount: 10, enemyHealth: 25, enemySpeed: 35, spawnInterval: 1.5, pattern: ['basic'] },
-            // Wave 2: Add villagers, still easy
-            { enemyCount: 14, enemyHealth: 28, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic', 'basic', 'villager'] },
-            // Wave 3: More enemies, more variety
-            { enemyCount: 17, enemyHealth: 32, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager', 'basic'] },
-            // Wave 4: Introduce archers
-            { enemyCount: 20, enemyHealth: 35, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
-            // Wave 5: Balanced mix
-            { enemyCount: 22, enemyHealth: 38, enemySpeed: 42, spawnInterval: 1.3, pattern: ['basic', 'villager', 'archer', 'basic'] },
-            // Wave 6: More archers
-            { enemyCount: 24, enemyHealth: 42, enemySpeed: 44, spawnInterval: 1.3, pattern: ['archer', 'basic', 'villager', 'archer'] },
-            // Wave 7: Ramp up difficulty
-            { enemyCount: 24, enemyHealth: 45, enemySpeed: 46, spawnInterval: 1.3, pattern: ['villager', 'archer', 'basic', 'archer'] },
-            // Wave 8: Heavy pressure
-            { enemyCount: 24, enemyHealth: 48, enemySpeed: 48, spawnInterval: 1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
-            // Wave 9: Challenging
-            { enemyCount: 26, enemyHealth: 52, enemySpeed: 50, spawnInterval: 1.1, pattern: ['archer', 'villager', 'basic', 'archer', 'villager'] },
-            // Wave 10: Boss wave
-            { enemyCount: 30, enemyHealth: 55, enemySpeed: 52, spawnInterval: 1.0, pattern: ['archer', 'archer', 'villager', 'basic', 'archer'] }
+            { enemyCount: 10, enemyHealth_multiplier: 1.0, enemySpeed: 35, spawnInterval: 1.5, pattern: ['basic'] },
+            { enemyCount: 14, enemyHealth_multiplier: 1.1, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic', 'basic', 'villager'] },
+            { enemyCount: 17, enemyHealth_multiplier: 1.2, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager', 'basic'] },
+            { enemyCount: 20, enemyHealth_multiplier: 1.3, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
+            { enemyCount: 22, enemyHealth_multiplier: 1.4, enemySpeed: 42, spawnInterval: 1.3, pattern: ['basic', 'villager', 'archer', 'basic'] },
+            { enemyCount: 24, enemyHealth_multiplier: 1.5, enemySpeed: 44, spawnInterval: 1.3, pattern: ['archer', 'basic', 'villager', 'archer'] },
+            { enemyCount: 24, enemyHealth_multiplier: 1.6, enemySpeed: 46, spawnInterval: 1.3, pattern: ['villager', 'archer', 'basic', 'archer'] },
+            { enemyCount: 24, enemyHealth_multiplier: 1.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
+            { enemyCount: 26, enemyHealth_multiplier: 1.8, enemySpeed: 50, spawnInterval: 1.1, pattern: ['archer', 'villager', 'basic', 'archer', 'villager'] },
+            { enemyCount: 30, enemyHealth_multiplier: 1.9, enemySpeed: 52, spawnInterval: 1.0, pattern: ['archer', 'archer', 'villager', 'basic', 'archer'] }
         ];
         
         if (wave > 0 && wave <= waveConfigs.length) {
@@ -72,7 +62,7 @@ export class Level5 extends LevelBase {
         // Fallback for waves beyond 10
         return {
             enemyCount: 10,
-            enemyHealth: 60,
+            enemyHealth_multiplier: 2.0,
             enemySpeed: 55,
             spawnInterval: 0.6,
             pattern: ['basic', 'villager', 'archer']
