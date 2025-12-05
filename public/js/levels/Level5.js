@@ -7,6 +7,19 @@ export class Level5 extends LevelBase {
         this.levelNumber = 5;
         this.difficulty = 'Easy';
         this.maxWaves = 10;
+        
+        // Customize visuals for Level 5
+        this.setVisualConfig({
+            grassColors: {
+                top: '#4a6741',
+                upper: '#5a7751',
+                lower: '#6a8761',
+                bottom: '#3a5731'
+            },
+            grassPatchDensity: 8000,
+            pathBaseColor: '#8b7355'
+        });
+        
         console.log('Level5: Initialized');
     }
     

@@ -28,7 +28,52 @@ export class LevelBase {
         this.visualElementsGenerated = false;
         
         this.castle = null;
+        
+        // Visual configuration - can be overridden by individual levels
+        this.visualConfig = {
+            // Grass background
+            grassColors: {
+                top: '#4a6741',
+                upper: '#5a7751',
+                lower: '#6a8761',
+                bottom: '#3a5731'
+            },
+            grassPatchDensity: 8000, // pixels per patch
+            grassPatchSizeMin: 6,
+            grassPatchSizeMax: 18,
+            
+            // Dirt patches
+            dirtPatchCount: 8,
+            dirtPatchAlpha: 0.15,
+            
+            // Flowers
+            flowerDensity: 25000, // pixels per flower
+            
+            // Path visuals
+            pathBaseColor: '#8b7355',
+            pathTextureSpacing: 15, // pixels between texture elements
+            pathEdgeVegetationChance: 0.4,
+            
+            // Edge vegetation
+            edgeBushColor: '#1f6f1f',
+            edgeBushAccentColor: '#28a028',
+            edgeRockColor: '#807f80',
+            edgeGrassColor: '#2e8b2e'
+        };
+        
         console.log(this.constructor.name + ': Constructor completed');
+    }
+    
+    // Method to update visual configuration for a level
+    setVisualConfig(updates) {
+        this.visualConfig = {
+            ...this.visualConfig,
+            ...updates,
+            grassColors: {
+                ...this.visualConfig.grassColors,
+                ...(updates.grassColors || {})
+            }
+        };
     }
     
     initializeForCanvas(canvasWidth, canvasHeight) {
@@ -281,9 +326,9 @@ export class LevelBase {
     generateAllVisualElements(canvasWidth, canvasHeight) {
         if (this.visualElementsGenerated) return;
         
-        // Generate grass patches - REDUCED density and added more natural variation
+        // Generate grass patches - using config density
         this.grassPatches = [];
-        const patchCount = Math.floor((canvasWidth * canvasHeight) / 8000); // Reduced from 2000 to 8000
+        const patchCount = Math.floor((canvasWidth * canvasHeight) / this.visualConfig.grassPatchDensity);
         for (let i = 0; i < patchCount; i++) {
             // Add clustering - some patches appear near others
             let x, y;
@@ -304,15 +349,15 @@ export class LevelBase {
             this.grassPatches.push({
                 x: x,
                 y: y,
-                size: Math.random() * 12 + 6, // Increased size variation
-                shade: Math.random() * 0.4 + 0.6, // More variation in shading
+                size: Math.random() * (this.visualConfig.grassPatchSizeMax - this.visualConfig.grassPatchSizeMin) + this.visualConfig.grassPatchSizeMin,
+                shade: Math.random() * 0.4 + 0.6,
                 type: Math.floor(Math.random() * 3)
             });
         }
         
-        // Generate dirt patches - REDUCED quantity
+        // Generate dirt patches
         this.dirtPatches = [];
-        for (let i = 0; i < 8; i++) { // Reduced from 20 to 8
+        for (let i = 0; i < this.visualConfig.dirtPatchCount; i++) {
             this.dirtPatches.push({
                 x: Math.random() * canvasWidth,
                 y: Math.random() * canvasHeight,
@@ -322,9 +367,9 @@ export class LevelBase {
             });
         }
         
-        // Generate flowers - REDUCED density and improved clustering
+        // Generate flowers - using config density
         this.flowers = [];
-        const flowerCount = Math.floor(canvasWidth * canvasHeight / 25000); // Reduced from 10000 to 25000
+        const flowerCount = Math.floor(canvasWidth * canvasHeight / this.visualConfig.flowerDensity);
         for (let i = 0; i < flowerCount; i++) {
             const flowerType = Math.random();
             let x, y;
@@ -372,12 +417,12 @@ export class LevelBase {
         this.pathLeaves = [];
         const pathWidth = Math.max(40, Math.min(80, this.cellSize * 3));
         
-        // Generate texture elements along the path - REDUCED density
+        // Generate texture elements along the path - using config spacing
         for (let i = 0; i < this.path.length - 1; i++) {
             const start = this.path[i];
             const end = this.path[i + 1];
             const distance = Math.hypot(end.x - start.x, end.y - start.y);
-            const elements = Math.floor(distance / 15); // Reduced from 5 to 15 for less density
+            const elements = Math.floor(distance / this.visualConfig.pathTextureSpacing);
             
             for (let j = 0; j < elements; j++) {
                 const t = j / elements;
@@ -457,17 +502,17 @@ export class LevelBase {
         // Generate all visual elements if not done yet
         this.generateAllVisualElements(canvas.width, canvas.height);
         
-        // Base grass color gradient
+        // Base grass color gradient - using config
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#4a6741');
-        gradient.addColorStop(0.3, '#5a7751');
-        gradient.addColorStop(0.7, '#6a8761');
-        gradient.addColorStop(1, '#3a5731');
+        gradient.addColorStop(0, this.visualConfig.grassColors.top);
+        gradient.addColorStop(0.3, this.visualConfig.grassColors.upper);
+        gradient.addColorStop(0.7, this.visualConfig.grassColors.lower);
+        gradient.addColorStop(1, this.visualConfig.grassColors.bottom);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Render cached dirt patches
-        ctx.fillStyle = 'rgba(101, 67, 33, 0.15)';
+        ctx.fillStyle = `rgba(101, 67, 33, ${this.visualConfig.dirtPatchAlpha})`;
         this.dirtPatches.forEach(patch => {
             ctx.save();
             ctx.translate(patch.x, patch.y);
@@ -614,8 +659,8 @@ export class LevelBase {
             }
         }
         
-        // Base path color - consistent dirt brown across all cells
-        ctx.fillStyle = '#8b7355';
+        // Base path color - using config
+        ctx.fillStyle = this.visualConfig.pathBaseColor;
         pathCells.forEach(posStr => {
             const [cellX, cellY] = posStr.split(',').map(Number);
             const screenX = cellX * this.cellSize;
@@ -800,7 +845,7 @@ export class LevelBase {
             const seed = cellX * 73856093 ^ cellY * 19349663;
             const placementChance = Math.abs(Math.sin(seed * 0.007));
             
-            if (placementChance > 0.4) {
+            if (placementChance > this.visualConfig.pathEdgeVegetationChance) {
                 processedCells.add(cellKey);
                 
                 // Place vegetation in center of path edge cell
@@ -822,18 +867,18 @@ export class LevelBase {
             }
         });
         
-        // Render edge vegetation - bushes, rocks, plants
+        // Render edge vegetation - using config colors
         edgeVegetation.forEach(veg => {
             const seed = veg.seed;
             
             switch (veg.type) {
                 case 0: // Small bushes
-                    ctx.fillStyle = '#1f6f1f';
+                    ctx.fillStyle = this.visualConfig.edgeBushColor;
                     ctx.beginPath();
                     ctx.arc(veg.x, veg.y, 6, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    ctx.fillStyle = '#28a028';
+                    ctx.fillStyle = this.visualConfig.edgeBushAccentColor;
                     ctx.beginPath();
                     ctx.arc(veg.x - 4, veg.y - 3, 4, 0, Math.PI * 2);
                     ctx.fill();
@@ -843,7 +888,7 @@ export class LevelBase {
                     break;
                     
                 case 1: // Rocks
-                    ctx.fillStyle = '#807f80';
+                    ctx.fillStyle = this.visualConfig.edgeRockColor;
                     ctx.beginPath();
                     ctx.arc(veg.x, veg.y, 5, 0, Math.PI * 2);
                     ctx.fill();
@@ -860,7 +905,7 @@ export class LevelBase {
                     break;
                     
                 case 2: // Grass clumps and wildflowers
-                    ctx.strokeStyle = '#2e8b2e';
+                    ctx.strokeStyle = this.visualConfig.edgeGrassColor;
                     ctx.lineWidth = 1.5;
                     for (let j = 0; j < 5; j++) {
                         const angle = (j / 5) * Math.PI * 2 + (seed * 0.01);

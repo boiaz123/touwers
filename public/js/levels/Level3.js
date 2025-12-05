@@ -7,6 +7,28 @@ export class Level3 extends LevelBase {
         this.levelNumber = 3;
         this.difficulty = 'Easy';
         this.maxWaves = 10;
+        
+        // Customize visuals for swampy/frog theme
+        this.setVisualConfig({
+            grassColors: {
+                top: '#d0d0d7ff',
+                upper: '#b5b5baff',
+                lower: '#8c8c98ff',
+                bottom: '#c9c9d4ff'
+            },
+            grassPatchDensity: 12000,
+            grassPatchSizeMin: 2,
+            grassPatchSizeMax: 4,
+            dirtPatchCount: 12,
+            dirtPatchAlpha: 0.14,
+            flowerDensity: 100000,
+            pathBaseColor: '#9f9f9cff',
+            pathEdgeVegetationChance: 0.3,
+            edgeBushColor: '#000000ff',
+            edgeRockColor: '#666666',
+            edgeGrassColor: '#56512bff'
+        });
+        
         console.log('Level3: Initialized');
     }
     

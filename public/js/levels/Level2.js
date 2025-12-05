@@ -7,6 +7,28 @@ export class Level2 extends LevelBase {
         this.levelNumber = 2;
         this.difficulty = 'Braab';
         this.maxWaves = 14;
+        
+        // Customize visuals for Level 2
+        this.setVisualConfig({
+            grassColors: {
+                top: '#852356ff',
+                upper: '#3b1047ff',
+                lower: '#4a4a5a',
+                bottom: '#1a1a2a'
+            },
+            grassPatchDensity: 12000,
+            grassPatchSizeMin: 10,
+            grassPatchSizeMax: 20,
+            dirtPatchCount: 20,
+            dirtPatchAlpha: 0.25,
+            flowerDensity: 2000,
+            pathBaseColor: '#6f4f6fff',
+            pathEdgeVegetationChance: 0.9,
+            edgeBushColor: '#1d7b85ff',
+            edgeRockColor: '#666666',
+            edgeGrassColor: '#5c74ebff'
+        });
+        
         console.log('Level2: Initialized');
     }
     
@@ -59,11 +81,17 @@ export class Level2 extends LevelBase {
             { enemyCount: 100, enemyHealth_multiplier:.6, enemySpeed: 2000, spawnInterval:  1.3, pattern: ['villager'] },
             { enemyCount: 24, enemyHealth_multiplier: .7,enemySpeed: 480, spawnInterval:  1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
             { enemyCount: 13, enemyHealth_multiplier: .8, enemySpeed: 500, spawnInterval: 1.3, pattern: ['shieldknight'] },
-            { enemyCount: 30, enemyHealth_multiplier: 9,enemySpeed: 520, spawnInterval:  1.0, pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'archer', 'villager'] },
+            { enemyCount: 30, enemyHealth_multiplier: .9,enemySpeed: 520, spawnInterval:  1.0, pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'archer', 'villager'] },
             { enemyCount: 35, enemyHealth_multiplier: .1, enemySpeed: 53, spawnInterval: 0.9, pattern: ['beefyenemy', 'archer', 'villager', 'beefyenemy'] },
             { enemyCount: 80, enemyHealth_multiplier: .1, enemySpeed: 5000, spawnInterval: 2.5, pattern: ['frog'] },
             { enemyCount: 45, enemyHealth_multiplier: .3, enemySpeed: 570, spawnInterval: 0.7, pattern: ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'shieldknight'] },
-            { enemyCount: 5, enemyHealth_multiplier: .8, enemySpeed: 30, spawnInterval: 1, pattern: ['knight'] }
+            { enemyCount: 5, enemyHealth_multiplier: 1.8, enemySpeed: 30, spawnInterval: 1, pattern: ['knight'] },
+            { enemyCount: 15, enemyHealth_multiplier: 1.8, enemySpeed: 300, spawnInterval: 1, pattern: ['knight', 'beefyenemy'] },
+            { enemyCount: 25, enemyHealth_multiplier: 1.8, enemySpeed: 300, spawnInterval: 1, pattern: ['basic', 'basic', 'villager', 'archer'] },
+            { enemyCount: 35, enemyHealth_multiplier: 1.8, enemySpeed: 300, spawnInterval: 1, pattern: ['shieldknight'] },
+            { enemyCount: 45, enemyHealth_multiplier: 1.8, enemySpeed: 3000, spawnInterval: 1, pattern: ['frog'] },
+            { enemyCount: 55, enemyHealth_multiplier: 1.8, enemySpeed: 300, spawnInterval: 1, pattern: ['knight', 'basic', 'villager', 'beefyenemy', 'archer', 'mage', 'shieldknight'] },
+            { enemyCount: 60, enemyHealth_multiplier: 1.8, enemySpeed: 20, spawnInterval: 0.1, pattern: ['shieldknight'] }
         ];
         
         if (wave > 0 && wave <= waveConfigs.length) {
