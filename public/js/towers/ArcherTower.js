@@ -1,20 +1,16 @@
-export class ArcherTower {
+import { Tower } from './Tower.js';
+
+export class ArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 140;
         this.damage = 15;
         this.fireRate = 1.5;
-        this.cooldown = 0;
-        this.target = null;
         
         // Animation properties
         this.archerAngle = 0;
         this.drawTime = 0;
         this.arrows = [];
-        this.animationTime = 0;
         this.archers = [
             { angle: 0, drawback: 0, shootTimer: 0 },
             { angle: Math.PI / 2, drawback: 0, shootTimer: 0.2 },
@@ -24,12 +20,8 @@ export class ArcherTower {
     }
     
     update(deltaTime, enemies) {
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime;
+        super.update(deltaTime, enemies);
         
-        this.target = this.findTarget(enemies);
-        
-        // Update archer positions and animations
         this.archers.forEach(archer => {
             archer.shootTimer = Math.max(0, archer.shootTimer - deltaTime);
             archer.drawback = Math.max(0, archer.drawback - deltaTime * 3);
@@ -55,21 +47,6 @@ export class ArcherTower {
             
             return arrow.life > 0;
         });
-    }
-    
-    findTarget(enemies) {
-        let closest = null;
-        let closestDist = this.range;
-        
-        for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
-                closest = enemy;
-                closestDist = dist;
-            }
-        }
-        
-        return closest;
     }
     
     shoot() {

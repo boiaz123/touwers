@@ -1,37 +1,27 @@
-export class CannonTower {
+import { Tower } from './Tower.js';
+
+export class CannonTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 120;
         this.damage = 40;
         this.splashRadius = 35;
         this.fireRate = 0.4;
-        this.cooldown = 0;
-        this.target = null;
         
-        // Animation properties
         this.trebuchetAngle = 0;
-        this.armPosition = 0; // 0 = ready, 1 = loaded/pulled back, 2 = firing
+        this.armPosition = 0;
         this.armSpeed = 0;
         this.explosions = [];
         this.fireballs = [];
-        this.animationTime = 0;
         this.loadingTime = 0;
-        
-        // Fixed random seed for consistent texture
         this.randomSeed = Math.random() * 1000;
     }
     
     update(deltaTime, enemies) {
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime;
-        
-        this.target = this.findTarget(enemies);
+        super.update(deltaTime, enemies);
         
         // Update trebuchet arm animation
-        if (this.armPosition === 2) { // Firing
+        if (this.armPosition === 2) {
             this.armSpeed += deltaTime * 10;
             this.armPosition = Math.max(0, this.armPosition - this.armSpeed * deltaTime);
             if (this.armPosition <= 0) {
@@ -39,7 +29,6 @@ export class CannonTower {
                 this.armSpeed = 0;
             }
         } else if (this.target && this.cooldown === 0) {
-            // Loading animation
             this.loadingTime += deltaTime * 1.2;
             this.armPosition = Math.min(1, this.loadingTime);
             
@@ -55,7 +44,6 @@ export class CannonTower {
             this.armPosition = Math.max(0, this.armPosition - deltaTime * 0.3);
         }
         
-        // Update trebuchet angle to track target
         if (this.target) {
             const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
             this.trebuchetAngle = targetAngle;
@@ -69,7 +57,6 @@ export class CannonTower {
             fireball.life -= deltaTime;
             fireball.flameAnimation += deltaTime * 8;
             
-            // Check if fireball has reached target position or lifetime expired
             if (fireball.life <= 0 || 
                 (fireball.life < fireball.maxLife * 0.5 && 
                  Math.hypot(fireball.x - fireball.targetX, fireball.y - fireball.targetY) < 20)) {
@@ -87,41 +74,22 @@ export class CannonTower {
         });
     }
     
-    findTarget(enemies) {
-        let closest = null;
-        let closestDist = this.range;
-        
-        for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
-                closest = enemy;
-                closestDist = dist;
-            }
-        }
-        
-        return closest;
-    }
-    
     shoot() {
         if (this.target) {
-            // Calculate precise trajectory to hit target
             const dx = this.target.x - this.x;
             const dy = this.target.y - this.y;
             const distance = Math.hypot(dx, dy);
             
-            // Use ballistic trajectory calculation for accuracy
             const gravity = 250;
-            const launchAngle = Math.PI / 6; // 30 degrees for optimal range
+            const launchAngle = Math.PI / 6;
             const initialSpeed = Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle));
-            
-            // Calculate flight time to reach target
             const flightTime = distance / (initialSpeed * Math.cos(launchAngle));
             
             this.fireballs.push({
                 x: this.x,
-                y: this.y - 25, // Start from trebuchet arm height
+                y: this.y - 25,
                 vx: (dx / distance) * initialSpeed * Math.cos(launchAngle),
-                vy: -initialSpeed * Math.sin(launchAngle), // Negative for upward
+                vy: -initialSpeed * Math.sin(launchAngle),
                 gravity: gravity,
                 flameAnimation: 0,
                 life: flightTime,
@@ -133,7 +101,6 @@ export class CannonTower {
     }
     
     explode(x, y, enemies) {
-        // Create visual explosion
         this.explosions.push({
             x: x,
             y: y,
@@ -143,11 +110,9 @@ export class CannonTower {
             maxLife: 1.0
         });
         
-        // Deal AoE damage to all enemies in range
         enemies.forEach(enemy => {
             const distance = Math.hypot(enemy.x - x, enemy.y - y);
             if (distance <= this.splashRadius) {
-                // Damage falls off with distance
                 const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
                 const actualDamage = Math.floor(this.damage * damageFalloff);
                 enemy.takeDamage(actualDamage);
@@ -155,7 +120,6 @@ export class CannonTower {
         });
     }
     
-    // Seeded random function for consistent textures
     seededRandom(seed) {
         const x = Math.sin(seed) * 10000;
         return x - Math.floor(x);

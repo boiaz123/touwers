@@ -1,19 +1,15 @@
-export class BasicTower {
+import { Tower } from './Tower.js';
+
+export class BasicTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 120;
         this.damage = 20;
         this.fireRate = 1;
-        this.cooldown = 0;
-        this.target = null;
-        this.showRange = false; // Add property to control range display
+        this.showRange = false;
         
         // Animation properties
-        this.animationTime = 0; // Add missing initialization
-        this.throwingDefender = -1; // Which defender is throwing
+        this.throwingDefender = -1;
         this.throwAnimationTime = 0;
         this.rocks = [];
         this.defenders = [
@@ -23,8 +19,6 @@ export class BasicTower {
             { angle: 3 * Math.PI / 2, armRaised: 0, throwCooldown: 0.9 }
         ];
 
-        // Prevent stat panel from opening immediately after build.
-        // The panel will be allowed only when the tower icon is clicked.
         this.isSelected = false;
         this._suppressSelectionUntilClick = true;
         this._clickHandlerAttached = false;
@@ -32,9 +26,7 @@ export class BasicTower {
     }
     
     update(deltaTime, enemies) {
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        
-        this.target = this.findTarget(enemies);
+        super.update(deltaTime, enemies);
         
         // Update defenders
         this.defenders.forEach((defender, index) => {
@@ -43,7 +35,6 @@ export class BasicTower {
             
             if (this.target) {
                 const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-                // Defenders slowly turn toward target
                 const angleDiff = targetAngle - defender.angle;
                 defender.angle += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), deltaTime * 2);
             }
@@ -54,19 +45,18 @@ export class BasicTower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update flying rocks - check for enemy hits
+        // Update flying rocks
         this.rocks = this.rocks.filter(rock => {
             rock.x += rock.vx * deltaTime;
             rock.y += rock.vy * deltaTime;
-            rock.vy += 200 * deltaTime; // Gravity
+            rock.vy += 200 * deltaTime;
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
-            // Check collision with target enemy
             if (rock.target && !rock.target.isDead) {
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
-                if (dist <= 15) { // Hit radius
-                    return false; // Remove rock
+                if (dist <= 15) {
+                    return false;
                 }
             }
             
@@ -74,26 +64,10 @@ export class BasicTower {
         });
     }
     
-    findTarget(enemies) {
-        let closest = null;
-        let closestDist = this.range;
-        
-        for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
-                closest = enemy;
-                closestDist = dist;
-            }
-        }
-        
-        return closest;
-    }
-    
     shoot() {
         if (this.target) {
             this.target.takeDamage(this.damage);
             
-            // Select a defender to throw
             const availableDefenders = this.defenders
                 .map((def, index) => ({ def, index }))
                 .filter(({ def }) => def.throwCooldown === 0);
@@ -104,7 +78,6 @@ export class BasicTower {
                 thrower.throwCooldown = 2;
                 this.throwingDefender = index;
                 
-                // Create rock projectile from defender position
                 const platformY = this.y - (this.gridSize || 64) * 0.12 - (this.gridSize || 64) * 0.45 - (this.gridSize || 64) * 0.08;
                 const defenderX = this.x + (this.gridSize || 64) * 0.32 * 0.1;
                 const defenderY = platformY - (this.gridSize || 64) * 0.32 * 0.05 - 12;

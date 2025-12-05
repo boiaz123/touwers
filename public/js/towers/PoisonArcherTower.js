@@ -1,11 +1,10 @@
-export class PoisonArcherTower {
+import { ArcherTower } from './ArcherTower.js';
+
+export class PoisonArcherTower extends ArcherTower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 130;
-        this.damage = 0; // No direct damage
+        this.damage = 18;
         this.fireRate = 0.8;
         this.cooldown = 0;
         this.target = null;
@@ -171,7 +170,9 @@ export class PoisonArcherTower {
     }
     
     shoot() {
-        if (this.target && !this.archerPosition.hidden) {
+        if (this.target) {
+            this.target.takeDamage(this.damage);
+            
             // No direct damage, just shoot poison arrow
             this.drawback = 1;
             

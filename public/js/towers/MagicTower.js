@@ -1,15 +1,11 @@
-export class MagicTower {
+import { Tower } from './Tower.js';
+
+export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 110;
         this.damage = 30;
         this.fireRate = 0.8;
-        this.cooldown = 0;
-        this.target = null;
-        this.isSelected = false; // Add selection state
         
         // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
@@ -21,7 +17,6 @@ export class MagicTower {
         };
         
         // Animation properties
-        this.animationTime = 0;
         this.crystalPulse = 0;
         this.runeRotation = 0;
         this.lightningBolts = [];
@@ -40,8 +35,8 @@ export class MagicTower {
     }
     
     update(deltaTime, enemies) {
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime;
+        super.update(deltaTime, enemies);
+        
         this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
         this.runeRotation += deltaTime * 0.5;
         

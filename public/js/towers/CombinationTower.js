@@ -1,15 +1,11 @@
-export class CombinationTower {
+import { Tower } from './Tower.js';
+
+export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 110;
         this.damage = 35;
         this.fireRate = 0.7;
-        this.cooldown = 0;
-        this.target = null;
-        this.isSelected = false;
         
         // Combination spell system
         this.selectedSpell = null; // Will be set to first unlocked spell
@@ -49,6 +45,8 @@ export class CombinationTower {
     }
     
     update(deltaTime, enemies) {
+        super.update(deltaTime, enemies);
+        
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
         this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);

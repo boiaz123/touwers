@@ -1,37 +1,25 @@
-export class BarricadeTower {
+import { Tower } from './Tower.js';
+
+export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
-        this.x = x;
-        this.y = y;
-        this.gridX = gridX;
-        this.gridY = gridY;
+        super(x, y, gridX, gridY);
         this.range = 120;
-        this.fireRate = 0.15; // Reduced from 0.4 - now fires every ~6.7 seconds
-        this.cooldown = 0;
-        this.target = null;
+        this.fireRate = 0.15;
         
-        // Animation properties
         this.defenders = [
             { angle: 0, pushAnimation: 0, hasBarrel: true },
             { angle: Math.PI, pushAnimation: 0, hasBarrel: true }
         ];
         this.rollingBarrels = [];
         this.slowZones = [];
-        this.animationTime = 0;
         
-        // Static environmental elements - generated once
         this.staticEnvironment = this.generateStaticEnvironment();
-        
-        // Store original values for upgrade calculations
         this.originalRange = this.range;
     }
     
     update(deltaTime, enemies) {
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime;
+        super.update(deltaTime, enemies);
         
-        this.target = this.findTarget(enemies);
-        
-        // Update defenders
         this.defenders.forEach(defender => {
             defender.pushAnimation = Math.max(0, defender.pushAnimation - deltaTime * 2);
             
@@ -48,14 +36,12 @@ export class BarricadeTower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update rolling barrels
         this.rollingBarrels = this.rollingBarrels.filter(barrel => {
             barrel.x += barrel.vx * deltaTime;
             barrel.y += barrel.vy * deltaTime;
             barrel.rotation += barrel.rotationSpeed * deltaTime;
             barrel.life -= deltaTime;
             
-            // Check if barrel reaches target or expires
             const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
             if (barrel.life <= 0 || distanceToTarget < 15) {
                 this.createSmokeZone(barrel.targetX, barrel.targetY);
@@ -64,12 +50,10 @@ export class BarricadeTower {
             return true;
         });
         
-        // Update slow zones and apply effects
         this.slowZones = this.slowZones.filter(zone => {
             zone.life -= deltaTime;
             zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
-            // Apply slow effect to enemies in zone
             enemies.forEach(enemy => {
                 if (!enemy.hasOwnProperty('originalSpeed')) {
                     enemy.originalSpeed = enemy.speed;
@@ -91,7 +75,6 @@ export class BarricadeTower {
             return zone.life > 0;
         });
         
-        // Restore speed for enemies not in any slow zone
         if (this.slowZones.length === 0) {
             enemies.forEach(enemy => {
                 if (enemy.hasOwnProperty('originalSpeed') && enemy.speed < enemy.originalSpeed) {
@@ -100,21 +83,6 @@ export class BarricadeTower {
                 }
             });
         }
-    }
-    
-    findTarget(enemies) {
-        let closest = null;
-        let closestDist = this.range;
-        
-        for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
-                closest = enemy;
-                closestDist = dist;
-            }
-        }
-        
-        return closest;
     }
     
     rollBarrel() {
@@ -179,15 +147,13 @@ export class BarricadeTower {
     }
     
     generateStaticEnvironment() {
-        // CRITICAL: Use exact same cellSize calculation as Level.js for consistency
         const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, 1920 / baseResolution)); // Standard resolution
-        const cellSize = Math.floor(32 * scaleFactor); // = 32 at standard res
-        const towerGridSize = cellSize * 2; // 2x2 tower
-        const halfGrid = towerGridSize * 0.5; // Half distance = 1 cell from center
+        const scaleFactor = Math.max(0.5, Math.min(2.5, 1920 / baseResolution));
+        const cellSize = Math.floor(32 * scaleFactor);
+        const towerGridSize = cellSize * 2;
+        const halfGrid = towerGridSize * 0.5;
         
         return {
-            // Forest floor elements strictly within tower 2x2 grid
             bushes: [
                 { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.25 },
                 { x: this.x + halfGrid * 0.3, y: this.y + halfGrid * 0.15 },
@@ -198,7 +164,6 @@ export class BarricadeTower {
                 { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.5 }
             ],
             rocks: [
-                // Rocks integrated into tower foundation
                 { x: this.x - halfGrid * 0.15, y: this.y + halfGrid * 0.12, size: 3 },
                 { x: this.x + halfGrid * 0.15, y: this.y + halfGrid * 0.08, size: 2 },
                 { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.3, size: 4 },
@@ -206,7 +171,6 @@ export class BarricadeTower {
                 { x: this.x - halfGrid * 0.3, y: this.y - halfGrid * 0.15, size: 2 },
                 { x: this.x + halfGrid * 0.4, y: this.y - halfGrid * 0.12, size: 3 }
             ],
-            // Small trees within very tight grid bounds
             smallTrees: [
                 { x: this.x - halfGrid * 0.35, y: this.y + halfGrid * 0.2, size: 12 },
                 { x: this.x + halfGrid * 0.25, y: this.y + halfGrid * 0.12, size: 10 },
@@ -215,7 +179,6 @@ export class BarricadeTower {
                 { x: this.x - halfGrid * 0.2, y: this.y + halfGrid * 0.4, size: 12 },
                 { x: this.x + halfGrid * 0.5, y: this.y + halfGrid * 0.03, size: 11 }
             ],
-            // Medium understory trees within tight grid
             mediumTrees: [
                 { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.4, size: 18 },
                 { x: this.x + halfGrid * 0.45, y: this.y + halfGrid * 0.3, size: 16 },
@@ -223,7 +186,6 @@ export class BarricadeTower {
                 { x: this.x + halfGrid * 0.55, y: this.y - halfGrid * 0.12, size: 15 },
                 { x: this.x - halfGrid * 0.25, y: this.y + halfGrid * 0.6, size: 18 }
             ],
-            // Tall forest trees within very strict grid bounds
             forestTrees: [
                 { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.6, size: 25 },
                 { x: this.x + halfGrid * 0.55, y: this.y + halfGrid * 0.5, size: 23 },
