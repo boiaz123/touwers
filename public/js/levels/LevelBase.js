@@ -958,7 +958,7 @@ export class LevelBase {
         };
         
         // Then load the real Castle class and replace
-        import('./buildings/Castle.js').then(module => {
+        import('../buildings/Castle.js').then(module => {
             this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
             console.log('Level: Castle created at grid', castleGridX, castleGridY);
         }).catch(err => {
