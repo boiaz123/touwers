@@ -207,8 +207,13 @@ export class Game {
                 return;
             }
             
-            const deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
+            let deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
             this.lastTime = currentTime;
+            
+            // NEW: Apply game speed multiplier if in gameplay state
+            if (this.stateManager.currentStateName === 'game' && this.stateManager.currentState.getAdjustedDeltaTime) {
+                deltaTime = this.stateManager.currentState.getAdjustedDeltaTime(deltaTime);
+            }
             
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             

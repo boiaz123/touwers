@@ -16,6 +16,12 @@ export class GameplayState {
         this.waveInProgress = false;
         this.waveCompleted = false;
         this.superWeaponLab = null;
+        
+        // NEW: Speed control
+        this.gameSpeed = 1.0; // 1x, 2x, 3x, or 10x
+        this.speedMultiplier = [1, 2, 3, 10, 30]; // Available speeds
+        this.currentSpeedIndex = 0;
+        
         console.log('GameplayState constructor completed');
     }
     
@@ -261,6 +267,14 @@ export class GameplayState {
             this.handleClick(canvasX, canvasY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        
+        // NEW: Speed control button
+        const speedBtn = document.getElementById('speed-control-btn');
+        if (speedBtn) {
+            speedBtn.addEventListener('click', () => {
+                this.cycleGameSpeed();
+            });
+        }
     }
     
     removeEventListeners() {
@@ -1368,6 +1382,23 @@ export class GameplayState {
         
         this.activeMenu = menu;
         console.log('GameplayState: Super Weapon menu ready with all handlers attached');
+    }
+    
+    // NEW: Speed control methods
+    cycleGameSpeed() {
+        this.currentSpeedIndex = (this.currentSpeedIndex + 1) % this.speedMultiplier.length;
+        this.gameSpeed = this.speedMultiplier[this.currentSpeedIndex];
+        
+        const speedDisplay = document.getElementById('speed-display');
+        if (speedDisplay) {
+            speedDisplay.textContent = `${this.gameSpeed}x`;
+        }
+        
+        console.log(`GameplayState: Game speed changed to ${this.gameSpeed}x`);
+    }
+    
+    getAdjustedDeltaTime(deltaTime) {
+        return deltaTime * this.gameSpeed;
     }
     
     getUpgradeCurrentEffect(upgrade) {
