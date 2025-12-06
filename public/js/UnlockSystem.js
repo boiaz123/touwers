@@ -13,7 +13,7 @@ export class UnlockSystem {
         
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
-        this.unlockedBuildings = new Set(['forge']);
+        this.unlockedBuildings = new Set(['forge', 'training']);
         this.unlockedUpgrades = new Set();
         
         // New: Track gem mining research

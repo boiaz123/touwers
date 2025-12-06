@@ -2,6 +2,7 @@ import { GoldMine } from './GoldMine.js';
 import { TowerForge } from './TowerForge.js';
 import { MagicAcademy } from './MagicAcademy.js';
 import { SuperWeaponLab } from './SuperWeaponLab.js';
+import { TrainingGrounds } from './TrainingGrounds.js';
 
 export class BuildingManager {
     constructor(gameState, level) {
@@ -12,6 +13,7 @@ export class BuildingManager {
             'mine': { class: GoldMine, cost: 200, size: 4 },
             'forge': { class: TowerForge, cost: 300, size: 4 },
             'academy': { class: MagicAcademy, cost: 250, size: 4 },
+            'training': { class: TrainingGrounds, cost: 400, size: 4 },
             'superweapon': { class: SuperWeaponLab, cost: 1000, size: 4 }
         };
         this.occupiedPositions = new Set();
