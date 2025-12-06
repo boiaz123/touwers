@@ -4,9 +4,20 @@ export class LevelSelect {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.levels = LevelFactory.getLevelList();
-        this.selectedLevel = 0;
+        this.selectedLevel = null;
         this.hoveredLevel = -1;
         this.hoveredStartButton = false;
+        
+        // Grid layout configuration
+        this.gridConfig = {
+            cols: 3,
+            cardWidth: 200,
+            cardHeight: 200,
+            paddingX: 40,
+            paddingY: 120,
+            gapX: 30,
+            gapY: 40
+        };
     }
     
     enter() {
@@ -23,6 +34,10 @@ export class LevelSelect {
             console.log('LevelSelect: Sidebar hidden');
         }
         
+        // Select first unlocked level by default
+        this.selectedLevel = this.levels.findIndex(l => l.unlocked);
+        if (this.selectedLevel === -1) this.selectedLevel = 0;
+        
         this.setupMouseListeners();
     }
     
@@ -33,13 +48,36 @@ export class LevelSelect {
     
     setupMouseListeners() {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
+        this.clickHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.handleClick(x, y);
+        };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+        this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
     
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
         }
+        if (this.clickHandler) {
+            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
+        }
+    }
+    
+    getCardPosition(index) {
+        const { cols, cardWidth, cardHeight, paddingX, paddingY, gapX, gapY } = this.gridConfig;
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        
+        return {
+            x: paddingX + col * (cardWidth + gapX),
+            y: paddingY + row * (cardHeight + gapY),
+            width: cardWidth,
+            height: cardHeight
+        };
     }
     
     handleMouseMove(e) {
@@ -47,29 +85,22 @@ export class LevelSelect {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        const cardWidth = 300;
-        const cardHeight = 150;
-        const startY = 200;
-        const spacing = 180;
-        const cardX = this.stateManager.canvas.width / 2 - cardWidth / 2;
-        
         this.hoveredLevel = -1;
         this.hoveredStartButton = false;
         
         this.levels.forEach((level, index) => {
-            const cardY = startY + index * spacing;
+            const pos = this.getCardPosition(index);
             
-            if (level.unlocked && 
-                x >= cardX && x <= cardX + cardWidth && 
-                y >= cardY && y <= cardY + cardHeight) {
+            if (x >= pos.x && x <= pos.x + pos.width && 
+                y >= pos.y && y <= pos.y + pos.height) {
                 
                 this.hoveredLevel = index;
                 
-                // Check if hovering over start button for selected level
-                if (index === this.selectedLevel) {
-                    const buttonX = cardX + cardWidth / 2 - 50; // Center the 100px wide button
-                    const buttonY = cardY + 100;
-                    const buttonWidth = 100;
+                // Check if hovering over start button
+                if (index === this.selectedLevel && level.unlocked) {
+                    const buttonX = pos.x + pos.width / 2 - 40;
+                    const buttonY = pos.y + pos.height - 50;
+                    const buttonWidth = 80;
                     const buttonHeight = 30;
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
@@ -80,7 +111,6 @@ export class LevelSelect {
             }
         });
         
-        // Update cursor style
         this.stateManager.canvas.style.cursor = 
             (this.hoveredLevel !== -1 || this.hoveredStartButton) ? 'pointer' : 'default';
     }
@@ -101,119 +131,126 @@ export class LevelSelect {
         ctx.fillStyle = '#d4af37';
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
-        ctx.fillText('Select Your Quest', canvas.width / 2, 100);
-        ctx.strokeText('Select Your Quest', canvas.width / 2, 100);
+        ctx.fillText('Select Your Quest', canvas.width / 2, 60);
+        ctx.strokeText('Select Your Quest', canvas.width / 2, 60);
         
-        // Level cards
-        const cardWidth = 300;
-        const cardHeight = 150;
-        const startY = 200;
-        const spacing = 180;
-        
+        // Render level cards in grid
         this.levels.forEach((level, index) => {
-            const x = canvas.width / 2 - cardWidth / 2;
-            const y = startY + index * spacing;
-            
-            // Card background with hover effect
-            let cardColor = '#2a1a0f';
-            let borderColor = '#d4af37';
-            
-            if (level.unlocked) {
-                if (index === this.selectedLevel) {
-                    cardColor = '#3a2a1f';
-                } else if (index === this.hoveredLevel) {
-                    cardColor = '#352217';
-                }
-            } else {
-                cardColor = '#1a1a1a';
-                borderColor = '#666';
-            }
-            
-            ctx.fillStyle = cardColor;
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = level.unlocked && index === this.hoveredLevel ? 3 : 2;
-            ctx.fillRect(x, y, cardWidth, cardHeight);
-            ctx.strokeRect(x, y, cardWidth, cardHeight);
-            
-            if (level.unlocked) {
-                // Level name
-                ctx.textAlign = 'center';
-                ctx.font = 'bold 24px serif';
-                ctx.fillStyle = '#d4af37';
-                ctx.fillText(level.name, x + cardWidth / 2, y + 50);
-                
-                // Difficulty
-                ctx.font = '18px serif';
-                ctx.fillStyle = level.difficulty === 'Easy' ? '#4CAF50' : 
-                              level.difficulty === 'Medium' ? '#FFC107' : '#F44336';
-                ctx.fillText(level.difficulty, x + cardWidth / 2, y + 80);
-                
-                // Start button for selected level
-                if (index === this.selectedLevel) {
-                    const buttonX = x + cardWidth / 2 - 50; // Center the button
-                    const buttonY = y + 100;
-                    const buttonWidth = 100;
-                    const buttonHeight = 30;
-                    
-                    // Button background with hover effect
-                    ctx.fillStyle = this.hoveredStartButton ? '#45a049' : '#4CAF50';
-                    ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
-                    
-                    // Button border
-                    ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
-                    ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
-                    ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
-                    
-                    // Button text
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 16px serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('START', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 6);
-                }
-            } else {
-                // Locked indicator
-                ctx.textAlign = 'center';
-                ctx.font = 'bold 24px serif';
-                ctx.fillStyle = '#666';
-                ctx.fillText('🔒 LOCKED', x + cardWidth / 2, y + cardHeight / 2 + 8);
-            }
+            this.renderLevelCard(ctx, level, index);
         });
         
         // Instructions
         ctx.textAlign = 'center';
-        ctx.font = '16px serif';
+        ctx.font = '14px serif';
         ctx.fillStyle = '#c9a876';
-        ctx.fillText('Click on a level to select, then click START', canvas.width / 2, canvas.height - 50);
+        ctx.fillText('Click to select, then START', canvas.width / 2, canvas.height - 30);
+    }
+    
+    renderLevelCard(ctx, level, index) {
+        const pos = this.getCardPosition(index);
+        const isSelected = index === this.selectedLevel;
+        const isHovered = index === this.hoveredLevel;
+        
+        // Card background
+        let cardColor = '#1a0f05';
+        let borderColor = '#664422';
+        let borderWidth = 2;
+        
+        if (!level.unlocked) {
+            cardColor = '#0f0f0f';
+            borderColor = '#333';
+        } else {
+            if (isSelected) {
+                cardColor = '#3a2a1a';
+                borderColor = '#d4af37';
+                borderWidth = 3;
+            } else if (isHovered) {
+                cardColor = '#2a1a0a';
+                borderColor = '#a88555';
+                borderWidth = 2.5;
+            }
+        }
+        
+        ctx.fillStyle = cardColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = borderWidth;
+        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+        ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+        
+        if (level.unlocked) {
+            // Level icon/number
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 32px serif';
+            ctx.fillStyle = '#d4af37';
+            ctx.fillText(level.id === 'sandbox' ? '🏜️' : `${level.id.replace('level', '')}`, 
+                         pos.x + pos.width / 2, pos.y + 45);
+            
+            // Level name
+            ctx.font = 'bold 16px serif';
+            ctx.fillStyle = '#d4af37';
+            ctx.fillText(level.name, pos.x + pos.width / 2, pos.y + 85);
+            
+            // Difficulty badge
+            ctx.font = 'bold 12px serif';
+            const diffColor = level.difficulty === 'Easy' ? '#4CAF50' : 
+                            level.difficulty === 'Medium' ? '#FFC107' : 
+                            level.difficulty === 'Hard' ? '#F44336' : '#9C27B0';
+            ctx.fillStyle = diffColor;
+            ctx.fillText(`● ${level.difficulty}`, pos.x + pos.width / 2, pos.y + 108);
+            
+            // Start button for selected level
+            if (isSelected) {
+                const buttonX = pos.x + pos.width / 2 - 40;
+                const buttonY = pos.y + pos.height - 50;
+                const buttonWidth = 80;
+                const buttonHeight = 30;
+                
+                ctx.fillStyle = this.hoveredStartButton ? '#66BB6A' : '#4CAF50';
+                ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                
+                ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
+                ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
+                ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('START', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+            }
+        } else {
+            // Locked indicator
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 24px serif';
+            ctx.fillStyle = '#666';
+            ctx.fillText('🔒', pos.x + pos.width / 2, pos.y + pos.height / 2);
+            
+            ctx.font = '12px serif';
+            ctx.fillText('LOCKED', pos.x + pos.width / 2, pos.y + pos.height / 2 + 30);
+        }
     }
     
     handleClick(x, y) {
-        const cardWidth = 300;
-        const cardHeight = 150;
-        const startY = 200;
-        const spacing = 180;
-        const cardX = this.stateManager.canvas.width / 2 - cardWidth / 2;
-        
         this.levels.forEach((level, index) => {
-            const cardY = startY + index * spacing;
+            const pos = this.getCardPosition(index);
             
-            if (level.unlocked && 
-                x >= cardX && x <= cardX + cardWidth && 
-                y >= cardY && y <= cardY + cardHeight) {
+            if (x >= pos.x && x <= pos.x + pos.width && 
+                y >= pos.y && y <= pos.y + pos.height && 
+                level.unlocked) {
                 
                 if (index === this.selectedLevel) {
-                    // Check start button area with corrected positioning
-                    const buttonX = cardX + cardWidth / 2 - 50;
-                    const buttonY = cardY + 100;
-                    const buttonWidth = 100;
+                    // Check start button click
+                    const buttonX = pos.x + pos.width / 2 - 40;
+                    const buttonY = pos.y + pos.height - 50;
+                    const buttonWidth = 80;
                     const buttonHeight = 30;
                     
                     if (x >= buttonX && x <= buttonX + buttonWidth && 
                         y >= buttonY && y <= buttonY + buttonHeight) {
-                        // Pass the selected level info to the game state
                         this.stateManager.selectedLevelInfo = this.levels[this.selectedLevel];
                         this.stateManager.changeState('game');
                     }
                 } else {
+                    // Select different level
                     this.selectedLevel = index;
                 }
             }
