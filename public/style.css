@@ -566,7 +566,6 @@ body {
 
 /* Speed Control Button */
 .speed-control-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: 2px solid #d4af37;
     border-radius: 4px;
     color: #fff;
@@ -574,9 +573,9 @@ body {
     font-size: 14px;
     padding: 6px 12px;
     cursor: pointer;
-    margin-left: auto;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .speed-control-btn:hover {
@@ -587,6 +586,19 @@ body {
 
 .speed-control-btn:active {
     transform: scale(0.98);
+}
+
+.speed-control-btn.active {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    box-shadow: 0 6px 12px rgba(102, 126, 234, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.2);
+    border-color: #667eea;
+}
+
+.speed-controls {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+    align-items: center;
 }
 
 /* Mobile optimizations */

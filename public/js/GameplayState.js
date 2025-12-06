@@ -17,10 +17,8 @@ export class GameplayState {
         this.waveCompleted = false;
         this.superWeaponLab = null;
         
-        // NEW: Speed control
-        this.gameSpeed = 1.0; // 1x, 2x, 3x, or 10x
-        this.speedMultiplier = [1, 2, 3, 10, 30]; // Available speeds
-        this.currentSpeedIndex = 0;
+        // NEW: Speed control (3 fixed speeds instead of cycling)
+        this.gameSpeed = 1.0; // 1x, 2x, or 3x
         
         console.log('GameplayState constructor completed');
     }
@@ -271,12 +269,19 @@ export class GameplayState {
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
         
-        // NEW: Speed control button
-        const speedBtn = document.getElementById('speed-control-btn');
-        if (speedBtn) {
-            speedBtn.addEventListener('click', () => {
-                this.cycleGameSpeed();
-            });
+        // NEW: Three separate speed control buttons
+        const speed1xBtn = document.getElementById('speed-1x-btn');
+        const speed2xBtn = document.getElementById('speed-2x-btn');
+        const speed3xBtn = document.getElementById('speed-3x-btn');
+        
+        if (speed1xBtn) {
+            speed1xBtn.addEventListener('click', () => this.setGameSpeed(1.0));
+        }
+        if (speed2xBtn) {
+            speed2xBtn.addEventListener('click', () => this.setGameSpeed(2.0));
+        }
+        if (speed3xBtn) {
+            speed3xBtn.addEventListener('click', () => this.setGameSpeed(3.0));
         }
     }
     
@@ -1386,16 +1391,23 @@ export class GameplayState {
     }
     
     // NEW: Speed control methods
-    cycleGameSpeed() {
-        this.currentSpeedIndex = (this.currentSpeedIndex + 1) % this.speedMultiplier.length;
-        this.gameSpeed = this.speedMultiplier[this.currentSpeedIndex];
+    setGameSpeed(speed) {
+        this.gameSpeed = speed;
         
-        const speedDisplay = document.getElementById('speed-display');
-        if (speedDisplay) {
-            speedDisplay.textContent = `${this.gameSpeed}x`;
-        }
+        // Update button active states
+        const speed1xBtn = document.getElementById('speed-1x-btn');
+        const speed2xBtn = document.getElementById('speed-2x-btn');
+        const speed3xBtn = document.getElementById('speed-3x-btn');
         
-        console.log(`GameplayState: Game speed changed to ${this.gameSpeed}x`);
+        [speed1xBtn, speed2xBtn, speed3xBtn].forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+        
+        if (speed === 1.0 && speed1xBtn) speed1xBtn.classList.add('active');
+        else if (speed === 2.0 && speed2xBtn) speed2xBtn.classList.add('active');
+        else if (speed === 3.0 && speed3xBtn) speed3xBtn.classList.add('active');
+        
+        console.log(`GameplayState: Game speed set to ${speed}x`);
     }
     
     getAdjustedDeltaTime(deltaTime) {
