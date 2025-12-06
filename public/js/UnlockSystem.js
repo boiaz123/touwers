@@ -30,15 +30,13 @@ export class UnlockSystem {
         if (this.forgeCount < this.maxForges) {
             this.hasForge = true;
             this.forgeCount++;
-            this.forgeLevel = 1;
+            this.forgeLevel = 1; // Built at level 1
             
             // Forge level 1 unlocks
-            this.unlockedBuildings.add('mine');
             this.unlockedTowers.add('archer');
-            this.unlockedUpgrades.add('towerRange');
-            this.unlockedUpgrades.add('barricadeDamage');
+            this.unlockedBuildings.add('mine');
             
-            console.log('UnlockSystem: Forge built - unlocked mine, archer, basic upgrades');
+            console.log('UnlockSystem: Forge built at level 1 - unlocked archer tower and 1 mine');
             return true;
         }
         return false;
@@ -107,9 +105,13 @@ export class UnlockSystem {
     }
     
     getMaxMines() {
-        if (this.forgeLevel >= 10) return 4;
-        if (this.forgeLevel >= 8) return 3;
-        if (this.forgeLevel >= 5) return 2;
+        // Level 1: 1 mine max
+        // Level 2: 1 mine max
+        // Level 3: 2 mines max
+        // Level 4: 2 mines max
+        // Level 5: 3 mines max
+        if (this.forgeLevel >= 5) return 3;
+        if (this.forgeLevel >= 3) return 2;
         if (this.forgeLevel >= 1) return 1;
         return 0;
     }
@@ -121,39 +123,27 @@ export class UnlockSystem {
             case 2:
                 // Forge level 2 unlocks
                 this.unlockedTowers.add('poison');
-                this.unlockedUpgrades.add('poisonDamage');
-                console.log('UnlockSystem: Forge level 2 - unlocked poison tower and upgrades');
+                console.log('UnlockSystem: Forge level 2 - unlocked poison archer tower');
                 break;
                 
             case 3:
                 // Forge level 3 unlocks
                 this.unlockedTowers.add('cannon');
-                this.unlockedUpgrades.add('explosiveRadius');
-                console.log('UnlockSystem: Forge level 3 - unlocked cannon tower and upgrades');
+                console.log('UnlockSystem: Forge level 3 - unlocked trebuchet tower and 2nd mine slot');
                 break;
                 
             case 4:
                 // Forge level 4 unlocks
                 this.unlockedBuildings.add('academy');
-                this.unlockedUpgrades.add('fireArrows');
                 console.log('UnlockSystem: Forge level 4 - unlocked magic academy');
                 break;
                 
             case 5:
-                console.log(`UnlockSystem: Forge level 5 - can now build ${this.getMaxMines()} mines`);
-                break;
-                
-            case 8:
-                console.log(`UnlockSystem: Forge level 8 - can now build ${this.getMaxMines()} mines`);
-                break;
-                
-            case 10:
-                console.log(`UnlockSystem: Forge level 10 - can now build ${this.getMaxMines()} mines`);
+                console.log(`UnlockSystem: Forge level 5 - unlocked 3rd mine slot`);
                 break;
                 
             default:
-                // Higher levels just improve mine income
-                console.log(`UnlockSystem: Forge level ${newLevel} - improved mine efficiency`);
+                console.log(`UnlockSystem: Forge level ${newLevel}`);
                 break;
         }
     }
@@ -207,21 +197,17 @@ export class UnlockSystem {
         const nextLevel = this.forgeLevel + 1;
         switch(nextLevel) {
             case 1:
-                return "Gold Mine + Archer Tower + Basic Upgrades";
+                return "Archer Tower + 1 Gold Mine";
             case 2:
-                return "Poison Tower + Poison Upgrades + Better Mine Income";
+                return "Poison Archer Tower + 2x Mine Income";
             case 3:
-                return "Cannon Tower + Explosive Upgrades + Better Mine Income";
+                return "Trebuchet Tower + 2nd Gold Mine + 2.5x Mine Income";
             case 4:
-                return "Magic Academy + Magic Tower + Fire Arrows + Better Mine Income";
+                return "Magic Academy + 3x Mine Income";
             case 5:
-                return "2nd Gold Mine + Better Mine Income";
-            case 8:
-                return "3rd Gold Mine + Better Mine Income";
-            case 10:
-                return "4th Gold Mine + Better Mine Income";
+                return "3rd Gold Mine + 3.5x Mine Income";
             default:
-                return nextLevel <= 10 ? "Improved Mine Income" : "Max Level Reached";
+                return "Max Level Reached";
         }
     }
 }

@@ -686,11 +686,6 @@ export class GameplayState {
         // Get unlock system from tower manager
         const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Filter available upgrades based on unlock system
-        const availableUpgrades = forgeData.upgrades.filter(upgrade => 
-            unlockSystem.canUseUpgrade(upgrade.id)
-        );
-        
         // Create upgrade menu with proper currency check
         const menu = document.createElement('div');
         menu.id = 'forge-upgrade-menu';
@@ -722,8 +717,8 @@ export class GameplayState {
             `;
         }
         
-        // Add tower upgrades
-        upgradeListHTML += availableUpgrades.map(upgrade => `
+        // Add tower upgrades - ALL of them, not filtered
+        upgradeListHTML += forgeData.upgrades.map(upgrade => `
             <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
                 <div class="upgrade-icon">${upgrade.icon}</div>
                 <div class="upgrade-details">

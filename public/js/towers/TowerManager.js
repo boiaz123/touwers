@@ -276,43 +276,38 @@ export class TowerManager {
         
         forges.forEach(forge => {
             const multipliers = forge.getUpgradeMultipliers();
-            
-            // Store original range if not already stored
-            if (!tower.originalRange) {
-                tower.originalRange = tower.range;
-            }
-            
-            // Apply range upgrade based on ORIGINAL range, not current
-            tower.range = tower.originalRange * multipliers.rangeMultiplier;
-            
-            // Apply specific upgrades based on tower type and unlock status
             const towerType = tower.constructor.name;
             
             switch (towerType) {
-                case 'PoisonArcherTower':
-                    if (this.unlockSystem.canUseUpgrade('poisonDamage')) {
-                        tower.damage += multipliers.poisonDamageBonus;
-                    }
-                    if (this.unlockSystem.canUseUpgrade('fireArrows') && multipliers.fireArrowsEnabled) {
-                        tower.hasFireArrows = true;
-                    }
-                    break;
-                    
-                case 'ArcherTower':
-                    if (this.unlockSystem.canUseUpgrade('fireArrows') && multipliers.fireArrowsEnabled) {
-                        tower.hasFireArrows = true;
+                case 'BasicTower':
+                    if (multipliers.basicDamageBonus > 0) {
+                        tower.damage += multipliers.basicDamageBonus;
                     }
                     break;
                     
                 case 'BarricadeTower':
-                case 'BasicTower':
-                    if (this.unlockSystem.canUseUpgrade('barricadeDamage')) {
+                    if (multipliers.barricadeDamageBonus > 0) {
                         tower.damage += multipliers.barricadeDamageBonus;
                     }
                     break;
                     
+                case 'ArcherTower':
+                    if (multipliers.fireArrowsEnabled) {
+                        tower.hasFireArrows = true;
+                    }
+                    break;
+                    
+                case 'PoisonArcherTower':
+                    if (multipliers.poisonDamageBonus > 0) {
+                        tower.damage += multipliers.poisonDamageBonus;
+                    }
+                    if (multipliers.fireArrowsEnabled) {
+                        tower.hasFireArrows = true;
+                    }
+                    break;
+                    
                 case 'CannonTower':
-                    if (this.unlockSystem.canUseUpgrade('explosiveRadius') && tower.explosionRadius) {
+                    if (multipliers.explosiveRadiusBonus > 0 && tower.explosionRadius) {
                         tower.explosionRadius += multipliers.explosiveRadiusBonus;
                     }
                     break;

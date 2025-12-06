@@ -29,16 +29,21 @@ export class TowerForge extends Building {
             }
         ];
         
-        // Forge level and tower upgrades
-        this.forgeLevel = 0; // Start at level 0, built to level 1
-        this.maxForgeLevel = 10;
+        // Forge level - starts at 1 when built, can upgrade to 5
+        this.forgeLevel = 1; // Built directly at level 1
+        this.maxForgeLevel = 5;
         
-        // Tower upgrade system - rebalanced for better progression
+        // Tower upgrade system - rebalanced for the new progression
         this.upgrades = {
-            towerRange: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 },
-            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 },
+            // Level 1 (Base) upgrades
+            basicDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 },
             barricadeDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 },
             fireArrows: { level: 0, maxLevel: 3, baseCost: 200, effect: 1 },
+            
+            // Level 2 upgrades
+            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 },
+            
+            // Level 3 upgrades
             explosiveRadius: { level: 0, maxLevel: 4, baseCost: 180, effect: 15 }
         };
     }
@@ -1078,17 +1083,42 @@ export class TowerForge extends Building {
     }
     
     getUpgradeOptions() {
-        return [
-            {
-                id: 'towerRange',
-                name: 'Extended Barrels',
-                description: `Increase all tower range by ${(this.upgrades.towerRange.effect * 100).toFixed(0)}% per level`,
-                level: this.upgrades.towerRange.level,
-                maxLevel: this.upgrades.towerRange.maxLevel,
-                cost: this.calculateUpgradeCost('towerRange'),
-                icon: '🎯'
-            },
-            {
+        const options = [];
+        
+        // Level 1 (Base) - Always available
+        options.push({
+            id: 'basicDamage',
+            name: 'Reinforced Weapons',
+            description: `Add ${this.upgrades.basicDamage.effect} damage per level to Basic Towers`,
+            level: this.upgrades.basicDamage.level,
+            maxLevel: this.upgrades.basicDamage.maxLevel,
+            cost: this.calculateUpgradeCost('basicDamage'),
+            icon: '⚔️'
+        });
+        
+        options.push({
+            id: 'barricadeDamage',
+            name: 'Fortified Structure',
+            description: `Add ${this.upgrades.barricadeDamage.effect} damage per level to Barricade Towers`,
+            level: this.upgrades.barricadeDamage.level,
+            maxLevel: this.upgrades.barricadeDamage.maxLevel,
+            cost: this.calculateUpgradeCost('barricadeDamage'),
+            icon: '🛡️'
+        });
+        
+        options.push({
+            id: 'fireArrows',
+            name: 'Flame Arrows',
+            description: 'Archer arrows ignite enemies, dealing burn damage over time',
+            level: this.upgrades.fireArrows.level,
+            maxLevel: this.upgrades.fireArrows.maxLevel,
+            cost: this.calculateUpgradeCost('fireArrows'),
+            icon: '🔥'
+        });
+        
+        // Level 2 and above - Poison upgrades
+        if (this.forgeLevel >= 2) {
+            options.push({
                 id: 'poisonDamage',
                 name: 'Toxic Coating',
                 description: `Add ${this.upgrades.poisonDamage.effect} poison damage per level to Poison Archers`,
@@ -1096,35 +1126,23 @@ export class TowerForge extends Building {
                 maxLevel: this.upgrades.poisonDamage.maxLevel,
                 cost: this.calculateUpgradeCost('poisonDamage'),
                 icon: '☠️'
-            },
-            {
-                id: 'barricadeDamage',
-                name: 'Reinforced Materials',
-                description: `Add ${this.upgrades.barricadeDamage.effect} damage per level to Barricade/Basic Towers`,
-                level: this.upgrades.barricadeDamage.level,
-                maxLevel: this.upgrades.barricadeDamage.maxLevel,
-                cost: this.calculateUpgradeCost('barricadeDamage'),
-                icon: '🛡️'
-            },
-            {
-                id: 'fireArrows',
-                name: 'Flame Arrows',
-                description: 'Archer arrows ignite enemies, dealing burn damage over time',
-                level: this.upgrades.fireArrows.level,
-                maxLevel: this.upgrades.fireArrows.maxLevel,
-                cost: this.calculateUpgradeCost('fireArrows'),
-                icon: '🔥'
-            },
-            {
+            });
+        }
+        
+        // Level 3 and above - Explosive upgrades
+        if (this.forgeLevel >= 3) {
+            options.push({
                 id: 'explosiveRadius',
                 name: 'Enhanced Gunpowder',
-                description: `Increase Cannon blast radius by ${this.upgrades.explosiveRadius.effect}px per level`,
+                description: `Increase Trebuchet blast radius by ${this.upgrades.explosiveRadius.effect}px per level`,
                 level: this.upgrades.explosiveRadius.level,
                 maxLevel: this.upgrades.explosiveRadius.maxLevel,
                 cost: this.calculateUpgradeCost('explosiveRadius'),
                 icon: '💥'
-            }
-        ];
+            });
+        }
+        
+        return options;
     }
     
     getForgeUpgradeOption() {
@@ -1133,35 +1151,24 @@ export class TowerForge extends Building {
         }
         
         const nextLevel = this.forgeLevel + 1;
-        let description = "Upgrade the forge itself to unlock new content and improve mine income.";
+        let description = "Upgrade the forge itself to unlock new towers and improve mine income.";
         let nextUnlock = "";
         
         switch(nextLevel) {
             case 2:
-                nextUnlock = "Unlocks: Poison Tower + Poison Upgrades + 2x Mine Income";
+                nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
                 break;
             case 3:
-                nextUnlock = "Unlocks: Cannon Tower + Explosive Upgrades + 2.5x Mine Income";
+                nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
                 break;
             case 4:
-                nextUnlock = "Unlocks: Magic Academy + Magic Tower + Fire Arrows + 3x Mine Income";
+                nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
                 break;
             case 5:
-                nextUnlock = "Unlocks: 2nd Gold Mine + 3.2x Mine Income";
-                break;
-            case 8:
-                nextUnlock = "Unlocks: 3rd Gold Mine + 3.8x Mine Income";
-                break;
-            case 10:
-                nextUnlock = "Unlocks: 4th Gold Mine + 4.2x Mine Income";
+                nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
                 break;
             default:
-                if (nextLevel < 10) {
-                    const multiplier = 3.0 + (nextLevel - 4) * 0.2;
-                    nextUnlock = `Unlocks: ${multiplier.toFixed(1)}x Mine Income`;
-                } else {
-                    nextUnlock = "Max Level Reached";
-                }
+                nextUnlock = "Max Level Reached";
                 break;
         }
         
@@ -1179,7 +1186,7 @@ export class TowerForge extends Building {
     
     calculateForgeUpgradeCost() {
         if (this.forgeLevel >= this.maxForgeLevel) return null;
-        // Expensive forge upgrades: 400, 800, 1600, 3200, etc.
+        // Cost progression: Level 1->2: $400, 2->3: $800, 3->4: $1600, 4->5: $3200
         return 400 * Math.pow(2, this.forgeLevel - 1);
     }
     
@@ -1204,9 +1211,7 @@ export class TowerForge extends Building {
         gameState.gold -= cost;
         upgrade.level++;
         
-        // Trigger immediate effect application to all towers
         this.notifyUpgradeChanged();
-        
         console.log(`TowerForge: Purchased ${upgradeType} upgrade level ${upgrade.level}`);
         return true;
     }
@@ -1230,52 +1235,24 @@ export class TowerForge extends Building {
     }
     
     notifyUpgradeChanged() {
-        // This will be called by TowerManager to refresh all tower stats
         this.upgradesChanged = true;
     }
     
-    // Method to get all current upgrade multipliers
     getUpgradeMultipliers() {
         return {
-            rangeMultiplier: 1 + (this.upgrades.towerRange.level * this.upgrades.towerRange.effect),
+            rangeMultiplier: 1.0, // No range upgrades in new system
             poisonDamageBonus: this.upgrades.poisonDamage.level * this.upgrades.poisonDamage.effect,
             barricadeDamageBonus: this.upgrades.barricadeDamage.level * this.upgrades.barricadeDamage.effect,
+            basicDamageBonus: this.upgrades.basicDamage.level * this.upgrades.basicDamage.effect,
             fireArrowsEnabled: this.upgrades.fireArrows.level > 0,
             explosiveRadiusBonus: this.upgrades.explosiveRadius.level * this.upgrades.explosiveRadius.effect
         };
-    }
-    
-    applyUpgrade(upgradeType, gameState) {
-        const upgrade = this.upgrades[upgradeType];
-        
-        switch(upgradeType) {
-            case 'towerRange':
-                // Applied globally in towerManager
-                break;
-            case 'poisonDamage':
-                // Applied to poison archer towers
-                break;
-            case 'barricadeDamage':
-                // Applied to barricade towers
-                break;
-            case 'fireArrows':
-                // Applied to archer towers
-                break;
-            case 'explosiveRadius':
-                // Applied to cannon towers
-                break;
-        }
     }
     
     applyEffect(buildingManager) {
         // Base forge effect
         buildingManager.towerUpgrades.damage *= 1.25;
         buildingManager.towerUpgrades.range *= 1.15;
-        
-        // Apply forge upgrades
-        if (this.upgrades.towerRange.level > 0) {
-            buildingManager.towerUpgrades.range *= (1 + this.upgrades.towerRange.level * this.upgrades.towerRange.effect);
-        }
         
         // Apply mine income multiplier based on forge level
         const mineIncomeMultiplier = this.getMineIncomeMultiplier();
@@ -1287,10 +1264,19 @@ export class TowerForge extends Building {
     }
     
     getMineIncomeMultiplier() {
-        if (this.forgeLevel === 1) return 1.5;
-        if (this.forgeLevel === 2) return 2.0;
-        if (this.forgeLevel === 3) return 2.5;
-        return 3.0 + (this.forgeLevel - 4) * 0.2;
+        // Level 1: 1.0x (base)
+        // Level 2: 2.0x
+        // Level 3: 2.5x
+        // Level 4: 3.0x
+        // Level 5: 3.5x
+        switch(this.forgeLevel) {
+            case 1: return 1.0;
+            case 2: return 2.0;
+            case 3: return 2.5;
+            case 4: return 3.0;
+            case 5: return 3.5;
+            default: return 1.0;
+        }
     }
     
     deselect() {
