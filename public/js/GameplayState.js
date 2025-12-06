@@ -244,6 +244,9 @@ export class GameplayState {
                 } else if (clickResult.type === 'academy_menu') {
                     this.showAcademyUpgradeMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'castle_menu') {
+                    this.showCastleUpgradeMenu(clickResult);
+                    return;
                 } else if (clickResult.type === 'magic_tower_menu') {
                     this.showMagicTowerElementMenu(clickResult);
                     return;
@@ -612,6 +615,9 @@ export class GameplayState {
                 return;
             } else if (clickResult.type === 'academy_menu') {
                 this.showAcademyUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'castle_menu') {
+                this.showCastleUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'magic_tower_menu') {
                 this.showMagicTowerElementMenu(clickResult);
@@ -1706,5 +1712,81 @@ export class GameplayState {
     resize() {
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
         this.towerManager.updatePositions(this.level);
+    }
+    
+    showCastleUpgradeMenu(castleData) {
+        // Clear existing menus
+        this.clearActiveMenus();
+        
+        console.log('GameplayState: Showing castle upgrade menu', castleData);
+        
+        // Create upgrade menu
+        const menu = document.createElement('div');
+        menu.id = 'castle-upgrade-menu';
+        menu.className = 'upgrade-menu';
+        
+        let upgradeListHTML = '';
+        
+        upgradeListHTML += castleData.upgrades.map(upgrade => {
+            const isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost || upgrade.level >= upgrade.maxLevel;
+            
+            return `
+                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
+                    <div class="upgrade-icon">${upgrade.icon}</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">${upgrade.name}</div>
+                        <div class="upgrade-desc">${upgrade.description}</div>
+                        <div class="upgrade-current">${upgrade.currentEffect}</div>
+                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
+                    </div>
+                    <div class="upgrade-cost">
+                        ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
+                    </div>
+                    <button class="upgrade-btn" 
+                            data-upgrade="${upgrade.id}" 
+                            ${isDisabled ? 'disabled' : ''}>
+                        ${upgrade.cost ? 'Upgrade' : 'MAX'}
+                    </button>
+                </div>
+            `;
+        }).join('');
+        
+        menu.innerHTML = `
+            <div class="menu-header">
+                <h3>🏰 Castle Upgrades</h3>
+                <button class="close-btn">×</button>
+            </div>
+            <div class="upgrade-list">
+                ${upgradeListHTML}
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Add close button handler
+        menu.querySelector('.close-btn').addEventListener('click', () => {
+            castleData.castle.deselect();
+            menu.remove();
+        });
+        
+        // Add upgrade button handlers
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                
+                if (castleData.castle.purchaseUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    
+                    // Refresh the menu
+                    this.showCastleUpgradeMenu({
+                        type: 'castle_menu',
+                        castle: castleData.castle,
+                        upgrades: castleData.castle.getUpgradeOptions()
+                    });
+                }
+            });
+        });
+        
+        this.activeMenu = menu;
     }
 }

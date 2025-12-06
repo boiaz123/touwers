@@ -320,7 +320,7 @@ export class TowerManager {
         });
     }
     
-    handleClick(x, y, canvasSize) {
+    handleClick(x, y, canvasRect) {
         // Clear any previous selections
         this.towers.forEach(tower => tower.isSelected = false);
         this.buildingManager.buildings.forEach(building => {
@@ -328,7 +328,7 @@ export class TowerManager {
         });
         
         // Check tower icon clicks first for element selection
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasRect.width / 1920)));
         const iconSize = 30;
         
         for (const tower of this.towers) {
@@ -383,7 +383,7 @@ export class TowerManager {
         }
         
         // Then check building icon clicks with improved detection
-        const buildingResult = this.buildingManager.handleClick(x, y, canvasSize);
+        const buildingResult = this.buildingManager.handleClick(x, y, canvasRect);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
@@ -420,6 +420,13 @@ export class TowerManager {
                         }
                     }
                 }
+            }
+        }
+        
+        // NEW: Check castle click
+        if (this.level && this.level.castle) {
+            if (this.level.castle.isPointInside(x, y, this.level.cellSize)) {
+                return this.level.castle.onClick();
             }
         }
         
