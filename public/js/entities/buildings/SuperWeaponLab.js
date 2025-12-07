@@ -20,7 +20,7 @@ export class SuperWeaponLab extends Building {
                 radius: 120,
                 cooldown: 30,
                 currentCooldown: 0,
-                unlocked: true,
+                unlocked: false,
                 level: 1,
                 maxLevel: 5,
                 upgradeCost: 300
@@ -744,6 +744,9 @@ export class SuperWeaponLab extends Building {
     
     applyEffect(buildingManager) {
         buildingManager.superWeaponUnlocked = true;
+        // Unlock the base arcane blast spell when the lab is built
+        this.spells.arcaneBlast.unlocked = true;
+        console.log('SuperWeaponLab: ✓ Arcane Blast unlocked');
     }
     
     static getInfo() {

@@ -49,25 +49,7 @@ export class UIManager {
             });
         });
 
-        // PERMANENT: Event delegation for dynamically created spell buttons
-        const spellGrid = document.getElementById('spell-grid');
-        if (spellGrid && !spellGrid.dataset.delegationSetup) {
-            console.log('UIManager: Setting up PERMANENT spell button delegation');
-            spellGrid.addEventListener('click', (e) => {
-                console.log('UIManager: Spell grid clicked, target:', e.target.className);
-                const spellBtn = e.target.closest('.spell-btn.ready');
-                if (spellBtn && !spellBtn.disabled) {
-                    console.log('UIManager: ✓ SPELL BUTTON CLICKED via delegation');
-                    const spellId = spellBtn.dataset.spellId;
-                    console.log(`UIManager: Spell ID: ${spellId}`);
-                    this.gameplayState.activateSpellTargeting(spellId);
-                } else {
-                    console.log('UIManager: Click was on non-ready spell button or not a spell button');
-                }
-            });
-            spellGrid.dataset.delegationSetup = 'true';
-        }
-
+        
         // Speed control circles - new bottom-left design
         const speedCircles = document.querySelectorAll('.speed-circle');
         
@@ -112,6 +94,22 @@ export class UIManager {
         // Reset to 1x speed
         this.gameplayState.setGameSpeed(1.0);
         this.updateSpeedCircles(1);
+    }
+
+    // ============ SPELL WHEEL ============
+
+    toggleSpellWheel() {
+        const spellWheel = document.getElementById('spell-wheel');
+        if (spellWheel.style.display === 'none') {
+            spellWheel.style.display = 'block';
+        } else {
+            spellWheel.style.display = 'none';
+        }
+    }
+
+    closeSpellWheel() {
+        const spellWheel = document.getElementById('spell-wheel');
+        spellWheel.style.display = 'none';
     }
 
     // ============ TOWER/BUILDING SELECTION ============
@@ -294,8 +292,11 @@ export class UIManager {
     // ============ SPELL UI ============
 
     updateSpellUI() {
-        const spellSection = document.getElementById('spell-section');
-        const spellGrid = document.getElementById('spell-grid');
+        const spellButtonsList = document.getElementById('spell-buttons-list');
+        
+        if (!spellButtonsList) {
+            return;
+        }
         
         // Find super weapon lab
         const superWeaponLab = this.towerManager.buildingManager.buildings.find(
@@ -303,74 +304,78 @@ export class UIManager {
         );
         
         if (!superWeaponLab) {
-            if (spellSection) spellSection.style.display = 'none';
+            spellButtonsList.innerHTML = '';
             return;
         }
-        
-        spellSection.style.display = 'block';
         
         const availableSpells = superWeaponLab.getAvailableSpells();
+        const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
         
-        // IMPORTANT: Check if we need to rebuild the UI
-        const currentButtonCount = spellGrid.querySelectorAll('.spell-btn').length;
-        const currentReadyCount = spellGrid.querySelectorAll('.spell-btn.ready').length;
-        
-        // Rebuild if the number of available spells changed (new unlock) or button count is 0
-        const needsRebuild = currentButtonCount !== availableSpells.length;
-        
-        if (!needsRebuild) {
-            // Just update cooldown displays without rebuilding buttons
+        // Only rebuild if the number of spells changed (new unlock)
+        if (currentButtonCount !== availableSpells.length) {
+            console.log(`UIManager: Rebuilding spell buttons - count changed from ${currentButtonCount} to ${availableSpells.length}`);
+            spellButtonsList.innerHTML = '';
+            
+            // Create a button for each unlocked spell
             availableSpells.forEach(spell => {
-                const btn = spellGrid.querySelector(`[data-spell-id="${spell.id}"]`);
-                if (btn) {
-                    const isReady = spell.currentCooldown === 0;
-                    const cooldownDisplay = btn.querySelector('.spell-cooldown');
-                    
-                    if (isReady && !btn.classList.contains('ready')) {
-                        btn.classList.remove('cooling');
-                        btn.classList.add('ready');
-                        btn.disabled = false;
-                        if (cooldownDisplay) cooldownDisplay.remove();
-                    } else if (!isReady && btn.classList.contains('ready')) {
-                        btn.classList.remove('ready');
-                        btn.classList.add('cooling');
-                        btn.disabled = true;
-                        if (!cooldownDisplay) {
-                            const div = document.createElement('div');
-                            div.className = 'spell-cooldown';
-                            div.textContent = Math.ceil(spell.currentCooldown) + 's';
-                            btn.appendChild(div);
-                        } else {
-                            cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
-                        }
-                    } else if (!isReady && cooldownDisplay) {
-                        cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                const btn = document.createElement('button');
+                btn.className = 'spell-btn';
+                btn.dataset.spellId = spell.id;
+                btn.title = `${spell.name}: ${spell.description}`;
+                btn.innerHTML = `<span>${spell.icon}</span>`;
+                
+                // Add click listener that will work permanently
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`UIManager: Spell button clicked for ${spell.id}, currentCooldown: ${spell.currentCooldown}`);
+                    if (spell.currentCooldown === 0) {
+                        console.log(`UIManager: ✓ Activating spell targeting for ${spell.id}`);
+                        this.gameplayState.activateSpellTargeting(spell.id);
+                    } else {
+                        console.log(`UIManager: Spell ${spell.id} is on cooldown`);
                     }
-                }
+                });
+                
+                spellButtonsList.appendChild(btn);
             });
-            return;
         }
         
-        // REBUILD: Only happens when spells are newly unlocked
-        console.log('UIManager: Rebuilding spell UI - spell state changed');
-        
-        spellGrid.innerHTML = availableSpells.map(spell => {
-            const isReady = spell.currentCooldown === 0;
-            
-            return `
-                <button class="spell-btn ${isReady ? 'ready' : 'cooling'}" 
-                        data-spell-id="${spell.id}"
-                        ${!isReady ? 'disabled' : ''}
-                        title="${spell.name}: ${spell.description}">
-                    <div class="spell-icon">${spell.icon}</div>
-                    <div class="spell-name">${spell.name}</div>
-                    ${!isReady ? `<div class="spell-cooldown">${Math.ceil(spell.currentCooldown)}s</div>` : ''}
-                </button>
-            `;
-        }).join('');
-        
-        const buttons = spellGrid.querySelectorAll('.spell-btn.ready');
-        console.log(`UIManager: Rebuilt UI with ${buttons.length} ready spell buttons`);
+        // Update button states (cooldown/ready) without recreating
+        availableSpells.forEach(spell => {
+            const btn = spellButtonsList.querySelector(`[data-spell-id="${spell.id}"]`);
+            if (btn) {
+                const isReady = spell.currentCooldown === 0;
+                
+                // Update disabled state
+                btn.disabled = !isReady;
+                
+                // Update class
+                if (isReady && btn.classList.contains('cooling')) {
+                    btn.classList.remove('cooling');
+                } else if (!isReady && !btn.classList.contains('cooling')) {
+                    btn.classList.add('cooling');
+                }
+                
+                // Update cooldown display
+                let cooldownDisplay = btn.querySelector('.spell-cooldown');
+                if (!isReady) {
+                    if (!cooldownDisplay) {
+                        cooldownDisplay = document.createElement('div');
+                        cooldownDisplay.className = 'spell-cooldown';
+                        btn.appendChild(cooldownDisplay);
+                    }
+                    cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                    cooldownDisplay.style.position = 'absolute';
+                    cooldownDisplay.style.fontSize = '0.7em';
+                    cooldownDisplay.style.fontWeight = 'bold';
+                } else {
+                    if (cooldownDisplay) {
+                        cooldownDisplay.remove();
+                    }
+                }
+            }
+        });
     }
 
     // ============ UPDATE UI ============
@@ -453,6 +458,7 @@ export class UIManager {
             } else {
                 btn.style.display = '';
                 
+                // Always show button if unlocked - either clickable or disabled
                 if (info.disabled) {
                     btn.classList.add('disabled');
                     btn.title = info.disableReason || '';
@@ -465,6 +471,23 @@ export class UIManager {
                 }
             }
         });
+        
+        // Update spell buttons visibility - only show when spells are actually unlocked
+        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        
+        if (spellButtonsContainer) {
+            const superWeaponLab = this.towerManager.buildingManager.buildings.find(
+                b => b.constructor.name === 'SuperWeaponLab'
+            );
+            
+            let hasAvailableSpells = false;
+            if (superWeaponLab) {
+                const availableSpells = superWeaponLab.getAvailableSpells();
+                hasAvailableSpells = availableSpells && availableSpells.length > 0;
+            }
+            
+            spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
+        }
     }
 
     setGameSpeedButtonState(speed) {
