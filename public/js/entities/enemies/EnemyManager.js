@@ -129,11 +129,28 @@ export class EnemyManager {
             this.spawning = false;
         }
         
-        // Update all enemies
+        // Update all enemies (this no longer updates their splatters internally)
         this.enemies.forEach(enemy => enemy.update(deltaTime));
         
-        // Update and clean up orphaned splatters from dead enemies
+        // IMPORTANT: Update ALL splatters (both from live enemies and dead enemies) in ONE place
+        // This prevents double-updating and ensures consistent lifecycle management
+        
+        // Update splatters from live enemies
+        this.enemies.forEach(enemy => {
+            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                enemy.hitSplatters.forEach(splatter => splatter.update(deltaTime));
+            }
+        });
+        
+        // Update orphaned splatters from dead enemies
         this.orphanedSplatters.forEach(splatter => splatter.update(deltaTime));
+        
+        // Filter out dead splatters from both lists
+        this.enemies.forEach(enemy => {
+            if (enemy.hitSplatters) {
+                enemy.hitSplatters = enemy.hitSplatters.filter(splatter => splatter.isAlive());
+            }
+        });
         this.orphanedSplatters = this.orphanedSplatters.filter(splatter => splatter.isAlive());
     }
     
@@ -184,7 +201,15 @@ export class EnemyManager {
         // Render all enemies
         this.enemies.forEach(enemy => enemy.render(ctx));
         
+        // Render splatters from live enemies
+        this.enemies.forEach(enemy => {
+            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                enemy.hitSplatters.forEach(splatter => splatter.render(ctx));
+            }
+        });
+        
         // Render orphaned splatters from dead enemies
+        // These will continue to display and fade until their life reaches 0
         this.orphanedSplatters.forEach(splatter => splatter.render(ctx));
     }
 }

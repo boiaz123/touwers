@@ -59,9 +59,8 @@ export class BaseEnemy {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         
-        // Update hit splatters
-        this.hitSplatters.forEach(splatter => splatter.update(deltaTime));
-        this.hitSplatters = this.hitSplatters.filter(splatter => splatter.isAlive());
+        // NOTE: Hit splatters are now managed by EnemyManager to avoid double-updating
+        // They are updated once per frame in EnemyManager.update() for all splatters
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
