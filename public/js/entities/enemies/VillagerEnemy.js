@@ -99,8 +99,8 @@ export class VillagerEnemy extends BaseEnemy {
         this.y += (dy / distance) * moveDistance;
     }
     
-    takeDamage(amount) {
-        this.health -= amount;
+    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
+        super.takeDamage(amount, ignoreArmor, damageType, followTarget);
     }
     
     isDead() {
@@ -398,6 +398,9 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        
+        // Render hit splatters
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
     
     drawTorch(ctx, handX, handY, baseSize, armAngle) {

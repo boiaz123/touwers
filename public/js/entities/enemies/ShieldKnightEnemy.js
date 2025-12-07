@@ -340,6 +340,9 @@ export class ShieldKnightEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        
+        // Render hit splatters
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
     
     attackCastle(castle, deltaTime) {

@@ -46,6 +46,7 @@ export class CombinationTower extends Tower {
     
     update(deltaTime, enemies) {
         super.update(deltaTime, enemies);
+        this.enemies = enemies; // Store for use in chainLightning
         
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
@@ -107,6 +108,22 @@ export class CombinationTower extends Tower {
         return closest;
     }
     
+    chainToNearbyEnemies(originalTarget, damage, damageType) {
+        const chainRange = 80;
+        if (!this.enemies) return;
+        
+        this.enemies.forEach(enemy => {
+            if (enemy !== originalTarget && !enemy.isDead()) {
+                const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
+                if (dist <= chainRange) {
+                    // Reduced damage for chained targets
+                    const chainDamage = Math.floor(damage * 0.5);
+                    enemy.takeDamage(chainDamage, false, damageType);
+                }
+            }
+        });
+    }
+    
     shoot() {
         if (this.target && this.selectedSpell) {
             let finalDamage = this.damage;
@@ -116,7 +133,7 @@ export class CombinationTower extends Tower {
             switch(this.selectedSpell) {
                 case 'steam':
                     finalDamage += spell.damageBonus;
-                    this.target.takeDamage(finalDamage);
+                    this.target.takeDamage(finalDamage, false, 'fire');
                     // Burn effect
                     if (this.target.burnTimer) {
                         this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -135,7 +152,7 @@ export class CombinationTower extends Tower {
                 case 'magma':
                     finalDamage += spell.damageBonus;
                     const piercingDamage = finalDamage + spell.piercingBonus;
-                    this.target.takeDamage(piercingDamage, true);
+                    this.target.takeDamage(piercingDamage, true, 'earth');
                     // Burn effect
                     if (this.target.burnTimer) {
                         this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -146,19 +163,21 @@ export class CombinationTower extends Tower {
                     break;
                     
                 case 'tempest':
-                    this.target.takeDamage(finalDamage);
+                    this.target.takeDamage(finalDamage, false, 'water');
                     // Slow effect
                     const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
                     if (this.target.speed > 20) {
                         this.target.speed *= slowEffect;
                     }
-                    // Chain to nearby enemies (simplified)
+                    // Chain to nearby enemies
+                    this.chainToNearbyEnemies(this.target, finalDamage, 'water');
                     break;
                     
                 case 'meteor':
                     const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                    this.target.takeDamage(meteorPiercingDamage, true);
-                    // Chain to nearby enemies (simplified)
+                    this.target.takeDamage(meteorPiercingDamage, true, 'earth');
+                    // Chain to nearby enemies (splash damage)
+                    this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
                     break;
             }
             

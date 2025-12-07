@@ -699,6 +699,22 @@ export class GameplayState {
                 }
             }
             
+            // Handle burn damage over time
+            if (enemy.burnTimer > 0) {
+                enemy.burnTimer -= deltaTime;
+                enemy.burnTickTimer = (enemy.burnTickTimer || 0) - deltaTime;
+                
+                if (enemy.burnTickTimer <= 0) {
+                    const burnDamage = enemy.burnDamage || 2;
+                    enemy.takeDamage(burnDamage, false, 'fire', true); // true = follow target
+                    enemy.burnTickTimer = 0.5; // Tick every 0.5 seconds
+                }
+                
+                if (enemy.burnTimer <= 0) {
+                    enemy.burnTimer = 0;
+                }
+            }
+            
             // Have enemies attack the castle if they reached the end
             if (enemy.reachedEnd && this.level.castle) {
                 enemy.isAttackingCastle = true;

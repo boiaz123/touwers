@@ -349,6 +349,9 @@ export class BasicEnemy extends BaseEnemy {
         
         ctx.restore();
         
+        // Render hit splatters
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+        
         // Health bar background
         const barWidth = baseSize * 3;
         const barHeight = Math.max(2, baseSize * 0.4);

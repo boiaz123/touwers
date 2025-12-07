@@ -115,7 +115,7 @@ export class CannonTower extends Tower {
             if (distance <= this.splashRadius) {
                 const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
                 const actualDamage = Math.floor(this.damage * damageFalloff);
-                enemy.takeDamage(actualDamage);
+                enemy.takeDamage(actualDamage, false, 'physical');
             }
         });
     }

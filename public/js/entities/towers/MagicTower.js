@@ -36,6 +36,7 @@ export class MagicTower extends Tower {
     
     update(deltaTime, enemies) {
         super.update(deltaTime, enemies);
+        this.enemies = enemies; // Store for use in chainLightning
         
         this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
         this.runeRotation += deltaTime * 0.5;
@@ -103,7 +104,7 @@ export class MagicTower extends Tower {
             switch(this.selectedElement) {
                 case 'fire':
                     finalDamage += this.elementalBonuses.fire.damageBonus;
-                    this.target.takeDamage(finalDamage);
+                    this.target.takeDamage(finalDamage, false, 'fire');
                     // Apply burn effect
                     if (this.target.burnTimer) {
                         this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -114,7 +115,7 @@ export class MagicTower extends Tower {
                     break;
                     
                 case 'water':
-                    this.target.takeDamage(finalDamage);
+                    this.target.takeDamage(finalDamage, false, 'water');
                     // Apply enhanced slow effect
                     const baseSlowEffect = 0.7;
                     const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.water.slowBonus);
@@ -126,7 +127,7 @@ export class MagicTower extends Tower {
                     break;
                     
                 case 'air':
-                    this.target.takeDamage(finalDamage);
+                    this.target.takeDamage(finalDamage, false, 'air');
                     // Chain lightning to nearby enemies
                     this.chainLightning(this.target);
                     break;
@@ -134,7 +135,7 @@ export class MagicTower extends Tower {
                 case 'earth':
                     // Armor piercing ignores enemy defense
                     const piercingDamage = finalDamage + this.elementalBonuses.earth.armorPiercing;
-                    this.target.takeDamage(piercingDamage, true); // True = ignore armor
+                    this.target.takeDamage(piercingDamage, true, 'earth'); // True = ignore armor
                     break;
             }
             
@@ -145,11 +146,39 @@ export class MagicTower extends Tower {
     
     chainLightning(originalTarget) {
         const chainRange = 50 + this.elementalBonuses.air.chainRange;
-        const chainTargets = [];
+        const chainTargets = [originalTarget];
         
         // Find nearby enemies for chain lightning
-        // This would need access to the enemies array - to be implemented in game logic
-        // For now, just create the visual effect
+        if (this.enemies) {
+            const visited = new Set();
+            visited.add(originalTarget);
+            let currentTargets = [originalTarget];
+            
+            // Chain up to 3 times
+            for (let chain = 0; chain < 3; chain++) {
+                const nextTargets = [];
+                
+                currentTargets.forEach(target => {
+                    this.enemies.forEach(enemy => {
+                        if (!visited.has(enemy) && !enemy.isDead()) {
+                            const dist = Math.hypot(enemy.x - target.x, enemy.y - target.y);
+                            if (dist <= chainRange) {
+                                nextTargets.push(enemy);
+                                visited.add(enemy);
+                                chainTargets.push(enemy);
+                                
+                                // Deal damage to chained enemy
+                                let chainDamage = Math.floor(this.damage * 0.6); // 60% damage
+                                enemy.takeDamage(chainDamage, false, 'air');
+                            }
+                        }
+                    });
+                });
+                
+                if (nextTargets.length === 0) break;
+                currentTargets = nextTargets;
+            }
+        }
     }
     
     createElementalEffect() {

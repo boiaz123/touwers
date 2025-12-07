@@ -1,3 +1,5 @@
+import { HitSplatter } from '../effects/HitSplatter.js';
+
 export class BaseEnemy {
     constructor(path, health, speed = 50) {
         this.path = path;
@@ -18,6 +20,9 @@ export class BaseEnemy {
         
         // Animation properties
         this.animationTime = 0;
+        
+        // Hit splatter effects
+        this.hitSplatters = [];
     }
     
     updatePath(newPath) {
@@ -54,6 +59,10 @@ export class BaseEnemy {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         
+        // Update hit splatters
+        this.hitSplatters.forEach(splatter => splatter.update(deltaTime));
+        this.hitSplatters = this.hitSplatters.filter(splatter => splatter.isAlive());
+        
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
         if (this.currentPathIndex >= this.path.length - 1) {
@@ -89,8 +98,12 @@ export class BaseEnemy {
         this.y += (dy / distance) * moveDistance;
     }
     
-    takeDamage(amount) {
+    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
         this.health -= amount;
+        
+        // Create a hit splatter effect
+        const splatter = new HitSplatter(this.x, this.y - 20, amount, damageType, followTarget ? this : null);
+        this.hitSplatters.push(splatter);
     }
     
     isDead() {

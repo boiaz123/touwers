@@ -143,7 +143,7 @@ export class PoisonArcherTower extends ArcherTower {
                 enemy.poisonTickTimer = (enemy.poisonTickTimer || 0) - deltaTime;
                 
                 if (enemy.poisonTickTimer <= 0) {
-                    enemy.takeDamage(enemy.poisonDamage || 4);
+                    enemy.takeDamage(enemy.poisonDamage || 4, false, 'poison', true); // true = follow target
                     enemy.poisonTickTimer = 1.0; // Tick every second
                 }
                 
@@ -171,7 +171,7 @@ export class PoisonArcherTower extends ArcherTower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
+            this.target.takeDamage(this.damage, false, 'poison');
             
             // No direct damage, just shoot poison arrow
             this.drawback = 1;

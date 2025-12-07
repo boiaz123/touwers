@@ -51,7 +51,7 @@ export class ArcherTower extends Tower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage);
+            this.target.takeDamage(this.damage, false, 'physical');
             
             // Select an archer to shoot
             const shooter = this.archers[Math.floor(Math.random() * this.archers.length)];
