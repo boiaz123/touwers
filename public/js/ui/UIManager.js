@@ -998,8 +998,8 @@ export class UIManager {
         
         menu.innerHTML = `
             <div class="menu-header">
-                <h3>🗼 Super Weapon Lab</h3>
-                <button class="close-btn">×</button>
+                <h3>💥 Super Weapon Lab</h3>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
             <div class="upgrade-list">
                 ${upgradeListHTML}
@@ -1007,199 +1007,90 @@ export class UIManager {
         `;
         
         document.body.appendChild(menu);
-        console.log('UIManager: Super Weapon menu appended to DOM');
         
-        // Close button handler
-        menu.querySelector('.close-btn').addEventListener('click', () => {
-            console.log('UIManager: Close button clicked');
-            menu.remove();
-        });
-        
-        // Upgrade handlers - SPELL UNLOCK BUTTONS - use event delegation
-        const allUnlockButtons = menu.querySelectorAll('[data-spell-unlock]');
-        console.log(`UIManager: Found ${allUnlockButtons.length} unlock buttons`);
-        allUnlockButtons.forEach(btn => {
-            console.log(`UIManager: Attaching handler to unlock button for:`, btn.dataset.spellUnlock);
+        // Add button handlers for superweapon menu
+        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const spellId = e.currentTarget.dataset.spellUnlock;
-                console.log(`UIManager: UNLOCK BUTTON CLICKED for: ${spellId}`);
-                
-                if (menuData.building.unlockSpell(spellId, this.gameState)) {
-                    console.log(`UIManager: Successfully unlocked ${spellId}`);
-                    this.updateUI();
-                    this.updateSpellUI();
-                    this.showSuperWeaponMenu({
-                        type: 'superweapon_menu',
-                        building: menuData.building,
-                        spells: menuData.building.getAllSpells(),
-                        labLevel: menuData.building.labLevel,
-                        maxLabLevel: menuData.building.maxLabLevel
-                    });
-                } else {
-                    console.error(`UIManager: Failed to unlock ${spellId}`);
+                if (e.target.dataset.upgrade === 'lab_upgrade') {
+                    if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
+                } else if (e.target.dataset.spellUnlock) {
+                    const spellId = e.target.dataset.spellUnlock;
+                    if (menuData.building.unlockSpell(spellId, this.gameState)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
+                } else if (e.target.dataset.spellUpgrade) {
+                    const spellId = e.target.dataset.spellUpgrade;
+                    if (menuData.building.upgradeSpell(spellId, this.gameState)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
                 }
             });
         });
-        
-        // SPELL UPGRADE BUTTONS
-        const allUpgradeButtons = menu.querySelectorAll('[data-spell-upgrade]');
-        console.log(`UIManager: Found ${allUpgradeButtons.length} upgrade buttons`);
-        allUpgradeButtons.forEach(btn => {
-            console.log(`UIManager: Attaching handler to upgrade button for:`, btn.dataset.spellUpgrade);
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const spellId = e.currentTarget.dataset.spellUpgrade;
-                console.log(`UIManager: UPGRADE BUTTON CLICKED for: ${spellId}`);
-                
-                if (menuData.building.upgradeSpell(spellId, this.gameState)) {
-                    console.log(`UIManager: Successfully upgraded ${spellId}`);
-                    this.updateUI();
-                    this.showSuperWeaponMenu({
-                        type: 'superweapon_menu',
-                        building: menuData.building,
-                        spells: menuData.building.getAllSpells(),
-                        labLevel: menuData.building.labLevel,
-                        maxLabLevel: menuData.building.maxLabLevel
-                    });
-                } else {
-                    console.error(`UIManager: Failed to upgrade ${spellId}`);
-                }
-            });
-        });
-        
-        // LAB UPGRADE BUTTON
-        const labBtn = menu.querySelector('[data-upgrade="lab_upgrade"]');
-        if (labBtn) {
-            console.log('UIManager: Attaching handler to lab upgrade button');
-            labBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('UIManager: LAB UPGRADE BUTTON CLICKED');
-                
-                if (menuData.building.purchaseLabUpgrade(this.gameState)) {
-                    console.log('UIManager: Successfully upgraded lab');
-                    this.updateUI();
-                    this.showSuperWeaponMenu({
-                        type: 'superweapon_menu',
-                        building: menuData.building,
-                        spells: menuData.building.getAllSpells(),
-                        labLevel: menuData.building.labLevel,
-                        maxLabLevel: menuData.building.maxLabLevel
-                    });
-                } else {
-                    console.error('UIManager: Failed to upgrade lab');
-                }
-            });
-        }
         
         this.activeMenu = menu;
-        console.log('UIManager: Super Weapon menu ready with all handlers attached');
     }
 
     showCastleUpgradeMenu(castleData) {
-        // Clear existing menus
+        // Castle upgrades menu - similar structure to other menus
         this.clearActiveMenus();
         
-        console.log('UIManager: Showing castle upgrade menu', castleData);
-        
-        // Create upgrade menu
         const menu = document.createElement('div');
         menu.id = 'castle-upgrade-menu';
         menu.className = 'upgrade-menu';
         
-        let upgradeListHTML = '';
-        
-        upgradeListHTML += castleData.upgrades.map(upgrade => {
-            const isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost || upgrade.level >= upgrade.maxLevel;
-            
-            return `
-                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${upgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${upgrade.name}</div>
-                        <div class="upgrade-desc">${upgrade.description}</div>
-                        <div class="upgrade-current">${upgrade.currentEffect}</div>
-                        <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                    </div>
-                    <div class="upgrade-cost">
-                        ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="${upgrade.id}" 
-                            ${isDisabled ? 'disabled' : ''}>
-                        ${upgrade.cost ? 'Upgrade' : 'MAX'}
-                    </button>
-                </div>
-            `;
-        }).join('');
-        
         menu.innerHTML = `
             <div class="menu-header">
                 <h3>🏰 Castle Upgrades</h3>
-                <button class="close-btn">×</button>
+                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
             </div>
             <div class="upgrade-list">
-                ${upgradeListHTML}
+                <div class="upgrade-item">
+                    <div class="upgrade-icon">🛡️</div>
+                    <div class="upgrade-details">
+                        <div class="upgrade-name">Reinforced Walls</div>
+                        <div class="upgrade-desc">Improve castle defenses</div>
+                        <div class="upgrade-level">Health: ${castleData.castle.health}/${castleData.castle.maxHealth}</div>
+                    </div>
+                    <div class="upgrade-cost">Info Only</div>
+                </div>
             </div>
         `;
         
         document.body.appendChild(menu);
-        
-        // Add close button handler
-        menu.querySelector('.close-btn').addEventListener('click', () => {
-            castleData.castle.deselect();
-            menu.remove();
-        });
-        
-        // Add upgrade button handlers
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const upgradeId = e.target.dataset.upgrade;
-                
-                if (castleData.castle.purchaseUpgrade(upgradeId, this.gameState)) {
-                    this.updateUI();
-                    
-                    // Refresh the menu
-                    this.showCastleUpgradeMenu({
-                        type: 'castle_menu',
-                        castle: castleData.castle,
-                        upgrades: castleData.castle.getUpgradeOptions()
-                    });
-                }
-            });
-        });
-        
         this.activeMenu = menu;
     }
 
-    // ============ HELPER METHODS ============
-
     getUpgradeCurrentEffect(upgrade) {
-        switch (upgrade.id) {
-            case 'towerRange':
-                return `+${(upgrade.level * 5)}% range`;
-            case 'poisonDamage':
-                return `+${upgrade.level * 3} poison damage`;
-            case 'barricadeDamage':
-                return `+${upgrade.level * 8} damage`;
-            case 'fireArrows':
-                return upgrade.level > 0 ? 'Active' : 'Inactive';
-            case 'explosiveRadius':
-                return `+${upgrade.level * 15}px radius`;
-            default:
-                return '';
+        if (upgrade.id === 'basic_damage') {
+            return `Damage: +${upgrade.level * 2}`;
+        } else if (upgrade.id === 'basic_fire_rate') {
+            return `Fire Rate: +${(upgrade.level * 0.1).toFixed(1)}/sec`;
+        } else if (upgrade.id === 'basic_range') {
+            return `Range: +${upgrade.level * 10}px`;
+        } else if (upgrade.id === 'archer_armor_pierce') {
+            return `Armor Pierce: +${upgrade.level * 5}%`;
+        } else if (upgrade.id === 'archer_fire_rate') {
+            return `Fire Rate: +${(upgrade.level * 0.15).toFixed(1)}/sec`;
+        } else if (upgrade.id === 'poison_damage') {
+            return `Poison Damage: +${upgrade.level}`;
+        } else if (upgrade.id === 'cannon_aoe') {
+            return `AOE Radius: +${upgrade.level * 5}px`;
+        } else {
+            return `Level ${upgrade.level}`;
         }
     }
 
     clearActiveMenus() {
-        const existingMenus = document.querySelectorAll('.upgrade-menu');
-        existingMenus.forEach(menu => menu.remove());
-        if (this.activeMenu) {
+        if (this.activeMenu && this.activeMenu.parentElement) {
             this.activeMenu.remove();
             this.activeMenu = null;
         }
+        // Also remove any other open menus
+        document.querySelectorAll('.upgrade-menu').forEach(menu => menu.remove());
     }
 }

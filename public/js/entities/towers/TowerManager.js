@@ -1,6 +1,6 @@
 import { TowerRegistry } from './TowerRegistry.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
-import { UnlockSystem } from '../UnlockSystem.js';
+import { UnlockSystem } from '../../core/UnlockSystem.js';
 
 export class TowerManager {
     constructor(gameState, level) {

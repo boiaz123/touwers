@@ -1,7 +1,7 @@
-import { GameStateManager } from './GameStateManager.js';
-import { StartScreen } from './StartScreen.js';
-import { LevelSelect } from './LevelSelect.js';
-import { GameplayState } from './GameplayState.js';
+import { GameStateManager } from '../core/states/GameStateManager.js';
+import { StartScreen } from '../core/states/StartScreen.js';
+import { LevelSelect } from '../core/states/LevelSelect.js';
+import { GameplayState } from '../core/states/GameplayState.js';
 
 export class Game {
     constructor() {

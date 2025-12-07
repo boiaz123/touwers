@@ -1,8 +1,8 @@
-import { TowerManager } from './towers/TowerManager.js';
-import { EnemyManager } from './enemies/EnemyManager.js';
-import { LevelFactory } from './LevelFactory.js';
+import { TowerManager } from '../../entities/towers/TowerManager.js';
+import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
+import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
-import { UIManager } from './UIManager.js';
+import { UIManager } from '../../ui/UIManager.js';
 
 export class GameplayState {
     constructor(stateManager) {

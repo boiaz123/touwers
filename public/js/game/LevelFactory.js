@@ -1,9 +1,9 @@
-import { Level1 } from './levels/Level1.js';
-import { Level2 } from './levels/Level2.js';
-import { Level3 } from './levels/Level3.js';
-import { Level4 } from './levels/Level4.js';
-import { Level5 } from './levels/Level5.js';
-import { SandboxLevel } from './levels/SandboxLevel.js';
+import { Level1 } from '../entities/levels/Level1.js';
+import { Level2 } from '../entities/levels/Level2.js';
+import { Level3 } from '../entities/levels/Level3.js';
+import { Level4 } from '../entities/levels/Level4.js';
+import { Level5 } from '../entities/levels/Level5.js';
+import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
 
 export class LevelFactory {
     static async createLevel(levelType) {

@@ -1,4 +1,4 @@
-import { LevelFactory } from './LevelFactory.js';
+import { LevelFactory } from '../../game/LevelFactory.js';
 
 export class LevelSelect {
     constructor(stateManager) {
