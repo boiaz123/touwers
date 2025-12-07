@@ -53,7 +53,7 @@ export class BasicTower extends Tower {
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
-            if (rock.target && !rock.target.isDead) {
+            if (rock.target && !rock.target.isDead()) {
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
                 if (dist <= 15) {
                     return false;

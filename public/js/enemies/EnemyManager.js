@@ -1,11 +1,4 @@
-import { BasicEnemy } from './BasicEnemy.js';
-import { BeefyEnemy } from './BeefyEnemy.js';
-import { ArcherEnemy } from './ArcherEnemy.js';
-import { MageEnemy } from './MageEnemy.js';
-import { VillagerEnemy } from './VillagerEnemy.js';
-import { KnightEnemy } from './KnightEnemy.js';
-import { ShieldKnightEnemy } from './ShieldKnightEnemy.js';
-import { FrogEnemy } from './FrogEnemy.js';
+import { EnemyRegistry } from './EnemyRegistry.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -83,31 +76,12 @@ export class EnemyManager {
         // In continuous mode, keep queue filled
         if (this.continuousMode && this.spawnQueue.length === 0) {
             const enemyType = this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length];
-            
-            let health = 100;
-            let speed = 50;
-            
-            if (enemyType === 'beefyenemy') {
-                health = 150;
-                speed = 60;
-            } else if (enemyType === 'knight') {
-                health = 160;
-                speed = 40; // Slowest
-            } else if (enemyType === 'shieldknight') {
-                health = 180;
-                speed = 35; // Even slower with shield
-            } else if (enemyType === 'mage') {
-                health = 110;
-                speed = 45;
-            } else if (enemyType === 'frog') {
-                health = 85;
-                speed = 55; // Fast jumper
-            }
+            const defaultSpeed = EnemyRegistry.getDefaultSpeed(enemyType);
             
             this.spawnQueue.push({
                 type: enemyType,
-                health: health,
-                speed: speed
+                health_multiplier: 1,
+                speed: defaultSpeed
             });
             this.spawnPatternIndex++;
             
@@ -119,40 +93,34 @@ export class EnemyManager {
             
             if (this.spawnTimer >= this.spawnInterval) {
                 const enemyData = this.spawnQueue.shift();
-                let enemy;
                 
-                switch(enemyData.type) {
-                    case 'beefyenemy':
-                        enemy = new BeefyEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'knight':
-                        enemy = new KnightEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'shieldknight':
-                        enemy = new ShieldKnightEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'mage':
-                        enemy = new MageEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'villager':
-                        enemy = new VillagerEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'archer':
-                        enemy = new ArcherEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'frog':
-                        enemy = new FrogEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
-                    case 'basic':
-                    default:
-                        enemy = new BasicEnemy(this.path, enemyData.health_multiplier, enemyData.speed);
-                        break;
+                // Normalize enemy data: handle both "health" (from spawnWave) and "health_multiplier" (from waves/continuous)
+                let healthMultiplier = enemyData.health_multiplier;
+                let speed = enemyData.speed;
+                
+                // If "health" is provided instead of "health_multiplier", convert it
+                if (enemyData.health !== undefined && healthMultiplier === undefined) {
+                    const baseHealth = EnemyRegistry.getDefaultHealth(enemyData.type);
+                    if (baseHealth) {
+                        healthMultiplier = enemyData.health / baseHealth;
+                    } else {
+                        healthMultiplier = 1;
+                    }
                 }
                 
-                this.enemies.push(enemy);
-                this.spawnTimer = 0;
-                console.log(`✓ Spawned ${enemyData.type} enemy (total: ${this.enemies.length})`);
-                console.log(`Next in pattern: ${this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length]}`);
+                const enemy = EnemyRegistry.createEnemy(
+                    enemyData.type,
+                    this.path,
+                    healthMultiplier,
+                    speed
+                );
+                
+                if (enemy) {
+                    this.enemies.push(enemy);
+                    this.spawnTimer = 0;
+                    console.log(`✓ Spawned ${enemyData.type} enemy (total: ${this.enemies.length})`);
+                    console.log(`Next in pattern: ${this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length]}`);
+                }
             }
         } else if (!this.continuousMode) {
             this.spawning = false;
