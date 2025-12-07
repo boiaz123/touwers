@@ -12,36 +12,35 @@
         <div id="stats-bar" style="display: none;">
             <div id="stats">
                 <div class="stat">
-                    <span class="stat-icon">❤️</span>
-                    <span id="health">100</span>
+                    <div class="stat-label">Gold</div>
+                    <div class="gold-display">
+                        <div class="gold-coin"></div>
+                        <span id="gold">500</span>
+                    </div>
                 </div>
                 <div class="stat">
-                    <span class="stat-icon">💰</span>
-                    <span id="gold">500</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-icon">🌊</span>
+                    <div class="stat-label">Wave</div>
                     <span id="wave">1/10</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-icon">👹</span>
-                    <span id="enemies-remaining">0</span>
+                    <div class="stat-label">Level</div>
+                    <span id="level">1</span>
                 </div>
-                <div class="stat">
-                    <span class="stat-icon">💎</span>
-                    <span id="gems">🔥0 💧0 💨0 🌍0</span>
+                <div class="stat gems-container">
+                    <div class="stat-label">Gems</div>
+                    <div class="gems-display">
+                        <div class="gem fire-gem" title="Fire Gem"></div>
+                        <span id="gems-fire">0</span>
+                        <div class="gem water-gem" title="Water Gem"></div>
+                        <span id="gems-water">0</span>
+                        <div class="gem air-gem" title="Air Gem"></div>
+                        <span id="gems-air">0</span>
+                        <div class="gem earth-gem" title="Earth Gem"></div>
+                        <span id="gems-earth">0</span>
+                        <div class="gem diamond-gem" title="Diamond Gem"></div>
+                        <span id="gems-diamond">0</span>
+                    </div>
                 </div>
-            </div>
-            <div class="speed-controls">
-                <button id="speed-1x-btn" class="speed-control-btn active" title="Normal Speed (1x)">
-                    1x
-                </button>
-                <button id="speed-2x-btn" class="speed-control-btn" title="Double Speed (2x)">
-                    2x
-                </button>
-                <button id="speed-3x-btn" class="speed-control-btn" title="Triple Speed (3x)">
-                    3x
-                </button>
             </div>
         </div>
 
@@ -51,6 +50,21 @@
             
             <!-- C&C Style Tower Sidebar -->
             <div id="tower-sidebar">
+                <div id="speed-controls-sidebar" class="speed-controls-sidebar">
+                    <div class="speed-label">Speed</div>
+                    <div class="speed-buttons-group">
+                        <button id="speed-1x-btn" class="speed-control-btn active" title="Normal Speed (1x)">
+                            1x
+                        </button>
+                        <button id="speed-2x-btn" class="speed-control-btn" title="Double Speed (2x)">
+                            2x
+                        </button>
+                        <button id="speed-3x-btn" class="speed-control-btn" title="Triple Speed (3x)">
+                            3x
+                        </button>
+                    </div>
+                </div>
+
                 <div id="tower-grid">
                     <button class="tower-btn" data-type="basic" data-cost="50" data-name="Basic Tower">
                         <div class="tower-icon">🏰</div>
@@ -81,6 +95,9 @@
                         <div class="tower-cost">$200</div>
                     </button>
                 </div>
+                
+                <!-- Wooden Beam Separator -->
+                <div class="wooden-beam-separator"></div>
                 
                 <!-- Buildings Section -->
                 <div id="building-section">

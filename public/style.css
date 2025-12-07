@@ -77,46 +77,199 @@ body {
 #stats-bar {
     display: flex;
     align-items: center;
-    gap: max(1rem, 3vw);
-    padding: max(0.5rem, 1.5vh) max(1rem, 2vw);
-    background: linear-gradient(90deg, rgba(42, 26, 15, 0.95) 0%, rgba(32, 16, 8, 0.95) 100%);
-    border-bottom: 3px solid var(--primary-gold);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 8px rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    padding: max(0.75rem, 1.5vh) max(1.5rem, 3vw);
+    background: linear-gradient(180deg, rgba(42, 26, 15, 0.95) 0%, rgba(32, 16, 8, 0.95) 95%, #4a3a2f 100%);
+    border-bottom: 8px solid transparent;
+    border-image: linear-gradient(90deg, 
+        #2a1a0f 0%, 
+        #6b5540 20%, 
+        #8b6f47 35%, 
+        #7a6038 50%, 
+        #8b6f47 65%, 
+        #6b5540 80%, 
+        #2a1a0f 100%) 1;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1), 
+        0 4px 8px rgba(0, 0, 0, 0.7),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.8),
+        0 8px 12px rgba(0, 0, 0, 0.9);
     color: var(--text-primary);
     position: relative;
     font-family: 'Trebuchet MS', sans-serif;
     backdrop-filter: blur(4px);
     min-height: auto;
-    flex-wrap: wrap;
-    gap: clamp(1rem, 3vw, 2.5rem);
+}
+
+#stats-bar::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: linear-gradient(90deg,
+        #2a1a0f 0%,
+        #5a4a3f 15%,
+        #7a6a5f 25%,
+        #6a5a4f 50%,
+        #7a6a5f 75%,
+        #5a4a3f 85%,
+        #2a1a0f 100%);
+    background-image: 
+        linear-gradient(90deg,
+            #2a1a0f 0%,
+            #5a4a3f 15%,
+            #7a6a5f 25%,
+            #6a5a4f 50%,
+            #7a6a5f 75%,
+            #5a4a3f 85%,
+            #2a1a0f 100%),
+        repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(0, 0, 0, 0.3) 2px,
+            rgba(0, 0, 0, 0.3) 3px,
+            transparent 3px,
+            transparent 6px),
+        repeating-linear-gradient(0deg,
+            rgba(255, 255, 255, 0.08) 0px,
+            rgba(255, 255, 255, 0.08) 1px,
+            transparent 1px,
+            transparent 2px);
+    background-size: 100% 100%, 6px 100%, 100% 2px;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.6),
+        0 2px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
 }
 
 #stats {
     display: flex;
     flex-wrap: wrap;
-    gap: clamp(1rem, 2.5vw, 2rem);
+    gap: clamp(2rem, 5vw, 4rem);
     font-size: clamp(0.9rem, 2vw, 1.1rem);
     font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
 }
 
 .stat {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.5rem;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
     border-radius: 0.25rem;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(212, 175, 55, 0.3);
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(212, 175, 55, 0.4);
     white-space: nowrap;
+    flex-direction: column;
 }
 
-.stat-icon {
-    font-size: clamp(1rem, 2vw, 1.5rem);
+.stat-label {
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: bold;
 }
 
-.stat-item {
-    color: var(--primary-gold);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+/* Gold Display */
+.gold-display {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+}
+
+.gold-coin {
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle at 30% 30%, #FFE54C, #FFC107, #F57F17);
+    border: 2px solid #D4AF37;
+    border-radius: 50%;
+    box-shadow: 
+        inset -1px -1px 3px rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.5),
+        inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+    position: relative;
+}
+
+.gold-coin::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 10px;
+    background: #D4AF37;
+    border-radius: 50%;
+}
+
+#gold {
+    color: var(--primary-gold-light);
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+}
+
+/* Gems Display */
+.gems-container {
+    flex-direction: row !important;
+}
+
+.gems-display {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    margin-top: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.gem {
+    width: 16px;
+    height: 16px;
+    position: relative;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+
+/* Fire Gem - Red/Orange diamond */
+.fire-gem {
+    background: linear-gradient(135deg, #FF6B00 0%, #FF4500 50%, #E60000 100%);
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 50% 82%, 18% 100%, 0% 38%);
+}
+
+/* Water Gem - Blue crystal */
+.water-gem {
+    background: linear-gradient(135deg, #00D4FF 0%, #0099FF 50%, #004BB3 100%);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+/* Air Gem - Light cyan/white star */
+.air-gem {
+    background: linear-gradient(135deg, #E0F7FF 0%, #99FFFF 50%, #4FFFFF 100%);
+    clip-path: polygon(
+        50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%
+    );
+}
+
+/* Earth Gem - Brown/green octagon */
+.earth-gem {
+    background: linear-gradient(135deg, #8B6914 0%, #A0826D 50%, #6B5D1B 100%);
+    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+}
+
+/* Diamond Gem - Clear/white brilliant */
+.diamond-gem {
+    background: linear-gradient(135deg, #F0F8FF 0%, #E6E6FA 50%, #D3D3D3 100%);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+#gems-fire, #gems-water, #gems-air, #gems-earth, #gems-diamond {
+    color: var(--primary-gold-light);
+    font-size: clamp(0.8rem, 1.5vw, 0.95rem);
     font-weight: bold;
 }
 
@@ -141,32 +294,87 @@ body {
     width: max(10%, 140px);
     width: clamp(120px, 12%, 180px);
     background: linear-gradient(135deg, rgba(42, 26, 15, 0.98) 0%, rgba(26, 15, 10, 0.98) 100%);
-    border-left: 4px solid var(--primary-gold);
     display: none;
     flex-direction: column;
-    padding: clamp(0.75rem, 2vh, 1.25rem) clamp(0.4rem, 1vw, 0.75rem);
+    padding: clamp(0.75rem, 2vh, 1.25rem) clamp(0.4rem, 1vw, 0.75rem) clamp(0.75rem, 2vh, 1.25rem) clamp(1rem, 1.5vw, 1.2rem);
     flex-shrink: 0;
     overflow-y: auto;
-    box-shadow: inset 2px 0 8px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.6);
+    box-shadow: 
+        inset 2px 0 8px rgba(0, 0, 0, 0.8), 
+        0 0 10px rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(2px);
+    position: relative;
+}
+
+#tower-sidebar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    background: linear-gradient(90deg, #1a0f05 0%, #4a3a2f 10%, #5a4a3f 20%, #6a5a4f 35%, #7a6a5f 50%, #6a5a4f 65%, #5a4a3f 80%, #4a3a2f 90%, #1a0f05 100%);
+    background-image: 
+        /* Main gradient for depth */
+        linear-gradient(90deg, 
+            #1a0f05 0%, #4a3a2f 10%, #5a4a3f 20%, #6a5a4f 35%, #7a6a5f 50%, 
+            #6a5a4f 65%, #5a4a3f 80%, #4a3a2f 90%, #1a0f05 100%),
+        /* Large stone blocks - cobblestones */
+        repeating-linear-gradient(180deg,
+            rgba(60, 45, 35, 0.6) 0px,
+            rgba(60, 45, 35, 0.6) 16px,
+            rgba(50, 35, 25, 0.8) 16px,
+            rgba(50, 35, 25, 0.8) 32px),
+        /* Vertical mortar/grout lines */
+        repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 10px,
+            rgba(0, 0, 0, 0.5) 10px,
+            rgba(0, 0, 0, 0.5) 11px,
+            transparent 11px,
+            transparent 12px),
+        /* Stone texture scratches and cracks */
+        repeating-linear-gradient(45deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(0, 0, 0, 0.2) 2px,
+            rgba(0, 0, 0, 0.2) 3px),
+        /* Highlights for stone depth */
+        repeating-linear-gradient(180deg,
+            rgba(255, 255, 255, 0.06) 0px,
+            rgba(255, 255, 255, 0.06) 1px,
+            transparent 1px,
+            transparent 8px),
+        /* Stone weathering effect */
+        repeating-linear-gradient(180deg,
+            transparent 0px,
+            transparent 8px,
+            rgba(139, 111, 78, 0.2) 8px,
+            rgba(139, 111, 78, 0.2) 9px);
+    background-size: 100% 100%, 100% 32px, 12px 100%, 3px 3px, 100% 8px, 100% 9px;
+    pointer-events: none;
+    z-index: 0;
+    box-shadow: 
+        inset 0 0 6px rgba(0, 0, 0, 0.9), 
+        inset 0 2px 4px rgba(255, 255, 255, 0.1),
+        1px 0 3px rgba(0, 0, 0, 0.8),
+        inset -1px 0 2px rgba(0, 0, 0, 0.6);
 }
 
 #tower-sidebar::-webkit-scrollbar {
-    width: 8px;
+    width: 0px;
 }
 
 #tower-sidebar::-webkit-scrollbar-track {
-    background: rgba(26, 15, 10, 0.5);
-    border-radius: 4px;
+    background: transparent;
 }
 
 #tower-sidebar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--primary-gold), var(--primary-gold-dark));
-    border-radius: 4px;
+    background: transparent;
 }
 
 #tower-sidebar::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, var(--primary-gold-light), var(--primary-gold));
+    background: transparent;
 }
 
 #tower-grid {
@@ -174,6 +382,75 @@ body {
     grid-template-columns: repeat(2, 1fr);
     gap: clamp(0.4rem, 1vw, 0.8rem);
     margin-bottom: clamp(1rem, 2vh, 1.5rem);
+}
+
+/* ============ SPEED CONTROLS IN SIDEBAR ============ */
+.speed-controls-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: clamp(1rem, 2vh, 1.5rem);
+    padding: 0.6rem;
+    background: linear-gradient(135deg, rgba(58, 42, 31, 0.7), rgba(42, 26, 15, 0.7));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 0.25rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.speed-label {
+    color: var(--primary-gold);
+    font-size: clamp(0.6rem, 1.2vw, 0.8rem);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.speed-buttons-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3rem;
+}
+
+/* ============ WOODEN BEAM SEPARATOR ============ */
+.wooden-beam-separator {
+    height: 12px;
+    margin: clamp(0.75rem, 1.5vh, 1rem) 0;
+    background: linear-gradient(180deg, 
+        #5a4a3f 0%, 
+        #6b5a4f 25%, 
+        #5a4a3f 50%, 
+        #4a3a2f 75%, 
+        #3a2a1f 100%);
+    border-top: 2px solid rgba(212, 175, 55, 0.4);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.5),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.wooden-beam-separator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.1) 3px,
+            rgba(0, 0, 0, 0.1) 4px),
+        repeating-linear-gradient(0deg,
+            rgba(255, 255, 255, 0.05) 0px,
+            rgba(255, 255, 255, 0.05) 1px,
+            transparent 1px,
+            transparent 3px);
+    pointer-events: none;
 }
 
 /* ============ BUILDINGS SECTION ============ */
@@ -315,21 +592,19 @@ body {
 }
 
 #tower-info-scroll::-webkit-scrollbar {
-    width: 6px;
+    width: 0px;
 }
 
 #tower-info-scroll::-webkit-scrollbar-track {
-    background: rgba(26, 15, 10, 0.5);
-    border-radius: 3px;
+    background: transparent;
 }
 
 #tower-info-scroll::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--primary-gold), var(--primary-gold-dark));
-    border-radius: 3px;
+    background: transparent;
 }
 
 #tower-info-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-gold-light);
+    background: transparent;
 }
 
 #tower-info {
@@ -380,6 +655,19 @@ body {
     max-height: 85vh;
     overflow-y: auto;
     backdrop-filter: blur(8px);
+}
+
+/* Hide scrollbars for upgrade menu */
+.upgrade-menu::-webkit-scrollbar {
+    width: 0px;
+}
+
+.upgrade-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.upgrade-menu::-webkit-scrollbar-thumb {
+    background: transparent;
 }
 
 .menu-header {
@@ -704,87 +992,6 @@ body {
 .spell-cost {
     font-size: 8px;
     opacity: 0.9;
-}
-
-/* Fixed Description Box */
-#tower-info-box {
-    border-top: 2px solid #8B7355;
-    margin-top: 8px;
-    padding-top: 8px;
-    height: 140px;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-}
-
-#tower-info-scroll {
-    overflow-y: auto;
-    flex: 1;
-    padding-right: 4px;
-}
-
-#tower-info-scroll::-webkit-scrollbar {
-    width: 6px;
-}
-
-#tower-info-scroll::-webkit-scrollbar-track {
-    background: #1a0f0a;
-    border-radius: 3px;
-}
-
-#tower-info-scroll::-webkit-scrollbar-thumb {
-    background: #8B7355;
-    border-radius: 3px;
-}
-
-#tower-info-scroll::-webkit-scrollbar-thumb:hover {
-    background: #B8860B;
-}
-
-#tower-info {
-    padding: 0 4px;
-}
-
-/* ============ SPEED CONTROL BUTTONS ============ */
-.speed-control-btn {
-    border: 2px solid var(--primary-gold);
-    border-radius: 0.3rem;
-    color: var(--text-primary);
-    font-weight: bold;
-    font-size: clamp(0.85rem, 1.6vw, 1.1rem);
-    padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.75rem, 1.5vw, 1rem);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    background: rgba(0, 0, 0, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-family: 'Trebuchet MS', sans-serif;
-}
-
-.speed-control-btn:hover {
-    background: linear-gradient(135deg, rgba(118, 75, 162, 0.8), rgba(102, 126, 234, 0.8));
-    box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
-    transform: translateY(-2px);
-    border-color: rgba(102, 126, 234, 0.9);
-}
-
-.speed-control-btn:active {
-    transform: translateY(0);
-}
-
-.speed-control-btn.active {
-    background: linear-gradient(135deg, rgba(118, 75, 162, 0.95), rgba(102, 126, 234, 0.95));
-    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.15);
-    border-color: rgba(102, 126, 234, 0.95);
-}
-
-.speed-controls {
-    display: flex;
-    gap: clamp(0.4rem, 1vw, 0.8rem);
-    margin-left: auto;
-    align-items: center;
-    flex-wrap: wrap;
 }
 
 /* ============ RESPONSIVE MEDIA QUERIES ============ */

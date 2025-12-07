@@ -281,7 +281,6 @@ export class UIManager {
     // ============ UPDATE UI ============
 
     updateUI() {
-        document.getElementById('health').textContent = this.gameplayState.gameState.health;
         document.getElementById('gold').textContent = Math.floor(this.gameplayState.gameState.gold);
         
         // Show wave info differently for sandbox mode
@@ -291,33 +290,29 @@ export class UIManager {
             document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave}/${this.gameplayState.maxWavesForLevel}`;
         }
         
-        let statusText = `Enemies: ${this.gameplayState.enemyManager.enemies.length}`;
-        if (this.gameplayState.waveCompleted) {
-            statusText = this.gameplayState.isSandbox ? 'Next Wave...' : 'Wave Complete!';
-        } else if (!this.gameplayState.waveInProgress && this.gameplayState.enemyManager.enemies.length === 0) {
-            statusText = 'Preparing...';
+        // Show level
+        const levelElement = document.getElementById('level');
+        if (levelElement) {
+            levelElement.textContent = this.level?.levelName || 'Unknown Level';
         }
         
-        document.getElementById('enemies-remaining').textContent = statusText;
-        
-        // Update gem display in top bar - force check for sandbox
+        // Update gem display in top bar with new structure
         const gems = this.towerManager.getGemStocks();
-        const gemsElement = document.getElementById('gems');
-        if (gemsElement) {
-            // In sandbox, show gems even if all are 0 (they should be 100)
-            let gemText = `🔥${gems.fire || 0} 💧${gems.water || 0} 💨${gems.air || 0} 🪨${gems.earth || 0}`;
-            
-            // Always show diamond count in sandbox
-            if (gems.diamond !== undefined || this.gameplayState.isSandbox) {
-                gemText += ` 💎${gems.diamond || 0}`;
-            }
-            
-            gemsElement.textContent = gemText;
-            
-            // Debug logging for sandbox
-            if (this.gameplayState.isSandbox) {
-                console.log('UIManager: updateUI - Current gems:', gems);
-            }
+        const gemFireElement = document.getElementById('gems-fire');
+        const gemWaterElement = document.getElementById('gems-water');
+        const gemAirElement = document.getElementById('gems-air');
+        const gemEarthElement = document.getElementById('gems-earth');
+        const gemDiamondElement = document.getElementById('gems-diamond');
+        
+        if (gemFireElement) gemFireElement.textContent = gems.fire || 0;
+        if (gemWaterElement) gemWaterElement.textContent = gems.water || 0;
+        if (gemAirElement) gemAirElement.textContent = gems.air || 0;
+        if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
+        if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
+        
+        // Debug logging for sandbox
+        if (this.gameplayState.isSandbox) {
+            console.log('UIManager: updateUI - Current gems:', gems);
         }
         
         this.updateUIAvailability();
