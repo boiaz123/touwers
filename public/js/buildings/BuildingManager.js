@@ -1,21 +1,10 @@
-import { GoldMine } from './GoldMine.js';
-import { TowerForge } from './TowerForge.js';
-import { MagicAcademy } from './MagicAcademy.js';
-import { SuperWeaponLab } from './SuperWeaponLab.js';
-import { TrainingGrounds } from './TrainingGrounds.js';
+import { BuildingRegistry } from './BuildingRegistry.js';
 
 export class BuildingManager {
     constructor(gameState, level) {
         this.gameState = gameState;
         this.level = level;
         this.buildings = [];
-        this.buildingTypes = {
-            'mine': { class: GoldMine, cost: 200, size: 4 },
-            'forge': { class: TowerForge, cost: 300, size: 4 },
-            'academy': { class: MagicAcademy, cost: 250, size: 4 },
-            'training': { class: TrainingGrounds, cost: 400, size: 4 },
-            'superweapon': { class: SuperWeaponLab, cost: 1000, size: 4 }
-        };
         this.occupiedPositions = new Set();
         
         // Building effects tracking
@@ -37,10 +26,10 @@ export class BuildingManager {
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
-        const buildingType = this.buildingTypes[type];
+        const buildingType = BuildingRegistry.getBuildingType(type);
         if (!buildingType) {
-            console.error(`BuildingManager: Building type '${type}' not found in buildingTypes!`);
-            console.log('Available types:', Object.keys(this.buildingTypes));
+            console.error(`BuildingManager: Building type '${type}' not found in registry!`);
+            console.log('Available types:', Object.keys(BuildingRegistry.getAllBuildingTypes()));
             return false;
         }
         
@@ -55,7 +44,7 @@ export class BuildingManager {
         console.log(`BuildingManager: Position available, spending ${buildingType.cost} gold`);
         
         if (this.gameState.spend(buildingType.cost)) {
-            const building = new buildingType.class(x, y, gridX, gridY);
+            const building = BuildingRegistry.createBuilding(type, x, y, gridX, gridY);
             this.buildings.push(building);
             
             // Mark the 4x4 area as occupied
@@ -206,10 +195,10 @@ export class BuildingManager {
     }
     
     getBuildingInfo(type) {
-        const buildingType = this.buildingTypes[type];
-        if (!buildingType) return null;
+        const buildingClass = BuildingRegistry.getBuildingClass(type);
+        if (!buildingClass || !buildingClass.getInfo) return null;
         
-        return buildingType.class.getInfo();
+        return buildingClass.getInfo();
     }
     
     updatePositions(level) {

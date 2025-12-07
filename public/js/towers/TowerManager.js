@@ -1,10 +1,4 @@
-import { BasicTower } from './BasicTower.js';
-import { CannonTower } from './CannonTower.js';
-import { ArcherTower } from './ArcherTower.js';
-import { MagicTower } from './MagicTower.js';
-import { BarricadeTower } from './BarricadeTower.js';
-import { PoisonArcherTower } from './PoisonArcherTower.js';
-import { CombinationTower } from './CombinationTower.js';
+import { TowerRegistry } from './TowerRegistry.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../UnlockSystem.js';
 
@@ -13,15 +7,6 @@ export class TowerManager {
         this.gameState = gameState;
         this.level = level;
         this.towers = [];
-        this.towerTypes = {
-            'basic': { class: BasicTower, cost: 50 },
-            'cannon': { class: CannonTower, cost: 100 },
-            'archer': { class: ArcherTower, cost: 75 },
-            'magic': { class: MagicTower, cost: 150 },
-            'barricade': { class: BarricadeTower, cost: 90 },
-            'poison': { class: PoisonArcherTower, cost: 120 },
-            'combination': { class: CombinationTower, cost: 200 }
-        };
         
         // Initialize unlock system and building manager
         this.unlockSystem = new UnlockSystem();
@@ -38,7 +23,7 @@ export class TowerManager {
             return false;
         }
         
-        const towerType = this.towerTypes[type];
+        const towerType = TowerRegistry.getTowerType(type);
         if (!towerType) return false;
         
         // Check if the position is already occupied by another tower
@@ -48,7 +33,7 @@ export class TowerManager {
         }
         
         if (this.gameState.spend(towerType.cost)) {
-            const tower = new towerType.class(x, y, gridX, gridY);
+            const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
             this.towers.push(tower);
             
             // Mark the 2x2 area as occupied by this tower
@@ -458,10 +443,10 @@ export class TowerManager {
     }
     
     getTowerInfo(type) {
-        const towerType = this.towerTypes[type];
-        if (!towerType || !towerType.class.getInfo) return null;
+        const towerClass = TowerRegistry.getTowerClass(type);
+        if (!towerClass || !towerClass.getInfo) return null;
         
-        const info = towerType.class.getInfo();
+        const info = towerClass.getInfo();
         // Add unlock status
         info.unlocked = this.unlockSystem.canBuildTower(type);
         return info;

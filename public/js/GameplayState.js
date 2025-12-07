@@ -19,6 +19,9 @@ export class GameplayState {
         this.waveCompleted = false;
         this.superWeaponLab = null;
         
+        // Spell effects
+        this.spellEffects = [];
+        
         // NEW: Speed control (3 fixed speeds instead of cycling)
         this.gameSpeed = 1.0; // 1x, 2x, or 3x
         
@@ -381,9 +384,121 @@ export class GameplayState {
     }
     
     createSpellEffect(type, x, y, spell, targets) {
-        // Visual spell effects would be rendered here
-        // For now, just log
+        // Create visual spell effects at the cast location
         console.log(`Spell effect: ${type} at (${x}, ${y})`);
+        
+        if (type === 'arcaneBlast') {
+            // Purple/blue expanding blast with particles
+            for (let i = 0; i < 16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                this.spellEffects.push({
+                    type: 'arcaneBlast',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * 150,
+                    vy: Math.sin(angle) * 150,
+                    life: 0.6,
+                    maxLife: 0.6,
+                    size: 4,
+                    color: '#8B5CF6'
+                });
+            }
+            // Add expanding ring
+            this.spellEffects.push({
+                type: 'arcaneBlastRing',
+                x: x,
+                y: y,
+                maxRadius: spell.radius,
+                life: 0.4,
+                maxLife: 0.4,
+                color: '#A78BFA'
+            });
+        } else if (type === 'frostNova') {
+            // Blue/cyan expanding particles with ice effect
+            for (let i = 0; i < 20; i++) {
+                const angle = (i / 20) * Math.PI * 2;
+                this.spellEffects.push({
+                    type: 'frostNova',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * 120,
+                    vy: Math.sin(angle) * 120,
+                    life: 0.8,
+                    maxLife: 0.8,
+                    size: 3,
+                    color: '#06B6D4'
+                });
+            }
+            // Add frost ring
+            this.spellEffects.push({
+                type: 'frostNovaRing',
+                x: x,
+                y: y,
+                maxRadius: spell.radius,
+                life: 0.6,
+                maxLife: 0.6,
+                color: '#22D3EE'
+            });
+        } else if (type === 'meteorStrike') {
+            // Orange/red explosion with falling particles
+            for (let i = 0; i < 25; i++) {
+                const angle = (i / 25) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                const speed = 80 + Math.random() * 60;
+                this.spellEffects.push({
+                    type: 'meteorStrike',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 50,
+                    life: 1.0,
+                    maxLife: 1.0,
+                    size: 5 + Math.random() * 3,
+                    color: ['#DC2626', '#EA580C', '#FB923C'][Math.floor(Math.random() * 3)]
+                });
+            }
+            // Add impact circle
+            this.spellEffects.push({
+                type: 'meteorStrikeImpact',
+                x: x,
+                y: y,
+                maxRadius: 80,
+                life: 0.3,
+                maxLife: 0.3,
+                color: '#F97316'
+            });
+        } else if (type === 'chainLightning') {
+            // Lightning effects between targets
+            if (targets && targets.length > 0) {
+                for (let i = 0; i < targets.length - 1; i++) {
+                    const target1 = targets[i];
+                    const target2 = targets[i + 1];
+                    this.spellEffects.push({
+                        type: 'chainLightningBolt',
+                        x1: target1.x,
+                        y1: target1.y,
+                        x2: target2.x,
+                        y2: target2.y,
+                        life: 0.15,
+                        maxLife: 0.15
+                    });
+                }
+            }
+            // Lightning particles at cast location
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                this.spellEffects.push({
+                    type: 'chainLightning',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * 100,
+                    vy: Math.sin(angle) * 100,
+                    life: 0.5,
+                    maxLife: 0.5,
+                    size: 2,
+                    color: '#FBBF24'
+                });
+            }
+        }
     }
     
     handleClick(x, y) {
@@ -445,6 +560,17 @@ export class GameplayState {
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, 4);
+                    
+                    // Store reference to SuperWeaponLab if it was just built
+                    if (this.selectedBuildingType === 'superweapon') {
+                        const newBuilding = this.towerManager.buildingManager.buildings.find(
+                            b => b.constructor.name === 'SuperWeaponLab' && b.x === screenX && b.y === screenY
+                        );
+                        if (newBuilding) {
+                            this.superWeaponLab = newBuilding;
+                            console.log('GameplayState: SuperWeaponLab reference stored');
+                        }
+                    }
                     
                     // SANDBOX: If academy was just built, initialize gems immediately
                     if (this.isSandbox && this.selectedBuildingType === 'academy') {
@@ -608,6 +734,17 @@ export class GameplayState {
         
         // Update spell UI - only updates displays, doesn't recreate every frame
         this.uiManager.updateSpellUI();
+        
+        // Update spell effects
+        this.spellEffects = this.spellEffects.filter(effect => {
+            effect.life -= deltaTime;
+            if (effect.x !== undefined && effect.vx !== undefined) {
+                effect.x += effect.vx * deltaTime;
+                effect.y += effect.vy * deltaTime;
+                effect.vy += 100 * deltaTime; // gravity
+            }
+            return effect.life > 0;
+        });
     }
     
     gameOver() {
@@ -620,6 +757,146 @@ export class GameplayState {
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
+        this.renderSpellEffects(ctx);
+    }
+    
+    renderSpellEffects(ctx) {
+        this.spellEffects.forEach(effect => {
+            const alpha = effect.life / effect.maxLife;
+            ctx.globalAlpha = alpha;
+            
+            if (effect.type === 'arcaneBlast') {
+                // Purple particle
+                ctx.fillStyle = effect.color;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Glow effect
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size + 2, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (effect.type === 'arcaneBlastRing') {
+                // Expanding ring
+                const progress = 1 - (effect.life / effect.maxLife);
+                const radius = effect.maxRadius * progress;
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (effect.type === 'frostNova') {
+                // Cyan particle
+                ctx.fillStyle = effect.color;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add crystalline effect
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha * 0.7;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(effect.x, effect.y);
+                    ctx.lineTo(
+                        effect.x + Math.cos(angle) * effect.size * 2,
+                        effect.y + Math.sin(angle) * effect.size * 2
+                    );
+                    ctx.stroke();
+                }
+            } else if (effect.type === 'frostNovaRing') {
+                // Expanding ice ring
+                const progress = 1 - (effect.life / effect.maxLife);
+                const radius = effect.maxRadius * progress;
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (effect.type === 'meteorStrike') {
+                // Orange/red particle with rotation
+                ctx.fillStyle = effect.color;
+                ctx.save();
+                ctx.translate(effect.x, effect.y);
+                ctx.rotate(Date.now() / 100);
+                ctx.fillRect(-effect.size / 2, -effect.size / 2, effect.size, effect.size);
+                ctx.restore();
+                
+                // Glow
+                ctx.fillStyle = effect.color;
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (effect.type === 'meteorStrikeImpact') {
+                // Impact circle with rings
+                const progress = 1 - (effect.life / effect.maxLife);
+                const radius = effect.maxRadius * progress;
+                
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Inner ring
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha * 0.5 * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, radius * 0.6, 0, Math.PI * 2);
+                ctx.stroke();
+            } else if (effect.type === 'chainLightning') {
+                // Yellow lightning particle
+                ctx.fillStyle = effect.color;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Star effect
+                ctx.strokeStyle = effect.color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha * 0.6;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(effect.x, effect.y);
+                    ctx.lineTo(
+                        effect.x + Math.cos(angle) * effect.size * 3,
+                        effect.y + Math.sin(angle) * effect.size * 3
+                    );
+                    ctx.stroke();
+                }
+            } else if (effect.type === 'chainLightningBolt') {
+                // Lightning bolt between two targets
+                ctx.strokeStyle = '#FBBF24';
+                ctx.lineWidth = 3;
+                
+                // Main bolt
+                ctx.beginPath();
+                ctx.moveTo(effect.x1, effect.y1);
+                ctx.lineTo(effect.x2, effect.y2);
+                ctx.stroke();
+                
+                // Inner bright bolt
+                ctx.strokeStyle = '#FCDC5C';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.moveTo(effect.x1, effect.y1);
+                ctx.lineTo(effect.x2, effect.y2);
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1;
+        });
     }
     
     resize() {

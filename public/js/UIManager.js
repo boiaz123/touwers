@@ -216,13 +216,12 @@ export class UIManager {
         
         const availableSpells = superWeaponLab.getAvailableSpells();
         
-        // IMPORTANT: Only update if spell states have actually changed
-        // Check if we need to rebuild the UI
+        // IMPORTANT: Check if we need to rebuild the UI
         const currentButtonCount = spellGrid.querySelectorAll('.spell-btn').length;
         const currentReadyCount = spellGrid.querySelectorAll('.spell-btn.ready').length;
         
-        // Only rebuild if the number of ready spells changed or button count is 0
-        const needsRebuild = currentButtonCount === 0 || this.lastSpellReadyCount !== currentReadyCount;
+        // Rebuild if the number of available spells changed (new unlock) or button count is 0
+        const needsRebuild = currentButtonCount !== availableSpells.length;
         
         if (!needsRebuild) {
             // Just update cooldown displays without rebuilding buttons
@@ -274,8 +273,6 @@ export class UIManager {
                 </button>
             `;
         }).join('');
-        
-        this.lastSpellReadyCount = currentReadyCount;
         
         const buttons = spellGrid.querySelectorAll('.spell-btn.ready');
         console.log(`UIManager: Rebuilt UI with ${buttons.length} ready spell buttons`);
