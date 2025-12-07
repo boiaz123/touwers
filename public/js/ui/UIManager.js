@@ -68,33 +68,21 @@ export class UIManager {
             spellGrid.dataset.delegationSetup = 'true';
         }
 
-        // Speed control buttons
-        const speed1xBtn = document.getElementById('speed-1x-btn');
-        const speed2xBtn = document.getElementById('speed-2x-btn');
-        const speed3xBtn = document.getElementById('speed-3x-btn');
+        // Speed control circles - new bottom-left design
+        const speedCircles = document.querySelectorAll('.speed-circle');
         
-        console.log('UIManager: Speed button setup - 1x:', speed1xBtn ? 'found' : 'NOT FOUND', '2x:', speed2xBtn ? 'found' : 'NOT FOUND', '3x:', speed3xBtn ? 'found' : 'NOT FOUND');
-        
-        if (speed1xBtn) {
-            speed1xBtn.addEventListener('click', (e) => {
-                console.log('UIManager: Speed 1x clicked');
-                this.gameplayState.setGameSpeed(1.0);
+        if (speedCircles.length > 0) {
+            speedCircles.forEach(circle => {
+                circle.addEventListener('click', (e) => {
+                    const speed = parseFloat(e.target.dataset.speed);
+                    console.log(`UIManager: Speed ${speed}x clicked`);
+                    this.gameplayState.setGameSpeed(speed);
+                    this.updateSpeedCircles(speed);
+                });
             });
-            console.log('UIManager: Speed 1x listener attached');
-        }
-        if (speed2xBtn) {
-            speed2xBtn.addEventListener('click', (e) => {
-                console.log('UIManager: Speed 2x clicked');
-                this.gameplayState.setGameSpeed(2.0);
-            });
-            console.log('UIManager: Speed 2x listener attached');
-        }
-        if (speed3xBtn) {
-            speed3xBtn.addEventListener('click', (e) => {
-                console.log('UIManager: Speed 3x clicked');
-                this.gameplayState.setGameSpeed(3.0);
-            });
-            console.log('UIManager: Speed 3x listener attached');
+            console.log('UIManager: Speed circles setup complete');
+        } else {
+            console.log('UIManager: Speed circles not found');
         }
     }
 
@@ -102,6 +90,28 @@ export class UIManager {
         document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
+    }
+
+    // ============ SPEED CONTROLS ============
+
+    showSpeedControls() {
+        const speedControls = document.getElementById('speed-controls-bottom');
+        if (speedControls) {
+            speedControls.classList.add('visible');
+        }
+    }
+
+    hideSpeedControls() {
+        const speedControls = document.getElementById('speed-controls-bottom');
+        if (speedControls) {
+            speedControls.classList.remove('visible');
+        }
+    }
+
+    resetGameSpeed() {
+        // Reset to 1x speed
+        this.gameplayState.setGameSpeed(1.0);
+        this.updateSpeedCircles(1);
     }
 
     // ============ TOWER/BUILDING SELECTION ============
@@ -155,45 +165,130 @@ export class UIManager {
         const info = this.towerManager.getTowerInfo(towerType);
         if (!info) return;
         
-        const infoPanel = document.getElementById('tower-info');
-        infoPanel.innerHTML = `
+        // Get the tower button
+        const towerBtn = document.querySelector(`.tower-btn[data-type="${towerType}"]`);
+        if (!towerBtn) return;
+        
+        // Clear existing menu
+        this.clearTowerInfoMenu();
+        
+        // Create hover menu
+        const menu = document.createElement('div');
+        menu.className = 'building-info-menu';
+        menu.id = 'tower-info-hover';
+        menu.innerHTML = `
             <div class="info-title">${info.name}</div>
             <div class="info-stats">
-                <div>Damage: ${info.damage}</div>
-                <div>Range: ${info.range}</div>
-                <div>Rate: ${info.fireRate}</div>
+                <div><span>Damage:</span> <span>${info.damage}</span></div>
+                <div><span>Range:</span> <span>${info.range}</span></div>
+                <div><span>Rate:</span> <span>${info.fireRate}</span></div>
             </div>
-            <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
+            <div class="info-description">${info.description}</div>
         `;
+        
+        document.body.appendChild(menu);
+        
+        // Position the menu near the button
+        const btnRect = towerBtn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        
+        // Position to the left of button (outside sidebar)
+        let left = btnRect.left - menuWidth - 10;
+        let top = btnRect.top;
+        
+        // Adjust if menu goes off screen
+        if (left < 10) {
+            left = btnRect.right + 10;
+        }
+        
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight - 10;
+        }
+        
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        
+        // Clean up on mouse leave
+        towerBtn.addEventListener('mouseleave', () => {
+            this.clearTowerInfoMenu();
+        }, { once: true });
+    }
+
+    clearTowerInfoMenu() {
+        const existingMenu = document.getElementById('tower-info-hover');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
     }
 
     showBuildingInfo(buildingType) {
         const info = this.towerManager.getBuildingInfo(buildingType);
         if (!info) return;
         
-        const infoPanel = document.getElementById('tower-info');
+        // Get the building button
+        const buildingBtn = document.querySelector(`.building-btn[data-type="${buildingType}"]`);
+        if (!buildingBtn) return;
+        
+        // Clear existing menu
+        this.clearBuildingInfoMenu();
         
         // Check if building is disabled
-        const buildingBtn = document.querySelector(`.building-btn[data-type="${buildingType}"]`);
         let disabledNote = '';
-        
         if (buildingType === 'superweapon') {
             const unlockSystem = this.towerManager.getUnlockSystem();
             if (!unlockSystem.superweaponUnlocked) {
-                disabledNote = '<div style="color: #ff6b6b; margin-top: 8px; font-size: 10px;">⚠️ Unlock at Academy Level 3</div>';
+                disabledNote = '<div style="color: #ff6b6b;">⚠️ Unlock at Academy Level 3</div>';
             }
         }
         
-        infoPanel.innerHTML = `
+        // Create hover menu
+        const menu = document.createElement('div');
+        menu.className = 'building-info-menu';
+        menu.id = 'building-info-hover';
+        menu.innerHTML = `
             <div class="info-title">${info.name}</div>
             <div class="info-stats">
-                <div>Effect: ${info.effect}</div>
-                <div>Size: ${info.size}</div>
-                <div>Cost: $${info.cost}</div>
+                <div><span>Effect:</span> <span>${info.effect}</span></div>
+                <div><span>Size:</span> <span>${info.size}</span></div>
+                <div><span>Cost:</span> <span>$${info.cost}</span></div>
             </div>
-            <div style="margin-top: 4px; font-size: 8px; color: #a88;">${info.description}</div>
+            <div class="info-description">${info.description}</div>
             ${disabledNote}
         `;
+        
+        document.body.appendChild(menu);
+        
+        // Position the menu near the button
+        const btnRect = buildingBtn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        
+        // Position to the left of button (outside sidebar)
+        let left = btnRect.left - menuWidth - 10;
+        let top = btnRect.top;
+        
+        // Adjust if menu goes off screen
+        if (left < 10) {
+            left = btnRect.right + 10;
+        }
+        
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight - 10;
+        }
+        
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        
+        // Clean up on mouse leave
+        buildingBtn.addEventListener('mouseleave', () => {
+            this.clearBuildingInfoMenu();
+        }, { once: true });
+    }
+
+    clearBuildingInfoMenu() {
+        const existingMenu = document.getElementById('building-info-hover');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
     }
 
     // ============ SPELL UI ============
@@ -373,17 +468,19 @@ export class UIManager {
     }
 
     setGameSpeedButtonState(speed) {
-        const speed1xBtn = document.getElementById('speed-1x-btn');
-        const speed2xBtn = document.getElementById('speed-2x-btn');
-        const speed3xBtn = document.getElementById('speed-3x-btn');
-        
-        [speed1xBtn, speed2xBtn, speed3xBtn].forEach(btn => {
-            if (btn) btn.classList.remove('active');
+        // Update speed circles
+        document.querySelectorAll('.speed-circle').forEach(circle => {
+            circle.classList.remove('active');
         });
         
-        if (speed === 1.0 && speed1xBtn) speed1xBtn.classList.add('active');
-        else if (speed === 2.0 && speed2xBtn) speed2xBtn.classList.add('active');
-        else if (speed === 3.0 && speed3xBtn) speed3xBtn.classList.add('active');
+        const activeCircle = document.querySelector(`.speed-circle[data-speed="${speed}"]`);
+        if (activeCircle) {
+            activeCircle.classList.add('active');
+        }
+    }
+
+    updateSpeedCircles(speed) {
+        this.setGameSpeedButtonState(speed);
     }
 
     // ============ UPGRADE MENUS ============
@@ -1087,5 +1184,7 @@ export class UIManager {
         }
         // Also remove any other open menus
         document.querySelectorAll('.upgrade-menu').forEach(menu => menu.remove());
+        this.clearBuildingInfoMenu();
+        this.clearTowerInfoMenu();
     }
 }

@@ -119,6 +119,7 @@ export class GameplayState {
         this.setupEventListeners();
         this.uiManager.setupSpellUI(); // Setup spell UI through UIManager
         this.uiManager.updateUI(); // Initial UI update through UIManager
+        this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         this.startWave();
         console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
         console.log('GameplayState: enter completed');
@@ -187,6 +188,8 @@ export class GameplayState {
         this.removeEventListeners();
         if (this.uiManager) {
             this.uiManager.removeUIEventListeners();
+            this.uiManager.hideSpeedControls(); // Hide speed controls when leaving gameplay
+            this.uiManager.resetGameSpeed(); // Reset speed to 1x when leaving
         }
     }
     
