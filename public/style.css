@@ -279,10 +279,13 @@ body {
     flex: 1;
     min-height: 0;
     gap: 0;
+    overflow: hidden;
+    width: 100%;
 }
 
 #gameCanvas {
     flex: 1;
+    min-width: 0;
     background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
     cursor: crosshair;
     touch-action: none;
@@ -291,8 +294,7 @@ body {
 
 /* ============ TOWER SIDEBAR - MEDIEVAL FORTRESS AESTHETIC ============ */
 #tower-sidebar {
-    width: max(15%, 200px);
-    width: clamp(200px, 24%, 360px);
+    width: clamp(160px, 22%, 280px);
     background: linear-gradient(135deg, rgba(42, 26, 15, 0.98) 0%, rgba(26, 15, 10, 0.98) 100%);
     display: none;
     flex-direction: column;
@@ -304,6 +306,7 @@ body {
         0 0 10px rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(2px);
     position: relative;
+    max-width: 22vw;
 }
 
 #tower-sidebar::before {
