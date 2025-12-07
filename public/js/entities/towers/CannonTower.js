@@ -76,26 +76,34 @@ export class CannonTower extends Tower {
     
     shoot() {
         if (this.target) {
-            const dx = this.target.x - this.x;
-            const dy = this.target.y - this.y;
-            const distance = Math.hypot(dx, dy);
-            
+            // Estimate initial speed to predict trajectory time
+            const distEstimate = Math.hypot(this.target.x - this.x, this.target.y - this.y);
             const gravity = 250;
             const launchAngle = Math.PI / 6;
-            const initialSpeed = Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle));
-            const flightTime = distance / (initialSpeed * Math.cos(launchAngle));
+            const initialSpeedEstimate = Math.sqrt((distEstimate * gravity) / Math.sin(2 * launchAngle));
+            const flightTimeEstimate = distEstimate / (initialSpeedEstimate * Math.cos(launchAngle));
+            
+            // Predict where the target will be
+            const predicted = this.predictEnemyPosition(this.target, initialSpeedEstimate);
+            
+            const dx = predicted.x - this.x;
+            const dy = predicted.y - this.y;
+            const distance = Math.hypot(dx, dy);
+            
+            const initialSpeed = distance > 0 ? Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle)) : initialSpeedEstimate;
+            const flightTime = distance > 0 ? distance / (initialSpeed * Math.cos(launchAngle)) : flightTimeEstimate;
             
             this.fireballs.push({
                 x: this.x,
                 y: this.y - 25,
-                vx: (dx / distance) * initialSpeed * Math.cos(launchAngle),
+                vx: distance > 0 ? (dx / distance) * initialSpeed * Math.cos(launchAngle) : 0,
                 vy: -initialSpeed * Math.sin(launchAngle),
                 gravity: gravity,
                 flameAnimation: 0,
                 life: flightTime,
                 maxLife: flightTime,
-                targetX: this.target.x,
-                targetY: this.target.y
+                targetX: predicted.x,
+                targetY: predicted.y
             });
         }
     }

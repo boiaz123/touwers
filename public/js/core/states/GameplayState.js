@@ -22,6 +22,9 @@ export class GameplayState {
         // Spell effects
         this.spellEffects = [];
         
+        // Pending damage to apply during update (for delayed damage like meteor strikes)
+        this.pendingDamage = [];
+        
         // NEW: Speed control (3 fixed speeds instead of cycling)
         this.gameSpeed = 1.0; // 1x, 2x, or 3x
         
@@ -333,7 +336,7 @@ export class GameplayState {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
                         const damage = spell.damage * (1 - dist / spell.radius * 0.5);
-                        enemy.takeDamage(damage);
+                        enemy.takeDamage(damage, false, 'arcane');
                     }
                 });
                 this.createSpellEffect('arcaneBlast', x, y, spell);
@@ -352,17 +355,23 @@ export class GameplayState {
                 break;
                 
             case 'meteorStrike':
-                // Delayed damage for meteor
-                setTimeout(() => {
-                    this.enemyManager.enemies.forEach(enemy => {
-                        const dist = Math.hypot(enemy.x - x, enemy.y - y);
-                        if (dist <= 80) {
-                            enemy.takeDamage(spell.damage);
-                            enemy.burnTimer = spell.burnDuration;
-                            enemy.burnDamage = spell.burnDamage;
-                        }
-                    });
-                }, 500);
+                // Queue delayed damage for meteor to be applied during update loop
+                this.pendingDamage.push({
+                    time: 0.5, // Delay of 0.5 seconds
+                    callback: () => {
+                        // Find alive enemies in the impact area
+                        this.enemyManager.enemies.forEach(enemy => {
+                            if (!enemy.isDead()) {
+                                const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                                if (dist <= 80) {
+                                    enemy.takeDamage(spell.damage, false, 'fire');
+                                    enemy.burnTimer = spell.burnDuration;
+                                    enemy.burnDamage = spell.burnDamage;
+                                }
+                            }
+                        });
+                    }
+                });
                 this.createSpellEffect('meteorStrike', x, y, spell);
                 break;
                 
@@ -373,7 +382,7 @@ export class GameplayState {
                 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
-                        enemy.takeDamage(spell.damage * Math.pow(0.8, index));
+                        enemy.takeDamage(spell.damage * Math.pow(0.8, index), false, 'electricity');
                     }, index * 100);
                 });
                 this.createSpellEffect('chainLightning', x, y, spell, targets);
@@ -687,6 +696,16 @@ export class GameplayState {
     }
     
     update(deltaTime) {
+        // Process pending damage (delayed spell effects)
+        this.pendingDamage = this.pendingDamage.filter(damage => {
+            damage.time -= deltaTime;
+            if (damage.time <= 0) {
+                damage.callback();
+                return false; // Remove from pending list
+            }
+            return true;
+        });
+        
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         

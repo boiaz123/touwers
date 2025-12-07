@@ -58,21 +58,24 @@ export class ArcherTower extends Tower {
             shooter.drawback = 1;
             shooter.shootTimer = 0.3;
             
-            // Calculate arrow trajectory with arc
-            const dx = this.target.x - this.x;
-            const dy = this.target.y - this.y;
-            const distance = Math.hypot(dx, dy);
+            // Predict where the target will be
             const arrowSpeed = 400;
+            const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
+            
+            // Calculate arrow trajectory with arc to predicted position
+            const dx = predicted.x - this.x;
+            const dy = predicted.y - this.y;
+            const distance = Math.hypot(dx, dy);
             const arcHeight = distance * 0.1; // Slight arc for realism
             
             this.arrows.push({
                 x: this.x + Math.cos(shooter.angle) * 20,
                 y: this.y + Math.sin(shooter.angle) * 20,
-                vx: (dx / distance) * arrowSpeed,
-                vy: (dy / distance) * arrowSpeed - arcHeight,
+                vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
+                vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
                 rotation: shooter.angle,
-                life: distance / arrowSpeed + 0.5,
-                maxLife: distance / arrowSpeed + 0.5
+                life: distance / Math.max(arrowSpeed, 1) + 0.5,
+                maxLife: distance / Math.max(arrowSpeed, 1) + 0.5
             });
         }
     }

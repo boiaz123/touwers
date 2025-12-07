@@ -38,6 +38,43 @@ export class Tower {
         
         return closest;
     }
+
+    /**
+     * Predict where an enemy will be at a given time
+     * Used for accurate tower shooting at moving targets
+     */
+    predictEnemyPosition(enemy, projectileSpeed) {
+        if (!enemy) return null;
+        
+        // If enemy has no velocity, return current position
+        if (!enemy.vx && !enemy.vy) {
+            return { x: enemy.x, y: enemy.y };
+        }
+        
+        // Calculate the time it will take for projectile to reach enemy
+        // Using distance = sqrt((targetX - x)^2 + (targetY - y)^2) = speed * time
+        // This is an iterative approximation
+        let predictedX = enemy.x;
+        let predictedY = enemy.y;
+        
+        // Simple prediction: assume enemy continues in current direction
+        // Get approximate velocity from enemy movement
+        const dx = (enemy.vx || 0);
+        const dy = (enemy.vy || 0);
+        const enemySpeed = Math.hypot(dx, dy);
+        
+        // Distance from tower to enemy
+        const distToEnemy = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+        
+        // Time for projectile to reach
+        const timeToReach = distToEnemy / Math.max(projectileSpeed, 1);
+        
+        // Where the enemy will be by then
+        predictedX = enemy.x + dx * timeToReach;
+        predictedY = enemy.y + dy * timeToReach;
+        
+        return { x: predictedX, y: predictedY };
+    }
     
     shoot() {
         // Override in subclass

@@ -171,26 +171,30 @@ export class PoisonArcherTower extends ArcherTower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage, false, 'poison');
+            // Don't deal direct damage - only apply poison over time via clouds
+            // this.target.takeDamage(this.damage, false, 'poison');
             
-            // No direct damage, just shoot poison arrow
+            // Shoot poison arrow
             this.drawback = 1;
             
-            const dx = this.target.x - this.archerPosition.x;
-            const dy = this.target.y - this.archerPosition.y;
-            const distance = Math.hypot(dx, dy);
+            // Predict where the target will be
             const arrowSpeed = 350;
+            const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
+            
+            const dx = predicted.x - this.archerPosition.x;
+            const dy = predicted.y - this.archerPosition.y;
+            const distance = Math.hypot(dx, dy);
             const arcHeight = distance * 0.08;
             
             this.poisonArrows.push({
                 x: this.archerPosition.x,
                 y: this.archerPosition.y,
-                vx: (dx / distance) * arrowSpeed,
-                vy: (dy / distance) * arrowSpeed - arcHeight,
+                vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
+                vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
                 rotation: Math.atan2(dy, dx),
-                life: distance / arrowSpeed + 0.5,
-                targetX: this.target.x,
-                targetY: this.target.y
+                life: distance / Math.max(arrowSpeed, 1) + 0.5,
+                targetX: predicted.x,
+                targetY: predicted.y
             });
         }
     }

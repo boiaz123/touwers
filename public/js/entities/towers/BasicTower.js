@@ -82,20 +82,23 @@ export class BasicTower extends Tower {
                 const defenderX = this.x + (this.gridSize || 64) * 0.32 * 0.1;
                 const defenderY = platformY - (this.gridSize || 64) * 0.32 * 0.05 - 12;
                 
-                const dx = this.target.x - defenderX;
-                const dy = this.target.y - defenderY;
-                const distance = Math.hypot(dx, dy);
+                // Predict where the target will be
                 const throwSpeed = 300;
+                const predicted = this.predictEnemyPosition(this.target, throwSpeed);
+                
+                const dx = predicted.x - defenderX;
+                const dy = predicted.y - defenderY;
+                const distance = Math.hypot(dx, dy);
                 const arcHeight = distance * 0.15;
                 
                 this.rocks.push({
                     x: defenderX,
                     y: defenderY,
-                    vx: (dx / distance) * throwSpeed,
-                    vy: (dy / distance) * throwSpeed - arcHeight,
+                    vx: distance > 0 ? (dx / distance) * throwSpeed : 0,
+                    vy: distance > 0 ? (dy / distance) * throwSpeed - arcHeight : 0,
                     rotation: 0,
                     rotationSpeed: Math.random() * 10 + 5,
-                    life: distance / throwSpeed + 1,
+                    life: distance / Math.max(throwSpeed, 1) + 1,
                     size: Math.random() * 2 + 3,
                     target: this.target
                 });

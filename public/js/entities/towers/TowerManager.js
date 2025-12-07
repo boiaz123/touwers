@@ -263,16 +263,17 @@ export class TowerManager {
             const multipliers = forge.getUpgradeMultipliers();
             const towerType = tower.constructor.name;
             
+            // Apply forge upgrades as additive bonuses on top of original damage
             switch (towerType) {
                 case 'BasicTower':
                     if (multipliers.basicDamageBonus > 0) {
-                        tower.damage += multipliers.basicDamageBonus;
+                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.basicDamageBonus;
                     }
                     break;
                     
                 case 'BarricadeTower':
                     if (multipliers.barricadeDamageBonus > 0) {
-                        tower.damage += multipliers.barricadeDamageBonus;
+                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.barricadeDamageBonus;
                     }
                     break;
                     
@@ -284,7 +285,7 @@ export class TowerManager {
                     
                 case 'PoisonArcherTower':
                     if (multipliers.poisonDamageBonus > 0) {
-                        tower.damage += multipliers.poisonDamageBonus;
+                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.poisonDamageBonus;
                     }
                     if (multipliers.fireArrowsEnabled) {
                         tower.hasFireArrows = true;
@@ -292,8 +293,12 @@ export class TowerManager {
                     break;
                     
                 case 'CannonTower':
-                    if (multipliers.explosiveRadiusBonus > 0 && tower.explosionRadius) {
-                        tower.explosionRadius += multipliers.explosiveRadiusBonus;
+                    if (multipliers.explosiveRadiusBonus > 0) {
+                        // Store original splash radius if not already stored
+                        if (!tower.originalSplashRadius) {
+                            tower.originalSplashRadius = tower.splashRadius;
+                        }
+                        tower.splashRadius = tower.originalSplashRadius + multipliers.explosiveRadiusBonus;
                     }
                     break;
             }

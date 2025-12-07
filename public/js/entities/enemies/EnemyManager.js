@@ -9,6 +9,9 @@ export class EnemyManager {
         this.spawnTimer = 0;
         this.spawnInterval = 1.2; // Increased from 0.8 for more spacing
         
+        // Keep track of splatters from dead enemies to render them until they fade
+        this.orphanedSplatters = [];
+        
         // Continuous spawn mode: alternates between enemy types
         this.continuousMode = true;
         this.spawnPatternIndex = 0;
@@ -126,7 +129,12 @@ export class EnemyManager {
             this.spawning = false;
         }
         
+        // Update all enemies
         this.enemies.forEach(enemy => enemy.update(deltaTime));
+        
+        // Update and clean up orphaned splatters from dead enemies
+        this.orphanedSplatters.forEach(splatter => splatter.update(deltaTime));
+        this.orphanedSplatters = this.orphanedSplatters.filter(splatter => splatter.isAlive());
     }
     
     checkReachedEnd() {
@@ -146,6 +154,10 @@ export class EnemyManager {
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.isDead()) {
                 killedCount++;
+                // Preserve splatters from dead enemies so they continue to animate and fade
+                if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                    this.orphanedSplatters.push(...enemy.hitSplatters);
+                }
                 return false;
             }
             return true;
@@ -169,6 +181,10 @@ export class EnemyManager {
             ctx.stroke();
         }
         
+        // Render all enemies
         this.enemies.forEach(enemy => enemy.render(ctx));
+        
+        // Render orphaned splatters from dead enemies
+        this.orphanedSplatters.forEach(splatter => splatter.render(ctx));
     }
 }
