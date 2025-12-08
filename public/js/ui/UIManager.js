@@ -22,8 +22,9 @@ export class UIManager {
             const towerType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
-            // Check if unlocked
-            const isUnlocked = this.towerManager.unlockSystem.canBuildTower(towerType);
+            // For guard-post, check if unlocked separately from limit
+            let isUnlocked = this.towerManager.unlockSystem.unlockedTowers.has(towerType);
+            let canBuild = this.towerManager.unlockSystem.canBuildTower(towerType);
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
@@ -34,8 +35,8 @@ export class UIManager {
                 // Check if affordable
                 const canAfford = this.gameState.canAfford(cost);
                 
-                // Determine if button should be disabled
-                if (!canAfford) {
+                // Determine if button should be disabled (limit or affordability)
+                if (!canAfford || !canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
                 } else {
@@ -506,17 +507,18 @@ export class UIManager {
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
-            const unlocked = unlockSystem.canBuildTower(type);
+            const isUnlocked = unlockSystem.unlockedTowers.has(type);
+            const canBuild = unlockSystem.canBuildTower(type);
             
             // Hide if not unlocked, show if unlocked
-            if (!unlocked) {
+            if (!isUnlocked) {
                 btn.style.display = 'none';
                 btn.classList.add('disabled');
                 btn.disabled = true;
             } else {
                 btn.style.display = 'flex';
-                // Button is unlocked, now check if affordable
-                if (!this.gameState.canAfford(cost)) {
+                // Button is unlocked, now check if it can be built (not at limit) and affordable
+                if (!canBuild || !this.gameState.canAfford(cost)) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
                 } else {
@@ -1320,6 +1322,148 @@ export class UIManager {
         }
     }
 
+    showGuardPostMenu(towerData) {
+        const panel = document.getElementById('basic-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Panel not found for Guard Post menu');
+            return;
+        }
+
+        console.log('UIManager: Showing Guard Post menu', towerData);
+
+        const tower = towerData.tower;
+        const towerInfo = tower.constructor.getInfo();
+        const gameState = towerData.gameState;
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">${towerInfo.icon}</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${towerInfo.name}</div>
+                            <div class="upgrade-description">${towerInfo.description}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Defender hiring section
+        if (!tower.defender || tower.defender.isDead()) {
+            if (tower.defenderDeadCooldown > 0) {
+                // Show cooldown message
+                contentHTML += `
+                    <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">⏱️</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">Defender Cooldown</div>
+                                    <div class="upgrade-description">Wait before hiring another defender</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display" style="color: #ff9999;">${tower.defenderDeadCooldown.toFixed(1)}s</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show hiring option
+                const canAfford = gameState.gold >= 100;
+                contentHTML += `
+                    <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">🛡️</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">Hire Defender L1</div>
+                                    <div class="upgrade-description">Summons a Level 1 defender to guard this post</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display">$100</div>
+                                <button class="upgrade-button hire-defender-btn" ${!canAfford ? 'disabled' : ''}>
+                                    ${canAfford ? 'Hire' : 'Not Enough Gold'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // Defender is active
+            contentHTML += `
+                <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                    <div class="panel-upgrade-item">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">✅</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">Defender Active</div>
+                                <div class="upgrade-description">A defender is currently stationed here</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">${tower.defender.health}/${tower.defender.maxHealth} HP</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Guard Post
+                </button>
+            </div>
+        `;
+
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🛡️ Guard Post';
+
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('basic-tower-panel'), { once: true });
+        }
+
+        // Setup hire defender button
+        const hireBtn = panel.querySelector('.hire-defender-btn');
+        if (hireBtn) {
+            hireBtn.addEventListener('click', () => {
+                if (tower.hireDefender(gameState)) {
+                    console.log('UIManager: Defender hired successfully');
+                    this.updateUI();
+                    // Refresh menu
+                    this.showGuardPostMenu(towerData);
+                }
+            }, { once: true });
+        }
+
+        // Setup sell button
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(tower);
+                this.updateUI();
+                this.closePanelWithAnimation('basic-tower-panel');
+            }, { once: true });
+        }
+    }
+
     showTowerStatsMenu(towerData) {
         // Generic tower stats menu for any tower type
         console.log('UIManager: Showing tower stats menu', towerData);
@@ -1625,6 +1769,88 @@ export class UIManager {
         }
     }
 
+    showGuardPostMenu(guardPostData) {
+        const panel = document.getElementById('guard-post-panel');
+        if (!panel) {
+            console.error('UIManager: Guard post panel not found');
+            return;
+        }
+        
+        const tower = guardPostData.tower;
+        const contentArea = panel.querySelector('.panel-content');
+        if (!contentArea) {
+            console.error('UIManager: Guard post content area not found');
+            return;
+        }
+        
+        let contentHTML = '<div class="tower-menu-content">';
+        
+        // Guard post info
+        contentHTML += `
+            <div class="tower-stats-section">
+                <div class="stat-item">
+                    <span class="stat-label">Guard Post</span>
+                    <span class="stat-value">Tower</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Health</span>
+                    <span class="stat-value">${tower.health}/${tower.maxHealth}</span>
+                </div>
+            </div>
+        `;
+        
+        // Defender section
+        if (tower.defender && !tower.defender.isDead()) {
+            contentHTML += `
+                <div class="defender-section">
+                    <div class="defender-status">
+                        <span class="defender-status-label">Defender Status: ACTIVE</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Defender Health</span>
+                        <span class="stat-value">${tower.defender.health}/${tower.defender.maxHealth}</span>
+                    </div>
+                </div>
+            `;
+        } else if (tower.defenderDeadCooldown > 0) {
+            contentHTML += `
+                <div class="defender-section">
+                    <div class="defender-status">
+                        <span class="defender-status-label">Cooldown: ${tower.defenderDeadCooldown.toFixed(1)}s</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            contentHTML += `
+                <div class="defender-hiring-section">
+                    <button class="hire-defender-btn" data-level="1">
+                        <span class="hire-button-label">Hire Level 1 Defender</span>
+                        <span class="hire-button-cost">100g</span>
+                    </button>
+                </div>
+            `;
+        }
+        
+        contentHTML += '</div>';
+        contentArea.innerHTML = contentHTML;
+        
+        // Add event listener for hiring button
+        const hireBtn = contentArea.querySelector('.hire-defender-btn');
+        if (hireBtn) {
+            hireBtn.addEventListener('click', () => {
+                if (tower.hireDefender(this.gameState)) {
+                    this.updateUI();
+                    this.showGuardPostMenu(guardPostData);
+                } else {
+                    console.log('UIManager: Failed to hire defender');
+                }
+            }, { once: true });
+        }
+        
+        // Show the panel
+        this.showPanelWithAnimation('guard-post-panel');
+    }
+
     showCastleUpgradeMenu(castleData) {
         // Castle upgrades menu - using panel-based system
         
@@ -1862,6 +2088,9 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('training-panel'), { once: true });
         }
         
+        // Get unlock system for tower unlock notifications
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        
         // Add button handlers for upgrades
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -1873,6 +2102,10 @@ export class UIManager {
                 let success = false;
                 if (upgradeId === 'training_level') {
                     success = trainingData.trainingGrounds.purchaseTrainingLevelUpgrade(this.gameState);
+                    // Notify unlock system of training grounds upgrade
+                    if (success) {
+                        unlockSystem.onTrainingGroundsUpgraded(trainingData.trainingGrounds.trainingLevel);
+                    }
                 } else if (towerType) {
                     success = trainingData.trainingGrounds.purchaseRangeUpgrade(towerType, this.gameState);
                 }

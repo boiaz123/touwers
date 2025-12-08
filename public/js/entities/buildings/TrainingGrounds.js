@@ -13,6 +13,10 @@ export class TrainingGrounds extends Building {
         this.defenderUnlocked = false; // Unlocked at training level 3
         this.defenderMaxLevel = 1; // Upgraded to level 2 at training level 4, level 3 at training level 5
         
+        // Guard Post system unlock and limits
+        this.guardPostUnlocked = false; // Unlocked at training level 4
+        this.maxGuardPosts = 0; // 1 at level 4, 2 at level 5
+        
         // Range upgrades for manned towers - each tower has 5 levels
         // Towers: ArcherTower, BarricadeTower, BasicTower, PoisonArcherTower, CannonTower
         this.rangeUpgrades = {
@@ -1170,12 +1174,15 @@ export class TrainingGrounds extends Building {
         // Check for defender upgrades at levels 4 and 5
         if (this.trainingLevel === 4) {
             this.defenderMaxLevel = 2;
-            console.log('TrainingGrounds: Defender upgraded to level 2!');
+            this.guardPostUnlocked = true;
+            this.maxGuardPosts = 1;
+            console.log('TrainingGrounds: Defender upgraded to level 2! Guard Posts unlocked (limit: 1)');
         }
         
         if (this.trainingLevel === 5) {
             this.defenderMaxLevel = 3;
-            console.log('TrainingGrounds: Defender upgraded to level 3!');
+            this.maxGuardPosts = 2;
+            console.log('TrainingGrounds: Defender upgraded to level 3! Guard Posts limit increased to 2');
         }
         
         console.log(`TrainingGrounds: Purchased training level upgrade, now at level ${this.trainingLevel}`);
@@ -1256,6 +1263,30 @@ export class TrainingGrounds extends Building {
         }
         
         return false;
+    }
+
+    /**
+     * Get guard post unlock option if available
+     */
+    getGuardPostOption() {
+        // Only show if training level 4+ and not already at max
+        if (this.trainingLevel < 4) {
+            return null;
+        }
+        
+        if (!this.guardPostUnlocked) {
+            return null;
+        }
+        
+        return {
+            id: 'guard_post_unlock',
+            name: 'Guard Post Tower',
+            description: 'Build a Guard Post tower on the path. Hire level 1 defenders to guard key locations.',
+            type: 'guard_post',
+            cost: 150,
+            icon: '🏚️',
+            maxBuildings: this.maxGuardPosts
+        };
     }
 
     getUpgradeOptions() {

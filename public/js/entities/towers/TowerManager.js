@@ -26,6 +26,35 @@ export class TowerManager {
         const towerType = TowerRegistry.getTowerType(type);
         if (!towerType) return false;
         
+        // Special handling for guard-post towers
+        if (type === 'guard-post') {
+            // Guard posts must be placed on the path
+            const pathPoint = this.findNearestPathPoint(x, y);
+            if (!pathPoint) {
+                console.log('TowerManager: Guard post must be placed on the path');
+                return false;
+            }
+            
+            // Use UnlockSystem to check limit
+            if (!this.unlockSystem.canBuildTower('guard-post')) {
+                console.log(`TowerManager: Guard post limit reached`);
+                return false;
+            }
+            
+            // Use path point position instead of grid-based position
+            if (this.gameState.spend(towerType.cost)) {
+                const GuardPost = towerType.class;
+                const tower = new GuardPost(pathPoint.x, pathPoint.y, 1);
+                this.towers.push(tower);
+                // Notify unlock system
+                this.unlockSystem.onGuardPostBuilt();
+                console.log(`TowerManager: Placed guard-post at path (${pathPoint.x}, ${pathPoint.y})`);
+                return true;
+            }
+            return false;
+        }
+        
+        // Normal tower placement for non-guard-post towers
         // Check if the position is already occupied by another tower
         if (this.isTowerPositionOccupied(gridX, gridY)) {
             console.log('TowerManager: Position already occupied by another tower');
@@ -43,6 +72,39 @@ export class TowerManager {
             return true;
         }
         return false;
+    }
+    
+    /**
+     * Find the nearest point on the path to given coordinates
+     * Allows placement in the 2x2 border around the path (up to 60px from path center)
+     */
+    findNearestPathPoint(x, y) {
+        if (!this.level || !this.level.path || this.level.path.length < 2) {
+            return null;
+        }
+        
+        let nearest = null;
+        let minDistance = 60; // Maximum placement distance from path - allows 2x2 border placement
+        
+        for (let i = 0; i < this.level.path.length - 1; i++) {
+            const p1 = this.level.path[i];
+            const p2 = this.level.path[i + 1];
+            
+            // Find closest point on line segment
+            const t = Math.max(0, Math.min(1, ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / (Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))));
+            const closestX = p1.x + t * (p2.x - p1.x);
+            const closestY = p1.y + t * (p2.y - p1.y);
+            
+            const distance = Math.hypot(closestX - x, closestY - y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                // Return the clicked position, not the closest point on path
+                // This allows placement in the 2x2 border around the path
+                nearest = { x: x, y: y };
+            }
+        }
+        
+        return nearest;
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
@@ -360,6 +422,28 @@ export class TowerManager {
         const iconSize = 30;
         
         for (const tower of this.towers) {
+            // Special handling for GuardPost - uses world coordinates, not grid
+            if (tower.constructor.name === 'GuardPost') {
+                if (tower.iconWorldX !== undefined && tower.iconWorldY !== undefined) {
+                    // Icon box spans from iconWorldX to iconWorldX+iconWidth, iconWorldY to iconWorldY+iconHeight
+                    const buffer = 3;
+                    if (x >= tower.iconWorldX - buffer && x <= tower.iconWorldX + tower.iconWidth + buffer &&
+                        y >= tower.iconWorldY - buffer && y <= tower.iconWorldY + tower.iconHeight + buffer) {
+                        console.log(`TowerManager: GuardPost icon clicked at (${x}, ${y}), icon at (${tower.iconWorldX}, ${tower.iconWorldY})`);
+                        tower.isSelected = true;
+                        return {
+                            type: 'guard_post_menu',
+                            tower: tower,
+                            options: tower.getDefenderHiringOptions(),
+                            gameState: this.gameState
+                        };
+                    }
+                }
+                // Continue checking other towers
+                continue;
+            }
+            
+            // Standard tower click detection using grid position
             // Icon position: bottom right of 2x2 grid, slightly floating up
             const iconX = (tower.gridX + 1.5) * cellSize;
             const iconY = (tower.gridY + 1.5) * cellSize - 5;

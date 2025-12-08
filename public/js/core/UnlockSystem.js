@@ -10,6 +10,8 @@ export class UnlockSystem {
         this.maxForges = 1;
         this.mineCount = 0;
         this.academyCount = 0;
+        this.guardPostCount = 0;
+        this.maxGuardPosts = 0;
         
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
@@ -67,6 +69,43 @@ export class UnlockSystem {
         console.log('UnlockSystem: Set superweaponUnlocked to true');
         console.log('UnlockSystem: superweaponUnlocked is now:', this.superweaponUnlocked);
         console.log('UnlockSystem: Academy Level 3 reached - Super Weapon Lab unlocked!');
+    }
+    
+    // New: Method to handle Training Grounds level upgrades
+    onTrainingGroundsUpgraded(newLevel) {
+        switch(newLevel) {
+            case 4:
+                // Training Grounds level 4 unlocks Guard Post tower
+                this.unlockedTowers.add('guard-post');
+                this.maxGuardPosts = 1;
+                console.log('UnlockSystem: Training Grounds level 4 - unlocked Guard Post tower (limit: 1)');
+                break;
+            case 5:
+                // Training Grounds level 5 increases limit
+                this.maxGuardPosts = 2;
+                console.log('UnlockSystem: Training Grounds level 5 - Guard Posts limit increased to 2');
+                break;
+            default:
+                break;
+        }
+    }
+    
+    // New: Track Guard Post built
+    onGuardPostBuilt() {
+        if (this.guardPostCount < this.maxGuardPosts) {
+            this.guardPostCount++;
+            console.log(`UnlockSystem: Guard Post built - ${this.guardPostCount}/${this.maxGuardPosts}`);
+            return true;
+        }
+        return false;
+    }
+    
+    // New: Track Guard Post destroyed/sold
+    onGuardPostDestroyed() {
+        if (this.guardPostCount > 0) {
+            this.guardPostCount--;
+            console.log(`UnlockSystem: Guard Post destroyed - ${this.guardPostCount}/${this.maxGuardPosts}`);
+        }
     }
     
     // New: Method to handle gem mining research
@@ -149,6 +188,10 @@ export class UnlockSystem {
     }
     
     canBuildTower(type) {
+        // Special handling for guard-post - check count limit
+        if (type === 'guard-post') {
+            return this.unlockedTowers.has(type) && this.guardPostCount < this.maxGuardPosts;
+        }
         return this.unlockedTowers.has(type);
     }
 

@@ -225,6 +225,9 @@ export class GameplayState {
                 } else if (clickResult.type === 'combination_tower_menu') {
                     this.uiManager.showCombinationTowerMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'guard_post_menu') {
+                    this.uiManager.showGuardPostMenu(clickResult);
+                    return;
                 } else if (clickResult.type === 'basic_tower_stats') {
                     this.uiManager.showBasicTowerStatsMenu(clickResult);
                     return;
@@ -755,6 +758,15 @@ export class GameplayState {
             defender.y = this.level.castle.y + 40;
         }
         
+        // Update guard posts and their defenders
+        if (this.level.towers) {
+            this.level.towers.forEach(tower => {
+                if (tower.type === 'guard-post') {
+                    tower.update(deltaTime, this.enemyManager.enemies, this.gameState);
+                }
+            });
+        }
+        
         // Update freeze timers and handle combat
         this.enemyManager.enemies.forEach(enemy => {
             if (enemy.freezeTimer > 0) {
@@ -780,7 +792,7 @@ export class GameplayState {
                 }
             }
             
-            // Check if enemy should engage defender
+            // Check if enemy should engage castle defender
             if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
                 if (enemy.checkDefenderTarget(this.level.castle.defender)) {
                     enemy.attackDefender(this.level.castle.defender, deltaTime);
@@ -788,10 +800,26 @@ export class GameplayState {
                 }
             }
             
-            // Have enemies attack the castle if they reached the end
-            if (enemy.reachedEnd && this.level.castle) {
-                enemy.isAttackingCastle = true;
-                enemy.attackCastle(this.level.castle, deltaTime);
+            // Check if enemy should engage guard post defenders
+            let attackingGuardPost = false;
+            if (this.level.towers) {
+                for (let tower of this.level.towers) {
+                    if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                        if (enemy.checkDefenderTarget(tower.defender)) {
+                            enemy.attackDefender(tower.defender, deltaTime);
+                            attackingGuardPost = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (!attackingGuardPost) {
+                // Have enemies attack the castle if they reached the end
+                if (enemy.reachedEnd && this.level.castle) {
+                    enemy.isAttackingCastle = true;
+                    enemy.attackCastle(this.level.castle, deltaTime);
+                }
             }
         });
         
@@ -854,6 +882,15 @@ export class GameplayState {
         // Render defender if active
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             this.level.castle.defender.render(ctx);
+        }
+        
+        // Render guard post defenders
+        if (this.level.towers) {
+            this.level.towers.forEach(tower => {
+                if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                    tower.defender.render(ctx);
+                }
+            });
         }
         
         this.renderSpellEffects(ctx);

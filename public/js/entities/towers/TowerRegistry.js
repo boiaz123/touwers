@@ -5,6 +5,7 @@ import { MagicTower } from './MagicTower.js';
 import { BarricadeTower } from './BarricadeTower.js';
 import { PoisonArcherTower } from './PoisonArcherTower.js';
 import { CombinationTower } from './CombinationTower.js';
+import { GuardPost } from './GuardPost.js';
 
 /**
  * TowerRegistry - Centralized registry for all tower types
@@ -19,7 +20,8 @@ export class TowerRegistry {
         'magic': { class: MagicTower, cost: 150 },
         'barricade': { class: BarricadeTower, cost: 90 },
         'poison': { class: PoisonArcherTower, cost: 120 },
-        'combination': { class: CombinationTower, cost: 200 }
+        'combination': { class: CombinationTower, cost: 200 },
+        'guard-post': { class: GuardPost, cost: 150 }
     };
 
     /**
