@@ -25,18 +25,23 @@ export class UIManager {
             // Check if unlocked
             const isUnlocked = this.towerManager.unlockSystem.canBuildTower(towerType);
             
-            // Check if affordable
-            const canAfford = this.gameState.canAfford(cost);
-            
-            // Determine if button should be disabled
-            const shouldDisable = !isUnlocked || !canAfford;
-            
-            if (shouldDisable) {
-                btn.classList.add('disabled');
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
                 btn.disabled = true;
             } else {
-                btn.classList.remove('disabled');
-                btn.disabled = false;
+                btn.style.display = 'flex';
+                // Check if affordable
+                const canAfford = this.gameState.canAfford(cost);
+                
+                // Determine if button should be disabled
+                if (!canAfford) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
             }
         });
 
@@ -45,21 +50,32 @@ export class UIManager {
             const buildingType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
-            // Check if unlocked and at limit
-            const isAvailable = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+            // Check if building is unlocked (separate from whether it can be built)
+            const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
             
-            // Check if affordable
-            const canAfford = this.gameState.canAfford(cost);
+            // Debug superweapon button
+            if (buildingType === 'superweapon') {
+                console.log(`updateButtonStates: superweapon - isUnlocked: ${isUnlocked}, superweaponUnlocked: ${this.towerManager.unlockSystem.superweaponUnlocked}`);
+            }
             
-            // Determine if button should be disabled
-            const shouldDisable = !isAvailable || !canAfford;
-            
-            if (shouldDisable) {
-                btn.classList.add('disabled');
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
                 btn.disabled = true;
             } else {
-                btn.classList.remove('disabled');
-                btn.disabled = false;
+                btn.style.display = 'flex';
+                // Check if it can be built (not at limit) and affordable
+                const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+                const canAfford = this.gameState.canAfford(cost);
+                
+                // Determine if button should be disabled
+                if (!canBuild || !canAfford) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
             }
         });
     }
@@ -486,46 +502,60 @@ export class UIManager {
     updateUIAvailability() {
         const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Update tower button states - keep buttons visible but disabled if locked
+        // Update tower button states - show only when unlocked, disable based on resources
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const unlocked = unlockSystem.canBuildTower(type);
             
-            // Always show button, but disable if locked
-            btn.style.display = '';
+            // Hide if not unlocked, show if unlocked
             if (!unlocked) {
-                btn.classList.add('disabled');
-                btn.disabled = true;
-            } else if (!this.gameState.canAfford(cost)) {
+                btn.style.display = 'none';
                 btn.classList.add('disabled');
                 btn.disabled = true;
             } else {
-                btn.classList.remove('disabled');
-                btn.disabled = false;
+                btn.style.display = 'flex';
+                // Button is unlocked, now check if affordable
+                if (!this.gameState.canAfford(cost)) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
             }
         });
         
-        // Update building button states - keep buttons visible but disabled appropriately
+        // Update building button states - show when unlocked, disable based on limits and resources
         document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
-            // Always show button
-            btn.style.display = '';
+            // Check if building is unlocked (not if it can be built - that's different)
+            const isUnlocked = unlockSystem.isBuildingUnlocked(type);
             
-            // Check if building is available (not at limit and unlocked)
-            const isAvailable = unlockSystem.canBuildBuilding(type);
+            // Debug superweapon button
+            if (type === 'superweapon') {
+                console.log(`updateUIAvailability: superweapon - isUnlocked: ${isUnlocked}, superweaponUnlocked: ${unlockSystem.superweaponUnlocked}`);
+            }
             
-            if (!isAvailable) {
-                btn.classList.add('disabled');
-                btn.disabled = true;
-            } else if (!this.gameState.canAfford(cost)) {
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
                 btn.classList.add('disabled');
                 btn.disabled = true;
             } else {
-                btn.classList.remove('disabled');
-                btn.disabled = false;
+                btn.style.display = 'flex';
+                // Building is unlocked, check if it can be built (at limit or affordable)
+                const canBuild = unlockSystem.canBuildBuilding(type);
+                
+                if (!canBuild || !this.gameState.canAfford(cost)) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
             }
         });
         

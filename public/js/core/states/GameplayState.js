@@ -100,13 +100,6 @@ export class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         
-        // New: Initialize unlock system with superweapon unlocked in sandbox
-        if (this.isSandbox) {
-            const unlockSystem = this.towerManager.getUnlockSystem();
-            unlockSystem.superweaponUnlocked = true;
-            console.log('GameplayState: SANDBOX MODE - superweapon unlocked');
-        }
-        
         // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
         if (this.isSandbox) {
             console.log('GameplayState: SANDBOX MODE - Initializing gems immediately');

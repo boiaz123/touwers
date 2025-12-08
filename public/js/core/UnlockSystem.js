@@ -151,6 +151,18 @@ export class UnlockSystem {
     canBuildTower(type) {
         return this.unlockedTowers.has(type);
     }
+
+    /**
+     * Check if a building is unlocked (appears in menu)
+     * This is different from canBuildBuilding - it only checks if the building type is available
+     */
+    isBuildingUnlocked(type) {
+        // Superweapon is special - only appears when unlocked at Academy level 3
+        if (type === 'superweapon') {
+            return this.superweaponUnlocked;
+        }
+        return this.unlockedBuildings.has(type);
+    }
     
     canBuildBuilding(type) {
         if (type === 'forge' && this.forgeCount >= this.maxForges) {
