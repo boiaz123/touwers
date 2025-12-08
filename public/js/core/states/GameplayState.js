@@ -234,6 +234,9 @@ export class GameplayState {
                 } else if (clickResult.type === 'basic_tower_stats') {
                     this.uiManager.showBasicTowerStatsMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'tower_stats') {
+                    this.uiManager.showTowerStatsMenu(clickResult);
+                    return;
                 } else if (clickResult.type === 'superweapon_menu') {
                     this.uiManager.showSuperWeaponMenu(clickResult);
                     return;
@@ -540,6 +543,9 @@ export class GameplayState {
                 return;
             } else if (clickResult.type === 'basic_tower_stats') {
                 this.uiManager.showBasicTowerStatsMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'tower_stats') {
+                this.uiManager.showTowerStatsMenu(clickResult);
                 return;
             } else if (clickResult.type === 'superweapon_menu') {
                 this.uiManager.showSuperWeaponMenu(clickResult);

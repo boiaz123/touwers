@@ -503,6 +503,9 @@ export class CannonTower extends Tower {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
@@ -512,7 +515,8 @@ export class CannonTower extends Tower {
             damage: '40 (AoE)',
             range: '120',
             fireRate: '0.4/sec',
-            cost: 100
+            cost: 100,
+            icon: '🎯'
         };
     }
 }

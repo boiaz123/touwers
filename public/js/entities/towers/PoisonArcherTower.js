@@ -489,6 +489,9 @@ export class PoisonArcherTower extends ArcherTower {
         ctx.beginPath();
         ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
@@ -498,7 +501,8 @@ export class PoisonArcherTower extends ArcherTower {
             damage: '0 direct + 4 DoT/sec',
             range: '130',
             fireRate: '0.8/sec',
-            cost: 120
+            cost: 120,
+            icon: '🌿'
         };
     }
 }

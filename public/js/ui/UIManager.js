@@ -731,6 +731,36 @@ export class UIManager {
         }
     }
 
+    showPanelWithoutClosing(panelId, title, contentHTML) {
+        // Show panel WITHOUT closing others - for tower menus that should stay open
+        const panel = document.getElementById(panelId);
+        if (!panel) {
+            console.error(`UIManager: Panel ${panelId} not found`);
+            return;
+        }
+        
+        // Update title
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = title;
+        
+        // Update content
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel with animation
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn && !closeBtn.dataset.hasListener) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation(panelId));
+            closeBtn.dataset.hasListener = 'true';
+        }
+    }
+
     closePanelWithAnimation(panelId) {
         const panel = document.getElementById(panelId);
         if (!panel) return;
@@ -752,7 +782,8 @@ export class UIManager {
             'combination-tower-panel',
             'superweapon-panel',
             'training-panel',
-            'castle-panel'
+            'castle-panel',
+            'basic-tower-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -1197,6 +1228,61 @@ export class UIManager {
                 this.updateUI();
                 this.closePanelWithAnimation('combination-tower-panel');
             }, { once: true });
+        }
+    }
+
+    showTowerStatsMenu(towerData) {
+        // Generic tower stats menu for any tower type
+        console.log('UIManager: Showing tower stats menu', towerData);
+        
+        const tower = towerData.tower;
+        const towerInfo = tower.constructor.getInfo();
+        
+        const stats = {
+            name: towerInfo.name,
+            damage: tower.damage,
+            range: tower.range,
+            fireRate: tower.fireRate,
+            description: towerInfo.description,
+            cost: towerInfo.cost,
+            icon: towerInfo.icon || '🏰'
+        };
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">${stats.icon}</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${stats.name}</div>
+                            <div class="upgrade-description">${stats.description}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Display in panel using the non-closing method so menu stays open when clicking towers
+        this.showPanelWithoutClosing('basic-tower-panel', `${stats.icon} Tower Stats`, contentHTML);
+        
+        // Add sell button handler
+        const sellBtn = document.getElementById(`sell-tower-btn-${tower.gridX}-${tower.gridY}`);
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(tower);
+                this.updateUI();
+                this.closePanelWithAnimation('basic-tower-panel');
+            });
         }
     }
 

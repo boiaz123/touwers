@@ -606,6 +606,9 @@ export class MagicTower extends Tower {
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
         }
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
@@ -615,7 +618,8 @@ export class MagicTower extends Tower {
             damage: '30 + elemental bonuses',
             range: '110',
             fireRate: '0.8/sec',
-            cost: 150
+            cost: 150,
+            icon: '✨'
         };
     }
 }

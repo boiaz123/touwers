@@ -447,7 +447,11 @@ export class BasicTower extends Tower {
             ctx.setLineDash([]);
         }
         
-        // Floating icon in bottom right of 2x2 grid
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
+        
+        // Floating icon in bottom right of 2x2 grid - DISABLED FOR BASIC TOWER
+        /*
         const iconSize = 20;
         const iconX = (this.gridX + 1.5) * cellSize;
         const iconY = (this.gridY + 1.5) * cellSize - 5;
@@ -507,6 +511,7 @@ export class BasicTower extends Tower {
         // Add subtle gold highlight on symbol
         ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
         ctx.fillText(symbol, iconX, iconY);
+        */
     }
     
     drawEnvironment(ctx, gridSize) {
@@ -633,7 +638,8 @@ export class BasicTower extends Tower {
             damage: '20',
             range: '120',
             fireRate: '1.0/sec',
-            cost: 50
+            cost: 50,
+            icon: '🏯'
         };
     }
 }

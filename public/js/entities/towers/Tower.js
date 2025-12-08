@@ -93,6 +93,28 @@ export class Tower {
             ctx.stroke();
         }
     }
+
+    /**
+     * Render the attack radius circle - only shown when tower is selected
+     */
+    renderAttackRadiusCircle(ctx, color = 'rgba(100, 200, 100, 0.3)') {
+        if (this.isSelected) {
+            ctx.strokeStyle = 'rgba(100, 200, 100, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Draw a dashed circle for better visibility
+            ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+        }
+    }
     
     getTowerSize(ctx) {
         const baseResolution = 1920;
@@ -105,7 +127,8 @@ export class Tower {
         return {
             name: 'Tower',
             description: 'Base tower',
-            cost: 0
+            cost: 0,
+            icon: '🏰'
         };
     }
 }

@@ -746,6 +746,9 @@ export class CombinationTower extends Tower {
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
         }
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
@@ -755,7 +758,8 @@ export class CombinationTower extends Tower {
             damage: '35',
             range: '110',
             fireRate: '0.7/sec',
-            cost: 200
+            cost: 200,
+            icon: '⚡'
         };
     }
 }

@@ -364,6 +364,9 @@ export class ArcherTower extends Tower {
             ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
             ctx.stroke();
         }
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
@@ -373,7 +376,8 @@ export class ArcherTower extends Tower {
             damage: '15',
             range: '140',
             fireRate: '1.5/sec',
-            cost: 75
+            cost: 75,
+            icon: '🏹'
         };
     }
 }
