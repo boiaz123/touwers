@@ -487,7 +487,7 @@ body {
     aspect-ratio: 1;
     background: linear-gradient(145deg, rgba(74, 58, 47, 0.9) 0%, rgba(58, 42, 31, 0.9) 100%);
     color: var(--text-gold);
-    border: 1.5px solid var(--border-primary);
+    border: 3px solid var(--border-primary);
     border-radius: 0.2rem;
     cursor: pointer;
     font-size: clamp(0.4rem, 0.7vw, 0.55rem);
@@ -496,10 +496,10 @@ body {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: flex-start;
     text-align: center;
-    padding: clamp(0.15rem, 0.3vh, 0.25rem);
+    padding: 0;
     transition: all 0.15s ease;
     position: relative;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.6);
@@ -564,17 +564,33 @@ body {
     box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.tower-icon, .building-icon {
-    font-size: clamp(0.6rem, 1.3vw, 0.85rem);
-    margin-bottom: 0.05rem;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+/* Button icon image - fills entire button */
+.btn-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
-.tower-cost, .building-cost {
-    font-size: clamp(0.35rem, 0.6vw, 0.45rem);
+/* Price box in bottom right corner */
+.btn-price-box {
+    position: absolute;
+    bottom: 0.4rem;
+    right: 0.4rem;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--primary-gold-light);
+    border-radius: 0.15rem;
+    padding: clamp(0.12rem, 0.25vh, 0.18rem) clamp(0.2rem, 0.35vw, 0.28rem);
+    font-size: clamp(0.32rem, 0.65vw, 0.45rem);
     color: var(--primary-gold-light);
     font-weight: bold;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 2;
+    white-space: nowrap;
 }
 
 /* ============ INFO PANEL ============ */
