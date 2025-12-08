@@ -6,6 +6,7 @@ export class UIManager {
         this.stateManager = gameplayState.stateManager;
         this.level = gameplayState.level;
         this.activeMenu = null;
+        this.currentForgeData = null;
         this.lastSpellReadyCount = 0;
     }
 
@@ -509,90 +510,157 @@ export class UIManager {
     // ============ UPGRADE MENUS ============
 
     showForgeUpgradeMenu(forgeData) {
-        // Clear existing menus
-        this.clearActiveMenus();
+        // Store current forge data for this session
+        this.currentForgeData = forgeData;
         
         // Get unlock system from tower manager
         const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Create upgrade menu with proper currency check
-        const menu = document.createElement('div');
-        menu.id = 'forge-upgrade-menu';
-        menu.className = 'upgrade-menu';
+        // Get panel and container
+        const panel = document.getElementById('forge-panel');
+        const upgradesContainer = document.getElementById('forge-panel-upgrades');
         
-        let upgradeListHTML = '';
+        if (!panel || !upgradesContainer) {
+            console.error('UIManager: Forge panel elements not found');
+            return;
+        }
         
-        // Add forge level upgrade first if available
+        // Build upgraded HTML with better visual structure
+        let contentHTML = '';
+        
+        // Forge Level Section - Special styling
         if (forgeData.forgeUpgrade) {
             const forgeUpgrade = forgeData.forgeUpgrade;
-            upgradeListHTML += `
-                <div class="upgrade-item forge-upgrade ${forgeUpgrade.level >= forgeUpgrade.maxLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${forgeUpgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${forgeUpgrade.name}</div>
-                        <div class="upgrade-desc">${forgeUpgrade.description}</div>
-                        <div class="upgrade-next">${forgeUpgrade.nextUnlock}</div>
-                        <div class="upgrade-level">Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}</div>
+            const isMaxed = forgeUpgrade.level >= forgeUpgrade.maxLevel;
+            const canAfford = forgeUpgrade.cost && this.gameState.gold >= forgeUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category forge-level-upgrade">
+                    <div class="panel-upgrade-item forge-level-upgrade ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${forgeUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${forgeUpgrade.name}</div>
+                                <div class="upgrade-description">${forgeUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(forgeUpgrade.level / forgeUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${forgeUpgrade.nextUnlock}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${forgeUpgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${forgeUpgrade.id}" 
+                                    data-forge-level="true"
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade Forge'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">
-                        ${forgeUpgrade.cost ? `$${forgeUpgrade.cost}` : 'MAX'}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="${forgeUpgrade.id}" 
-                            ${(!forgeUpgrade.cost || this.gameState.gold < forgeUpgrade.cost) ? 'disabled' : ''}>
-                        ${forgeUpgrade.cost ? 'Upgrade' : 'MAX'}
-                    </button>
                 </div>
             `;
         }
         
-        // Add tower upgrades - ALL of them, not filtered
-        upgradeListHTML += forgeData.upgrades.map(upgrade => `
-            <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                <div class="upgrade-icon">${upgrade.icon}</div>
-                <div class="upgrade-details">
-                    <div class="upgrade-name">${upgrade.name}</div>
-                    <div class="upgrade-desc">${upgrade.description}</div>
-                    <div class="upgrade-level">Level: ${upgrade.level}/${upgrade.maxLevel}</div>
-                    <div class="upgrade-current">${this.getUpgradeCurrentEffect(upgrade)}</div>
-                </div>
-                <div class="upgrade-cost">
-                    ${upgrade.cost ? `$${upgrade.cost}` : 'MAX'}
-                </div>
-                <button class="upgrade-btn" 
-                        data-upgrade="${upgrade.id}" 
-                        ${(!upgrade.cost || this.gameState.gold < upgrade.cost) ? 'disabled' : ''}>
-                    ${upgrade.cost ? 'Upgrade' : 'MAX'}
-                </button>
-            </div>
-        `).join('');
+        // Tower Upgrades Section - Organized by availability
+        if (forgeData.upgrades && forgeData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category">
+                <div class="upgrade-category-header">Tower Upgrades</div>`;
+            
+            forgeData.upgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                
+                // Calculate current effect display
+                let currentEffect = '';
+                if (upgrade.id === 'basicDamage') {
+                    currentEffect = `Damage: +${upgrade.level * upgrade.effect}`;
+                } else if (upgrade.id === 'barricadeDamage') {
+                    currentEffect = `Damage: +${upgrade.level * upgrade.effect}`;
+                } else if (upgrade.id === 'fireArrows') {
+                    currentEffect = `${upgrade.level > 0 ? 'Active' : 'Inactive'} - Burn effect enabled`;
+                } else if (upgrade.id === 'poisonDamage') {
+                    currentEffect = `Poison: +${upgrade.level * upgrade.effect}`;
+                } else if (upgrade.id === 'explosiveRadius') {
+                    currentEffect = `Radius: +${upgrade.level * upgrade.effect}px`;
+                }
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>🔨 Tower Forge Upgrades</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${upgradeListHTML}
-            </div>
-        `;
+        // Update container
+        upgradesContainer.innerHTML = contentHTML;
         
-        document.body.appendChild(menu);
+        // Show the panel with animation
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
         
-        // Add upgrade button handlers with immediate menu refresh
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        // Setup event listeners
+        this.setupForgePanelListeners(forgeData, unlockSystem);
+    }
+
+    setupForgePanelListeners(forgeData, unlockSystem) {
+        const panel = document.getElementById('forge-panel');
+        if (!panel) return;
+        
+        // Close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closeForgePanelWithAnimation();
+            }, { once: true });
+        }
+        
+        // Upgrade buttons
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
+                const isForgeLevel = e.target.dataset.forgeLevel === 'true';
                 
-                if (upgradeId === 'forge_level') {
+                if (isForgeLevel) {
                     // Handle forge level upgrade
                     if (forgeData.forge.purchaseForgeUpgrade(this.gameState)) {
                         // Notify unlock system of forge upgrade
                         unlockSystem.onForgeUpgraded(forgeData.forge.getForgeLevel());
                         this.updateUI();
-                        this.updateUIAvailability(); // Update button visibility
+                        this.updateUIAvailability();
                         
-                        // Refresh the menu
+                        // Refresh the panel
                         this.showForgeUpgradeMenu({
                             type: 'forge_menu',
                             forge: forgeData.forge,
@@ -605,7 +673,7 @@ export class UIManager {
                     if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
                         this.updateUI();
                         
-                        // Refresh the menu
+                        // Refresh the panel
                         this.showForgeUpgradeMenu({
                             type: 'forge_menu',
                             forge: forgeData.forge,
@@ -616,8 +684,20 @@ export class UIManager {
                 }
             });
         });
+    }
+
+    closeForgePanelWithAnimation() {
+        const panel = document.getElementById('forge-panel');
+        if (!panel) return;
         
-        this.activeMenu = menu;
+        if (panel.style.display === 'none') return; // Already closed
+        
+        panel.classList.add('closing');
+        setTimeout(() => {
+            panel.style.display = 'none';
+            panel.classList.remove('closing');
+            this.currentForgeData = null;
+        }, 250);
     }
 
     showAcademyUpgradeMenu(academyData) {
@@ -1207,6 +1287,8 @@ export class UIManager {
         }
         // Also remove any other open menus
         document.querySelectorAll('.upgrade-menu').forEach(menu => menu.remove());
+        // Close forge panel if open
+        this.closeForgePanelWithAnimation();
         this.clearBuildingInfoMenu();
         this.clearTowerInfoMenu();
     }
