@@ -89,10 +89,10 @@ export class Game {
             
             console.log('Game: All states added successfully');
             
-            const stateChanged = this.stateManager.changeState('mainMenu');
+            const stateChanged = this.stateManager.changeState('start');
             
             if (!stateChanged) {
-                throw new Error('Failed to change to mainMenu state');
+                throw new Error('Failed to change to start state');
             }
             
             this.isInitialized = true;

@@ -108,7 +108,8 @@ export class MainMenu {
     getButtonPosition(index) {
         const canvas = this.stateManager.canvas;
         const totalHeight = this.buttons.length * this.buttonHeight + (this.buttons.length - 1) * this.buttonGap;
-        const startY = canvas.height / 2;
+        // Position buttons underneath the title with proper spacing
+        const startY = canvas.height / 2 + 80; // 80px below title
 
         return {
             x: canvas.width / 2 - this.buttonWidth / 2,
@@ -161,15 +162,13 @@ export class MainMenu {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title fade in
-        if (this.animationTime > 0.5) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.5) / 1);
-        }
+        // Title is immediately visible at full opacity (no fade-in)
+        this.titleOpacity = 1;
 
-        // Buttons fade in
-        if (this.animationTime > 2) {
+        // Buttons fade in and slide up from underneath
+        if (this.animationTime > 0.3) {
             this.showButtons = true;
-            this.buttonsOpacity = Math.min(1, (this.animationTime - 2) / 1);
+            this.buttonsOpacity = Math.min(1, (this.animationTime - 0.3) / 0.6);
         }
 
         // Update particles
@@ -218,24 +217,18 @@ export class MainMenu {
                 });
             }
 
-            // Title
-            ctx.globalAlpha = Math.max(0.1, this.titleOpacity);
+            // Title - positioned at SAME height as StartScreen (middle of canvas)
+            ctx.globalAlpha = this.titleOpacity;
             ctx.textAlign = 'center';
             ctx.font = 'bold 80px serif';
             ctx.fillStyle = '#000';
-            ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 3 + 3);
+            ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 2 - 50 + 3);
 
             ctx.fillStyle = '#d4af37';
             ctx.strokeStyle = '#8b7355';
             ctx.lineWidth = 2;
-            ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 3);
-            ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 3);
-
-            // Subtitle
-            ctx.globalAlpha = Math.max(0.05, this.titleOpacity * 0.7);
-            ctx.font = 'italic 24px serif';
-            ctx.fillStyle = '#c9a876';
-            ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 3 + 50);
+            ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
 
             // Buttons
             if (this.showButtons) {

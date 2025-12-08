@@ -80,20 +80,20 @@ export class StartScreen {
     update(deltaTime) {
         this.animationTime += deltaTime;
         
-        // Title fade in
-        if (this.animationTime > 0.5) { // Reduced from 1
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.5) / 1); // Reduced from 2
+        // Title (TOUWERS) fade in - starts immediately
+        if (this.animationTime > 0.3) {
+            this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.8);
         }
         
-        // Subtitle fade in
-        if (this.animationTime > 1.5) { // Reduced from 3
-            this.subtitleOpacity = Math.min(1, (this.animationTime - 1.5) / 1); // Reduced from 1.5
+        // Subtitle (Defend the Realm) fade in - after title is visible
+        if (this.animationTime > 1.3) {
+            this.subtitleOpacity = Math.min(1, (this.animationTime - 1.3) / 0.8);
         }
         
-        // Show continue button
-        if (this.animationTime > 2.5) { // Reduced from 5
+        // Show continue button - after subtitle is visible
+        if (this.animationTime > 2.3) {
             this.showContinue = true;
-            this.continueOpacity = Math.min(1, (this.animationTime - 2.5) / 1); // Reduced from 5
+            this.continueOpacity = Math.min(1, (this.animationTime - 2.3) / 0.8);
         }
         
         // Update particles only if they exist
@@ -162,16 +162,14 @@ export class StartScreen {
             ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
             
             // Subtitle
-            ctx.globalAlpha = Math.max(0.05, this.subtitleOpacity); // Ensure some visibility
+            ctx.globalAlpha = this.subtitleOpacity;
             ctx.font = 'italic 24px serif';
             ctx.fillStyle = '#c9a876';
             ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
             
             // Continue message
-            if (this.showContinue || this.animationTime > 1) { // Show early for testing
-                const flickerAlpha = this.showContinue ? 
-                    this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3)) : 
-                    0.3; // Static visibility before animation completes
+            if (this.showContinue) {
+                const flickerAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
                 ctx.globalAlpha = flickerAlpha;
                 ctx.font = '20px serif';
                 ctx.fillStyle = '#fff';
@@ -200,7 +198,7 @@ export class StartScreen {
         console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
         // Allow clicking even before animation completes for testing
         if (this.showContinue || this.animationTime > 1) {
-            this.stateManager.changeState('levelSelect');
+            this.stateManager.changeState('mainMenu');
         }
     }
 }
