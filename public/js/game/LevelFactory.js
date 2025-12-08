@@ -43,14 +43,25 @@ export class LevelFactory {
         }
     }
     
-    static getLevelList() {
-        return [
+    static getLevelList(saveData = null) {
+        const levels = [
             { id: 'level1', name: 'The King\'s Road', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { id: 'level2', name: 'Braab\'s Path', difficulty: 'Easy', unlocked: true, type: 'campaign' },
-            { id: 'level3', name: 'Crazy Frogs', difficulty: 'Medium', unlocked: true, type: 'campaign' },
-            { id: 'level4', name: 'Dave\'s cave', difficulty: 'Medium', unlocked: true, type: 'campaign' },
+            { id: 'level2', name: 'Braab\'s Path', difficulty: 'Easy', unlocked: false, type: 'campaign' },
+            { id: 'level3', name: 'Crazy Frogs', difficulty: 'Medium', unlocked: false, type: 'campaign' },
+            { id: 'level4', name: 'Dave\'s cave', difficulty: 'Medium', unlocked: false, type: 'campaign' },
             { id: 'level5', name: 'Placeholder', difficulty: 'Hard', unlocked: false, type: 'campaign' },
             { id: 'sandbox', name: 'Sandbox Mode', difficulty: 'Endless', unlocked: true, type: 'sandbox' }
         ];
+
+        // If save data is provided, apply unlocked levels from save
+        if (saveData && saveData.unlockedLevels) {
+            levels.forEach(level => {
+                if (saveData.unlockedLevels.includes(level.id)) {
+                    level.unlocked = true;
+                }
+            });
+        }
+
+        return levels;
     }
 }

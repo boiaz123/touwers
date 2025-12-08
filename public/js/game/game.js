@@ -1,7 +1,11 @@
 import { GameStateManager } from '../core/states/GameStateManager.js';
+import { MainMenu } from '../core/states/MainMenu.js';
+import { LoadGame } from '../core/states/LoadGame.js';
+import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
 import { LevelSelect } from '../core/states/LevelSelect.js';
 import { GameplayState } from '../core/states/GameplayState.js';
+import { SaveSystem } from '../core/SaveSystem.js';
 
 export class Game {
     constructor() {
@@ -32,7 +36,8 @@ export class Game {
             
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
-            console.log('Game: GameStateManager created');
+            this.stateManager.SaveSystem = SaveSystem;
+            console.log('Game: GameStateManager created with SaveSystem');
             
             // Initialize game loop timing
             this.lastTime = 0;
@@ -58,6 +63,18 @@ export class Game {
         console.log('Game: Adding states...');
         
         try {
+            const mainMenu = new MainMenu(this.stateManager);
+            this.stateManager.addState('mainMenu', mainMenu);
+            console.log('Game: MainMenu state added');
+
+            const loadGame = new LoadGame(this.stateManager);
+            this.stateManager.addState('loadGame', loadGame);
+            console.log('Game: LoadGame state added');
+
+            const optionsMenu = new OptionsMenu(this.stateManager);
+            this.stateManager.addState('options', optionsMenu);
+            console.log('Game: OptionsMenu state added');
+            
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
             console.log('Game: StartScreen state added');
@@ -72,10 +89,10 @@ export class Game {
             
             console.log('Game: All states added successfully');
             
-            const stateChanged = this.stateManager.changeState('start');
+            const stateChanged = this.stateManager.changeState('mainMenu');
             
             if (!stateChanged) {
-                throw new Error('Failed to change to start state');
+                throw new Error('Failed to change to mainMenu state');
             }
             
             this.isInitialized = true;

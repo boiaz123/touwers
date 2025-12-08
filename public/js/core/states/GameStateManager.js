@@ -5,6 +5,15 @@ export class GameStateManager {
         this.states = {};
         this.currentState = null;
         this.currentStateName = null;
+        
+        // Save system properties
+        this.currentSaveSlot = null;
+        this.currentSaveData = null;
+        this.previousState = null;
+        
+        // SaveSystem reference (will be set during game initialization)
+        this.SaveSystem = null;
+        
         console.log('GameStateManager: Constructor called with canvas:', canvas.width, 'x', canvas.height);
     }
     
@@ -102,8 +111,45 @@ export class GameStateManager {
         return this._selectedLevelInfo;
     }
     
+    
     set selectedLevelInfo(info) {
         console.log('GameStateManager: Setting selected level info:', info);
         this._selectedLevelInfo = info;
     }
+
+    startNewGame() {
+        console.log('GameStateManager: Starting new game');
+        
+        if (!this.SaveSystem) {
+            console.error('GameStateManager: SaveSystem not initialized');
+            return;
+        }
+        
+        // Find first empty save slot
+        let slotToUse = null;
+        for (let i = 1; i <= 3; i++) {
+            const save = this.SaveSystem.getSave(i);
+            if (!save) {
+                slotToUse = i;
+                break;
+            }
+        }
+        
+        // If no empty slot, use slot 1
+        if (!slotToUse) {
+            slotToUse = 1;
+        }
+        
+        // Create new game state
+        const newGameData = this.SaveSystem.createNewGameState();
+        this.SaveSystem.saveGame(slotToUse, newGameData);
+        
+        this.currentSaveSlot = slotToUse;
+        this.currentSaveData = newGameData;
+        
+        console.log(`New game started in save slot ${slotToUse}`);
+        
+        this.changeState('levelSelect');
+    }
 }
+

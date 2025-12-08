@@ -3,6 +3,7 @@ import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
 import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
+import { SaveSystem } from '../SaveSystem.js';
 
 export class GameplayState {
     constructor(stateManager) {
@@ -697,6 +698,29 @@ export class GameplayState {
             // Sandbox mode doesn't end, just continue
             return;
         }
+
+        console.log(`Level ${this.currentLevel} completed!`);
+
+        // Update save data with level completion
+        if (this.stateManager.currentSaveData) {
+            const saveData = this.stateManager.currentSaveData;
+            
+            // Mark level as completed
+            saveData.completedLevels = SaveSystem.markLevelCompleted(this.currentLevel, saveData.completedLevels);
+            
+            // Unlock next level
+            saveData.unlockedLevels = SaveSystem.unlockNextLevel(this.currentLevel, saveData.unlockedLevels);
+            
+            // Update last played level
+            saveData.lastPlayedLevel = this.currentLevel;
+            
+            // Save to current slot if available
+            if (this.stateManager.currentSaveSlot) {
+                SaveSystem.saveGame(this.stateManager.currentSaveSlot, saveData);
+                console.log('Progress saved after level completion');
+            }
+        }
+
         alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
         this.stateManager.changeState('levelSelect');
     }
@@ -792,6 +816,9 @@ export class GameplayState {
     gameOver() {
         console.log('Game Over! Castle destroyed.');
         this.waveInProgress = false;
+        
+        // Don't save progress on failure, just show alert and return to level select
+        alert('Game Over! The castle was destroyed.\n\nTry again!');
         this.stateManager.changeState('levelSelect');
     }
     
