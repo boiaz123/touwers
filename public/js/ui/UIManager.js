@@ -133,9 +133,6 @@ export class UIManager {
         this.gameplayState.selectedBuildingType = null;
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
         
-        // Clear any active menus when starting tower placement
-        this.clearActiveMenus();
-        
         this.showTowerInfo(towerType);
     }
 
@@ -766,11 +763,37 @@ export class UIManager {
         });
     }
 
-    showAcademyUpgradeMenu(academyData) {
-        // Clear existing menus
-        this.clearActiveMenus();
+    closeOtherPanelsImmediate(panelIdToKeep) {
+        const panelIds = [
+            'forge-panel',
+            'academy-panel',
+            'magic-tower-panel',
+            'combination-tower-panel',
+            'superweapon-panel',
+            'training-panel',
+            'castle-panel',
+            'basic-tower-panel'
+        ];
         
+        panelIds.forEach(panelId => {
+            if (panelId !== panelIdToKeep) {
+                const panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.style.display = 'none';
+                    panel.classList.remove('closing');
+                }
+            }
+        });
+    }
+
+    showAcademyUpgradeMenu(academyData) {
         console.log('UIManager: Showing academy upgrade menu', academyData);
+        
+        const panel = document.getElementById('academy-panel');
+        if (!panel) {
+            console.error('UIManager: Academy panel not found');
+            return;
+        }
         
         let contentHTML = '';
         
@@ -891,11 +914,35 @@ export class UIManager {
             contentHTML += `</div>`;
         }
         
+        // Add sell button for academy
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Academy
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🎓 Magic Academy';
+        
+        const contentContainer = panel.querySelector('#academy-panel-upgrades') || panel.querySelector('.panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
         // Show the panel
-        this.showPanel('academy-panel', '🎓 Magic Academy', contentHTML);
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('academy-panel'), { once: true });
+        }
         
         // Setup button listeners
-        const panel = document.getElementById('academy-panel');
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
@@ -952,13 +999,26 @@ export class UIManager {
                         });
                     }
                 }
-            });
+            }, { once: true });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.buildingManager.sellBuilding(academyData.academy);
+                this.updateUI();
+                this.closePanelWithAnimation('academy-panel');
+            }, { once: true });
+        }
     }
 
     showMagicTowerElementMenu(towerData) {
-        // Clear existing menus
-        this.clearActiveMenus();
+        const panel = document.getElementById('magic-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Magic tower panel not found');
+            return;
+        }
         
         console.log('UIManager: Showing magic tower element menu', towerData);
         
@@ -989,11 +1049,35 @@ export class UIManager {
             `;
         });
         
-        // Display in panel
-        this.showPanel('magic-tower-panel', '⚡ Magic Tower Elements', contentHTML);
+        // Add sell button for tower
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '⚡ Magic Tower Elements';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('magic-tower-panel'), { once: true });
+        }
         
         // Add element selection handlers
-        const panel = document.getElementById('magic-tower-panel');
         panel.querySelectorAll('.panel-element-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const elementId = e.target.dataset.element;
@@ -1009,13 +1093,26 @@ export class UIManager {
                         currentElement: elementId
                     });
                 }
-            });
+            }, { once: true });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(towerData.tower);
+                this.updateUI();
+                this.closePanelWithAnimation('magic-tower-panel');
+            }, { once: true });
+        }
     }
 
     showCombinationTowerMenu(towerData) {
-        // Convert combination tower menu to panel-based system
-        this.clearActiveMenus();
+        const panel = document.getElementById('combination-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Combination tower panel not found');
+            return;
+        }
         
         console.log('UIManager: Showing combination tower spell menu', towerData);
         
@@ -1046,11 +1143,35 @@ export class UIManager {
             `;
         });
         
-        // Display in panel
-        this.showPanel('combination-tower-panel', '✨ Combination Tower Spells', contentHTML);
+        // Add sell button for tower
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '✨ Combination Tower Spells';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('combination-tower-panel'), { once: true });
+        }
         
         // Add spell selection handlers
-        const panel = document.getElementById('combination-tower-panel');
         panel.querySelectorAll('.panel-spell-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const spellId = e.target.dataset.spell;
@@ -1065,13 +1186,22 @@ export class UIManager {
                         currentSpell: spellId
                     });
                 }
-            });
+            }, { once: true });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(towerData.tower);
+                this.updateUI();
+                this.closePanelWithAnimation('combination-tower-panel');
+            }, { once: true });
+        }
     }
 
     showBasicTowerStatsMenu(towerData) {
         // Basic tower stats menu - using panel-based system
-        this.clearActiveMenus();
         
         console.log('UIManager: Showing basic tower stats menu', towerData);
         
@@ -1130,7 +1260,11 @@ export class UIManager {
     }
 
     showSuperWeaponMenu(menuData) {
-        this.clearActiveMenus();
+        const panel = document.getElementById('superweapon-panel');
+        if (!panel) {
+            console.error('UIManager: SuperWeapon panel not found');
+            return;
+        }
         
         console.log('UIManager: showSuperWeaponMenu called with:', menuData);
         
@@ -1253,11 +1387,35 @@ export class UIManager {
             });
         }
         
-        // Display in panel
-        this.showPanel('superweapon-panel', '💥 Super Weapon Lab', contentHTML);
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="superweapon" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Lab
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '💥 Super Weapon Lab';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('superweapon-panel'), { once: true });
+        }
         
         // Add button handlers
-        const panel = document.getElementById('superweapon-panel');
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (e.target.dataset.upgrade === 'lab_upgrade') {
@@ -1278,13 +1436,22 @@ export class UIManager {
                         this.showSuperWeaponMenu(menuData);
                     }
                 }
-            });
+            }, { once: true });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.buildingManager.sellBuilding(menuData.building);
+                this.updateUI();
+                this.closePanelWithAnimation('superweapon-panel');
+            }, { once: true });
+        }
     }
 
     showCastleUpgradeMenu(castleData) {
         // Castle upgrades menu - using panel-based system
-        this.clearActiveMenus();
         
         let contentHTML = '';
         
@@ -1321,7 +1488,11 @@ export class UIManager {
 
     showTrainingGroundsMenu(trainingData) {
         // Training Grounds upgrade menu - using panel-based system
-        this.clearActiveMenus();
+        const panel = document.getElementById('training-panel');
+        if (!panel) {
+            console.error('UIManager: Training panel not found');
+            return;
+        }
         
         console.log('UIManager: Showing training grounds menu', trainingData);
         
@@ -1362,11 +1533,35 @@ export class UIManager {
             `;
         });
         
-        // Display in panel
-        this.showPanel('training-panel', '🏛️ Training Grounds', contentHTML);
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="training" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Training Grounds
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🏛️ Training Grounds';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('training-panel'), { once: true });
+        }
         
         // Add button handlers
-        const panel = document.getElementById('training-panel');
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
@@ -1382,8 +1577,18 @@ export class UIManager {
                         upgrades: trainingData.building.getUpgradeOptions()
                     });
                 }
-            });
+            }, { once: true });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.buildingManager.sellBuilding(trainingData.building);
+                this.updateUI();
+                this.closePanelWithAnimation('training-panel');
+            }, { once: true });
+        }
     }
 
     getUpgradeCurrentEffect(upgrade) {
