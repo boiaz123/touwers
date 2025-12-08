@@ -182,6 +182,9 @@ export class TowerManager {
             // Apply forge-specific upgrades
             this.applyForgeUpgrades(tower);
             
+            // Apply Training Grounds range upgrades
+            this.applyTrainingGroundsUpgrades(tower);
+            
             // Apply academy elemental bonuses to Magic Towers
             this.applyAcademyUpgrades(tower);
             
@@ -305,6 +308,46 @@ export class TowerManager {
         });
     }
     
+    applyTrainingGroundsUpgrades(tower) {
+        // Get all Training Grounds buildings
+        const trainingGrounds = this.buildingManager.buildings.filter(building => 
+            building.constructor.name === 'TrainingGrounds'
+        );
+        
+        const towerType = tower.constructor.name;
+        let towerTypeKey = null;
+        
+        // Map tower constructor names to range upgrade keys
+        switch (towerType) {
+            case 'ArcherTower':
+                towerTypeKey = 'archerTower';
+                break;
+            case 'BarricadeTower':
+                towerTypeKey = 'barricadeTower';
+                break;
+            case 'BasicTower':
+                towerTypeKey = 'basicTower';
+                break;
+            case 'PoisonArcherTower':
+                towerTypeKey = 'poisonArcherTower';
+                break;
+            case 'CannonTower':
+                towerTypeKey = 'cannonTower';
+                break;
+            default:
+                return; // No range upgrades for this tower type
+        }
+        
+        // Apply Training Grounds range upgrades
+        trainingGrounds.forEach(grounds => {
+            const upgrade = grounds.rangeUpgrades[towerTypeKey];
+            if (upgrade && upgrade.level > 0) {
+                // Apply range bonus: each level adds 'effect' pixels to range
+                tower.range = tower.originalRange + (upgrade.level * upgrade.effect);
+            }
+        });
+    }
+    
     handleClick(x, y, canvasRect) {
         // Clear any previous selections
         this.towers.forEach(tower => tower.isSelected = false);
@@ -312,7 +355,7 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check tower icon clicks first for element selection
+        // Calculate cellSize for icon positioning
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasRect.width / 1920)));
         const iconSize = 30;
         
@@ -389,9 +432,12 @@ export class TowerManager {
         // Check buildings first (they have interactive elements like toggle icons)
         if (this.buildingManager) {
             for (const building of this.buildingManager.buildings) {
-                if (building.isPointInside(x, y, building.size || 256)) {
+                // Calculate the actual pixel size of the building
+                const buildingSize = cellSize * building.size;
+                
+                if (building.isPointInside(x, y, buildingSize)) {
                     // Pass coordinates to onClick so it can handle toggle icons
-                    const result = building.onClick ? building.onClick(x, y, building.size || 256) : null;
+                    const result = building.onClick ? building.onClick(x, y, buildingSize) : null;
                     
                     console.log(`TowerManager: Building clicked at (${x}, ${y}), result:`, result);
                     

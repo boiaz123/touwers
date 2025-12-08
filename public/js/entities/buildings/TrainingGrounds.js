@@ -5,6 +5,20 @@ export class TrainingGrounds extends Building {
         super(x, y, gridX, gridY, 4);
         this.isSelected = false;
         
+        // Training Grounds building level - starts at 1 when built
+        this.trainingLevel = 1;
+        this.maxTrainingLevel = 5;
+        
+        // Range upgrades for manned towers - each tower has 5 levels
+        // Towers: ArcherTower, BarricadeTower, BasicTower, PoisonArcherTower, CannonTower
+        this.rangeUpgrades = {
+            archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
+            barricadeTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
+            basicTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
+            poisonArcherTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
+            cannonTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 }
+        };
+        
         this.upgrades = {
             damageTraining: { level: 0, maxLevel: 5, baseCost: 100, effect: 5 },
             speedTraining: { level: 0, maxLevel: 5, baseCost: 120, effect: 1.05 },
@@ -238,10 +252,11 @@ export class TrainingGrounds extends Building {
         this.renderParticles(ctx);
         
         // Floating icon in bottom right of 4x4 grid
+        // MUST match BuildingManager.handleClick icon position calculation
         const cellSize = size / 4;
         const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
+        const iconX = (this.gridX + this.size - 0.5) * cellSize;
+        const iconY = (this.gridY + this.size - 0.5) * cellSize - 5;
         
         const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
         
@@ -970,15 +985,19 @@ export class TrainingGrounds extends Building {
         });
     }
     
-    isPointInside(x, y, size) {
-        // Check if a point is inside the building's area
-        const cellSize = size / 4;
+    isPointInside(x, y, buildingSize) {
+        // Check if a point is inside the building's icon area
+        // buildingSize is passed as cellSize * this.size
+        const cellSize = buildingSize / this.size;
         const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
+        const clickBuffer = 5;
         
-        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
+        // Icon position must match BuildingManager.handleClick calculation
+        const iconX = (this.gridX + this.size - 0.5) * cellSize;
+        const iconY = (this.gridY + this.size - 0.5) * cellSize - 5;
+        
+        return x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
+               y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer);
     }
     
     onClick() {
@@ -986,11 +1005,161 @@ export class TrainingGrounds extends Building {
         this.isSelected = true;
         return {
             type: 'training_menu',
-            building: this,
-            upgrades: this.getUpgradeOptions()
+            trainingGrounds: this,
+            upgrades: this.getRangeUpgradeOptions(),
+            trainingUpgrade: this.getTrainingLevelUpgradeOption()
         };
     }
     
+    /**
+     * Get available range upgrade options based on current training grounds level
+     * Each training grounds level unlocks the next upgrade level for all towers
+     */
+    getRangeUpgradeOptions() {
+        const options = [];
+        
+        // Manned tower types for range upgrades
+        const towerTypes = [
+            { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
+            { id: 'barricadeTower', name: 'Barricade Tower', icon: '🛡️' },
+            { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
+            { id: 'poisonArcherTower', name: 'Poison Archer Tower', icon: '☠️' },
+            { id: 'cannonTower', name: 'Cannon Tower', icon: '🔫' }
+        ];
+        
+        // Add range upgrade for each manned tower
+        towerTypes.forEach(tower => {
+            const upgrade = this.rangeUpgrades[tower.id];
+            
+            // Check if this upgrade level is unlocked (training level must be >= upgrade level + 1)
+            const isUnlocked = this.trainingLevel > upgrade.level;
+            
+            options.push({
+                id: `range_${tower.id}`,
+                towerType: tower.id,
+                name: `${tower.name} Range Training`,
+                description: `Increase ${tower.name} range by ${upgrade.effect} pixels per level`,
+                level: upgrade.level,
+                maxLevel: upgrade.maxLevel,
+                cost: this.calculateRangeUpgradeCost(tower.id),
+                icon: tower.icon,
+                isUnlocked: isUnlocked
+            });
+        });
+        
+        return options;
+    }
+    
+    /**
+     * Get the training grounds level upgrade option
+     */
+    getTrainingLevelUpgradeOption() {
+        if (this.trainingLevel >= this.maxTrainingLevel) {
+            return null;
+        }
+        
+        const nextLevel = this.trainingLevel + 1;
+        let description = "Upgrade the training grounds to unlock the next range training level for manned towers.";
+        let nextUnlock = "";
+        
+        switch(nextLevel) {
+            case 2:
+                nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
+                break;
+            case 3:
+                nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
+                break;
+            case 4:
+                nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers";
+                break;
+            case 5:
+                nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
+                break;
+            default:
+                nextUnlock = "Max Level Reached";
+                break;
+        }
+        
+        return {
+            id: 'training_level',
+            name: `Training Grounds Level ${nextLevel}`,
+            description: description,
+            nextUnlock: nextUnlock,
+            level: this.trainingLevel,
+            maxLevel: this.maxTrainingLevel,
+            cost: this.calculateTrainingLevelCost(),
+            icon: '🏫'
+        };
+    }
+    
+    /**
+     * Calculate cost for range upgrade
+     */
+    calculateRangeUpgradeCost(towerType) {
+        const upgrade = this.rangeUpgrades[towerType];
+        if (upgrade.level >= upgrade.maxLevel) return null;
+        return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
+    }
+    
+    /**
+     * Calculate cost for training grounds level upgrade
+     */
+    calculateTrainingLevelCost() {
+        if (this.trainingLevel >= this.maxTrainingLevel) return null;
+        // Cost progression: 500, 1000, 1500, 2000
+        return 500 * this.trainingLevel;
+    }
+    
+    /**
+     * Purchase a range upgrade for a specific tower type
+     */
+    purchaseRangeUpgrade(towerType, gameState) {
+        const upgrade = this.rangeUpgrades[towerType];
+        if (!upgrade) return false;
+        
+        // Check if upgrade level is unlocked by training grounds level
+        if (this.trainingLevel <= upgrade.level) {
+            console.log(`TrainingGrounds: Range level ${upgrade.level + 1} not yet unlocked (requires training level ${upgrade.level + 1})`);
+            return false;
+        }
+        
+        const cost = this.calculateRangeUpgradeCost(towerType);
+        
+        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
+            console.log(`TrainingGrounds: Cannot purchase ${towerType} range upgrade - cost: ${cost}, gold: ${gameState.gold}, level: ${upgrade.level}`);
+            return false;
+        }
+        
+        gameState.spend(cost);
+        upgrade.level++;
+        
+        console.log(`TrainingGrounds: Purchased ${towerType} range upgrade level ${upgrade.level}`);
+        return true;
+    }
+    
+    /**
+     * Purchase training grounds level upgrade
+     */
+    purchaseTrainingLevelUpgrade(gameState) {
+        if (this.trainingLevel >= this.maxTrainingLevel) {
+            console.log('TrainingGrounds: Already at max training level');
+            return false;
+        }
+        
+        const cost = this.calculateTrainingLevelCost();
+        
+        if (!cost || gameState.gold < cost) {
+            console.log(`TrainingGrounds: Cannot purchase training level upgrade - cost: ${cost}, gold: ${gameState.gold}`);
+            return false;
+        }
+        
+        gameState.spend(cost);
+        this.trainingLevel++;
+        
+        console.log(`TrainingGrounds: Purchased training level upgrade, now at level ${this.trainingLevel}`);
+        return true;
+    }
+
     getUpgradeOptions() {
         // Return available upgrade options for the building
         return [

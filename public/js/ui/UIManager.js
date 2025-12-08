@@ -1661,26 +1661,26 @@ export class UIManager {
         this.showPanel('castle-panel', '🏰 Castle Upgrades', contentHTML);
     }
 
-    showTrainingGroundsMenu(trainingData) {
-        // Training Grounds upgrade menu - using panel-based system
+    showTrainingGroundsUpgradeMenu(trainingData) {
         const panel = document.getElementById('training-panel');
         if (!panel) {
             console.error('UIManager: Training panel not found');
             return;
         }
         
-        console.log('UIManager: Showing training grounds menu', trainingData);
+        console.log('UIManager: Showing training grounds upgrade menu', trainingData);
         
         let contentHTML = '';
         
-        // Display all training upgrades
-        trainingData.upgrades.forEach(upgrade => {
+        // Add training grounds building level upgrade first
+        if (trainingData.trainingUpgrade) {
+            const upgrade = trainingData.trainingUpgrade;
             const isMaxed = upgrade.level >= upgrade.maxLevel;
-            const cost = isMaxed ? 0 : upgrade.cost;
+            const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
             
             contentHTML += `
-                <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                <div class="upgrade-category training-level-upgrade">
+                    <div class="panel-upgrade-item training-level-upgrade ${isMaxed ? 'maxed' : ''}">
                         <div class="upgrade-header-row">
                             <div class="upgrade-icon-section">${upgrade.icon}</div>
                             <div class="upgrade-info-section">
@@ -1692,21 +1692,78 @@ export class UIManager {
                                         <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
                                     </div>
                                 </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${upgrade.nextUnlock}</div>
                             </div>
                         </div>
                         <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= upgrade.cost ? 'affordable' : 'unavailable'}">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
                                 ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
                             </div>
-                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="${upgrade.id}" 
-                                    ${isMaxed || this.gameState.gold < upgrade.cost ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="training_level" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade Training'}
                             </button>
                         </div>
                     </div>
                 </div>
             `;
-        });
+        }
+        
+        // Add range upgrades section
+        if (trainingData.upgrades && trainingData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Manned Tower Range Training</div>`;
+            
+            trainingData.upgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const isUnlocked = upgrade.isUnlocked;
+                const isDisabled = isMaxed || !canAfford || !isUnlocked;
+                
+                let statusClass = '';
+                if (isMaxed) {
+                    statusClass = 'maxed';
+                } else if (!isUnlocked) {
+                    statusClass = 'locked';
+                } else if (!canAfford) {
+                    statusClass = 'unaffordable';
+                } else {
+                    statusClass = 'affordable';
+                }
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${statusClass}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                ${!isUnlocked ? `<div style="font-size: 0.8rem; color: #ff6b6b; margin-top: 0.3rem;">⚠️ Unlock at Training Level ${upgrade.level + 1}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isDisabled ? (isMaxed ? 'maxed' : 'unavailable') : canAfford ? 'affordable' : 'unaffordable'}">
+                                ${isMaxed ? 'MAX' : isUnlocked ? (canAfford ? `$${upgrade.cost}` : `$${upgrade.cost}`) : 'LOCKED'}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    data-tower-type="${upgrade.towerType}"
+                                    ${isDisabled ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : isUnlocked ? 'Train Range' : 'LOCKED'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
         
         // Add sell button
         contentHTML += `
@@ -1721,7 +1778,7 @@ export class UIManager {
         const titleElement = panel.querySelector('.panel-title');
         if (titleElement) titleElement.textContent = '🏛️ Training Grounds';
         
-        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        const contentContainer = panel.querySelector('#training-panel-content');
         if (contentContainer) {
             contentContainer.innerHTML = contentHTML;
         }
@@ -1736,20 +1793,29 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('training-panel'), { once: true });
         }
         
-        // Add button handlers
+        // Add button handlers for upgrades
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
+                const towerType = e.target.dataset.towerType;
                 
-                console.log(`UIManager: Training upgrade selected: ${upgradeId}`);
+                console.log(`UIManager: Training upgrade selected: ${upgradeId}, towerType: ${towerType}`);
                 
-                if (trainingData.building.purchaseUpgrade(upgradeId, this.gameState)) {
+                let success = false;
+                if (upgradeId === 'training_level') {
+                    success = trainingData.trainingGrounds.purchaseTrainingLevelUpgrade(this.gameState);
+                } else if (towerType) {
+                    success = trainingData.trainingGrounds.purchaseRangeUpgrade(towerType, this.gameState);
+                }
+                
+                if (success) {
                     this.updateUI();
                     this.updateUIAvailability();
-                    this.showTrainingGroundsMenu({
-                        type: 'training_menu',
-                        building: trainingData.building,
-                        upgrades: trainingData.building.getUpgradeOptions()
+                    // Refresh the menu
+                    this.showTrainingGroundsUpgradeMenu({
+                        trainingGrounds: trainingData.trainingGrounds,
+                        upgrades: trainingData.trainingGrounds.getRangeUpgradeOptions(),
+                        trainingUpgrade: trainingData.trainingGrounds.getTrainingLevelUpgradeOption()
                     });
                 }
             }, { once: true });
@@ -1759,11 +1825,16 @@ export class UIManager {
         const sellBtn = panel.querySelector('.sell-building-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
-                this.towerManager.buildingManager.sellBuilding(trainingData.building);
+                this.towerManager.buildingManager.sellBuilding(trainingData.trainingGrounds);
                 this.updateUI();
                 this.closePanelWithAnimation('training-panel');
             }, { once: true });
         }
+    }
+
+    showTrainingGroundsMenu(trainingData) {
+        // Redirect to the proper upgrade menu handler
+        this.showTrainingGroundsUpgradeMenu(trainingData);
     }
 
     getUpgradeCurrentEffect(upgrade) {
