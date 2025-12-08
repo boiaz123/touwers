@@ -4,7 +4,7 @@ import { HitSplatter } from '../effects/HitSplatter.js';
  * Defender - A protective unit that stands in front of the castle
  * Enemies will attack the defender before they can damage the castle
  * Has 3 levels with different models, health, and stats
- * Based on BeefyEnemy visuals but with defender appearance
+ * Refined with idle animations and detailed armor
  */
 export class Defender {
     constructor(level = 1) {
@@ -27,18 +27,21 @@ export class Defender {
         this.animationTime = 0;
         this.isAttacking = false;
         this.attackTarget = null;
+        this.lastAttackTime = 0;
         
-        // Size based on level (more similar to enemies)
-        this.sizeMultiplier = 1.0 + (this.level - 1) * 0.15; // 1.0, 1.15, 1.3
+        // Size based on level - adjusted multipliers
+        // Level 1: 1.2x, Level 2: 1.4x, Level 3: 1.7x
+        this.sizeMultiplier = [1.2, 1.4, 1.7][this.level - 1];
         
-        // Tunic color - different from enemies (blue/purple tint)
+        // Colors and styling
         this.tunicColor = this.getTunicColor();
+        this.armorColor = this.getArmorColor();
         
         // Hit effects
         this.hitSplatters = [];
         this.damageFlashTimer = 0;
         
-        console.log(`Defender: Created level ${this.level} defender with ${this.health}/${this.maxHealth} health`);
+        console.log(`Defender: Created level ${this.level} defender with ${this.health}/${this.maxHealth} health, size multiplier ${this.sizeMultiplier}`);
     }
     
     initializeStats() {
@@ -48,39 +51,49 @@ export class Defender {
                 this.maxHealth = 120;
                 this.health = 120;
                 this.armor = 3;
-                this.armorColor = '#5a5a5a'; // Steel gray
                 break;
             case 2:
                 this.maxHealth = 200;
                 this.health = 200;
                 this.armor = 6;
-                this.armorColor = '#4a5a7a'; // Darker steel with blue tint
                 break;
             case 3:
                 this.maxHealth = 300;
                 this.health = 300;
                 this.armor = 9;
-                this.armorColor = '#3a4a6a'; // Deep blue-gray armor
                 break;
         }
     }
     
     getTunicColor() {
-        // Blue/purple tones to distinguish from regular enemies
+        // Distinctive blue colors for defenders
         switch(this.level) {
             case 1:
-                return '#2E5A8C'; // Royal blue
+                return '#1E5A7A'; // Medium blue
             case 2:
-                return '#1A3A5C'; // Deeper blue
+                return '#1A4A6A'; // Deeper blue
             case 3:
-                return '#0F1F3C'; // Dark navy
+                return '#0F2A4A'; // Very dark blue
             default:
-                return '#2E5A8C';
+                return '#1E5A7A';
+        }
+    }
+    
+    getArmorColor() {
+        // Progressive armor colors
+        switch(this.level) {
+            case 1:
+                return '#5A6A8A'; // Steel blue
+            case 2:
+                return '#4A5A7A'; // Darker steel
+            case 3:
+                return '#3A4A6A'; // Deep armor blue
+            default:
+                return '#5A6A8A';
         }
     }
     
     getAttackDamage() {
-        // Damage scales with level
         switch(this.level) {
             case 1:
                 return 6;
@@ -94,7 +107,6 @@ export class Defender {
     }
     
     getAttackSpeed() {
-        // Attack speed in attacks per second
         switch(this.level) {
             case 1:
                 return 0.9;
@@ -108,18 +120,14 @@ export class Defender {
     }
     
     takeDamage(amount) {
-        // Apply armor reduction
-        const armorReduction = this.armor * 0.4; // Each armor point reduces damage by 0.4
+        const armorReduction = this.armor * 0.4;
         const actualDamage = Math.max(1, amount - armorReduction);
         
         this.health -= actualDamage;
         this.damageFlashTimer = 0.2;
         
-        // Create hit splatter
         const splatter = new HitSplatter(this.x, this.y - 30, actualDamage, 'physical', null);
         this.hitSplatters.push(splatter);
-        
-        console.log(`Defender level ${this.level}: Took ${actualDamage} damage (${amount} - ${armorReduction} armor), health: ${Math.max(0, this.health)}/${this.maxHealth}`);
         
         return actualDamage;
     }
@@ -132,8 +140,9 @@ export class Defender {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         this.damageFlashTimer = Math.max(0, this.damageFlashTimer - deltaTime);
+        this.lastAttackTime += deltaTime;
         
-        // Find target - closest enemy within range
+        // Find target
         this.attackTarget = null;
         let closestDistance = this.attackRange;
         
@@ -149,14 +158,17 @@ export class Defender {
             });
         }
         
-        // Attack target if in range
+        // Attack
         if (this.attackTarget && this.attackCooldown <= 0) {
             this.isAttacking = true;
+            this.lastAttackTime = 0;
             const damage = this.getAttackDamage();
             this.attackTarget.takeDamage(damage);
             this.attackCooldown = 1.0 / this.attackSpeed;
         } else {
-            this.isAttacking = false;
+            if (this.lastAttackTime > 0.5) {
+                this.isAttacking = false;
+            }
         }
         
         // Update hit splatters
@@ -169,375 +181,101 @@ export class Defender {
     render(ctx) {
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3;
+        // Idle breathing animation
+        const breathe = Math.sin(this.animationTime * 1.5) * 0.15;
+        const sway = Math.sin(this.animationTime * 0.8) * 0.2;
         
-        const armSwingFreq = this.animationTime * 8;
-        const leftArmBase = Math.sin(armSwingFreq) * 0.6;
-        const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
-        const rightArmBase = this.isAttacking ? 0.8 : Math.sin(armSwingFreq + Math.PI) * 0.55;
-        const rightArmBend = Math.sin(armSwingFreq * 2 + Math.PI / 3) * 0.18;
+        // Idle arm animation - natural swaying
+        const idleLeftArmSway = Math.sin(this.animationTime * 1.2) * 0.25;
+        const idleRightArmSway = Math.sin(this.animationTime * 1.2 + Math.PI) * 0.25;
         
-        // Damage flash effect
+        // Attack animations
+        let attackLean = 0;
+        let attackLeftArmAngle = 0;
+        let attackRightArmAngle = 0;
+        
+        if (this.isAttacking) {
+            const attackProgress = this.lastAttackTime / 0.5;
+            const attackPower = Math.sin(Math.min(attackProgress, 1) * Math.PI);
+            attackLean = attackPower * 0.4;
+            attackRightArmAngle = attackPower * 1.0;
+            attackLeftArmAngle = attackPower * 0.4;
+        }
+        
+        // Damage flash
         if (this.damageFlashTimer > 0) {
             const flashIntensity = this.damageFlashTimer / 0.2;
             ctx.fillStyle = `rgba(255, 100, 100, ${flashIntensity * 0.3})`;
             ctx.fillRect(this.x - baseSize * 0.8, this.y - baseSize * 1.8, baseSize * 1.6, baseSize * 2.4);
         }
         
-        // Enemy shadow - larger
+        // Shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 1.6, baseSize * 1.0, baseSize * 0.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 1.8, baseSize * 1.1, baseSize * 0.35, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.save();
-        ctx.translate(this.x, this.y + bobAnimation);
+        ctx.translate(this.x, this.y);
         
-        // Back/depth layer (darker, more pronounced)
-        ctx.fillStyle = this.darkenColor(this.tunicColor, 0.25);
-        ctx.fillRect(-baseSize * 0.72, -baseSize * 0.82, baseSize * 1.44, baseSize * 1.2);
+        // --- BODY STRUCTURE ---
         
-        // Main tunic/body - defender style with gradient
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.7, -baseSize * 0.9, baseSize * 0.7, baseSize * 0.45);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.2));
+        // Legs - solid stance
+        this.renderLegs(ctx, baseSize);
         
-        ctx.fillStyle = bodyGradient;
-        ctx.fillRect(-baseSize * 0.68, -baseSize * 0.88, baseSize * 1.36, baseSize * 1.32);
+        // Torso with breathing animation
+        ctx.save();
+        ctx.translate(0, breathe * 0.3 + sway * 0.1);
         
-        ctx.strokeStyle = '#1a1a1a';
+        // Back layer
+        ctx.fillStyle = this.darkenColor(this.tunicColor, 0.3);
+        ctx.fillRect(-baseSize * 0.7, -baseSize * 0.75, baseSize * 1.4, baseSize * 1.2);
+        
+        // Main tunic/chest
+        const chestGradient = ctx.createLinearGradient(0, -baseSize * 0.9, 0, baseSize * 0.5);
+        chestGradient.addColorStop(0, this.lightenColor(this.tunicColor, 0.1));
+        chestGradient.addColorStop(0.5, this.tunicColor);
+        chestGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.15));
+        
+        ctx.fillStyle = chestGradient;
+        ctx.fillRect(-baseSize * 0.68, -baseSize * 0.85, baseSize * 1.36, baseSize * 1.3);
+        ctx.strokeStyle = '#0a0a0a';
         ctx.lineWidth = 1.2;
-        ctx.strokeRect(-baseSize * 0.68, -baseSize * 0.88, baseSize * 1.36, baseSize * 1.32);
+        ctx.strokeRect(-baseSize * 0.68, -baseSize * 0.85, baseSize * 1.36, baseSize * 1.3);
         
-        // Center seam
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(0, -baseSize * 0.88);
-        ctx.lineTo(0, baseSize * 0.44);
-        ctx.stroke();
-        
-        // Armor chest plate - increases with level
-        ctx.fillStyle = this.armorColor;
-        const armorHeight = baseSize * (0.7 + (this.level - 1) * 0.15);
-        ctx.fillRect(-baseSize * 0.6, -armorHeight, baseSize * 1.2, armorHeight * 0.9);
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-baseSize * 0.6, -armorHeight, baseSize * 1.2, armorHeight * 0.9);
-        
-        // Armor rivets - more on higher levels
-        ctx.fillStyle = '#3a3a3a';
-        const rivetCount = 2 + this.level;
-        for (let i = -1; i <= 1; i++) {
-            for (let j = 0; j < rivetCount; j++) {
-                ctx.beginPath();
-                ctx.arc(i * baseSize * 0.35, -baseSize * 0.5 + j * baseSize * (0.35 - (this.level - 1) * 0.05), 0.8, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        
-        // Side highlight - more pronounced
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        ctx.fillRect(-baseSize * 0.62, -baseSize * 0.8, baseSize * 0.25, baseSize * 0.95);
-        
-        // --- HEAD WITH 3D PERSPECTIVE ---
-        
-        ctx.fillStyle = '#C4A575';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.06, -baseSize * 1.3, baseSize * 0.62, 0, Math.PI * 2);
-        ctx.fill();
-        
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 1.42, baseSize * 0.25, 0, -baseSize * 1.35, baseSize * 0.7);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
-        
-        ctx.fillStyle = headGradient;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.35, baseSize * 0.58, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#B8956A';
-        ctx.lineWidth = 0.6;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.35, baseSize * 0.58, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // --- HELMET - beefier, more intimidating, defender themed ---
-        
-        const helmetGradient = ctx.createLinearGradient(-baseSize * 0.7, -baseSize * 1.48, baseSize * 0.7, -baseSize * 1.0);
-        helmetGradient.addColorStop(0, this.armorColor);
-        helmetGradient.addColorStop(0.5, this.darkenColor(this.armorColor, 0.2));
-        helmetGradient.addColorStop(1, this.darkenColor(this.armorColor, 0.4));
-        
-        ctx.fillStyle = helmetGradient;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.35, baseSize * 0.7, Math.PI * 0.92, Math.PI * 2.08);
-        ctx.fill();
-        
-        // Helmet nose guard
-        ctx.fillStyle = this.darkenColor(this.armorColor, 0.3);
-        ctx.fillRect(-baseSize * 0.12, -baseSize * 1.3, baseSize * 0.24, baseSize * 0.45);
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.7, -baseSize * 1.35);
-        ctx.lineTo(baseSize * 0.7, -baseSize * 1.35);
-        ctx.stroke();
-        
-        // Helmet highlight - stronger on defenders
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 1.52, baseSize * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // --- LEFT ARM ---
-        
-        const leftShoulderX = -baseSize * 0.56;
-        const leftShoulderY = -baseSize * 0.4;
-        
-        const leftSwingForward = leftArmBase;
-        const leftArmDropAmount = -leftSwingForward * 0.7;
-        const leftArmForwardOffset = leftSwingForward * 0.3;
-        
-        const leftElbowX = leftShoulderX + leftArmForwardOffset * baseSize * 0.45;
-        const leftElbowY = leftShoulderY + baseSize * 0.52 + leftArmDropAmount * baseSize * 0.35;
-        
-        const leftWristX = leftElbowX + leftArmForwardOffset * baseSize * 0.4;
-        const leftWristY = leftElbowY + (baseSize * 0.68 + leftArmBend * baseSize * 0.17);
-        
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.12 + Math.max(0, leftSwingForward) * 0.18})`;
-        ctx.lineWidth = baseSize * 0.36;
-        ctx.beginPath();
-        ctx.moveTo(leftShoulderX + 0.6, leftShoulderY + 0.6);
-        ctx.lineTo(leftElbowX + 0.6, leftElbowY + 0.6);
-        ctx.lineTo(leftWristX + 0.6, leftWristY + 0.6);
-        ctx.stroke();
-        
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.88 + Math.abs(leftSwingForward) * 0.12})`);
-        
-        ctx.strokeStyle = leftUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.38;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(leftShoulderX, leftShoulderY);
-        ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.stroke();
-        
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.93 + Math.abs(leftSwingForward) * 0.07})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = leftLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(leftElbowX, leftElbowY);
-        ctx.lineTo(leftWristX, leftWristY);
-        ctx.stroke();
-        
-        // Left hand/shield
-        ctx.fillStyle = '#4a4a4a';
-        ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#2F2F2F';
+        // Tunic center seam
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.2, 0, Math.PI * 2);
+        ctx.moveTo(0, -baseSize * 0.85);
+        ctx.lineTo(0, baseSize * 0.45);
         ctx.stroke();
         
-        // --- RIGHT ARM WITH SWORD/WEAPON ---
+        // --- ARMOR CHEST PLATE ---
         
-        const rightShoulderX = baseSize * 0.56;
-        const rightShoulderY = -baseSize * 0.4;
+        this.renderArmorPlate(ctx, baseSize);
         
-        const rightSwingForward = rightArmBase;
-        const rightArmDropAmount = -rightSwingForward * 0.7;
-        const rightArmForwardOffset = rightSwingForward * 0.3;
+        // --- SHOULDERS/PAULDRONS ---
         
-        const rightElbowX = rightShoulderX + rightArmForwardOffset * baseSize * 0.45;
-        const rightElbowY = rightShoulderY + baseSize * 0.52 + rightArmDropAmount * baseSize * 0.35;
+        this.renderPauldrons(ctx, baseSize);
         
-        const rightWristX = rightElbowX + rightArmForwardOffset * baseSize * 0.4;
-        const rightWristY = rightElbowY + (baseSize * 0.68 + rightArmBend * baseSize * 0.17);
+        // --- HEAD ---
         
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.12 + Math.max(0, rightSwingForward) * 0.18})`;
-        ctx.lineWidth = baseSize * 0.36;
-        ctx.beginPath();
-        ctx.moveTo(rightShoulderX + 0.6, rightShoulderY + 0.6);
-        ctx.lineTo(rightElbowX + 0.6, rightElbowY + 0.6);
-        ctx.lineTo(rightWristX + 0.6, rightWristY + 0.6);
-        ctx.stroke();
+        this.renderHead(ctx, baseSize);
         
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.88 + Math.abs(rightSwingForward) * 0.12})`);
+        // --- ARMS ---
         
-        ctx.strokeStyle = rightUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.38;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightShoulderX, rightShoulderY);
-        ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.stroke();
+        this.renderLeftArm(ctx, baseSize, idleLeftArmSway + attackLeftArmAngle);
+        this.renderRightArm(ctx, baseSize, idleRightArmSway + attackRightArmAngle, this.isAttacking, this.lastAttackTime);
         
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.93 + Math.abs(rightSwingForward) * 0.07})`);
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
+        ctx.restore(); // End torso translation
         
-        ctx.strokeStyle = rightLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(rightElbowX, rightElbowY);
-        ctx.lineTo(rightWristX, rightWristY);
-        ctx.stroke();
-        
-        // Right hand with gauntlet - increases with level
-        const gauntletColor = this.level === 1 ? '#4a4a4a' : (this.level === 2 ? '#3a4a5a' : '#2a3a4a');
-        ctx.fillStyle = gauntletColor;
-        ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.2 + (this.level - 1) * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.2 + (this.level - 1) * 0.05, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // --- SWORD/WEAPON - scales with level ---
-        
-        // Sword points mostly upright with slight forward tilt - more aggressive when attacking
-        const swordAttackTilt = this.isAttacking ? 0.5 : 0.3;
-        const swordAngle = -Math.PI / 2 + swordAttackTilt;
-        const swordLength = baseSize * (1.8 + (this.level - 1) * 0.3);
-        const swordTipX = rightWristX + Math.cos(swordAngle) * swordLength;
-        const swordTipY = rightWristY + Math.sin(swordAngle) * swordLength;
-        
-        // Sword shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * (0.16 + (this.level - 1) * 0.08);
-        ctx.beginPath();
-        ctx.moveTo(rightWristX + 0.8, rightWristY + 0.8);
-        ctx.lineTo(swordTipX + 0.8, swordTipY + 0.8);
-        ctx.stroke();
-        
-        // Sword blade - gets better with level
-        const swordColor = this.level === 1 ? '#A9A9A9' : (this.level === 2 ? '#C0C0C0' : '#D4AF37');
-        const swordGradient = ctx.createLinearGradient(rightWristX, rightWristY, swordTipX, swordTipY);
-        swordGradient.addColorStop(0, swordColor);
-        swordGradient.addColorStop(0.5, this.lightenColor(swordColor, 0.2));
-        swordGradient.addColorStop(1, this.darkenColor(swordColor, 0.3));
-        
-        ctx.strokeStyle = swordGradient;
-        ctx.lineWidth = baseSize * (0.22 + (this.level - 1) * 0.06);
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightWristX, rightWristY);
-        ctx.lineTo(swordTipX, swordTipY);
-        ctx.stroke();
-        
-        // Sword edge highlight
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = baseSize * 0.08;
-        ctx.beginPath();
-        ctx.moveTo(rightWristX, rightWristY);
-        ctx.lineTo(swordTipX, swordTipY);
-        ctx.stroke();
-        
-        // Sword guard (crossbar) - increases with level
-        ctx.save();
-        ctx.translate(rightWristX, rightWristY);
-        ctx.rotate(swordAngle);
-        const guardColor = this.level === 1 ? '#D4AF37' : (this.level === 2 ? '#B8860B' : '#8B7500');
-        ctx.fillStyle = guardColor;
-        ctx.fillRect(-baseSize * (0.28 + (this.level - 1) * 0.1), -baseSize * 0.08, baseSize * (0.56 + (this.level - 1) * 0.2), baseSize * 0.16);
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(-baseSize * (0.28 + (this.level - 1) * 0.1), -baseSize * 0.08, baseSize * (0.56 + (this.level - 1) * 0.2), baseSize * 0.16);
-        
-        // Sword pommel - increases with level
-        ctx.fillStyle = guardColor;
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.15, baseSize * (0.12 + (this.level - 1) * 0.05), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.15, baseSize * (0.12 + (this.level - 1) * 0.05), 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-        
-        // --- LEGS ---
-        
-        const leftHipX = -baseSize * 0.28;
-        const leftHipY = baseSize * 0.38;
-        
-        const leftLegAngle = walkCycle * 0.35;
-        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.8;
-        const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.9;
-        
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(leftHipX + 1, leftHipY + 1);
-        ctx.lineTo(leftFootX + 1, leftFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(leftHipX, leftHipY);
-        ctx.lineTo(leftFootX, leftFootY);
-        ctx.stroke();
-        
-        const rightHipX = baseSize * 0.28;
-        const rightHipY = baseSize * 0.38;
-        
-        const rightLegAngle = -walkCycle * 0.35;
-        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.8;
-        const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.9;
-        
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(rightHipX + 1, rightHipY + 1);
-        ctx.lineTo(rightFootX + 1, rightFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightHipX, rightHipY);
-        ctx.lineTo(rightFootX, rightFootY);
-        ctx.stroke();
-        
-        // --- BOOTS ---
-        
-        ctx.fillStyle = '#0a0a0a';
-        ctx.beginPath();
-        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.18, baseSize * 0.24, baseSize * 0.18, walkCycle * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#0a0a0a';
-        ctx.beginPath();
-        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.18, baseSize * 0.24, baseSize * 0.18, -walkCycle * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.restore();
+        ctx.restore(); // End main translate
         
         // Health bar
-        const barWidth = baseSize * 3.6;
-        const barHeight = Math.max(2.4, baseSize * 0.48);
-        const barY = this.y - baseSize * 2.5;
+        const barWidth = baseSize * 4.2;
+        const barHeight = Math.max(3.2, baseSize * 0.55);
+        const barY = this.y - baseSize * 3.0;
         
         ctx.fillStyle = '#000';
         ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
@@ -547,18 +285,533 @@ export class Defender {
         ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
         
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
         
-        // Level indicator on health bar
         ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 8px Arial';
+        ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`Def L${this.level}`, this.x, barY + barHeight / 2);
+        ctx.fillText(`Defender L${this.level}`, this.x, barY + barHeight / 2);
         
-        // Render hit splatters
+        // Hit splatters
         this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+    
+    renderLegs(ctx, baseSize) {
+        // Left leg
+        ctx.strokeStyle = '#3A3A3A';
+        ctx.lineWidth = baseSize * 0.32;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.25, baseSize * 0.32);
+        ctx.lineTo(-baseSize * 0.25, baseSize * 1.15);
+        ctx.stroke();
+        
+        // Right leg
+        ctx.strokeStyle = '#3A3A3A';
+        ctx.lineWidth = baseSize * 0.32;
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.25, baseSize * 0.32);
+        ctx.lineTo(baseSize * 0.25, baseSize * 1.15);
+        ctx.stroke();
+        
+        // Boots
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.25, baseSize * 1.3, baseSize * 0.3, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#1a1a1a';
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.25, baseSize * 1.3, baseSize * 0.3, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    renderArmorPlate(ctx, baseSize) {
+        // Main plate
+        const plateHeight = baseSize * (0.75 + (this.level - 1) * 0.15);
+        
+        ctx.fillStyle = this.armorColor;
+        ctx.fillRect(-baseSize * 0.58, -plateHeight, baseSize * 1.16, plateHeight * 0.95);
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-baseSize * 0.58, -plateHeight, baseSize * 1.16, plateHeight * 0.95);
+        
+        // Center ridge
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(0, -plateHeight);
+        ctx.lineTo(0, plateHeight * 0.95 - plateHeight);
+        ctx.stroke();
+        
+        // Plate details - left side highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.fillRect(-baseSize * 0.58, -plateHeight + 2, baseSize * 0.55, plateHeight * 0.9);
+        
+        // Plate details - right side shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.fillRect(baseSize * 0.03, -plateHeight + 2, baseSize * 0.55, plateHeight * 0.9);
+        
+        // Rivets - more refined
+        const rivetCount = 2 + this.level;
+        const rivetSize = 0.9 + (this.level - 1) * 0.3;
+        
+        for (let col = 0; col < 3; col++) {
+            const xPos = (col - 1) * baseSize * 0.35;
+            for (let row = 0; row < rivetCount; row++) {
+                const yPos = -plateHeight * 0.5 + row * (plateHeight * 0.35 / rivetCount);
+                
+                // Rivet shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.beginPath();
+                ctx.arc(xPos + 0.5, yPos + 0.5, rivetSize * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Rivet body
+                ctx.fillStyle = '#2a2a2a';
+                ctx.beginPath();
+                ctx.arc(xPos, yPos, rivetSize * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Rivet highlight
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(xPos - rivetSize * 0.15, yPos - rivetSize * 0.15, rivetSize * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    
+    renderPauldrons(ctx, baseSize) {
+        const pauldronColor = this.lightenColor(this.armorColor, 0.2);
+        const pauldronSize = baseSize * (0.28 + (this.level - 1) * 0.08);
+        
+        // Left pauldron
+        ctx.fillStyle = pauldronColor;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.72, -baseSize * 0.28, pauldronSize, pauldronSize * 1.2, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.72, -baseSize * 0.28, pauldronSize, pauldronSize * 1.2, -0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Left pauldron ridges
+        for (let i = 0; i < 2 + this.level; i++) {
+            const angle = -Math.PI * 0.6 + (i / (2 + this.level)) * Math.PI * 0.6;
+            const x = Math.cos(angle) * pauldronSize;
+            const y = Math.sin(angle) * pauldronSize * 0.8;
+            
+            ctx.fillStyle = this.darkenColor(pauldronColor, 0.2);
+            ctx.beginPath();
+            ctx.arc(-baseSize * 0.72 + x, -baseSize * 0.28 + y, pauldronSize * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Right pauldron
+        ctx.fillStyle = pauldronColor;
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.72, -baseSize * 0.28, pauldronSize, pauldronSize * 1.2, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.72, -baseSize * 0.28, pauldronSize, pauldronSize * 1.2, 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Right pauldron ridges
+        for (let i = 0; i < 2 + this.level; i++) {
+            const angle = Math.PI * 0.6 - (i / (2 + this.level)) * Math.PI * 0.6;
+            const x = Math.cos(angle) * pauldronSize;
+            const y = Math.sin(angle) * pauldronSize * 0.8;
+            
+            ctx.fillStyle = this.darkenColor(pauldronColor, 0.2);
+            ctx.beginPath();
+            ctx.arc(baseSize * 0.72 + x, -baseSize * 0.28 + y, pauldronSize * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    
+    renderHead(ctx, baseSize) {
+        // Skin/face
+        ctx.fillStyle = '#D4A574';
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.32, baseSize * 0.60, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Helmet - full cover
+        const helmetColor = this.armorColor;
+        ctx.fillStyle = helmetColor;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.32, baseSize * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.32, baseSize * 0.72, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Face opening/visor area
+        ctx.fillStyle = this.darkenColor(helmetColor, 0.25);
+        ctx.fillRect(-baseSize * 0.35, -baseSize * 1.15, baseSize * 0.7, baseSize * 0.45);
+        
+        // Eye slits - bright blue glow
+        const eyeColor = '#4A9FFF';
+        ctx.fillStyle = eyeColor;
+        // Left eye
+        ctx.fillRect(-baseSize * 0.18, -baseSize * 1.05, baseSize * 0.1, baseSize * 0.12);
+        // Right eye
+        ctx.fillRect(baseSize * 0.08, -baseSize * 1.05, baseSize * 0.1, baseSize * 0.12);
+        
+        // Eye glow
+        ctx.fillStyle = 'rgba(74, 159, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.13, -baseSize * 0.99, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.13, -baseSize * 0.99, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nose guard - centered and thick
+        ctx.fillStyle = this.darkenColor(helmetColor, 0.2);
+        ctx.fillRect(-baseSize * 0.12, -baseSize * 1.15, baseSize * 0.24, baseSize * 0.35);
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-baseSize * 0.12, -baseSize * 1.15, baseSize * 0.24, baseSize * 0.35);
+        
+        // Cheek plates
+        const cheekColor = this.lightenColor(helmetColor, 0.1);
+        ctx.fillStyle = cheekColor;
+        ctx.fillRect(-baseSize * 0.48, -baseSize * 1.0, baseSize * 0.28, baseSize * 0.35);
+        ctx.fillRect(baseSize * 0.2, -baseSize * 1.0, baseSize * 0.28, baseSize * 0.35);
+        
+        // Helmet crest ornament - top
+        const crestColor = this.level === 1 ? '#C0C0C0' : (this.level === 2 ? '#FFB347' : '#FFD700');
+        ctx.fillStyle = crestColor;
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.15, -baseSize * 1.65, baseSize * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.15, -baseSize * 1.65, baseSize * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Center crest
+        const centerCrestColor = this.level === 1 ? '#FFD700' : (this.level === 2 ? '#FF6347' : '#FF1493');
+        ctx.fillStyle = centerCrestColor;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.72, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.72, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    
+    renderLeftArm(ctx, baseSize, swayAngle) {
+        const shoulderX = -baseSize * 0.75;
+        const shoulderY = -baseSize * 0.25;
+        
+        const armAngle = -0.2 + swayAngle;
+        const elbowX = shoulderX + Math.cos(armAngle) * baseSize * 0.45;
+        const elbowY = shoulderY + Math.sin(armAngle) * baseSize * 0.45;
+        
+        const wristAngle = armAngle - 0.3;
+        const wristX = elbowX + Math.cos(wristAngle) * baseSize * 0.4;
+        const wristY = elbowY + Math.sin(wristAngle) * baseSize * 0.4;
+        
+        // Upper arm
+        const upperArmGrad = ctx.createLinearGradient(shoulderX, shoulderY, elbowX, elbowY);
+        upperArmGrad.addColorStop(0, '#E8D4B8');
+        upperArmGrad.addColorStop(1, '#D4A574');
+        
+        ctx.strokeStyle = upperArmGrad;
+        ctx.lineWidth = baseSize * 0.42;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(elbowX, elbowY);
+        ctx.stroke();
+        
+        // Lower arm
+        const lowerArmGrad = ctx.createLinearGradient(elbowX, elbowY, wristX, wristY);
+        lowerArmGrad.addColorStop(0, '#D4A574');
+        lowerArmGrad.addColorStop(1, '#C89968');
+        
+        ctx.strokeStyle = lowerArmGrad;
+        ctx.lineWidth = baseSize * 0.34;
+        ctx.beginPath();
+        ctx.moveTo(elbowX, elbowY);
+        ctx.lineTo(wristX, wristY);
+        ctx.stroke();
+        
+        // Shield
+        const shieldSize = baseSize * (0.38 + (this.level - 1) * 0.12);
+        const shieldX = wristX - baseSize * 0.1;
+        const shieldY = wristY + baseSize * 0.15;
+        
+        // Shield wood
+        ctx.fillStyle = '#8B5A2B';
+        ctx.beginPath();
+        ctx.ellipse(shieldX, shieldY, shieldSize, shieldSize * 1.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Shield metal boss
+        ctx.fillStyle = this.armorColor;
+        ctx.beginPath();
+        ctx.arc(shieldX, shieldY, shieldSize * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(shieldX, shieldY, shieldSize * 0.32, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Shield edge rim
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = baseSize * 0.12;
+        ctx.beginPath();
+        ctx.ellipse(shieldX, shieldY, shieldSize, shieldSize * 1.25, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Shield cross decoration
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(shieldX - shieldSize * 0.15, shieldY);
+        ctx.lineTo(shieldX + shieldSize * 0.15, shieldY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(shieldX, shieldY - shieldSize * 0.2);
+        ctx.lineTo(shieldX, shieldY + shieldSize * 0.2);
+        ctx.stroke();
+    }
+    
+    renderRightArm(ctx, baseSize, swayAngle, isAttacking, attackTime) {
+        const shoulderX = baseSize * 0.75;
+        const shoulderY = -baseSize * 0.25;
+        
+        let armAngle, elbowX, elbowY, wristX, wristY;
+        
+        if (isAttacking) {
+            const attackProgress = Math.min(attackTime / 0.5, 1);
+            const attackPower = Math.sin(attackProgress * Math.PI);
+            
+            armAngle = 0.2 + attackPower * 0.9;
+            elbowX = shoulderX + Math.cos(armAngle) * baseSize * 0.48;
+            elbowY = shoulderY + Math.sin(armAngle) * baseSize * 0.48;
+            
+            const wristAngle = armAngle + 0.5 + attackPower * 0.4;
+            wristX = elbowX + Math.cos(wristAngle) * baseSize * 0.42;
+            wristY = elbowY + Math.sin(wristAngle) * baseSize * 0.42;
+        } else {
+            armAngle = 0.2 + swayAngle;
+            elbowX = shoulderX + Math.cos(armAngle) * baseSize * 0.45;
+            elbowY = shoulderY + Math.sin(armAngle) * baseSize * 0.45;
+            
+            const wristAngle = armAngle + 0.4;
+            wristX = elbowX + Math.cos(wristAngle) * baseSize * 0.4;
+            wristY = elbowY + Math.sin(wristAngle) * baseSize * 0.4;
+        }
+        
+        // Upper arm
+        const upperArmGrad = ctx.createLinearGradient(shoulderX, shoulderY, elbowX, elbowY);
+        upperArmGrad.addColorStop(0, '#E8D4B8');
+        upperArmGrad.addColorStop(1, '#D4A574');
+        
+        ctx.strokeStyle = upperArmGrad;
+        ctx.lineWidth = baseSize * 0.42;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(elbowX, elbowY);
+        ctx.stroke();
+        
+        // Lower arm
+        const lowerArmGrad = ctx.createLinearGradient(elbowX, elbowY, wristX, wristY);
+        lowerArmGrad.addColorStop(0, '#D4A574');
+        lowerArmGrad.addColorStop(1, '#C89968');
+        
+        ctx.strokeStyle = lowerArmGrad;
+        ctx.lineWidth = baseSize * 0.34;
+        ctx.beginPath();
+        ctx.moveTo(elbowX, elbowY);
+        ctx.lineTo(wristX, wristY);
+        ctx.stroke();
+        
+        // Gauntlet
+        const gauntletColor = this.level === 1 ? '#8A8A8A' : (this.level === 2 ? '#6A7A9A' : '#4A5A7A');
+        ctx.fillStyle = gauntletColor;
+        ctx.beginPath();
+        ctx.arc(wristX, wristY, baseSize * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.arc(wristX, wristY, baseSize * 0.22, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Sword
+        this.renderSword(ctx, baseSize, wristX, wristY, armAngle, isAttacking);
+    }
+    
+    renderSword(ctx, baseSize, wristX, wristY, armAngle, isAttacking) {
+        const swordAttackTilt = isAttacking ? 0.35 : 0.15;
+        const swordAngle = -Math.PI / 2 + swordAttackTilt + armAngle * 0.4;
+        const swordLength = baseSize * (2.1 + (this.level - 1) * 0.5);
+        
+        const tipX = wristX + Math.cos(swordAngle) * swordLength;
+        const tipY = wristY + Math.sin(swordAngle) * swordLength;
+        
+        // Sword shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.lineWidth = baseSize * (0.2 + (this.level - 1) * 0.1);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(wristX + 1.5, wristY + 1.5);
+        ctx.lineTo(tipX + 1.5, tipY + 1.5);
+        ctx.stroke();
+        
+        // Sword blade - distinct per level
+        if (this.level === 1) {
+            // Silver sword
+            const grad = ctx.createLinearGradient(wristX, wristY, tipX, tipY);
+            grad.addColorStop(0, '#E8E8E8');
+            grad.addColorStop(0.5, '#FFFFFF');
+            grad.addColorStop(1, '#A8A8A8');
+            
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = baseSize * 0.26;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(wristX, wristY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+            
+        } else if (this.level === 2) {
+            // Steel-blue broad sword
+            const grad = ctx.createLinearGradient(wristX, wristY, tipX, tipY);
+            grad.addColorStop(0, '#5A7A9A');
+            grad.addColorStop(0.5, '#8A9ABA');
+            grad.addColorStop(1, '#3A5A7A');
+            
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = baseSize * 0.34;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(wristX, wristY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+            
+            // Fuller (center ridge)
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.lineWidth = baseSize * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(wristX, wristY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+            
+        } else {
+            // Golden great sword
+            const grad = ctx.createLinearGradient(wristX, wristY, tipX, tipY);
+            grad.addColorStop(0, '#FFE680');
+            grad.addColorStop(0.3, '#FFFF99');
+            grad.addColorStop(0.7, '#FFE680');
+            grad.addColorStop(1, '#CC8800');
+            
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = baseSize * 0.42;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(wristX, wristY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+            
+            // Center ridge - bright
+            ctx.strokeStyle = 'rgba(255, 255, 220, 0.6)';
+            ctx.lineWidth = baseSize * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(wristX, wristY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+            
+            // Attack lightning
+            if (isAttacking) {
+                ctx.strokeStyle = 'rgba(255, 220, 50, 0.7)';
+                ctx.lineWidth = baseSize * 0.08;
+                const mid1X = wristX + (tipX - wristX) * 0.33;
+                const mid1Y = wristY + (tipY - wristY) * 0.33;
+                const mid2X = wristX + (tipX - wristX) * 0.66;
+                const mid2Y = wristY + (tipY - wristY) * 0.66;
+                ctx.beginPath();
+                ctx.moveTo(mid1X, mid1Y);
+                ctx.lineTo(mid1X - baseSize * 0.1, mid1Y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(mid2X, mid2Y);
+                ctx.lineTo(mid2X + baseSize * 0.1, mid2Y);
+                ctx.stroke();
+            }
+        }
+        
+        // Sword edge highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = baseSize * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(wristX - 1, wristY - 1);
+        ctx.lineTo(tipX - 1, tipY - 1);
+        ctx.stroke();
+        
+        // Sword guard
+        ctx.save();
+        ctx.translate(wristX, wristY);
+        ctx.rotate(swordAngle);
+        
+        const guardColor = this.level === 1 ? '#C0C0C0' : (this.level === 2 ? '#8B4513' : '#FFD700');
+        ctx.fillStyle = guardColor;
+        const guardWidth = baseSize * (0.36 + (this.level - 1) * 0.16);
+        const guardHeight = baseSize * (0.14 + (this.level - 1) * 0.06);
+        ctx.fillRect(-guardWidth / 2, -guardHeight / 2, guardWidth, guardHeight);
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-guardWidth / 2, -guardHeight / 2, guardWidth, guardHeight);
+        
+        // Guard jewel
+        if (this.level > 1) {
+            const jewelColor = this.level === 2 ? '#FF6347' : '#FF1493';
+            ctx.fillStyle = jewelColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, baseSize * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Pommel
+        ctx.fillStyle = guardColor;
+        const pommelRadius = baseSize * (0.16 + (this.level - 1) * 0.13);
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.22, pommelRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.22, pommelRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Pommel jewel
+        if (this.level > 1) {
+            const jewelColor = this.level === 2 ? '#FF6347' : '#FF1493';
+            ctx.fillStyle = jewelColor;
+            ctx.beginPath();
+            ctx.arc(0, baseSize * 0.22, pommelRadius * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
     }
     
     darkenColor(color, factor) {
