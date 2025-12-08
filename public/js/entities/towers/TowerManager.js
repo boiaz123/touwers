@@ -456,7 +456,9 @@ export class TowerManager {
         // NEW: Check castle click
         if (this.level && this.level.castle) {
             if (this.level.castle.isPointInside(x, y, this.level.cellSize)) {
-                return this.level.castle.onClick();
+                // Get training grounds for defender options
+                const trainingGrounds = this.buildingManager.buildings.find(b => b.constructor.name === 'TrainingGrounds');
+                return this.level.castle.onClick(trainingGrounds);
             }
         }
         

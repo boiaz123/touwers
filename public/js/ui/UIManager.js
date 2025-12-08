@@ -1631,6 +1631,7 @@ export class UIManager {
         let contentHTML = '';
         
         const castle = castleData.castle;
+        const trainingGrounds = castleData.trainingGrounds;
         const maxHealth = castle.maxHealth;
         const currentHealth = castle.health;
         const healthPercent = (currentHealth / maxHealth) * 100;
@@ -1658,7 +1659,75 @@ export class UIManager {
             </div>
         `;
         
+        // Add defender hiring section if Training Grounds is available
+        if (trainingGrounds && trainingGrounds.defenderUnlocked) {
+            const defenderOptions = castle.getDefenderHiringOptions(trainingGrounds);
+            
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Defender Hiring</div>`;
+            
+            defenderOptions.forEach(option => {
+                if (option.type === 'defender_status') {
+                    // Status messages (active, cooldown, locked)
+                    contentHTML += `
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${option.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${option.name}</div>
+                                    <div class="upgrade-description">${option.description}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (option.type === 'defender_hire' && option.canHire) {
+                    // Hiring options
+                    const canAfford = this.gameState.gold >= option.cost;
+                    const statusClass = canAfford ? 'affordable' : 'unaffordable';
+                    
+                    contentHTML += `
+                        <div class="panel-upgrade-item ${statusClass}">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${option.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${option.name}</div>
+                                    <div class="upgrade-description">${option.description}</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${canAfford ? 'affordable' : ''}">
+                                    $${option.cost}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" 
+                                        data-defender-level="${option.level}" 
+                                        ${!canAfford ? 'disabled' : ''}>
+                                    Hire Level ${option.level}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
         this.showPanel('castle-panel', '🏰 Castle Upgrades', contentHTML);
+        
+        // Add event listeners for defender hiring
+        if (trainingGrounds && trainingGrounds.defenderUnlocked) {
+            document.querySelectorAll('[data-defender-level]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const level = parseInt(btn.dataset.defenderLevel);
+                    if (castle.hireDefender(level, this.gameState)) {
+                        this.updateUI();
+                        this.updateButtonStates();
+                        this.closePanelWithAnimation('castle-panel');
+                    } else {
+                        console.log('UIManager: Failed to hire defender');
+                    }
+                }, { once: true });
+            });
+        }
     }
 
     showTrainingGroundsUpgradeMenu(trainingData) {

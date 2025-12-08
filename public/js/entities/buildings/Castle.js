@@ -1,3 +1,5 @@
+import { Defender } from '../enemies/Defender.js';
+
 export class Castle {
     constructor(x, y, gridX, gridY) {
         this.x = x;
@@ -50,6 +52,11 @@ export class Castle {
         this.catapultLevel = 0;
         this.maxCatapultLevel = 3;
         
+        // Defender system
+        this.defender = null; // Currently active defender
+        this.defenderDeadCooldown = 0; // Cooldown before hiring new defender after death
+        this.maxDefenderCooldown = 10; // 10 seconds cooldown after defender dies
+        
         console.log('Castle: Created at grid position', gridX, gridY, 'screen position', x, y);
     }
     
@@ -59,6 +66,11 @@ export class Castle {
         // Update damage flash effect
         if (this.damageFlashTimer > 0) {
             this.damageFlashTimer -= deltaTime;
+        }
+        
+        // Update defender cooldown
+        if (this.defenderDeadCooldown > 0) {
+            this.defenderDeadCooldown -= deltaTime;
         }
         
         this.lights.forEach((light, i) => {
@@ -618,11 +630,12 @@ export class Castle {
                y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
     }
     
-    onClick() {
+    onClick(trainingGrounds) {
         this.isSelected = true;
         return {
             type: 'castle_menu',
             castle: this,
+            trainingGrounds: trainingGrounds,
             upgrades: this.getUpgradeOptions()
         };
     }
@@ -703,6 +716,152 @@ export class Castle {
     
     deselect() {
         this.isSelected = false;
+    }
+    
+    /**
+     * Hire a defender of the specified level
+     * Can only hire if no defender is alive and cooldown has expired
+     */
+    hireDefender(defenderLevel, gameState) {
+        // Check if we can hire
+        if (this.defender && !this.defender.isDead()) {
+            console.log('Castle: Defender is already active');
+            return false;
+        }
+        
+        // Check cooldown after defender death
+        if (this.defenderDeadCooldown > 0) {
+            console.log(`Castle: Cannot hire defender yet - cooldown ${this.defenderDeadCooldown.toFixed(1)}s remaining`);
+            return false;
+        }
+        
+        // Calculate cost based on level
+        const cost = this.calculateDefenderCost(defenderLevel);
+        if (!cost || gameState.gold < cost) {
+            console.log(`Castle: Cannot afford defender level ${defenderLevel} - cost: ${cost}, gold: ${gameState.gold}`);
+            return false;
+        }
+        
+        gameState.spend(cost);
+        
+        // Create new defender at this position
+        this.defender = new Defender(defenderLevel);
+        this.defender.x = this.x - 60; // Position in front of castle
+        this.defender.y = this.y + 40; // Ground level
+        
+        console.log(`Castle: Hired Level ${defenderLevel} Defender for ${cost} gold`);
+        return true;
+    }
+    
+    /**
+     * Calculate the cost to hire a defender
+     */
+    calculateDefenderCost(level) {
+        switch(level) {
+            case 1:
+                return 200;
+            case 2:
+                return 350;
+            case 3:
+                return 500;
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * Check if defender has died and start cooldown
+     */
+    checkDefenderDeath() {
+        if (this.defender && this.defender.isDead() && this.defenderDeadCooldown <= 0) {
+            this.defenderDeadCooldown = this.maxDefenderCooldown;
+            console.log(`Castle: Defender died - cooldown started (${this.maxDefenderCooldown}s)`);
+        }
+    }
+    
+    /**
+     * Get defender hiring options for the castle menu
+     */
+    getDefenderHiringOptions(trainingGrounds) {
+        const options = [];
+        
+        // Check if defender is already active
+        if (this.defender && !this.defender.isDead()) {
+            return [{
+                id: 'defender_active',
+                name: `Defender Level ${this.defender.level} Active`,
+                description: `Your defender is actively protecting the castle (${this.defender.health}/${this.defender.maxHealth} HP)`,
+                type: 'defender_status',
+                canHire: false,
+                icon: '🛡️'
+            }];
+        }
+        
+        // Show cooldown message if in cooldown
+        if (this.defenderDeadCooldown > 0) {
+            return [{
+                id: 'defender_cooldown',
+                name: 'Hiring Cooldown',
+                description: `Your defender needs time to recover. Ready in ${this.defenderDeadCooldown.toFixed(1)}s`,
+                type: 'defender_status',
+                canHire: false,
+                icon: '🛡️'
+            }];
+        }
+        
+        // Defender system not unlocked
+        if (!trainingGrounds || !trainingGrounds.defenderUnlocked) {
+            return [{
+                id: 'defender_locked',
+                name: 'Defender System Locked',
+                description: 'Upgrade Training Grounds to Level 3 to unlock the Defender system',
+                type: 'defender_status',
+                canHire: false,
+                icon: '🔒'
+            }];
+        }
+        
+        // Level 1 Defender always available
+        options.push({
+            id: 'defender_1',
+            name: 'Hire Level 1 Defender',
+            description: 'Light armored soldier with sword and shield (150 HP, 8 DMG)',
+            type: 'defender_hire',
+            level: 1,
+            cost: this.calculateDefenderCost(1),
+            canHire: true,
+            icon: '⚔️'
+        });
+        
+        // Level 2 Defender if unlocked
+        if (trainingGrounds.defenderMaxLevel >= 2) {
+            options.push({
+                id: 'defender_2',
+                name: 'Hire Level 2 Defender',
+                description: 'Medium armored knight with two-handed sword (300 HP, 15 DMG)',
+                type: 'defender_hire',
+                level: 2,
+                cost: this.calculateDefenderCost(2),
+                canHire: true,
+                icon: '⚔️'
+            });
+        }
+        
+        // Level 3 Defender if unlocked
+        if (trainingGrounds.defenderMaxLevel >= 3) {
+            options.push({
+                id: 'defender_3',
+                name: 'Hire Level 3 Defender',
+                description: 'Heavy armored tank with massive sword (500 HP, 25 DMG)',
+                type: 'defender_hire',
+                level: 3,
+                cost: this.calculateDefenderCost(3),
+                canHire: true,
+                icon: '⚔️'
+            });
+        }
+        
+        return options;
     }
     
     static getInfo() {

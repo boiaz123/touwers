@@ -18,6 +18,10 @@ export class BaseEnemy {
         this.attackRange = 30;
         this.isAttackingCastle = false;
         
+        // Defender combat properties
+        this.isAttackingDefender = false;
+        this.defenderTarget = null;
+        
         // Animation properties
         this.animationTime = 0;
         
@@ -95,6 +99,48 @@ export class BaseEnemy {
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
+    }
+    
+    /**
+     * Check if enemy should engage with a defender instead of castle
+     * Returns true if defender is in range and not dead
+     */
+    checkDefenderTarget(defender) {
+        if (!defender || defender.isDead()) {
+            this.isAttackingDefender = false;
+            this.defenderTarget = null;
+            return false;
+        }
+        
+        // If we've reached the end of the path, check if defender is in range
+        if (this.reachedEnd || this.isAttackingCastle) {
+            const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
+            if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
+                this.isAttackingDefender = true;
+                this.defenderTarget = defender;
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Attack defender instead of castle
+     */
+    attackDefender(defender, deltaTime) {
+        if (!this.isAttackingDefender || !defender) return 0;
+        
+        this.attackCooldown -= deltaTime;
+        
+        if (this.attackCooldown <= 0) {
+            const damage = this.attackDamage;
+            defender.takeDamage(damage);
+            this.attackCooldown = 1.0 / this.attackSpeed;
+            return damage;
+        }
+        
+        return 0;
     }
     
     takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {

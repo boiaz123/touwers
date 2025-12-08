@@ -739,7 +739,23 @@ export class GameplayState {
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         
-        // Update freeze timers and handle castle attacks
+        // Update castle
+        if (this.level.castle) {
+            this.level.castle.update(deltaTime);
+            this.level.castle.checkDefenderDeath();
+        }
+        
+        // Update defender and handle defender combat
+        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+            const defender = this.level.castle.defender;
+            defender.update(deltaTime, this.enemyManager.enemies);
+            
+            // Position defender in front of castle
+            defender.x = this.level.castle.x - 60;
+            defender.y = this.level.castle.y + 40;
+        }
+        
+        // Update freeze timers and handle combat
         this.enemyManager.enemies.forEach(enemy => {
             if (enemy.freezeTimer > 0) {
                 enemy.freezeTimer -= deltaTime;
@@ -761,6 +777,14 @@ export class GameplayState {
                 
                 if (enemy.burnTimer <= 0) {
                     enemy.burnTimer = 0;
+                }
+            }
+            
+            // Check if enemy should engage defender
+            if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+                if (enemy.checkDefenderTarget(this.level.castle.defender)) {
+                    enemy.attackDefender(this.level.castle.defender, deltaTime);
+                    return; // Don't attack castle if attacking defender
                 }
             }
             
@@ -826,6 +850,12 @@ export class GameplayState {
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
+        
+        // Render defender if active
+        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+            this.level.castle.defender.render(ctx);
+        }
+        
         this.renderSpellEffects(ctx);
     }
     

@@ -9,6 +9,10 @@ export class TrainingGrounds extends Building {
         this.trainingLevel = 1;
         this.maxTrainingLevel = 5;
         
+        // Defender system unlock and upgrade
+        this.defenderUnlocked = false; // Unlocked at training level 3
+        this.defenderMaxLevel = 1; // Upgraded to level 2 at training level 4, level 3 at training level 5
+        
         // Range upgrades for manned towers - each tower has 5 levels
         // Towers: ArcherTower, BarricadeTower, BasicTower, PoisonArcherTower, CannonTower
         this.rangeUpgrades = {
@@ -1156,8 +1160,102 @@ export class TrainingGrounds extends Building {
         gameState.spend(cost);
         this.trainingLevel++;
         
+        // Check for defender unlock at level 3
+        if (this.trainingLevel === 3) {
+            this.defenderUnlocked = true;
+            this.defenderMaxLevel = 1;
+            console.log('TrainingGrounds: Defender system unlocked!');
+        }
+        
+        // Check for defender upgrades at levels 4 and 5
+        if (this.trainingLevel === 4) {
+            this.defenderMaxLevel = 2;
+            console.log('TrainingGrounds: Defender upgraded to level 2!');
+        }
+        
+        if (this.trainingLevel === 5) {
+            this.defenderMaxLevel = 3;
+            console.log('TrainingGrounds: Defender upgraded to level 3!');
+        }
+        
         console.log(`TrainingGrounds: Purchased training level upgrade, now at level ${this.trainingLevel}`);
         return true;
+    }
+
+    /**
+     * Get defender unlock/upgrade option if available
+     */
+    getDefenderOption() {
+        // Only show if training level 3+ and not already at max
+        if (this.trainingLevel < 3) {
+            return null;
+        }
+        
+        // Determine what to display based on training level
+        let option = null;
+        
+        if (!this.defenderUnlocked) {
+            // Should never happen if trainingLevel >= 3, but safety check
+            return null;
+        }
+        
+        // If training level 4, we can unlock level 2 defender
+        if (this.trainingLevel === 4 && this.defenderMaxLevel < 2) {
+            option = {
+                id: 'defender_upgrade_2',
+                name: 'Defender Level 2 Unlock',
+                description: 'Unlock the Level 2 Defender - Medium armored knight with improved stats',
+                type: 'defender_upgrade',
+                level: 2,
+                cost: 800,
+                icon: '🛡️'
+            };
+        }
+        // If training level 5, we can unlock level 3 defender
+        else if (this.trainingLevel === 5 && this.defenderMaxLevel < 3) {
+            option = {
+                id: 'defender_upgrade_3',
+                name: 'Defender Level 3 Unlock',
+                description: 'Unlock the Level 3 Defender - Heavy armored tank with maximum strength',
+                type: 'defender_upgrade',
+                level: 3,
+                cost: 1200,
+                icon: '🛡️'
+            };
+        }
+        
+        return option;
+    }
+    
+    /**
+     * Purchase defender upgrade
+     */
+    purchaseDefenderUpgrade(level, gameState) {
+        if (level === 2 && this.trainingLevel >= 4 && this.defenderMaxLevel < 2) {
+            const cost = 800;
+            if (gameState.gold < cost) {
+                console.log('TrainingGrounds: Not enough gold for defender level 2 unlock');
+                return false;
+            }
+            gameState.spend(cost);
+            this.defenderMaxLevel = 2;
+            console.log('TrainingGrounds: Defender level 2 unlocked!');
+            return true;
+        }
+        
+        if (level === 3 && this.trainingLevel >= 5 && this.defenderMaxLevel < 3) {
+            const cost = 1200;
+            if (gameState.gold < cost) {
+                console.log('TrainingGrounds: Not enough gold for defender level 3 unlock');
+                return false;
+            }
+            gameState.spend(cost);
+            this.defenderMaxLevel = 3;
+            console.log('TrainingGrounds: Defender level 3 unlocked!');
+            return true;
+        }
+        
+        return false;
     }
 
     getUpgradeOptions() {
