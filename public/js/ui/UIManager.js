@@ -700,150 +700,214 @@ export class UIManager {
         }, 250);
     }
 
+    // ============ GENERIC PANEL SYSTEM ============
+    
+    showPanel(panelId, title, contentHTML) {
+        // Close all currently open panels
+        this.closeAllPanels();
+        
+        const panel = document.getElementById(panelId);
+        if (!panel) {
+            console.error(`UIManager: Panel ${panelId} not found`);
+            return;
+        }
+        
+        // Update title
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = title;
+        
+        // Update content
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel with animation
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn && !closeBtn.dataset.hasListener) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation(panelId));
+            closeBtn.dataset.hasListener = 'true';
+        }
+    }
+
+    closePanelWithAnimation(panelId) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        
+        if (panel.style.display === 'none') return; // Already closed
+        
+        panel.classList.add('closing');
+        setTimeout(() => {
+            panel.style.display = 'none';
+            panel.classList.remove('closing');
+        }, 250);
+    }
+
+    closeAllPanels() {
+        const panelIds = [
+            'forge-panel',
+            'academy-panel',
+            'magic-tower-panel',
+            'combination-tower-panel',
+            'superweapon-panel',
+            'training-panel',
+            'castle-panel'
+        ];
+        
+        panelIds.forEach(panelId => {
+            const panel = document.getElementById(panelId);
+            if (panel && panel.style.display !== 'none') {
+                this.closePanelWithAnimation(panelId);
+            }
+        });
+    }
+
     showAcademyUpgradeMenu(academyData) {
         // Clear existing menus
         this.clearActiveMenus();
         
         console.log('UIManager: Showing academy upgrade menu', academyData);
         
-        // Create upgrade menu using the same structure as forge
-        const menu = document.createElement('div');
-        menu.id = 'academy-upgrade-menu';
-        menu.className = 'upgrade-menu';
-        
-        let upgradeListHTML = '';
+        let contentHTML = '';
         
         // Add academy building upgrades first
         const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
         if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
-            const isDisabled = !academyUpgrade.cost || this.gameState.gold < academyUpgrade.cost;
-            upgradeListHTML += `
-                <div class="upgrade-item ${academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${academyUpgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${academyUpgrade.name}</div>
-                        <div class="upgrade-desc">${academyUpgrade.description}</div>
-                        <div class="upgrade-next">${academyUpgrade.nextUnlock}</div>
-                        <div class="upgrade-level">Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}</div>
+            const isMaxed = academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel;
+            const canAfford = academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${academyUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${academyUpgrade.name}</div>
+                                <div class="upgrade-description">${academyUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(academyUpgrade.level / academyUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${academyUpgrade.nextUnlock}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${academyUpgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="academy_upgrade" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">
-                        ${academyUpgrade.cost ? `$${academyUpgrade.cost}` : 'MAX'}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="academy_upgrade" 
-                            ${isDisabled ? 'disabled' : ''}>
-                        ${academyUpgrade.cost ? 'Upgrade' : 'MAX'}
-                    </button>
                 </div>
             `;
         }
         
-        // Add elemental upgrades
-        upgradeListHTML += academyData.upgrades.map(upgrade => {
-            if (upgrade.isAcademyUpgrade) return '';
+        // Add elemental upgrades section
+        if (academyData.upgrades && academyData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Elemental & Research</div>`;
             
-            let isDisabled = false;
-            let costDisplay = '';
-            
-            // New: Handle combination spell unlocks
-            if (upgrade.isCombinationUnlock) {
-                let allGemsAvailable = true;
-                const gemCosts = [];
+            academyData.upgrades.forEach(upgrade => {
+                if (upgrade.isAcademyUpgrade) return;
                 
-                // Map gem types to their icons
-                const gemIcons = {
-                    fire: '🔥',
-                    water: '💧',
-                    air: '💨',
-                    earth: '🪨'
-                };
+                let isDisabled = false;
+                let costDisplay = '';
+                let canAfford = false;
                 
-                for (const [gemType, amount] of Object.entries(upgrade.cost)) {
-                    const gemCount = academyData.academy.gems[gemType] || 0;
-                    const icon = gemIcons[gemType] || gemType[0];
-                    gemCosts.push(`${icon}${amount}`);
-                    if (gemCount < amount) {
-                        allGemsAvailable = false;
+                // Handle combination spell unlocks
+                if (upgrade.isCombinationUnlock) {
+                    let allGemsAvailable = true;
+                    const gemCosts = [];
+                    const gemIcons = {
+                        fire: '🔥',
+                        water: '💧',
+                        air: '💨',
+                        earth: '🪨'
+                    };
+                    
+                    for (const [gemType, amount] of Object.entries(upgrade.cost)) {
+                        const gemCount = academyData.academy.gems[gemType] || 0;
+                        const icon = gemIcons[gemType] || gemType[0];
+                        gemCosts.push(`${icon}${amount}`);
+                        if (gemCount < amount) {
+                            allGemsAvailable = false;
+                        }
                     }
+                    
+                    isDisabled = !allGemsAvailable;
+                    costDisplay = gemCosts.join(' + ');
+                    canAfford = allGemsAvailable;
+                } else if (upgrade.isResearch) {
+                    canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
+                    costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
+                } else {
+                    const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
+                    canAfford = upgrade.cost && gemCount >= upgrade.cost;
+                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
+                    costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
                 }
                 
-                isDisabled = !allGemsAvailable;
-                costDisplay = gemCosts.join(' + ');
-            } else if (upgrade.isResearch) {
-                isDisabled = !upgrade.cost || this.gameState.gold < upgrade.cost;
-                costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
-            } else {
-                const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
-                isDisabled = !upgrade.cost || gemCount < upgrade.cost;
-                costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
-            }
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    ${upgrade.isCombinationUnlock ? 'Investment' : 'Level'}: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : costDisplay}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    ${isDisabled ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
             
-            return `
-                <div class="upgrade-item ${upgrade.level >= upgrade.maxLevel ? 'maxed' : ''}">
-                    <div class="upgrade-icon">${upgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${upgrade.name}</div>
-                        <div class="upgrade-desc">${upgrade.description}</div>
-                        <div class="upgrade-level">${upgrade.isCombinationUnlock ? 'Investment' : 'Level'}: ${upgrade.level}/${upgrade.maxLevel}</div>
-                    </div>
-                    <div class="upgrade-cost">
-                        ${costDisplay}
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-upgrade="${upgrade.id}" 
-                            ${isDisabled ? 'disabled' : ''}>
-                        ${upgrade.cost ? (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade') : 'MAX'}
-                    </button>
-                </div>
-            `;
-        }).join('');
+            contentHTML += `</div>`;
+        }
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>🎓 Magic Academy Upgrades</h3>
-                <button class="close-btn">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${upgradeListHTML}
-            </div>
-        `;
+        // Show the panel
+        this.showPanel('academy-panel', '🎓 Magic Academy', contentHTML);
         
-        document.body.appendChild(menu);
-        
-        // Add close button handler FIRST
-        menu.querySelector('.close-btn').addEventListener('click', () => {
-            menu.remove();
-        });
-        
-        // Add upgrade button handlers - GET FRESH REFERENCE TO academy
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        // Setup button listeners
+        const panel = document.getElementById('academy-panel');
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = e.target.dataset.upgrade;
                 
                 if (upgradeId === 'academy_upgrade') {
-                    console.log(`UIManager: Attempting academy upgrade purchase`);
-                    
-                    // Purchase FIRST
-                    const purchased = academyData.academy.purchaseAcademyUpgrade(this.gameState);
-                    console.log(`UIManager: Purchase returned: ${purchased}`);
-                    
-                    if (purchased) {
-                        console.log(`UIManager: Purchase succeeded`);
+                    if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
                         const newLevel = academyData.academy.academyLevel;
-                        console.log(`UIManager: Academy new level: ${newLevel}`);
-                        
-                        // NOW unlock
                         if (newLevel === 3) {
-                            console.log('UIManager: *** LEVEL 3 REACHED - UNLOCKING SUPERWEAPON ***');
-                            const unlockSystem = this.towerManager.getUnlockSystem();
-                            unlockSystem.onAcademyLevelThree();
-                            console.log(`UIManager: After unlock, superweaponUnlocked is: ${unlockSystem.superweaponUnlocked}`);
+                            this.towerManager.getUnlockSystem().onAcademyLevelThree();
                         }
-                        
                         this.updateUI();
                         this.updateUIAvailability();
-                        
-                        // Refresh menu
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -851,14 +915,11 @@ export class UIManager {
                         });
                     }
                 } else if (upgradeId.startsWith('unlock_')) {
-                    // New: Handle combination spell unlocks
                     const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
                     if (result && result.success) {
-                        // Notify unlock system of the spell unlock
                         this.towerManager.getUnlockSystem().onCombinationSpellUnlocked(result.spellId);
                         this.updateUI();
                         this.updateUIAvailability();
-                        
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -866,23 +927,15 @@ export class UIManager {
                         });
                     }
                 } else if (upgradeId === 'gemMiningTools') {
-                    // Handle gem mining tools research
                     if (academyData.academy.researchGemMiningTools(this.gameState)) {
-                        // Notify unlock system
                         this.towerManager.getUnlockSystem().onGemMiningResearched();
-                        
-                        // Update ALL mines with academy reference immediately
                         this.towerManager.buildingManager.buildings.forEach(building => {
                             if (building.constructor.name === 'GoldMine') {
                                 building.setAcademy(academyData.academy);
-                                console.log('UIManager: Updated mine with academy reference, gemMiningUnlocked:', building.gemMiningUnlocked);
                             }
                         });
-                        
                         this.updateUI();
                         this.updateUIAvailability();
-                        
-                        // Refresh the menu
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -890,11 +943,8 @@ export class UIManager {
                         });
                     }
                 } else {
-                    // Handle elemental upgrades
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
                         this.updateUI();
-                        
-                        // Refresh the menu
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
@@ -904,8 +954,6 @@ export class UIManager {
                 }
             });
         });
-        
-        this.activeMenu = menu;
     }
 
     showMagicTowerElementMenu(towerData) {
@@ -914,51 +962,39 @@ export class UIManager {
         
         console.log('UIManager: Showing magic tower element menu', towerData);
         
-        // Create element selection menu
-        const menu = document.createElement('div');
-        menu.id = 'magic-tower-menu';
-        menu.className = 'upgrade-menu';
+        // Generate panel content with element selection
+        let contentHTML = '';
         
-        let elementListHTML = '';
-        
-        elementListHTML += towerData.elements.map(element => {
-            // Use provided icon (already has 🪨 for earth)
-            const icon = element.icon;
-            
-            return `
-                <div class="upgrade-item ${element.id === towerData.currentElement ? 'selected-element' : ''}">
-                    <div class="upgrade-icon">${icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${element.name} Element</div>
-                        <div class="upgrade-desc">${element.description}</div>
-                        ${element.id === towerData.currentElement ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+        towerData.elements.forEach(element => {
+            const isCurrent = element.id === towerData.currentElement;
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${element.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${element.name} Element</div>
+                                <div class="upgrade-description">${element.description}</div>
+                                ${isCurrent ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">Free</div>
+                            <button class="upgrade-button panel-element-btn" data-element="${element.id}" ${isCurrent ? 'disabled' : ''}>
+                                ${isCurrent ? 'Active' : 'Select'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">
-                        Free
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-element="${element.id}" 
-                            ${element.id === towerData.currentElement ? 'disabled' : ''}>
-                        ${element.id === towerData.currentElement ? 'Active' : 'Select'}
-                    </button>
                 </div>
             `;
-        }).join('');
+        });
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>⚡ Magic Tower Elements</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${elementListHTML}
-            </div>
-        `;
-        
-        document.body.appendChild(menu);
+        // Display in panel
+        this.showPanel('magic-tower-panel', '⚡ Magic Tower Elements', contentHTML);
         
         // Add element selection handlers
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        const panel = document.getElementById('magic-tower-panel');
+        panel.querySelectorAll('.panel-element-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const elementId = e.target.dataset.element;
                 
@@ -975,56 +1011,47 @@ export class UIManager {
                 }
             });
         });
-        
-        this.activeMenu = menu;
     }
 
     showCombinationTowerMenu(towerData) {
-        // New: Menu for selecting combination spells
+        // Convert combination tower menu to panel-based system
         this.clearActiveMenus();
         
         console.log('UIManager: Showing combination tower spell menu', towerData);
         
-        const menu = document.createElement('div');
-        menu.id = 'combination-tower-menu';
-        menu.className = 'upgrade-menu';
+        // Generate panel content with spell selection
+        let contentHTML = '';
         
-        let spellListHTML = '';
-        
-        spellListHTML += towerData.spells.map(spell => {
-            return `
-                <div class="upgrade-item ${spell.id === towerData.currentSpell ? 'selected-element' : ''}">
-                    <div class="upgrade-icon">${spell.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${spell.name} Spell</div>
-                        <div class="upgrade-desc">${spell.description}</div>
-                        ${spell.id === towerData.currentSpell ? '<div class="upgrade-current">Currently Active</div>' : ''}
+        towerData.spells.forEach(spell => {
+            const isCurrent = spell.id === towerData.currentSpell;
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${spell.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${spell.name} Spell</div>
+                                <div class="upgrade-description">${spell.description}</div>
+                                ${isCurrent ? '<div class="upgrade-current">Currently Active</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">Free</div>
+                            <button class="upgrade-button panel-spell-btn" data-spell="${spell.id}" ${isCurrent ? 'disabled' : ''}>
+                                ${isCurrent ? 'Active' : 'Select'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">
-                        Free
-                    </div>
-                    <button class="upgrade-btn" 
-                            data-spell="${spell.id}" 
-                            ${spell.id === towerData.currentSpell ? 'disabled' : ''}>
-                        ${spell.id === towerData.currentSpell ? 'Active' : 'Select'}
-                    </button>
                 </div>
             `;
-        }).join('');
+        });
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>✨ Combination Tower Spells</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${spellListHTML}
-            </div>
-        `;
+        // Display in panel
+        this.showPanel('combination-tower-panel', '✨ Combination Tower Spells', contentHTML);
         
-        document.body.appendChild(menu);
-        
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        // Add spell selection handlers
+        const panel = document.getElementById('combination-tower-panel');
+        panel.querySelectorAll('.panel-spell-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const spellId = e.target.dataset.spell;
                 
@@ -1040,32 +1067,13 @@ export class UIManager {
                 }
             });
         });
-        
-        this.activeMenu = menu;
     }
 
     showBasicTowerStatsMenu(towerData) {
-        // New: Compact menu positioned next to the tower
+        // Basic tower stats menu - using panel-based system
         this.clearActiveMenus();
         
         console.log('UIManager: Showing basic tower stats menu', towerData);
-        
-        const menu = document.createElement('div');
-        menu.id = 'basic-tower-stats-menu';
-        menu.className = 'upgrade-menu';
-        menu.style.minWidth = '200px'; // Make more compact
-        menu.style.position = 'absolute'; // Position absolutely
-        
-        // Position next to the tower (above it)
-        const canvasRect = this.stateManager.canvas.getBoundingClientRect();
-        const scaleX = this.stateManager.canvas.width / canvasRect.width;
-        const scaleY = this.stateManager.canvas.height / canvasRect.height;
-        const screenX = canvasRect.left + (towerData.position.x / scaleX);
-        const screenY = canvasRect.top + (towerData.position.y / scaleY) - 120; // Position above tower
-        
-        menu.style.left = `${screenX}px`;
-        menu.style.top = `${screenY}px`;
-        menu.style.transform = 'none'; // Remove center transform
         
         const tower = towerData.tower;
         const stats = {
@@ -1077,37 +1085,48 @@ export class UIManager {
             cost: tower.constructor.getInfo().cost
         };
         
-        menu.innerHTML = `
-            <div style="padding: 10px; font-size: 12px;">
-                <div style="font-weight: bold; margin-bottom: 5px; color: #FFD700;">${stats.name}</div>
-                <div style="color: #c9a876; margin-bottom: 8px;">Damage: ${stats.damage}</div>
-                <div style="color: #c9a876; margin-bottom: 8px;">Range: ${stats.range}</div>
-                <div style="color: #c9a876; margin-bottom: 8px;">Fire Rate: ${stats.fireRate}/sec</div>
-                <div style="margin-bottom: 8px; font-size: 11px; color: #a88; line-height: 1.3; padding-right: 50px;">${stats.description}</div>
-                <div style="display: flex; gap: 3px; justify-content: flex-end;">
-                    <button class="sell-btn" style="background: #ff4444; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap;">Sell</button>
-                    <button class="close-btn" style="background: #666; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; white-space: nowrap; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">✕</button>
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">🏹</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${stats.name}</div>
+                            <div class="upgrade-description">${stats.description}</div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
             </div>
         `;
         
-        document.body.appendChild(menu);
+        // Display in panel with close button
+        this.showPanel('basic-tower-panel', '🏹 Tower Stats', contentHTML);
+        
+        // Add sell button to the panel's action row
+        const panel = document.getElementById('basic-tower-panel');
+        const panelContent = panel.querySelector('.panel-content');
+        
+        // Create sell button container
+        const sellContainer = document.createElement('div');
+        sellContainer.style.cssText = 'padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;';
+        sellContainer.innerHTML = `
+            <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                💰 Sell Tower
+            </button>
+        `;
+        panelContent.appendChild(sellContainer);
         
         // Add sell button handler
-        menu.querySelector('.sell-btn').addEventListener('click', () => {
+        panel.querySelector('.sell-tower-btn').addEventListener('click', () => {
             this.towerManager.sellTower(tower);
             this.updateUI();
-            menu.remove();
+            this.closePanelWithAnimation('basic-tower-panel');
         });
-        
-        // Add close button handler
-        menu.querySelector('.close-btn').addEventListener('click', () => {
-            tower.isSelected = false;
-            tower.showRange = false;
-            menu.remove();
-        });
-        
-        this.activeMenu = menu;
     }
 
     showSuperWeaponMenu(menuData) {
@@ -1115,96 +1134,131 @@ export class UIManager {
         
         console.log('UIManager: showSuperWeaponMenu called with:', menuData);
         
-        const menu = document.createElement('div');
-        menu.id = 'superweapon-upgrade-menu';
-        menu.className = 'upgrade-menu';
-        
-        let upgradeListHTML = '';
+        let contentHTML = '';
         
         // Add lab level upgrade
         const labUpgrade = menuData.building.getLabUpgradeOption();
         if (labUpgrade) {
             console.log('UIManager: Adding lab upgrade option:', labUpgrade);
-            upgradeListHTML += `
-                <div class="upgrade-item">
-                    <div class="upgrade-icon">${labUpgrade.icon}</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">${labUpgrade.name}</div>
-                        <div class="upgrade-desc">${labUpgrade.description}</div>
-                        <div class="upgrade-next">${labUpgrade.nextUnlock}</div>
-                        <div class="upgrade-level">Level: ${labUpgrade.level}/${labUpgrade.maxLevel}</div>
+            const isMaxed = labUpgrade.level >= labUpgrade.maxLevel;
+            const labCost = isMaxed ? 0 : labUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${labUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${labUpgrade.name}</div>
+                                <div class="upgrade-description">${labUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${labUpgrade.level}/${labUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(labUpgrade.level / labUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= labUpgrade.cost ? 'affordable' : 'unavailable'}">
+                                ${isMaxed ? 'MAX' : `$${labUpgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="lab_upgrade" 
+                                    ${isMaxed || this.gameState.gold < labUpgrade.cost ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">$${labUpgrade.cost}</div>
-                    <button class="upgrade-btn" data-upgrade="lab_upgrade" 
-                            ${this.gameState.gold < labUpgrade.cost ? 'disabled' : ''}>
-                        Upgrade
-                    </button>
                 </div>
             `;
         }
         
-        // Add spell unlocks and upgrades
+        // Add spell unlocks and upgrades in categories
         console.log('UIManager: Processing spells:', menuData.spells.length);
-        menuData.spells.forEach((spell, index) => {
-            console.log(`UIManager: Spell ${index}:`, spell.id, 'unlocked:', spell.unlocked, 'level:', spell.level);
+        
+        // Organize spells into categories
+        const unlockedSpells = menuData.spells.filter(s => s.unlocked);
+        const lockedSpells = menuData.spells.filter(s => !s.unlocked);
+        
+        // Add unlocked spells first
+        if (unlockedSpells.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">Unlocked Spells</div>`;
             
-            if (!spell.unlocked) {
-                // Unlock option - use unique data attribute
-                console.log(`UIManager: Creating unlock button for ${spell.id}`);
-                upgradeListHTML += `
-                    <div class="upgrade-item locked">
-                        <div class="upgrade-icon">${spell.icon}</div>
-                        <div class="upgrade-details">
-                            <div class="upgrade-name">${spell.name}</div>
-                            <div class="upgrade-desc">${spell.description}</div>
-                            <div class="upgrade-level">🔒 Locked</div>
-                        </div>
-                        <div class="upgrade-cost">$${spell.unlockCost}</div>
-                        <button class="upgrade-btn" data-spell-unlock="${spell.id}"
-                                ${this.gameState.gold < spell.unlockCost ? 'disabled' : ''}>
-                            Unlock
-                        </button>
-                    </div>
-                `;
-            } else {
-                // Upgrade option
+            unlockedSpells.forEach(spell => {
                 const upgradeCost = spell.upgradeCost * spell.level;
                 const isMaxed = spell.level >= spell.maxLevel;
                 
-                console.log(`UIManager: Creating upgrade button for ${spell.id}, cost: ${upgradeCost}, maxed: ${isMaxed}`);
-                upgradeListHTML += `
-                    <div class="upgrade-item ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-icon">${spell.icon}</div>
-                        <div class="upgrade-details">
-                            <div class="upgrade-name">${spell.name}</div>
-                            <div class="upgrade-desc">${spell.description}</div>
-                            <div class="upgrade-level">Level: ${spell.level}/${spell.maxLevel}</div>
-                            <div class="upgrade-current">Cooldown: ${spell.cooldown.toFixed(1)}s</div>
+                console.log(`UIManager: Creating upgrade for ${spell.id}, cost: ${upgradeCost}, maxed: ${isMaxed}`);
+                contentHTML += `
+                    <div class="upgrade-category">
+                        <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${spell.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${spell.name}</div>
+                                    <div class="upgrade-description">${spell.description}</div>
+                                    <div class="upgrade-level-display">
+                                        Level: ${spell.level}/${spell.maxLevel}
+                                        <div class="upgrade-level-bar">
+                                            <div class="upgrade-level-bar-fill" style="width: ${(spell.level / spell.maxLevel) * 100}%"></div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: #a88; margin-top: 0.3rem;">Cooldown: ${spell.cooldown.toFixed(1)}s</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= upgradeCost ? 'affordable' : 'unavailable'}">
+                                    ${isMaxed ? 'MAX' : `$${upgradeCost}`}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" data-spell-upgrade="${spell.id}" 
+                                        ${isMaxed || this.gameState.gold < upgradeCost ? 'disabled' : ''}>
+                                    ${isMaxed ? 'MAX' : 'Upgrade'}
+                                </button>
+                            </div>
                         </div>
-                        <div class="upgrade-cost">${isMaxed ? 'MAX' : `$${upgradeCost}`}</div>
-                        <button class="upgrade-btn" data-spell-upgrade="${spell.id}"
-                                ${isMaxed || this.gameState.gold < upgradeCost ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : 'Upgrade'}
-                        </button>
                     </div>
                 `;
-            }
-        });
+            });
+        }
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>💥 Super Weapon Lab</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                ${upgradeListHTML}
-            </div>
-        `;
+        // Add locked spells
+        if (lockedSpells.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #888; font-weight: bold; border-bottom: 1px solid rgba(136, 136, 136, 0.3); margin-top: 0.6rem;">🔒 Locked Spells</div>`;
+            
+            lockedSpells.forEach(spell => {
+                console.log(`UIManager: Creating unlock button for ${spell.id}`);
+                contentHTML += `
+                    <div class="upgrade-category">
+                        <div class="panel-upgrade-item locked">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${spell.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${spell.name}</div>
+                                    <div class="upgrade-description">${spell.description}</div>
+                                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.3rem;">🔒 Locked</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${this.gameState.gold >= spell.unlockCost ? 'affordable' : 'unavailable'}">
+                                    $${spell.unlockCost}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" data-spell-unlock="${spell.id}"
+                                        ${this.gameState.gold < spell.unlockCost ? 'disabled' : ''}>
+                                    Unlock
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
         
-        document.body.appendChild(menu);
+        // Display in panel
+        this.showPanel('superweapon-panel', '💥 Super Weapon Lab', contentHTML);
         
-        // Add button handlers for superweapon menu
-        menu.querySelectorAll('.upgrade-btn').forEach(btn => {
+        // Add button handlers
+        const panel = document.getElementById('superweapon-panel');
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (e.target.dataset.upgrade === 'lab_upgrade') {
                     if (menuData.building.purchaseLabUpgrade(this.gameState)) {
@@ -1226,38 +1280,110 @@ export class UIManager {
                 }
             });
         });
-        
-        this.activeMenu = menu;
     }
 
     showCastleUpgradeMenu(castleData) {
-        // Castle upgrades menu - similar structure to other menus
+        // Castle upgrades menu - using panel-based system
         this.clearActiveMenus();
         
-        const menu = document.createElement('div');
-        menu.id = 'castle-upgrade-menu';
-        menu.className = 'upgrade-menu';
+        let contentHTML = '';
         
-        menu.innerHTML = `
-            <div class="menu-header">
-                <h3>🏰 Castle Upgrades</h3>
-                <button class="close-btn" onclick="this.parentElement.parentElement.remove()">×</button>
-            </div>
-            <div class="upgrade-list">
-                <div class="upgrade-item">
-                    <div class="upgrade-icon">🛡️</div>
-                    <div class="upgrade-details">
-                        <div class="upgrade-name">Reinforced Walls</div>
-                        <div class="upgrade-desc">Improve castle defenses</div>
-                        <div class="upgrade-level">Health: ${castleData.castle.health}/${castleData.castle.maxHealth}</div>
+        const castle = castleData.castle;
+        const maxHealth = castle.maxHealth;
+        const currentHealth = castle.health;
+        const healthPercent = (currentHealth / maxHealth) * 100;
+        
+        contentHTML += `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">🛡️</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Reinforced Walls</div>
+                            <div class="upgrade-description">Improve castle defenses and structural integrity</div>
+                            <div class="upgrade-level-display">
+                                Health: ${currentHealth}/${maxHealth}
+                                <div class="upgrade-level-bar">
+                                    <div class="upgrade-level-bar-fill" style="width: ${healthPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="upgrade-cost">Info Only</div>
+                    <div class="upgrade-action-row">
+                        <div class="upgrade-cost-display">Info Only</div>
+                    </div>
                 </div>
             </div>
         `;
         
-        document.body.appendChild(menu);
-        this.activeMenu = menu;
+        this.showPanel('castle-panel', '🏰 Castle Upgrades', contentHTML);
+    }
+
+    showTrainingGroundsMenu(trainingData) {
+        // Training Grounds upgrade menu - using panel-based system
+        this.clearActiveMenus();
+        
+        console.log('UIManager: Showing training grounds menu', trainingData);
+        
+        let contentHTML = '';
+        
+        // Display all training upgrades
+        trainingData.upgrades.forEach(upgrade => {
+            const isMaxed = upgrade.level >= upgrade.maxLevel;
+            const cost = isMaxed ? 0 : upgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= upgrade.cost ? 'affordable' : 'unavailable'}">
+                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="${upgrade.id}" 
+                                    ${isMaxed || this.gameState.gold < upgrade.cost ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Display in panel
+        this.showPanel('training-panel', '🏛️ Training Grounds', contentHTML);
+        
+        // Add button handlers
+        const panel = document.getElementById('training-panel');
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                
+                console.log(`UIManager: Training upgrade selected: ${upgradeId}`);
+                
+                if (trainingData.building.purchaseUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    this.updateUIAvailability();
+                    this.showTrainingGroundsMenu({
+                        type: 'training_menu',
+                        building: trainingData.building,
+                        upgrades: trainingData.building.getUpgradeOptions()
+                    });
+                }
+            });
+        });
     }
 
     getUpgradeCurrentEffect(upgrade) {
@@ -1287,8 +1413,8 @@ export class UIManager {
         }
         // Also remove any other open menus
         document.querySelectorAll('.upgrade-menu').forEach(menu => menu.remove());
-        // Close forge panel if open
-        this.closeForgePanelWithAnimation();
+        // Close all side panels
+        this.closeAllPanels();
         this.clearBuildingInfoMenu();
         this.clearTowerInfoMenu();
     }

@@ -237,6 +237,9 @@ export class GameplayState {
                 } else if (clickResult.type === 'superweapon_menu') {
                     this.uiManager.showSuperWeaponMenu(clickResult);
                     return;
+                } else if (clickResult.type === 'training_menu') {
+                    this.uiManager.showTrainingGroundsMenu(clickResult);
+                    return;
                 } else if (typeof clickResult === 'number') {
                     this.gameState.gold += clickResult;
                     this.uiManager.updateUI();
