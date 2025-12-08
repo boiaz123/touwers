@@ -600,6 +600,7 @@ export class GameplayState {
                     }
                     
                     this.uiManager.updateUI();
+                    this.uiManager.updateButtonStates();
                     
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
@@ -764,6 +765,7 @@ export class GameplayState {
             const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
             this.gameState.gold += killedEnemies * goldPerEnemy;
             this.uiManager.updateUI();
+            this.uiManager.updateButtonStates();
         }
         
         // Check if wave is completed

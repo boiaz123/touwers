@@ -10,6 +10,60 @@ export class UIManager {
         this.lastSpellReadyCount = 0;
     }
 
+    // ============ BUTTON STATE MANAGEMENT ============
+
+    /**
+     * Update the enabled/disabled state of all tower and building buttons
+     * based on unlock status, resource availability, and build limits
+     */
+    updateButtonStates() {
+        // Update tower buttons
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const towerType = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            
+            // Check if unlocked
+            const isUnlocked = this.towerManager.unlockSystem.canBuildTower(towerType);
+            
+            // Check if affordable
+            const canAfford = this.gameState.canAfford(cost);
+            
+            // Determine if button should be disabled
+            const shouldDisable = !isUnlocked || !canAfford;
+            
+            if (shouldDisable) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('disabled');
+                btn.disabled = false;
+            }
+        });
+
+        // Update building buttons
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            const buildingType = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            
+            // Check if unlocked and at limit
+            const isAvailable = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+            
+            // Check if affordable
+            const canAfford = this.gameState.canAfford(cost);
+            
+            // Determine if button should be disabled
+            const shouldDisable = !isAvailable || !canAfford;
+            
+            if (shouldDisable) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('disabled');
+                btn.disabled = false;
+            }
+        });
+    }
+
     // ============ SETUP ============
     
     setupSpellUI() {
@@ -67,6 +121,9 @@ export class UIManager {
         } else {
             console.log('UIManager: Speed circles not found');
         }
+
+        // Initial button state update
+        this.updateButtonStates();
     }
 
     removeUIEventListeners() {
@@ -116,6 +173,11 @@ export class UIManager {
     // ============ TOWER/BUILDING SELECTION ============
 
     selectTower(btn) {
+        // Prevent selection of disabled buttons
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            return;
+        }
+
         const towerType = btn.dataset.type;
         const cost = parseInt(btn.dataset.cost);
         
@@ -137,6 +199,11 @@ export class UIManager {
     }
 
     selectBuilding(btn) {
+        // Prevent selection of disabled buttons
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            return;
+        }
+
         const buildingType = btn.dataset.type;
         const cost = parseInt(btn.dataset.cost);
         
@@ -419,54 +486,46 @@ export class UIManager {
     updateUIAvailability() {
         const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Update tower button states
+        // Update tower button states - keep buttons visible but disabled if locked
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const unlocked = unlockSystem.canBuildTower(type);
             
+            // Always show button, but disable if locked
+            btn.style.display = '';
             if (!unlocked) {
-                btn.style.display = 'none';
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else if (!this.gameState.canAfford(cost)) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
             } else {
-                btn.style.display = '';
-                if (this.gameState.canAfford(cost)) {
-                    btn.classList.remove('disabled');
-                } else {
-                    btn.classList.add('disabled');
-                }
+                btn.classList.remove('disabled');
+                btn.disabled = false;
             }
         });
         
-        // Update building button states - SAME LOGIC FOR ALL BUILDINGS
+        // Update building button states - keep buttons visible but disabled appropriately
         document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
-            const info = this.towerManager.getBuildingInfo(type);
             
-            if (!info) {
-                btn.style.display = 'none';
-                return;
-            }
+            // Always show button
+            btn.style.display = '';
             
-            // Use info.unlocked for ALL buildings (same as mines, forge, academy)
-            const isUnlocked = info.unlocked;
+            // Check if building is available (not at limit and unlocked)
+            const isAvailable = unlockSystem.canBuildBuilding(type);
             
-            if (!isUnlocked) {
-                btn.style.display = 'none';
+            if (!isAvailable) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else if (!this.gameState.canAfford(cost)) {
+                btn.classList.add('disabled');
+                btn.disabled = true;
             } else {
-                btn.style.display = '';
-                
-                // Always show button if unlocked - either clickable or disabled
-                if (info.disabled) {
-                    btn.classList.add('disabled');
-                    btn.title = info.disableReason || '';
-                } else if (this.gameState.canAfford(cost)) {
-                    btn.classList.remove('disabled');
-                    btn.title = '';
-                } else {
-                    btn.classList.add('disabled');
-                    btn.title = 'Not enough gold';
-                }
+                btn.classList.remove('disabled');
+                btn.disabled = false;
             }
         });
         
