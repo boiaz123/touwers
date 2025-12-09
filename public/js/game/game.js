@@ -189,6 +189,28 @@ export class Game {
                 }
             });
             
+            // Add right-click handler to cancel tower/building/spell selection
+            this.canvas.addEventListener('mousedown', (e) => {
+                try {
+                    // Check for right-click (button 2)
+                    if (e.button === 2) {
+                        e.preventDefault();
+                        
+                        // Call cancel selection on current state
+                        if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.cancelSelection) {
+                            this.stateManager.currentState.cancelSelection();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Game: Error handling right-click:', error);
+                }
+            });
+            
+            // Prevent right-click context menu on canvas
+            this.canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+            
             console.log('Game: Event listeners set up successfully');
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);

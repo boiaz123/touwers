@@ -590,6 +590,27 @@ export class GameplayState {
         }
     }
     
+    cancelSelection() {
+        // Cancel tower selection
+        if (this.selectedTowerType) {
+            console.log('GameplayState: Cancelled tower selection');
+            this.selectedTowerType = null;
+            document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+            this.level.setPlacementPreview(0, 0, false);
+        }
+        
+        // Cancel building selection
+        if (this.selectedBuildingType) {
+            console.log('GameplayState: Cancelled building selection');
+            this.selectedBuildingType = null;
+            document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+            this.level.setPlacementPreview(0, 0, false);
+        }
+        
+        // Close any open menus
+        this.uiManager.closeAllPanels();
+    }
+    
     getBuildingCost(buildingType) {
         const costs = {
             'mine': 200,

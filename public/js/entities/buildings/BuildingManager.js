@@ -154,8 +154,9 @@ export class BuildingManager {
             const buildingGridHeight = cellSize * building.size;
             const buildingLeftEdge = building.gridX * cellSize;
             const buildingTopEdge = building.gridY * cellSize;
-            const buildingRightEdge = buildingLeftEdge + buildingGridWidth;
-            const buildingBottomEdge = buildingTopEdge + buildingGridHeight;
+            // Clamp the right and bottom edges to the canvas boundaries to prevent overflow clickboxes
+            const buildingRightEdge = Math.min(buildingLeftEdge + buildingGridWidth, canvasSize.width);
+            const buildingBottomEdge = Math.min(buildingTopEdge + buildingGridHeight, canvasSize.height);
             
             console.log(`BuildingManager: ${building.constructor.name} at grid (${building.gridX}, ${building.gridY}), screen (${building.x}, ${building.y}), clickbox: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}`);
             
