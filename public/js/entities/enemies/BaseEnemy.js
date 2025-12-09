@@ -17,7 +17,7 @@ export class BaseEnemy {
         // Path defenders (guard post defenders on the path)
         this.pathDefenders = [];
         
-        // Attack properties
+        // Attack properties - constant across all resolutions
         this.attackDamage = 5;
         this.attackSpeed = 1.0;
         this.attackCooldown = 0;

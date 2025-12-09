@@ -107,11 +107,8 @@ export class BasicTower extends Tower {
     }
     
     render(ctx) {
-        // Calculate tower size based on grid cell size (2x2 cells)
-        // CRITICAL: Use EXACT same calculation as Level.js cellSize
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
+        // Get cell size - use ResolutionManager if available
+        const cellSize = this.getCellSize(ctx);
         const gridSize = cellSize * 2; // 2x2 grid = 2 cells wide
         this.gridSize = gridSize; // Store for rock calculations
 

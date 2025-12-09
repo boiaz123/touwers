@@ -81,10 +81,8 @@ export class ArcherTower extends Tower {
     }
     
     render(ctx) {
-        // Calculate tower size based on grid cell size (2x2 cells)
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
+        // Get tower size - use ResolutionManager if available
+        const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
         
         // 3D shadow for entire structure

@@ -600,11 +600,20 @@ export class TowerManager {
     }
     
     updatePositions(level) {
+        // Update tower positions based on current grid and cellSize
         this.towers.forEach(tower => {
             const { screenX, screenY } = level.gridToScreen(tower.gridX, tower.gridY);
+            tower.x = screenX;
+            tower.y = screenY;
+            // Also keep screenX/screenY for compatibility
             tower.screenX = screenX;
             tower.screenY = screenY;
         });
+        
+        // Update building positions as well
+        if (this.buildingManager) {
+            this.buildingManager.updatePositions(level);
+        }
     }
     
     sellTower(tower) {

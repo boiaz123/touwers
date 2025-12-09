@@ -33,40 +33,37 @@ export class Level2 extends LevelBase {
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
-        // Shorter path for Level 1 - simple S-curve
-        const safeWidth = Math.max(800, canvasWidth);
-        const safeHeight = Math.max(600, canvasHeight);
+        // Use GRID coordinates for consistency across resolutions
+        const gridWidth = this.gridWidth || 60;
+        const gridHeight = this.gridHeight || 33.75;
         
-        this.path = [
-            // Start left, middle height
-            { x: safeHeight * 0.4, y: safeHeight * 0.1},
+        const pathInGridCoords = [
+            // Start left, top area
+            { gridX: gridWidth * 0.4, gridY: gridHeight * 0.1},
             
             // First turn - go up and right
-            { x: safeWidth * 0.6, y: safeHeight * 0.2 },
-            { x: safeWidth * 0.25, y: safeHeight * 0.45 },
+            { gridX: gridWidth * 0.6, gridY: gridHeight * 0.2 },
+            { gridX: gridWidth * 0.25, gridY: gridHeight * 0.45 },
             
             // Second turn - go right and down
-            { x: safeWidth * 0.45, y: safeHeight * 0.65 },
-            { x: safeWidth * 0.55, y: safeHeight * 0.77 },
+            { gridX: gridWidth * 0.45, gridY: gridHeight * 0.65 },
+            { gridX: gridWidth * 0.55, gridY: gridHeight * 0.77 },
             
-           
-            
-            
-            // third turn - go right and down
-            { x: safeWidth * 0.7, y: safeHeight * 0.60 },
-            { x: safeWidth * 0.9, y: safeHeight * 0.85 },
+            // Third turn - go right and down
+            { gridX: gridWidth * 0.7, gridY: gridHeight * 0.60 },
+            { gridX: gridWidth * 0.9, gridY: gridHeight * 0.85 },
             
             // Final stretch - go right to end
-            { x: safeWidth * 0.6, y: safeHeight * 0.9 }
+            { gridX: gridWidth * 0.6, gridY: gridHeight * 0.9 }
         ];
         
-        // Ensure all path points are within canvas bounds
-        this.path = this.path.map(point => ({
-            x: Math.max(0, Math.min(safeWidth, point.x)),
-            y: Math.max(0, Math.min(safeHeight, point.y))
+        // Convert grid coordinates to screen coordinates
+        this.path = pathInGridCoords.map(point => ({
+            x: Math.round(point.gridX * this.cellSize),
+            y: Math.round(point.gridY * this.cellSize)
         }));
         
-        console.log('Level1: Shorter S-curve path created, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
+        console.log('Level2: Path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     getWaveConfig(wave) {

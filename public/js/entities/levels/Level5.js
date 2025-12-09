@@ -33,33 +33,33 @@ export class Level5 extends LevelBase {
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
-        // Shorter path for Level 1 - simple S-curve
-        const safeWidth = Math.max(800, canvasWidth);
-        const safeHeight = Math.max(600, canvasHeight);
+        // Use GRID coordinates for consistency across resolutions
+        const gridWidth = this.gridWidth || 60;
+        const gridHeight = this.gridHeight || 33.75;
         
-        this.path = [
+        const pathInGridCoords = [
             // Start left, middle height
-            { x: 0, y: safeHeight * 0.5 },
+            { gridX: 0, gridY: gridHeight * 0.5 },
             
             // First turn - go up and right
-            { x: safeWidth * 0.2, y: safeHeight * 0.5 },
-            { x: safeWidth * 0.2, y: safeHeight * 0.25 },
+            { gridX: gridWidth * 0.2, gridY: gridHeight * 0.5 },
+            { gridX: gridWidth * 0.2, gridY: gridHeight * 0.25 },
             
             // Second turn - go right and down
-            { x: safeWidth * 0.5, y: safeHeight * 0.25 },
-            { x: safeWidth * 0.5, y: safeHeight * 0.75 },
+            { gridX: gridWidth * 0.5, gridY: gridHeight * 0.25 },
+            { gridX: gridWidth * 0.5, gridY: gridHeight * 0.75 },
             
             // Final stretch - go right to end
-            { x: safeWidth * 0.8, y: safeHeight * 0.75 }
+            { gridX: gridWidth * 0.8, gridY: gridHeight * 0.75 }
         ];
         
-        // Ensure all path points are within canvas bounds
-        this.path = this.path.map(point => ({
-            x: Math.max(0, Math.min(safeWidth, point.x)),
-            y: Math.max(0, Math.min(safeHeight, point.y))
+        // Convert grid coordinates to screen coordinates
+        this.path = pathInGridCoords.map(point => ({
+            x: Math.round(point.gridX * this.cellSize),
+            y: Math.round(point.gridY * this.cellSize)
         }));
         
-        console.log('Level1: Shorter S-curve path created, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
+        console.log('Level5: Path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     getWaveConfig(wave) {

@@ -113,7 +113,7 @@ export class GameplayState {
         
         // Initialize level for current canvas size first
         console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
-        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
         
         // Create new enemy manager with the properly initialized path
         console.log('GameplayState: Creating enemy manager with path:', this.level.path);
@@ -215,6 +215,16 @@ export class GameplayState {
         // Setup UI event listeners through UIManager
         if (this.uiManager) {
             this.uiManager.setupUIEventListeners();
+        }
+        
+        // Setup resolution button
+        const resolutionBtn = document.getElementById('resolution-btn');
+        if (resolutionBtn) {
+            resolutionBtn.addEventListener('click', () => {
+                if (this.stateManager && this.stateManager.game && this.stateManager.game.showResolutionSelector) {
+                    this.stateManager.game.showResolutionSelector();
+                }
+            });
         }
         
         // Mouse move listener for placement preview
@@ -1124,7 +1134,7 @@ export class GameplayState {
     }
     
     resize() {
-        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
         this.towerManager.updatePositions(this.level);
     }
 }

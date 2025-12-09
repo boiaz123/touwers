@@ -6,6 +6,9 @@ import { StartScreen } from '../core/states/StartScreen.js';
 import { LevelSelect } from '../core/states/LevelSelect.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SaveSystem } from '../core/SaveSystem.js';
+import { ResolutionManager } from '../core/ResolutionManager.js';
+import { ResolutionSettings } from '../core/ResolutionSettings.js';
+import { ResolutionSelector } from '../ui/ResolutionSelector.js';
 
 export class Game {
     constructor() {
@@ -27,21 +30,36 @@ export class Game {
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
             
-            // Set initial canvas size BEFORE creating state manager
-            this.resizeCanvas();
-            console.log('Game: Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
+            // Apply fixed resolution from saved settings
+            const savedResolution = ResolutionSettings.getSavedResolution();
+            const resolution = ResolutionSettings.getResolution(savedResolution);
+            this.canvas.width = resolution.width;
+            this.canvas.height = resolution.height;
+            console.log('Game: Canvas set to fixed resolution:', this.canvas.width, 'x', this.canvas.height);
             
             // Prevent infinite resize loops
             this.isResizing = false;
             
+            // Initialize resolution manager with current canvas size
+            this.resolutionManager = new ResolutionManager(this.canvas.width, this.canvas.height);
+            
+            // Attach resolution manager to canvas for easy access from rendering code
+            this.canvas.resolutionManager = this.resolutionManager;
+            this.ctx.resolutionManager = this.resolutionManager;
+            
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
             this.stateManager.SaveSystem = SaveSystem;
-            console.log('Game: GameStateManager created with SaveSystem');
+            this.stateManager.resolutionManager = this.resolutionManager;
+            this.stateManager.game = this; // Set game reference for resolution selector access
+            console.log('Game: GameStateManager created with SaveSystem and ResolutionManager');
             
             // Initialize game loop timing
             this.lastTime = 0;
             this.isInitialized = false;
+            
+            // Create resolution selector
+            this.resolutionSelector = new ResolutionSelector(this);
             
             // Setup event listeners early
             this.setupEventListeners();
@@ -133,33 +151,9 @@ export class Game {
     }
     
     resizeCanvas() {
-        if (this.isResizing) return;
-        
-        this.isResizing = true;
-        
-        try {
-            const sidebar = document.getElementById('tower-sidebar');
-            const statsBar = document.getElementById('stats-bar');
-            
-            const sidebarWidth = (sidebar && sidebar.style.display !== 'none') ? sidebar.offsetWidth : 0;
-            const statsBarHeight = (statsBar && statsBar.style.display !== 'none') ? statsBar.offsetHeight : 0;
-            
-            const oldWidth = this.canvas.width;
-            const oldHeight = this.canvas.height;
-            
-            const newWidth = Math.max(800, window.innerWidth - sidebarWidth);
-            const newHeight = Math.max(600, window.innerHeight - statsBarHeight);
-            
-            if (Math.abs(oldWidth - newWidth) > 10 || Math.abs(oldHeight - newHeight) > 10) {
-                this.canvas.width = newWidth;
-                this.canvas.height = newHeight;
-                console.log('Game: Canvas resized from', oldWidth, 'x', oldHeight, 'to', newWidth, 'x', newHeight);
-            }
-        } catch (error) {
-            console.error('Game: Error during resize:', error);
-        } finally {
-            this.isResizing = false;
-        }
+        // For fixed resolution mode, canvas size is no longer dynamic
+        // This method is kept for compatibility but does not resize on window resize
+        console.log('Game: Canvas is using fixed resolution mode');
     }
     
     setupEventListeners() {
@@ -214,6 +208,44 @@ export class Game {
             console.log('Game: Event listeners set up successfully');
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);
+        }
+    }
+    
+    /**
+     * Apply a new resolution and re-initialize game if needed
+     */
+    applyResolution(width, height) {
+        try {
+            console.log(`Game: Applying resolution ${width}x${height}`);
+            
+            // Update canvas dimensions
+            this.canvas.width = width;
+            this.canvas.height = height;
+            
+            // Recreate resolution manager with new dimensions
+            this.resolutionManager = new ResolutionManager(width, height);
+            this.canvas.resolutionManager = this.resolutionManager;
+            this.ctx.resolutionManager = this.resolutionManager;
+            if (this.stateManager) {
+                this.stateManager.resolutionManager = this.resolutionManager;
+            }
+            
+            // Trigger resize on current state if available
+            if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.resize) {
+                this.stateManager.currentState.resize();
+                console.log('Game: Current state resized to new resolution');
+            }
+        } catch (error) {
+            console.error('Game: Error applying resolution:', error);
+        }
+    }
+    
+    /**
+     * Show the resolution selector dialog
+     */
+    showResolutionSelector() {
+        if (this.resolutionSelector) {
+            this.resolutionSelector.show();
         }
     }
     

@@ -12,6 +12,19 @@ export class Building {
         this.animationTime += deltaTime;
     }
     
+    /**
+     * Get cell size from resolution manager if available
+     */
+    getCellSize(ctx) {
+        if (ctx && ctx.resolutionManager) {
+            return ctx.resolutionManager.cellSize;
+        }
+        // Fallback: manual calculation
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, (ctx && ctx.canvas ? ctx.canvas.width : 1920) / baseResolution));
+        return Math.floor(32 * scaleFactor);
+    }
+    
     render(ctx, buildingSize) {
         // Override in subclasses
     }

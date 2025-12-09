@@ -1,6 +1,9 @@
 export class LevelBase {
-    constructor() {
-        // Grid configuration - will be calculated based on screen size
+    constructor(resolutionManager = null) {
+        // Resolution manager - will be set during initialization
+        this.resolutionManager = resolutionManager;
+        
+        // Grid configuration - will be set by resolutionManager or fallback defaults
         this.gridWidth = 70;
         this.gridHeight = 40;
         this.cellSize = 20;
@@ -76,7 +79,7 @@ export class LevelBase {
         };
     }
     
-    initializeForCanvas(canvasWidth, canvasHeight) {
+    initializeForCanvas(canvasWidth, canvasHeight, resolutionManager = null) {
         // Ensure we have valid canvas dimensions
         if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) {
             console.warn('Level: Invalid canvas dimensions, skipping initialization');
@@ -87,6 +90,12 @@ export class LevelBase {
         if (this.isInitializing) {
             console.warn('Level: Already initializing, skipping duplicate call');
             return;
+        }
+        
+        // Use provided resolution manager or create one if not available
+        if (resolutionManager && !this.resolutionManager) {
+            this.resolutionManager = resolutionManager;
+            console.log('Level: ResolutionManager injected');
         }
         
         // Always reinitialize if canvas size changed significantly
@@ -105,15 +114,23 @@ export class LevelBase {
         this.isInitializing = true;
         
         try {
-            // Calculate grid size based on canvas dimensions - DOUBLED cell size to halve grid density
-            // Aim for cells that are appropriately sized for the resolution
-            const baseResolution = 1920; // 1080p width as baseline
-            const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / baseResolution));
+            // Use ResolutionManager if available, otherwise create fallback values
+            // ResolutionManager should always be provided, but handle fallback just in case
+            if (this.resolutionManager) {
+                this.cellSize = this.resolutionManager.cellSize;
+                this.gridWidth = this.resolutionManager.gridWidth;
+                this.gridHeight = this.resolutionManager.gridHeight;
+                console.log(`Level: Using ResolutionManager values - cellSize: ${this.cellSize}, grid: ${this.gridWidth}x${this.gridHeight}`);
+            } else {
+                // Fallback: simple proportional scaling
+                console.warn('Level: ResolutionManager not available, using fallback scaling');
+                const scaleFactor = Math.max(0.5, Math.min(2.5, canvasWidth / 1920));
+                this.cellSize = Math.round(32 * scaleFactor);
+                this.gridWidth = Math.floor(canvasWidth / this.cellSize);
+                this.gridHeight = Math.floor(canvasHeight / this.cellSize);
+            }
             
-            this.cellSize = Math.floor(32 * scaleFactor); // Doubled from 16 to 32 to halve grid density
-            this.gridWidth = Math.floor(canvasWidth / this.cellSize);
-            this.gridHeight = Math.floor(canvasHeight / this.cellSize);
-            
+
             // Create a more complex, meandering path that uses more of the map
             this.createMeanderingPath(canvasWidth, canvasHeight);
             console.log('Level: Created path with', this.path.length, 'waypoints');
@@ -129,6 +146,13 @@ export class LevelBase {
             this.visualElementsGenerated = false;
             this.pathTextureGenerated = false;
             
+            // IMPORTANT: Also clear cached visual elements arrays so they get regenerated
+            // This fixes the issue where grass patches, dirt patches, etc. don't scale properly
+            this.grassPatches = [];
+            this.dirtPatches = [];
+            this.flowers = [];
+            this.pathLeaves = [];
+            
             this.lastCanvasWidth = canvasWidth;
             this.lastCanvasHeight = canvasHeight;
             this.isInitialized = true;
@@ -143,42 +167,46 @@ export class LevelBase {
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
-        // Ensure minimum canvas size to avoid division by zero or negative values
-        const safeWidth = Math.max(800, canvasWidth);
-        const safeHeight = Math.max(600, canvasHeight);
+        // Path should be created based on GRID coordinates, not pixels
+        // This ensures the path stays in the same position regardless of resolution
         
-        // Create proportional waypoints that scale with canvas size
-        this.path = [
-            // Start from left edge, positioned vertically based on canvas height
-            { x: 0, y: safeHeight * 0.7 },
+        // Use grid dimensions from ResolutionManager (always 60x33.75)
+        const gridWidth = this.gridWidth || 60;
+        const gridHeight = this.gridHeight || 33.75;
+        
+        // Create path in GRID COORDINATES (not pixels)
+        // These coordinates will be converted to pixels based on cellSize
+        const pathInGridCoords = [
+            // Start from left edge
+            { gridX: 0, gridY: gridHeight * 0.7 },
             
             // First turn - go up and right
-            { x: safeWidth * 0.15, y: safeHeight * 0.7 },
-            { x: safeWidth * 0.15, y: safeHeight * 0.3 },
+            { gridX: gridWidth * 0.15, gridY: gridHeight * 0.7 },
+            { gridX: gridWidth * 0.15, gridY: gridHeight * 0.3 },
             
             // Second turn - go right and down
-            { x: safeWidth * 0.35, y: safeHeight * 0.3 },
-            { x: safeWidth * 0.35, y: safeHeight * 0.8 },
+            { gridX: gridWidth * 0.35, gridY: gridHeight * 0.3 },
+            { gridX: gridWidth * 0.35, gridY: gridHeight * 0.8 },
             
             // Third turn - go right and up
-            { x: safeWidth * 0.55, y: safeHeight * 0.8 },
-            { x: safeWidth * 0.55, y: safeHeight * 0.2 },
+            { gridX: gridWidth * 0.55, gridY: gridHeight * 0.8 },
+            { gridX: gridWidth * 0.55, gridY: gridHeight * 0.2 },
             
-            // Fourth turn - go right and down (but NOT all the way to edge)
-            { x: safeWidth * 0.72, y: safeHeight * 0.2 },
-            { x: safeWidth * 0.72, y: safeHeight * 0.6 },
+            // Fourth turn - go right and down
+            { gridX: gridWidth * 0.72, gridY: gridHeight * 0.2 },
+            { gridX: gridWidth * 0.72, gridY: gridHeight * 0.6 },
             
-            // Final stretch - end before right edge for castle placement
-            { x: safeWidth * 0.85, y: safeHeight * 0.6 }
+            // Final stretch
+            { gridX: gridWidth * 0.85, gridY: gridHeight * 0.6 }
         ];
         
-        // Ensure all path points are within canvas bounds
-        this.path = this.path.map(point => ({
-            x: Math.max(0, Math.min(safeWidth, point.x)),
-            y: Math.max(0, Math.min(safeHeight, point.y))
+        // Convert grid coordinates to screen coordinates using cellSize
+        this.path = pathInGridCoords.map(point => ({
+            x: Math.round(point.gridX * this.cellSize),
+            y: Math.round(point.gridY * this.cellSize)
         }));
         
-        console.log('Level: Path created with bounds check, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
+        console.log('Level: Path created in grid coords, then converted to screen coords. First:', this.path[0], 'Last:', this.path[this.path.length - 1]);
     }
     
     markPathCells() {
@@ -311,16 +339,33 @@ export class LevelBase {
     }
     
     screenToGrid(screenX, screenY) {
+        // Use ResolutionManager if available, otherwise use cellSize
+        if (this.resolutionManager) {
+            return this.resolutionManager.screenToGrid(screenX, screenY);
+        }
         const gridX = Math.floor(screenX / this.cellSize);
         const gridY = Math.floor(screenY / this.cellSize);
         return { gridX, gridY };
     }
     
     gridToScreen(gridX, gridY, size = 2) {
+        // Use ResolutionManager if available, otherwise calculate manually
+        if (this.resolutionManager) {
+            return this.resolutionManager.gridToScreen(gridX, gridY, size);
+        }
         // Return center of the specified size area
         const screenX = (gridX + size / 2) * this.cellSize;
         const screenY = (gridY + size / 2) * this.cellSize;
         return { screenX, screenY };
+    }
+    
+    isValidGridPosition(gridX, gridY) {
+        // Use ResolutionManager if available
+        if (this.resolutionManager) {
+            return this.resolutionManager.isValidGridPosition(gridX, gridY);
+        }
+        return gridX >= 0 && gridX < this.gridWidth && 
+               gridY >= 0 && gridY < this.gridHeight;
     }
     
     generateAllVisualElements(canvasWidth, canvasHeight) {

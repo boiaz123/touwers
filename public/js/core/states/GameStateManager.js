@@ -14,6 +14,12 @@ export class GameStateManager {
         // SaveSystem reference (will be set during game initialization)
         this.SaveSystem = null;
         
+        // ResolutionManager reference (will be set during game initialization)
+        this.resolutionManager = null;
+        
+        // Game reference (will be set during game initialization)
+        this.game = null;
+        
         console.log('GameStateManager: Constructor called with canvas:', canvas.width, 'x', canvas.height);
     }
     

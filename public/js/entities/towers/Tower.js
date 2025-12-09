@@ -4,9 +4,13 @@ export class Tower {
         this.y = y;
         this.gridX = gridX;
         this.gridY = gridY;
-        this.range = 120;
+        
+        // Tower stats - all measured in base units, not pixels
+        // These stay constant across all resolutions
+        this.range = 120; // pixels at base resolution = 3.75 grid cells
         this.damage = 20;
         this.fireRate = 1;
+        
         this.cooldown = 0;
         this.target = null;
         this.isSelected = false;
@@ -117,10 +121,29 @@ export class Tower {
     }
     
     getTowerSize(ctx) {
+        // Use ResolutionManager if available (attached to canvas/ctx during initialization)
+        if (ctx.resolutionManager) {
+            return ctx.resolutionManager.cellSize * 2;
+        }
+        
+        // Fallback: manual calculation (same logic as ResolutionManager)
         const baseResolution = 1920;
         const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
         const cellSize = Math.floor(32 * scaleFactor);
         return cellSize * 2;
+    }
+    
+    /**
+     * Get cell size from resolution manager
+     * Useful for positioning and sizing calculations
+     */
+    getCellSize(ctx) {
+        if (ctx.resolutionManager) {
+            return ctx.resolutionManager.cellSize;
+        }
+        const baseResolution = 1920;
+        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
+        return Math.floor(32 * scaleFactor);
     }
     
     static getInfo() {
