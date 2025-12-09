@@ -63,6 +63,9 @@ export class GameplayState {
     async enter() {
         console.log('GameplayState: entering');
         
+        // Reset pause state when entering a new level
+        this.isPaused = false;
+        
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign' };
         
@@ -494,6 +497,11 @@ export class GameplayState {
     }
     
     handleClick(x, y) {
+        // Prevent any interactions when game is paused
+        if (this.isPaused) {
+            return;
+        }
+        
         // Handle regular tower/building placement first, before showing any menus
         if (this.selectedTowerType) {
             // Guard posts need special handling - use raw click coordinates

@@ -149,6 +149,15 @@ export class UIManager {
         const exitBtn = document.getElementById('exit-btn');
         const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
 
+        // Reset pause button to show pause icon (game is not paused on entry)
+        if (speedPauseBtn) {
+            const icon = speedPauseBtn.querySelector('.pause-play-icon');
+            if (icon) {
+                icon.textContent = '⏸';
+                speedPauseBtn.title = 'Pause Game';
+            }
+        }
+
         if (speedPauseBtn) {
             speedPauseBtn.addEventListener('click', () => {
                 this.togglePauseGame();
@@ -197,9 +206,46 @@ export class UIManager {
     }
 
     removeUIEventListeners() {
+        // Clean up tower, building, and spell buttons
         document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
             btn.replaceWith(btn.cloneNode(true));
         });
+        
+        // Clean up pause and menu buttons by cloning them to remove all listeners
+        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        if (speedPauseBtn) {
+            speedPauseBtn.replaceWith(speedPauseBtn.cloneNode(true));
+        }
+        
+        const menuBtn = document.getElementById('menu-btn');
+        if (menuBtn) {
+            menuBtn.replaceWith(menuBtn.cloneNode(true));
+        }
+        
+        const resumeBtn = document.getElementById('resume-btn');
+        if (resumeBtn) {
+            resumeBtn.replaceWith(resumeBtn.cloneNode(true));
+        }
+        
+        const restartBtn = document.getElementById('restart-btn');
+        if (restartBtn) {
+            restartBtn.replaceWith(restartBtn.cloneNode(true));
+        }
+        
+        const saveBtn = document.getElementById('save-btn');
+        if (saveBtn) {
+            saveBtn.replaceWith(saveBtn.cloneNode(true));
+        }
+        
+        const exitBtn = document.getElementById('exit-btn');
+        if (exitBtn) {
+            exitBtn.replaceWith(exitBtn.cloneNode(true));
+        }
+        
+        const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
+        if (pauseMenuOverlay) {
+            pauseMenuOverlay.replaceWith(pauseMenuOverlay.cloneNode(true));
+        }
     }
 
     // ============ SPEED CONTROLS ============
@@ -243,6 +289,11 @@ export class UIManager {
     // ============ TOWER/BUILDING SELECTION ============
 
     selectTower(btn) {
+        // Prevent selection when game is paused
+        if (this.gameplayState.isPaused) {
+            return;
+        }
+        
         // Prevent selection of disabled buttons
         if (btn.disabled || btn.classList.contains('disabled')) {
             return;
@@ -269,6 +320,11 @@ export class UIManager {
     }
 
     selectBuilding(btn) {
+        // Prevent selection when game is paused
+        if (this.gameplayState.isPaused) {
+            return;
+        }
+        
         // Prevent selection of disabled buttons
         if (btn.disabled || btn.classList.contains('disabled')) {
             return;
@@ -463,6 +519,11 @@ export class UIManager {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    // Prevent spell casting when game is paused
+                    if (this.gameplayState.isPaused) {
+                        console.log(`UIManager: Spell casting disabled - game is paused`);
+                        return;
+                    }
                     console.log(`UIManager: Spell button clicked for ${spell.id}, currentCooldown: ${spell.currentCooldown}`);
                     if (spell.currentCooldown === 0) {
                         console.log(`UIManager: ✓ Activating spell targeting for ${spell.id}`);
@@ -2201,6 +2262,16 @@ export class UIManager {
             this.gameplayState.setPaused(true);
         }
         
+        // Update pause button to show correct state (play icon since game is now paused)
+        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        if (speedPauseBtn) {
+            const icon = speedPauseBtn.querySelector('.pause-play-icon');
+            if (icon) {
+                icon.textContent = '▶';
+                speedPauseBtn.title = 'Resume Game';
+            }
+        }
+        
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         if (pauseMenuModal) {
             pauseMenuModal.classList.add('show');
@@ -2212,17 +2283,10 @@ export class UIManager {
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         if (pauseMenuModal) {
             pauseMenuModal.classList.remove('show');
-            // Resume game when closing menu
-            this.gameplayState.setPaused(false);
+            // Keep game paused when closing menu - only close the menu
+            // Game remains in paused state
             
-            // Update pause button state
-            const pauseBtn = document.getElementById('pause-btn');
-            if (pauseBtn) {
-                pauseBtn.classList.remove('paused');
-                pauseBtn.style.opacity = '1';
-            }
-            
-            console.log('UIManager: Pause menu closed');
+            console.log('UIManager: Pause menu closed (game remains paused)');
         }
     }
 
@@ -2231,6 +2295,9 @@ export class UIManager {
         
         // Close menu first
         this.closePauseMenu();
+        
+        // Unpause the game before restarting
+        this.gameplayState.setPaused(false);
         
         // Small delay to ensure menu closes visually
         setTimeout(() => {
