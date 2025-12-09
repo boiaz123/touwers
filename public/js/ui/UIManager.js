@@ -139,6 +139,59 @@ export class UIManager {
             console.log('UIManager: Speed circles not found');
         }
 
+        // ============ PAUSE AND MENU BUTTONS ============
+        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        const menuBtn = document.getElementById('menu-btn');
+        const pauseMenuModal = document.getElementById('pause-menu-modal');
+        const resumeBtn = document.getElementById('resume-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const exitBtn = document.getElementById('exit-btn');
+        const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
+
+        if (speedPauseBtn) {
+            speedPauseBtn.addEventListener('click', () => {
+                this.togglePauseGame();
+            });
+        }
+
+        if (menuBtn) {
+            menuBtn.addEventListener('click', () => {
+                this.openPauseMenu();
+            });
+        }
+
+        if (resumeBtn) {
+            resumeBtn.addEventListener('click', () => {
+                this.closePauseMenu();
+            });
+        }
+
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.restartLevel();
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.saveGame();
+            });
+        }
+
+        if (exitBtn) {
+            exitBtn.addEventListener('click', () => {
+                this.exitToMenu();
+            });
+        }
+
+        // Close modal when clicking overlay
+        if (pauseMenuOverlay) {
+            pauseMenuOverlay.addEventListener('click', () => {
+                this.closePauseMenu();
+            });
+        }
+
         // Initial button state update
         this.updateButtonStates();
     }
@@ -2118,5 +2171,112 @@ export class UIManager {
         this.closeAllPanels();
         this.clearBuildingInfoMenu();
         this.clearTowerInfoMenu();
+    }
+
+    // ============ PAUSE AND MENU MANAGEMENT ============
+
+    togglePauseGame() {
+        const wasPaused = this.gameplayState.togglePause();
+        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        
+        if (speedPauseBtn) {
+            const icon = speedPauseBtn.querySelector('.pause-play-icon');
+            if (icon) {
+                if (wasPaused) {
+                    icon.textContent = '▶';
+                    speedPauseBtn.title = 'Resume Game';
+                } else {
+                    icon.textContent = '⏸';
+                    speedPauseBtn.title = 'Pause Game';
+                }
+            }
+        }
+        
+        console.log(`UIManager: Game paused state: ${wasPaused}`);
+    }
+
+    openPauseMenu() {
+        // Pause the game when opening menu
+        if (!this.gameplayState.isPaused) {
+            this.gameplayState.setPaused(true);
+        }
+        
+        const pauseMenuModal = document.getElementById('pause-menu-modal');
+        if (pauseMenuModal) {
+            pauseMenuModal.classList.add('show');
+            console.log('UIManager: Pause menu opened');
+        }
+    }
+
+    closePauseMenu() {
+        const pauseMenuModal = document.getElementById('pause-menu-modal');
+        if (pauseMenuModal) {
+            pauseMenuModal.classList.remove('show');
+            // Resume game when closing menu
+            this.gameplayState.setPaused(false);
+            
+            // Update pause button state
+            const pauseBtn = document.getElementById('pause-btn');
+            if (pauseBtn) {
+                pauseBtn.classList.remove('paused');
+                pauseBtn.style.opacity = '1';
+            }
+            
+            console.log('UIManager: Pause menu closed');
+        }
+    }
+
+    restartLevel() {
+        console.log('UIManager: Restarting level');
+        
+        // Close menu first
+        this.closePauseMenu();
+        
+        // Small delay to ensure menu closes visually
+        setTimeout(() => {
+            // Set the selected level info to current level to reload it
+            this.stateManager.selectedLevelInfo = this.stateManager.selectedLevelInfo || { id: this.gameplayState.currentLevel };
+            // Change to game state which properly resets the game state
+            this.stateManager.changeState('game');
+        }, 100);
+    }
+
+    saveGame() {
+        console.log('UIManager: Saving game');
+        try {
+            SaveSystem.saveGame(
+                this.gameplayState.currentLevel,
+                this.gameState,
+                this.towerManager,
+                this.level
+            );
+            
+            // Show save confirmation
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Game Saved!';
+                saveBtn.disabled = true;
+                
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('UIManager: Error saving game:', error);
+        }
+    }
+
+    exitToMenu() {
+        console.log('UIManager: Exiting to level select');
+        // Close menu first
+        this.closePauseMenu();
+        
+        // Small delay to ensure menu closes visually
+        setTimeout(() => {
+            // Change to level select state
+            this.stateManager.changeState('levelSelect');
+        }, 100);
     }
 }

@@ -149,18 +149,27 @@ export class BuildingManager {
         
         // Then check regular building grid-based clicks
         for (const building of this.buildings) {
-            // Check if click is within the building's grid area
-            const buildingGridWidth = cellSize * building.size;
-            const buildingGridHeight = cellSize * building.size;
-            const buildingLeftEdge = building.gridX * cellSize;
-            const buildingTopEdge = building.gridY * cellSize;
-            // Clamp the right and bottom edges to the canvas boundaries to prevent overflow clickboxes
-            const buildingRightEdge = Math.min(buildingLeftEdge + buildingGridWidth, canvasSize.width);
-            const buildingBottomEdge = Math.min(buildingTopEdge + buildingGridHeight, canvasSize.height);
+            // Use the actual screen coordinates where the building is rendered
+            const buildingSize = cellSize * building.size;
             
-            console.log(`BuildingManager: ${building.constructor.name} at grid (${building.gridX}, ${building.gridY}), screen (${building.x}, ${building.y}), clickbox: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}`);
+            // The building is rendered centered at (building.x, building.y)
+            const buildingLeftEdge = building.x - buildingSize / 2;
+            const buildingTopEdge = building.y - buildingSize / 2;
+            const buildingRightEdge = building.x + buildingSize / 2;
+            const buildingBottomEdge = building.y + buildingSize / 2;
             
-            if (x >= buildingLeftEdge && x <= buildingRightEdge && y >= buildingTopEdge && y <= buildingBottomEdge) {
+            // Calculate the valid clickable area by clamping to canvas bounds
+            const validLeft = Math.max(buildingLeftEdge, 0);
+            const validTop = Math.max(buildingTopEdge, 0);
+            const validRight = Math.min(buildingRightEdge, canvasSize.width);
+            const validBottom = Math.min(buildingBottomEdge, canvasSize.height);
+            
+            // Only register click if it's within the clamped valid area
+            const clickIsValid = x >= validLeft && x <= validRight && y >= validTop && y <= validBottom;
+            
+            console.log(`BuildingManager: ${building.constructor.name} at screen (${building.x}, ${building.y}), clickable area: ${validLeft}-${validRight}, ${validTop}-${validBottom} (original: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}), click valid: ${clickIsValid}`);
+            
+            if (clickIsValid) {
                 console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
                 
                 // Call the building's onClick method directly

@@ -29,6 +29,9 @@ export class GameplayState {
         // NEW: Speed control (3 fixed speeds instead of cycling)
         this.gameSpeed = 1.0; // 1x, 2x, or 3x
         
+        // NEW: Pause system
+        this.isPaused = false;
+        
         console.log('GameplayState constructor completed');
     }
 
@@ -39,7 +42,22 @@ export class GameplayState {
     }
 
     getAdjustedDeltaTime(deltaTime) {
+        // Return 0 delta time when paused
+        if (this.isPaused) {
+            return 0;
+        }
         return deltaTime * this.gameSpeed;
+    }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
+        return this.isPaused;
+    }
+
+    setPaused(paused) {
+        this.isPaused = paused;
+        console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
     }
     
     async enter() {
