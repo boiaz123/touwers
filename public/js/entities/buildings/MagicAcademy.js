@@ -200,59 +200,6 @@ export class MagicAcademy extends Building {
             ctx.textAlign = 'center';
             ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
         }
-        
-        // Floating icon in bottom right of 4x4 grid
-        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 30; // Increased from 20 for better visibility
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
-        
-        // Dynamic pulse for medieval glow effect - reduced intensity
-        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
-        
-        // Enhanced shadow for floating effect with medieval depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        // Parchment-like background with magical purple gradient
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(221, 160, 221, ${pulseIntensity})`); // Plum parchment
-        parchmentGradient.addColorStop(0.7, `rgba(186, 85, 211, ${pulseIntensity * 0.9})`); // Medium orchid parchment
-        parchmentGradient.addColorStop(1, `rgba(138, 43, 226, ${pulseIntensity * 0.8})`); // Blue violet parchment
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        // Subtle medieval glow effect
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(138, 43, 226, ${pulseIntensity * 0.2})`);
-        glowGradient.addColorStop(1, 'rgba(138, 43, 226, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        // Symbol with enhanced medieval styling - spellbook
-        ctx.fillStyle = `rgba(75, 0, 130, ${pulseIntensity})`; // Indigo for magical text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('📖', iconX, iconY);
-        
-        // Add subtle gold highlight on symbol
-        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText('📖', iconX, iconY);
     }
     
     renderFortress(ctx, size) {

@@ -148,53 +148,6 @@ export class SuperWeaponLab extends Building {
         this.renderCrystalTop(ctx, size);
         this.renderMagicParticles(ctx, size);
         this.renderSpellCastEffect(ctx, size);
-        
-        // Floating icon in bottom right of 4x4 grid
-        const cellSize = size / 4;
-        const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
-        
-        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
-        
-        // Icon shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        // Magical purple parchment background
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(139, 92, 246, ${pulseIntensity})`);
-        parchmentGradient.addColorStop(0.7, `rgba(99, 102, 241, ${pulseIntensity * 0.9})`);
-        parchmentGradient.addColorStop(1, `rgba(79, 70, 229, ${pulseIntensity * 0.8})`);
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Gold border
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        // Glow effect
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(139, 92, 246, ${pulseIntensity * 0.3})`);
-        glowGradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        // Icon symbol - magical tower
-        ctx.fillStyle = `rgba(255, 255, 255, ${pulseIntensity})`;
-        ctx.font = 'bold 16px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🗼', iconX, iconY);
     }
     
     renderStoneBase(ctx, size) {

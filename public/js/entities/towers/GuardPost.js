@@ -245,59 +245,7 @@ export class GuardPost extends Tower {
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(this.width * 0.28, -this.height * 0.77, 14, 3);
         
-        // Render icon for clicking (sword icon at bottom right)
-        const iconSize = 24;
-        const iconBoxX = this.width * 0.35 - iconSize / 2;
-        const iconBoxY = this.height * 0.35 - iconSize / 2;
-        
-        ctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2;
-        ctx.fillRect(iconBoxX, iconBoxY, iconSize, iconSize);
-        ctx.strokeRect(iconBoxX, iconBoxY, iconSize, iconSize);
-        
-        // Draw sword in icon - vertical blade with crossguard and pommel
-        const swordCenterX = iconBoxX + iconSize / 2;
-        const swordCenterY = iconBoxY + iconSize / 2;
-        
-        // Blade - silver vertical line
-        ctx.strokeStyle = '#C0C0C0';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(swordCenterX, iconBoxY + 3);
-        ctx.lineTo(swordCenterX, swordCenterY - 2);
-        ctx.stroke();
-        
-        // Blade tip - triangle point
-        ctx.fillStyle = '#C0C0C0';
-        ctx.beginPath();
-        ctx.moveTo(swordCenterX - 1, iconBoxY + 2);
-        ctx.lineTo(swordCenterX + 1, iconBoxY + 2);
-        ctx.lineTo(swordCenterX, iconBoxY);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Crossguard - gold horizontal bar
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(swordCenterX - iconSize / 3, swordCenterY - 2);
-        ctx.lineTo(swordCenterX + iconSize / 3, swordCenterY - 2);
-        ctx.stroke();
-        
-        // Pommel - brown circular knob at bottom
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.arc(swordCenterX, swordCenterY + 6, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        
         ctx.restore();
-        
-        // Store icon position for click detection in world coordinates (OUTSIDE the ctx.restore)
-        this.iconWorldX = this.x + iconBoxX;
-        this.iconWorldY = this.y + iconBoxY;
-        this.iconWidth = iconSize;
-        this.iconHeight = iconSize;
         
         // Render defender if alive
         if (this.defender && !this.defender.isDead()) {
@@ -308,57 +256,6 @@ export class GuardPost extends Tower {
     /**
      * Render building icon for GUI
      */
-    renderIcon(ctx, x, y, size = 24) {
-        ctx.save();
-        
-        // Icon background circle
-        ctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
-        ctx.beginPath();
-        ctx.arc(x, y, size/2 + 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Icon border
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(x, y, size/2 + 2, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Draw sword
-        // Blade - vertical line
-        ctx.strokeStyle = '#C0C0C0';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y - size/3);
-        ctx.lineTo(x, y + size/2.5);
-        ctx.stroke();
-        
-        // Blade tip - point
-        ctx.fillStyle = '#C0C0C0';
-        ctx.beginPath();
-        ctx.moveTo(x - 1.5, y - size/3);
-        ctx.lineTo(x + 1.5, y - size/3);
-        ctx.lineTo(x, y - size/2.2);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Guard - crossbar
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(x - size/3.5, y);
-        ctx.lineTo(x + size/3.5, y);
-        ctx.stroke();
-        
-        // Pommel - handle knob
-        ctx.fillStyle = '#8B4513';
-        ctx.beginPath();
-        ctx.arc(x, y + size/3, 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.restore();
-    }
-    
     /**
      * Handle click on this guard post
      */

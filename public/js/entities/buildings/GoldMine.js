@@ -900,91 +900,6 @@ export class GoldMine extends Building {
             ctx.fillText(this.gemMode ? '💎 READY' : '💰 READY', this.x, this.y - size/2 - 10);
         }
         
-        // Floating icon in bottom right of 4x4 grid
-        const cellSize = size / 4; // Since size is buildingSize = cellSize * 4
-        const iconSize = 35; // Increased size for better visibility
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
-        
-        // Render floating icon only when gold is ready
-        if (this.goldReady) {
-            const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
-            
-            // Enhanced shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-            
-            // Parchment background
-            const parchmentGradient = ctx.createRadialGradient(
-                iconX - iconSize/4, iconY - iconSize/4, 0,
-                iconX, iconY, iconSize
-            );
-            parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`);
-            parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`);
-            parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`);
-            
-            ctx.fillStyle = parchmentGradient;
-            ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-            
-            // Ornate medieval border with gem-specific color
-            let borderColor = '#B8860B'; // Gold border by default
-            if (this.gemMode && this.currentGemType) {
-                switch(this.currentGemType) {
-                    case 'fire': borderColor = '#FF4500'; break;
-                    case 'water': borderColor = '#40A4DF'; break;
-                    case 'air': borderColor = '#FFD700'; break;
-                    case 'earth': borderColor = '#8B4513'; break;
-                }
-            }
-            
-            // Outer ornate border
-            ctx.strokeStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity})`;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(iconX - iconSize/2 - 1, iconY - iconSize/2 - 1, iconSize + 2, iconSize + 2);
-            
-            // Inner decorative border
-            ctx.strokeStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity * 0.6})`;
-            ctx.lineWidth = 1;
-            ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-            
-            // Corner ornaments
-            const ornamentSize = 3;
-            ctx.fillStyle = `rgba(${borderColor === '#B8860B' ? '184, 134, 11' : 'rgb'}, ${pulseIntensity})`;
-            // Corners
-            ctx.fillRect(iconX - iconSize/2 - 1, iconY - iconSize/2 - 1, ornamentSize, ornamentSize);
-            ctx.fillRect(iconX + iconSize/2 - ornamentSize + 1, iconY - iconSize/2 - 1, ornamentSize, ornamentSize);
-            ctx.fillRect(iconX - iconSize/2 - 1, iconY + iconSize/2 - ornamentSize + 1, ornamentSize, ornamentSize);
-            ctx.fillRect(iconX + iconSize/2 - ornamentSize + 1, iconY + iconSize/2 - ornamentSize + 1, ornamentSize, ornamentSize);
-            
-            // Subtle medieval glow
-            const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-            glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
-            glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            ctx.fillStyle = glowGradient;
-            ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-            
-            // Symbol - changes based on gem type
-            let symbol = '💰';
-            if (this.gemMode && this.currentGemType) {
-                switch(this.currentGemType) {
-                    case 'fire': symbol = '🔥'; break;
-                    case 'water': symbol = '💧'; break;
-                    case 'air': symbol = '💨'; break;
-                    case 'earth': symbol = '🪨'; break;
-                }
-            }
-            
-            ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`;
-            ctx.font = 'bold 20px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(symbol, iconX, iconY);
-            
-            // Highlight
-            ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-            ctx.fillText(symbol, iconX, iconY);
-        }
-        
         // Toggle icon with medieval border
         if (this.gemMiningUnlocked) {
             const toggleIconSize = 25;
@@ -1023,8 +938,10 @@ export class GoldMine extends Building {
             
             // Toggle glow
             const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
-            toggleGlow.addColorStop(0, `${this.gemMode ? 'rgba(138, 43, 226, ' : 'rgba(200, 200, 200, '}${togglePulse * 0.2})`);
-            toggleGlow.addColorStop(1, `${this.gemMode ? 'rgba(138, 43, 226, ' : 'rgba(200, 200, 200, '}0)`);
+            const glowColor0 = this.gemMode ? `rgba(138, 43, 226, ${togglePulse * 0.2})` : `rgba(200, 200, 200, ${togglePulse * 0.2})`;
+            const glowColor1 = this.gemMode ? 'rgba(138, 43, 226, 0)' : 'rgba(200, 200, 200, 0)';
+            toggleGlow.addColorStop(0, glowColor0);
+            toggleGlow.addColorStop(1, glowColor1);
             ctx.fillStyle = toggleGlow;
             ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
             
@@ -1092,7 +1009,7 @@ export class GoldMine extends Building {
             ctx.fillText(text.text, this.x + 2, text.y + 2);
             
             // Main text with color
-            switch(text.gemType) {
+            switch (text.gemType) {
                 case 'fire':
                     ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
                     break;
@@ -1106,39 +1023,14 @@ export class GoldMine extends Building {
                     ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
                     break;
                 case 'diamond':
-                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`; // Light blue/cyan for diamond
+                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`;
                     break;
-                default: // gold
+                default:
                     ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+                    break;
             }
             ctx.fillText(text.text, this.x, text.y);
         });
-    }
-    
-    isPointInside(x, y, size) {
-        // Check building area
-        const dx = x - this.x;
-        const dy = y - this.y;
-        if (Math.abs(dx) <= size/2 && Math.abs(dy) <= size/2) {
-            return true;
-        }
-        
-        // Check toggle icon area if unlocked (top-left corner)
-        if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
-            const toggleX = this.x - size/2 + 12;
-            const toggleY = this.y - size/2 + 12;
-            
-            const inToggle = x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
-                           y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2;
-            
-            if (inToggle) {
-                console.log('GoldMine: Click detected on toggle icon');
-            }
-            return inToggle;
-        }
-        
-        return false;
     }
     
     onClick(x, y, size) {

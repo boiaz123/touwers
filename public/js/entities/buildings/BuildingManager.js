@@ -122,9 +122,8 @@ export class BuildingManager {
             if (building.deselect) building.deselect();
         });
         
-        // Check for ANY building interaction (icon clicks or regular clicks)
+        // Check for ANY building interaction
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
-        const iconSize = 30;
         
         // First check toggle icon clicks for gold mines
         for (const building of this.buildings) {
@@ -148,17 +147,18 @@ export class BuildingManager {
             }
         }
         
-        // Then check regular building icon clicks
+        // Then check regular building grid-based clicks
         for (const building of this.buildings) {
-            // Icon position: bottom right of building grid, slightly floating up
-            const iconX = (building.gridX + building.size - 0.5) * cellSize;
-            const iconY = (building.gridY + building.size - 0.5) * cellSize - 5;
+            // Check if click is within the building's grid area
+            const buildingGridWidth = cellSize * building.size;
+            const buildingGridHeight = cellSize * building.size;
+            const buildingLeftEdge = building.gridX * cellSize;
+            const buildingTopEdge = building.gridY * cellSize;
+            const buildingRightEdge = buildingLeftEdge + buildingGridWidth;
+            const buildingBottomEdge = buildingTopEdge + buildingGridHeight;
             
-            // Add small buffer for easier clicking
-            const clickBuffer = 5;
-            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
-                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} icon`);
+            if (x >= buildingLeftEdge && x <= buildingRightEdge && y >= buildingTopEdge && y <= buildingBottomEdge) {
+                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {
@@ -173,7 +173,7 @@ export class BuildingManager {
             }
         }
         
-        console.log('BuildingManager: No building icon hit');
+        console.log('BuildingManager: No building hit');
         return null;
     }
     

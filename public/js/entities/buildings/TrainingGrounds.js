@@ -259,51 +259,6 @@ export class TrainingGrounds extends Building {
         this.renderDummies(ctx, size);
         this.renderParticles(ctx);
         
-        // Floating icon in bottom right of 4x4 grid
-        // MUST match BuildingManager.handleClick icon position calculation
-        const cellSize = size / 4;
-        const iconSize = 30;
-        const iconX = (this.gridX + this.size - 0.5) * cellSize;
-        const iconY = (this.gridY + this.size - 0.5) * cellSize - 5;
-        
-        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(210, 180, 140, ${pulseIntensity})`);
-        parchmentGradient.addColorStop(0.7, `rgba(188, 143, 143, ${pulseIntensity * 0.9})`);
-        parchmentGradient.addColorStop(1, `rgba(160, 120, 80, ${pulseIntensity * 0.8})`);
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(218, 165, 32, ${pulseIntensity * 0.2})`);
-        glowGradient.addColorStop(1, 'rgba(218, 165, 32, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        ctx.fillStyle = `rgba(139, 69, 19, ${pulseIntensity})`;
-        ctx.font = 'bold 18px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('⚔️', iconX, iconY);
-        
-        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText('⚔️', iconX, iconY);
     }
     
     renderDetailedGround(ctx, size) {
@@ -991,21 +946,6 @@ export class TrainingGrounds extends Building {
                 ctx.fill();
             }
         });
-    }
-    
-    isPointInside(x, y, buildingSize) {
-        // Check if a point is inside the building's icon area
-        // buildingSize is passed as cellSize * this.size
-        const cellSize = buildingSize / this.size;
-        const iconSize = 30;
-        const clickBuffer = 5;
-        
-        // Icon position must match BuildingManager.handleClick calculation
-        const iconX = (this.gridX + this.size - 0.5) * cellSize;
-        const iconY = (this.gridY + this.size - 0.5) * cellSize - 5;
-        
-        return x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
-               y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer);
     }
     
     onClick() {

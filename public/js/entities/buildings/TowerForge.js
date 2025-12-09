@@ -186,58 +186,6 @@ export class TowerForge extends Building {
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
-        
-        // Floating icon in bottom right of 4x4 grid
-        const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5; // Float up slightly
-        
-        // Dynamic pulse for medieval glow effect - reduced intensity
-        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
-        
-        // Enhanced shadow for floating effect with medieval depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        // Parchment-like background with medieval gradient
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        // Subtle medieval glow effect
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
-        glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        // Symbol with enhanced medieval styling
-        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔨', iconX, iconY);
-        
-        // Add subtle gold highlight on symbol
-        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText('🔨', iconX, iconY);
     }
 
     renderFrontAreaItems(ctx, size) {

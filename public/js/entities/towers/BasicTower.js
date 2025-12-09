@@ -115,44 +115,7 @@ export class BasicTower extends Tower {
         const gridSize = cellSize * 2; // 2x2 grid = 2 cells wide
         this.gridSize = gridSize; // Store for rock calculations
 
-        // If the tower was auto-selected during build, suppress that selection
-        // until the user explicitly clicks the tower icon.
-        if (this._suppressSelectionUntilClick && this.isSelected) {
-            this.isSelected = false;
-        }
 
-        // Attach click handler once to detect clicks on the tower icon.
-        if (!this._clickHandlerAttached) {
-            const canvas = ctx.canvas;
-            this._clickHandlerAttached = true;
-            this._onCanvasClick = (e) => {
-                const rect = canvas.getBoundingClientRect();
-                // Map mouse to canvas pixel coordinates
-                const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-                const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-                // Recompute icon position using same logic as render
-                const baseResolutionLocal = 1920;
-                const scaleFactorLocal = Math.max(0.5, Math.min(2.5, canvas.width / baseResolutionLocal));
-                const cellSizeLocal = Math.floor(32 * scaleFactorLocal);
-                const iconSize = 20;
-                const iconX = (this.gridX + 1.5) * cellSizeLocal;
-                const iconY = (this.gridY + 1.5) * cellSizeLocal - 5;
-
-                // Hit test against icon bounding box
-                if (
-                    clickX >= iconX - iconSize / 2 &&
-                    clickX <= iconX + iconSize / 2 &&
-                    clickY >= iconY - iconSize / 2 &&
-                    clickY <= iconY + iconSize / 2
-                ) {
-                    // Allow selection and open stat panel
-                    this._suppressSelectionUntilClick = false;
-                    this.isSelected = true;
-                }
-            };
-            canvas.addEventListener('click', this._onCanvasClick);
-        }
 
         // Compact, aligned tower dimensions
         const baseSize = gridSize * 0.35;
@@ -449,69 +412,6 @@ export class BasicTower extends Tower {
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);
-        
-        // Floating icon in bottom right of 2x2 grid - DISABLED FOR BASIC TOWER
-        /*
-        const iconSize = 20;
-        const iconX = (this.gridX + 1.5) * cellSize;
-        const iconY = (this.gridY + 1.5) * cellSize - 5;
-        
-        // Dynamic pulse for medieval glow effect
-        const pulseIntensity = 0.7 + 0.3 * Math.sin(this.animationTime * 4);
-        
-        // Enhanced shadow for floating effect with medieval depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        // Parchment-like background with medieval gradient
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(255, 248, 220, ${pulseIntensity})`); // Cream parchment
-        parchmentGradient.addColorStop(0.7, `rgba(245, 222, 179, ${pulseIntensity * 0.9})`); // Antique parchment
-        parchmentGradient.addColorStop(1, `rgba(222, 184, 135, ${pulseIntensity * 0.8})`); // Aged parchment
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        // Subtle medieval glow effect
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(255, 215, 0, ${pulseIntensity * 0.2})`);
-        glowGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        // Symbol with enhanced medieval styling
-        ctx.fillStyle = `rgba(101, 67, 33, ${pulseIntensity})`; // Dark brown for medieval text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        let symbol = '🏰'; // default
-        switch(this.constructor.name) {
-            case 'BasicTower': symbol = '🏰'; break;
-            case 'CannonTower': symbol = '🎯'; break;
-            case 'ArcherTower': symbol = '🏹'; break;
-            case 'MagicTower': symbol = '⚡'; break;
-            case 'BarricadeTower': symbol = '🛡️'; break;
-            case 'PoisonArcherTower': symbol = '🌿'; break;
-        }
-        ctx.fillText(symbol, iconX, iconY);
-        
-        // Add subtle gold highlight on symbol
-        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText(symbol, iconX, iconY);
-        */
     }
     
     drawEnvironment(ctx, gridSize) {

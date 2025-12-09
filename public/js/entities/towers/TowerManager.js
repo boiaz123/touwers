@@ -417,40 +417,19 @@ export class TowerManager {
             if (building.deselect) building.deselect();
         });
         
-        // Calculate cellSize for icon positioning
+        // Calculate cellSize for grid-based click detection
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasRect.width / 1920)));
-        const iconSize = 30;
         
         for (const tower of this.towers) {
-            // Special handling for GuardPost - uses world coordinates, not grid
-            if (tower.constructor.name === 'GuardPost') {
-                if (tower.iconWorldX !== undefined && tower.iconWorldY !== undefined) {
-                    // Icon box spans from iconWorldX to iconWorldX+iconWidth, iconWorldY to iconWorldY+iconHeight
-                    const buffer = 3;
-                    if (x >= tower.iconWorldX - buffer && x <= tower.iconWorldX + tower.iconWidth + buffer &&
-                        y >= tower.iconWorldY - buffer && y <= tower.iconWorldY + tower.iconHeight + buffer) {
-                        console.log(`TowerManager: GuardPost icon clicked at (${x}, ${y}), icon at (${tower.iconWorldX}, ${tower.iconWorldY})`);
-                        tower.isSelected = true;
-                        return {
-                            type: 'guard_post_menu',
-                            tower: tower,
-                            options: tower.getDefenderHiringOptions(),
-                            gameState: this.gameState
-                        };
-                    }
-                }
-                // Continue checking other towers
-                continue;
-            }
+            // Check if click is within the tower's 2x2 grid area
+            const towerGridWidth = cellSize * 2;
+            const towerGridHeight = cellSize * 2;
+            const towerLeftEdge = tower.gridX * cellSize;
+            const towerTopEdge = tower.gridY * cellSize;
+            const towerRightEdge = towerLeftEdge + towerGridWidth;
+            const towerBottomEdge = towerTopEdge + towerGridHeight;
             
-            // Standard tower click detection using grid position
-            // Icon position: bottom right of 2x2 grid, slightly floating up
-            const iconX = (tower.gridX + 1.5) * cellSize;
-            const iconY = (tower.gridY + 1.5) * cellSize - 5;
-            
-            const clickBuffer = 5;
-            if (x >= iconX - (iconSize/2 + clickBuffer) && x <= iconX + (iconSize/2 + clickBuffer) &&
-                y >= iconY - (iconSize/2 + clickBuffer) && y <= iconY + (iconSize/2 + clickBuffer)) {
+            if (x >= towerLeftEdge && x <= towerRightEdge && y >= towerTopEdge && y <= towerBottomEdge) {
                 if (tower.constructor.name === 'MagicTower') {
                     tower.isSelected = true;
                     return {
@@ -507,33 +486,12 @@ export class TowerManager {
                 // New: Handle super weapon menu
                 console.log('TowerManager: Super Weapon menu requested');
                 return buildingResult;
+            } else if (buildingResult.type === 'training_menu') {
+                console.log('TowerManager: Training menu requested');
+                return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection
                 return buildingResult;
-            }
-        }
-        
-        // Check buildings first (they have interactive elements like toggle icons)
-        if (this.buildingManager) {
-            for (const building of this.buildingManager.buildings) {
-                // Calculate the actual pixel size of the building
-                const buildingSize = cellSize * building.size;
-                
-                if (building.isPointInside(x, y, buildingSize)) {
-                    // Pass coordinates to onClick so it can handle toggle icons
-                    const result = building.onClick ? building.onClick(x, y, buildingSize) : null;
-                    
-                    console.log(`TowerManager: Building clicked at (${x}, ${y}), result:`, result);
-                    
-                    // Handle different result types
-                    if (result !== undefined && result !== null) {
-                        if (typeof result === 'number') {
-                            return result; // Gold/gem collection
-                        } else if (typeof result === 'object') {
-                            return result; // Menu data
-                        }
-                    }
-                }
             }
         }
         

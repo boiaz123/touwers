@@ -714,26 +714,6 @@ export class CombinationTower extends Tower {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
                 ctx.stroke();
-            }
-            
-            const iconBoxSize = 24;
-            const iconBoxX = this.x + towerSize / 2 - iconBoxSize;
-            const iconBoxY = this.y + towerSize / 2 - iconBoxSize;
-            
-            ctx.fillStyle = combinationColor + '0.8)';
-            ctx.strokeStyle = combinationColor + '1)';
-            ctx.lineWidth = 2;
-            ctx.fillRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
-            ctx.strokeRect(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
-            
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(spellIcons[this.selectedSpell] || '✦', this.x + towerSize / 2 - iconBoxSize / 2, this.y + towerSize / 2 - iconBoxSize / 2);
-            ctx.fillText(spellIcons[this.selectedSpell] || '✦', this.x, this.y + towerSize/2 + 15);
-            
-            if (this.isSelected) {
                 ctx.shadowBlur = 0;
             }
         }
