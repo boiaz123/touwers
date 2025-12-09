@@ -22,8 +22,12 @@ export class GuardPost extends Tower {
         this.health = 200;
         this.maxHealth = 200;
         this.armor = 5;
+        // Clickbox size - used for click detection
         this.width = 50;
         this.height = 50;
+        // Larger clickbox area for better clickability (used in click detection)
+        this.clickBoxWidth = 80;
+        this.clickBoxHeight = 80;
         
         // Build cost
         this.buildCost = 150;
@@ -31,8 +35,6 @@ export class GuardPost extends Tower {
         // Defender spawning position - at the front of the hut
         this.defenderSpawnX = x - 35;
         this.defenderSpawnY = y;
-        
-        console.log(`GuardPost: Created at (${x}, ${y})`);
     }
     
     /**

@@ -423,11 +423,13 @@ export class TowerManager {
         for (const tower of this.towers) {
             // Special handling for GuardPost (uses absolute coordinates, not grid)
             if (tower.constructor.name === 'GuardPost') {
-                const guardPostSize = 80;  // Increased from 50 for better clickability
-                const guardPostLeft = tower.x - guardPostSize / 2;
-                const guardPostRight = tower.x + guardPostSize / 2;
-                const guardPostTop = tower.y - guardPostSize / 2;
-                const guardPostBottom = tower.y + guardPostSize / 2;
+                // Use clickBoxWidth/Height if available, otherwise fall back to width/height
+                const clickBoxWidth = tower.clickBoxWidth || tower.width || 80;
+                const clickBoxHeight = tower.clickBoxHeight || tower.height || 80;
+                const guardPostLeft = tower.x - clickBoxWidth / 2;
+                const guardPostRight = tower.x + clickBoxWidth / 2;
+                const guardPostTop = tower.y - clickBoxHeight / 2;
+                const guardPostBottom = tower.y + clickBoxHeight / 2;
                 
                 if (x >= guardPostLeft && x <= guardPostRight && y >= guardPostTop && y <= guardPostBottom) {
                     tower.isSelected = true;

@@ -206,48 +206,7 @@ export class GameplayState {
             const canvasX = e.clientX - rect.left;
             const canvasY = e.clientY - rect.top;
             
-            // Check for building/tower clicks first
-            const clickResult = this.towerManager.handleClick(canvasX, canvasY, rect);
-            
-            if (clickResult) {
-                if (clickResult.type === 'forge_menu') {
-                    this.uiManager.showForgeUpgradeMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'academy_menu') {
-                    this.uiManager.showAcademyUpgradeMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'castle_menu') {
-                    this.uiManager.showCastleUpgradeMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'magic_tower_menu') {
-                    this.uiManager.showMagicTowerElementMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'combination_tower_menu') {
-                    this.uiManager.showCombinationTowerMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'guard_post_menu') {
-                    this.uiManager.showGuardPostMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'basic_tower_stats') {
-                    this.uiManager.showBasicTowerStatsMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'tower_stats') {
-                    this.uiManager.showTowerStatsMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'superweapon_menu') {
-                    this.uiManager.showSuperWeaponMenu(clickResult);
-                    return;
-                } else if (clickResult.type === 'training_menu') {
-                    this.uiManager.showTrainingGroundsMenu(clickResult);
-                    return;
-                } else if (typeof clickResult === 'number') {
-                    this.gameState.gold += clickResult;
-                    this.uiManager.updateUI();
-                    return;
-                }
-            }
-            
-            // Handle regular tower/building placement
+            // All click handling is now done in handleClick method, which prioritizes placement
             this.handleClick(canvasX, canvasY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
@@ -517,59 +476,37 @@ export class GameplayState {
     }
     
     handleClick(x, y) {
-        const clickResult = this.towerManager.handleClick(x, y, { 
-            width: this.stateManager.canvas.width, 
-            height: this.stateManager.canvas.height 
-        });
-        
-        if (clickResult) {
-            if (clickResult.type === 'forge_menu') {
-                this.uiManager.showForgeUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'academy_menu') {
-                this.uiManager.showAcademyUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'castle_menu') {
-                this.uiManager.showCastleUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'magic_tower_menu') {
-                this.uiManager.showMagicTowerElementMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'combination_tower_menu') {
-                this.uiManager.showCombinationTowerMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'basic_tower_stats') {
-                this.uiManager.showBasicTowerStatsMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'tower_stats') {
-                this.uiManager.showTowerStatsMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'superweapon_menu') {
-                this.uiManager.showSuperWeaponMenu(clickResult);
-                return;
-            } else if (typeof clickResult === 'number') {
-                this.gameState.gold += clickResult;
-                this.uiManager.updateUI();
-                return;
-            }
-        }
-        
-        // Handle regular tower/building placement
+        // Handle regular tower/building placement first, before showing any menus
         if (this.selectedTowerType) {
-            const { gridX, gridY } = this.level.screenToGrid(x, y);
-            
-            if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
-                
-                if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
-                    this.level.placeTower(gridX, gridY);
+            // Guard posts need special handling - use raw click coordinates
+            if (this.selectedTowerType === 'guard-post') {
+                if (this.towerManager.placeTower(this.selectedTowerType, x, y, 0, 0)) {
                     this.uiManager.updateUI();
                     
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    return; // Exit after placement - don't open menus
+                }
+            } else {
+                // Regular towers use grid coordinates
+                const { gridX, gridY } = this.level.screenToGrid(x, y);
+                
+                if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
+                    const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
+                    
+                    if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
+                        this.level.placeTower(gridX, gridY);
+                        this.uiManager.updateUI();
+                        
+                        this.selectedTowerType = null;
+                        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                        this.level.setPlacementPreview(0, 0, false);
+                        return; // Exit after placement - don't open menus
+                    }
                 }
             }
+            return; // Exit if placement check failed - don't open menus
         } else if (this.selectedBuildingType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
             
@@ -602,7 +539,53 @@ export class GameplayState {
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    return; // Exit after placement - don't open menus
                 }
+            }
+            return; // Exit if placement check failed - don't open menus
+        }
+        
+        // Only show menus if not in placement mode
+        const clickResult = this.towerManager.handleClick(x, y, { 
+            width: this.stateManager.canvas.width, 
+            height: this.stateManager.canvas.height 
+        });
+        
+        if (clickResult) {
+            if (clickResult.type === 'forge_menu') {
+                this.uiManager.showForgeUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'academy_menu') {
+                this.uiManager.showAcademyUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'castle_menu') {
+                this.uiManager.showCastleUpgradeMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'magic_tower_menu') {
+                this.uiManager.showMagicTowerElementMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'combination_tower_menu') {
+                this.uiManager.showCombinationTowerMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'basic_tower_stats') {
+                this.uiManager.showBasicTowerStatsMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'tower_stats') {
+                this.uiManager.showTowerStatsMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'guard_post_menu') {
+                this.uiManager.showGuardPostMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'superweapon_menu') {
+                this.uiManager.showSuperWeaponMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'training_menu') {
+                this.uiManager.showTrainingGroundsMenu(clickResult);
+                return;
+            } else if (typeof clickResult === 'number') {
+                this.gameState.gold += clickResult;
+                this.uiManager.updateUI();
+                return;
             }
         }
     }
