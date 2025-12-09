@@ -722,6 +722,33 @@ export class GameplayState {
             return true;
         });
         
+        // Update castle first so it's ready for defender positioning
+        if (this.level.castle) {
+            this.level.castle.update(deltaTime);
+            this.level.castle.checkDefenderDeath();
+        }
+        
+        // Update castle defender position BEFORE checking enemy engagement
+        // This ensures the defender position is current when distance checks happen
+        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+            const defender = this.level.castle.defender;
+            // Position defender in front of castle
+            defender.x = this.level.castle.x - 60;
+            defender.y = this.level.castle.y + 40;
+        }
+        
+        // Update guard post defender positions BEFORE checking enemy engagement
+        // This ensures they're at the correct waypoint location for distance checks
+        if (this.level.towers) {
+            this.level.towers.forEach(tower => {
+                if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                    // Maintain defender position on the path
+                    tower.defender.x = tower.defenderSpawnX;
+                    tower.defender.y = tower.defenderSpawnY;
+                }
+            });
+        }
+        
         // FIRST: Check if enemies should engage with defenders BEFORE moving them
         // This prevents enemies from walking through defenders
         this.enemyManager.enemies.forEach(enemy => {
@@ -737,12 +764,19 @@ export class GameplayState {
             if (this.level.towers) {
                 for (let tower of this.level.towers) {
                     if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                        // Always add this defender to the enemy's list of path defenders to check against
+                        if (!enemy.pathDefenders) {
+                            enemy.pathDefenders = [];
+                        }
+                        if (!enemy.pathDefenders.find(d => d === tower.defender)) {
+                            enemy.pathDefenders.push(tower.defender);
+                        }
+                        
+                        // Check if enemy is already close enough to engage
                         if (enemy.checkDefenderTarget(tower.defender)) {
-                            // Set the defender's waypoint on the enemy so it will stop here
-                            if (tower.defender.defenderWaypoint) {
-                                enemy.defenderWaypoint = tower.defender.defenderWaypoint;
-                            }
-                            // Set attacking defender so enemy won't move in update
+                            // Enemy is close enough - set it to attack this defender
+                            enemy.isAttackingDefender = true;
+                            enemy.defenderTarget = tower.defender;
                             return;
                         }
                     }
@@ -754,20 +788,10 @@ export class GameplayState {
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         
-        // Update castle
-        if (this.level.castle) {
-            this.level.castle.update(deltaTime);
-            this.level.castle.checkDefenderDeath();
-        }
-        
-        // Update defender and handle defender combat
+        // Update defender combat
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             const defender = this.level.castle.defender;
             defender.update(deltaTime, this.enemyManager.enemies);
-            
-            // Position defender in front of castle
-            defender.x = this.level.castle.x - 60;
-            defender.y = this.level.castle.y + 40;
         }
         
         // Update guard posts and their defenders
@@ -804,13 +828,39 @@ export class GameplayState {
                 }
             }
             
-            // Handle damage to defenders
+            // Handle damage to defenders and castle
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
                 enemy.attackDefender(enemy.defenderTarget, deltaTime);
-            } else if (enemy.reachedEnd && this.level.castle) {
-                // Have enemies attack the castle if they reached the end
-                enemy.isAttackingCastle = true;
-                enemy.attackCastle(this.level.castle, deltaTime);
+            } else if (enemy.reachedEnd) {
+                // Enemy reached either a path defender or the castle
+                let targetDefender = null;
+                
+                // Check if there's a path defender to engage
+                if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
+                    for (let defender of enemy.pathDefenders) {
+                        if (!defender.isDead()) {
+                            targetDefender = defender;
+                            break;
+                        }
+                    }
+                }
+                
+                // If no path defender found, check for castle defender
+                if (!targetDefender && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+                    targetDefender = this.level.castle.defender;
+                    enemy.isAttackingCastle = false;
+                }
+                
+                // Attack the defender if found
+                if (targetDefender) {
+                    enemy.isAttackingDefender = true;
+                    enemy.defenderTarget = targetDefender;
+                    enemy.attackDefender(targetDefender, deltaTime);
+                } else if (this.level.castle) {
+                    // No defender found, attack the castle
+                    enemy.isAttackingCastle = true;
+                    enemy.attackCastle(this.level.castle, deltaTime);
+                }
             }
         });
         

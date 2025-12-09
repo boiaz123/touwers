@@ -13,6 +13,7 @@ export class GuardPost extends Tower {
         // The tower is positioned at absolute canvas coordinates
         super(x, y, 0, 0);
         
+        this.type = 'guard-post'; // Identify this as a guard-post tower
         this.level = level; // Guard post level (always 1)
         this.defender = null;
         this.defenderDeadCooldown = 0;
@@ -42,7 +43,7 @@ export class GuardPost extends Tower {
     }
     
     /**
-     * Set the game path reference and calculate the waypoint index
+     * Set the game path reference and calculate the nearest point on the path
      * Called after GuardPost is created to establish path connection
      */
     setPath(gamePath) {
@@ -50,31 +51,78 @@ export class GuardPost extends Tower {
             console.warn('GuardPost: Invalid path provided');
             return;
         }
-        
+
         this.gamePath = gamePath;
-        
-        // Find the closest path waypoint to this guard post's position
+
+        // Find the nearest point ON the path (not just at waypoints)
+        let closestPoint = null;
         let closestDistance = Infinity;
-        let closestIndex = 0;
-        
-        for (let i = 0; i < gamePath.length; i++) {
-            const distance = Math.hypot(gamePath[i].x - this.x, gamePath[i].y - this.y);
+        let closestSegmentIndex = 0;
+
+        // Check distance to each path segment
+        for (let i = 0; i < gamePath.length - 1; i++) {
+            const segmentStart = gamePath[i];
+            const segmentEnd = gamePath[i + 1];
+
+            // Find nearest point on this line segment
+            const nearestOnSegment = this.getNearestPointOnSegment(
+                this.x, this.y,
+                segmentStart.x, segmentStart.y,
+                segmentEnd.x, segmentEnd.y
+            );
+
+            const distance = Math.hypot(nearestOnSegment.x - this.x, nearestOnSegment.y - this.y);
+
             if (distance < closestDistance) {
                 closestDistance = distance;
-                closestIndex = i;
+                closestPoint = nearestOnSegment;
+                closestSegmentIndex = i;
             }
         }
-        
-        this.pathIndex = closestIndex;
-        
-        // Set defender spawn position to the actual path waypoint
-        this.defenderSpawnX = gamePath[closestIndex].x;
-        this.defenderSpawnY = gamePath[closestIndex].y;
-        
-        console.log(`GuardPost: Path set, closest waypoint at index ${closestIndex}, position (${this.defenderSpawnX}, ${this.defenderSpawnY})`);
+
+        // Also check the last waypoint
+        const lastWaypoint = gamePath[gamePath.length - 1];
+        const distanceToLast = Math.hypot(lastWaypoint.x - this.x, lastWaypoint.y - this.y);
+        if (distanceToLast < closestDistance) {
+            closestPoint = { x: lastWaypoint.x, y: lastWaypoint.y };
+            closestDistance = distanceToLast;
+            closestSegmentIndex = gamePath.length - 1;
+        }
+
+        // Set defender spawn position to the nearest point on the path
+        this.defenderSpawnX = closestPoint.x;
+        this.defenderSpawnY = closestPoint.y;
+        this.pathIndex = closestSegmentIndex;
+
+        console.log(`GuardPost: Path set, nearest point on path at (${this.defenderSpawnX.toFixed(0)}, ${this.defenderSpawnY.toFixed(0)}), distance ${closestDistance.toFixed(0)}`);
     }
-    
+
     /**
+     * Get the nearest point on a line segment to a given point
+     * Uses projection to find the closest point
+     */
+    getNearestPointOnSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lengthSquared = dx * dx + dy * dy;
+
+        if (lengthSquared === 0) {
+            // Segment is a point
+            return { x: x1, y: y1 };
+        }
+
+        // Calculate the projection parameter (t) of point P onto the line segment
+        let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+
+        // Clamp t to [0, 1] to stay within the segment
+        t = Math.max(0, Math.min(1, t));
+
+        // Calculate the nearest point
+        const nearestX = x1 + t * dx;
+        const nearestY = y1 + t * dy;
+
+        return { x: nearestX, y: nearestY };
+    }    /**
      * Hire a level 1 defender at this guard post
      */
     hireDefender(gameState) {
@@ -176,6 +224,10 @@ export class GuardPost extends Tower {
         
         // Update defender if alive
         if (this.defender && !this.defender.isDead()) {
+            // Maintain defender position on the path
+            this.defender.x = this.defenderSpawnX;
+            this.defender.y = this.defenderSpawnY;
+            
             this.defender.update(deltaTime, enemies);
         } else {
             // Check if defender died
