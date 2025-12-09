@@ -17,6 +17,10 @@ export class Defender {
         this.x = 0;
         this.y = 0;
         
+        // Waypoint where enemies should stop and fight this defender
+        // Used by enemies to know when to stop moving and engage
+        this.defenderWaypoint = null;
+        
         // Combat properties
         this.attackDamage = this.getAttackDamage();
         this.attackSpeed = this.getAttackSpeed();

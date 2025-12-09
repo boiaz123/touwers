@@ -11,6 +11,9 @@ export class BaseEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
+        // Defender waypoint - if set, enemy will stop here instead of reaching castle
+        this.defenderWaypoint = null;
+        
         // Attack properties
         this.attackDamage = 5;
         this.attackSpeed = 1.0;
@@ -66,7 +69,31 @@ export class BaseEnemy {
         // NOTE: Hit splatters are now managed by EnemyManager to avoid double-updating
         // They are updated once per frame in EnemyManager.update() for all splatters
         
+        // Don't move if attacking a defender (either on path or at castle)
+        if (this.isAttackingDefender) {
+            return;
+        }
+        
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
+        
+        // Check if we've reached a defender waypoint on the path
+        // This allows guard post defenders to stop enemies before they reach the castle
+        // This acts as a backup in case the normal engagement mechanism doesn't catch them
+        if (this.defenderWaypoint) {
+            const distanceToWaypoint = Math.hypot(
+                this.defenderWaypoint.x - this.x,
+                this.defenderWaypoint.y - this.y
+            );
+            
+            // If within reaching distance of defender waypoint, stop here
+            // Note: We stop even if not yet engaging, because movement will bring us into range
+            if (distanceToWaypoint < 30) {
+                this.reachedEnd = true;
+                this.isAttackingCastle = false;
+                console.log(`${this.constructor.name}: Reached defender waypoint at path index ${this.defenderWaypoint.pathIndex}`);
+                return;
+            }
+        }
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
@@ -112,14 +139,12 @@ export class BaseEnemy {
             return false;
         }
         
-        // If we've reached the end of the path, check if defender is in range
-        if (this.reachedEnd || this.isAttackingCastle) {
-            const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
-            if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
-                this.isAttackingDefender = true;
-                this.defenderTarget = defender;
-                return true;
-            }
+        // Check if defender is in range - works for both castle defenders and guard post defenders
+        const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
+        if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
+            this.isAttackingDefender = true;
+            this.defenderTarget = defender;
+            return true;
         }
         
         return false;

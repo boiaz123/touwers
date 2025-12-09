@@ -45,6 +45,10 @@ export class TowerManager {
             if (this.gameState.spend(towerType.cost)) {
                 const GuardPost = towerType.class;
                 const tower = new GuardPost(pathPoint.x, pathPoint.y, 1);
+                // Set the path on the guard post so it can place defenders on actual path waypoints
+                if (this.level && this.level.path) {
+                    tower.setPath(this.level.path);
+                }
                 this.towers.push(tower);
                 // Notify unlock system
                 this.unlockSystem.onGuardPostBuilt();

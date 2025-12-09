@@ -18,6 +18,10 @@ export class GuardPost extends Tower {
         this.defenderDeadCooldown = 0;
         this.maxDefenderDeadCooldown = 10; // 10 second cooldown before hiring again
         
+        // Path reference for placing defenders on the actual path
+        this.gamePath = null;
+        this.pathIndex = null; // Index of closest path waypoint
+        
         // Stats for this tower
         this.health = 200;
         this.maxHealth = 200;
@@ -32,9 +36,42 @@ export class GuardPost extends Tower {
         // Build cost
         this.buildCost = 150;
         
-        // Defender spawning position - at the front of the hut
+        // Defender spawning position - will be set based on path
         this.defenderSpawnX = x - 35;
         this.defenderSpawnY = y;
+    }
+    
+    /**
+     * Set the game path reference and calculate the waypoint index
+     * Called after GuardPost is created to establish path connection
+     */
+    setPath(gamePath) {
+        if (!gamePath || gamePath.length < 2) {
+            console.warn('GuardPost: Invalid path provided');
+            return;
+        }
+        
+        this.gamePath = gamePath;
+        
+        // Find the closest path waypoint to this guard post's position
+        let closestDistance = Infinity;
+        let closestIndex = 0;
+        
+        for (let i = 0; i < gamePath.length; i++) {
+            const distance = Math.hypot(gamePath[i].x - this.x, gamePath[i].y - this.y);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        
+        this.pathIndex = closestIndex;
+        
+        // Set defender spawn position to the actual path waypoint
+        this.defenderSpawnX = gamePath[closestIndex].x;
+        this.defenderSpawnY = gamePath[closestIndex].y;
+        
+        console.log(`GuardPost: Path set, closest waypoint at index ${closestIndex}, position (${this.defenderSpawnX}, ${this.defenderSpawnY})`);
     }
     
     /**
@@ -66,7 +103,18 @@ export class GuardPost extends Tower {
         this.defender.x = this.defenderSpawnX;
         this.defender.y = this.defenderSpawnY;
         
-        console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}), gold remaining: ${gameState.gold}`);
+        // Set the defender's waypoint to make enemies stop here
+        // Enemies will stop at this waypoint instead of reaching the castle
+        if (this.pathIndex !== null && this.gamePath) {
+            this.defender.defenderWaypoint = {
+                x: this.defenderSpawnX,
+                y: this.defenderSpawnY,
+                pathIndex: this.pathIndex
+            };
+            console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}) with waypoint at path index ${this.pathIndex}, gold remaining: ${gameState.gold}`);
+        } else {
+            console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}), gold remaining: ${gameState.gold}`);
+        }
         return true;
     }
     

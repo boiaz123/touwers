@@ -157,6 +157,8 @@ export class BuildingManager {
             const buildingRightEdge = buildingLeftEdge + buildingGridWidth;
             const buildingBottomEdge = buildingTopEdge + buildingGridHeight;
             
+            console.log(`BuildingManager: ${building.constructor.name} at grid (${building.gridX}, ${building.gridY}), screen (${building.x}, ${building.y}), clickbox: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}`);
+            
             if (x >= buildingLeftEdge && x <= buildingRightEdge && y >= buildingTopEdge && y <= buildingBottomEdge) {
                 console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
                 

@@ -722,6 +722,35 @@ export class GameplayState {
             return true;
         });
         
+        // FIRST: Check if enemies should engage with defenders BEFORE moving them
+        // This prevents enemies from walking through defenders
+        this.enemyManager.enemies.forEach(enemy => {
+            // Check if enemy should engage castle defender
+            if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+                if (enemy.checkDefenderTarget(this.level.castle.defender)) {
+                    // Set attacking defender so enemy won't move in update
+                    return;
+                }
+            }
+            
+            // Check if enemy should engage guard post defenders
+            if (this.level.towers) {
+                for (let tower of this.level.towers) {
+                    if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                        if (enemy.checkDefenderTarget(tower.defender)) {
+                            // Set the defender's waypoint on the enemy so it will stop here
+                            if (tower.defender.defenderWaypoint) {
+                                enemy.defenderWaypoint = tower.defender.defenderWaypoint;
+                            }
+                            // Set attacking defender so enemy won't move in update
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+        
+        // SECOND: Update enemy positions (they won't move if attacking defender)
         this.enemyManager.update(deltaTime);
         this.towerManager.update(deltaTime, this.enemyManager.enemies);
         
@@ -775,34 +804,13 @@ export class GameplayState {
                 }
             }
             
-            // Check if enemy should engage castle defender
-            if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
-                if (enemy.checkDefenderTarget(this.level.castle.defender)) {
-                    enemy.attackDefender(this.level.castle.defender, deltaTime);
-                    return; // Don't attack castle if attacking defender
-                }
-            }
-            
-            // Check if enemy should engage guard post defenders
-            let attackingGuardPost = false;
-            if (this.level.towers) {
-                for (let tower of this.level.towers) {
-                    if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
-                        if (enemy.checkDefenderTarget(tower.defender)) {
-                            enemy.attackDefender(tower.defender, deltaTime);
-                            attackingGuardPost = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (!attackingGuardPost) {
+            // Handle damage to defenders
+            if (enemy.isAttackingDefender && enemy.defenderTarget) {
+                enemy.attackDefender(enemy.defenderTarget, deltaTime);
+            } else if (enemy.reachedEnd && this.level.castle) {
                 // Have enemies attack the castle if they reached the end
-                if (enemy.reachedEnd && this.level.castle) {
-                    enemy.isAttackingCastle = true;
-                    enemy.attackCastle(this.level.castle, deltaTime);
-                }
+                enemy.isAttackingCastle = true;
+                enemy.attackCastle(this.level.castle, deltaTime);
             }
         });
         
