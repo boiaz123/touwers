@@ -421,54 +421,74 @@ export class TowerManager {
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasRect.width / 1920)));
         
         for (const tower of this.towers) {
-            // Check if click is within the tower's 2x2 grid area
-            const towerGridWidth = cellSize * 2;
-            const towerGridHeight = cellSize * 2;
-            const towerLeftEdge = tower.gridX * cellSize;
-            const towerTopEdge = tower.gridY * cellSize;
-            const towerRightEdge = towerLeftEdge + towerGridWidth;
-            const towerBottomEdge = towerTopEdge + towerGridHeight;
-            
-            if (x >= towerLeftEdge && x <= towerRightEdge && y >= towerTopEdge && y <= towerBottomEdge) {
-                if (tower.constructor.name === 'MagicTower') {
+            // Special handling for GuardPost (uses absolute coordinates, not grid)
+            if (tower.constructor.name === 'GuardPost') {
+                const guardPostSize = 80;  // Increased from 50 for better clickability
+                const guardPostLeft = tower.x - guardPostSize / 2;
+                const guardPostRight = tower.x + guardPostSize / 2;
+                const guardPostTop = tower.y - guardPostSize / 2;
+                const guardPostBottom = tower.y + guardPostSize / 2;
+                
+                if (x >= guardPostLeft && x <= guardPostRight && y >= guardPostTop && y <= guardPostBottom) {
                     tower.isSelected = true;
+                    const hireOptions = tower.getDefenderHiringOptions();
                     return {
-                        type: 'magic_tower_menu',
+                        type: 'guard_post_menu',
                         tower: tower,
-                        elements: [
-                            { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                            { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
-                            { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                            { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
-                        ],
-                        currentElement: tower.selectedElement
+                        options: hireOptions,
+                        gameState: this.gameState
                     };
-                } else if (tower.constructor.name === 'CombinationTower') {
-                    // New: Handle combination tower spell selection
-                    tower.isSelected = true;
-                    return {
-                        type: 'combination_tower_menu',
-                        tower: tower,
-                        spells: tower.availableSpells.map(spell => ({
-                            id: spell.id,
-                            name: spell.name,
-                            icon: spell.icon,
-                            description: spell.description
-                        })),
-                        currentSpell: tower.selectedSpell
-                    };
-                } else {
-                    // Show stats menu for all other tower types
-                    if (!this.gameState || !this.gameState.isPlacingTower) {
+                }
+            } else {
+                // Grid-based click detection for regular towers
+                const towerGridWidth = cellSize * 2;
+                const towerGridHeight = cellSize * 2;
+                const towerLeftEdge = tower.gridX * cellSize;
+                const towerTopEdge = tower.gridY * cellSize;
+                const towerRightEdge = towerLeftEdge + towerGridWidth;
+                const towerBottomEdge = towerTopEdge + towerGridHeight;
+                
+                if (x >= towerLeftEdge && x <= towerRightEdge && y >= towerTopEdge && y <= towerBottomEdge) {
+                    if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
                         return {
-                            type: 'tower_stats',
+                            type: 'magic_tower_menu',
                             tower: tower,
-                            position: { x: tower.x, y: tower.y }
+                            elements: [
+                                { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
+                                { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
+                                { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
+                                { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                            ],
+                            currentElement: tower.selectedElement
                         };
+                    } else if (tower.constructor.name === 'CombinationTower') {
+                        // New: Handle combination tower spell selection
+                        tower.isSelected = true;
+                        return {
+                            type: 'combination_tower_menu',
+                            tower: tower,
+                            spells: tower.availableSpells.map(spell => ({
+                                id: spell.id,
+                                name: spell.name,
+                                icon: spell.icon,
+                                description: spell.description
+                            })),
+                            currentSpell: tower.selectedSpell
+                        };
+                    } else {
+                        // Show stats menu for all other tower types
+                        if (!this.gameState || !this.gameState.isPlacingTower) {
+                            tower.isSelected = true;
+                            return {
+                                type: 'tower_stats',
+                                tower: tower,
+                                position: { x: tower.x, y: tower.y }
+                            };
+                        }
                     }
+                    break;
                 }
-                break;
             }
         }
         

@@ -132,63 +132,6 @@ export class Castle {
         
         // Draw health bar above castle (world space, not translated)
         this.drawHealthBar(ctx);
-        
-        // NEW: Floating icon in bottom right of 3x3 grid
-        // Calculate cellSize from ctx.canvas width (must match Level.js calculation)
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, ctx.canvas.width / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        
-        const iconSize = 30;
-        const iconX = (this.gridX + 2.5) * cellSize;
-        const iconY = (this.gridY + 2.5) * cellSize - 5;
-        
-        // Dynamic pulse for medieval glow effect
-        const pulseIntensity = 0.85 + 0.15 * Math.sin(this.animationTime * 4);
-        
-        // Enhanced shadow for floating effect
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(iconX - iconSize/2 + 3, iconY - iconSize/2 + 3, iconSize, iconSize);
-        
-        // Parchment-like background with castle stone gradient
-        const parchmentGradient = ctx.createRadialGradient(
-            iconX - iconSize/4, iconY - iconSize/4, 0,
-            iconX, iconY, iconSize
-        );
-        parchmentGradient.addColorStop(0, `rgba(200, 190, 180, ${pulseIntensity})`); // Light stone
-        parchmentGradient.addColorStop(0.7, `rgba(170, 160, 150, ${pulseIntensity * 0.9})`); // Medium stone
-        parchmentGradient.addColorStop(1, `rgba(140, 130, 120, ${pulseIntensity * 0.8})`); // Dark stone
-        
-        ctx.fillStyle = parchmentGradient;
-        ctx.fillRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Ornate gold border with medieval styling
-        ctx.strokeStyle = `rgba(184, 134, 11, ${pulseIntensity})`; // Dark goldenrod
-        ctx.lineWidth = 2;
-        ctx.strokeRect(iconX - iconSize/2, iconY - iconSize/2, iconSize, iconSize);
-        
-        // Inner gold accent border
-        ctx.strokeStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.8})`; // Gold
-        ctx.lineWidth = 1;
-        ctx.strokeRect(iconX - iconSize/2 + 2, iconY - iconSize/2 + 2, iconSize - 4, iconSize - 4);
-        
-        // Subtle medieval glow effect
-        const glowGradient = ctx.createRadialGradient(iconX, iconY, 0, iconX, iconY, iconSize * 1.5);
-        glowGradient.addColorStop(0, `rgba(184, 134, 11, ${pulseIntensity * 0.2})`);
-        glowGradient.addColorStop(1, 'rgba(184, 134, 11, 0)');
-        ctx.fillStyle = glowGradient;
-        ctx.fillRect(iconX - iconSize/2 - 5, iconY - iconSize/2 - 5, iconSize + 10, iconSize + 10);
-        
-        // Symbol with enhanced medieval styling - castle
-        ctx.fillStyle = `rgba(75, 60, 50, ${pulseIntensity})`; // Dark brown for medieval text
-        ctx.font = 'bold 18px serif'; // Serif font for medieval feel
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🏰', iconX, iconY);
-        
-        // Add subtle gold highlight on symbol
-        ctx.fillStyle = `rgba(255, 215, 0, ${pulseIntensity * 0.3})`;
-        ctx.fillText('🏰', iconX, iconY);
     }
     
     drawHealthBar(ctx) {
@@ -622,12 +565,13 @@ export class Castle {
             cellSize = 32;
         }
         
-        const iconSize = 30;
-        const iconX = (this.gridX + 2.5) * cellSize;
-        const iconY = (this.gridY + 2.5) * cellSize - 5;
+        // Large clickable area centered on castle for the entire structure
+        // Castle is at screen position (this.x, this.y), much larger than icon
+        const castleClickWidth = 200;
+        const castleClickHeight = 180;
         
-        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
+        return x >= this.x - castleClickWidth/2 && x <= this.x + castleClickWidth/2 &&
+               y >= this.y - castleClickHeight/2 && y <= this.y + castleClickHeight/2;
     }
     
     onClick(trainingGrounds) {
