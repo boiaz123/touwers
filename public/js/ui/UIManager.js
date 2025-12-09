@@ -598,6 +598,9 @@ export class UIManager {
     // ============ UPGRADE MENUS ============
 
     showForgeUpgradeMenu(forgeData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('forge-panel');
+        
         // Store current forge data for this session
         this.currentForgeData = forgeData;
         
@@ -909,6 +912,9 @@ export class UIManager {
     }
 
     showAcademyUpgradeMenu(academyData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('academy-panel');
+        
         console.log('UIManager: Showing academy upgrade menu', academyData);
         
         const panel = document.getElementById('academy-panel');
@@ -1136,6 +1142,9 @@ export class UIManager {
     }
 
     showMagicTowerElementMenu(towerData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('magic-tower-panel');
+        
         const panel = document.getElementById('magic-tower-panel');
         if (!panel) {
             console.error('UIManager: Magic tower panel not found');
@@ -1230,6 +1239,9 @@ export class UIManager {
     }
 
     showCombinationTowerMenu(towerData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('combination-tower-panel');
+        
         const panel = document.getElementById('combination-tower-panel');
         if (!panel) {
             console.error('UIManager: Combination tower panel not found');
@@ -1323,6 +1335,9 @@ export class UIManager {
     }
 
     showGuardPostMenu(towerData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('basic-tower-panel');
+        
         const panel = document.getElementById('basic-tower-panel');
         if (!panel) {
             console.error('UIManager: Panel not found for Guard Post menu');
@@ -1465,6 +1480,9 @@ export class UIManager {
     }
 
     showTowerStatsMenu(towerData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('basic-tower-panel');
+        
         // Generic tower stats menu for any tower type
         console.log('UIManager: Showing tower stats menu', towerData);
         
@@ -1520,6 +1538,9 @@ export class UIManager {
     }
 
     showBasicTowerStatsMenu(towerData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('basic-tower-panel');
+        
         // Basic tower stats menu - using panel-based system
         
         console.log('UIManager: Showing basic tower stats menu', towerData);
@@ -1579,6 +1600,9 @@ export class UIManager {
     }
 
     showSuperWeaponMenu(menuData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('superweapon-panel');
+        
         const panel = document.getElementById('superweapon-panel');
         if (!panel) {
             console.error('UIManager: SuperWeapon panel not found');
@@ -1770,6 +1794,9 @@ export class UIManager {
     }
 
     showCastleUpgradeMenu(castleData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('castle-panel');
+        
         // Castle upgrades menu - using panel-based system
         
         let contentHTML = '';
@@ -1875,6 +1902,9 @@ export class UIManager {
     }
 
     showTrainingGroundsUpgradeMenu(trainingData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('training-panel');
+        
         const panel = document.getElementById('training-panel');
         if (!panel) {
             console.error('UIManager: Training panel not found');
