@@ -163,29 +163,20 @@ export class MainMenu {
         });
     }
 
-    quitGame() {
+    async quitGame() {
         // Check if running in Tauri
         if (window.__TAURI__) {
-            const { invoke } = window.__TAURI_CORE__;
-            invoke('tauri', {
-                __tauriModule: 'Core',
-                message: {
-                    cmd: 'exit',
-                    exitCode: 0
-                }
-            }).catch(error => {
+            try {
+                // Use the custom Tauri command to close the app
+                const { invoke } = window.__TAURI__.core;
+                await invoke('close_app');
+            } catch (error) {
                 console.error('Error closing application:', error);
-                // Fallback: try alternative method
-                if (window.__TAURI_CORE__?.window?.appWindow) {
-                    window.__TAURI_CORE__.window.appWindow.close();
-                }
-            });
-        } else {
-            // Fallback for development environment
-            console.log('Attempting to close window...');
-            if (confirm('Close the application?')) {
-                window.close();
             }
+        } else {
+            // Fallback for development environment - just close silently
+            console.log('Closing application...');
+            window.close();
         }
     }
 

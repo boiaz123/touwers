@@ -1617,37 +1617,76 @@ body {
 
 .upgrade-button {
     flex: 1;
-    padding: 0.5rem 0.75rem;
-    background: linear-gradient(135deg, var(--primary-gold), var(--primary-gold-light));
-    color: #1a0f0a;
-    border: 2px solid var(--primary-gold-dark);
+    padding: 0.6rem 0.9rem;
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%);
+    color: var(--primary-gold-light);
+    border: 2px solid #d4af37;
     border-radius: 0.3rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    position: relative;
 }
 
 .upgrade-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--primary-gold-light), #ffed4e);
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%);
+    border-color: #ffe700;
+    color: #ffe700;
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(212, 175, 55, 0.3);
+    box-shadow: 0 6px 14px rgba(212, 175, 55, 0.4);
 }
 
 .upgrade-button:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .upgrade-button:disabled {
-    background: linear-gradient(135deg, rgba(139, 69, 19, 0.5), rgba(107, 85, 64, 0.5));
-    color: rgba(150, 150, 150, 0.5);
-    border-color: rgba(100, 100, 100, 0.5);
+    background: linear-gradient(135deg, rgba(50, 50, 50, 0.8) 0%, rgba(34, 34, 34, 0.8) 100%) !important;
+    color: rgba(150, 150, 150, 0.6) !important;
+    border-color: rgba(100, 100, 100, 0.5) !important;
     cursor: not-allowed;
     opacity: 0.6;
+    text-shadow: none;
+}
+
+/* Override any inline styles for upgrade buttons to ensure consistency */
+.upgrade-button[style] {
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
+    color: var(--primary-gold-light) !important;
+    border: 2px solid #d4af37 !important;
+}
+
+.upgrade-button[style]:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
+    border-color: #ffe700 !important;
+    color: #ffe700 !important;
+}
+
+/* Sell button variant - red/brown tone for buttons with red inline styles */
+.sell-tower-btn,
+.sell-building-btn,
+button[style*="ff4444"],
+button[style*="#ff4444"] {
+    background: linear-gradient(135deg, rgba(120, 60, 60, 0.95) 0%, rgba(100, 40, 40, 0.95) 100%) !important;
+    border-color: #d64545 !important;
+    color: #ff8888 !important;
+}
+
+.sell-tower-btn:hover:not(:disabled),
+.sell-building-btn:hover:not(:disabled),
+button[style*="ff4444"]:hover:not(:disabled),
+button[style*="#ff4444"]:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(140, 80, 80, 0.98) 0%, rgba(120, 60, 60, 0.98) 100%) !important;
+    border-color: #ff8888 !important;
+    color: #ffaaaa !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(212, 69, 69, 0.4) !important;
 }
 
 /* Forge level upgrade - special styling */
@@ -1979,12 +2018,9 @@ body {
 
 .pause-menu-btn {
     padding: clamp(0.9rem, 1.8vh, 1.3rem) clamp(1.8rem, 4vw, 2.5rem);
-    background: linear-gradient(180deg, 
-        rgba(78, 58, 38, 0.95) 0%,
-        rgba(58, 38, 18, 0.95) 50%,
-        rgba(48, 28, 8, 0.95) 100%);
-    border: 4px outset #a67c3a;
-    border-radius: 0.5rem;
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%);
+    border: 3px solid #d4af37;
+    border-radius: 0.3rem;
     color: var(--primary-gold-light);
     font-size: clamp(1rem, 2.2vw, 1.3rem);
     font-weight: 900;
@@ -1994,8 +2030,8 @@ body {
     transition: all 0.25s ease;
     box-shadow: 
         0 8px 16px rgba(0, 0, 0, 0.8),
-        inset 0 2px 4px rgba(255, 255, 255, 0.1),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+        inset 0 1px 2px rgba(255, 255, 255, 0.1),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.4);
     position: relative;
     overflow: hidden;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
@@ -2004,55 +2040,51 @@ body {
 .pause-menu-btn::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-    transition: left 0.6s ease;
+    top: 1px;
+    left: 1px;
+    right: 1px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
     pointer-events: none;
     z-index: 1;
-}
-
-.pause-menu-btn:hover::before {
-    left: 100%;
 }
 
 .pause-menu-btn::after {
     content: '';
     position: absolute;
-    top: 1px;
-    left: 1px;
-    right: 1px;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.4), transparent, rgba(255, 255, 255, 0.4));
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     pointer-events: none;
-    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.4s ease;
     z-index: 1;
 }
 
+.pause-menu-btn:hover::after {
+    opacity: 1;
+}
+
 .pause-menu-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, 
-        rgba(108, 78, 58, 0.98) 0%,
-        rgba(88, 58, 38, 0.98) 50%,
-        rgba(68, 48, 28, 0.98) 100%);
-    border-color: #d4af37;
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%);
+    border-color: #ffe700;
     box-shadow: 
         0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
+        inset 0 1px 2px rgba(255, 255, 255, 0.15),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.6),
         0 0 20px rgba(212, 175, 55, 0.5);
-    transform: translateY(-4px);
-    color: #ffd700;
+    transform: translateY(-3px);
+    color: #ffe700;
 }
 
 .pause-menu-btn:active:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 
         0 6px 12px rgba(0, 0, 0, 0.8),
-        inset 0 2px 4px rgba(255, 255, 255, 0.1),
-        inset 0 2px 6px rgba(0, 0, 0, 0.6),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+        inset 0 1px 2px rgba(255, 255, 255, 0.1),
+        inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .pause-menu-btn:disabled {
@@ -2060,95 +2092,24 @@ body {
     cursor: not-allowed;
 }
 
-.resume-btn {
-    background: linear-gradient(180deg, 
-        rgba(70, 60, 100, 0.95) 0%,
-        rgba(50, 40, 80, 0.95) 50%,
-        rgba(40, 30, 60, 0.95) 100%);
-    border-color: #8B5CF6;
-    color: #C4B5FD;
-}
-
-.resume-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, 
-        rgba(90, 80, 120, 0.98) 0%,
-        rgba(70, 60, 100, 0.98) 50%,
-        rgba(60, 50, 80, 0.98) 100%);
-    border-color: #C4B5FD;
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
-        0 0 25px rgba(139, 92, 246, 0.6);
-    color: #E9D5FF;
-}
-
-.restart-btn {
-    background: linear-gradient(180deg, 
-        rgba(100, 60, 40, 0.95) 0%,
-        rgba(80, 40, 20, 0.95) 50%,
-        rgba(70, 30, 10, 0.95) 100%);
-    border-color: #d4684e;
-    color: #ff9977;
-}
-
-.restart-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, 
-        rgba(120, 80, 60, 0.98) 0%,
-        rgba(100, 60, 40, 0.98) 50%,
-        rgba(90, 50, 30, 0.98) 100%);
-    border-color: #ff9977;
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
-        0 0 25px rgba(212, 104, 78, 0.6);
-    color: #ffb399;
-}
-
-.save-btn {
-    background: linear-gradient(180deg, 
-        rgba(60, 90, 60, 0.95) 0%,
-        rgba(40, 70, 40, 0.95) 50%,
-        rgba(30, 60, 30, 0.95) 100%);
-    border-color: #66bb6a;
-    color: #99dd99;
-}
-
-.save-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, 
-        rgba(80, 110, 80, 0.98) 0%,
-        rgba(60, 90, 60, 0.98) 50%,
-        rgba(50, 80, 50, 0.98) 100%);
-    border-color: #99dd99;
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
-        0 0 25px rgba(102, 187, 106, 0.6);
-    color: #bbffbb;
-}
-
+/* All pause menu buttons use the same medieval stone style */
+.resume-btn,
+.restart-btn,
+.save-btn,
 .exit-btn {
-    background: linear-gradient(180deg, 
-        rgba(100, 50, 50, 0.95) 0%,
-        rgba(80, 30, 30, 0.95) 50%,
-        rgba(70, 20, 20, 0.95) 100%);
-    border-color: #d32f2f;
-    color: #ff6b6b;
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
+    border-color: #d4af37 !important;
+    color: var(--primary-gold-light) !important;
 }
 
+.resume-btn:hover:not(:disabled),
+.restart-btn:hover:not(:disabled),
+.save-btn:hover:not(:disabled),
 .exit-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, 
-        rgba(120, 70, 70, 0.98) 0%,
-        rgba(100, 50, 50, 0.98) 50%,
-        rgba(90, 40, 40, 0.98) 100%);
-    border-color: #ff6b6b;
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6),
-        0 0 25px rgba(211, 47, 47, 0.6);
-    color: #ff9999;
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
+    border-color: #ffe700 !important;
+    color: #ffe700 !important;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 2px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.5) !important;
+    transform: translateY(-3px) !important;
 }
 

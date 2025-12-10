@@ -207,20 +207,49 @@ export class LevelSelect {
         const pos = this.getButtonPosition(index);
         const isHovered = this.hoveredButton === button.action;
 
-        // Button background
-        ctx.fillStyle = isHovered ? '#66BB6A' : '#4CAF50';
+        // Medieval stone button background with gradient (matching MainMenu)
+        const gradient = ctx.createLinearGradient(pos.y, pos.y + pos.height, 0, 0);
+        if (isHovered) {
+            gradient.addColorStop(0, '#8b7355');
+            gradient.addColorStop(0.5, '#a89968');
+            gradient.addColorStop(1, '#9a8960');
+        } else {
+            gradient.addColorStop(0, '#5a4a3a');
+            gradient.addColorStop(0.5, '#7a6a5a');
+            gradient.addColorStop(1, '#6a5a4a');
+        }
+        ctx.fillStyle = gradient;
         ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
 
-        // Button border
-        ctx.strokeStyle = isHovered ? '#d4af37' : '#2E7D32';
-        ctx.lineWidth = isHovered ? 2 : 1;
+        // Inner shadow for depth
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(pos.x, pos.y, pos.width, 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(pos.x, pos.y, pos.width, 3);
+        ctx.fillRect(pos.x, pos.y + pos.height - 3, pos.width, 3);
+
+        // Golden border for medieval look
+        ctx.strokeStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.lineWidth = isHovered ? 3 : 2;
         ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
 
-        // Button text
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px serif';
+        // Secondary decorative border (darker)
+        ctx.strokeStyle = isHovered ? '#8b7355' : '#3a2a1f';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pos.x + 1, pos.y + 1, pos.width - 2, pos.height - 2);
+
+        // Button text with shadow for medieval effect
+        ctx.font = 'bold 14px serif';
         ctx.textAlign = 'center';
-        ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2 + 4);
+        ctx.textBaseline = 'middle';
+
+        // Shadow text
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillText(button.label, pos.x + pos.width / 2 + 1, pos.y + pos.height / 2 + 1);
+
+        // Main text with gold color
+        ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+        ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
     }
     
     renderLevelCard(ctx, level, index) {
@@ -277,22 +306,51 @@ export class LevelSelect {
             
             // Start button for selected level
             if (isSelected) {
-                const buttonX = pos.x + pos.width / 2 - 40;
+                const buttonX = pos.x + pos.width / 2 - 50;
                 const buttonY = pos.y + pos.height - 50;
-                const buttonWidth = 80;
-                const buttonHeight = 30;
+                const buttonWidth = 100;
+                const buttonHeight = 35;
                 
-                ctx.fillStyle = this.hoveredStartButton ? '#66BB6A' : '#4CAF50';
+                // Draw medieval button (matching main menu style)
+                const isButtonHovered = this.hoveredStartButton;
+                const gradient = ctx.createLinearGradient(buttonY, buttonY + buttonHeight, 0, 0);
+                if (isButtonHovered) {
+                    gradient.addColorStop(0, '#8b7355');
+                    gradient.addColorStop(0.5, '#a89968');
+                    gradient.addColorStop(1, '#9a8960');
+                } else {
+                    gradient.addColorStop(0, '#5a4a3a');
+                    gradient.addColorStop(0.5, '#7a6a5a');
+                    gradient.addColorStop(1, '#6a5a4a');
+                }
+                ctx.fillStyle = gradient;
                 ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
-                
-                ctx.strokeStyle = this.hoveredStartButton ? '#d4af37' : '#2E7D32';
-                ctx.lineWidth = this.hoveredStartButton ? 2 : 1;
+
+                // Inner shadow for depth
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(buttonX, buttonY, buttonWidth, 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.fillRect(buttonX, buttonY, buttonWidth, 3);
+                ctx.fillRect(buttonX, buttonY + buttonHeight - 3, buttonWidth, 3);
+
+                // Golden border
+                ctx.strokeStyle = isButtonHovered ? '#ffd700' : '#d4af37';
+                ctx.lineWidth = isButtonHovered ? 3 : 2;
                 ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
-                
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px serif';
+
+                // Secondary border
+                ctx.strokeStyle = isButtonHovered ? '#8b7355' : '#3a2a1f';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(buttonX + 1, buttonY + 1, buttonWidth - 2, buttonHeight - 2);
+
+                // Button text
+                ctx.font = 'bold 14px serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('START', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2 + 5);
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillText('START', buttonX + buttonWidth / 2 + 1, buttonY + buttonHeight / 2 + 1);
+                ctx.fillStyle = isButtonHovered ? '#ffe700' : '#d4af37';
+                ctx.fillText('START', buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
             }
         } else {
             // Locked indicator
