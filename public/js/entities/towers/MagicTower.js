@@ -238,7 +238,7 @@ export class MagicTower extends Tower {
     setElement(element) {
         if (['fire', 'water', 'air', 'earth'].includes(element)) {
             this.selectedElement = element;
-            console.log(`MagicTower: Element changed to ${element}`);
+// console.log(`MagicTower: Element changed to ${element}`);
             
             // Update visual particles to match element
             this.updateElementalParticles();

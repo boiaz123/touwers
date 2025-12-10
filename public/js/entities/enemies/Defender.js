@@ -45,7 +45,7 @@ export class Defender {
         this.hitSplatters = [];
         this.damageFlashTimer = 0;
         
-        console.log(`Defender: Created level ${this.level} defender with ${this.health}/${this.maxHealth} health, size multiplier ${this.sizeMultiplier}`);
+// console.log(`Defender: Created level ${this.level} defender with ${this.health}/${this.maxHealth} health, size multiplier ${this.sizeMultiplier}`);
     }
     
     initializeStats() {

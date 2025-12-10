@@ -19,7 +19,7 @@ export class TowerManager {
     placeTower(type, x, y, gridX, gridY) {
         // Check if tower type is unlocked
         if (!this.unlockSystem.canBuildTower(type)) {
-            console.log(`TowerManager: ${type} tower not yet unlocked`);
+// console.log(`TowerManager: ${type} tower not yet unlocked`);
             return false;
         }
         
@@ -31,13 +31,13 @@ export class TowerManager {
             // Guard posts must be placed on the path
             const pathPoint = this.findNearestPathPoint(x, y);
             if (!pathPoint) {
-                console.log('TowerManager: Guard post must be placed on the path');
+// console.log('TowerManager: Guard post must be placed on the path');
                 return false;
             }
             
             // Use UnlockSystem to check limit
             if (!this.unlockSystem.canBuildTower('guard-post')) {
-                console.log(`TowerManager: Guard post limit reached`);
+// console.log(`TowerManager: Guard post limit reached`);
                 return false;
             }
             
@@ -52,7 +52,7 @@ export class TowerManager {
                 this.towers.push(tower);
                 // Notify unlock system
                 this.unlockSystem.onGuardPostBuilt();
-                console.log(`TowerManager: Placed guard-post at path (${pathPoint.x}, ${pathPoint.y})`);
+// console.log(`TowerManager: Placed guard-post at path (${pathPoint.x}, ${pathPoint.y})`);
                 return true;
             }
             return false;
@@ -61,7 +61,7 @@ export class TowerManager {
         // Normal tower placement for non-guard-post towers
         // Check if the position is already occupied by another tower
         if (this.isTowerPositionOccupied(gridX, gridY)) {
-            console.log('TowerManager: Position already occupied by another tower');
+// console.log('TowerManager: Position already occupied by another tower');
             return false;
         }
         
@@ -72,7 +72,7 @@ export class TowerManager {
             // Mark the 2x2 area as occupied by this tower
             this.markTowerPosition(gridX, gridY);
             
-            console.log(`TowerManager: Placed ${type} tower at grid (${gridX}, ${gridY})`);
+// console.log(`TowerManager: Placed ${type} tower at grid (${gridX}, ${gridY})`);
             return true;
         }
         return false;
@@ -114,13 +114,13 @@ export class TowerManager {
     placeBuilding(type, x, y, gridX, gridY) {
         // NEW: Debug log for superweapon specifically
         if (type === 'superweapon') {
-            console.log(`TowerManager: placeBuilding - superweapon unlock status: ${this.unlockSystem.superweaponUnlocked}`);
-            console.log(`TowerManager: placeBuilding - canBuildBuilding result: ${this.unlockSystem.canBuildBuilding(type)}`);
+// console.log(`TowerManager: placeBuilding - superweapon unlock status: ${this.unlockSystem.superweaponUnlocked}`);
+// console.log(`TowerManager: placeBuilding - canBuildBuilding result: ${this.unlockSystem.canBuildBuilding(type)}`);
         }
         
         // Check if building type is unlocked
         if (!this.unlockSystem.canBuildBuilding(type)) {
-            console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
+// console.log(`TowerManager: ${type} building not yet unlocked or limit reached`);
             return false;
         }
         
@@ -130,10 +130,10 @@ export class TowerManager {
         if (result) {
             if (type === 'forge') {
                 this.unlockSystem.onForgeBuilt();
-                console.log('TowerManager: Forge built, new content unlocked');
+// console.log('TowerManager: Forge built, new content unlocked');
             } else if (type === 'mine') {
                 this.unlockSystem.onMineBuilt();
-                console.log('TowerManager: Mine built');
+// console.log('TowerManager: Mine built');
                 
                 // New: Set academy reference on newly built mine if academy exists and gem mining researched
                 const academies = this.buildingManager.buildings.filter(building =>
@@ -142,11 +142,11 @@ export class TowerManager {
                 if (academies.length > 0) {
                     const newMine = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
                     newMine.setAcademy(academies[0]);
-                    console.log('TowerManager: Set academy reference on new mine');
+// console.log('TowerManager: Set academy reference on new mine');
                 }
             } else if (type === 'academy') {
                 this.unlockSystem.onAcademyBuilt();
-                console.log('TowerManager: Academy built, Magic Tower unlocked');
+// console.log('TowerManager: Academy built, Magic Tower unlocked');
                 
                 // New: When academy is built, set it as reference on all existing mines
                 this.buildingManager.buildings.forEach(building => {
@@ -154,12 +154,12 @@ export class TowerManager {
                         const academy = this.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                         if (academy) {
                             building.setAcademy(academy);
-                            console.log('TowerManager: Set academy reference on existing mine');
+// console.log('TowerManager: Set academy reference on existing mine');
                         }
                     }
                 });
             } else if (type === 'superweapon') {
-                console.log('TowerManager: Super Weapon Lab built!');
+// console.log('TowerManager: Super Weapon Lab built!');
             }
         }
         
@@ -319,7 +319,7 @@ export class TowerManager {
                 tower.fireRate = tower.originalFireRate;
             }
         });
-        console.log('TowerManager: Recalculated all tower stats due to forge upgrade');
+// console.log('TowerManager: Recalculated all tower stats due to forge upgrade');
     }
     
     applyForgeUpgrades(tower) {
@@ -506,14 +506,14 @@ export class TowerManager {
                 return buildingResult;
             } else if (buildingResult.type === 'academy_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
-                console.log('TowerManager: Academy menu requested');
+// console.log('TowerManager: Academy menu requested');
                 return buildingResult;
             } else if (buildingResult.type === 'superweapon_menu') {
                 // New: Handle super weapon menu
-                console.log('TowerManager: Super Weapon menu requested');
+// console.log('TowerManager: Super Weapon menu requested');
                 return buildingResult;
             } else if (buildingResult.type === 'training_menu') {
-                console.log('TowerManager: Training menu requested');
+// console.log('TowerManager: Training menu requested');
                 return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection
@@ -536,7 +536,7 @@ export class TowerManager {
     selectMagicTowerElement(tower, element) {
         if (tower && tower.setElement) {
             tower.setElement(element);
-            console.log(`TowerManager: Set magic tower element to ${element}`);
+// console.log(`TowerManager: Set magic tower element to ${element}`);
             return true;
         }
         return false;
@@ -546,7 +546,7 @@ export class TowerManager {
     selectCombinationTowerSpell(tower, spellId) {
         if (tower && tower.setSpell) {
             tower.setSpell(spellId);
-            console.log(`TowerManager: Set combination tower spell to ${spellId}`);
+// console.log(`TowerManager: Set combination tower spell to ${spellId}`);
             return true;
         }
         return false;
@@ -620,6 +620,6 @@ export class TowerManager {
         const refund = Math.floor(tower.constructor.getInfo().cost * 0.7);
         this.gameState.gold += refund;
         this.removeTower(tower);
-        console.log(`TowerManager: Sold ${tower.constructor.name} for $${refund}`);
+// console.log(`TowerManager: Sold ${tower.constructor.name} for $${refund}`);
     }
 }

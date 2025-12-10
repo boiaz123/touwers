@@ -201,24 +201,11 @@ export class ResolutionSelector {
         const resolution = ResolutionSettings.getResolution(key);
         ResolutionSettings.saveResolution(key);
         
-        console.log(`Resolution selected: ${key} (${resolution.width}x${resolution.height})`);
+// console.log(`Resolution selected: ${key} (${resolution.width}x${resolution.height})`);
         
-        // Update Electron window (if available)
-        if (window.electron && window.electron.setResolution) {
-            window.electron.setResolution(resolution.width, resolution.height).then((result) => {
-                if (result.success) {
-                    console.log('Electron window resized successfully');
-                    // Apply game resolution
-                    if (this.game && this.game.applyResolution) {
-                        this.game.applyResolution(resolution.width, resolution.height);
-                    }
-                }
-            }).catch(err => console.error('Failed to set resolution:', err));
-        } else {
-            // Web version: set canvas size directly
-            if (this.game) {
-                this.game.applyResolution(resolution.width, resolution.height);
-            }
+        // Apply game resolution (Tauri handles window sizing via fullscreen mode)
+        if (this.game && this.game.applyResolution) {
+            this.game.applyResolution(resolution.width, resolution.height);
         }
         
         this.hide();
@@ -228,24 +215,15 @@ export class ResolutionSelector {
      * Toggle fullscreen mode
      */
     async toggleFullscreen(enable) {
-        // Try Electron fullscreen first
-        if (window.electron && window.electron.toggleFullscreen) {
-            const result = await window.electron.toggleFullscreen(enable);
-            if (result.success) {
-                console.log(`Electron fullscreen ${enable ? 'enabled' : 'disabled'}`);
-                return;
-            }
-        }
-        
-        // Fall back to HTML5 fullscreen
+        // Use HTML5 fullscreen API (Tauri runs in fullscreen by default)
         if (enable) {
             const success = await ResolutionSettings.requestFullscreen(document.documentElement);
             if (success) {
-                console.log('HTML5 fullscreen enabled');
+// console.log('Fullscreen enabled');
             }
         } else {
             await ResolutionSettings.exitFullscreen();
-            console.log('HTML5 fullscreen disabled');
+// console.log('Fullscreen disabled');
         }
     }
 

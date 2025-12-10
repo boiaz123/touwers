@@ -29,6 +29,6 @@ export class SandboxLevel extends LevelBase {
             edgeGrassColor: '#1a6a1a'
         });
         
-        console.log('SandboxLevel: Initialized');
+// console.log('SandboxLevel: Initialized');
     }
 }

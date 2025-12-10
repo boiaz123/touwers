@@ -15,7 +15,7 @@ export class MageEnemy extends BaseEnemy {
         this.spellCastTimer = 0;
         this.isCastingSpell = false;
         
-        console.log('MageEnemy: Created at position', this.x, this.y);
+// console.log('MageEnemy: Created at position', this.x, this.y);
     }
     
     update(deltaTime) {
@@ -54,14 +54,14 @@ export class MageEnemy extends BaseEnemy {
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-            console.log('MageEnemy: Reached castle, ready to attack!');
+// console.log('MageEnemy: Reached castle, ready to attack!');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-            console.log('MageEnemy: No target waypoint, reached end');
+// console.log('MageEnemy: No target waypoint, reached end');
             return;
         }
         
@@ -94,10 +94,12 @@ export class MageEnemy extends BaseEnemy {
     render(ctx) {
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3;
+        // Apply phase offset - mages have varied mystical timing
+        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3;
         
-        const armSwingFreq = this.animationTime * 8;
+        const armSwingFreq = animTime;
         const leftArmBase = Math.sin(armSwingFreq) * 0.5;
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.4;
         

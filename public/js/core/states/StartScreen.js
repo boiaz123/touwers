@@ -8,7 +8,7 @@ export class StartScreen {
         this.continueOpacity = 0;
         this.particles = [];
         this.particlesInitialized = false;
-        console.log('StartScreen: constructor called');
+// console.log('StartScreen: constructor called');
     }
     
     initParticles() {
@@ -23,7 +23,7 @@ export class StartScreen {
             return;
         }
         
-        console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
+// console.log('StartScreen: Initializing particles for canvas size:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.particles = [];
         
         // Reduce particle count to speed up initialization
@@ -38,11 +38,11 @@ export class StartScreen {
         }
         
         this.particlesInitialized = true;
-        console.log('StartScreen: Particles initialized:', this.particles.length);
+// console.log('StartScreen: Particles initialized:', this.particles.length);
     }
     
     enter() {
-        console.log('StartScreen: enter called');
+// console.log('StartScreen: enter called');
         
         // Ensure game UI is hidden when in start screen
         const statsBar = document.getElementById('stats-bar');
@@ -50,12 +50,12 @@ export class StartScreen {
         
         if (statsBar) {
             statsBar.style.display = 'none';
-            console.log('StartScreen: Stats bar hidden');
+// console.log('StartScreen: Stats bar hidden');
         }
         
         if (sidebar) {
             sidebar.style.display = 'none';
-            console.log('StartScreen: Sidebar hidden');
+// console.log('StartScreen: Sidebar hidden');
         }
         
         // Reset animation state
@@ -74,7 +74,7 @@ export class StartScreen {
             this.initParticles();
         }
         
-        console.log('StartScreen: enter completed');
+// console.log('StartScreen: enter completed');
     }
     
     update(deltaTime) {
@@ -178,7 +178,7 @@ export class StartScreen {
             
             ctx.globalAlpha = 1;
             
-            console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
+// console.log('StartScreen: Rendered successfully, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
             
         } catch (error) {
             console.error('StartScreen render error:', error);
@@ -195,7 +195,7 @@ export class StartScreen {
     }
     
     handleClick() {
-        console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
+// console.log('StartScreen: Click detected, showContinue:', this.showContinue, 'animationTime:', this.animationTime);
         // Allow clicking even before animation completes for testing
         if (this.showContinue || this.animationTime > 1) {
             this.stateManager.changeState('mainMenu');

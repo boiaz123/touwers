@@ -38,7 +38,7 @@ export class UnlockSystem {
             this.unlockedTowers.add('archer');
             this.unlockedBuildings.add('mine');
             
-            console.log('UnlockSystem: Forge built at level 1 - unlocked archer tower and 1 mine');
+// console.log('UnlockSystem: Forge built at level 1 - unlocked archer tower and 1 mine');
             return true;
         }
         return false;
@@ -47,7 +47,7 @@ export class UnlockSystem {
     onMineBuilt() {
         if (this.mineCount < this.getMaxMines()) {
             this.mineCount++;
-            console.log(`UnlockSystem: Mine built - ${this.mineCount}/${this.getMaxMines()}`);
+// console.log(`UnlockSystem: Mine built - ${this.mineCount}/${this.getMaxMines()}`);
             return true;
         }
         return false;
@@ -57,18 +57,18 @@ export class UnlockSystem {
         this.academyCount++;
         this.unlockedTowers.add('magic');
         this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
-        console.log('UnlockSystem: Academy built - unlocked magic tower and gem mining research');
+// console.log('UnlockSystem: Academy built - unlocked magic tower and gem mining research');
         return true;
     }
     
     // New: Method to unlock superweapon when academy reaches level 3
     onAcademyLevelThree() {
-        console.log('UnlockSystem: onAcademyLevelThree() called!');
+// console.log('UnlockSystem: onAcademyLevelThree() called!');
         this.superweaponUnlocked = true;
         this.unlockedBuildings.add('superweapon');
-        console.log('UnlockSystem: Set superweaponUnlocked to true');
-        console.log('UnlockSystem: superweaponUnlocked is now:', this.superweaponUnlocked);
-        console.log('UnlockSystem: Academy Level 3 reached - Super Weapon Lab unlocked!');
+// console.log('UnlockSystem: Set superweaponUnlocked to true');
+// console.log('UnlockSystem: superweaponUnlocked is now:', this.superweaponUnlocked);
+// console.log('UnlockSystem: Academy Level 3 reached - Super Weapon Lab unlocked!');
     }
     
     // New: Method to handle Training Grounds level upgrades
@@ -78,12 +78,12 @@ export class UnlockSystem {
                 // Training Grounds level 4 unlocks Guard Post tower
                 this.unlockedTowers.add('guard-post');
                 this.maxGuardPosts = 1;
-                console.log('UnlockSystem: Training Grounds level 4 - unlocked Guard Post tower (limit: 1)');
+// console.log('UnlockSystem: Training Grounds level 4 - unlocked Guard Post tower (limit: 1)');
                 break;
             case 5:
                 // Training Grounds level 5 increases limit
                 this.maxGuardPosts = 2;
-                console.log('UnlockSystem: Training Grounds level 5 - Guard Posts limit increased to 2');
+// console.log('UnlockSystem: Training Grounds level 5 - Guard Posts limit increased to 2');
                 break;
             default:
                 break;
@@ -94,7 +94,7 @@ export class UnlockSystem {
     onGuardPostBuilt() {
         if (this.guardPostCount < this.maxGuardPosts) {
             this.guardPostCount++;
-            console.log(`UnlockSystem: Guard Post built - ${this.guardPostCount}/${this.maxGuardPosts}`);
+// console.log(`UnlockSystem: Guard Post built - ${this.guardPostCount}/${this.maxGuardPosts}`);
             return true;
         }
         return false;
@@ -104,14 +104,14 @@ export class UnlockSystem {
     onGuardPostDestroyed() {
         if (this.guardPostCount > 0) {
             this.guardPostCount--;
-            console.log(`UnlockSystem: Guard Post destroyed - ${this.guardPostCount}/${this.maxGuardPosts}`);
+// console.log(`UnlockSystem: Guard Post destroyed - ${this.guardPostCount}/${this.maxGuardPosts}`);
         }
     }
     
     // New: Method to handle gem mining research
     onGemMiningResearched() {
         this.gemMiningResearched = true;
-        console.log('UnlockSystem: Gem mining tools researched');
+// console.log('UnlockSystem: Gem mining tools researched');
     }
     
     // New: Check if gem mining is available
@@ -122,12 +122,12 @@ export class UnlockSystem {
     // New: Method to unlock a combination spell
     onCombinationSpellUnlocked(spellId) {
         this.unlockedCombinationSpells.add(spellId);
-        console.log(`UnlockSystem: Combination spell ${spellId} unlocked`);
+// console.log(`UnlockSystem: Combination spell ${spellId} unlocked`);
         
         // If ANY combination spell is unlocked, unlock the combination tower
         if (this.unlockedCombinationSpells.size > 0) {
             this.unlockedTowers.add('combination');
-            console.log('UnlockSystem: Combination Tower unlocked!');
+// console.log('UnlockSystem: Combination Tower unlocked!');
         }
     }
     
@@ -140,7 +140,7 @@ export class UnlockSystem {
     onSuperweaponUnlocked() {
         this.superweaponUnlocked = true;
         this.unlockedBuildings.add('superweapon');
-        console.log('UnlockSystem: Super Weapon Lab building unlocked!');
+// console.log('UnlockSystem: Super Weapon Lab building unlocked!');
     }
     
     getMaxMines() {
@@ -162,27 +162,27 @@ export class UnlockSystem {
             case 2:
                 // Forge level 2 unlocks
                 this.unlockedTowers.add('poison');
-                console.log('UnlockSystem: Forge level 2 - unlocked poison archer tower');
+// console.log('UnlockSystem: Forge level 2 - unlocked poison archer tower');
                 break;
                 
             case 3:
                 // Forge level 3 unlocks
                 this.unlockedTowers.add('cannon');
-                console.log('UnlockSystem: Forge level 3 - unlocked trebuchet tower and 2nd mine slot');
+// console.log('UnlockSystem: Forge level 3 - unlocked trebuchet tower and 2nd mine slot');
                 break;
                 
             case 4:
                 // Forge level 4 unlocks
                 this.unlockedBuildings.add('academy');
-                console.log('UnlockSystem: Forge level 4 - unlocked magic academy');
+// console.log('UnlockSystem: Forge level 4 - unlocked magic academy');
                 break;
                 
             case 5:
-                console.log(`UnlockSystem: Forge level 5 - unlocked 3rd mine slot`);
+// console.log(`UnlockSystem: Forge level 5 - unlocked 3rd mine slot`);
                 break;
                 
             default:
-                console.log(`UnlockSystem: Forge level ${newLevel}`);
+// console.log(`UnlockSystem: Forge level ${newLevel}`);
                 break;
         }
     }

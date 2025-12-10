@@ -9,7 +9,7 @@ export class BeefyEnemy extends BaseEnemy {
         this.attackDamage = 9;
         this.attackSpeed = 0.8;
         
-        console.log('BeefyEnemy: Created at position', this.x, this.y);
+        // console.log('BeefyEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {
@@ -22,10 +22,12 @@ export class BeefyEnemy extends BaseEnemy {
     render(ctx) {
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3;
+        // Apply phase offset for animation diversity - slower for beefier enemies
+        const animTime = (this.animationTime * 6.5 + this.animationPhaseOffset); // Slightly slower animation for beefier feel
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3;
         
-        const armSwingFreq = this.animationTime * 8;
+        const armSwingFreq = animTime;
         const leftArmBase = Math.sin(armSwingFreq) * 0.6;
         const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;

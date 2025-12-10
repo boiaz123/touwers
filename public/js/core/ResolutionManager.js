@@ -42,7 +42,7 @@ export class ResolutionManager {
         this.scaleFactor = Math.max(0.5, Math.min(2.5, this.scaleFactor));
         this.cellSize = Math.round(ResolutionManager.BASE_CELL_SIZE * this.scaleFactor);
         
-        console.log(`ResolutionManager: Canvas ${canvasWidth}x${canvasHeight}, Scale: ${this.scaleFactor.toFixed(3)}x, Cell: ${this.cellSize}px, Grid: ${this.gridWidth}x${this.gridHeight} (fixed)`);
+// console.log(`ResolutionManager: Canvas ${canvasWidth}x${canvasHeight}, Scale: ${this.scaleFactor.toFixed(3)}x, Cell: ${this.cellSize}px, Grid: ${this.gridWidth}x${this.gridHeight} (fixed)`);
     }
     
     /**

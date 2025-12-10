@@ -9,7 +9,7 @@ export class ShieldKnightEnemy extends BaseEnemy {
         this.attackDamage = 5;
         this.attackSpeed = 0.6;
         
-        console.log('ShieldKnightEnemy: Created at position', this.x, this.y);
+// console.log('ShieldKnightEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {
@@ -22,10 +22,12 @@ export class ShieldKnightEnemy extends BaseEnemy {
     render(ctx) {
         const baseSize = Math.max(6.3, Math.min(14.7, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3;
+        // Apply phase offset - slightly slower for shield knight
+        const animTime = (this.animationTime * 7.5 + this.animationPhaseOffset);
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3;
         
-        const armSwingFreq = this.animationTime * 8;
+        const armSwingFreq = animTime;
         const leftArmBase = Math.sin(armSwingFreq) * 0.6;
         const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;

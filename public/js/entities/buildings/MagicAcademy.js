@@ -674,7 +674,7 @@ export class MagicAcademy extends Building {
     }
     
     onClick() {
-        console.log('MagicAcademy: onClick called');
+// console.log('MagicAcademy: onClick called');
         this.isSelected = true;
         
         const result = {
@@ -683,7 +683,7 @@ export class MagicAcademy extends Building {
             upgrades: this.getElementalUpgradeOptions()
         };
         
-        console.log('MagicAcademy: returning menu data:', result);
+// console.log('MagicAcademy: returning menu data:', result);
         return result;
     }
     
@@ -819,7 +819,7 @@ export class MagicAcademy extends Building {
     // New: Purchase academy upgrade
     purchaseAcademyUpgrade(gameState) {
         if (this.academyLevel >= this.maxAcademyLevel) {
-            console.log('MagicAcademy: Already at max academy level');
+// console.log('MagicAcademy: Already at max academy level');
             return false;
         }
         
@@ -827,28 +827,28 @@ export class MagicAcademy extends Building {
         const cost = upgradeOption.cost;
         
         if (!gameState.canAfford(cost)) {
-            console.log('MagicAcademy: Not enough gold for academy upgrade');
+// console.log('MagicAcademy: Not enough gold for academy upgrade');
             return false;
         }
         
         gameState.spend(cost);
         this.academyLevel++;
         
-        console.log(`MagicAcademy: Purchased academy upgrade, level is now:`, this.academyLevel);
+// console.log(`MagicAcademy: Purchased academy upgrade, level is now:`, this.academyLevel);
         
         // Apply unlocks based on new level
         switch(this.academyLevel) {
             case 1:
                 this.combinationSpellsUnlocked = true;
-                console.log('MagicAcademy: Combination spells unlocked!');
+// console.log('MagicAcademy: Combination spells unlocked!');
                 break;
             case 2:
                 this.diamondMiningUnlocked = true;
-                console.log('MagicAcademy: Diamond mining unlocked!');
+// console.log('MagicAcademy: Diamond mining unlocked!');
                 break;
             case 3:
                 this.superWeaponUnlocked = true;
-                console.log('MagicAcademy: Super weapon construction unlocked!');
+// console.log('MagicAcademy: Super weapon construction unlocked!');
                 break;
         }
         
@@ -871,20 +871,20 @@ export class MagicAcademy extends Building {
             const spell = this.combinationSpells.find(s => s.id === spellId);
             
             if (!spell) {
-                console.log(`MagicAcademy: Unknown combination spell ${spellId}`);
+// console.log(`MagicAcademy: Unknown combination spell ${spellId}`);
                 return false;
             }
             
             // Check if already unlocked
             if (this.unlockedCombinations.has(spellId)) {
-                console.log(`MagicAcademy: ${spellId} already unlocked`);
+// console.log(`MagicAcademy: ${spellId} already unlocked`);
                 return false;
             }
             
             // Check if enough gems for all required elements
             for (const [gemType, amount] of Object.entries(spell.gemsRequired)) {
                 if ((this.gems[gemType] || 0) < amount) {
-                    console.log(`MagicAcademy: Not enough ${gemType} gems for ${spellId}. Need ${amount}, have ${this.gems[gemType] || 0}`);
+// console.log(`MagicAcademy: Not enough ${gemType} gems for ${spellId}. Need ${amount}, have ${this.gems[gemType] || 0}`);
                     return false;
                 }
             }
@@ -895,7 +895,7 @@ export class MagicAcademy extends Building {
             }
             
             this.unlockedCombinations.add(spellId);
-            console.log(`MagicAcademy: Unlocked ${spell.name} combination spell!`);
+// console.log(`MagicAcademy: Unlocked ${spell.name} combination spell!`);
             
             // NEW: Notify unlock system
             return { success: true, spellId: spellId };
@@ -906,20 +906,20 @@ export class MagicAcademy extends Building {
         const cost = this.calculateElementalCost(element);
         
         if (!cost || upgrade.level >= upgrade.maxLevel) {
-            console.log(`MagicAcademy: Cannot upgrade ${element} - invalid cost or max level`);
+// console.log(`MagicAcademy: Cannot upgrade ${element} - invalid cost or max level`);
             return false;
         }
         
         // Check if player has enough gems
         if (this.gems[element] < cost) {
-            console.log(`MagicAcademy: Not enough ${element} gems. Need ${cost}, have ${this.gems[element]}`);
+// console.log(`MagicAcademy: Not enough ${element} gems. Need ${cost}, have ${this.gems[element]}`);
             return false;
         }
         
         this.gems[element] -= cost;
         upgrade.level++;
         
-        console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} using ${cost} ${element} gems`);
+// console.log(`MagicAcademy: Purchased ${element} upgrade level ${upgrade.level} using ${cost} ${element} gems`);
         return true;
     }
     
@@ -936,19 +936,19 @@ export class MagicAcademy extends Building {
     // New: Add diamond gem
     addDiamond() {
         this.gems.diamond++;
-        console.log(`MagicAcademy: Added 1 diamond, total: ${this.gems.diamond}`);
+// console.log(`MagicAcademy: Added 1 diamond, total: ${this.gems.diamond}`);
     }
     
     // Modified: Method to research gem mining tools
     researchGemMiningTools(gameState) {
         if (this.gemMiningResearched || !gameState.canAfford(500)) {
-            console.log('MagicAcademy: Cannot research gem mining tools');
+// console.log('MagicAcademy: Cannot research gem mining tools');
             return false;
         }
         
         if (gameState.spend(500)) {
             this.gemMiningResearched = true;
-            console.log('MagicAcademy: Researched gem mining tools');
+// console.log('MagicAcademy: Researched gem mining tools');
             return true;
         }
         return false;
@@ -958,7 +958,7 @@ export class MagicAcademy extends Building {
     addGem(gemType) {
         if (this.gems.hasOwnProperty(gemType)) {
             this.gems[gemType]++;
-            console.log(`MagicAcademy: Added 1 ${gemType} gem, total: ${this.gems[gemType]}`);
+// console.log(`MagicAcademy: Added 1 ${gemType} gem, total: ${this.gems[gemType]}`);
         }
     }
     
@@ -1012,11 +1012,11 @@ export class MagicAcademy extends Building {
                 this.superWeaponUnlocked = true;
                 break;
             default:
-                console.log(`MagicAcademy: Unknown feature ${feature}`);
+// console.log(`MagicAcademy: Unknown feature ${feature}`);
                 return false;
         }
         
-        console.log(`MagicAcademy: Unlocked ${feature}`);
+// console.log(`MagicAcademy: Unlocked ${feature}`);
         return true;
     }
 }

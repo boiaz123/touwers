@@ -8,16 +8,18 @@ export class ArcherEnemy extends BaseEnemy {
         this.attackDamage = 8;
         this.attackSpeed = 1.5;
         
-        console.log('ArcherEnemy: Created at position', this.x, this.y);
+// console.log('ArcherEnemy: Created at position', this.x, this.y);
     }
     
     render(ctx) {
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
         
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3;
+        // Apply phase offset for animation diversity
+        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3;
         
-        const armSwingFreq = this.animationTime * 8;
+        const armSwingFreq = animTime;
         const leftArmBase = Math.sin(armSwingFreq) * 0.6;
         const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;

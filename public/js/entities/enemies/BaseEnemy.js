@@ -30,6 +30,15 @@ export class BaseEnemy {
         
         // Animation properties
         this.animationTime = 0;
+        // Random animation phase offset (0 to 2π) to desynchronize enemy animations
+        this.animationPhaseOffset = Math.random() * Math.PI * 2;
+        
+        // Path spreading: random lateral offset from the main path
+        // This prevents all enemies from walking in a straight line
+        this.pathOffsetAmount = (Math.random() - 0.5) * 150; // ±75 pixels offset for better spreading
+        
+        // Only apply offset every N frames to reduce computation
+        this.offsetUpdateCounter = 0;
         
         // Hit splatter effects
         this.hitSplatters = [];
@@ -62,7 +71,7 @@ export class BaseEnemy {
             this.y = this.path[0].y;
         }
         
-        console.log(`${this.constructor.name}: Path updated, now at index`, this.currentPathIndex);
+        // console.log(`${this.constructor.name}: Path updated, now at index`, this.currentPathIndex);
     }
     
     update(deltaTime) {
@@ -93,7 +102,7 @@ export class BaseEnemy {
                     if (distanceToDefender < 50) {
                         this.reachedEnd = true;
                         this.isAttackingCastle = false;
-                        console.log(`${this.constructor.name}: Reached path defender`);
+// console.log(`${this.constructor.name}: Reached path defender`);
                         return;
                     }
                     
@@ -133,7 +142,7 @@ export class BaseEnemy {
                                 if (angleDiff < Math.PI * 0.4 && distToDefender < 100) {
                                     this.reachedEnd = true;
                                     this.isAttackingCastle = false;
-                                    console.log(`${this.constructor.name}: Blocked by path defender on segment`);
+// console.log(`${this.constructor.name}: Blocked by path defender on segment`);
                                     return;
                                 }
                             }
@@ -156,7 +165,7 @@ export class BaseEnemy {
             if (distanceToWaypoint < 50) {
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
-                console.log(`${this.constructor.name}: Reached defender waypoint at path index ${this.defenderWaypoint.pathIndex}`);
+// console.log(`${this.constructor.name}: Reached defender waypoint at path index ${this.defenderWaypoint.pathIndex}`);
                 return;
             }
         }
@@ -164,7 +173,7 @@ export class BaseEnemy {
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-            console.log(`${this.constructor.name}: Reached end of path`);
+// console.log(`${this.constructor.name}: Reached end of path`);
             return;
         }
         
@@ -172,7 +181,7 @@ export class BaseEnemy {
         if (!target) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-            console.log(`${this.constructor.name}: No target waypoint, reached end`);
+// console.log(`${this.constructor.name}: No target waypoint, reached end`);
             return;
         }
         
@@ -194,7 +203,7 @@ export class BaseEnemy {
                         // Defender is on our path - stop before reaching it
                         this.reachedEnd = true;
                         this.isAttackingCastle = false;
-                        console.log(`${this.constructor.name}: Blocked by path defender`);
+// console.log(`${this.constructor.name}: Blocked by path defender`);
                         return;
                     }
                 }
@@ -209,14 +218,55 @@ export class BaseEnemy {
         
         if (distance < reachThreshold) {
             this.currentPathIndex++;
-            this.x = target.x;
-            this.y = target.y;
+            // Apply lateral offset when reaching waypoint
+            const nextTarget = this.path[this.currentPathIndex];
+            if (nextTarget) {
+                this.x = nextTarget.x;
+                this.y = nextTarget.y;
+                // Apply offset perpendicular to path direction for next segment
+                this.applyPathOffset();
+            } else {
+                this.x = target.x;
+                this.y = target.y;
+            }
             return;
         }
         
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
+        
+        // Apply path offset every few frames to reduce computation
+        this.offsetUpdateCounter++;
+        if (this.offsetUpdateCounter >= 5) {
+            this.applyPathOffset();
+            this.offsetUpdateCounter = 0;
+        }
+    }
+    
+    /**
+     * Apply lateral offset perpendicular to path direction
+     * This spreads enemies across the path instead of keeping them in a line
+     */
+    applyPathOffset() {
+        if (!this.path || this.currentPathIndex >= this.path.length - 1) return;
+        
+        const currentPos = this.path[this.currentPathIndex];
+        const nextPos = this.path[this.currentPathIndex + 1];
+        
+        // Calculate direction vector along path
+        const pathDx = nextPos.x - currentPos.x;
+        const pathDy = nextPos.y - currentPos.y;
+        const pathLength = Math.hypot(pathDx, pathDy);
+        
+        if (pathLength === 0) return;
+        
+        // Perpendicular vector (rotate 90 degrees)
+        const perpX = -pathDy / pathLength;
+        const perpY = pathDx / pathLength;
+        
+        // Apply offset perpendicular to path
+        this.x += perpX * this.pathOffsetAmount * 0.02; // Larger step for more visible spreading
     }
     
     /**

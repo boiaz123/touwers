@@ -18,16 +18,16 @@ export class EnemyManager {
         // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer, 1 frog
         this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer', 'frog'];
         
-        console.log('EnemyManager initialized with path:', this.path);
+        // console.log('EnemyManager initialized with path:', this.path);
     }
     
     updatePath(newPath) {
         this.path = newPath;
-        console.log('EnemyManager path updated:', this.path);
+        // console.log('EnemyManager path updated:', this.path);
     }
     
     spawnWave(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0, enemyType = 'basic') {
-        console.log(`Spawning wave ${waveNumber} with ${count} enemies (HP: ${health}, Speed: ${speed}, Type: ${enemyType})`);
+        // console.log(`Spawning wave ${waveNumber} with ${count} enemies (HP: ${health}, Speed: ${speed}, Type: ${enemyType})`);
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
@@ -43,7 +43,7 @@ export class EnemyManager {
     }
     
     spawnWaveWithPattern(waveNumber, count, health_multiplier = 1, speed = 50, spawnInterval = 1.0, pattern) {
-        console.log(`Spawning wave ${waveNumber} with pattern`, pattern);
+        // console.log(`Spawning wave ${waveNumber} with pattern`, pattern);
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
@@ -72,7 +72,7 @@ export class EnemyManager {
             this.spawnPattern = pattern;
         }
         
-        console.log('EnemyManager: Started continuous spawn with interval:', this.spawnInterval, 'pattern:', this.spawnPattern);
+        // console.log('EnemyManager: Started continuous spawn with interval:', this.spawnInterval, 'pattern:', this.spawnPattern);
     }
     
     update(deltaTime) {
@@ -88,7 +88,7 @@ export class EnemyManager {
             });
             this.spawnPatternIndex++;
             
-            console.log(`EnemyManager: Queued ${enemyType} (index: ${this.spawnPatternIndex - 1})`);
+            // console.log(`EnemyManager: Queued ${enemyType} (index: ${this.spawnPatternIndex - 1})`);
         }
         
         if (this.spawnQueue.length > 0) {
@@ -121,8 +121,8 @@ export class EnemyManager {
                 if (enemy) {
                     this.enemies.push(enemy);
                     this.spawnTimer = 0;
-                    console.log(`✓ Spawned ${enemyData.type} enemy (total: ${this.enemies.length})`);
-                    console.log(`Next in pattern: ${this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length]}`);
+                    // console.log(`✓ Spawned ${enemyData.type} enemy (total: ${this.enemies.length})`);
+                    // console.log(`Next in pattern: ${this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length]}`);
                 }
             }
         } else if (!this.continuousMode) {

@@ -15,7 +15,7 @@ export class FrogEnemy extends BaseEnemy {
         this.jumpAnimationDuration = 0.4;
         this.jumpHeight = 20;
         
-        console.log('FrogEnemy: Created at position', this.x, this.y);
+// console.log('FrogEnemy: Created at position', this.x, this.y);
     }
     
     getRandomSkinColor() {
@@ -53,14 +53,14 @@ export class FrogEnemy extends BaseEnemy {
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
-            console.log('FrogEnemy: Reached end of path');
+// console.log('FrogEnemy: Reached end of path');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-            console.log('FrogEnemy: No target waypoint, reached end');
+// console.log('FrogEnemy: No target waypoint, reached end');
             return;
         }
         

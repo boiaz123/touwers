@@ -29,7 +29,7 @@ export class Level4 extends LevelBase {
             edgeGrassColor: '#1a6a1a'
         });
         
-        console.log('Level4: Initialized');
+// console.log('Level4: Initialized');
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
@@ -59,7 +59,7 @@ export class Level4 extends LevelBase {
             y: Math.round(point.gridY * this.cellSize)
         }));
         
-        console.log('Level4: Path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
+// console.log('Level4: Path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     getWaveConfig(wave) {

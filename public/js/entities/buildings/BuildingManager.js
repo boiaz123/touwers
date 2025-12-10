@@ -29,19 +29,19 @@ export class BuildingManager {
         const buildingType = BuildingRegistry.getBuildingType(type);
         if (!buildingType) {
             console.error(`BuildingManager: Building type '${type}' not found in registry!`);
-            console.log('Available types:', Object.keys(BuildingRegistry.getAllBuildingTypes()));
+// console.log('Available types:', Object.keys(BuildingRegistry.getAllBuildingTypes()));
             return false;
         }
         
-        console.log(`BuildingManager: Attempting to place ${type} at grid (${gridX}, ${gridY})`);
+// console.log(`BuildingManager: Attempting to place ${type} at grid (${gridX}, ${gridY})`);
         
         // Check if the 4x4 position is available
         if (this.isBuildingPositionOccupied(gridX, gridY, buildingType.size)) {
-            console.log(`BuildingManager: ${type} position occupied at (${gridX}, ${gridY})`);
+// console.log(`BuildingManager: ${type} position occupied at (${gridX}, ${gridY})`);
             return false;
         }
         
-        console.log(`BuildingManager: Position available, spending ${buildingType.cost} gold`);
+// console.log(`BuildingManager: Position available, spending ${buildingType.cost} gold`);
         
         if (this.gameState.spend(buildingType.cost)) {
             const building = BuildingRegistry.createBuilding(type, x, y, gridX, gridY);
@@ -53,10 +53,10 @@ export class BuildingManager {
             // Apply building effects to this manager
             building.applyEffect(this);
             
-            console.log(`BuildingManager: Successfully placed ${type} building at grid (${gridX}, ${gridY})`);
+// console.log(`BuildingManager: Successfully placed ${type} building at grid (${gridX}, ${gridY})`);
             return true;
         } else {
-            console.log(`BuildingManager: Not enough gold to place ${type}`);
+// console.log(`BuildingManager: Not enough gold to place ${type}`);
         }
         return false;
     }
@@ -115,7 +115,7 @@ export class BuildingManager {
     }
     
     handleClick(x, y, canvasSize) {
-        console.log(`BuildingManager: Click at (${x}, ${y}), checking ${this.buildings.length} buildings`);
+// console.log(`BuildingManager: Click at (${x}, ${y}), checking ${this.buildings.length} buildings`);
         
         // Clear all selections first
         this.buildings.forEach(building => {
@@ -135,13 +135,13 @@ export class BuildingManager {
                 const clickBuffer = 5;
                 if (x >= toggleX - (toggleIconSize/2 + clickBuffer) && x <= toggleX + (toggleIconSize/2 + clickBuffer) &&
                     y >= toggleY - (toggleIconSize/2 + clickBuffer) && y <= toggleY + (toggleIconSize/2 + clickBuffer)) {
-                    console.log(`BuildingManager: HIT! Clicked on toggle icon`);
+// console.log(`BuildingManager: HIT! Clicked on toggle icon`);
                     
                     // Call toggle method
                     building.toggleGemMode();
                     building.goldReady = false;
                     building.currentProduction = 0;
-                    console.log(`BuildingManager: Toggled mine to ${building.gemMode ? 'gem' : 'gold'} mode`);
+// console.log(`BuildingManager: Toggled mine to ${building.gemMode ? 'gem' : 'gold'} mode`);
                     return 0; // No gold collected on toggle
                 }
             }
@@ -167,15 +167,15 @@ export class BuildingManager {
             // Only register click if it's within the clamped valid area
             const clickIsValid = x >= validLeft && x <= validRight && y >= validTop && y <= validBottom;
             
-            console.log(`BuildingManager: ${building.constructor.name} at screen (${building.x}, ${building.y}), clickable area: ${validLeft}-${validRight}, ${validTop}-${validBottom} (original: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}), click valid: ${clickIsValid}`);
+// console.log(`BuildingManager: ${building.constructor.name} at screen (${building.x}, ${building.y}), clickable area: ${validLeft}-${validRight}, ${validTop}-${validBottom} (original: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}), click valid: ${clickIsValid}`);
             
             if (clickIsValid) {
-                console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
+// console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {
                     const result = building.onClick();
-                    console.log(`BuildingManager: onClick result:`, result);
+// console.log(`BuildingManager: onClick result:`, result);
                     return result;
                 } else if (building.constructor.name === 'GoldMine') {
                     // Fallback for GoldMine if onClick doesn't exist
@@ -185,7 +185,7 @@ export class BuildingManager {
             }
         }
         
-        console.log('BuildingManager: No building hit');
+// console.log('BuildingManager: No building hit');
         return null;
     }
     

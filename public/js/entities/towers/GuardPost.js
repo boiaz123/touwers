@@ -94,7 +94,7 @@ export class GuardPost extends Tower {
         this.defenderSpawnY = closestPoint.y;
         this.pathIndex = closestSegmentIndex;
 
-        console.log(`GuardPost: Path set, nearest point on path at (${this.defenderSpawnX.toFixed(0)}, ${this.defenderSpawnY.toFixed(0)}), distance ${closestDistance.toFixed(0)}`);
+// console.log(`GuardPost: Path set, nearest point on path at (${this.defenderSpawnX.toFixed(0)}, ${this.defenderSpawnY.toFixed(0)}), distance ${closestDistance.toFixed(0)}`);
     }
 
     /**
@@ -127,19 +127,19 @@ export class GuardPost extends Tower {
      */
     hireDefender(gameState) {
         if (this.defender && !this.defender.isDead()) {
-            console.log('GuardPost: Defender already active');
+// console.log('GuardPost: Defender already active');
             return false;
         }
         
         if (this.defenderDeadCooldown > 0) {
-            console.log(`GuardPost: Defender cooldown - ${this.defenderDeadCooldown.toFixed(1)}s remaining`);
+// console.log(`GuardPost: Defender cooldown - ${this.defenderDeadCooldown.toFixed(1)}s remaining`);
             return false;
         }
         
         // Cost to hire
         const cost = 100; // Level 1 defender at guard post
         if (gameState.gold < cost) {
-            console.log(`GuardPost: Not enough gold. Need ${cost}, have ${gameState.gold}`);
+// console.log(`GuardPost: Not enough gold. Need ${cost}, have ${gameState.gold}`);
             return false;
         }
         
@@ -159,9 +159,9 @@ export class GuardPost extends Tower {
                 y: this.defenderSpawnY,
                 pathIndex: this.pathIndex
             };
-            console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}) with waypoint at path index ${this.pathIndex}, gold remaining: ${gameState.gold}`);
+// console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}) with waypoint at path index ${this.pathIndex}, gold remaining: ${gameState.gold}`);
         } else {
-            console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}), gold remaining: ${gameState.gold}`);
+// console.log(`GuardPost: Hired defender at (${this.defenderSpawnX}, ${this.defenderSpawnY}), gold remaining: ${gameState.gold}`);
         }
         return true;
     }
@@ -209,7 +209,7 @@ export class GuardPost extends Tower {
      */
     checkDefenderDeath() {
         if (this.defender && this.defender.isDead()) {
-            console.log('GuardPost: Defender died, starting cooldown');
+// console.log('GuardPost: Defender died, starting cooldown');
             this.defenderDeadCooldown = this.maxDefenderDeadCooldown;
             this.defender = null;
         }
@@ -362,7 +362,7 @@ export class GuardPost extends Tower {
      * Handle click on this guard post
      */
     onClick(gameState) {
-        console.log('GuardPost: Clicked');
+// console.log('GuardPost: Clicked');
         return {
             type: 'guard-post',
             tower: this,

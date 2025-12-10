@@ -1,0 +1,36 @@
+{
+  "productName": "Touwers",
+  "version": "1.0.0",
+  "identifier": "com.touwers.game",
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "node server-dev.js",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../public"
+  },
+  "app": {
+    "windows": [
+      {
+        "fullscreen": true,
+        "title": "Touwers",
+        "width": 1920,
+        "height": 1080,
+        "resizable": true,
+        "alwaysOnTop": false,
+        "focus": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png"
+    ]
+  }
+}

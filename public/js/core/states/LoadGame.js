@@ -14,11 +14,11 @@ export class LoadGame {
         this.slotButtonHeight = 80;
         this.slotButtonGap = 40;
 
-        console.log('LoadGame: constructor called');
+// console.log('LoadGame: constructor called');
     }
 
     enter() {
-        console.log('LoadGame: enter called');
+// console.log('LoadGame: enter called');
 
         // Hide game UI
         const statsBar = document.getElementById('stats-bar');
@@ -119,7 +119,7 @@ export class LoadGame {
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
 
-            console.log('LoadGame: Back button clicked');
+// console.log('LoadGame: Back button clicked');
             this.stateManager.changeState('mainMenu');
             return;
         }
@@ -134,12 +134,12 @@ export class LoadGame {
                 const saveData = SaveSystem.getSave(slotNum);
 
                 if (saveData) {
-                    console.log(`LoadGame: Loading save from slot ${slotNum}`, saveData);
+// console.log(`LoadGame: Loading save from slot ${slotNum}`, saveData);
                     this.stateManager.currentSaveSlot = slotNum;
                     this.stateManager.currentSaveData = saveData;
                     this.stateManager.changeState('levelSelect');
                 } else {
-                    console.log(`LoadGame: Slot ${slotNum} is empty`);
+// console.log(`LoadGame: Slot ${slotNum} is empty`);
                 }
             }
         });

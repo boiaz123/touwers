@@ -7,7 +7,7 @@ import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
 
 export class LevelFactory {
     static async createLevel(levelType) {
-        console.log(`LevelFactory: Creating level of type: ${levelType}`);
+// console.log(`LevelFactory: Creating level of type: ${levelType}`);
         
         try {
             let level;
@@ -35,7 +35,7 @@ export class LevelFactory {
                     throw new Error(`Unknown level type: ${levelType}`);
             }
             
-            console.log(`LevelFactory: Successfully created ${level.constructor.name}`);
+// console.log(`LevelFactory: Successfully created ${level.constructor.name}`);
             return level;
         } catch (error) {
             console.error(`LevelFactory: Error creating level:`, error);

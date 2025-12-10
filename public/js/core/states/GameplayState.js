@@ -32,12 +32,12 @@ export class GameplayState {
         // NEW: Pause system
         this.isPaused = false;
         
-        console.log('GameplayState constructor completed');
+// console.log('GameplayState constructor completed');
     }
 
     setGameSpeed(speed) {
         this.gameSpeed = speed;
-        console.log(`GameplayState: Game speed set to ${speed}x`);
+// console.log(`GameplayState: Game speed set to ${speed}x`);
         this.uiManager.setGameSpeedButtonState(speed);
     }
 
@@ -51,17 +51,17 @@ export class GameplayState {
 
     togglePause() {
         this.isPaused = !this.isPaused;
-        console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
+// console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
         return this.isPaused;
     }
 
     setPaused(paused) {
         this.isPaused = paused;
-        console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
+// console.log(`GameplayState: Game ${this.isPaused ? 'paused' : 'resumed'}`);
     }
     
     async enter() {
-        console.log('GameplayState: entering');
+// console.log('GameplayState: entering');
         
         // Reset pause state when entering a new level
         this.isPaused = false;
@@ -72,7 +72,7 @@ export class GameplayState {
         // Create the level using LevelFactory
         try {
             this.level = await LevelFactory.createLevel(levelInfo.id);
-            console.log(`GameplayState: Level created - ${this.level.levelName}`);
+// console.log(`GameplayState: Level created - ${this.level.levelName}`);
         } catch (error) {
             console.error('GameplayState: Failed to create level:', error);
             this.level = null;
@@ -104,19 +104,19 @@ export class GameplayState {
         
         if (statsBar) {
             statsBar.style.display = 'flex';
-            console.log('GameplayState: Stats bar shown');
+// console.log('GameplayState: Stats bar shown');
         }
         if (sidebar) {
             sidebar.style.display = 'flex';
-            console.log('GameplayState: Sidebar shown');
+// console.log('GameplayState: Sidebar shown');
         }
         
         // Initialize level for current canvas size first
-        console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
+// console.log('GameplayState: Initializing level for canvas:', this.stateManager.canvas.width, 'x', this.stateManager.canvas.height);
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
         
         // Create new enemy manager with the properly initialized path
-        console.log('GameplayState: Creating enemy manager with path:', this.level.path);
+// console.log('GameplayState: Creating enemy manager with path:', this.level.path);
         this.enemyManager = new EnemyManager(this.level.path);
         
         // Recreate tower manager to ensure it has the updated level reference
@@ -124,7 +124,7 @@ export class GameplayState {
         
         // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
         if (this.isSandbox) {
-            console.log('GameplayState: SANDBOX MODE - Initializing gems immediately');
+// console.log('GameplayState: SANDBOX MODE - Initializing gems immediately');
             this.initializeSandboxGems();
         }
         
@@ -136,13 +136,13 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         this.startWave();
-        console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
-        console.log('GameplayState: enter completed');
+// console.log(`GameplayState: Initialized ${this.levelName} (${this.levelType})`);
+// console.log('GameplayState: enter completed');
     }
     
     initializeSandboxGems() {
         // Called ONLY in sandbox mode to force gem initialization
-        console.log('GameplayState: initializeSandboxGems called');
+// console.log('GameplayState: initializeSandboxGems called');
         
         // Access building manager directly
         if (!this.towerManager || !this.towerManager.buildingManager) {
@@ -151,13 +151,13 @@ export class GameplayState {
         }
         
         const buildingManager = this.towerManager.buildingManager;
-        console.log('GameplayState: Building manager found, buildings:', buildingManager.buildings.length);
+// console.log('GameplayState: Building manager found, buildings:', buildingManager.buildings.length);
         
         // Find academy
         let academy = buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
         
         if (academy) {
-            console.log('GameplayState: Academy found! Initializing gems...');
+// console.log('GameplayState: Academy found! Initializing gems...');
             
             // Force initialize all gem values
             if (!academy.gems) {
@@ -176,25 +176,25 @@ export class GameplayState {
             // Do NOT set gemMiningResearched - keep it as an available research
             academy.gemMiningResearched = false;
             
-            console.log('GameplayState: Sandbox gems initialized:', academy.gems);
-            console.log('GameplayState: Diamond mining unlocked:', academy.diamondMiningUnlocked);
+// console.log('GameplayState: Sandbox gems initialized:', academy.gems);
+// console.log('GameplayState: Diamond mining unlocked:', academy.diamondMiningUnlocked);
             
             // Enable gem toggle on all existing mines
             buildingManager.buildings.forEach(building => {
                 if (building.constructor.name === 'GoldMine') {
                     building.setAcademy(academy);
                     building.gemMiningUnlocked = true; // Force enable toggle
-                    console.log('GameplayState: Mine gem toggle enabled for sandbox');
+// console.log('GameplayState: Mine gem toggle enabled for sandbox');
                 }
             });
             
-            console.log('GameplayState: Sandbox gem initialization complete!');
+// console.log('GameplayState: Sandbox gem initialization complete!');
         } else {
             console.error('GameplayState: Academy NOT FOUND in building manager!');
-            console.log('GameplayState: Available buildings:', 
-                buildingManager.buildings.map(b => b.constructor.name)
-            );
-            console.log('GameplayState: Will retry gem initialization when academy is built');
+            // console.log('GameplayState: Available buildings:', 
+            //     buildingManager.buildings.map(b => b.constructor.name)
+            // );
+            // console.log('GameplayState: Will retry gem initialization when academy is built');
         }
     }
     
@@ -390,7 +390,7 @@ export class GameplayState {
     
     createSpellEffect(type, x, y, spell, targets) {
         // Create visual spell effects at the cast location
-        console.log(`Spell effect: ${type} at (${x}, ${y})`);
+// console.log(`Spell effect: ${type} at (${x}, ${y})`);
         
         if (type === 'arcaneBlast') {
             // Purple/blue expanding blast with particles
@@ -559,13 +559,13 @@ export class GameplayState {
                         );
                         if (newBuilding) {
                             this.superWeaponLab = newBuilding;
-                            console.log('GameplayState: SuperWeaponLab reference stored');
+// console.log('GameplayState: SuperWeaponLab reference stored');
                         }
                     }
                     
                     // SANDBOX: If academy was just built, initialize gems immediately
                     if (this.isSandbox && this.selectedBuildingType === 'academy') {
-                        console.log('GameplayState: Academy just built in sandbox, initializing gems...');
+// console.log('GameplayState: Academy just built in sandbox, initializing gems...');
                         setTimeout(() => this.initializeSandboxGems(), 50); // Small delay to ensure building is registered
                     }
                     
@@ -629,7 +629,7 @@ export class GameplayState {
     cancelSelection() {
         // Cancel tower selection
         if (this.selectedTowerType) {
-            console.log('GameplayState: Cancelled tower selection');
+// console.log('GameplayState: Cancelled tower selection');
             this.selectedTowerType = null;
             document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
             this.level.setPlacementPreview(0, 0, false);
@@ -637,7 +637,7 @@ export class GameplayState {
         
         // Cancel building selection
         if (this.selectedBuildingType) {
-            console.log('GameplayState: Cancelled building selection');
+// console.log('GameplayState: Cancelled building selection');
             this.selectedBuildingType = null;
             document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
             this.level.setPlacementPreview(0, 0, false);
@@ -699,13 +699,13 @@ export class GameplayState {
             return;
         }
         
-        console.log(`Starting wave ${this.gameState.wave} of ${this.levelName}`);
+// console.log(`Starting wave ${this.gameState.wave} of ${this.levelName}`);
         this.waveInProgress = true;
         this.waveCompleted = false;
         
         if (this.isSandbox) {
             // Sandbox mode: continuous spawning with all enemy types
-            console.log('GameplayState: Starting sandbox continuous spawn mode');
+// console.log('GameplayState: Starting sandbox continuous spawn mode');
             this.enemyManager.startContinuousSpawn(0.6, ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight', 'shieldknight', 'frog']);
         } else {
             // Campaign mode: traditional wave spawning
@@ -742,7 +742,7 @@ export class GameplayState {
             return;
         }
 
-        console.log(`Level ${this.currentLevel} completed!`);
+// console.log(`Level ${this.currentLevel} completed!`);
 
         // Update save data with level completion
         if (this.stateManager.currentSaveData) {
@@ -760,7 +760,7 @@ export class GameplayState {
             // Save to current slot if available
             if (this.stateManager.currentSaveSlot) {
                 SaveSystem.saveGame(this.stateManager.currentSaveSlot, saveData);
-                console.log('Progress saved after level completion');
+// console.log('Progress saved after level completion');
             }
         }
 
@@ -940,7 +940,7 @@ export class GameplayState {
             this.waveInProgress = false;
             this.waveCompleted = true;
             
-            console.log(`Wave ${this.gameState.wave} completed`);
+// console.log(`Wave ${this.gameState.wave} completed`);
             
             setTimeout(() => {
                 this.gameState.wave++;
@@ -964,7 +964,7 @@ export class GameplayState {
     }
     
     gameOver() {
-        console.log('Game Over! Castle destroyed.');
+// console.log('Game Over! Castle destroyed.');
         this.waveInProgress = false;
         
         // Don't save progress on failure, just show alert and return to level select

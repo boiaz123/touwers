@@ -20,17 +20,17 @@ export class GameStateManager {
         // Game reference (will be set during game initialization)
         this.game = null;
         
-        console.log('GameStateManager: Constructor called with canvas:', canvas.width, 'x', canvas.height);
+// console.log('GameStateManager: Constructor called with canvas:', canvas.width, 'x', canvas.height);
     }
     
     addState(name, state) {
-        console.log('GameStateManager: Adding state:', name);
+// console.log('GameStateManager: Adding state:', name);
         this.states[name] = state;
-        console.log('GameStateManager: State added successfully:', name);
+// console.log('GameStateManager: State added successfully:', name);
     }
     
     changeState(stateName) {
-        console.log(`GameStateManager: Attempting to change to state '${stateName}'`);
+// console.log(`GameStateManager: Attempting to change to state '${stateName}'`);
         
         if (!this.states[stateName]) {
             console.error(`GameStateManager: State '${stateName}' does not exist. Available states:`, Object.keys(this.states));
@@ -40,7 +40,7 @@ export class GameStateManager {
         try {
             // Exit current state
             if (this.currentStateName && this.states[this.currentStateName]) {
-                console.log(`GameStateManager: Exiting state '${this.currentStateName}'`);
+// console.log(`GameStateManager: Exiting state '${this.currentStateName}'`);
                 if (this.states[this.currentStateName].exit) {
                     this.states[this.currentStateName].exit();
                 }
@@ -49,13 +49,13 @@ export class GameStateManager {
             // Enter new state
             this.currentStateName = stateName;
             this.currentState = this.states[stateName];
-            console.log(`GameStateManager: Entering state '${stateName}'`);
+// console.log(`GameStateManager: Entering state '${stateName}'`);
             
             if (this.currentState.enter) {
                 this.currentState.enter();
             }
             
-            console.log(`GameStateManager: Successfully changed to state '${stateName}'`);
+// console.log(`GameStateManager: Successfully changed to state '${stateName}'`);
             return true;
         } catch (error) {
             console.error(`GameStateManager: Error changing to state '${stateName}':`, error);
@@ -67,7 +67,7 @@ export class GameStateManager {
     handleClick(x, y) {
         try {
             if (this.currentState && this.currentState.handleClick) {
-                console.log(`GameStateManager: Handling click at (${x}, ${y}) for state '${this.currentStateName}'`);
+// console.log(`GameStateManager: Handling click at (${x}, ${y}) for state '${this.currentStateName}'`);
                 this.currentState.handleClick(x, y);
             } else {
                 console.warn(`GameStateManager: No click handler for state '${this.currentStateName}'`);
@@ -119,12 +119,12 @@ export class GameStateManager {
     
     
     set selectedLevelInfo(info) {
-        console.log('GameStateManager: Setting selected level info:', info);
+// console.log('GameStateManager: Setting selected level info:', info);
         this._selectedLevelInfo = info;
     }
 
     startNewGame() {
-        console.log('GameStateManager: Starting new game');
+// console.log('GameStateManager: Starting new game');
         
         if (!this.SaveSystem) {
             console.error('GameStateManager: SaveSystem not initialized');
@@ -153,7 +153,7 @@ export class GameStateManager {
         this.currentSaveSlot = slotToUse;
         this.currentSaveData = newGameData;
         
-        console.log(`New game started in save slot ${slotToUse}`);
+// console.log(`New game started in save slot ${slotToUse}`);
         
         this.changeState('levelSelect');
     }

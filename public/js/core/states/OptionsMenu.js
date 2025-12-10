@@ -7,11 +7,11 @@ export class OptionsMenu {
         this.showContent = false;
         this.backButtonHovered = false;
 
-        console.log('OptionsMenu: constructor called');
+// console.log('OptionsMenu: constructor called');
     }
 
     enter() {
-        console.log('OptionsMenu: enter called');
+// console.log('OptionsMenu: enter called');
 
         // Keep current UI state
         const statsBar = document.getElementById('stats-bar');
@@ -87,7 +87,7 @@ export class OptionsMenu {
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
 
-            console.log('OptionsMenu: Back button clicked');
+// console.log('OptionsMenu: Back button clicked');
             const previousState = this.stateManager.previousState || 'mainMenu';
             this.stateManager.changeState(previousState);
         }

@@ -9,7 +9,7 @@ export class KnightEnemy extends BaseEnemy {
         this.attackDamage = 7;
         this.attackSpeed = 0.7;
         
-        console.log('KnightEnemy: Created at position', this.x, this.y);
+// console.log('KnightEnemy: Created at position', this.x, this.y);
     }
     
     updatePath(newPath) {
@@ -39,7 +39,7 @@ export class KnightEnemy extends BaseEnemy {
             this.y = this.path[0].y;
         }
         
-        console.log('KnightEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
+// console.log('KnightEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
     }
     
     update(deltaTime) {
@@ -49,14 +49,14 @@ export class KnightEnemy extends BaseEnemy {
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
-            console.log('KnightEnemy: Reached end of path');
+// console.log('KnightEnemy: Reached end of path');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-            console.log('KnightEnemy: No target waypoint, reached end');
+// console.log('KnightEnemy: No target waypoint, reached end');
             return;
         }
         
@@ -89,10 +89,12 @@ export class KnightEnemy extends BaseEnemy {
     render(ctx) {
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        const walkCycle = Math.sin(this.animationTime * 7) * 0.4; // Slower walk cycle
-        const bobAnimation = Math.sin(this.animationTime * 7) * 0.25;
+        // Apply phase offset - slower for knights
+        const animTime = (this.animationTime * 7 + this.animationPhaseOffset); // Slower walk cycle for armored feel
+        const walkCycle = Math.sin(animTime) * 0.4;
+        const bobAnimation = Math.sin(animTime) * 0.25;
         
-        const armSwingFreq = this.animationTime * 7;
+        const armSwingFreq = animTime;
         const leftArmBase = Math.sin(armSwingFreq) * 0.4;
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.4; // Both arms swing together for sword
         

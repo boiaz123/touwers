@@ -2,51 +2,19 @@
   "name": "touwers",
   "version": "1.0.0",
   "description": "Tower Defense Game",
-  "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "nodemon server.js",
-    "server": "node server.js",
-    "electron-dev": "electron . --dev",
-    "build": "electron-builder",
-    "build-win": "electron-builder --win"
+    "server": "node server-dev.js",
+    "start": "node server-dev.js",
+    "build": "tauri build",
+    "build-msi": "tauri build --target msi",
+    "tauri": "tauri"
   },
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "electron": "^27.0.0",
-    "electron-builder": "^24.9.1",
-    "electron-is-dev": "^2.0.0",
-    "nodemon": "^3.0.1"
-  },
-  "build": {
-    "appId": "com.touwers.game",
-    "productName": "Touwers",
-    "files": [
-      "main.js",
-      "preload.js",
-      "server.js",
-      "package.json",
-      "public/**/*",
-      "node_modules/**/*"
-    ],
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Touwers"
-    }
+    "@tauri-apps/cli": "^2.0.0",
+    "@tauri-apps/api": "^2.0.0"
   }
 }

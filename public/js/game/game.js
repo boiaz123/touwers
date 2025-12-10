@@ -12,11 +12,15 @@ import { ResolutionSelector } from '../ui/ResolutionSelector.js';
 
 export class Game {
     constructor() {
-        console.log('Game: Starting initialization');
+// console.log('Game: Starting initialization');
         
         try {
             this.canvas = document.getElementById('gameCanvas');
-            this.ctx = this.canvas.getContext('2d');
+            // Use performance-optimized context options
+            this.ctx = this.canvas.getContext('2d', {
+                alpha: false,
+                desynchronized: true
+            });
             
             if (!this.canvas) {
                 throw new Error('Canvas element not found');
@@ -25,7 +29,7 @@ export class Game {
                 throw new Error('Canvas context not available');
             }
             
-            console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
+// console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
             
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
@@ -35,7 +39,11 @@ export class Game {
             const resolution = ResolutionSettings.getResolution(savedResolution);
             this.canvas.width = resolution.width;
             this.canvas.height = resolution.height;
-            console.log('Game: Canvas set to fixed resolution:', this.canvas.width, 'x', this.canvas.height);
+            
+            // Optimize canvas rendering performance
+            this.ctx.imageSmoothingEnabled = false;
+            this.ctx.imageSmoothingQuality = 'low';
+// console.log('Game: Canvas set to fixed resolution:', this.canvas.width, 'x', this.canvas.height);
             
             // Prevent infinite resize loops
             this.isResizing = false;
@@ -52,7 +60,7 @@ export class Game {
             this.stateManager.SaveSystem = SaveSystem;
             this.stateManager.resolutionManager = this.resolutionManager;
             this.stateManager.game = this; // Set game reference for resolution selector access
-            console.log('Game: GameStateManager created with SaveSystem and ResolutionManager');
+// console.log('Game: GameStateManager created with SaveSystem and ResolutionManager');
             
             // Initialize game loop timing
             this.lastTime = 0;
@@ -78,34 +86,34 @@ export class Game {
     }
     
     initializeStates() {
-        console.log('Game: Adding states...');
+// console.log('Game: Adding states...');
         
         try {
             const mainMenu = new MainMenu(this.stateManager);
             this.stateManager.addState('mainMenu', mainMenu);
-            console.log('Game: MainMenu state added');
+// console.log('Game: MainMenu state added');
 
             const loadGame = new LoadGame(this.stateManager);
             this.stateManager.addState('loadGame', loadGame);
-            console.log('Game: LoadGame state added');
+// console.log('Game: LoadGame state added');
 
             const optionsMenu = new OptionsMenu(this.stateManager);
             this.stateManager.addState('options', optionsMenu);
-            console.log('Game: OptionsMenu state added');
+// console.log('Game: OptionsMenu state added');
             
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
-            console.log('Game: StartScreen state added');
+// console.log('Game: StartScreen state added');
             
             const levelSelect = new LevelSelect(this.stateManager);
             this.stateManager.addState('levelSelect', levelSelect);
-            console.log('Game: LevelSelect state added');
+// console.log('Game: LevelSelect state added');
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);
-            console.log('Game: GameplayState added');
+// console.log('Game: GameplayState added');
             
-            console.log('Game: All states added successfully');
+// console.log('Game: All states added successfully');
             
             const stateChanged = this.stateManager.changeState('start');
             
@@ -114,7 +122,7 @@ export class Game {
             }
             
             this.isInitialized = true;
-            console.log('Game: State initialization complete, starting game loop');
+// console.log('Game: State initialization complete, starting game loop');
             this.startGameLoop();
             
         } catch (error) {
@@ -144,7 +152,7 @@ export class Game {
                 document.body.classList.add('scale-1x');
             }
             
-            console.log('Game: UI scaling applied');
+// console.log('Game: UI scaling applied');
         } catch (error) {
             console.error('Game: Error applying UI scaling:', error);
         }
@@ -153,7 +161,7 @@ export class Game {
     resizeCanvas() {
         // For fixed resolution mode, canvas size is no longer dynamic
         // This method is kept for compatibility but does not resize on window resize
-        console.log('Game: Canvas is using fixed resolution mode');
+// console.log('Game: Canvas is using fixed resolution mode');
     }
     
     setupEventListeners() {
@@ -205,7 +213,7 @@ export class Game {
                 e.preventDefault();
             });
             
-            console.log('Game: Event listeners set up successfully');
+// console.log('Game: Event listeners set up successfully');
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);
         }
@@ -216,7 +224,7 @@ export class Game {
      */
     applyResolution(width, height) {
         try {
-            console.log(`Game: Applying resolution ${width}x${height}`);
+// console.log(`Game: Applying resolution ${width}x${height}`);
             
             // Update canvas dimensions
             this.canvas.width = width;
@@ -233,7 +241,7 @@ export class Game {
             // Trigger resize on current state if available
             if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.resize) {
                 this.stateManager.currentState.resize();
-                console.log('Game: Current state resized to new resolution');
+// console.log('Game: Current state resized to new resolution');
             }
         } catch (error) {
             console.error('Game: Error applying resolution:', error);
@@ -250,7 +258,7 @@ export class Game {
     }
     
     startGameLoop() {
-        console.log('Game: Game loop starting');
+// console.log('Game: Game loop starting');
         requestAnimationFrame((time) => this.gameLoop(time));
     }
     
@@ -280,6 +288,11 @@ export class Game {
             
             let deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
             this.lastTime = currentTime;
+            
+            // Cap delta time to prevent physics issues (max 16ms per frame = 60 FPS minimum)
+            if (deltaTime > 0.033) {
+                deltaTime = 0.033; // Cap at 30 FPS if frame takes too long
+            }
             
             // NEW: Apply game speed multiplier if in gameplay state
             if (this.stateManager.currentStateName === 'game' && this.stateManager.currentState.getAdjustedDeltaTime) {
@@ -311,11 +324,11 @@ export class Game {
 
 // Initialize game on window load
 window.addEventListener('load', () => {
-    console.log('Window loaded, starting game initialization');
+// console.log('Window loaded, starting game initialization');
     
     try {
         new Game();
-        console.log('Game initialized successfully');
+// console.log('Game initialized successfully');
     } catch (error) {
         console.error('Critical error initializing game:', error);
         console.error('Stack trace:', error.stack);

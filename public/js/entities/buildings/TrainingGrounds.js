@@ -1067,21 +1067,21 @@ export class TrainingGrounds extends Building {
         
         // Check if upgrade level is unlocked by training grounds level
         if (this.trainingLevel <= upgrade.level) {
-            console.log(`TrainingGrounds: Range level ${upgrade.level + 1} not yet unlocked (requires training level ${upgrade.level + 1})`);
+// console.log(`TrainingGrounds: Range level ${upgrade.level + 1} not yet unlocked (requires training level ${upgrade.level + 1})`);
             return false;
         }
         
         const cost = this.calculateRangeUpgradeCost(towerType);
         
         if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
-            console.log(`TrainingGrounds: Cannot purchase ${towerType} range upgrade - cost: ${cost}, gold: ${gameState.gold}, level: ${upgrade.level}`);
+// console.log(`TrainingGrounds: Cannot purchase ${towerType} range upgrade - cost: ${cost}, gold: ${gameState.gold}, level: ${upgrade.level}`);
             return false;
         }
         
         gameState.spend(cost);
         upgrade.level++;
         
-        console.log(`TrainingGrounds: Purchased ${towerType} range upgrade level ${upgrade.level}`);
+// console.log(`TrainingGrounds: Purchased ${towerType} range upgrade level ${upgrade.level}`);
         return true;
     }
     
@@ -1090,14 +1090,14 @@ export class TrainingGrounds extends Building {
      */
     purchaseTrainingLevelUpgrade(gameState) {
         if (this.trainingLevel >= this.maxTrainingLevel) {
-            console.log('TrainingGrounds: Already at max training level');
+// console.log('TrainingGrounds: Already at max training level');
             return false;
         }
         
         const cost = this.calculateTrainingLevelCost();
         
         if (!cost || gameState.gold < cost) {
-            console.log(`TrainingGrounds: Cannot purchase training level upgrade - cost: ${cost}, gold: ${gameState.gold}`);
+// console.log(`TrainingGrounds: Cannot purchase training level upgrade - cost: ${cost}, gold: ${gameState.gold}`);
             return false;
         }
         
@@ -1108,7 +1108,7 @@ export class TrainingGrounds extends Building {
         if (this.trainingLevel === 3) {
             this.defenderUnlocked = true;
             this.defenderMaxLevel = 1;
-            console.log('TrainingGrounds: Defender system unlocked!');
+// console.log('TrainingGrounds: Defender system unlocked!');
         }
         
         // Check for defender upgrades at levels 4 and 5
@@ -1116,16 +1116,16 @@ export class TrainingGrounds extends Building {
             this.defenderMaxLevel = 2;
             this.guardPostUnlocked = true;
             this.maxGuardPosts = 1;
-            console.log('TrainingGrounds: Defender upgraded to level 2! Guard Posts unlocked (limit: 1)');
+// console.log('TrainingGrounds: Defender upgraded to level 2! Guard Posts unlocked (limit: 1)');
         }
         
         if (this.trainingLevel === 5) {
             this.defenderMaxLevel = 3;
             this.maxGuardPosts = 2;
-            console.log('TrainingGrounds: Defender upgraded to level 3! Guard Posts limit increased to 2');
+// console.log('TrainingGrounds: Defender upgraded to level 3! Guard Posts limit increased to 2');
         }
         
-        console.log(`TrainingGrounds: Purchased training level upgrade, now at level ${this.trainingLevel}`);
+// console.log(`TrainingGrounds: Purchased training level upgrade, now at level ${this.trainingLevel}`);
         return true;
     }
 
@@ -1181,24 +1181,24 @@ export class TrainingGrounds extends Building {
         if (level === 2 && this.trainingLevel >= 4 && this.defenderMaxLevel < 2) {
             const cost = 800;
             if (gameState.gold < cost) {
-                console.log('TrainingGrounds: Not enough gold for defender level 2 unlock');
+// console.log('TrainingGrounds: Not enough gold for defender level 2 unlock');
                 return false;
             }
             gameState.spend(cost);
             this.defenderMaxLevel = 2;
-            console.log('TrainingGrounds: Defender level 2 unlocked!');
+// console.log('TrainingGrounds: Defender level 2 unlocked!');
             return true;
         }
         
         if (level === 3 && this.trainingLevel >= 5 && this.defenderMaxLevel < 3) {
             const cost = 1200;
             if (gameState.gold < cost) {
-                console.log('TrainingGrounds: Not enough gold for defender level 3 unlock');
+// console.log('TrainingGrounds: Not enough gold for defender level 3 unlock');
                 return false;
             }
             gameState.spend(cost);
             this.defenderMaxLevel = 3;
-            console.log('TrainingGrounds: Defender level 3 unlocked!');
+// console.log('TrainingGrounds: Defender level 3 unlocked!');
             return true;
         }
         
@@ -1290,7 +1290,7 @@ export class TrainingGrounds extends Building {
         gameState.gold -= cost;
         upgrade.level++;
         
-        console.log(`TrainingGrounds: Purchased ${upgradeType} upgrade level ${upgrade.level}`);
+// console.log(`TrainingGrounds: Purchased ${upgradeType} upgrade level ${upgrade.level}`);
         return true;
     }
     
@@ -1301,7 +1301,7 @@ export class TrainingGrounds extends Building {
     
     applyEffect(buildingManager) {
         // Apply the building's effects (e.g., combat bonuses)
-        console.log('TrainingGrounds: Applying effects');
+// console.log('TrainingGrounds: Applying effects');
     }
     
     static getInfo() {

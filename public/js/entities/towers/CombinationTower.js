@@ -40,7 +40,7 @@ export class CombinationTower extends Tower {
         this.availableSpells = spells;
         if (spells.length > 0 && !this.selectedSpell) {
             this.selectedSpell = spells[0].id;
-            console.log(`CombinationTower: Set initial spell to ${this.selectedSpell}`);
+// console.log(`CombinationTower: Set initial spell to ${this.selectedSpell}`);
         }
     }
     
@@ -455,7 +455,7 @@ export class CombinationTower extends Tower {
     setSpell(spellId) {
         if (this.availableSpells.some(s => s.id === spellId)) {
             this.selectedSpell = spellId;
-            console.log(`CombinationTower: Spell changed to ${spellId}`);
+// console.log(`CombinationTower: Spell changed to ${spellId}`);
             return true;
         }
         return false;

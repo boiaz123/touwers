@@ -8,7 +8,7 @@ export class BasicEnemy extends BaseEnemy {
         this.attackDamage = 5;
         this.attackSpeed = 1.0;
         
-        console.log('BasicEnemy: Created at position', this.x, this.y);
+        // console.log('BasicEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {
@@ -22,13 +22,14 @@ export class BasicEnemy extends BaseEnemy {
         // Auto-scale enemy size based on canvas resolution
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
         
-        // Calculate walking animation with natural variation
-        const walkCycle = Math.sin(this.animationTime * 8) * 0.5;
-        const bobAnimation = Math.sin(this.animationTime * 8) * 0.3; // Vertical bob
-        const shoulderSway = Math.sin(this.animationTime * 8 + Math.PI / 4) * 0.2; // Subtle shoulder rotation
+        // Calculate walking animation with natural variation, using phase offset for diversity
+        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3; // Vertical bob
+        const shoulderSway = Math.sin(animTime + Math.PI / 4) * 0.2; // Subtle shoulder rotation
         
         // Create more complex arm movement patterns for natural variation
-        const armSwingFreq = this.animationTime * 8;
+        const armSwingFreq = animTime;
         
         // Left arm: leading swing with acceleration/deceleration
         const leftArmBase = Math.sin(armSwingFreq) * 0.6;
