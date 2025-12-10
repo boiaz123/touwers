@@ -512,6 +512,12 @@ export class GameplayState {
             return;
         }
         
+        // Skip all normal click handling if spell targeting is active
+        // The spell target handler will take over
+        if (this.selectedSpell) {
+            return;
+        }
+        
         // Handle regular tower/building placement first, before showing any menus
         if (this.selectedTowerType) {
             // Guard posts need special handling - use raw click coordinates
@@ -587,11 +593,15 @@ export class GameplayState {
             height: this.stateManager.canvas.height 
         });
         
+// console.log(`GameplayState: clickResult =`, clickResult);
+        
         if (clickResult) {
             if (clickResult.type === 'forge_menu') {
+// console.log('GameplayState: Showing forge menu');
                 this.uiManager.showForgeUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'academy_menu') {
+// console.log('GameplayState: Showing academy menu');
                 this.uiManager.showAcademyUpgradeMenu(clickResult);
                 return;
             } else if (clickResult.type === 'castle_menu') {
@@ -613,15 +623,19 @@ export class GameplayState {
                 this.uiManager.showGuardPostMenu(clickResult);
                 return;
             } else if (clickResult.type === 'superweapon_menu') {
+// console.log('GameplayState: Showing super weapon menu');
                 this.uiManager.showSuperWeaponMenu(clickResult);
                 return;
             } else if (clickResult.type === 'training_menu') {
+// console.log('GameplayState: Showing training menu');
                 this.uiManager.showTrainingGroundsMenu(clickResult);
                 return;
             } else if (clickResult.type === 'goldmine_menu') {
+// console.log('GameplayState: Showing gold mine menu');
                 this.uiManager.showGoldMineMenu(clickResult);
                 return;
             } else if (typeof clickResult === 'number') {
+// console.log('GameplayState: Gold collected:', clickResult);
                 this.gameState.gold += clickResult;
                 this.uiManager.updateUI();
                 return;

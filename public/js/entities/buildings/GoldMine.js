@@ -1033,23 +1033,8 @@ export class GoldMine extends Building {
         });
     }
     
-    onClick(x, y, size) {
-        // Check if clicking on toggle icon
-        if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
-            const toggleX = this.x - size/2 + 12;
-            const toggleY = this.y - size/2 + 12;
-            
-            if (x >= toggleX - toggleIconSize/2 && x <= toggleX + toggleIconSize/2 &&
-                y >= toggleY - toggleIconSize/2 && y <= toggleY + toggleIconSize/2) {
-                // Toggle mode and reset production
-                this.toggleGemMode();
-                this.goldReady = false;
-                this.currentProduction = 0;
-// console.log(`GoldMine: Clicked toggle - now in ${this.gemMode ? 'gem' : 'gold'} mode, production reset`);
-                return 0; // No collection on toggle
-            }
-        }
+    onClick() {
+// console.log(`GoldMine.onClick called`);
         
         // If ready, collect immediately without showing menu
         if (this.goldReady) {
@@ -1059,6 +1044,7 @@ export class GoldMine extends Building {
         }
         
         // Otherwise show the mine menu with progress
+        this.isSelected = true;
         return {
             type: 'goldmine_menu',
             goldMine: this

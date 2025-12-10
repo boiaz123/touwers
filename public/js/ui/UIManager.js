@@ -2274,6 +2274,18 @@ export class UIManager {
         // Add sell button
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+        `;
+        
+        // Add collect button if ready
+        if (goldMine.goldReady) {
+            contentHTML += `
+                <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
+                    💰 Collect Now
+                </button>
+            `;
+        }
+        
+        contentHTML += `
                 <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; flex: 1; margin: 0;">
                     💰 Sell Mine
                 </button>
@@ -2297,6 +2309,24 @@ export class UIManager {
         const closeBtn = panel.querySelector('.panel-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
+        }
+        
+        // Setup right-click to close menu
+        const rightClickHandler = (e) => {
+            e.preventDefault();
+            this.closePanelWithAnimation('goldmine-panel');
+        };
+        panel.addEventListener('contextmenu', rightClickHandler, { once: true });
+        
+        // Add collect button listener if button exists
+        const collectBtn = panel.querySelector('.collect-gold-btn');
+        if (collectBtn) {
+            collectBtn.addEventListener('click', () => {
+                const collected = goldMine.collectGold();
+                this.gameState.gold += collected;
+                this.updateUI();
+                this.closePanelWithAnimation('goldmine-panel');
+            }, { once: true });
         }
         
         // Add sell button listener

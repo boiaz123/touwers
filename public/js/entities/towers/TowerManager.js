@@ -500,9 +500,11 @@ export class TowerManager {
         
         // Then check building icon clicks with improved detection
         const buildingResult = this.buildingManager.handleClick(x, y, canvasRect);
+// console.log(`TowerManager: buildingResult =`, buildingResult);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
+// console.log('TowerManager: Forge menu requested');
                 return buildingResult;
             } else if (buildingResult.type === 'academy_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
@@ -521,6 +523,7 @@ export class TowerManager {
                 return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection
+// console.log('TowerManager: Gold collected:', buildingResult);
                 return buildingResult;
             }
         }

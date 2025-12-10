@@ -170,12 +170,12 @@ export class BuildingManager {
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {
-                    const buildingSize = cellSize * building.size;
-                    const result = building.onClick(x, y, buildingSize);
+                    const result = building.onClick();
 // console.log(`BuildingManager: onClick result:`, result);
                     return result;
                 } else if (building.constructor.name === 'GoldMine') {
                     // Fallback for GoldMine if onClick doesn't exist
+// console.log(`BuildingManager: GoldMine onClick missing, using fallback`);
                     return building.collectGold();
                 }
                 break;
