@@ -1011,7 +1011,8 @@ export class UIManager {
             'superweapon-panel',
             'training-panel',
             'castle-panel',
-            'basic-tower-panel'
+            'basic-tower-panel',
+            'goldmine-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -1031,7 +1032,8 @@ export class UIManager {
             'superweapon-panel',
             'training-panel',
             'castle-panel',
-            'basic-tower-panel'
+            'basic-tower-panel',
+            'goldmine-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -2310,13 +2312,6 @@ export class UIManager {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
         }
-        
-        // Setup right-click to close menu
-        const rightClickHandler = (e) => {
-            e.preventDefault();
-            this.closePanelWithAnimation('goldmine-panel');
-        };
-        panel.addEventListener('contextmenu', rightClickHandler, { once: true });
         
         // Add collect button listener if button exists
         const collectBtn = panel.querySelector('.collect-gold-btn');
