@@ -828,6 +828,15 @@ export class UIManager {
             contentHTML += `</div>`;
         }
         
+        // Add sell button for forge
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Forge
+                </button>
+            </div>
+        `;
+        
         // Update container
         upgradesContainer.innerHTML = contentHTML;
         
@@ -889,6 +898,17 @@ export class UIManager {
                 }
             });
         });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(forgeData.forge);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closeForgePanelWithAnimation();
+            }, { once: true });
+        }
     }
 
     closeForgePanelWithAnimation() {
@@ -1248,8 +1268,9 @@ export class UIManager {
         const sellBtn = panel.querySelector('.sell-building-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
-                this.towerManager.buildingManager.sellBuilding(academyData.academy);
+                this.towerManager.sellBuilding(academyData.academy);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('academy-panel');
             }, { once: true });
         }
@@ -1347,6 +1368,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(towerData.tower);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('magic-tower-panel');
             }, { once: true });
         }
@@ -1443,6 +1465,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(towerData.tower);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('combination-tower-panel');
             }, { once: true });
         }
@@ -1588,6 +1611,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(tower);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('basic-tower-panel');
             }, { once: true });
         }
@@ -1646,6 +1670,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(tower);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('basic-tower-panel');
             });
         }
@@ -1709,6 +1734,7 @@ export class UIManager {
         panel.querySelector('.sell-tower-btn').addEventListener('click', () => {
             this.towerManager.sellTower(tower);
             this.updateUI();
+            this.level.setPlacementPreview(0, 0, false);
             this.closePanelWithAnimation('basic-tower-panel');
         });
     }
@@ -1900,8 +1926,9 @@ export class UIManager {
         const sellBtn = panel.querySelector('.sell-building-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
-                this.towerManager.buildingManager.sellBuilding(menuData.building);
+                this.towerManager.sellBuilding(menuData.building);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('superweapon-panel');
             }, { once: true });
         }
@@ -2189,8 +2216,9 @@ export class UIManager {
         const sellBtn = panel.querySelector('.sell-building-btn');
         if (sellBtn) {
             sellBtn.addEventListener('click', () => {
-                this.towerManager.buildingManager.sellBuilding(trainingData.trainingGrounds);
+                this.towerManager.sellBuilding(trainingData.trainingGrounds);
                 this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('training-panel');
             }, { once: true });
         }
@@ -2199,6 +2227,88 @@ export class UIManager {
     showTrainingGroundsMenu(trainingData) {
         // Redirect to the proper upgrade menu handler
         this.showTrainingGroundsUpgradeMenu(trainingData);
+    }
+
+    showGoldMineMenu(goldMineData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('goldmine-panel');
+        
+        const panel = document.getElementById('goldmine-panel');
+        if (!panel) {
+            console.error('UIManager: Gold Mine panel not found');
+            return;
+        }
+        
+        const goldMine = goldMineData.goldMine;
+        const incomeInfo = goldMine.getBaseIncome();
+        const modeText = goldMine.gemMode ? '💎 Gem Mining' : '💰 Gold Mining';
+        
+        // Calculate progress information
+        const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
+        const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
+        const readyStatus = goldMine.goldReady ? '✅ READY TO COLLECT' : `⏳ ${timeRemaining.toFixed(1)}s remaining`;
+        const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">⛏️</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Gold Mine Production</div>
+                            <div class="upgrade-description">Generates resources automatically every 30 seconds.</div>
+                            <div style="font-size: 0.8rem; color: #c9a876; margin-top: 0.3rem;">📊 Mode: ${modeText}</div>
+                            <div style="font-size: 0.8rem; color: #c9a876; margin-top: 0.2rem;">💵 Income: ${incomeInfo} ${goldMine.gemMode ? 'gems' : 'gold'}/cycle</div>
+                            <div style="font-size: 0.8rem; color: ${readyColor}; margin-top: 0.3rem; font-weight: bold;">${readyStatus}</div>
+                            <div style="margin-top: 0.4rem; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden;">
+                                <div style="width: ${progressPercent}%; height: 6px; background: linear-gradient(90deg, #FFB800, #FFD700); transition: width 0.3s;">
+                                </div>
+                            </div>
+                            <div style="font-size: 0.7rem; color: #999; margin-top: 0.2rem; text-align: center;">${progressPercent.toFixed(0)}% complete</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Mine
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '⛏️ Gold Mine';
+        
+        const contentContainer = panel.querySelector('#goldmine-panel-content') || panel.querySelector('.panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
+        }
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(goldMine);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('goldmine-panel');
+            }, { once: true });
+        }
     }
 
     getUpgradeCurrentEffect(upgrade) {

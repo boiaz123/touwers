@@ -1051,8 +1051,18 @@ export class GoldMine extends Building {
             }
         }
         
-        // Otherwise collect normally
-        return this.collectGold();
+        // If ready, collect immediately without showing menu
+        if (this.goldReady) {
+            const collected = this.collectGold();
+// console.log(`GoldMine: Auto-collected ${collected} gold/gems`);
+            return collected;
+        }
+        
+        // Otherwise show the mine menu with progress
+        return {
+            type: 'goldmine_menu',
+            goldMine: this
+        };
     }
     
     // New: Helper to check if click is on toggle (kept for compatibility)

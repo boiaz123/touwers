@@ -35,7 +35,8 @@ export class BaseEnemy {
         
         // Path spreading: random lateral offset from the main path
         // This prevents all enemies from walking in a straight line
-        this.pathOffsetAmount = (Math.random() - 0.5) * 150; // ±75 pixels offset for better spreading
+        // Range: ±30 pixels for consistent spreading within path bounds
+        this.pathOffsetAmount = (Math.random() - 0.5) * 60; // ±30 pixels offset
         
         // Only apply offset every N frames to reduce computation
         this.offsetUpdateCounter = 0;
@@ -236,9 +237,9 @@ export class BaseEnemy {
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
         
-        // Apply path offset every few frames to reduce computation
+        // Apply path offset more frequently for better spreading from start
         this.offsetUpdateCounter++;
-        if (this.offsetUpdateCounter >= 5) {
+        if (this.offsetUpdateCounter >= 2) {
             this.applyPathOffset();
             this.offsetUpdateCounter = 0;
         }
@@ -265,8 +266,42 @@ export class BaseEnemy {
         const perpX = -pathDy / pathLength;
         const perpY = pathDx / pathLength;
         
-        // Apply offset perpendicular to path
-        this.x += perpX * this.pathOffsetAmount * 0.02; // Larger step for more visible spreading
+        // Calculate distance from path center (project position onto path segment)
+        const toCurrentDx = this.x - currentPos.x;
+        const toCurrentDy = this.y - currentPos.y;
+        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / (pathLength * pathLength);
+        const projX = currentPos.x + projectionLength * pathDx;
+        const projY = currentPos.y + projectionLength * pathDy;
+        
+        // Distance from enemy to path center line
+        const distFromPath = Math.hypot(this.x - projX, this.y - projY);
+        
+        // Max allowed offset (path width is 60px total, so ±25px from center)
+        const maxOffset = 25;
+        
+        // If we're too far from path center, pull back toward it
+        if (distFromPath > maxOffset) {
+            // Calculate how much we're over the limit
+            const excess = distFromPath - maxOffset;
+            
+            // Direction from enemy to path center
+            const toCenterX = projX - this.x;
+            const toCenterY = projY - this.y;
+            const toCenterLen = Math.hypot(toCenterX, toCenterY);
+            
+            if (toCenterLen > 0) {
+                // Pull back toward center
+                const pullStrength = 0.08;
+                this.x += (toCenterX / toCenterLen) * excess * pullStrength;
+                this.y += (toCenterY / toCenterLen) * excess * pullStrength;
+            }
+        } else {
+            // We're within bounds, apply gentle spreading offset
+            // Use the initial random offset, but scale it based on distance from center
+            const spreadAmount = (this.pathOffsetAmount / 30) * (1 - (distFromPath / maxOffset) * 0.5);
+            this.x += perpX * spreadAmount * 0.02;
+            this.y += perpY * spreadAmount * 0.02;
+        }
     }
     
     /**

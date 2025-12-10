@@ -125,16 +125,19 @@ export class BuildingManager {
         // Check for ANY building interaction
         const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
         
-        // First check toggle icon clicks for gold mines
+        // First check toggle icon clicks for gold mines (in grid space)
         for (const building of this.buildings) {
             if (building.constructor.name === 'GoldMine' && building.gemMiningUnlocked) {
-                const toggleIconSize = 25;
-                const toggleX = building.x - (cellSize * 4) / 2 + 12; // Top-left corner
-                const toggleY = building.y - (cellSize * 4) / 2 + 12;
+                // Toggle icon is at the top-left of the 4x4 building grid
+                const toggleGridX = building.gridX;
+                const toggleGridY = building.gridY;
+                const togglePixelX = toggleGridX * cellSize + 12; // Offset within grid cell
+                const togglePixelY = toggleGridY * cellSize + 12;
                 
+                const toggleIconSize = 25;
                 const clickBuffer = 5;
-                if (x >= toggleX - (toggleIconSize/2 + clickBuffer) && x <= toggleX + (toggleIconSize/2 + clickBuffer) &&
-                    y >= toggleY - (toggleIconSize/2 + clickBuffer) && y <= toggleY + (toggleIconSize/2 + clickBuffer)) {
+                if (x >= togglePixelX - (toggleIconSize/2 + clickBuffer) && x <= togglePixelX + (toggleIconSize/2 + clickBuffer) &&
+                    y >= togglePixelY - (toggleIconSize/2 + clickBuffer) && y <= togglePixelY + (toggleIconSize/2 + clickBuffer)) {
 // console.log(`BuildingManager: HIT! Clicked on toggle icon`);
                     
                     // Call toggle method
@@ -149,32 +152,26 @@ export class BuildingManager {
         
         // Then check regular building grid-based clicks
         for (const building of this.buildings) {
-            // Use the actual screen coordinates where the building is rendered
-            const buildingSize = cellSize * building.size;
+            // Use grid-based coordinates, not screen coordinates
+            const buildingGridWidth = building.size;
+            const buildingGridHeight = building.size;
+            const buildingLeftEdge = building.gridX * cellSize;
+            const buildingTopEdge = building.gridY * cellSize;
+            const buildingRightEdge = buildingLeftEdge + (buildingGridWidth * cellSize);
+            const buildingBottomEdge = buildingTopEdge + (buildingGridHeight * cellSize);
             
-            // The building is rendered centered at (building.x, building.y)
-            const buildingLeftEdge = building.x - buildingSize / 2;
-            const buildingTopEdge = building.y - buildingSize / 2;
-            const buildingRightEdge = building.x + buildingSize / 2;
-            const buildingBottomEdge = building.y + buildingSize / 2;
+            // Check if click is within the building's grid area
+            const clickIsValid = x >= buildingLeftEdge && x <= buildingRightEdge && y >= buildingTopEdge && y <= buildingBottomEdge;
             
-            // Calculate the valid clickable area by clamping to canvas bounds
-            const validLeft = Math.max(buildingLeftEdge, 0);
-            const validTop = Math.max(buildingTopEdge, 0);
-            const validRight = Math.min(buildingRightEdge, canvasSize.width);
-            const validBottom = Math.min(buildingBottomEdge, canvasSize.height);
-            
-            // Only register click if it's within the clamped valid area
-            const clickIsValid = x >= validLeft && x <= validRight && y >= validTop && y <= validBottom;
-            
-// console.log(`BuildingManager: ${building.constructor.name} at screen (${building.x}, ${building.y}), clickable area: ${validLeft}-${validRight}, ${validTop}-${validBottom} (original: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}), click valid: ${clickIsValid}`);
+// console.log(`BuildingManager: ${building.constructor.name} at grid (${building.gridX}, ${building.gridY}), clickable area: ${buildingLeftEdge}-${buildingRightEdge}, ${buildingTopEdge}-${buildingBottomEdge}, click at (${x}, ${y}), valid: ${clickIsValid}`);
             
             if (clickIsValid) {
 // console.log(`BuildingManager: HIT! Clicked on ${building.constructor.name} grid area`);
                 
                 // Call the building's onClick method directly
                 if (building.onClick) {
-                    const result = building.onClick();
+                    const buildingSize = cellSize * building.size;
+                    const result = building.onClick(x, y, buildingSize);
 // console.log(`BuildingManager: onClick result:`, result);
                     return result;
                 } else if (building.constructor.name === 'GoldMine') {
@@ -219,4 +216,39 @@ export class BuildingManager {
             building.y = screenY;
         });
     }
+    
+    /**
+     * Sell a building: free up grid positions, refund 70% of cost, remove building
+     */
+    sellBuilding(building) {
+        if (!building) return false;
+        
+        // Get building cost info
+        const buildingInfo = building.constructor.getInfo();
+        const refund = Math.floor(buildingInfo.cost * 0.7);
+        
+        // Free up the occupied positions
+        const size = building.size || 4;
+        for (let x = building.gridX; x < building.gridX + size; x++) {
+            for (let y = building.gridY; y < building.gridY + size; y++) {
+                this.occupiedPositions.delete(`${x},${y}`);
+            }
+        }
+        
+        // Remove building from array
+        const index = this.buildings.indexOf(building);
+        if (index !== -1) {
+            this.buildings.splice(index, 1);
+        }
+        
+        // Refund the player
+        this.gameState.gold += refund;
+        
+        // Recalculate tower upgrades (since building effects may have changed)
+        this.calculateTowerUpgrades();
+        
+        // console.log(`BuildingManager: Sold ${building.constructor.name} for $${refund}, freed positions at (${building.gridX}, ${building.gridY})`);
+        return true;
+    }
 }
+

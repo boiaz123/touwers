@@ -515,6 +515,10 @@ export class TowerManager {
             } else if (buildingResult.type === 'training_menu') {
 // console.log('TowerManager: Training menu requested');
                 return buildingResult;
+            } else if (buildingResult.type === 'goldmine_menu') {
+                // Handle gold mine menu
+// console.log('TowerManager: Gold mine menu requested');
+                return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection
                 return buildingResult;
@@ -619,7 +623,45 @@ export class TowerManager {
     sellTower(tower) {
         const refund = Math.floor(tower.constructor.getInfo().cost * 0.7);
         this.gameState.gold += refund;
+        
+        // Remove from level's occupied cells
+        if (this.level) {
+            this.level.removeTower(tower.gridX, tower.gridY);
+        }
+        
         this.removeTower(tower);
 // console.log(`TowerManager: Sold ${tower.constructor.name} for $${refund}`);
+    }
+    
+    sellBuilding(building) {
+        if (!building) return false;
+        
+        const buildingType = building.constructor.name;
+        const buildingSize = building.size || 4;
+        
+        // Handle the sale through building manager
+        const result = this.buildingManager.sellBuilding(building);
+        
+        if (result) {
+            // Remove from level's occupied cells
+            if (this.level) {
+                this.level.removeBuilding(building.gridX, building.gridY, buildingSize);
+            }
+            
+            // Notify unlock system to decrement building counts
+            // Map constructor names to building types for unlock system
+            let unlocksType = null;
+            if (buildingType === 'TowerForge') unlocksType = 'forge';
+            else if (buildingType === 'GoldMine') unlocksType = 'mine';
+            else if (buildingType === 'MagicAcademy') unlocksType = 'academy';
+            else if (buildingType === 'TrainingGrounds') unlocksType = 'training';
+            else if (buildingType === 'SuperWeaponLab') unlocksType = 'superweapon';
+            
+            if (unlocksType) {
+                this.unlockSystem.onBuildingSold(unlocksType);
+            }
+        }
+        
+        return result;
     }
 }
