@@ -12,7 +12,8 @@ export class MainMenu {
         this.buttons = [
             { label: 'NEW GAME', action: 'newGame', hovered: false },
             { label: 'LOAD GAME', action: 'loadGame', hovered: false },
-            { label: 'OPTIONS', action: 'options', hovered: false }
+            { label: 'OPTIONS', action: 'options', hovered: false },
+            { label: 'QUIT GAME', action: 'quitGame', hovered: false }
         ];
 
         this.buttonWidth = 200;
@@ -154,9 +155,38 @@ export class MainMenu {
                         this.stateManager.previousState = 'mainMenu';
                         this.stateManager.changeState('options');
                         break;
+                    case 'quitGame':
+                        this.quitGame();
+                        break;
                 }
             }
         });
+    }
+
+    quitGame() {
+        // Check if running in Tauri
+        if (window.__TAURI__) {
+            const { invoke } = window.__TAURI_CORE__;
+            invoke('tauri', {
+                __tauriModule: 'Core',
+                message: {
+                    cmd: 'exit',
+                    exitCode: 0
+                }
+            }).catch(error => {
+                console.error('Error closing application:', error);
+                // Fallback: try alternative method
+                if (window.__TAURI_CORE__?.window?.appWindow) {
+                    window.__TAURI_CORE__.window.appWindow.close();
+                }
+            });
+        } else {
+            // Fallback for development environment
+            console.log('Attempting to close window...');
+            if (confirm('Close the application?')) {
+                window.close();
+            }
+        }
     }
 
     update(deltaTime) {
@@ -237,20 +267,47 @@ export class MainMenu {
                 this.buttons.forEach((button, index) => {
                     const pos = this.getButtonPosition(index);
 
-                    // Button background
-                    ctx.fillStyle = button.hovered ? '#66BB6A' : '#4CAF50';
+                    // Medieval stone button background with gradient
+                    const gradient = ctx.createLinearGradient(pos.y, pos.y + pos.height, 0, 0);
+                    if (button.hovered) {
+                        gradient.addColorStop(0, '#8b7355');
+                        gradient.addColorStop(0.5, '#a89968');
+                        gradient.addColorStop(1, '#9a8960');
+                    } else {
+                        gradient.addColorStop(0, '#5a4a3a');
+                        gradient.addColorStop(0.5, '#7a6a5a');
+                        gradient.addColorStop(1, '#6a5a4a');
+                    }
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
 
-                    // Button border
-                    ctx.strokeStyle = button.hovered ? '#d4af37' : '#2E7D32';
-                    ctx.lineWidth = button.hovered ? 2 : 1;
+                    // Inner shadow for depth
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(pos.x, pos.y, pos.width, 3);
+                    ctx.fillRect(pos.x, pos.y + pos.height - 3, pos.width, 3);
+
+                    // Golden border for medieval look
+                    ctx.strokeStyle = button.hovered ? '#ffd700' : '#d4af37';
+                    ctx.lineWidth = button.hovered ? 3 : 2;
                     ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
 
-                    // Button text
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 16px serif';
+                    // Secondary decorative border (darker)
+                    ctx.strokeStyle = button.hovered ? '#8b7355' : '#3a2a1f';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(pos.x + 1, pos.y + 1, pos.width - 2, pos.height - 2);
+
+                    // Button text with shadow for medieval effect
+                    ctx.font = 'bold 18px serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2 + 5);
+                    ctx.textBaseline = 'middle';
+
+                    // Shadow text
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillText(button.label, pos.x + pos.width / 2 + 1, pos.y + pos.height / 2 + 1);
+
+                    // Main text with gold color
+                    ctx.fillStyle = button.hovered ? '#ffe700' : '#d4af37';
+                    ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
                 });
             }
 
