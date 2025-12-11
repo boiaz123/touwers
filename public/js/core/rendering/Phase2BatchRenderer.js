@@ -33,6 +33,27 @@ export class Phase2BatchRenderer extends BatchRenderer {
     }
     
     /**
+     * Direct sprite rendering (called by SpriteRenderingAdapter)
+     * Used for immediate entity rendering with automatic caching
+     * This is the critical link between entities and sprite caching
+     */
+    renderSprite(ctx, spriteKey, x, y, options = {}) {
+        if (!this.spriteRenderingEnabled) {
+            return false;
+        }
+        
+        // Try to render cached sprite
+        const result = this.spriteCache.renderSprite(ctx, spriteKey, x, y, options);
+        
+        if (result) {
+            return true;
+        }
+        
+        // If sprite doesn't exist, it will be cached on next attempt
+        return false;
+    }
+    
+    /**
      * Batch sprite rendering operation
      * Used instead of complex entity.render() calls
      */

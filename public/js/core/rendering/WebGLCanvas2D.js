@@ -32,7 +32,7 @@ export class WebGLCanvas2D {
         this.ctx2d = this.fallbackCanvas.getContext('2d', { alpha: false, desynchronized: true });
         
         // Configure 2D context
-        this.ctx2d.imageSmoothingEnabled = false;
+        this.ctx2d.imageSmoothingEnabled = true;
         this.ctx2d.imageSmoothingQuality = 'low';
         
         // Phase 1: Initialize batch renderer (disabled by default for compatibility)
@@ -45,7 +45,7 @@ export class WebGLCanvas2D {
         
         // Phase 2: Initialize sprite-enhanced batch renderer
         this.phase2Renderer = new Phase2BatchRenderer(this.ctx2d);
-        this.phase2Enabled = false; // Phase 2 can be enabled when Phase 1 is perfected
+        this.phase2Enabled = true; // Phase 2 can be enabled when Phase 1 is perfected
         
         // Set sprite renderer on adapter for entity use
         SpriteRenderingAdapter.setSpriteRenderer(this.phase2Renderer);
