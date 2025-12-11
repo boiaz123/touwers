@@ -1,4 +1,5 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
+import { SpriteRenderingAdapter } from '../../core/rendering/SpriteRenderingAdapter.js';
 
 /**
  * Defender - A protective unit that stands in front of the castle
@@ -183,6 +184,12 @@ export class Defender {
     }
     
     render(ctx) {
+        // PHASE 2: Try to render as cached sprite (5-10x faster)
+        if (SpriteRenderingAdapter.renderAsSprite(ctx, this)) {
+            return; // Sprite rendered successfully
+        }
+        
+        // Fallback: Render normally (first frame, or sprite not available)
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
         // Idle breathing animation

@@ -1,4 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { SpriteRenderingAdapter } from '../../core/rendering/SpriteRenderingAdapter.js';
 
 export class BasicEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 50) {
@@ -19,6 +20,12 @@ export class BasicEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // PHASE 2: Try to render as cached sprite (5-10x faster)
+        if (SpriteRenderingAdapter.renderAsSprite(ctx, this)) {
+            return; // Sprite rendered successfully
+        }
+        
+        // Fallback: Render normally (first frame, or sprite not available)
         // Auto-scale enemy size based on canvas resolution
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
         
@@ -56,11 +63,20 @@ export class BasicEnemy extends BaseEnemy {
         ctx.fillStyle = this.darkenColor(this.tunicColor, 0.2);
         ctx.fillRect(-baseSize * 0.65, -baseSize * 0.75, baseSize * 1.3, baseSize * 1.1);
         
-        // Main tunic/body with 3D shading
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.15));
+        // Main tunic/body with 3D shading - USE GRADIENT CACHE
+        const bodyGradient = ctx.gradientCache ? 
+            ctx.gradientCache.getLinearGradient(ctx, -baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4, [
+                { offset: 0, color: this.tunicColor },
+                { offset: 0.5, color: this.tunicColor },
+                { offset: 1, color: this.darkenColor(this.tunicColor, 0.15) }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4);
+                g.addColorStop(0, this.tunicColor);
+                g.addColorStop(0.5, this.tunicColor);
+                g.addColorStop(1, this.darkenColor(this.tunicColor, 0.15));
+                return g;
+            })();
         
         ctx.fillStyle = bodyGradient;
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
@@ -90,11 +106,20 @@ export class BasicEnemy extends BaseEnemy {
         ctx.arc(baseSize * 0.05, -baseSize * 1.15, baseSize * 0.55, 0, Math.PI * 2);
         ctx.fill();
         
-        // Main head with gradient for roundness
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.1, -baseSize * 1.25, baseSize * 0.2, 0, -baseSize * 1.2, baseSize * 0.6);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
+        // Main head with gradient for roundness - USE GRADIENT CACHE
+        const headGradient = ctx.gradientCache ?
+            ctx.gradientCache.getRadialGradient(ctx, -baseSize * 0.1, -baseSize * 1.25, baseSize * 0.2, 0, -baseSize * 1.2, baseSize * 0.6, [
+                { offset: 0, color: '#E8D4B8' },
+                { offset: 0.6, color: '#DDBEA9' },
+                { offset: 1, color: '#C9A876' }
+            ]) :
+            (() => {
+                const g = ctx.createRadialGradient(-baseSize * 0.1, -baseSize * 1.25, baseSize * 0.2, 0, -baseSize * 1.2, baseSize * 0.6);
+                g.addColorStop(0, '#E8D4B8');
+                g.addColorStop(0.6, '#DDBEA9');
+                g.addColorStop(1, '#C9A876');
+                return g;
+            })();
         
         ctx.fillStyle = headGradient;
         ctx.beginPath();
@@ -110,11 +135,20 @@ export class BasicEnemy extends BaseEnemy {
         
         // --- HELMET ---
         
-        // Helmet with 3D perspective (front face brighter)
-        const helmetGradient = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 1.3, baseSize * 0.6, -baseSize * 0.9);
-        helmetGradient.addColorStop(0, '#808080');
-        helmetGradient.addColorStop(0.5, '#696969');
-        helmetGradient.addColorStop(1, '#505050');
+        // Helmet with 3D perspective (front face brighter) - USE GRADIENT CACHE
+        const helmetGradient = ctx.gradientCache ?
+            ctx.gradientCache.getLinearGradient(ctx, -baseSize * 0.6, -baseSize * 1.3, baseSize * 0.6, -baseSize * 0.9, [
+                { offset: 0, color: '#808080' },
+                { offset: 0.5, color: '#696969' },
+                { offset: 1, color: '#505050' }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 1.3, baseSize * 0.6, -baseSize * 0.9);
+                g.addColorStop(0, '#808080');
+                g.addColorStop(0.5, '#696969');
+                g.addColorStop(1, '#505050');
+                return g;
+            })();
         
         ctx.fillStyle = helmetGradient;
         ctx.beginPath();
@@ -171,10 +205,18 @@ export class BasicEnemy extends BaseEnemy {
         ctx.lineTo(leftWristX + 0.5, leftWristY + 0.5);
         ctx.stroke();
         
-        // Upper arm (shoulder to elbow)
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(leftSwingForward) * 0.1})`);
+        // Upper arm (shoulder to elbow) - USE GRADIENT CACHE
+        const leftUpperArmGradient = ctx.gradientCache ?
+            ctx.gradientCache.getLinearGradient(ctx, leftShoulderX, leftShoulderY, leftElbowX, leftElbowY, [
+                { offset: 0, color: '#E8D4B8' },
+                { offset: 1, color: `rgba(201, 168, 118, ${0.9 + Math.abs(leftSwingForward) * 0.1})` }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
+                g.addColorStop(0, '#E8D4B8');
+                g.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(leftSwingForward) * 0.1})`);
+                return g;
+            })();
         
         ctx.strokeStyle = leftUpperArmGradient;
         ctx.lineWidth = baseSize * 0.32;
@@ -185,10 +227,18 @@ export class BasicEnemy extends BaseEnemy {
         ctx.lineTo(leftElbowX, leftElbowY);
         ctx.stroke();
         
-        // Lower arm (elbow to wrist) - slightly thinner
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(leftSwingForward) * 0.05})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
+        // Lower arm (elbow to wrist) - slightly thinner - USE GRADIENT CACHE
+        const leftLowerArmGradient = ctx.gradientCache ?
+            ctx.gradientCache.getLinearGradient(ctx, leftElbowX, leftElbowY, leftWristX, leftWristY, [
+                { offset: 0, color: `rgba(232, 212, 184, ${0.95 + Math.abs(leftSwingForward) * 0.05})` },
+                { offset: 1, color: '#C9A876' }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
+                g.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(leftSwingForward) * 0.05})`);
+                g.addColorStop(1, '#C9A876');
+                return g;
+            })();
         
         ctx.strokeStyle = leftLowerArmGradient;
         ctx.lineWidth = baseSize * 0.26;
@@ -240,10 +290,18 @@ export class BasicEnemy extends BaseEnemy {
         ctx.lineTo(rightWristX + 0.5, rightWristY + 0.5);
         ctx.stroke();
         
-        // Upper arm (shoulder to elbow)
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(rightSwingForward) * 0.1})`);
+        // Upper arm (shoulder to elbow) - USE GRADIENT CACHE
+        const rightUpperArmGradient = ctx.gradientCache ?
+            ctx.gradientCache.getLinearGradient(ctx, rightShoulderX, rightShoulderY, rightElbowX, rightElbowY, [
+                { offset: 0, color: '#E8D4B8' },
+                { offset: 1, color: `rgba(201, 168, 118, ${0.9 + Math.abs(rightSwingForward) * 0.1})` }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
+                g.addColorStop(0, '#E8D4B8');
+                g.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(rightSwingForward) * 0.1})`);
+                return g;
+            })();
         
         ctx.strokeStyle = rightUpperArmGradient;
         ctx.lineWidth = baseSize * 0.32;
@@ -254,10 +312,18 @@ export class BasicEnemy extends BaseEnemy {
         ctx.lineTo(rightElbowX, rightElbowY);
         ctx.stroke();
         
-        // Lower arm (elbow to wrist) - slightly thinner
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(rightSwingForward) * 0.05})`);
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
+        // Lower arm (elbow to wrist) - slightly thinner - USE GRADIENT CACHE
+        const rightLowerArmGradient = ctx.gradientCache ?
+            ctx.gradientCache.getLinearGradient(ctx, rightElbowX, rightElbowY, rightWristX, rightWristY, [
+                { offset: 0, color: `rgba(232, 212, 184, ${0.95 + Math.abs(rightSwingForward) * 0.05})` },
+                { offset: 1, color: '#C9A876' }
+            ]) :
+            (() => {
+                const g = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
+                g.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(rightSwingForward) * 0.05})`);
+                g.addColorStop(1, '#C9A876');
+                return g;
+            })();
         
         ctx.strokeStyle = rightLowerArmGradient;
         ctx.lineWidth = baseSize * 0.26;

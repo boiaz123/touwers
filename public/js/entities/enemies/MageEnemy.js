@@ -1,4 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { SpriteRenderingAdapter } from '../../core/rendering/SpriteRenderingAdapter.js';
 
 export class MageEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 45) {
@@ -92,6 +93,12 @@ export class MageEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // PHASE 2: Try to render as cached sprite (5-10x faster)
+        if (SpriteRenderingAdapter.renderAsSprite(ctx, this)) {
+            return; // Sprite rendered successfully
+        }
+        
+        // Fallback: Render normally (first frame, or sprite not available)
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
         // Apply phase offset - mages have varied mystical timing

@@ -1,4 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { SpriteRenderingAdapter } from '../../core/rendering/SpriteRenderingAdapter.js';
 
 export class VillagerEnemy extends BaseEnemy {
     // Static counter to alternate weapon types across spawns
@@ -123,6 +124,12 @@ export class VillagerEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // PHASE 2: Try to render as cached sprite (5-10x faster)
+        if (SpriteRenderingAdapter.renderAsSprite(ctx, this)) {
+            return; // Sprite rendered successfully
+        }
+        
+        // Fallback: Render normally (first frame, or sprite not available)
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
         
         // Apply phase offset for animation diversity
