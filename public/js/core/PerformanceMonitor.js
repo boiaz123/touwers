@@ -77,25 +77,10 @@ export class PerformanceMonitor {
         if (!this.enabled) return;
         
         const stats = this.getStats();
-        
-        // Get batch rendering stats if available
-        let batchStats = '';
-        try {
-            const canvas = document.getElementById('gameCanvas');
-            if (canvas && canvas._webglCtx && canvas._webglCtx.getBatchStats) {
-                const batch = canvas._webglCtx.getBatchStats();
-                if (batch) {
-                    batchStats = ` | Batches: ${batch.totalBatches} | Ops: ${batch.totalOperations} | Avg: ${batch.avgBatchSize}`;
-                }
-            }
-        } catch (e) {
-            // Batch stats not available
-        }
-        
-        const text = `FPS: ${stats.fps} | Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms${batchStats}`;
+        const text = `FPS: ${stats.fps} | Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms`;
         
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x, y, Math.min(800, ctx.canvas.width - x - 5), 25);
+        ctx.fillRect(x, y, 300, 25);
         
         ctx.fillStyle = stats.fps < 30 ? '#ff0000' : stats.fps < 50 ? '#ffff00' : '#00ff00';
         ctx.font = '12px monospace';

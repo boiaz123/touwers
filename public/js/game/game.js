@@ -9,7 +9,6 @@ import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { ResolutionSelector } from '../ui/ResolutionSelector.js';
-import { WebGLCanvas2D } from '../core/rendering/WebGLCanvas2D.js';
 
 export class Game {
     constructor() {
@@ -17,9 +16,11 @@ export class Game {
         
         try {
             this.canvas = document.getElementById('gameCanvas');
-            
-            // Use WebGL-accelerated canvas renderer with Canvas2D fallback
-            this.ctx = new WebGLCanvas2D(this.canvas);
+            // Use performance-optimized context options
+            this.ctx = this.canvas.getContext('2d', {
+                alpha: false,
+                desynchronized: true
+            });
             
             if (!this.canvas) {
                 throw new Error('Canvas element not found');
@@ -38,12 +39,6 @@ export class Game {
             const resolution = ResolutionSettings.getResolution(savedResolution);
             this.canvas.width = resolution.width;
             this.canvas.height = resolution.height;
-            
-            // Update fallback canvas size too
-            if (this.ctx.fallbackCanvas) {
-                this.ctx.fallbackCanvas.width = resolution.width;
-                this.ctx.fallbackCanvas.height = resolution.height;
-            }
             
             // Optimize canvas rendering performance
             this.ctx.imageSmoothingEnabled = false;
@@ -66,12 +61,6 @@ export class Game {
             this.stateManager.resolutionManager = this.resolutionManager;
             this.stateManager.game = this; // Set game reference for resolution selector access
 // console.log('Game: GameStateManager created with SaveSystem and ResolutionManager');
-            
-            // Enable Phase 2 Sprite Atlasing for 5-10x performance improvement
-            if (typeof this.ctx.setPhase2Enabled === 'function') {
-                this.ctx.setPhase2Enabled(true);
-                console.log('Game: Phase 2 Sprite Atlasing enabled for performance optimization');
-            }
             
             // Initialize game loop timing
             this.lastTime = 0;
@@ -322,11 +311,6 @@ export class Game {
                 this.ctx.font = '24px serif';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
-            }
-            
-            // Flush any pending drawing operations to screen
-            if (this.ctx.flush) {
-                this.ctx.flush();
             }
             
         } catch (error) {
