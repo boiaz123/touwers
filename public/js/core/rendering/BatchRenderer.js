@@ -27,6 +27,15 @@ export class BatchRenderer {
      * Add a drawing operation to the batch queue
      */
     addOperation(operation) {
+        // Skip batching for complex operations that can't be batched reliably
+        // This prevents rendering issues with certain draw operations
+        if (operation.type === 'path' || operation.type === 'image' || 
+            (operation.type === 'arc' && !Number.isFinite(operation.radius))) {
+            // Execute immediately instead of queuing
+            this.renderOperation(operation);
+            return;
+        }
+        
         this.queue.push(operation);
         this.stats.totalOperations++;
         
@@ -279,24 +288,39 @@ export class BatchRenderer {
                 this.ctx2d.strokeRect(op.x, op.y, op.width, op.height);
                 break;
                 
-            case 'arc':
+            case 'arc': {
                 this.ctx2d.beginPath();
-                this.ctx2d.arc(op.x, op.y, op.radius, op.startAngle, op.endAngle);
-                if (op.fillStyle) this.ctx2d.fill();
-                if (op.strokeStyle) this.ctx2d.stroke();
+                this.ctx2d.arc(op.x, op.y, op.radius, op.startAngle, op.endAngle, false);
+                // Only fill/stroke if style is defined
+                if (op.fillStyle && op.fillStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.fill();
+                }
+                if (op.strokeStyle && op.strokeStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.stroke();
+                }
                 break;
+            }
                 
-            case 'ellipse':
+            case 'ellipse': {
                 this.ctx2d.beginPath();
-                this.ctx2d.ellipse(op.x, op.y, op.radiusX, op.radiusY, op.rotation, op.startAngle, op.endAngle);
-                if (op.fillStyle) this.ctx2d.fill();
-                if (op.strokeStyle) this.ctx2d.stroke();
+                this.ctx2d.ellipse(op.x, op.y, op.radiusX, op.radiusY, op.rotation, op.startAngle, op.endAngle, false);
+                if (op.fillStyle && op.fillStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.fill();
+                }
+                if (op.strokeStyle && op.strokeStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.stroke();
+                }
                 break;
+            }
                 
             case 'path':
                 this.renderPath(op.pathData);
-                if (op.fillStyle) this.ctx2d.fill();
-                if (op.strokeStyle) this.ctx2d.stroke();
+                if (op.fillStyle && op.fillStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.fill();
+                }
+                if (op.strokeStyle && op.strokeStyle !== 'rgba(0, 0, 0, 0)') {
+                    this.ctx2d.stroke();
+                }
                 break;
                 
             case 'image':

@@ -35,13 +35,14 @@ export class WebGLCanvas2D {
         this.ctx2d.imageSmoothingEnabled = true;
         this.ctx2d.imageSmoothingQuality = 'low';
         
-        // Phase 1: Initialize batch renderer (disabled by default for compatibility)
-        this.batchRenderer = new BatchRenderer(this.ctx2d);
-        this.batchingEnabled = false; // DISABLED: Batching causes rendering issues with complex paths/gradients
-        // Will implement optimized batching in Phase 2 that properly handles all operations
-        
         // Gradient Cache: Eliminates expensive per-frame gradient recreation
         this.gradientCache = new GradientCache(500);
+        // Expose gradient cache to context so entities can use it
+        this.ctx2d.gradientCache = this.gradientCache;
+        
+        // Phase 1: Initialize batch renderer
+        this.batchRenderer = new BatchRenderer(this.ctx2d);
+        this.batchingEnabled = false; // ENABLED: Properly configured batching for performance
         
         // Phase 2: Initialize sprite-enhanced batch renderer
         this.phase2Renderer = new Phase2BatchRenderer(this.ctx2d);
@@ -96,6 +97,41 @@ export class WebGLCanvas2D {
             if (this.batchRenderer) {
                 this.batchRenderer.clearGradientCache();
             }
+        }
+    }
+    
+    /**
+     * Enable or disable Phase 2 sprite rendering
+     */
+    setPhase2Enabled(enabled) {
+        this.phase2Enabled = enabled;
+        if (this.phase2Renderer) {
+            this.phase2Renderer.spriteRenderingEnabled = enabled;
+        }
+    }
+    
+    /**
+     * Get batch rendering statistics for performance monitoring
+     */
+    getBatchStats() {
+        if (!this.batchRenderer) return null;
+        const stats = this.batchRenderer.stats;
+        const avgBatchSize = stats.totalOperations > 0 ? 
+            Math.round(stats.totalOperations / (stats.totalBatches || 1)) : 0;
+        return {
+            totalBatches: stats.totalBatches,
+            totalOperations: stats.totalOperations,
+            avgBatchSize: avgBatchSize,
+            gradientCacheHits: stats.gradientCacheHits
+        };
+    }
+    
+    /**
+     * Flush batched operations to main canvas
+     */
+    flush() {
+        if (this.batchingEnabled && this.batchRenderer) {
+            this.batchRenderer.flush();
         }
     }
     
