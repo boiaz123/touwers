@@ -9,6 +9,7 @@ import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { ResolutionSelector } from '../ui/ResolutionSelector.js';
+import { PixiRenderer } from '../core/rendering/PixiRenderer.js';
 
 export class Game {
     constructor() {
@@ -16,17 +17,9 @@ export class Game {
         
         try {
             this.canvas = document.getElementById('gameCanvas');
-            // Use performance-optimized context options
-            this.ctx = this.canvas.getContext('2d', {
-                alpha: false,
-                desynchronized: true
-            });
             
             if (!this.canvas) {
                 throw new Error('Canvas element not found');
-            }
-            if (!this.ctx) {
-                throw new Error('Canvas context not available');
             }
             
 // console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
@@ -40,10 +33,13 @@ export class Game {
             this.canvas.width = resolution.width;
             this.canvas.height = resolution.height;
             
-            // Optimize canvas rendering performance
+            // Initialize PixiRenderer instead of canvas 2D context
+            this.ctx = new PixiRenderer(this.canvas);
+            
+            // Emulate the optimization settings for compatibility
             this.ctx.imageSmoothingEnabled = false;
             this.ctx.imageSmoothingQuality = 'low';
-// console.log('Game: Canvas set to fixed resolution:', this.canvas.width, 'x', this.canvas.height);
+// console.log('Game: PixiRenderer initialized at resolution:', this.canvas.width, 'x', this.canvas.height);
             
             // Prevent infinite resize loops
             this.isResizing = false;
@@ -312,6 +308,9 @@ export class Game {
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
             }
+            
+            // Render with Pixi
+            this.ctx.render();
             
         } catch (error) {
             console.error('Game: Error in game loop:', error);
