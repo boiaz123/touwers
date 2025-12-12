@@ -3,7 +3,7 @@ import { BaseEnemy } from './BaseEnemy.js';
 export class ShieldKnightEnemy extends BaseEnemy {
     constructor(path, health_multiplier = 1.0, speed = 35) {
         super(path, 180 * health_multiplier, speed);
-        this.tunicColor = this.getRandomTunicColor();
+        this.armorColor = this.getRandomArmorColor();
         this.sizeMultiplier = 1.05;
         
         this.attackDamage = 5;
@@ -12,318 +12,313 @@ export class ShieldKnightEnemy extends BaseEnemy {
 // console.log('ShieldKnightEnemy: Created at position', this.x, this.y);
     }
     
-    getRandomTunicColor() {
-        const tunicColors = [
+    getRandomArmorColor() {
+        const armorColors = [
             '#4A5568', '#2C3E50', '#34495E', '#1A252F', '#3E4C59', '#556B82'
         ];
-        return tunicColors[Math.floor(Math.random() * tunicColors.length)];
+        return armorColors[Math.floor(Math.random() * armorColors.length)];
     }
     
     render(ctx) {
         const baseSize = Math.max(6.3, Math.min(14.7, ctx.canvas.width / 150)) * this.sizeMultiplier;
         
-        // Apply phase offset - slightly slower for shield knight
+        // Pre-calculate animation values once
         const animTime = (this.animationTime * 7.5 + this.animationPhaseOffset);
-        const walkCycle = Math.sin(animTime) * 0.5;
-        const bobAnimation = Math.sin(animTime) * 0.3;
+        const sinAnimTime = Math.sin(animTime);
+        const cosAnimTime = Math.cos(animTime);
+        const walkCycle = sinAnimTime * 0.4;
+        const bobAnimation = sinAnimTime * 0.25;
         
-        const armSwingFreq = animTime;
-        const leftArmBase = Math.sin(armSwingFreq) * 0.6;
-        const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
-        const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;
-        const rightArmBend = Math.sin(armSwingFreq * 2 + Math.PI / 3) * 0.18;
-        
-        // Enemy shadow - medium size
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        // Enemy shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 1.6, baseSize * 0.95, baseSize * 0.28, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 1.5, baseSize * 0.95, baseSize * 0.28, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.save();
         ctx.translate(this.x, this.y + bobAnimation);
         
-        // Back/depth layer
-        ctx.fillStyle = this.darkenColor(this.tunicColor, 0.22);
-        ctx.fillRect(-baseSize * 0.68, -baseSize * 0.78, baseSize * 1.36, baseSize * 1.15);
+        // --- ARMOR BODY PLATE (SIMPLIFIED) ---
         
-        // Main armor/body
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.65, -baseSize * 0.85, baseSize * 0.65, baseSize * 0.42);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.18));
+        // Main chest plate - solid color (no gradient)
+        ctx.fillStyle = this.armorColor;
+        ctx.fillRect(-baseSize * 0.65, -baseSize * 0.7, baseSize * 1.3, baseSize * 1.05);
         
-        ctx.fillStyle = bodyGradient;
-        ctx.fillRect(-baseSize * 0.64, -baseSize * 0.84, baseSize * 1.28, baseSize * 1.26);
-        
+        // Armor outline
         ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 1.1;
-        ctx.strokeRect(-baseSize * 0.64, -baseSize * 0.84, baseSize * 1.28, baseSize * 1.26);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-baseSize * 0.65, -baseSize * 0.7, baseSize * 1.3, baseSize * 1.05);
         
-        // Center seam
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
-        ctx.lineWidth = 0.6;
+        // --- SHOULDER PAULDRONS ---
+        
+        // Left and right shoulders - simplified
+        ctx.fillStyle = '#5A6B7A';
         ctx.beginPath();
-        ctx.moveTo(0, -baseSize * 0.84);
-        ctx.lineTo(0, baseSize * 0.42);
+        ctx.arc(-baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Medium armor plates on chest
-        ctx.fillStyle = '#7a8a9a';
-        ctx.fillRect(-baseSize * 0.55, -baseSize * 0.65, baseSize * 1.1, baseSize * 0.75);
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.9;
-        ctx.strokeRect(-baseSize * 0.55, -baseSize * 0.65, baseSize * 1.1, baseSize * 0.75);
+        // --- ARMOR RIVETS (MINIMAL) ---
         
-        // Armor rivets
-        ctx.fillStyle = '#3a4a5a';
-        for (let i = -1; i <= 1; i++) {
-            for (let j = 0; j < 2; j++) {
-                ctx.beginPath();
-                ctx.arc(i * baseSize * 0.3, -baseSize * 0.45 + j * baseSize * 0.4, 0.7, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+        // Chest plate rivets - reduced
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 0.5, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 0.2, 0.9, 0, Math.PI * 2);
+        ctx.fill();
         
-        // Side highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-        ctx.fillRect(-baseSize * 0.61, -baseSize * 0.77, baseSize * 0.22, baseSize * 0.9);
+        // --- HEAD WITH CLOSED HELM (SIMPLIFIED) ---
         
-        // --- HEAD WITH HELMET ---
-        
+        // Head (simplified - no gradient)
         ctx.fillStyle = '#C4A575';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.05, -baseSize * 1.25, baseSize * 0.58, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 1.25, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.1, -baseSize * 1.35, baseSize * 0.22, 0, -baseSize * 1.3, baseSize * 0.65);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
+        // --- CLOSED HELM (solid color) ---
         
-        ctx.fillStyle = headGradient;
+        // Helm body - full coverage
+        ctx.fillStyle = '#4a4a4a';
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.3, baseSize * 0.55, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 1.25, baseSize * 0.68, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = '#B8956A';
-        ctx.lineWidth = 0.55;
+        // Helm outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.3, baseSize * 0.55, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 1.25, baseSize * 0.68, 0, Math.PI * 2);
         ctx.stroke();
         
-        // --- KNIGHT HELMET ---
+        // Visor and nose guard
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(-baseSize * 0.35, -baseSize * 1.28, baseSize * 0.7, baseSize * 0.12);
+        ctx.fillRect(-baseSize * 0.08, -baseSize * 1.25, baseSize * 0.16, baseSize * 0.4);
         
-        const helmetGradient = ctx.createLinearGradient(-baseSize * 0.65, -baseSize * 1.42, baseSize * 0.65, -baseSize * 0.95);
-        helmetGradient.addColorStop(0, '#5a6a7a');
-        helmetGradient.addColorStop(0.5, '#4a5a6a');
-        helmetGradient.addColorStop(1, '#3a4a5a');
-        
-        ctx.fillStyle = helmetGradient;
+        // Helm crest - ornamental ridge
+        ctx.strokeStyle = '#5A6B7A';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.3, baseSize * 0.68, Math.PI * 0.93, Math.PI * 2.07);
+        ctx.moveTo(0, -baseSize * 1.92);
+        ctx.lineTo(-baseSize * 0.15, -baseSize * 1.55);
+        ctx.lineTo(baseSize * 0.15, -baseSize * 1.55);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = '#5A6B7A';
         ctx.fill();
         
-        // Helmet nose guard
-        ctx.fillStyle = '#4a5a6a';
-        ctx.fillRect(-baseSize * 0.11, -baseSize * 1.25, baseSize * 0.22, baseSize * 0.42);
-        
+        // Helm detail - cheek guards
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.3;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.65, -baseSize * 1.3);
-        ctx.lineTo(baseSize * 0.65, -baseSize * 1.3);
+        ctx.arc(-baseSize * 0.45, -baseSize * 1.1, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.45, -baseSize * 1.1, baseSize * 0.12, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Helmet highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.18, -baseSize * 1.48, baseSize * 0.17, 0, Math.PI * 2);
-        ctx.fill();
+        // Eye slit glow detail
+        ctx.fillStyle = 'rgba(255, 100, 50, 0.3)';
+        ctx.fillRect(-baseSize * 0.28, -baseSize * 1.3, baseSize * 0.56, baseSize * 0.08);
         
-        // --- LEFT ARM ---
+        // --- LEFT ARM WITH SHIELD ---
         
-        const leftShoulderX = -baseSize * 0.54;
-        const leftShoulderY = -baseSize * 0.38;
+        const leftShoulderX = -baseSize * 0.65;
+        const leftShoulderY = -baseSize * 0.35;
         
-        const leftSwingForward = leftArmBase;
-        const leftArmDropAmount = -leftSwingForward * 0.7;
-        const leftArmForwardOffset = leftSwingForward * 0.3;
+        // Left arm - shield arm positioned at body height, defensive
+        const leftArmAngle = 0.2; // Angled to hold shield in defense
+        const cosLeftArm = Math.cos(leftArmAngle);
+        const sinLeftArm = Math.sin(leftArmAngle);
+        const leftElbowX = leftShoulderX + cosLeftArm * baseSize * 0.35;
+        const leftElbowY = leftShoulderY + sinLeftArm * baseSize * 0.35;
         
-        const leftElbowX = leftShoulderX + leftArmForwardOffset * baseSize * 0.44;
-        const leftElbowY = leftShoulderY + baseSize * 0.5 + leftArmDropAmount * baseSize * 0.32;
+        // Wrist positioned for shield
+        const leftWristX = leftElbowX + cosLeftArm * baseSize * 0.42;
+        const leftWristY = leftElbowY + sinLeftArm * baseSize * 0.42;
         
-        const leftWristX = leftElbowX + leftArmForwardOffset * baseSize * 0.38;
-        const leftWristY = leftElbowY + (baseSize * 0.65 + leftArmBend * baseSize * 0.16);
-        
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.11 + Math.max(0, leftSwingForward) * 0.16})`;
-        ctx.lineWidth = baseSize * 0.34;
-        ctx.beginPath();
-        ctx.moveTo(leftShoulderX + 0.6, leftShoulderY + 0.6);
-        ctx.lineTo(leftElbowX + 0.6, leftElbowY + 0.6);
-        ctx.lineTo(leftWristX + 0.6, leftWristY + 0.6);
-        ctx.stroke();
-        
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.89 + Math.abs(leftSwingForward) * 0.11})`);
-        
-        ctx.strokeStyle = leftUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.36;
+        // Left arm (simplified - solid color)
+        ctx.strokeStyle = '#C9A876';
+        ctx.lineWidth = baseSize * 0.35;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(leftShoulderX, leftShoulderY);
         ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.stroke();
-        
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.94 + Math.abs(leftSwingForward) * 0.06})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = leftLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.28;
-        ctx.beginPath();
-        ctx.moveTo(leftElbowX, leftElbowY);
         ctx.lineTo(leftWristX, leftWristY);
         ctx.stroke();
         
-        // Left hand with gauntlet
-        ctx.fillStyle = '#5a6a7a';
+        // Left gauntlet
+        ctx.fillStyle = '#5A6B7A';
         ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.19, 0, Math.PI * 2);
+        ctx.arc(leftWristX, leftWristY, baseSize * 0.22, 0, Math.PI * 2);
         ctx.fill();
+        
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.75;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.19, 0, Math.PI * 2);
+        ctx.arc(leftWristX, leftWristY, baseSize * 0.22, 0, Math.PI * 2);
         ctx.stroke();
         
-        // --- LEFT ARM SHIELD (KITE SHIELD) - PROTECTIVE POSITION ---
+        // --- SHIELD ---
         
-        // Shield positioned at upper body with curved arm protection
-        const shieldX = leftWristX - baseSize * 0.25; // Further left for curved arm
-        const shieldY = leftWristY - baseSize * 0.15; // Higher up on body
-        this.drawKiteShield(ctx, shieldX, shieldY, baseSize, 0.1); // Minimal rotation, more protective
+        this.drawSimpleShield(ctx, leftWristX, leftWristY, baseSize);
         
         // --- RIGHT ARM WITH SCIMITAR ---
         
-        const rightShoulderX = baseSize * 0.54;
-        const rightShoulderY = -baseSize * 0.38;
+        const rightShoulderX = baseSize * 0.65;
+        const rightShoulderY = -baseSize * 0.35;
         
-        const rightSwingForward = rightArmBase;
-        const rightArmDropAmount = -rightSwingForward * 0.7;
-        const rightArmForwardOffset = rightSwingForward * 0.3;
+        // Right arm - sword arm positioned upward, offensive
+        const rightArmAngle = -0.5; // Angled upward
+        const cosRightArm = Math.cos(rightArmAngle);
+        const sinRightArm = Math.sin(rightArmAngle);
+        const rightElbowX = rightShoulderX + cosRightArm * baseSize * 0.35;
+        const rightElbowY = rightShoulderY + sinRightArm * baseSize * 0.35;
         
-        const rightElbowX = rightShoulderX + rightArmForwardOffset * baseSize * 0.44;
-        const rightElbowY = rightShoulderY + baseSize * 0.5 + rightArmDropAmount * baseSize * 0.32;
+        // Wrist positioned for sword
+        const rightWristX = rightElbowX + cosRightArm * baseSize * 0.42;
+        const rightWristY = rightElbowY + sinRightArm * baseSize * 0.42;
         
-        const rightWristX = rightElbowX + rightArmForwardOffset * baseSize * 0.38;
-        const rightWristY = rightElbowY + (baseSize * 0.65 + rightArmBend * baseSize * 0.16);
-        
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.11 + Math.max(0, rightSwingForward) * 0.16})`;
-        ctx.lineWidth = baseSize * 0.34;
-        ctx.beginPath();
-        ctx.moveTo(rightShoulderX + 0.6, rightShoulderY + 0.6);
-        ctx.lineTo(rightElbowX + 0.6, rightElbowY + 0.6);
-        ctx.lineTo(rightWristX + 0.6, rightWristY + 0.6);
-        ctx.stroke();
-        
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.89 + Math.abs(rightSwingForward) * 0.11})`);
-        
-        ctx.strokeStyle = rightUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.36;
+        // Right arm (simplified - solid color)
+        ctx.strokeStyle = '#C9A876';
+        ctx.lineWidth = baseSize * 0.35;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(rightShoulderX, rightShoulderY);
         ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.stroke();
-        
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.94 + Math.abs(rightSwingForward) * 0.06})`);
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = rightLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.28;
-        ctx.beginPath();
-        ctx.moveTo(rightElbowX, rightElbowY);
         ctx.lineTo(rightWristX, rightWristY);
         ctx.stroke();
         
-        // Right hand with gauntlet
-        ctx.fillStyle = '#5a6a7a';
+        // Right gauntlet
+        ctx.fillStyle = '#5A6B7A';
         ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.19, 0, Math.PI * 2);
+        ctx.arc(rightWristX, rightWristY, baseSize * 0.22, 0, Math.PI * 2);
         ctx.fill();
+        
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.75;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.19, 0, Math.PI * 2);
+        ctx.arc(rightWristX, rightWristY, baseSize * 0.22, 0, Math.PI * 2);
         ctx.stroke();
         
-        // --- SCIMITAR - UPRIGHT OFFENSIVE POSITION ---
+        // --- SMALL SINGLE-HANDED SWORD ---
         
-        this.drawScimitar(ctx, rightWristX, rightWristY, baseSize, rightSwingForward);
+        this.drawSingleHandedSword(ctx, rightWristX, rightWristY, baseSize, walkCycle);
         
-        // --- LEGS ---
+        // --- LEGS WITH LEG ARMOR (SIMPLIFIED) ---
         
-        const leftHipX = -baseSize * 0.27;
-        const leftHipY = baseSize * 0.36;
+        const leftHipX = -baseSize * 0.28;
+        const leftHipY = baseSize * 0.35;
         
-        const leftLegAngle = walkCycle * 0.35;
-        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.75;
+        const leftLegAngle = walkCycle * 0.3;
+        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.7;
         const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.85;
         
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.27;
-        ctx.beginPath();
-        ctx.moveTo(leftHipX + 1, leftHipY + 1);
-        ctx.lineTo(leftFootX + 1, leftFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.27;
+        // Left leg upper thigh armor
+        ctx.strokeStyle = '#4A5568';
+        ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(leftHipX, leftHipY);
+        const leftKneeX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.35;
+        const leftKneeY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.42;
+        ctx.lineTo(leftKneeX, leftKneeY);
+        ctx.stroke();
+        
+        // Left knee joint
+        ctx.fillStyle = '#5A6B7A';
+        ctx.beginPath();
+        ctx.arc(leftKneeX, leftKneeY, baseSize * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Left leg lower shin armor
+        ctx.strokeStyle = '#4A5568';
+        ctx.lineWidth = baseSize * 0.26;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(leftKneeX, leftKneeY);
         ctx.lineTo(leftFootX, leftFootY);
         ctx.stroke();
         
-        const rightHipX = baseSize * 0.27;
-        const rightHipY = baseSize * 0.36;
+        const rightHipX = baseSize * 0.28;
+        const rightHipY = baseSize * 0.35;
         
-        const rightLegAngle = -walkCycle * 0.35;
-        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.75;
+        const rightLegAngle = -walkCycle * 0.3;
+        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.7;
         const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.85;
         
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.27;
-        ctx.beginPath();
-        ctx.moveTo(rightHipX + 1, rightHipY + 1);
-        ctx.lineTo(rightFootX + 1, rightFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.27;
+        // Right leg upper thigh armor
+        ctx.strokeStyle = '#4A5568';
+        ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(rightHipX, rightHipY);
+        const rightKneeX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.35;
+        const rightKneeY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.42;
+        ctx.lineTo(rightKneeX, rightKneeY);
+        ctx.stroke();
+        
+        // Right knee joint
+        ctx.fillStyle = '#5A6B7A';
+        ctx.beginPath();
+        ctx.arc(rightKneeX, rightKneeY, baseSize * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Right leg lower shin armor
+        ctx.strokeStyle = '#4A5568';
+        ctx.lineWidth = baseSize * 0.26;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(rightKneeX, rightKneeY);
         ctx.lineTo(rightFootX, rightFootY);
         ctx.stroke();
         
-        // --- BOOTS ---
+        // --- ARMORED BOOTS (SIMPLIFIED) ---
         
-        ctx.fillStyle = '#0d0d0d';
+        // Left boot
+        ctx.fillStyle = '#2a2a2a';
         ctx.beginPath();
-        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.16, baseSize * 0.22, baseSize * 0.17, walkCycle * 0.3, 0, Math.PI * 2);
+        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.18, baseSize * 0.26, baseSize * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = '#0d0d0d';
+        ctx.strokeStyle = '#5A6B7A';
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.16, baseSize * 0.22, baseSize * 0.17, -walkCycle * 0.3, 0, Math.PI * 2);
+        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.18, baseSize * 0.26, baseSize * 0.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Right boot
+        ctx.fillStyle = '#2a2a2a';
+        ctx.beginPath();
+        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.18, baseSize * 0.26, baseSize * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.strokeStyle = '#5A6B7A';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.18, baseSize * 0.26, baseSize * 0.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
         
         ctx.restore();
         
@@ -362,195 +357,102 @@ export class ShieldKnightEnemy extends BaseEnemy {
         return 0;
     }
     
-    drawKiteShield(ctx, handX, handY, baseSize, armSwing) {
+    drawSimpleShield(ctx, handX, handY, baseSize) {
         ctx.save();
         ctx.translate(handX, handY);
         
-        // Shield angle - angled to protect upper body
-        const shieldAngle = 0.2; // Tilted to match curved arm
-        ctx.rotate(shieldAngle);
+        // Shield angle - protective position
+        ctx.rotate(-0.25);
         
-        // Kite shield shape - much larger now
-        const shieldWidth = baseSize * 0.58;
-        const shieldHeight = baseSize * 0.95;
-        const pointDepth = baseSize * 0.2;
+        const shieldWidth = baseSize * 0.68;
+        const shieldHeight = baseSize * 1.05;
         
-        // Shield shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2 + 0.8, -shieldHeight / 2 + 0.8);
-        ctx.lineTo(shieldWidth / 2 + 0.8, -shieldHeight / 2 + 0.8);
-        ctx.lineTo(shieldWidth / 2 + 0.8, shieldHeight / 2 - pointDepth + 0.8);
-        ctx.lineTo(0 + 0.8, shieldHeight / 2 + pointDepth + 0.8);
-        ctx.lineTo(-shieldWidth / 2 + 0.8, shieldHeight / 2 - pointDepth + 0.8);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Main shield body with gradient
-        const shieldGradient = ctx.createLinearGradient(-shieldWidth / 2, -shieldHeight / 2, shieldWidth / 2, shieldHeight / 2);
-        shieldGradient.addColorStop(0, '#8a7a6a');
-        shieldGradient.addColorStop(0.5, '#9a8a7a');
-        shieldGradient.addColorStop(1, '#6a5a4a');
-        
-        ctx.fillStyle = shieldGradient;
+        // Shield body - solid color
+        ctx.fillStyle = '#8a7a6a';
         ctx.beginPath();
         ctx.moveTo(-shieldWidth / 2, -shieldHeight / 2);
         ctx.lineTo(shieldWidth / 2, -shieldHeight / 2);
-        ctx.lineTo(shieldWidth / 2, shieldHeight / 2 - pointDepth);
-        ctx.lineTo(0, shieldHeight / 2 + pointDepth);
-        ctx.lineTo(-shieldWidth / 2, shieldHeight / 2 - pointDepth);
+        ctx.lineTo(shieldWidth / 2, shieldHeight / 2 - baseSize * 0.18);
+        ctx.lineTo(0, shieldHeight / 2 + baseSize * 0.18);
+        ctx.lineTo(-shieldWidth / 2, shieldHeight / 2 - baseSize * 0.18);
         ctx.closePath();
         ctx.fill();
         
         // Shield edge
         ctx.strokeStyle = '#4a3a2a';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2, -shieldHeight / 2);
-        ctx.lineTo(shieldWidth / 2, -shieldHeight / 2);
-        ctx.lineTo(shieldWidth / 2, shieldHeight / 2 - pointDepth);
-        ctx.lineTo(0, shieldHeight / 2 + pointDepth);
-        ctx.lineTo(-shieldWidth / 2, shieldHeight / 2 - pointDepth);
-        ctx.closePath();
+        ctx.lineWidth = 1.8;
         ctx.stroke();
         
-        // Shield highlight (left side for shine) - larger
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2 + baseSize * 0.1, -shieldHeight / 2 + baseSize * 0.12);
-        ctx.lineTo(-shieldWidth / 2 + baseSize * 0.16, shieldHeight / 3);
-        ctx.lineTo(-shieldWidth / 2 + baseSize * 0.06, shieldHeight / 3);
-        ctx.lineTo(-shieldWidth / 2 + baseSize * 0.06, -shieldHeight / 2 + baseSize * 0.12);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Shield boss (raised center circle) - larger
+        // Shield boss (raised center circle)
         ctx.fillStyle = '#5a4a3a';
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.08, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 0.1, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.strokeStyle = '#3a2a1a';
         ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.08, baseSize * 0.18, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Boss highlight - larger
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.08, -baseSize * 0.16, baseSize * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Additional shield straps/bands for detail
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2 + baseSize * 0.08, -shieldHeight / 4);
-        ctx.lineTo(shieldWidth / 2 - baseSize * 0.08, -shieldHeight / 4);
-        ctx.stroke();
-        
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2 + baseSize * 0.08, shieldHeight / 6);
-        ctx.lineTo(shieldWidth / 2 - baseSize * 0.08, shieldHeight / 6);
         ctx.stroke();
         
         ctx.restore();
     }
     
-    drawScimitar(ctx, handX, handY, baseSize, armSwing) {
+    drawSingleHandedSword(ctx, handX, handY, baseSize, walkCycle) {
         ctx.save();
         ctx.translate(handX, handY);
         
-        // Scimitar angle - held upright with pommel down
-        const swordAngle = -Math.PI / 2; // Perfectly upright
+        // Sword angle - upright pointing up with tilt to the right
+        const swordAngle = 0.35 + walkCycle * 0.08;
         ctx.rotate(swordAngle);
         
-        const swordLength = baseSize * 1.8;
-        const bladeWidth = baseSize * 0.2;
-        const curveAmount = -baseSize * 0.4; // Negative for curve pointing upward
+        const swordLength = baseSize * 1.4;
+        const bladeWidth = baseSize * 0.22;
         
-        // Sword shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = bladeWidth;
+        // Sword blade - solid color (no gradient for better performance)
+        ctx.fillStyle = '#A8A8A8';
         ctx.beginPath();
-        ctx.moveTo(0.8, 0.8);
-        ctx.quadraticCurveTo(curveAmount + 0.8, swordLength / 2 + 0.8, 0.8, swordLength + 0.8);
-        ctx.stroke();
-        
-        // Scimitar blade - curved upward with gradient
-        const bladeGradient = ctx.createLinearGradient(0, 0, curveAmount * 2, swordLength);
-        bladeGradient.addColorStop(0, '#C0C0C0');
-        bladeGradient.addColorStop(0.5, '#D0D0D0');
-        bladeGradient.addColorStop(1, '#A0A0A0');
-        
-        ctx.strokeStyle = bladeGradient;
-        ctx.lineWidth = bladeWidth;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(curveAmount, swordLength / 2, 0, swordLength);
-        ctx.stroke();
-        
-        // Blade edge highlight (curved side pointing up) - more prominent
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = baseSize * 0.08;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.03, baseSize * 0.1);
-        ctx.quadraticCurveTo(curveAmount * 0.85, swordLength / 2, -baseSize * 0.03, swordLength - baseSize * 0.12);
-        ctx.stroke();
-        
-        // Sword tip - sharp point at top
-        ctx.fillStyle = '#808080';
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.1, swordLength - baseSize * 0.12);
-        ctx.lineTo(baseSize * 0.1, swordLength - baseSize * 0.12);
-        ctx.lineTo(0, swordLength + baseSize * 0.12);
+        ctx.moveTo(-bladeWidth/2, 0);
+        ctx.lineTo(bladeWidth/2, 0);
+        ctx.lineTo(baseSize * 0.1, -swordLength);
+        ctx.lineTo(-baseSize * 0.1, -swordLength);
         ctx.closePath();
         ctx.fill();
         
-        // Sword guard (crossbar) - larger
-        ctx.fillStyle = '#D4AF37';
-        ctx.fillRect(-baseSize * 0.35, -baseSize * 0.12, baseSize * 0.7, baseSize * 0.24);
-        ctx.strokeStyle = '#8B7500';
+        // Blade outline
+        ctx.strokeStyle = '#505050';
         ctx.lineWidth = 1;
-        ctx.strokeRect(-baseSize * 0.35, -baseSize * 0.12, baseSize * 0.7, baseSize * 0.24);
-        
-        // Guard details - crossbar ornaments
-        ctx.fillStyle = '#C9A534';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.22, 0, baseSize * 0.04, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.22, 0, baseSize * 0.04, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Sword pommel (handle) - positioned at bottom when upright
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(-baseSize * 0.1, baseSize * 0.12, baseSize * 0.2, baseSize * 0.3);
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(-baseSize * 0.1, baseSize * 0.12, baseSize * 0.2, baseSize * 0.3);
-        
-        // Pommel cap
-        ctx.fillStyle = '#D4AF37';
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.44, baseSize * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.44, baseSize * 0.08, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Pommel highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        // --- SWORD CROSS-GUARD ---
+        
+        ctx.fillStyle = '#D4AF37';
+        ctx.fillRect(-baseSize * 0.3, -baseSize * 0.1, baseSize * 0.6, baseSize * 0.2);
+        
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-baseSize * 0.3, -baseSize * 0.1, baseSize * 0.6, baseSize * 0.2);
+        
+        // --- SWORD HANDLE ---
+        
+        const handleLength = baseSize * 0.45;
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(-baseSize * 0.1, baseSize * 0.1, baseSize * 0.2, handleLength);
+        
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(-baseSize * 0.1, baseSize * 0.1, baseSize * 0.2, handleLength);
+        
+        // --- SWORD POMMEL ---
+        
+        ctx.fillStyle = '#D4AF37';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.03, baseSize * 0.40, baseSize * 0.04, 0, Math.PI * 2);
+        ctx.arc(0, baseSize * 0.62, baseSize * 0.16, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.62, baseSize * 0.16, 0, Math.PI * 2);
+        ctx.stroke();
         
         ctx.restore();
     }
