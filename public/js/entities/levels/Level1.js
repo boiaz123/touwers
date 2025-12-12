@@ -66,7 +66,7 @@ export class Level1 extends LevelBase {
     getWaveConfig(wave) {
         // Wave configuration - 10 waves with only basic, villager, archer
         const waveConfigs = [
-            { enemyCount: 1000, enemyHealth_multiplier: 1., enemySpeed: 35, spawnInterval: 0.6, pattern: ['frog'] },
+            { enemyCount: 1000, enemyHealth_multiplier: 1., enemySpeed: 35, spawnInterval: 0.6, pattern: ['knight'] },
             { enemyCount: 14, enemyHealth_multiplier: 1.1, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic', 'basic', 'villager'] },
             { enemyCount: 17, enemyHealth_multiplier: 1.2, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager', 'basic'] },
             { enemyCount: 20, enemyHealth_multiplier: 1.3, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
