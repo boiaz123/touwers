@@ -1,6 +1,9 @@
 import { BaseEnemy } from './BaseEnemy.js';
 
 export class FrogEnemy extends BaseEnemy {
+    // Static color cache to avoid recalculation
+    static colorCache = new Map();
+    
     constructor(path, health_multiplier = 1.0, speed = 55) {
         super(path, 85 * health_multiplier, speed);
         this.skinColor = this.getRandomSkinColor();
@@ -15,6 +18,11 @@ export class FrogEnemy extends BaseEnemy {
         this.jumpAnimationDuration = 0.4;
         this.jumpHeight = 20;
         
+        // Cache for color variations to avoid recalculation
+        this.cachedLightenColor = null;
+        this.cachedDarkenColor = null;
+        this.cachedDarken2Color = null;
+        
 // console.log('FrogEnemy: Created at position', this.x, this.y);
     }
     
@@ -28,20 +36,25 @@ export class FrogEnemy extends BaseEnemy {
     update(deltaTime) {
         super.update(deltaTime);
         
+        // Reduce particle spawn frequency - spawn every 0.3s instead of 0.15s
         this.particleSpawnCounter += deltaTime;
-        if (this.particleSpawnCounter > 0.15) {
+        if (this.particleSpawnCounter > 0.3) {
             this.spawnMagicParticle();
             this.particleSpawnCounter = 0;
         }
         
-        // Update magic particles
-        this.magicParticles = this.magicParticles.filter(particle => {
+        // Update magic particles - inline to avoid function call overhead
+        let i = this.magicParticles.length;
+        while (i--) {
+            const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            return particle.life > 0;
-        });
+            if (particle.life <= 0) {
+                this.magicParticles.splice(i, 1);
+            }
+        }
         
         // Update jump animation timer
         this.jumpAnimationTimer += deltaTime;
@@ -149,6 +162,9 @@ export class FrogEnemy extends BaseEnemy {
     spawnMagicParticle() {
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.random() * 15 + 5;
+        // Limit total particles per frog to prevent memory bloat
+        if (this.magicParticles.length >= 8) return;
+        
         this.magicParticles.push({
             x: this.x + Math.cos(angle) * radius,
             y: this.y + Math.sin(angle) * radius - 10,
@@ -157,13 +173,76 @@ export class FrogEnemy extends BaseEnemy {
             life: 1.2,
             maxLife: 1.2,
             size: Math.random() * 2.5 + 1.5,
-            color: this.getMagicParticleColor()
+            colorIndex: Math.floor(Math.random() * 3)
         });
     }
     
     getMagicParticleColor() {
-        const colors = ['rgba(100, 200, 255, ', 'rgba(150, 255, 100, ', 'rgba(255, 200, 100, '];
+        // Return color index instead of building string - avoids string concatenation
+        const colors = [0, 1, 2];
         return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    // Static method for getting cached color variations
+    static getCachedColor(baseColor, type) {
+        const key = `${baseColor}_${type}`;
+        if (!FrogEnemy.colorCache.has(key)) {
+            let color;
+            if (type === 'lighten') {
+                color = FrogEnemy.lightenColorStatic(baseColor, 0.2);
+            } else if (type === 'lighten_body') {
+                color = FrogEnemy.lightenColorStatic(baseColor, 0.4);
+            } else if (type === 'darken') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.25);
+            } else if (type === 'darken_body') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.35);
+            } else if (type === 'darken_leg') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.05);
+            } else if (type === 'darken_detail') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.3);
+            } else if (type === 'darken_mouth') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.4);
+            } else if (type === 'darken_eye') {
+                color = FrogEnemy.darkenColorStatic(baseColor, 0.15);
+            } else if (type === 'lighten_foot') {
+                color = FrogEnemy.lightenColorStatic(baseColor, 0.15);
+            }
+            FrogEnemy.colorCache.set(key, color);
+        }
+        return FrogEnemy.colorCache.get(key);
+    }
+    
+    // Static version of color manipulation to use caching
+    static lightenColorStatic(color, factor) {
+        if (color.startsWith('#')) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            
+            const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
+            const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
+            const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
+            
+            return `rgb(${newR}, ${newG}, ${newB})`;
+        }
+        return color;
+    }
+    
+    static darkenColorStatic(color, factor) {
+        if (color.startsWith('#')) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            
+            const newR = Math.max(0, Math.floor(r * (1 - factor)));
+            const newG = Math.max(0, Math.floor(g * (1 - factor)));
+            const newB = Math.max(0, Math.floor(b * (1 - factor)));
+            
+            return `rgb(${newR}, ${newG}, ${newB})`;
+        }
+        return color;
     }
     
     takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
@@ -191,6 +270,13 @@ export class FrogEnemy extends BaseEnemy {
         
         ctx.translate(this.x, this.y - jumpArc);
         
+        // Cache colors for this render - only calculate once per frame
+        if (!this.cachedLightenColor) {
+            this.cachedLightenColor = FrogEnemy.getCachedColor(this.skinColor, 'lighten');
+            this.cachedDarkenColor = FrogEnemy.getCachedColor(this.skinColor, 'darken');
+            this.cachedDarken2Color = FrogEnemy.getCachedColor(this.skinColor, 'darken_body');
+        }
+        
         // --- FROG BODY ---
         
         // Back legs (lower) - more prominent and frog-like
@@ -199,23 +285,23 @@ export class FrogEnemy extends BaseEnemy {
         
         // Main body (rounded, more compact)
         const bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
-        bodyGradient.addColorStop(0, this.lightenColor(this.skinColor, 0.2));
+        bodyGradient.addColorStop(0, FrogEnemy.getCachedColor(this.skinColor, 'lighten'));
         bodyGradient.addColorStop(0.6, this.skinColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.skinColor, 0.25));
+        bodyGradient.addColorStop(1, this.cachedDarken2Color);
         
         ctx.fillStyle = bodyGradient;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.35);
+        ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
         ctx.stroke();
         
         // Belly (lighter color)
-        ctx.fillStyle = this.lightenColor(this.skinColor, 0.4);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_body');
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.15, baseSize * 0.38, baseSize * 0.42, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -232,7 +318,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.35);
+        ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
@@ -241,7 +327,7 @@ export class FrogEnemy extends BaseEnemy {
         // --- EYES (LARGE BULGING, FROG-LIKE) ---
         
         // Left eye socket
-        ctx.fillStyle = this.darkenColor(this.skinColor, 0.15);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
         ctx.beginPath();
         ctx.arc(-baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
@@ -270,7 +356,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.fill();
         
         // Right eye socket
-        ctx.fillStyle = this.darkenColor(this.skinColor, 0.15);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
         ctx.beginPath();
         ctx.arc(baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
@@ -301,7 +387,7 @@ export class FrogEnemy extends BaseEnemy {
         // --- MOUTH ---
         
         // Wide frog mouth
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.4);
+        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_mouth');
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 0.25, baseSize * 0.22, 0, Math.PI);
@@ -316,7 +402,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Nostril details
-        ctx.fillStyle = this.darkenColor(this.skinColor, 0.3);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
         ctx.beginPath();
         ctx.arc(-baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
@@ -330,13 +416,20 @@ export class FrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES ---
         
-        this.magicParticles.forEach(particle => {
+        const particleColors = [
+            'rgba(100, 200, 255, ',
+            'rgba(150, 255, 100, ',
+            'rgba(255, 200, 100, '
+        ];
+        
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             const alpha = particle.life / particle.maxLife;
-            ctx.fillStyle = particle.color + alpha + ')';
+            ctx.fillStyle = particleColors[particle.colorIndex] + alpha + ')';
             ctx.beginPath();
             ctx.arc(particle.x - this.x, particle.y - this.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
         
         ctx.restore();
         
@@ -357,7 +450,9 @@ export class FrogEnemy extends BaseEnemy {
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
         
         // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            this.hitSplatters[i].render(ctx);
+        }
     }
     
     drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight) {
@@ -387,7 +482,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Draw leg - thicker for muscular appearance
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.05);
+        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
         ctx.lineWidth = baseSize * 0.2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -398,13 +493,13 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Foot pads - webbed appearance
-        ctx.fillStyle = this.lightenColor(this.skinColor, 0.15);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
         ctx.beginPath();
         ctx.ellipse(footX, footY, baseSize * 0.16, baseSize * 0.18, calfAngle, 0, Math.PI * 2);
         ctx.fill();
         
         // Toe details - webbing
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.2);
+        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
         ctx.lineWidth = 0.8;
         for (let i = -1; i <= 1; i++) {
             const toeAngle = calfAngle + (i * 0.3);
@@ -444,7 +539,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Draw leg
-        ctx.strokeStyle = this.darkenColor(this.skinColor, 0.05);
+        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
         ctx.lineWidth = baseSize * 0.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -455,7 +550,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Hand pads
-        ctx.fillStyle = this.lightenColor(this.skinColor, 0.15);
+        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
         ctx.beginPath();
         ctx.ellipse(handX, handY, baseSize * 0.11, baseSize * 0.13, lowerAngle, 0, Math.PI * 2);
         ctx.fill();
@@ -519,34 +614,10 @@ export class FrogEnemy extends BaseEnemy {
     }
     
     lightenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
-            const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
-            const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
+        return FrogEnemy.lightenColorStatic(color, factor);
     }
     
     darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
+        return FrogEnemy.darkenColorStatic(color, factor);
     }
 }
