@@ -27,7 +27,6 @@ export class BeefyEnemy extends BaseEnemy {
         // Performance tracking for health bar rendering
         this.lastDamageTime = null;
         
-        // console.log('BeefyEnemy: Created at position', this.x, this.y);
     }
     
     getRandomTunicColor() {

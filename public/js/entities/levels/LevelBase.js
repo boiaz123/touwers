@@ -64,7 +64,6 @@ export class LevelBase {
             edgeGrassColor: '#2e8b2e'
         };
         
-// console.log(this.constructor.name + ': Constructor completed');
     }
     
     // Method to update visual configuration for a level
@@ -95,7 +94,6 @@ export class LevelBase {
         // Use provided resolution manager or create one if not available
         if (resolutionManager && !this.resolutionManager) {
             this.resolutionManager = resolutionManager;
-// console.log('Level: ResolutionManager injected');
         }
         
         // Always reinitialize if canvas size changed significantly
@@ -108,7 +106,6 @@ export class LevelBase {
             return; // Already initialized for this size
         }
         
-// console.log(`Level: Initializing for canvas size ${canvasWidth}x${canvasHeight}`);
         
         // Set initialization flag to prevent recursion
         this.isInitializing = true;
@@ -120,7 +117,6 @@ export class LevelBase {
                 this.cellSize = this.resolutionManager.cellSize;
                 this.gridWidth = this.resolutionManager.gridWidth;
                 this.gridHeight = this.resolutionManager.gridHeight;
-// console.log(`Level: Using ResolutionManager values - cellSize: ${this.cellSize}, grid: ${this.gridWidth}x${this.gridHeight}`);
             } else {
                 // Fallback: simple proportional scaling
                 console.warn('Level: ResolutionManager not available, using fallback scaling');
@@ -133,7 +129,6 @@ export class LevelBase {
 
             // Create a more complex, meandering path that uses more of the map
             this.createMeanderingPath(canvasWidth, canvasHeight);
-// console.log('Level: Created path with', this.path.length, 'waypoints');
             
             // Create castle at the end of the path
             this.createCastle();
@@ -157,7 +152,6 @@ export class LevelBase {
             this.lastCanvasHeight = canvasHeight;
             this.isInitialized = true;
             
-// console.log('Level: Initialization complete, path starts at', this.path[0], 'ends at', this.path[this.path.length - 1]);
         } catch (error) {
             console.error('Level: Error during initialization:', error);
         } finally {
@@ -206,7 +200,6 @@ export class LevelBase {
             y: Math.round(point.gridY * this.cellSize)
         }));
         
-// console.log('Level: Path created in grid coords, then converted to screen coords. First:', this.path[0], 'Last:', this.path[this.path.length - 1]);
     }
     
     markPathCells() {
@@ -305,7 +298,6 @@ export class LevelBase {
         for (let x = gridX; x < gridX + size; x++) {
             for (let y = gridY; y < gridY + size; y++) {
                 if (!this.isValidGridPosition(x, y) || this.occupiedCells.has(`${x},${y}`)) {
-// console.log(`Building placement blocked at grid (${x}, ${y}) - Valid: ${this.isValidGridPosition(x, y)}, Occupied: ${this.occupiedCells.has(`${x},${y}`)}`);
                     return false;
                 }
             }
@@ -313,7 +305,6 @@ export class LevelBase {
         
         // Check if there's already a building at this position
         if (towerManager && towerManager.isBuildingPositionOccupied(gridX, gridY, size)) {
-// console.log(`Building placement blocked - position already occupied by another building`);
             return false;
         }
         
@@ -1020,7 +1011,6 @@ export class LevelBase {
         // Load the real Castle class and create instance
         import('../buildings/Castle.js').then(module => {
             this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
-// console.log('Level: Castle created at grid', castleGridX, castleGridY);
         }).catch(err => {
             console.error('Level: Could not load Castle:', err);
             // Create fallback placeholder with render method
@@ -1033,7 +1023,6 @@ export class LevelBase {
                 maxHealth: 100,
                 takeDamage: function(amount) {
                     this.health -= amount;
-// console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
                 },
                 isDestroyed: function() {
                     return this.health <= 0;

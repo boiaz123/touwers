@@ -9,7 +9,6 @@ export class KnightEnemy extends BaseEnemy {
         this.attackDamage = 7;
         this.attackSpeed = 0.7;
         
-// console.log('KnightEnemy: Created at position', this.x, this.y);
     }
     
     updatePath(newPath) {
@@ -39,7 +38,6 @@ export class KnightEnemy extends BaseEnemy {
             this.y = this.path[0].y;
         }
         
-// console.log('KnightEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
     }
     
     update(deltaTime) {
@@ -49,14 +47,12 @@ export class KnightEnemy extends BaseEnemy {
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
-// console.log('KnightEnemy: Reached end of path');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-// console.log('KnightEnemy: No target waypoint, reached end');
             return;
         }
         

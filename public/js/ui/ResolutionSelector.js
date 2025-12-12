@@ -201,7 +201,6 @@ export class ResolutionSelector {
         const resolution = ResolutionSettings.getResolution(key);
         ResolutionSettings.saveResolution(key);
         
-// console.log(`Resolution selected: ${key} (${resolution.width}x${resolution.height})`);
         
         // Apply game resolution (Tauri handles window sizing via fullscreen mode)
         if (this.game && this.game.applyResolution) {
@@ -219,11 +218,9 @@ export class ResolutionSelector {
         if (enable) {
             const success = await ResolutionSettings.requestFullscreen(document.documentElement);
             if (success) {
-// console.log('Fullscreen enabled');
             }
         } else {
             await ResolutionSettings.exitFullscreen();
-// console.log('Fullscreen disabled');
         }
     }
 

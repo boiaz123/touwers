@@ -61,7 +61,6 @@ export class SaveSystem {
         };
 
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saves));
-// console.log(`Game saved to slot ${slotNumber}`, saves[slotKey]);
         return true;
     }
 
@@ -79,7 +78,6 @@ export class SaveSystem {
         saves[slotKey] = null;
 
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saves));
-// console.log(`Save slot ${slotNumber} deleted`);
         return true;
     }
 

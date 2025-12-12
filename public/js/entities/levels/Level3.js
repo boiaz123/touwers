@@ -29,7 +29,6 @@ export class Level3 extends LevelBase {
             edgeGrassColor: '#56512bff'
         });
         
-// console.log('Level3: Initialized');
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
@@ -59,7 +58,6 @@ export class Level3 extends LevelBase {
             y: Math.round(point.gridY * this.cellSize)
         }));
         
-// console.log('Level3: Path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     getWaveConfig(wave) {

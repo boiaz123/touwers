@@ -38,11 +38,9 @@ export class LevelSelect {
         
         if (statsBar) {
             statsBar.style.display = 'none';
-// console.log('LevelSelect: Stats bar hidden');
         }
         if (sidebar) {
             sidebar.style.display = 'none';
-// console.log('LevelSelect: Sidebar hidden');
         }
         
         // Reload levels with current save data
@@ -372,7 +370,6 @@ export class LevelSelect {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
 
-// console.log(`LevelSelect: Button clicked - ${button.action}`);
 
                 switch (button.action) {
                     case 'save':
@@ -429,7 +426,6 @@ export class LevelSelect {
 
             SaveSystem.saveGame(this.stateManager.currentSaveSlot, saveData);
             this.stateManager.currentSaveData = saveData;
-// console.log('Game saved to slot', this.stateManager.currentSaveSlot);
         }
     }
 }

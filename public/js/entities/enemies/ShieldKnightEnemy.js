@@ -9,7 +9,6 @@ export class ShieldKnightEnemy extends BaseEnemy {
         this.attackDamage = 5;
         this.attackSpeed = 0.6;
         
-// console.log('ShieldKnightEnemy: Created at position', this.x, this.y);
     }
     
     getRandomArmorColor() {

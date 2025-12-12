@@ -8,7 +8,6 @@ export class ArcherEnemy extends BaseEnemy {
         this.attackDamage = 8;
         this.attackSpeed = 1.5;
         
-// console.log('ArcherEnemy: Created at position', this.x, this.y);
     }
     
     render(ctx) {

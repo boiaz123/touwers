@@ -72,7 +72,6 @@ export class BaseEnemy {
             this.y = this.path[0].y;
         }
         
-        // console.log(`${this.constructor.name}: Path updated, now at index`, this.currentPathIndex);
     }
     
     update(deltaTime) {
@@ -103,7 +102,6 @@ export class BaseEnemy {
                     if (distanceToDefender < 50) {
                         this.reachedEnd = true;
                         this.isAttackingCastle = false;
-// console.log(`${this.constructor.name}: Reached path defender`);
                         return;
                     }
                     
@@ -143,7 +141,6 @@ export class BaseEnemy {
                                 if (angleDiff < Math.PI * 0.4 && distToDefender < 100) {
                                     this.reachedEnd = true;
                                     this.isAttackingCastle = false;
-// console.log(`${this.constructor.name}: Blocked by path defender on segment`);
                                     return;
                                 }
                             }
@@ -166,7 +163,6 @@ export class BaseEnemy {
             if (distanceToWaypoint < 50) {
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
-// console.log(`${this.constructor.name}: Reached defender waypoint at path index ${this.defenderWaypoint.pathIndex}`);
                 return;
             }
         }
@@ -174,7 +170,6 @@ export class BaseEnemy {
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-// console.log(`${this.constructor.name}: Reached end of path`);
             return;
         }
         
@@ -182,7 +177,6 @@ export class BaseEnemy {
         if (!target) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-// console.log(`${this.constructor.name}: No target waypoint, reached end`);
             return;
         }
         
@@ -204,7 +198,6 @@ export class BaseEnemy {
                         // Defender is on our path - stop before reaching it
                         this.reachedEnd = true;
                         this.isAttackingCastle = false;
-// console.log(`${this.constructor.name}: Blocked by path defender`);
                         return;
                     }
                 }

@@ -20,7 +20,6 @@ export class MainMenu {
         this.buttonHeight = 50;
         this.buttonGap = 20;
 
-// console.log('MainMenu: constructor called');
     }
 
     initParticles() {
@@ -35,7 +34,6 @@ export class MainMenu {
             return;
         }
 
-// console.log('MainMenu: Initializing particles');
         this.particles = [];
 
         for (let i = 0; i < 25; i++) {
@@ -52,7 +50,6 @@ export class MainMenu {
     }
 
     enter() {
-// console.log('MainMenu: enter called');
 
         // Hide game UI
         const statsBar = document.getElementById('stats-bar');
@@ -142,7 +139,6 @@ export class MainMenu {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
 
-// console.log(`MainMenu: Button clicked - ${button.action}`);
 
                 switch (button.action) {
                     case 'newGame':

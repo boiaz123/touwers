@@ -29,7 +29,6 @@ export class Level1 extends LevelBase {
             edgeGrassColor: '#1a6a1a'
         });
         
-// console.log('Level1: Initialized');
     }
     
     createMeanderingPath(canvasWidth, canvasHeight) {
@@ -60,7 +59,6 @@ export class Level1 extends LevelBase {
             y: Math.round(point.gridY * this.cellSize)
         }));
         
-// console.log('Level1: Shorter S-curve path created in grid coords, first point:', this.path[0], 'last point:', this.path[this.path.length - 1]);
     }
     
     getWaveConfig(wave) {

@@ -1160,7 +1160,6 @@ export class TowerForge extends Building {
         upgrade.level++;
         
         this.notifyUpgradeChanged();
-// console.log(`TowerForge: Purchased ${upgradeType} upgrade level ${upgrade.level}`);
         return true;
     }
     
@@ -1174,7 +1173,6 @@ export class TowerForge extends Building {
         gameState.gold -= cost;
         this.forgeLevel++;
         
-// console.log(`TowerForge: Upgraded forge to level ${this.forgeLevel}`);
         return true;
     }
     

@@ -59,7 +59,6 @@ export class Castle {
         this.defenderDeadCooldown = 0; // Cooldown before hiring new defender after death
         this.maxDefenderCooldown = 10; // 10 seconds cooldown after defender dies
         
-// console.log('Castle: Created at grid position', gridX, gridY, 'screen position', x, y);
     }
     
     update(deltaTime) {
@@ -85,7 +84,6 @@ export class Castle {
     takeDamage(amount) {
         this.health -= amount;
         this.damageFlashTimer = this.damageFlashDuration;
-// console.log(`Castle: Took ${amount} damage, health now ${this.health}/${this.maxHealth}`);
     }
     
     isDestroyed() {
@@ -606,7 +604,6 @@ export class Castle {
         this.maxHealth += 50;
         this.health = this.maxHealth;
         
-// console.log(`Castle: Purchased Fortification level ${this.fortificationLevel}, max health now ${this.maxHealth}`);
         return true;
     }
     
@@ -620,7 +617,6 @@ export class Castle {
         gameState.gold -= cost;
         this.catapultLevel++;
         
-// console.log(`Castle: Purchased Catapult Defense level ${this.catapultLevel}`);
         return true;
     }
     
@@ -635,20 +631,17 @@ export class Castle {
     hireDefender(defenderLevel, gameState) {
         // Check if we can hire
         if (this.defender && !this.defender.isDead()) {
-// console.log('Castle: Defender is already active');
             return false;
         }
         
         // Check cooldown after defender death
         if (this.defenderDeadCooldown > 0) {
-// console.log(`Castle: Cannot hire defender yet - cooldown ${this.defenderDeadCooldown.toFixed(1)}s remaining`);
             return false;
         }
         
         // Calculate cost based on level
         const cost = this.calculateDefenderCost(defenderLevel);
         if (!cost || gameState.gold < cost) {
-// console.log(`Castle: Cannot afford defender level ${defenderLevel} - cost: ${cost}, gold: ${gameState.gold}`);
             return false;
         }
         
@@ -659,7 +652,6 @@ export class Castle {
         this.defender.x = this.x - 60; // Position in front of castle
         this.defender.y = this.y + 40; // Ground level
         
-// console.log(`Castle: Hired Level ${defenderLevel} Defender for ${cost} gold`);
         return true;
     }
     
@@ -685,7 +677,6 @@ export class Castle {
     checkDefenderDeath() {
         if (this.defender && this.defender.isDead() && this.defenderDeadCooldown <= 0) {
             this.defenderDeadCooldown = this.maxDefenderCooldown;
-// console.log(`Castle: Defender died - cooldown started (${this.maxDefenderCooldown}s)`);
         }
     }
     

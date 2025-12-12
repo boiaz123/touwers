@@ -282,7 +282,6 @@ export class GoldMine extends Building {
                     this.currentGemType = gemTypes[Math.floor(Math.random() * gemTypes.length)];
                 }
                 
-// console.log(`GoldMine: ${this.gemMode ? 'Gem' : 'Gold'} production completed, ready to collect`);
             }
         }
         
@@ -378,7 +377,6 @@ export class GoldMine extends Building {
     collectGold() {
         // Only allow collection if ready
         if (!this.goldReady) {
-// console.log(`GoldMine: ${this.gemMode ? 'Gem' : 'Gold'} not ready yet. ${(this.productionTime - this.currentProduction).toFixed(1)}s remaining`);
             return 0;
         }
         
@@ -393,7 +391,6 @@ export class GoldMine extends Building {
             // Assume academy reference is available (set by game state)
             if (this.academy) {
                 this.academy.addGem(gemType);
-// console.log(`GoldMine: Collected 1 ${gemType} gem`);
                 
                 // Add floating text for gem collection
                 this.floatingTexts.push({
@@ -408,7 +405,6 @@ export class GoldMine extends Building {
                 // New: 10% chance to also get a diamond if diamond mining is unlocked
                 if (this.academy.diamondMiningUnlocked && Math.random() < 0.1) {
                     this.academy.addDiamond();
-// console.log(`GoldMine: Bonus! Collected 1 diamond`);
                     
                     this.floatingTexts.push({
                         x: this.x,
@@ -451,7 +447,6 @@ export class GoldMine extends Building {
                 gemType: 'gold'
             });
             
-// console.log(`GoldMine: Collected ${income} gold (base: ${this.getBaseIncome()}, multiplier: ${this.incomeMultiplier || 1})`);
             return income;
         }
     }
@@ -460,7 +455,6 @@ export class GoldMine extends Building {
     toggleGemMode() {
         if (this.gemMiningUnlocked) {
             this.gemMode = !this.gemMode;
-// console.log(`GoldMine: Gem mode ${this.gemMode ? 'enabled' : 'disabled'}`);
         }
     }
     
@@ -471,7 +465,6 @@ export class GoldMine extends Building {
         if (academy) {
             this.gemMiningUnlocked = this.gemMiningUnlocked || academy.gemMiningResearched;
         }
-// console.log(`GoldMine: setAcademy called, gemMiningUnlocked = ${this.gemMiningUnlocked}`);
     }
     
     render(ctx, size) {
@@ -1034,12 +1027,10 @@ export class GoldMine extends Building {
     }
     
     onClick() {
-// console.log(`GoldMine.onClick called`);
         
         // If ready, collect immediately without showing menu
         if (this.goldReady) {
             const collected = this.collectGold();
-// console.log(`GoldMine: Auto-collected ${collected} gold/gems`);
             return collected;
         }
         

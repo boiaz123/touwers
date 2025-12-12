@@ -24,7 +24,6 @@ export class VillagerEnemy extends BaseEnemy {
         // Torch particle system (lightweight)
         this.torchParticles = [];
         
-// console.log('VillagerEnemy: Created at position', this.x, this.y, 'with weapon:', this.weaponType);
     }
     
     getRandomTunicColor() {
@@ -67,7 +66,6 @@ export class VillagerEnemy extends BaseEnemy {
             this.y = this.path[0].y;
         }
         
-// console.log('VillagerEnemy: Path updated, now at index', this.currentPathIndex, 'position', this.x, this.y);
     }
     
     update(deltaTime) {
@@ -92,14 +90,12 @@ export class VillagerEnemy extends BaseEnemy {
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
-// console.log('VillagerEnemy: Reached castle, ready to attack!');
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
-// console.log('VillagerEnemy: No target waypoint, reached end');
             return;
         }
         

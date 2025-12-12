@@ -56,7 +56,6 @@ export class UIManager {
             
             // Debug superweapon button
             if (buildingType === 'superweapon') {
-// console.log(`updateButtonStates: superweapon - isUnlocked: ${isUnlocked}, superweaponUnlocked: ${this.towerManager.unlockSystem.superweaponUnlocked}`);
             }
             
             // Hide if not unlocked, show if unlocked
@@ -129,14 +128,11 @@ export class UIManager {
             speedCircles.forEach(circle => {
                 circle.addEventListener('click', (e) => {
                     const speed = parseFloat(e.target.dataset.speed);
-// console.log(`UIManager: Speed ${speed}x clicked`);
                     this.gameplayState.setGameSpeed(speed);
                     this.updateSpeedCircles(speed);
                 });
             });
-// console.log('UIManager: Speed circles setup complete');
         } else {
-// console.log('UIManager: Speed circles not found');
         }
 
         // ============ PAUSE AND MENU BUTTONS ============
@@ -504,7 +500,6 @@ export class UIManager {
         
         // Only rebuild if the number of spells changed (new unlock)
         if (currentButtonCount !== availableSpells.length) {
-// console.log(`UIManager: Rebuilding spell buttons - count changed from ${currentButtonCount} to ${availableSpells.length}`);
             spellButtonsList.innerHTML = '';
             
             // Create a button for each unlocked spell
@@ -521,15 +516,11 @@ export class UIManager {
                     e.stopPropagation();
                     // Prevent spell casting when game is paused
                     if (this.gameplayState.isPaused) {
-// console.log(`UIManager: Spell casting disabled - game is paused`);
                         return;
                     }
-// console.log(`UIManager: Spell button clicked for ${spell.id}, currentCooldown: ${spell.currentCooldown}`);
                     if (spell.currentCooldown === 0) {
-// console.log(`UIManager: ✓ Activating spell targeting for ${spell.id}`);
                         this.gameplayState.activateSpellTargeting(spell.id);
                     } else {
-// console.log(`UIManager: Spell ${spell.id} is on cooldown`);
                     }
                 });
                 
@@ -608,7 +599,6 @@ export class UIManager {
         
         // Debug logging for sandbox
         if (this.gameplayState.isSandbox) {
-// console.log('UIManager: updateUI - Current gems:', gems);
         }
         
         this.updateUIAvailability();
@@ -652,7 +642,6 @@ export class UIManager {
             
             // Debug superweapon button
             if (type === 'superweapon') {
-// console.log(`updateUIAvailability: superweapon - isUnlocked: ${isUnlocked}, superweaponUnlocked: ${unlockSystem.superweaponUnlocked}`);
             }
             
             // Hide if not unlocked, show if unlocked
@@ -1051,7 +1040,6 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('academy-panel');
         
-// console.log('UIManager: Showing academy upgrade menu', academyData);
         
         const panel = document.getElementById('academy-panel');
         if (!panel) {
@@ -1288,7 +1276,6 @@ export class UIManager {
             return;
         }
         
-// console.log('UIManager: Showing magic tower element menu', towerData);
         
         // Generate panel content with element selection
         let contentHTML = '';
@@ -1350,7 +1337,6 @@ export class UIManager {
             btn.addEventListener('click', (e) => {
                 const elementId = e.target.dataset.element;
                 
-// console.log(`UIManager: Magic tower element selected: ${elementId}`);
                 
                 if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
                     // Refresh the menu
@@ -1386,7 +1372,6 @@ export class UIManager {
             return;
         }
         
-// console.log('UIManager: Showing combination tower spell menu', towerData);
         
         // Generate panel content with spell selection
         let contentHTML = '';
@@ -1448,7 +1433,6 @@ export class UIManager {
             btn.addEventListener('click', (e) => {
                 const spellId = e.target.dataset.spell;
                 
-// console.log(`UIManager: Combination tower spell selected: ${spellId}`);
                 
                 if (this.towerManager.selectCombinationTowerSpell(towerData.tower, spellId)) {
                     this.showCombinationTowerMenu({
@@ -1483,7 +1467,6 @@ export class UIManager {
             return;
         }
 
-// console.log('UIManager: Showing Guard Post menu', towerData);
 
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
@@ -1599,7 +1582,6 @@ export class UIManager {
         if (hireBtn) {
             hireBtn.addEventListener('click', () => {
                 if (tower.hireDefender(gameState)) {
-// console.log('UIManager: Defender hired successfully');
                     this.updateUI();
                     // Refresh menu
                     this.showGuardPostMenu(towerData);
@@ -1624,7 +1606,6 @@ export class UIManager {
         this.closeOtherPanelsImmediate('basic-tower-panel');
         
         // Generic tower stats menu for any tower type
-// console.log('UIManager: Showing tower stats menu', towerData);
         
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
@@ -1684,7 +1665,6 @@ export class UIManager {
         
         // Basic tower stats menu - using panel-based system
         
-// console.log('UIManager: Showing basic tower stats menu', towerData);
         
         const tower = towerData.tower;
         const stats = {
@@ -1751,14 +1731,12 @@ export class UIManager {
             return;
         }
         
-// console.log('UIManager: showSuperWeaponMenu called with:', menuData);
         
         let contentHTML = '';
         
         // Add lab level upgrade
         const labUpgrade = menuData.building.getLabUpgradeOption();
         if (labUpgrade) {
-// console.log('UIManager: Adding lab upgrade option:', labUpgrade);
             const isMaxed = labUpgrade.level >= labUpgrade.maxLevel;
             const labCost = isMaxed ? 0 : labUpgrade.cost;
             
@@ -1793,7 +1771,6 @@ export class UIManager {
         }
         
         // Add spell unlocks and upgrades in categories
-// console.log('UIManager: Processing spells:', menuData.spells.length);
         
         // Organize spells into categories
         const unlockedSpells = menuData.spells.filter(s => s.unlocked);
@@ -1807,7 +1784,6 @@ export class UIManager {
                 const upgradeCost = spell.upgradeCost * spell.level;
                 const isMaxed = spell.level >= spell.maxLevel;
                 
-// console.log(`UIManager: Creating upgrade for ${spell.id}, cost: ${upgradeCost}, maxed: ${isMaxed}`);
                 contentHTML += `
                     <div class="upgrade-category">
                         <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
@@ -1845,7 +1821,6 @@ export class UIManager {
             contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #888; font-weight: bold; border-bottom: 1px solid rgba(136, 136, 136, 0.3); margin-top: 0.6rem;">🔒 Locked Spells</div>`;
             
             lockedSpells.forEach(spell => {
-// console.log(`UIManager: Creating unlock button for ${spell.id}`);
                 contentHTML += `
                     <div class="upgrade-category">
                         <div class="panel-upgrade-item locked">
@@ -2037,7 +2012,6 @@ export class UIManager {
                         this.updateButtonStates();
                         this.closePanelWithAnimation('castle-panel');
                     } else {
-// console.log('UIManager: Failed to hire defender');
                     }
                 }, { once: true });
             });
@@ -2054,7 +2028,6 @@ export class UIManager {
             return;
         }
         
-// console.log('UIManager: Showing training grounds upgrade menu', trainingData);
         
         let contentHTML = '';
         
@@ -2188,7 +2161,6 @@ export class UIManager {
                 const upgradeId = e.target.dataset.upgrade;
                 const towerType = e.target.dataset.towerType;
                 
-// console.log(`UIManager: Training upgrade selected: ${upgradeId}, towerType: ${towerType}`);
                 
                 let success = false;
                 if (upgradeId === 'training_level') {
@@ -2388,7 +2360,6 @@ export class UIManager {
             }
         }
         
-// console.log(`UIManager: Game paused state: ${wasPaused}`);
     }
 
     openPauseMenu() {
@@ -2410,7 +2381,6 @@ export class UIManager {
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         if (pauseMenuModal) {
             pauseMenuModal.classList.add('show');
-// console.log('UIManager: Pause menu opened');
         }
     }
 
@@ -2421,12 +2391,10 @@ export class UIManager {
             // Keep game paused when closing menu - only close the menu
             // Game remains in paused state
             
-// console.log('UIManager: Pause menu closed (game remains paused)');
         }
     }
 
     restartLevel() {
-// console.log('UIManager: Restarting level');
         
         // Close menu first
         this.closePauseMenu();
@@ -2444,7 +2412,6 @@ export class UIManager {
     }
 
     saveGame() {
-// console.log('UIManager: Saving game');
         try {
             SaveSystem.saveGame(
                 this.gameplayState.currentLevel,
@@ -2471,7 +2438,6 @@ export class UIManager {
     }
 
     exitToMenu() {
-// console.log('UIManager: Exiting to level select');
         // Close menu first
         this.closePauseMenu();
         

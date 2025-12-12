@@ -13,7 +13,6 @@ import { PixiRenderer } from '../core/rendering/PixiRenderer.js';
 
 export class Game {
     constructor() {
-// console.log('Game: Starting initialization');
         
         try {
             this.canvas = document.getElementById('gameCanvas');
@@ -22,7 +21,6 @@ export class Game {
                 throw new Error('Canvas element not found');
             }
             
-// console.log('Game: Canvas found, initial size:', this.canvas.width, 'x', this.canvas.height);
             
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
@@ -39,7 +37,6 @@ export class Game {
             // Emulate the optimization settings for compatibility
             this.ctx.imageSmoothingEnabled = false;
             this.ctx.imageSmoothingQuality = 'low';
-// console.log('Game: PixiRenderer initialized at resolution:', this.canvas.width, 'x', this.canvas.height);
             
             // Prevent infinite resize loops
             this.isResizing = false;
@@ -56,7 +53,6 @@ export class Game {
             this.stateManager.SaveSystem = SaveSystem;
             this.stateManager.resolutionManager = this.resolutionManager;
             this.stateManager.game = this; // Set game reference for resolution selector access
-// console.log('Game: GameStateManager created with SaveSystem and ResolutionManager');
             
             // Initialize game loop timing
             this.lastTime = 0;
@@ -82,34 +78,26 @@ export class Game {
     }
     
     initializeStates() {
-// console.log('Game: Adding states...');
         
         try {
             const mainMenu = new MainMenu(this.stateManager);
             this.stateManager.addState('mainMenu', mainMenu);
-// console.log('Game: MainMenu state added');
 
             const loadGame = new LoadGame(this.stateManager);
             this.stateManager.addState('loadGame', loadGame);
-// console.log('Game: LoadGame state added');
 
             const optionsMenu = new OptionsMenu(this.stateManager);
             this.stateManager.addState('options', optionsMenu);
-// console.log('Game: OptionsMenu state added');
             
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
-// console.log('Game: StartScreen state added');
             
             const levelSelect = new LevelSelect(this.stateManager);
             this.stateManager.addState('levelSelect', levelSelect);
-// console.log('Game: LevelSelect state added');
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);
-// console.log('Game: GameplayState added');
             
-// console.log('Game: All states added successfully');
             
             const stateChanged = this.stateManager.changeState('start');
             
@@ -118,7 +106,6 @@ export class Game {
             }
             
             this.isInitialized = true;
-// console.log('Game: State initialization complete, starting game loop');
             this.startGameLoop();
             
         } catch (error) {
@@ -148,7 +135,6 @@ export class Game {
                 document.body.classList.add('scale-1x');
             }
             
-// console.log('Game: UI scaling applied');
         } catch (error) {
             console.error('Game: Error applying UI scaling:', error);
         }
@@ -157,7 +143,6 @@ export class Game {
     resizeCanvas() {
         // For fixed resolution mode, canvas size is no longer dynamic
         // This method is kept for compatibility but does not resize on window resize
-// console.log('Game: Canvas is using fixed resolution mode');
     }
     
     setupEventListeners() {
@@ -209,7 +194,6 @@ export class Game {
                 e.preventDefault();
             });
             
-// console.log('Game: Event listeners set up successfully');
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);
         }
@@ -220,7 +204,6 @@ export class Game {
      */
     applyResolution(width, height) {
         try {
-// console.log(`Game: Applying resolution ${width}x${height}`);
             
             // Update canvas dimensions
             this.canvas.width = width;
@@ -237,7 +220,6 @@ export class Game {
             // Trigger resize on current state if available
             if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.resize) {
                 this.stateManager.currentState.resize();
-// console.log('Game: Current state resized to new resolution');
             }
         } catch (error) {
             console.error('Game: Error applying resolution:', error);
@@ -254,7 +236,6 @@ export class Game {
     }
     
     startGameLoop() {
-// console.log('Game: Game loop starting');
         requestAnimationFrame((time) => this.gameLoop(time));
     }
     
@@ -323,11 +304,9 @@ export class Game {
 
 // Initialize game on window load
 window.addEventListener('load', () => {
-// console.log('Window loaded, starting game initialization');
     
     try {
         new Game();
-// console.log('Game initialized successfully');
     } catch (error) {
         console.error('Critical error initializing game:', error);
         console.error('Stack trace:', error.stack);
