@@ -1,3 +1,5 @@
+import { SaveSystem } from '../core/SaveSystem.js';
+
 export class UIManager {
     constructor(gameplayState) {
         this.gameplayState = gameplayState;
@@ -2413,11 +2415,49 @@ export class UIManager {
 
     saveGame() {
         try {
+            // Validate that we have a save slot
+            if (!this.stateManager.currentSaveSlot || this.stateManager.currentSaveSlot < 1 || this.stateManager.currentSaveSlot > 3) {
+                console.error('UIManager: Invalid save slot:', this.stateManager.currentSaveSlot);
+                
+                // Show error message to player
+                const saveBtn = document.getElementById('save-btn');
+                if (saveBtn) {
+                    const originalText = saveBtn.textContent;
+                    saveBtn.textContent = 'Save Error!';
+                    saveBtn.disabled = true;
+                    
+                    setTimeout(() => {
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }, 2000);
+                }
+                return;
+            }
+            
+            // Perform a full mid-game save with complete state
+            const buildingManager = this.towerManager?.buildingManager;
+            const unlockSystem = this.towerManager?.unlockSystem;
+            
             SaveSystem.saveGame(
-                this.gameplayState.currentLevel,
-                this.gameState,
-                this.towerManager,
-                this.level
+                this.stateManager.currentSaveSlot,
+                {
+                    currentLevel: this.gameplayState.currentLevel,
+                    levelType: this.gameplayState.levelType,
+                    levelName: this.gameplayState.levelName,
+                    waveIndex: this.gameplayState.waveIndex || 0,
+                    waveInProgress: this.gameplayState.waveInProgress,
+                    spawnedEnemyCount: this.gameplayState.enemyManager?.enemies?.length || 0,
+                    totalEnemiesInWave: this.gameplayState.totalEnemiesInWave || 0,
+                    gameState: this.gameState,
+                    towerManager: this.towerManager,
+                    enemyManager: this.gameplayState.enemyManager,
+                    buildingManager: buildingManager,
+                    level: this.level,
+                    unlockedTowers: unlockSystem?.unlockedTowers ? Array.from(unlockSystem.unlockedTowers) : [],
+                    unlockedBuildings: unlockSystem?.unlockedBuildings ? Array.from(unlockSystem.unlockedBuildings) : [],
+                    unlockedLevels: this.stateManager.currentSaveData?.unlockedLevels || [],
+                    completedLevels: this.stateManager.currentSaveData?.completedLevels || []
+                }
             );
             
             // Show save confirmation
@@ -2434,6 +2474,19 @@ export class UIManager {
             }
         } catch (error) {
             console.error('UIManager: Error saving game:', error);
+            
+            // Show error message to player
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = 'Save Failed!';
+                saveBtn.disabled = true;
+                
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+                }, 2000);
+            }
         }
     }
 

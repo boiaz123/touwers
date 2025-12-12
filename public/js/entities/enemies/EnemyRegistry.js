@@ -118,7 +118,9 @@ export class EnemyRegistry {
         }
 
         const EnemyClass = enemyType.class;
-        return new EnemyClass(path, healthMultiplier, speed);
+        const enemy = new EnemyClass(path, healthMultiplier, speed);
+        enemy.type = type; // Store the type for serialization
+        return enemy;
     }
 
     /**

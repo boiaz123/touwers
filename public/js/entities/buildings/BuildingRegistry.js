@@ -86,6 +86,8 @@ export class BuildingRegistry {
     static createBuilding(type, x, y, gridX, gridY) {
         const buildingType = this.#registry[type];
         if (!buildingType) return null;
-        return new buildingType.class(x, y, gridX, gridY);
+        const building = new buildingType.class(x, y, gridX, gridY);
+        building.type = type; // Store the type for serialization
+        return building;
     }
 }

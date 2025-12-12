@@ -4,6 +4,7 @@ export class Tower {
         this.y = y;
         this.gridX = gridX;
         this.gridY = gridY;
+        this.type = null; // Will be set by TowerRegistry when creating
         
         // Tower stats - all measured in base units, not pixels
         // These stay constant across all resolutions

@@ -1,6 +1,7 @@
 import { GameStateManager } from '../core/states/GameStateManager.js';
 import { MainMenu } from '../core/states/MainMenu.js';
 import { LoadGame } from '../core/states/LoadGame.js';
+import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
 import { LevelSelect } from '../core/states/LevelSelect.js';
@@ -85,6 +86,9 @@ export class Game {
 
             const loadGame = new LoadGame(this.stateManager);
             this.stateManager.addState('loadGame', loadGame);
+
+            const saveSlotSelection = new SaveSlotSelection(this.stateManager);
+            this.stateManager.addState('saveSlotSelection', saveSlotSelection);
 
             const optionsMenu = new OptionsMenu(this.stateManager);
             this.stateManager.addState('options', optionsMenu);

@@ -1,6 +1,11 @@
 import { SaveSystem } from '../SaveSystem.js';
 
-export class LoadGame {
+/**
+ * SaveSlotSelection State
+ * Displayed after player selects "New Game"
+ * Player chooses which save slot to use for their new game
+ */
+export class SaveSlotSelection {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.animationTime = 0;
@@ -13,11 +18,9 @@ export class LoadGame {
         this.slotButtonWidth = 300;
         this.slotButtonHeight = 80;
         this.slotButtonGap = 40;
-
     }
 
     enter() {
-
         // Hide game UI
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -128,36 +131,16 @@ export class LoadGame {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
 
-                const saveData = SaveSystem.getSave(slotNum);
+                // Create new game in this slot
+                const newGameData = SaveSystem.createNewGameState();
+                SaveSystem.saveGame(slotNum, newGameData);
 
-                console.log('LoadGame: Clicked slot', slotNum);
-                console.log('LoadGame: Save data:', saveData);
+                // Set as current slot
+                this.stateManager.currentSaveSlot = slotNum;
+                this.stateManager.currentSaveData = newGameData;
 
-                if (saveData) {
-                    this.stateManager.currentSaveSlot = slotNum;
-                    this.stateManager.currentSaveData = saveData;
-                    
-                    // Check if this save has mid-game state (in-progress level)
-                    if (saveData.isMidGameSave && saveData.midGameState) {
-                        console.log('LoadGame: Found mid-game save, restoring from progress');
-                        console.log('LoadGame: midGameState:', saveData.midGameState);
-                        
-                        // Resume from mid-game
-                        this.stateManager.currentMidGameState = saveData.midGameState;
-                        this.stateManager.selectedLevelInfo = {
-                            id: saveData.currentLevel,
-                            name: saveData.levelName,
-                            type: saveData.levelType
-                        };
-                        this.stateManager.changeState('game');
-                    } else {
-                        console.log('LoadGame: Simple save found, going to level select');
-                        // Load level select to choose a level
-                        this.stateManager.changeState('levelSelect');
-                    }
-                } else {
-                    console.log('LoadGame: No save data found for slot', slotNum);
-                }
+                // Go to level select
+                this.stateManager.changeState('levelSelect');
             }
         });
     }
@@ -215,8 +198,13 @@ export class LoadGame {
             ctx.fillStyle = '#d4af37';
             ctx.strokeStyle = '#8b7355';
             ctx.lineWidth = 2;
-            ctx.fillText('LOAD GAME', canvas.width / 2, 100);
-            ctx.strokeText('LOAD GAME', canvas.width / 2, 100);
+            ctx.fillText('NEW GAME', canvas.width / 2, 100);
+            ctx.strokeText('NEW GAME', canvas.width / 2, 100);
+
+            // Subtitle
+            ctx.font = '18px serif';
+            ctx.fillStyle = '#c9a876';
+            ctx.fillText('Select a save slot', canvas.width / 2, 145);
 
             // Slots
             if (this.showContent) {
@@ -230,20 +218,20 @@ export class LoadGame {
             ctx.globalAlpha = 1;
 
         } catch (error) {
-            console.error('LoadGame render error:', error);
+            console.error('SaveSlotSelection render error:', error);
             ctx.fillStyle = '#2a1a0f';
             ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
             ctx.fillStyle = '#ff0000';
             ctx.font = '20px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('LoadGame Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
+            ctx.fillText('SaveSlotSelection Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 800) / 2);
         }
     }
 
     renderSaveSlot(ctx, slotNum, index) {
         const pos = this.getSlotPosition(index);
-        const saveInfo = SaveSystem.getSaveInfo(slotNum);
         const isHovered = this.hoveredSlot === slotNum;
+        const existingSave = SaveSystem.getSave(slotNum);
 
         // Slot background
         ctx.fillStyle = isHovered ? '#3a2a1a' : '#1a0f05';
@@ -260,18 +248,21 @@ export class LoadGame {
         ctx.font = 'bold 18px serif';
         ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, pos.y + 30);
 
-        if (saveInfo.isEmpty) {
-            ctx.font = '14px serif';
-            ctx.fillStyle = '#666';
-            ctx.fillText(saveInfo.displayText, pos.x + 20, pos.y + 55);
-        } else {
+        if (existingSave) {
+            const date = new Date(existingSave.timestamp);
+            const dateString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+            
             ctx.font = '16px serif';
             ctx.fillStyle = '#d4af37';
-            ctx.fillText(saveInfo.displayText, pos.x + 20, pos.y + 50);
+            ctx.fillText(`Progress: Level ${existingSave.lastPlayedLevel}`, pos.x + 20, pos.y + 50);
 
             ctx.font = '12px serif';
             ctx.fillStyle = '#999';
-            ctx.fillText(saveInfo.dateString, pos.x + 20, pos.y + 65);
+            ctx.fillText(`Last played: ${dateString}`, pos.x + 20, pos.y + 65);
+        } else {
+            ctx.font = '14px serif';
+            ctx.fillStyle = '#666';
+            ctx.fillText('Empty Slot - Click to start new game', pos.x + 20, pos.y + 55);
         }
     }
 }

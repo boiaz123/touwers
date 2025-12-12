@@ -6,6 +6,7 @@ export class BaseEnemy {
         this.health = health;
         this.maxHealth = health;
         this.speed = speed;
+        this.type = null; // Will be set by EnemyRegistry when creating
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;

@@ -5,6 +5,7 @@ export class Building {
         this.gridX = gridX;
         this.gridY = gridY;
         this.size = size;
+        this.type = null; // Will be set by BuildingRegistry when creating
         this.animationTime = 0;
     }
     

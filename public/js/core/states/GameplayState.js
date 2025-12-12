@@ -1,5 +1,6 @@
 import { TowerManager } from '../../entities/towers/TowerManager.js';
 import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
+import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
 import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
@@ -17,6 +18,7 @@ export class GameplayState {
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
         this.currentLevel = 1;
+        this.waveIndex = 0;
         this.waveInProgress = false;
         this.waveCompleted = false;
         this.superWeaponLab = null;
@@ -78,24 +80,47 @@ export class GameplayState {
             return;
         }
         
-        // Reset game state for new level
-        this.gameState = new GameState();
-        this.currentLevel = levelInfo.id;
-        this.levelType = levelInfo.type || 'campaign';
-        this.levelName = levelInfo.name || 'Unknown Level';
+        // Check if we're resuming from a mid-game save
+        const midGameState = this.stateManager.currentMidGameState;
+        const isMidGameResume = midGameState !== undefined && midGameState !== null;
         
-        // Configure level-specific settings
-        this.isSandbox = (this.levelType === 'sandbox');
+        console.log('GameplayState: Entering gameplay state');
+        console.log('GameplayState: isMidGameResume =', isMidGameResume);
+        console.log('GameplayState: midGameState =', midGameState);
         
-        if (this.isSandbox) {
-            this.gameState.gold = 100000;
-            this.maxWavesForLevel = Infinity;
-        } else {
+        if (isMidGameResume) {
+            // Restore game state from mid-game save
+            this.gameState = new GameState();
+            this.gameState.health = midGameState.gameState.health;
+            this.gameState.gold = midGameState.gameState.gold;
+            this.currentLevel = levelInfo.id;
+            this.levelType = levelInfo.type || 'campaign';
+            this.levelName = levelInfo.name || 'Unknown Level';
             this.maxWavesForLevel = 100;
+            this.waveInProgress = midGameState.gameState.waveInProgress;
+            this.waveCompleted = midGameState.gameState.waveCompleted;
+            // Current wave is restored through enemy spawn data
+            this.isSandbox = false;
+        } else {
+            // Normal level start - reset game state
+            this.gameState = new GameState();
+            this.currentLevel = levelInfo.id;
+            this.levelType = levelInfo.type || 'campaign';
+            this.levelName = levelInfo.name || 'Unknown Level';
+            
+            // Configure level-specific settings
+            this.isSandbox = (this.levelType === 'sandbox');
+            
+            if (this.isSandbox) {
+                this.gameState.gold = 100000;
+                this.maxWavesForLevel = Infinity;
+            } else {
+                this.maxWavesForLevel = 100;
+            }
+            
+            this.waveInProgress = false;
+            this.waveCompleted = false;
         }
-        
-        this.waveInProgress = false;
-        this.waveCompleted = false;
         
         // Ensure UI is visible
         const statsBar = document.getElementById('stats-bar');
@@ -129,7 +154,16 @@ export class GameplayState {
         this.uiManager.setupSpellUI(); // Setup spell UI through UIManager
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
-        this.startWave();
+        
+        // Restore mid-game state if applicable
+        if (isMidGameResume) {
+            this.restoreMidGameState(midGameState);
+        } else {
+            this.startWave();
+        }
+        
+        // Clear the mid-game state from state manager after loading
+        this.stateManager.currentMidGameState = null;
     }
     
     initializeSandboxGems() {
@@ -178,6 +212,145 @@ export class GameplayState {
             console.error('GameplayState: Academy NOT FOUND in building manager!');
             //     buildingManager.buildings.map(b => b.constructor.name)
             // );
+        }
+    }
+
+    /**
+     * Restore complete game state from mid-game save
+     * Reconstructs towers, enemies, and buildings to their saved state
+     */
+    restoreMidGameState(midGameState) {
+        if (!midGameState) {
+            console.error('GameplayState: No mid-game state to restore');
+            this.startWave();
+            return;
+        }
+
+        try {
+            // Restore game state (health, gold, wave)
+            if (midGameState.gameState) {
+                this.gameState.health = midGameState.gameState.health || 100;
+                this.gameState.gold = midGameState.gameState.gold || 0;
+                this.gameState.wave = midGameState.gameState.wave || 0;
+            }
+
+            // Restore castle health
+            if (midGameState.castle && this.level?.castle) {
+                this.level.castle.health = midGameState.castle.health || midGameState.castle.maxHealth || 100;
+            }
+
+            // Restore unlock system
+            const unlockSystem = this.towerManager?.unlockSystem;
+            if (unlockSystem && midGameState.unlockedTowers && Array.isArray(midGameState.unlockedTowers)) {
+                midGameState.unlockedTowers.forEach(tower => {
+                    unlockSystem.unlockedTowers.add(tower);
+                });
+            }
+            if (unlockSystem && midGameState.unlockedBuildings && Array.isArray(midGameState.unlockedBuildings)) {
+                midGameState.unlockedBuildings.forEach(building => {
+                    unlockSystem.unlockedBuildings.add(building);
+                });
+            }
+
+            // Restore towers
+            if (midGameState.towers && Array.isArray(midGameState.towers)) {
+                midGameState.towers.forEach(towerData => {
+                    try {
+                        this.towerManager.placeTower(towerData.x, towerData.y, towerData.type);
+                        // Restore tower level and health
+                        const placedTower = this.towerManager.towers[this.towerManager.towers.length - 1];
+                        if (placedTower) {
+                            if (towerData.level) placedTower.level = towerData.level;
+                            if (towerData.health) placedTower.health = Math.min(towerData.health, placedTower.maxHealth || 999999);
+                        }
+                    } catch (e) {
+                        console.warn('GameplayState: Failed to restore tower:', towerData, e);
+                    }
+                });
+            }
+
+            // Restore buildings
+            if (midGameState.buildings && Array.isArray(midGameState.buildings)) {
+                const buildingManager = this.towerManager.buildingManager;
+                midGameState.buildings.forEach(buildingData => {
+                    try {
+                        buildingManager.placeBuilding(
+                            buildingData.gridX,
+                            buildingData.gridY,
+                            buildingData.type,
+                            this.stateManager.resolutionManager
+                        );
+                        // Restore building level and state
+                        const placedBuilding = buildingManager.buildings[buildingManager.buildings.length - 1];
+                        if (placedBuilding) {
+                            if (buildingData.level) placedBuilding.level = buildingData.level;
+                            // Restore building-specific data like gems and research
+                            if (buildingData.gems) placedBuilding.gems = { ...buildingData.gems };
+                            if (buildingData.researchProgress) placedBuilding.researchProgress = { ...buildingData.researchProgress };
+                            if (buildingData.gemMiningUnlocked !== undefined) placedBuilding.gemMiningUnlocked = buildingData.gemMiningUnlocked;
+                            if (buildingData.diamondMiningUnlocked !== undefined) placedBuilding.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
+                            if (buildingData.gemMiningResearched !== undefined) placedBuilding.gemMiningResearched = buildingData.gemMiningResearched;
+                        }
+                    } catch (e) {
+                        console.warn('GameplayState: Failed to restore building:', buildingData, e);
+                    }
+                });
+            }
+
+            // Restore enemies - these are already spawned in the level
+            if (midGameState.enemies && Array.isArray(midGameState.enemies)) {
+                console.log('GameplayState: Restoring enemies. Total to restore:', midGameState.enemies.length);
+                console.log('GameplayState: Raw enemies data:', JSON.stringify(midGameState.enemies));
+                
+                midGameState.enemies.forEach((enemyData, index) => {
+                    try {
+                        console.log('GameplayState: Attempting to restore enemy', index, ':', enemyData);
+                        // Use EnemyRegistry to create enemy at correct position
+                        const enemy = EnemyRegistry.createEnemy(enemyData.type, this.level.path, 1, enemyData.speed);
+                        if (enemy) {
+                            // Restore position and path progress
+                            enemy.pathIndex = enemyData.pathIndex || 0;
+                            enemy.x = enemyData.x || 0;
+                            enemy.y = enemyData.y || 0;
+                            // Restore health
+                            if (enemyData.health) {
+                                enemy.health = Math.min(enemyData.health, enemy.maxHealth);
+                            }
+                            this.enemyManager.enemies.push(enemy);
+                            console.log('GameplayState: Successfully restored enemy:', enemy.type);
+                        } else {
+                            console.warn('GameplayState: Failed to create enemy from registry with type:', enemyData.type);
+                        }
+                    } catch (e) {
+                        console.warn('GameplayState: Failed to restore enemy:', enemyData, e);
+                    }
+                });
+            }
+
+            // Restore wave progression state - DO NOT start a new wave
+            this.waveIndex = midGameState.waveIndex || 0;
+            this.waveInProgress = midGameState.waveInProgress || false;
+            
+            console.log('GameplayState: Mid-game state restored successfully');
+            console.log('Restored:', {
+                health: this.gameState.health,
+                gold: this.gameState.gold,
+                towers: midGameState.towers?.length || 0,
+                buildings: midGameState.buildings?.length || 0,
+                enemies: midGameState.enemies?.length || 0,
+                waveInProgress: this.waveInProgress
+            });
+        } catch (error) {
+            console.error('GameplayState: Error restoring mid-game state:', error);
+            // Fallback to normal wave start
+            this.startWave();
+            return;
+        }
+
+        // If wave is not in progress, start next wave
+        // Otherwise keep game in current wave state
+        if (!this.waveInProgress) {
+            this.startWave();
         }
     }
     
@@ -728,8 +901,7 @@ export class GameplayState {
             return;
         }
 
-
-        // Update save data with level completion
+        // Update save data with level completion (only level progress, not mid-game state)
         if (this.stateManager.currentSaveData) {
             const saveData = this.stateManager.currentSaveData;
             
@@ -741,6 +913,10 @@ export class GameplayState {
             
             // Update last played level
             saveData.lastPlayedLevel = this.currentLevel;
+            
+            // Clear mid-game state since level is complete
+            saveData.isMidGameSave = false;
+            delete saveData.midGameState;
             
             // Save to current slot if available
             if (this.stateManager.currentSaveSlot) {

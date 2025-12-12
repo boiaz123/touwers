@@ -82,6 +82,8 @@ export class TowerRegistry {
     static createTower(type, x, y, gridX, gridY) {
         const towerType = this.#registry[type];
         if (!towerType) return null;
-        return new towerType.class(x, y, gridX, gridY);
+        const tower = new towerType.class(x, y, gridX, gridY);
+        tower.type = type; // Store the type for serialization
+        return tower;
     }
 }
