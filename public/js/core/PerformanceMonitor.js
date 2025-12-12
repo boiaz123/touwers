@@ -92,34 +92,44 @@ export class PerformanceMonitor {
             fpsStatus = 'GOOD';
         }
         
-        // Main background panel
+        // Main background panel - increased width for better text fit
+        const panelWidth = 380;
+        const panelHeight = 90;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-        ctx.fillRect(x, y, 280, 80);
+        ctx.fillRect(x, y, panelWidth, panelHeight);
         
         // Border
         ctx.strokeStyle = fpsColor;
         ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, 280, 80);
+        ctx.strokeRect(x, y, panelWidth, panelHeight);
         
         // Title
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px monospace';
-        ctx.fillText('PERFORMANCE MONITOR', x + 8, y + 16);
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('PERFORMANCE MONITOR', x + 10, y + 8);
         
         // FPS line - prominent
         ctx.fillStyle = fpsColor;
-        ctx.font = 'bold 14px monospace';
-        ctx.fillText(`FPS: ${stats.fps}`, x + 8, y + 36);
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`FPS: ${stats.fps}`, x + 10, y + 24);
         
         ctx.fillStyle = '#cccccc';
-        ctx.font = '11px monospace';
-        ctx.fillText(`Status: ${fpsStatus}`, x + 130, y + 36);
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`Status: ${fpsStatus}`, x + 140, y + 24);
         
-        // Frame timing details
+        // Frame timing details - broken into two lines for better fit
         ctx.fillStyle = '#aaaaaa';
-        ctx.font = '10px monospace';
-        ctx.fillText(`Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms`, x + 8, y + 52);
-        ctx.fillText(`Update: ${stats.updateTime}ms | Render: ${stats.renderTime}ms`, x + 8, y + 66);
+        ctx.font = '9px monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms`, x + 10, y + 42);
+        ctx.fillText(`Update: ${stats.updateTime}ms | Render: ${stats.renderTime}ms`, x + 10, y + 57);
     }
 
     enable() {

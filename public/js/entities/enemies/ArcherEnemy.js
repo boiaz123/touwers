@@ -25,10 +25,15 @@ export class ArcherEnemy extends BaseEnemy {
         const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;
         const rightArmBend = Math.sin(armSwingFreq * 2 + Math.PI / 3) * 0.18;
         
+        // Cache frequently used calculations
+        const bs2 = baseSize * 0.2;
+        const bs4 = baseSize * 0.25;
+        const bs6 = baseSize * 0.6;
+        
         // Enemy shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 1.6, baseSize * 0.9, baseSize * 0.25, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 1.6, baseSize * 0.9, bs4, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.save();
@@ -38,21 +43,16 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.fillStyle = this.darkenColor(this.tunicColor, 0.2);
         ctx.fillRect(-baseSize * 0.65, -baseSize * 0.75, baseSize * 1.3, baseSize * 1.1);
         
-        // Main tunic/body - dark green ranger tunic
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.15));
-        
-        ctx.fillStyle = bodyGradient;
+        // Main tunic/body - simplified (removed gradient for better performance)
+        ctx.fillStyle = this.tunicColor;
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
         
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 1;
         ctx.strokeRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
         
-        // Center seam
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        // Center seam (simplified)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(0, -baseSize * 0.8);
@@ -61,7 +61,7 @@ export class ArcherEnemy extends BaseEnemy {
         
         // Ranger belt/waist detail
         ctx.fillStyle = '#8B7355';
-        ctx.fillRect(-baseSize * 0.62, -baseSize * 0.15, baseSize * 1.24, baseSize * 0.15);
+        ctx.fillRect(-baseSize * 0.62, -baseSize * 0.15, baseSize * 1.24, bs4);
         
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 0.8;
@@ -70,9 +70,9 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineTo(baseSize * 0.62, -baseSize * 0.15);
         ctx.stroke();
         
-        // Side highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        ctx.fillRect(-baseSize * 0.55, -baseSize * 0.7, baseSize * 0.2, baseSize * 0.8);
+        // Side highlight (simplified)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(-bs4, -baseSize * 0.7, bs2, baseSize * 0.8);
         
         // --- HEAD ---
         
@@ -81,12 +81,7 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.arc(baseSize * 0.05, -baseSize * 1.15, baseSize * 0.55, 0, Math.PI * 2);
         ctx.fill();
         
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.1, -baseSize * 1.25, baseSize * 0.2, 0, -baseSize * 1.2, baseSize * 0.6);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
-        
-        ctx.fillStyle = headGradient;
+        ctx.fillStyle = '#D5C0A0';
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.2, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
@@ -149,7 +144,7 @@ export class ArcherEnemy extends BaseEnemy {
         const leftWristX = leftElbowX + leftArmForwardOffset * baseSize * 0.35;
         const leftWristY = leftElbowY + (baseSize * 0.6 + leftArmBend * baseSize * 0.15);
         
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + Math.max(0, leftSwingForward) * 0.15})`;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         ctx.lineWidth = baseSize * 0.3;
         ctx.beginPath();
         ctx.moveTo(leftShoulderX + 0.5, leftShoulderY + 0.5);
@@ -157,11 +152,8 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineTo(leftWristX + 0.5, leftWristY + 0.5);
         ctx.stroke();
         
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(leftSwingForward) * 0.1})`);
-        
-        ctx.strokeStyle = leftUpperArmGradient;
+        // Simplified arm (solid color instead of gradient)
+        ctx.strokeStyle = '#D5C0A0';
         ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -170,11 +162,7 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineTo(leftElbowX, leftElbowY);
         ctx.stroke();
         
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(leftSwingForward) * 0.05})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = leftLowerArmGradient;
+        ctx.strokeStyle = '#C9A876';
         ctx.lineWidth = baseSize * 0.26;
         ctx.beginPath();
         ctx.moveTo(leftElbowX, leftElbowY);
@@ -207,11 +195,8 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineTo(rightWristX + 0.5, rightWristY + 0.5);
         ctx.stroke();
         
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, 'rgba(201, 168, 118, 0.95)');
-        
-        ctx.strokeStyle = rightUpperArmGradient;
+        // Simplified arm (solid color instead of gradient)
+        ctx.strokeStyle = '#D5C0A0';
         ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -220,11 +205,7 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineTo(rightElbowX, rightElbowY);
         ctx.stroke();
         
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, 'rgba(232, 212, 184, 0.95)');
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = rightLowerArmGradient;
+        ctx.strokeStyle = '#C9A876';
         ctx.lineWidth = baseSize * 0.26;
         ctx.beginPath();
         ctx.moveTo(rightElbowX, rightElbowY);
@@ -340,104 +321,107 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.rotate(armAngle);
         
         // Bow grip - wooden center with leather wrap
-        ctx.fillStyle = '#A0522D';
-        ctx.fillRect(-baseSize * 0.16, -baseSize * 0.25, baseSize * 0.32, baseSize * 0.5);
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(-baseSize * 0.2, -baseSize * 0.3, baseSize * 0.4, baseSize * 0.6);
         
         // Grip leather wrapping
-        ctx.fillStyle = '#8B4513';
-        for (let i = 0; i < 5; i++) {
-            const wrapY = -baseSize * 0.25 + (baseSize * 0.5 * i / 5);
-            ctx.fillRect(-baseSize * 0.16, wrapY, baseSize * 0.32, baseSize * 0.08);
-        }
+        ctx.fillStyle = '#6B5310';
+        ctx.fillRect(-baseSize * 0.2, -baseSize * 0.3, baseSize * 0.4, baseSize * 0.12);
+        ctx.fillRect(-baseSize * 0.2, baseSize * 0.05, baseSize * 0.4, baseSize * 0.12);
         
         // Grip highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.fillRect(-baseSize * 0.14, -baseSize * 0.22, baseSize * 0.12, baseSize * 0.44);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(-baseSize * 0.15, -baseSize * 0.25, baseSize * 0.15, baseSize * 0.5);
         
-        // Bow limbs - traditional longbow shape with larger curve
-        const bowLimbGradient = ctx.createLinearGradient(0, -baseSize * 1.2, 0, baseSize * 1.2);
-        bowLimbGradient.addColorStop(0, '#8B6914');
-        bowLimbGradient.addColorStop(0.5, '#A0826D');
-        bowLimbGradient.addColorStop(1, '#8B6914');
+        // Main bow body - filled shape for better visibility
+        // Upper limb
+        ctx.fillStyle = '#A0826D';
+        ctx.beginPath();
+        ctx.moveTo(0, -baseSize * 0.3);
+        ctx.quadraticCurveTo(baseSize * 1.0, -baseSize * 1.0, baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(baseSize * 0.6, -baseSize * 1.3, baseSize * 0.2, -baseSize * 1.1);
+        ctx.closePath();
+        ctx.fill();
         
-        ctx.strokeStyle = bowLimbGradient;
-        ctx.lineWidth = baseSize * 0.26;
+        // Lower limb
+        ctx.beginPath();
+        ctx.moveTo(0, baseSize * 0.3);
+        ctx.quadraticCurveTo(baseSize * 1.0, baseSize * 1.0, baseSize * 0.7, baseSize * 1.4);
+        ctx.quadraticCurveTo(baseSize * 0.6, baseSize * 1.3, baseSize * 0.2, baseSize * 1.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Bow outline - darker color for definition
+        ctx.strokeStyle = '#6B5310';
+        ctx.lineWidth = baseSize * 0.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Upper limb - curved forward with more pronounced curve
+        // Upper limb outline
         ctx.beginPath();
-        ctx.moveTo(0, -baseSize * 0.25);
-        ctx.quadraticCurveTo(baseSize * 0.6, -baseSize * 0.7, baseSize * 0.55, -baseSize * 1.15);
+        ctx.moveTo(0, -baseSize * 0.3);
+        ctx.quadraticCurveTo(baseSize * 1.0, -baseSize * 1.0, baseSize * 0.7, -baseSize * 1.4);
         ctx.stroke();
         
-        // Lower limb - curved forward with more pronounced curve
+        // Lower limb outline
         ctx.beginPath();
-        ctx.moveTo(0, baseSize * 0.25);
-        ctx.quadraticCurveTo(baseSize * 0.6, baseSize * 0.7, baseSize * 0.55, baseSize * 1.15);
+        ctx.moveTo(0, baseSize * 0.3);
+        ctx.quadraticCurveTo(baseSize * 1.0, baseSize * 1.0, baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
-        // Bow wood edges/depth
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        
-        ctx.beginPath();
-        ctx.moveTo(0, -baseSize * 0.25);
-        ctx.quadraticCurveTo(baseSize * 0.6, -baseSize * 0.7, baseSize * 0.55, -baseSize * 1.15);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(0, baseSize * 0.25);
-        ctx.quadraticCurveTo(baseSize * 0.6, baseSize * 0.7, baseSize * 0.55, baseSize * 1.15);
-        ctx.stroke();
-        
-        // Bowstring - thick tan/beige color, straight line
+        // Bowstring - tan/beige color, connecting the tips
         ctx.strokeStyle = '#D2B48C';
-        ctx.lineWidth = baseSize * 0.14;
+        ctx.lineWidth = baseSize * 0.18;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // String from upper tip to lower tip - straight line
+        // String from upper tip to lower tip - tight curve following bow shape
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.55, -baseSize * 1.15);
-        ctx.lineTo(baseSize * 0.55, baseSize * 1.15);
+        ctx.moveTo(baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(baseSize * 0.9, 0, baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
-        // Bowstring highlight
+        // Bowstring highlight for depth
         ctx.strokeStyle = '#F5DEB3';
-        ctx.lineWidth = baseSize * 0.07;
+        ctx.lineWidth = baseSize * 0.08;
         
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.55, -baseSize * 1.15);
-        ctx.lineTo(baseSize * 0.55, baseSize * 1.15);
+        ctx.moveTo(baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(baseSize * 0.9, 0, baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
         // Nocking point (where arrow sits on string)
         ctx.fillStyle = '#C19A6B';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.55, 0, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.55, 0, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
         ctx.stroke();
         
         // Bow tips - reinforced nocks
-        const tipGradient = ctx.createRadialGradient(baseSize * 0.55, -baseSize * 1.15, baseSize * 0.05, baseSize * 0.55, -baseSize * 1.15, baseSize * 0.15);
-        tipGradient.addColorStop(0, '#D4AF37');
-        tipGradient.addColorStop(1, '#8B7500');
-        
-        ctx.fillStyle = tipGradient;
+        ctx.fillStyle = '#D4AF37';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.55, -baseSize * 1.15, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = tipGradient;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.55, baseSize * 1.15, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Tip outlines
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.stroke();
         
         ctx.restore();
     }
