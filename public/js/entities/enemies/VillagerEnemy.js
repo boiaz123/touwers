@@ -15,6 +15,15 @@ export class VillagerEnemy extends BaseEnemy {
         this.attackDamage = 4;
         this.attackSpeed = 0.8;
         
+        // Optimization: Cache animation values
+        this.cachedAnimTime = 0;
+        this.cachedWalkCycle = 0;
+        this.cachedBobAnimation = 0;
+        this.cachedArmSwing = { left: 0, right: 0 };
+        
+        // Torch particle system (lightweight)
+        this.torchParticles = [];
+        
 // console.log('VillagerEnemy: Created at position', this.x, this.y, 'with weapon:', this.weaponType);
     }
     
@@ -65,6 +74,19 @@ export class VillagerEnemy extends BaseEnemy {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
         
+        // Pre-calculate animation values for rendering to avoid recalculation per frame
+        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
+        this.cachedAnimTime = animTime;
+        this.cachedWalkCycle = Math.sin(animTime) * 0.5;
+        this.cachedBobAnimation = Math.sin(animTime) * 0.3;
+        this.cachedArmSwing.left = Math.sin(animTime) * 0.6;
+        this.cachedArmSwing.right = Math.sin(animTime + Math.PI) * 0.55;
+        
+        // Update torch particles for burning effect
+        if (this.weaponType === 'torch') {
+            this.updateTorchParticles(deltaTime);
+        }
+        
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
         if (this.currentPathIndex >= this.path.length - 1) {
@@ -99,6 +121,38 @@ export class VillagerEnemy extends BaseEnemy {
         this.y += (dy / distance) * moveDistance;
     }
     
+    updateTorchParticles(deltaTime) {
+        // Add new particles periodically
+        if (Math.random() < 0.6) {
+            this.torchParticles.push({
+                x: 0,
+                y: 0,
+                vx: (Math.random() - 0.5) * 30,
+                vy: -Math.random() * 40 - 20,
+                life: 0.5 + Math.random() * 0.3,
+                maxLife: 0.5 + Math.random() * 0.3,
+                size: Math.random() * 3 + 2
+            });
+        }
+        
+        // Update and remove dead particles
+        for (let i = this.torchParticles.length - 1; i >= 0; i--) {
+            const p = this.torchParticles[i];
+            p.life -= deltaTime;
+            p.x += p.vx * deltaTime;
+            p.y += p.vy * deltaTime;
+            
+            if (p.life <= 0) {
+                this.torchParticles.splice(i, 1);
+            }
+        }
+        
+        // Keep particle count reasonable
+        if (this.torchParticles.length > 8) {
+            this.torchParticles = this.torchParticles.slice(-8);
+        }
+    }
+    
     takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
         super.takeDamage(amount, ignoreArmor, damageType, followTarget);
     }
@@ -125,15 +179,13 @@ export class VillagerEnemy extends BaseEnemy {
     render(ctx) {
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
         
-        // Apply phase offset for animation diversity
-        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
-        const walkCycle = Math.sin(animTime) * 0.5;
-        const bobAnimation = Math.sin(animTime) * 0.3;
-        
-        const armSwingFreq = animTime;
-        const leftArmBase = Math.sin(armSwingFreq) * 0.6;
+        // Use pre-calculated animation values
+        const walkCycle = this.cachedWalkCycle;
+        const bobAnimation = this.cachedBobAnimation;
+        const armSwingFreq = this.cachedAnimTime;
+        const leftArmBase = this.cachedArmSwing.left;
         const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
-        const rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;
+        const rightArmBase = this.cachedArmSwing.right;
         const rightArmBend = Math.sin(armSwingFreq * 2 + Math.PI / 3) * 0.18;
         
         // Enemy shadow
@@ -145,17 +197,12 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.save();
         ctx.translate(this.x, this.y + bobAnimation);
         
-        // Back/depth layer
+        // Back/depth layer - simplified (no gradient needed)
         ctx.fillStyle = this.darkenColor(this.tunicColor, 0.2);
         ctx.fillRect(-baseSize * 0.65, -baseSize * 0.75, baseSize * 1.3, baseSize * 1.1);
         
-        // Main tunic/body
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.15));
-        
-        ctx.fillStyle = bodyGradient;
+        // Main tunic/body - simplified gradient
+        ctx.fillStyle = this.tunicColor;
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
         
         ctx.strokeStyle = '#2F2F2F';
@@ -175,18 +222,12 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.fillRect(-baseSize * 0.55, -baseSize * 0.7, baseSize * 0.2, baseSize * 0.8);
         
         // --- HEAD ---
-        
         ctx.fillStyle = '#C4A575';
         ctx.beginPath();
         ctx.arc(baseSize * 0.05, -baseSize * 1.15, baseSize * 0.55, 0, Math.PI * 2);
         ctx.fill();
         
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.1, -baseSize * 1.25, baseSize * 0.2, 0, -baseSize * 1.2, baseSize * 0.6);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
-        
-        ctx.fillStyle = headGradient;
+        ctx.fillStyle = '#E8D4B8';
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.2, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
@@ -198,7 +239,6 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.stroke();
         
         // --- STRAW HAT (Villager) ---
-        
         ctx.fillStyle = '#D4A574';
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.2, baseSize * 0.62, Math.PI, Math.PI * 2);
@@ -217,7 +257,6 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.stroke();
         
         // --- LEFT ARM ---
-        
         const leftShoulderX = -baseSize * 0.5;
         const leftShoulderY = -baseSize * 0.35;
         
@@ -231,88 +270,62 @@ export class VillagerEnemy extends BaseEnemy {
         const leftWristX = leftElbowX + leftArmForwardOffset * baseSize * 0.35;
         const leftWristY = leftElbowY + (baseSize * 0.6 + leftArmBend * baseSize * 0.15);
         
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.1 + Math.max(0, leftSwingForward) * 0.15})`;
+        // Shadow stroke (simplified)
+        ctx.strokeStyle = `rgba(0, 0, 0, 0.15)`;
         ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(leftShoulderX + 0.5, leftShoulderY + 0.5);
-        ctx.lineTo(leftElbowX + 0.5, leftElbowY + 0.5);
-        ctx.lineTo(leftWristX + 0.5, leftWristY + 0.5);
-        ctx.stroke();
-        
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.9 + Math.abs(leftSwingForward) * 0.1})`);
-        
-        ctx.strokeStyle = leftUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(leftShoulderX, leftShoulderY);
         ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.stroke();
-        
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.95 + Math.abs(leftSwingForward) * 0.05})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = leftLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.26;
-        ctx.beginPath();
-        ctx.moveTo(leftElbowX, leftElbowY);
         ctx.lineTo(leftWristX, leftWristY);
         ctx.stroke();
         
+        // Main arm
+        ctx.strokeStyle = '#E8D4B8';
+        ctx.lineWidth = baseSize * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(leftShoulderX, leftShoulderY);
+        ctx.lineTo(leftWristX, leftWristY);
+        ctx.stroke();
+        
+        // Hand
         ctx.fillStyle = 'rgba(221, 190, 169, 0.9)';
         ctx.beginPath();
         ctx.arc(leftWristX, leftWristY, baseSize * 0.16, 0, Math.PI * 2);
         ctx.fill();
         
         // --- RIGHT ARM WITH WEAPON (RAISED) ---
-        
         const rightShoulderX = baseSize * 0.5;
         const rightShoulderY = -baseSize * 0.35;
         
-        // Right arm raised up holding weapon - more aggressive pose
-        const weaponRaiseAngle = -Math.PI / 2 + 0.3; // Arm raised up and slightly forward
+        const weaponRaiseAngle = -Math.PI / 2 + 0.3;
         const rightElbowX = rightShoulderX + Math.cos(weaponRaiseAngle) * baseSize * 0.45;
         const rightElbowY = rightShoulderY + Math.sin(weaponRaiseAngle) * baseSize * 0.45;
         
         const rightWristX = rightElbowX + Math.cos(weaponRaiseAngle) * baseSize * 0.4;
         const rightWristY = rightElbowY + Math.sin(weaponRaiseAngle) * baseSize * 0.4;
         
+        // Shadow stroke
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(rightShoulderX + 0.5, rightShoulderY + 0.5);
-        ctx.lineTo(rightElbowX + 0.5, rightElbowY + 0.5);
-        ctx.lineTo(rightWristX + 0.5, rightWristY + 0.5);
-        ctx.stroke();
-        
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, 'rgba(201, 168, 118, 0.95)');
-        
-        ctx.strokeStyle = rightUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(rightShoulderX, rightShoulderY);
         ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.stroke();
-        
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, 'rgba(232, 212, 184, 0.95)');
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = rightLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.26;
-        ctx.beginPath();
-        ctx.moveTo(rightElbowX, rightElbowY);
         ctx.lineTo(rightWristX, rightWristY);
         ctx.stroke();
         
+        // Main arm
+        ctx.strokeStyle = '#E8D4B8';
+        ctx.lineWidth = baseSize * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(rightShoulderX, rightShoulderY);
+        ctx.lineTo(rightWristX, rightWristY);
+        ctx.stroke();
+        
+        // Hand
         ctx.fillStyle = 'rgba(221, 190, 169, 0.95)';
         ctx.beginPath();
         ctx.arc(rightWristX, rightWristY, baseSize * 0.16, 0, Math.PI * 2);
@@ -326,7 +339,6 @@ export class VillagerEnemy extends BaseEnemy {
         }
         
         // --- LEGS ---
-        
         const leftHipX = -baseSize * 0.25;
         const leftHipY = baseSize * 0.35;
         
@@ -335,13 +347,6 @@ export class VillagerEnemy extends BaseEnemy {
         const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.8;
         
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.25;
-        ctx.beginPath();
-        ctx.moveTo(leftHipX + 1, leftHipY + 1);
-        ctx.lineTo(leftFootX + 1, leftFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = baseSize * 0.25;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -358,13 +363,6 @@ export class VillagerEnemy extends BaseEnemy {
         
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.lineWidth = baseSize * 0.25;
-        ctx.beginPath();
-        ctx.moveTo(rightHipX + 1, rightHipY + 1);
-        ctx.lineTo(rightFootX + 1, rightFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.25;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(rightHipX, rightHipY);
@@ -372,7 +370,6 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.stroke();
         
         // --- BOOTS ---
-        
         ctx.fillStyle = '#1C1C1C';
         ctx.beginPath();
         ctx.ellipse(leftFootX, leftFootY + baseSize * 0.15, baseSize * 0.2, baseSize * 0.15, walkCycle * 0.3, 0, Math.PI * 2);
@@ -414,7 +411,7 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(-baseSize * 0.08, 0, baseSize * 0.16, baseSize * 0.65);
         
-        // Handle detail - wood grain
+        // Handle detail - wood grain (simplified)
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 0.5;
         for (let i = 1; i < 5; i++) {
@@ -425,64 +422,80 @@ export class VillagerEnemy extends BaseEnemy {
             ctx.stroke();
         }
         
-        // Torch head - cloth wrapping around stick
+        // Torch head - cloth wrapping
         const torchHeadY = -baseSize * 0.25;
         ctx.fillStyle = '#D4691E';
         ctx.fillRect(-baseSize * 0.14, torchHeadY - baseSize * 0.1, baseSize * 0.28, baseSize * 0.15);
         
-        // Wrapping bands
+        // Wrapping band detail
         ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.14, torchHeadY - baseSize * 0.04);
         ctx.lineTo(baseSize * 0.14, torchHeadY - baseSize * 0.04);
         ctx.stroke();
         
         // Char marks on torch head
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(-baseSize * 0.12, torchHeadY - baseSize * 0.08, baseSize * 0.08, baseSize * 0.12);
         ctx.fillRect(baseSize * 0.04, torchHeadY - baseSize * 0.06, baseSize * 0.08, baseSize * 0.1);
         
-        // Fire glow aura
-        const fireGlowGradient = ctx.createRadialGradient(0, torchHeadY - baseSize * 0.35, 0, 0, torchHeadY - baseSize * 0.35, baseSize * 0.4);
-        fireGlowGradient.addColorStop(0, `rgba(255, 200, 0, ${0.7 + Math.sin(this.animationTime * 6) * 0.2})`);
-        fireGlowGradient.addColorStop(0.5, `rgba(255, 100, 0, ${0.4 + Math.sin(this.animationTime * 6) * 0.15})`);
-        fireGlowGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
-        
-        ctx.fillStyle = fireGlowGradient;
+        // Glowing aura around flames
+        ctx.fillStyle = `rgba(255, 150, 0, ${0.3 + Math.sin(this.animationTime * 6) * 0.15})`;
         ctx.beginPath();
-        ctx.arc(0, torchHeadY - baseSize * 0.35, baseSize * 0.35, 0, Math.PI * 2);
+        ctx.arc(0, torchHeadY - baseSize * 0.35, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Animated flames
-        const flameFlicker = Math.sin(this.animationTime * 8 + Math.random() * Math.PI) * 0.15;
+        // Animated flames with better burning effect
+        const flameFlicker = Math.sin(this.animationTime * 8 + Math.random() * Math.PI) * 0.2 + 0.8;
+        const flameWave = Math.sin(this.animationTime * 4) * 0.1;
         
-        // Outer flame (orange)
-        ctx.fillStyle = `rgba(255, 140, 0, ${0.85 + flameFlicker})`;
+        // Outer flame envelope (dark orange)
+        ctx.fillStyle = `rgba(220, 100, 20, ${0.9 * flameFlicker})`;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.1, torchHeadY);
-        ctx.quadraticCurveTo(-baseSize * 0.08, torchHeadY - baseSize * 0.4, 0, torchHeadY - baseSize * 0.5);
-        ctx.quadraticCurveTo(baseSize * 0.08, torchHeadY - baseSize * 0.4, baseSize * 0.1, torchHeadY);
+        ctx.moveTo(-baseSize * 0.12, torchHeadY);
+        ctx.quadraticCurveTo(-baseSize * 0.1 + flameWave * baseSize * 0.05, torchHeadY - baseSize * 0.35, 0, torchHeadY - baseSize * 0.55);
+        ctx.quadraticCurveTo(baseSize * 0.1 + flameWave * baseSize * 0.05, torchHeadY - baseSize * 0.35, baseSize * 0.12, torchHeadY);
         ctx.closePath();
         ctx.fill();
         
-        // Middle flame (yellow-orange)
-        ctx.fillStyle = `rgba(255, 180, 0, ${0.7 + flameFlicker * 0.5})`;
+        // Middle flame (orange)
+        ctx.fillStyle = `rgba(255, 140, 20, ${0.8 * flameFlicker})`;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.06, torchHeadY - baseSize * 0.05);
-        ctx.quadraticCurveTo(-baseSize * 0.04, torchHeadY - baseSize * 0.32, 0, torchHeadY - baseSize * 0.42);
-        ctx.quadraticCurveTo(baseSize * 0.04, torchHeadY - baseSize * 0.32, baseSize * 0.06, torchHeadY - baseSize * 0.05);
+        ctx.moveTo(-baseSize * 0.08, torchHeadY - baseSize * 0.05);
+        ctx.quadraticCurveTo(-baseSize * 0.06 + flameWave * baseSize * 0.03, torchHeadY - baseSize * 0.30, 0, torchHeadY - baseSize * 0.48);
+        ctx.quadraticCurveTo(baseSize * 0.06 + flameWave * baseSize * 0.03, torchHeadY - baseSize * 0.30, baseSize * 0.08, torchHeadY - baseSize * 0.05);
         ctx.closePath();
         ctx.fill();
         
-        // Inner flame (yellow - hot core)
-        ctx.fillStyle = `rgba(255, 255, 100, ${0.8 + flameFlicker * 0.3})`;
+        // Inner flame hot core (bright yellow-white)
+        ctx.fillStyle = `rgba(255, 220, 100, ${0.9 * flameFlicker})`;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.03, torchHeadY - baseSize * 0.1);
-        ctx.quadraticCurveTo(0, torchHeadY - baseSize * 0.28, 0, torchHeadY - baseSize * 0.35);
-        ctx.quadraticCurveTo(0, torchHeadY - baseSize * 0.28, baseSize * 0.03, torchHeadY - baseSize * 0.1);
+        ctx.moveTo(-baseSize * 0.04, torchHeadY - baseSize * 0.08);
+        ctx.quadraticCurveTo(-baseSize * 0.02, torchHeadY - baseSize * 0.25, 0, torchHeadY - baseSize * 0.38);
+        ctx.quadraticCurveTo(baseSize * 0.02, torchHeadY - baseSize * 0.25, baseSize * 0.04, torchHeadY - baseSize * 0.08);
         ctx.closePath();
         ctx.fill();
+        
+        // Brightest core (white hot center)
+        ctx.fillStyle = `rgba(255, 255, 200, ${0.7 * flameFlicker})`;
+        ctx.beginPath();
+        ctx.arc(0, torchHeadY - baseSize * 0.28, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Render torch particles for better burning effect
+        ctx.globalAlpha = 0.6;
+        this.torchParticles.forEach(p => {
+            const lifePercent = p.life / p.maxLife;
+            const size = p.size * lifePercent;
+            const brightness = Math.max(0, lifePercent - 0.3) * 1.43;
+            
+            ctx.fillStyle = `rgba(255, ${150 * brightness}, 0, ${brightness})`;
+            ctx.beginPath();
+            ctx.arc(p.x, torchHeadY - baseSize * 0.35 + p.y, size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
         
         ctx.restore();
     }
@@ -492,94 +505,117 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.translate(handX, handY);
         ctx.rotate(armAngle + Math.PI / 2);
         
-        // Pitchfork shaft - wood
+        // Pitchfork shaft - wooden handle
         const shaftWidth = baseSize * 0.12;
         const shaftLength = baseSize * 0.7;
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(-shaftWidth / 2, 0, shaftWidth, shaftLength);
         
-        // Shaft wood grain details
+        // Shaft wood grain details (simplified for performance)
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 0.5;
-        for (let i = 1; i < 6; i++) {
-            const grainY = (shaftLength * i / 6);
+        for (let i = 1; i < 5; i++) {
+            const grainY = (shaftLength * i / 5);
             ctx.beginPath();
             ctx.moveTo(-shaftWidth / 2, grainY);
             ctx.lineTo(shaftWidth / 2, grainY);
             ctx.stroke();
         }
         
-        // Metal ferrule (connection piece)
+        // Metal ferrule (connection piece between handle and tines)
         const ferruleY = -baseSize * 0.15;
         ctx.fillStyle = '#696969';
-        ctx.fillRect(-baseSize * 0.15, ferruleY - baseSize * 0.05, baseSize * 0.3, baseSize * 0.1);
+        ctx.fillRect(-baseSize * 0.16, ferruleY - baseSize * 0.06, baseSize * 0.32, baseSize * 0.12);
         
-        // Ferrule bands/rivets
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.15, ferruleY);
-        ctx.lineTo(baseSize * 0.15, ferruleY);
-        ctx.stroke();
+        // Ferrule edge highlight
+        ctx.fillStyle = '#A9A9A9';
+        ctx.fillRect(-baseSize * 0.16, ferruleY - baseSize * 0.06, baseSize * 0.32, baseSize * 0.04);
         
-        // Rivet details on ferrule
+        // Ferrule rivets/rivets for detail
+        ctx.fillStyle = '#505050';
         for (let i = -1; i <= 1; i++) {
-            ctx.fillStyle = '#505050';
             ctx.beginPath();
-            ctx.arc(i * baseSize * 0.08, ferruleY, baseSize * 0.02, 0, Math.PI * 2);
+            ctx.arc(i * baseSize * 0.08, ferruleY, baseSize * 0.018, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Three prongs - metal tines
-        const prongTopY = -baseSize * 0.6;
-        const prong1X = -baseSize * 0.25;
-        const prong2X = 0;
-        const prong3X = baseSize * 0.25;
+        // Three iron tines forming a W-shape (distinctive design)
+        const tineTop = -baseSize * 0.65;
+        const leftTineX = -baseSize * 0.3;
+        const centerTineX = 0;
+        const rightTineX = baseSize * 0.3;
         
-        // Prong material gradient
-        const prongGradient = ctx.createLinearGradient(0, ferruleY, 0, prongTopY);
-        prongGradient.addColorStop(0, '#A9A9A9');
-        prongGradient.addColorStop(0.5, '#C0C0C0');
-        prongGradient.addColorStop(1, '#808080');
+        // Tine specifications
+        const tineHeight = baseSize * 0.5;
+        const tineWidth = baseSize * 0.12;
+        const tipPointHeight = baseSize * 0.08;
         
-        // Draw each prong with proper thickness and shading
-        const prongWidth = baseSize * 0.1;
-        const prongPositions = [
-            { x: prong1X, length: baseSize * 0.45 },
-            { x: prong2X, length: baseSize * 0.52 }, // Center prong slightly longer
-            { x: prong3X, length: baseSize * 0.45 }
+        // Draw three tines with iron coloring and shading
+        const tines = [
+            { x: leftTineX, baseOffset: 0 },
+            { x: centerTineX, baseOffset: -baseSize * 0.07 }, // Center tine slightly taller
+            { x: rightTineX, baseOffset: 0 }
         ];
         
-        prongPositions.forEach((prong, index) => {
-            // Prong shadow (depth)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.fillRect(prong.x + baseSize * 0.02, ferruleY, prongWidth - baseSize * 0.02, -prong.length);
+        tines.forEach((tine, idx) => {
+            // Tine connection bar shadow at base
+            if (idx === 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(-baseSize * 0.35, ferruleY - baseSize * 0.03, baseSize * 0.7, baseSize * 0.04);
+            }
             
-            // Main prong
-            ctx.fillStyle = prongGradient;
-            ctx.fillRect(prong.x - prongWidth / 2, ferruleY, prongWidth, -prong.length);
+            // Main tine body - iron gray with shading
+            ctx.fillStyle = idx === 1 ? '#A9A9A9' : '#999999'; // Center tine slightly lighter
+            const tineY = ferruleY + tine.baseOffset;
+            const actualHeight = tineHeight + (idx === 1 ? baseSize * 0.07 : 0);
             
-            // Prong edge highlight (sharpness)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.fillRect(prong.x - prongWidth / 2 + baseSize * 0.02, ferruleY, baseSize * 0.03, -prong.length);
+            // Tine rectangle body
+            ctx.fillRect(tine.x - tineWidth / 2, tineY, tineWidth, -actualHeight);
             
-            // Prong sharp point - darker tip
+            // Tine edge highlight (right edge to show metal shine)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(tine.x - tineWidth / 2 + baseSize * 0.03, tineY - actualHeight * 0.7, baseSize * 0.03, actualHeight * 0.7);
+            
+            // Tine shadow (left edge for depth)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.fillRect(tine.x - tineWidth / 2, tineY, baseSize * 0.03, -actualHeight);
+            
+            // Sharp iron point at tip - Dark iron tip
             ctx.fillStyle = '#505050';
             ctx.beginPath();
-            ctx.moveTo(prong.x - prongWidth / 2, ferruleY - prong.length);
-            ctx.lineTo(prong.x + prongWidth / 2, ferruleY - prong.length);
-            ctx.lineTo(prong.x, ferruleY - prong.length - baseSize * 0.08);
+            ctx.moveTo(tine.x - tineWidth / 2, tineY - actualHeight);
+            ctx.lineTo(tine.x + tineWidth / 2, tineY - actualHeight);
+            ctx.lineTo(tine.x, tineY - actualHeight - tipPointHeight);
             ctx.closePath();
             ctx.fill();
+            
+            // Tip edge highlight for sharpness
+            ctx.strokeStyle = '#C0C0C0';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(tine.x - tineWidth / 2, tineY - actualHeight);
+            ctx.lineTo(tine.x, tineY - actualHeight - tipPointHeight);
+            ctx.stroke();
+            
+            // Tip right edge
+            ctx.beginPath();
+            ctx.moveTo(tine.x + tineWidth / 2, tineY - actualHeight);
+            ctx.lineTo(tine.x, tineY - actualHeight - tipPointHeight);
+            ctx.stroke();
         });
         
-        // Prong connecting bar at base
+        // Tine connection bar at base (joins all three tines)
         ctx.fillStyle = '#808080';
-        ctx.fillRect(-baseSize * 0.28, ferruleY - baseSize * 0.08, baseSize * 0.56, baseSize * 0.08);
+        ctx.fillRect(-baseSize * 0.35, ferruleY - baseSize * 0.08, baseSize * 0.7, baseSize * 0.08);
         
+        // Connection bar edge highlight
+        ctx.fillStyle = '#A9A9A9';
+        ctx.fillRect(-baseSize * 0.35, ferruleY - baseSize * 0.08, baseSize * 0.7, baseSize * 0.04);
+        
+        // Connection bar outline
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-baseSize * 0.28, ferruleY - baseSize * 0.08, baseSize * 0.56, baseSize * 0.08);
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(-baseSize * 0.35, ferruleY - baseSize * 0.08, baseSize * 0.7, baseSize * 0.08);
         
         ctx.restore();
     }
