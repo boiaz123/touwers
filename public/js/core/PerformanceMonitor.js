@@ -77,14 +77,49 @@ export class PerformanceMonitor {
         if (!this.enabled) return;
         
         const stats = this.getStats();
-        const text = `FPS: ${stats.fps} | Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms`;
         
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x, y, 300, 25);
+        // Determine color based on FPS
+        let fpsColor = '#00ff00';  // Green for good FPS
+        let fpsStatus = 'SMOOTH';
+        if (stats.fps < 30) {
+            fpsColor = '#ff0000';
+            fpsStatus = 'POOR';
+        } else if (stats.fps < 45) {
+            fpsColor = '#ffaa00';
+            fpsStatus = 'FAIR';
+        } else if (stats.fps < 55) {
+            fpsColor = '#ffff00';
+            fpsStatus = 'GOOD';
+        }
         
-        ctx.fillStyle = stats.fps < 30 ? '#ff0000' : stats.fps < 50 ? '#ffff00' : '#00ff00';
-        ctx.font = '12px monospace';
-        ctx.fillText(text, x + 5, y + 18);
+        // Main background panel
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(x, y, 280, 80);
+        
+        // Border
+        ctx.strokeStyle = fpsColor;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, 280, 80);
+        
+        // Title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText('PERFORMANCE MONITOR', x + 8, y + 16);
+        
+        // FPS line - prominent
+        ctx.fillStyle = fpsColor;
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText(`FPS: ${stats.fps}`, x + 8, y + 36);
+        
+        ctx.fillStyle = '#cccccc';
+        ctx.font = '11px monospace';
+        ctx.fillText(`Status: ${fpsStatus}`, x + 130, y + 36);
+        
+        // Frame timing details
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = '10px monospace';
+        ctx.fillText(`Frame: ${stats.frameTime}ms | Avg: ${stats.avgFrameTime}ms`, x + 8, y + 52);
+        ctx.fillText(`Update: ${stats.updateTime}ms | Render: ${stats.renderTime}ms`, x + 8, y + 66);
     }
 
     enable() {

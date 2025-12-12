@@ -4,6 +4,7 @@ import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
+import { PerformanceMonitor } from '../PerformanceMonitor.js';
 
 export class GameplayState {
     constructor(stateManager) {
@@ -31,6 +32,10 @@ export class GameplayState {
         
         // NEW: Pause system
         this.isPaused = false;
+        
+        // Performance Monitor
+        this.performanceMonitor = new PerformanceMonitor();
+        this.performanceMonitor.enable(); // Enable by default to show FPS
         
 // console.log('GameplayState constructor completed');
     }
@@ -1009,6 +1014,9 @@ export class GameplayState {
         }
         
         this.renderSpellEffects(ctx);
+        
+        // Render performance monitor
+        this.performanceMonitor.render(ctx, 10, 10);
     }
     
     renderSpellEffects(ctx) {

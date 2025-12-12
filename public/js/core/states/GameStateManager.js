@@ -79,8 +79,18 @@ export class GameStateManager {
     
     update(deltaTime) {
         try {
+            // Call performance monitor start if it exists
+            if (this.currentState && this.currentState.performanceMonitor) {
+                this.currentState.performanceMonitor.startFrame();
+            }
+            
             if (this.currentState && this.currentState.update) {
                 this.currentState.update(deltaTime);
+            }
+            
+            // Call performance monitor end update
+            if (this.currentState && this.currentState.performanceMonitor) {
+                this.currentState.performanceMonitor.endUpdate();
             }
         } catch (error) {
             console.error(`GameStateManager: Error in update for state '${this.currentStateName}':`, error);
@@ -99,6 +109,11 @@ export class GameStateManager {
                 this.ctx.font = '24px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText(`No render method for state: ${this.currentStateName}`, this.canvas.width / 2, this.canvas.height / 2);
+            }
+            
+            // Call performance monitor end render
+            if (this.currentState && this.currentState.performanceMonitor) {
+                this.currentState.performanceMonitor.endRender();
             }
         } catch (error) {
             console.error(`GameStateManager: Error in render for state '${this.currentStateName}':`, error);

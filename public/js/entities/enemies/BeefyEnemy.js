@@ -9,6 +9,24 @@ export class BeefyEnemy extends BaseEnemy {
         this.attackDamage = 9;
         this.attackSpeed = 0.8;
         
+        // Rendering optimization: Cache pre-calculated values
+        this.cachedBaseSize = null;
+        this.cachedColorVariants = this.getColorVariants();
+        
+        // Pre-calculate colors to avoid repeated color manipulation
+        this.darkenedTunic = this.darkenColor(this.tunicColor, 0.25);
+        
+        // Cache for armor rivets positions (relative to baseSize)
+        this.rivetPositions = [];
+        for (let i = -1; i <= 1; i++) {
+            for (let j = 0; j < 3; j++) {
+                this.rivetPositions.push({ i, j });
+            }
+        }
+        
+        // Performance tracking for health bar rendering
+        this.lastDamageTime = null;
+        
         // console.log('BeefyEnemy: Created at position', this.x, this.y);
     }
     
@@ -19,8 +37,39 @@ export class BeefyEnemy extends BaseEnemy {
         return tunicColors[Math.floor(Math.random() * tunicColors.length)];
     }
     
+    getColorVariants() {
+        // Pre-calculate all color variants to avoid repeated calculations
+        return {
+            headSkin: '#C4A575',
+            headGradientLight: '#E8D4B8',
+            headGradientMid: '#DDBEA9',
+            headGradientDark: '#C9A876',
+            headStroke: '#B8956A',
+            helmetLight: '#606060',
+            helmetMid: '#4a4a4a',
+            helmetDark: '#3a3a3a',
+            helmetNose: '#4a4a4a',
+            helmetOutline: '#2F2F2F',
+            skinTone: '#E8D4B8',
+            gauntlet: '#4a4a4a',
+            gauntletStroke: '#2F2F2F',
+            swordLight: '#A9A9A9',
+            swordMid: '#C0C0C0',
+            swordDark: '#808080',
+            guardGold: '#D4AF37',
+            guardGoldStroke: '#8B7500',
+            bootColor: '#0a0a0a',
+            legStroke: '#2F2F2F'
+        };
+    }
+    
     render(ctx) {
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
+        
+        // Use cached baseSize if possible to avoid recalculation
+        if (this.cachedBaseSize !== baseSize) {
+            this.cachedBaseSize = baseSize;
+        }
         
         // Apply phase offset for animation diversity - slower for beefier enemies
         const animTime = (this.animationTime * 6.5 + this.animationPhaseOffset); // Slightly slower animation for beefier feel
@@ -42,102 +91,88 @@ export class BeefyEnemy extends BaseEnemy {
         ctx.save();
         ctx.translate(this.x, this.y + bobAnimation);
         
-        // Back/depth layer (darker, more pronounced)
-        ctx.fillStyle = this.darkenColor(this.tunicColor, 0.25);
-        ctx.fillRect(-baseSize * 0.72, -baseSize * 0.82, baseSize * 1.44, baseSize * 1.2);
+        // Back/depth layer - removed for performance (shadow is enough)
+        // ctx.fillStyle = this.darkenedTunic;
+        // ctx.fillRect(-baseSize * 0.72, -baseSize * 0.82, baseSize * 1.44, baseSize * 1.2);
         
-        // Main tunic/body - beefier with stronger gradient
-        const bodyGradient = ctx.createLinearGradient(-baseSize * 0.7, -baseSize * 0.9, baseSize * 0.7, baseSize * 0.45);
-        bodyGradient.addColorStop(0, this.tunicColor);
-        bodyGradient.addColorStop(0.5, this.tunicColor);
-        bodyGradient.addColorStop(1, this.darkenColor(this.tunicColor, 0.2));
-        
-        ctx.fillStyle = bodyGradient;
+        // Main tunic/body - simplified but still looks good
+        ctx.fillStyle = this.tunicColor;
         ctx.fillRect(-baseSize * 0.68, -baseSize * 0.88, baseSize * 1.36, baseSize * 1.32);
         
+        // Simple outline instead of gradient for performance
         ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.0;
         ctx.strokeRect(-baseSize * 0.68, -baseSize * 0.88, baseSize * 1.36, baseSize * 1.32);
         
-        // Center seam
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 0.7;
+        // Center seam - simplified
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(0, -baseSize * 0.88);
         ctx.lineTo(0, baseSize * 0.44);
         ctx.stroke();
         
-        // Armor chest plate - beefier enemy wears armor
+        // Armor chest plate - simplified
         ctx.fillStyle = '#5a5a5a';
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.7, baseSize * 1.2, baseSize * 0.9);
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.8;
         ctx.strokeRect(-baseSize * 0.6, -baseSize * 0.7, baseSize * 1.2, baseSize * 0.9);
         
-        // Armor rivets
+        // Armor rivets - pre-calculated
         ctx.fillStyle = '#3a3a3a';
-        for (let i = -1; i <= 1; i++) {
-            for (let j = 0; j < 3; j++) {
-                ctx.beginPath();
-                ctx.arc(i * baseSize * 0.35, -baseSize * 0.5 + j * baseSize * 0.35, 0.8, 0, Math.PI * 2);
-                ctx.fill();
-            }
+        const baseRivetRadius = 0.7;
+        for (const rivet of this.rivetPositions) {
+            ctx.beginPath();
+            ctx.arc(
+                rivet.i * baseSize * 0.35,
+                -baseSize * 0.5 + rivet.j * baseSize * 0.35,
+                baseRivetRadius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
         }
         
-        // Side highlight - more pronounced
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        // Side highlight - slightly simplified
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.fillRect(-baseSize * 0.62, -baseSize * 0.8, baseSize * 0.25, baseSize * 0.95);
         
-        // --- HEAD WITH 3D PERSPECTIVE ---
+        // --- HEAD WITH SIMPLE SHADING ---
         
-        ctx.fillStyle = '#C4A575';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.06, -baseSize * 1.3, baseSize * 0.62, 0, Math.PI * 2);
-        ctx.fill();
-        
-        const headGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 1.42, baseSize * 0.25, 0, -baseSize * 1.35, baseSize * 0.7);
-        headGradient.addColorStop(0, '#E8D4B8');
-        headGradient.addColorStop(0.6, '#DDBEA9');
-        headGradient.addColorStop(1, '#C9A876');
-        
-        ctx.fillStyle = headGradient;
+        ctx.fillStyle = this.cachedColorVariants.headSkin;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.35, baseSize * 0.58, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = '#B8956A';
-        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = this.cachedColorVariants.headStroke;
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.35, baseSize * 0.58, 0, Math.PI * 2);
         ctx.stroke();
         
-        // --- HELMET - beefier, more intimidating ---
+        // --- HELMET - simplified but still looks intimidating ---
         
-        const helmetGradient = ctx.createLinearGradient(-baseSize * 0.7, -baseSize * 1.48, baseSize * 0.7, -baseSize * 1.0);
-        helmetGradient.addColorStop(0, '#606060');
-        helmetGradient.addColorStop(0.5, '#4a4a4a');
-        helmetGradient.addColorStop(1, '#3a3a3a');
-        
-        ctx.fillStyle = helmetGradient;
+        ctx.fillStyle = this.cachedColorVariants.helmetMid;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.35, baseSize * 0.7, Math.PI * 0.92, Math.PI * 2.08);
         ctx.fill();
         
         // Helmet nose guard
-        ctx.fillStyle = '#4a4a4a';
+        ctx.fillStyle = this.cachedColorVariants.helmetNose;
         ctx.fillRect(-baseSize * 0.12, -baseSize * 1.3, baseSize * 0.24, baseSize * 0.45);
         
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = this.cachedColorVariants.helmetOutline;
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.7, -baseSize * 1.35);
         ctx.lineTo(baseSize * 0.7, -baseSize * 1.35);
         ctx.stroke();
         
-        // Helmet highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        // Helmet highlight - simplified
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 1.52, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.2, -baseSize * 1.52, baseSize * 0.15, 0, Math.PI * 2);
         ctx.fill();
         
         // --- LEFT ARM ---
@@ -155,42 +190,21 @@ export class BeefyEnemy extends BaseEnemy {
         const leftWristX = leftElbowX + leftArmForwardOffset * baseSize * 0.4;
         const leftWristY = leftElbowY + (baseSize * 0.68 + leftArmBend * baseSize * 0.17);
         
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.12 + Math.max(0, leftSwingForward) * 0.18})`;
-        ctx.lineWidth = baseSize * 0.36;
-        ctx.beginPath();
-        ctx.moveTo(leftShoulderX + 0.6, leftShoulderY + 0.6);
-        ctx.lineTo(leftElbowX + 0.6, leftElbowY + 0.6);
-        ctx.lineTo(leftWristX + 0.6, leftWristY + 0.6);
-        ctx.stroke();
-        
-        const leftUpperArmGradient = ctx.createLinearGradient(leftShoulderX, leftShoulderY, leftElbowX, leftElbowY);
-        leftUpperArmGradient.addColorStop(0, '#E8D4B8');
-        leftUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.88 + Math.abs(leftSwingForward) * 0.12})`);
-        
-        ctx.strokeStyle = leftUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.38;
+        // Simplified arm drawing - fewer calls
+        ctx.strokeStyle = this.cachedColorVariants.skinTone;
+        ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(leftShoulderX, leftShoulderY);
         ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.stroke();
-        
-        const leftLowerArmGradient = ctx.createLinearGradient(leftElbowX, leftElbowY, leftWristX, leftWristY);
-        leftLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.93 + Math.abs(leftSwingForward) * 0.07})`);
-        leftLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = leftLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(leftElbowX, leftElbowY);
         ctx.lineTo(leftWristX, leftWristY);
         ctx.stroke();
         
-        // Left hand
+        // Left hand - simplified
         ctx.fillStyle = 'rgba(221, 190, 169, 0.95)';
         ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(leftWristX, leftWristY, baseSize * 0.16, 0, Math.PI * 2);
         ctx.fill();
         
         // --- RIGHT ARM WITH SWORD ---
@@ -208,107 +222,53 @@ export class BeefyEnemy extends BaseEnemy {
         const rightWristX = rightElbowX + rightArmForwardOffset * baseSize * 0.4;
         const rightWristY = rightElbowY + (baseSize * 0.68 + rightArmBend * baseSize * 0.17);
         
-        ctx.strokeStyle = `rgba(0, 0, 0, ${0.12 + Math.max(0, rightSwingForward) * 0.18})`;
-        ctx.lineWidth = baseSize * 0.36;
-        ctx.beginPath();
-        ctx.moveTo(rightShoulderX + 0.6, rightShoulderY + 0.6);
-        ctx.lineTo(rightElbowX + 0.6, rightElbowY + 0.6);
-        ctx.lineTo(rightWristX + 0.6, rightWristY + 0.6);
-        ctx.stroke();
-        
-        const rightUpperArmGradient = ctx.createLinearGradient(rightShoulderX, rightShoulderY, rightElbowX, rightElbowY);
-        rightUpperArmGradient.addColorStop(0, '#E8D4B8');
-        rightUpperArmGradient.addColorStop(1, `rgba(201, 168, 118, ${0.88 + Math.abs(rightSwingForward) * 0.12})`);
-        
-        ctx.strokeStyle = rightUpperArmGradient;
-        ctx.lineWidth = baseSize * 0.38;
+        // Simplified right arm
+        ctx.strokeStyle = this.cachedColorVariants.skinTone;
+        ctx.lineWidth = baseSize * 0.32;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(rightShoulderX, rightShoulderY);
         ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.stroke();
-        
-        const rightLowerArmGradient = ctx.createLinearGradient(rightElbowX, rightElbowY, rightWristX, rightWristY);
-        rightLowerArmGradient.addColorStop(0, `rgba(232, 212, 184, ${0.93 + Math.abs(rightSwingForward) * 0.07})`);
-        rightLowerArmGradient.addColorStop(1, '#C9A876');
-        
-        ctx.strokeStyle = rightLowerArmGradient;
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(rightElbowX, rightElbowY);
         ctx.lineTo(rightWristX, rightWristY);
         ctx.stroke();
         
-        // Right hand with gauntlet
-        ctx.fillStyle = '#4a4a4a';
+        // Right hand with gauntlet - simplified
+        ctx.fillStyle = this.cachedColorVariants.gauntlet;
         ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.2, 0, Math.PI * 2);
+        ctx.arc(rightWristX, rightWristY, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.2, 0, Math.PI * 2);
-        ctx.stroke();
         
-        // --- SWORD ---
+        // --- SWORD - optimized ---
         
         // Sword points mostly upright with slight forward tilt
         const swordAngle = -Math.PI / 2 + 0.3;
-        const swordLength = baseSize * 1.8;
+        const swordLength = baseSize * 1.5;  // Reduced from 1.8 for better proportions
+        
         const swordTipX = rightWristX + Math.cos(swordAngle) * swordLength;
         const swordTipY = rightWristY + Math.sin(swordAngle) * swordLength;
         
-        // Sword shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.16;
-        ctx.beginPath();
-        ctx.moveTo(rightWristX + 0.8, rightWristY + 0.8);
-        ctx.lineTo(swordTipX + 0.8, swordTipY + 0.8);
-        ctx.stroke();
-        
-        // Sword blade - steel gray with gradient
-        const swordGradient = ctx.createLinearGradient(rightWristX, rightWristY, swordTipX, swordTipY);
-        swordGradient.addColorStop(0, '#A9A9A9');
-        swordGradient.addColorStop(0.5, '#C0C0C0');
-        swordGradient.addColorStop(1, '#808080');
-        
-        ctx.strokeStyle = swordGradient;
-        ctx.lineWidth = baseSize * 0.22;
+        // Sword blade - simplified (no shadow, no gradient)
+        ctx.strokeStyle = this.cachedColorVariants.swordMid;
+        ctx.lineWidth = baseSize * 0.2;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(rightWristX, rightWristY);
         ctx.lineTo(swordTipX, swordTipY);
         ctx.stroke();
         
-        // Sword edge highlight
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = baseSize * 0.08;
-        ctx.beginPath();
-        ctx.moveTo(rightWristX, rightWristY);
-        ctx.lineTo(swordTipX, swordTipY);
-        ctx.stroke();
-        
-        // Sword guard (crossbar)
+        // Sword guard (crossbar) - optimized
         ctx.save();
         ctx.translate(rightWristX, rightWristY);
         ctx.rotate(swordAngle);
-        ctx.fillStyle = '#D4AF37';
-        ctx.fillRect(-baseSize * 0.28, -baseSize * 0.08, baseSize * 0.56, baseSize * 0.16);
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(-baseSize * 0.28, -baseSize * 0.08, baseSize * 0.56, baseSize * 0.16);
+        ctx.fillStyle = this.cachedColorVariants.guardGold;
+        ctx.fillRect(-baseSize * 0.25, -baseSize * 0.07, baseSize * 0.5, baseSize * 0.14);
         
-        // Sword pommel
-        ctx.fillStyle = '#D4AF37';
+        // Sword pommel - simplified
+        ctx.fillStyle = this.cachedColorVariants.guardGold;
         ctx.beginPath();
-        ctx.arc(0, baseSize * 0.15, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.arc(0, baseSize * 0.15, baseSize * 0.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.15, baseSize * 0.12, 0, Math.PI * 2);
-        ctx.stroke();
         ctx.restore();
         
         // --- LEGS ---
@@ -320,15 +280,8 @@ export class BeefyEnemy extends BaseEnemy {
         const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.8;
         const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.9;
         
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(leftHipX + 1, leftHipY + 1);
-        ctx.lineTo(leftFootX + 1, leftFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.3;
+        ctx.strokeStyle = this.cachedColorVariants.legStroke;
+        ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(leftHipX, leftHipY);
@@ -342,53 +295,61 @@ export class BeefyEnemy extends BaseEnemy {
         const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.8;
         const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.9;
         
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = baseSize * 0.3;
-        ctx.beginPath();
-        ctx.moveTo(rightHipX + 1, rightHipY + 1);
-        ctx.lineTo(rightFootX + 1, rightFootY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.3;
+        ctx.strokeStyle = this.cachedColorVariants.legStroke;
+        ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(rightHipX, rightHipY);
         ctx.lineTo(rightFootX, rightFootY);
         ctx.stroke();
         
-        // --- BOOTS ---
+        // --- BOOTS - simplified ---
         
-        ctx.fillStyle = '#0a0a0a';
+        ctx.fillStyle = this.cachedColorVariants.bootColor;
         ctx.beginPath();
-        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.18, baseSize * 0.24, baseSize * 0.18, walkCycle * 0.3, 0, Math.PI * 2);
+        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.16, baseSize * 0.22, baseSize * 0.16, walkCycle * 0.25, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = '#0a0a0a';
+        ctx.fillStyle = this.cachedColorVariants.bootColor;
         ctx.beginPath();
-        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.18, baseSize * 0.24, baseSize * 0.18, -walkCycle * 0.3, 0, Math.PI * 2);
+        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.16, baseSize * 0.22, baseSize * 0.16, -walkCycle * 0.25, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
         
-        // Health bar
+        // Health bar - only draw if not at full health or currently being damaged
         const barWidth = baseSize * 3.6;
-        const barHeight = Math.max(2.4, baseSize * 0.48);
+        const barHeight = Math.max(2, baseSize * 0.4);
         const barY = this.y - baseSize * 2.5;
         
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        // Only render health bar if below max or very recently damaged
+        if (this.health < this.maxHealth || (this.lastDamageTime && performance.now() - this.lastDamageTime < 2000)) {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+            
+            const healthPercent = this.health / this.maxHealth;
+            ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+            
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        }
         
-        const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+        // Render hit splatters only if any exist
+        if (this.hitSplatters && this.hitSplatters.length > 0) {
+            for (const splatter of this.hitSplatters) {
+                splatter.render(ctx);
+            }
+        }
+    }
+    
+    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
+        // Track last damage time for health bar rendering optimization
+        this.lastDamageTime = performance.now();
         
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+        // Call parent method
+        return super.takeDamage(amount, ignoreArmor, damageType, followTarget);
     }
     
     darkenColor(color, factor) {
