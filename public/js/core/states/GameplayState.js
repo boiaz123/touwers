@@ -728,7 +728,7 @@ export class GameplayState {
         if (this.isSandbox) {
             // Sandbox mode: continuous spawning with all enemy types
 // console.log('GameplayState: Starting sandbox continuous spawn mode');
-            this.enemyManager.startContinuousSpawn(0.6, ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight', 'shieldknight', 'frog']);
+            this.enemyManager.startContinuousSpawn(0.6, ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight','frog']);
         } else {
             // Campaign mode: traditional wave spawning
             const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);

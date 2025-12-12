@@ -25,10 +25,12 @@ export class Castle {
         
         // Flags on towers - positioned at tower roof peak
         // roofPeakY = topY - creneH - meralonH - roofH
+        // where topY = -this.towerHeight = -66.5, creneH = 10, meralonH = 4, roofH = 12
         // roofPeakY = -66.5 - 10 - 4 - 12 = -92.5
+        const flagRoofPeakY = -this.towerHeight - 10 - 4 - 12; // -92.5
         this.flags = [
-            { x: -72, y: -92.5, rotation: 0.1 },
-            { x: 72, y: -92.5, rotation: -0.15 }
+            { x: -72, y: flagRoofPeakY, rotation: 0.1 },
+            { x: 72, y: flagRoofPeakY, rotation: -0.15 }
         ];
         
         // Window lights on wall and towers
@@ -76,7 +78,7 @@ export class Castle {
         this.lights.forEach((light, i) => {
             this.windowFlicker[i] += Math.random() - 0.5;
             this.windowFlicker[i] = Math.max(0, Math.min(1, this.windowFlicker[i]));
-            light.intensity = 0.4 + this.windowFlicker[i] * 0.6;
+            light.intensity = 0.24 + this.windowFlicker[i] * 0.6;
         });
     }
     
@@ -110,9 +112,6 @@ export class Castle {
         // Draw main wall first (background)
         this.drawMainWall(ctx);
         
-        // Draw bridge connecting to left tower
-        this.drawBridge(ctx);
-        
         // Draw left tower with front perspective
         this.drawTower(ctx, -this.wallWidth/2 - this.towerWidth/2, 'left');
         
@@ -138,7 +137,7 @@ export class Castle {
         const barWidth = 120;
         const barHeight = 12;
         const barX = this.x - barWidth / 2;
-        const barY = this.y - 140;
+        const barY = this.y - 125;
         
         // Background
         ctx.fillStyle = '#000000';
@@ -163,56 +162,7 @@ export class Castle {
         ctx.fillText(`${Math.ceil(this.health)}/${this.maxHealth}`, this.x, barY + barHeight / 2);
     }
     
-    drawBridge(ctx) {
-        const bridgeX = -this.wallWidth/2 - this.towerWidth/2 - this.bridgeLength;
-        const bridgeY = this.wallHeight/2 - 5;
-        
-        // Bridge shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(bridgeX, bridgeY + 2, this.bridgeLength, this.bridgeHeight + 2);
-        
-        // Bridge main structure
-        const bridgeGrad = ctx.createLinearGradient(bridgeX, bridgeY, bridgeX, bridgeY + this.bridgeHeight);
-        bridgeGrad.addColorStop(0, '#8B7D6B');
-        bridgeGrad.addColorStop(1, '#6B5D4D');
-        
-        ctx.fillStyle = bridgeGrad;
-        ctx.fillRect(bridgeX, bridgeY, this.bridgeLength, this.bridgeHeight);
-        
-        ctx.strokeStyle = '#3D3830';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(bridgeX, bridgeY, this.bridgeLength, this.bridgeHeight);
-        
-        // Bridge planks
-        ctx.strokeStyle = '#5D5247';
-        ctx.lineWidth = 0.8;
-        for (let i = 0; i < 6; i++) {
-            ctx.beginPath();
-            ctx.moveTo(bridgeX + (i * this.bridgeLength/5), bridgeY);
-            ctx.lineTo(bridgeX + (i * this.bridgeLength/5), bridgeY + this.bridgeHeight);
-            ctx.stroke();
-        }
-        
-        // Bridge rails
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(bridgeX + 2, bridgeY - 3);
-        ctx.lineTo(bridgeX + this.bridgeLength - 2, bridgeY - 3);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(bridgeX + 2, bridgeY + this.bridgeHeight + 3);
-        ctx.lineTo(bridgeX + this.bridgeLength - 2, bridgeY + this.bridgeHeight + 3);
-        ctx.stroke();
-        
-        // Path connection
-        ctx.fillStyle = '#9B8B7B';
-        ctx.fillRect(bridgeX - 15, bridgeY + 2, 15, this.bridgeHeight - 2);
-        ctx.strokeStyle = '#5D5247';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(bridgeX - 15, bridgeY + 2, 15, this.bridgeHeight - 2);
-    }
+
     
     drawTower(ctx, x, side) {
         ctx.save();
@@ -249,33 +199,47 @@ export class Castle {
         ctx.closePath();
         ctx.stroke();
         
-        // Tower stone brick pattern - same brick size
+        // Tower stone brick pattern - optimized tight spacing
         ctx.strokeStyle = '#5D5247';
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = 0.7;
         const blockW = this.towerWidth / 6;
-        const blockH = 10.55; // Fixed brick height instead of this.towerHeight / 9
+        const blockH = 10.5; // Fixed brick height
         
         for (let y = topY; y < baseY; y += blockH) {
             const rowFraction = (y - topY) / this.towerHeight;
             const rowW = towerTopW + (this.towerWidth - towerTopW) * rowFraction;
             const offsetX = (Math.abs(y - topY) / blockH) % 2 * blockW/2;
+            const halfRowW = rowW / 2;
             
             for (let i = 0; i < 5; i++) {
                 const xPos = -rowW/2 + (i * blockW);
-                ctx.strokeRect(xPos + offsetX, y, blockW - 1, blockH - 1);
+                const brickLeft = xPos + offsetX;
+                const brickRight = brickLeft + (blockW - 0.8);
+                
+                // Only draw brick if it fits within tower width at this row
+                if (brickLeft >= -halfRowW && brickRight <= halfRowW) {
+                    ctx.strokeRect(brickLeft, y, blockW - 0.8, blockH - 0.8);
+                }
             }
         }
         
         // Stone highlights
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        for (let y = topY + 2; y < baseY; y += blockH) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        for (let y = topY + 1.5; y < baseY; y += blockH) {
             const rowFraction = (y - topY) / this.towerHeight;
             const rowW = towerTopW + (this.towerWidth - towerTopW) * rowFraction;
             const offsetX = (Math.abs(y - topY) / blockH) % 2 * blockW/2;
+            const halfRowW = rowW / 2;
             
             for (let i = 0; i < 5; i++) {
                 const xPos = -rowW/2 + (i * blockW);
-                ctx.fillRect(xPos + offsetX + 2, y + 2, blockW/3, blockH/3);
+                const highlightLeft = xPos + offsetX + 1.5;
+                const highlightRight = highlightLeft + blockW/3;
+                
+                // Only draw highlight if it fits within tower width at this row
+                if (highlightLeft >= -halfRowW && highlightRight <= halfRowW) {
+                    ctx.fillRect(highlightLeft, y + 1.5, blockW/3, blockH/3);
+                }
             }
         }
         
@@ -379,22 +343,24 @@ export class Castle {
         ctx.lineWidth = 2;
         ctx.strokeRect(-this.wallWidth/2, -this.wallHeight/2, this.wallWidth, this.wallHeight);
         
+        // Wall stone brick pattern - optimized tight spacing
         ctx.strokeStyle = '#5D5247';
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = 0.7;
         const blockW = this.wallWidth / 12;
         const blockH = this.wallHeight / 8;
         
         for (let y = -this.wallHeight/2; y < this.wallHeight/2; y += blockH) {
             const offsetX = (Math.abs(y + this.wallHeight/2) / blockH) % 2 * blockW/2;
             for (let x = -this.wallWidth/2; x < this.wallWidth/2; x += blockW) {
-                ctx.strokeRect(x + offsetX, y, blockW - 1, blockH - 1);
+                ctx.strokeRect(x + offsetX, y, blockW - 0.8, blockH - 0.8);
             }
         }
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        for (let y = -this.wallHeight/2 + 2; y < this.wallHeight/2; y += blockH) {
+        // Wall stone highlights
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        for (let y = -this.wallHeight/2 + 1.5; y < this.wallHeight/2; y += blockH) {
             const offsetX = (Math.abs(y + this.wallHeight/2) / blockH) % 2 * blockW/2;
-            for (let x = -this.wallWidth/2 + 2; x < this.wallWidth/2; x += blockW) {
+            for (let x = -this.wallWidth/2 + 1.5; x < this.wallWidth/2; x += blockW) {
                 ctx.fillRect(x + offsetX, y, blockW/3, blockH/3);
             }
         }
