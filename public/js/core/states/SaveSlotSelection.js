@@ -148,16 +148,12 @@ export class SaveSlotSelection {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title fade in
-        if (this.animationTime > 0.3) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.7);
-        }
+        // Title is immediately visible
+        this.titleOpacity = 1;
 
-        // Content fade in
-        if (this.animationTime > 1) {
-            this.showContent = true;
-            this.contentOpacity = Math.min(1, (this.animationTime - 1) / 0.7);
-        }
+        // Content is immediately visible
+        this.showContent = true;
+        this.contentOpacity = 1;
     }
 
     render(ctx) {

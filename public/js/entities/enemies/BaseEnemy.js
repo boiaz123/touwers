@@ -97,18 +97,11 @@ export class BaseEnemy {
                 this.defenderWaypoint.y - this.y
             );
             
-            // Always log first frame with waypoint
-            if (!this._waypointDebugLogged) {
-                console.log('[DEBUG] Enemy FIRST UPDATE with waypoint. Type:', this.type);
-                console.log('  Enemy pos:', {x: this.x.toFixed(0), y: this.y.toFixed(0)});
-                console.log('  Waypoint pos:', {x: this.defenderWaypoint.x.toFixed(0), y: this.defenderWaypoint.y.toFixed(0)});
-                console.log('  Distance:', distanceToWaypoint.toFixed(1));
-                this._waypointDebugLogged = true;
-            }
+
             
             // If we've reached the defender waypoint, engage with available path defender
             if (distanceToWaypoint < 50) {
-                console.log('[DEBUG] *** ENEMY REACHED WAYPOINT! ***');
+
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
                 // Will be attacked by defender in GameplayState combat handling

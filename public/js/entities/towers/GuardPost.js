@@ -155,7 +155,6 @@ export class GuardPost extends Tower {
                 y: this.defenderSpawnY,
                 pathIndex: this.pathIndex
             };
-            console.log('[DEBUG] GuardPost: Hired defender at waypoint', this.defender.stationedWaypoint);
         }
         return true;
     }

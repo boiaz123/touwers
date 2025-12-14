@@ -1,3 +1,5 @@
+import { ParticleSystem } from '../ParticleSystem.js';
+
 export class MainMenu {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -5,8 +7,7 @@ export class MainMenu {
         this.showButtons = false;
         this.titleOpacity = 0;
         this.buttonsOpacity = 0;
-        this.particles = [];
-        this.particlesInitialized = false;
+        this.particleSystem = null;
 
         // Button configuration
         this.buttons = [
@@ -20,33 +21,6 @@ export class MainMenu {
         this.buttonHeight = 50;
         this.buttonGap = 20;
 
-    }
-
-    initParticles() {
-        // Ensure we have valid canvas dimensions before initializing particles
-        if (!this.stateManager.canvas.width || !this.stateManager.canvas.height) {
-            console.warn('MainMenu: Canvas dimensions not available, skipping particle initialization');
-            return;
-        }
-
-        // Prevent multiple initializations
-        if (this.particlesInitialized) {
-            return;
-        }
-
-        this.particles = [];
-
-        for (let i = 0; i < 25; i++) {
-            this.particles.push({
-                x: Math.random() * this.stateManager.canvas.width,
-                y: Math.random() * this.stateManager.canvas.height,
-                size: Math.random() * 3 + 1,
-                speed: Math.random() * 20 + 10,
-                opacity: Math.random() * 0.5 + 0.1
-            });
-        }
-
-        this.particlesInitialized = true;
     }
 
     enter() {
@@ -67,12 +41,10 @@ export class MainMenu {
         this.showButtons = false;
         this.titleOpacity = 0;
         this.buttonsOpacity = 0;
-        this.particles = [];
-        this.particlesInitialized = false;
 
-        // Initialize particles
+        // Get or initialize shared particle system
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0) {
-            this.initParticles();
+            this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
         }
 
         this.setupMouseListeners();
@@ -188,15 +160,9 @@ export class MainMenu {
             this.buttonsOpacity = Math.min(1, (this.animationTime - 0.3) / 0.6);
         }
 
-        // Update particles
-        if (this.particles.length > 0) {
-            this.particles.forEach(particle => {
-                particle.y += particle.speed * deltaTime;
-                if (particle.y > this.stateManager.canvas.height) {
-                    particle.y = -10;
-                    particle.x = Math.random() * this.stateManager.canvas.width;
-                }
-            });
+        // Update shared particle system
+        if (this.particleSystem) {
+            this.particleSystem.update(deltaTime);
         }
     }
 
@@ -210,11 +176,6 @@ export class MainMenu {
                 return;
             }
 
-            // Initialize particles on first render if needed
-            if (!this.particlesInitialized) {
-                this.initParticles();
-            }
-
             // Background
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#1a0f0a');
@@ -222,16 +183,9 @@ export class MainMenu {
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Render particles
-            if (this.particles && this.particles.length > 0) {
-                ctx.globalAlpha = 1;
-                this.particles.forEach(particle => {
-                    ctx.globalAlpha = particle.opacity;
-                    ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
-                    ctx.beginPath();
-                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    ctx.fill();
-                });
+            // Render particles from shared system
+            if (this.particleSystem) {
+                this.particleSystem.render(ctx);
             }
 
             // Title - positioned at SAME height as StartScreen (middle of canvas)

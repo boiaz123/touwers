@@ -9,6 +9,7 @@ import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
 import { PerformanceMonitor } from '../PerformanceMonitor.js';
+import { ResultsScreen } from './ResultsScreen.js';
 
 export class GameplayState {
     constructor(stateManager) {
@@ -25,6 +26,9 @@ export class GameplayState {
         this.waveInProgress = false;
         this.waveCompleted = false;
         this.superWeaponLab = null;
+        
+        // Results screen for level completion / game over
+        this.resultsScreen = new ResultsScreen(stateManager);
         
         // Spell effects
         this.spellEffects = [];
@@ -941,6 +945,12 @@ export class GameplayState {
     }
     
     handleClick(x, y) {
+        // If results screen is showing, let it handle the click
+        if (this.resultsScreen && this.resultsScreen.isShowing) {
+            this.resultsScreen.handleClick(x, y);
+            return;
+        }
+        
         // Prevent any interactions when game is paused
         if (this.isPaused) {
             return;
@@ -1218,11 +1228,22 @@ export class GameplayState {
             }
         }
 
-        alert(`Congratulations! You completed Level ${this.currentLevel}!\n\nFinal Stats:\n- Waves Completed: ${this.maxWavesForLevel}\n- Health Remaining: ${this.gameState.health}\n- Gold Earned: ${this.gameState.gold}`);
-        this.stateManager.changeState('levelSelect');
+        // Show custom results screen with statistics
+        this.resultsScreen.show('levelComplete', {
+            level: this.currentLevel,
+            wavesCompleted: this.maxWavesForLevel,
+            health: this.gameState.health,
+            gold: this.gameState.gold
+        });
     }
     
     update(deltaTime) {
+        // Update results screen if showing
+        if (this.resultsScreen && this.resultsScreen.isShowing) {
+            this.resultsScreen.update(deltaTime);
+            return; // Don't update game state while results are showing
+        }
+        
         // Process pending damage (delayed spell effects)
         this.pendingDamage = this.pendingDamage.filter(damage => {
             damage.time -= deltaTime;
@@ -1263,33 +1284,13 @@ export class GameplayState {
         // FIRST: Register path defenders and waypoints on enemies
         // This allows enemies to know where to stop and engage path defenders
         if (this.enemyManager && this.enemyManager.enemies && this.towerManager) {
-            // Debug: Log active guard posts
-            let activeGuardPosts = 0;
-            let totalTowers = this.towerManager.towers ? this.towerManager.towers.length : 0;
-            console.log('[DEBUG] GameplayState UPDATE: Total towers:', totalTowers, 'Total enemies:', this.enemyManager.enemies.length);
-            
-            if (this.towerManager.towers) {
-                this.towerManager.towers.forEach(t => {
-                    if (t.type === 'guard-post') {
-                        const def = t.getDefender();
-                        console.log('[DEBUG] Found guard-post tower. getDefender() returned:', def ? 'YES' : 'NO');
-                        if (def) {
-                            activeGuardPosts++;
-                        }
-                    }
-                });
-            }
-            console.log('[DEBUG] Active guard posts with defenders:', activeGuardPosts);
-            
-            this.enemyManager.enemies.forEach((enemy, index) => {
+            this.enemyManager.enemies.forEach((enemy) => {
                 // Register guard post defenders and their waypoints
                 if (this.towerManager.towers) {
                     for (let tower of this.towerManager.towers) {
                         if (tower.type === 'guard-post') {
                             const defender = tower.getDefender();
                             if (defender) {
-                                console.log('[DEBUG] Enemy #', index, 'found guard post defender at', {x: defender.x.toFixed(0), y: defender.y.toFixed(0)});
-                                
                                 // Add defender to the enemy's list of available path defenders
                                 if (!enemy.pathDefenders) {
                                     enemy.pathDefenders = [];
@@ -1303,9 +1304,6 @@ export class GameplayState {
                                 const waypoint = tower.getDefenderWaypoint();
                                 if (waypoint && !enemy.defenderWaypoint) {
                                     enemy.defenderWaypoint = waypoint;
-                                    console.log('[DEBUG] -> Registered waypoint on enemy #', index, 'at', waypoint);
-                                } else if (!waypoint) {
-                                    console.log('[DEBUG] -> NO WAYPOINT returned from getDefenderWaypoint()');
                                 }
                             }
                         }
@@ -1392,12 +1390,10 @@ export class GameplayState {
                 
                 // PATH DEFENDER LOGIC: If there's a defenderWaypoint, engage path defenders there
                 if (enemy.defenderWaypoint && enemy.pathDefenders && enemy.pathDefenders.length > 0) {
-                    console.log('[DEBUG] Combat: Enemy at waypoint with defenders available. Defenders count:', enemy.pathDefenders.length);
                     // Find first alive path defender in the list
                     for (let defender of enemy.pathDefenders) {
                         if (!defender.isDead()) {
                             targetDefender = defender;
-                            console.log('[DEBUG] Combat: Found alive path defender. Engaging.');
                             break;
                         }
                     }
@@ -1410,8 +1406,6 @@ export class GameplayState {
                         enemy.attackDefender(targetDefender, deltaTime);
                         return;
                     }
-                } else if (!enemy.defenderWaypoint) {
-                    console.log('[DEBUG] Combat: Enemy reached end but no defenderWaypoint set. Will check castle defender.');
                 }
                 
                 // CASTLE DEFENDER LOGIC: If no path defender, engage castle defender if available
@@ -1474,9 +1468,12 @@ export class GameplayState {
     gameOver() {
         this.waveInProgress = false;
         
-        // Don't save progress on failure, just show alert and return to level select
-        alert('Game Over! The castle was destroyed.\n\nTry again!');
-        this.stateManager.changeState('levelSelect');
+        // Show custom results screen instead of alert
+        this.resultsScreen.show('gameOver', {
+            level: this.currentLevel,
+            wave: this.gameState.wave,
+            gold: this.gameState.gold
+        });
     }
     
     render(ctx) {
@@ -1505,6 +1502,11 @@ export class GameplayState {
         
         // Render performance monitor
         this.performanceMonitor.render(ctx, 10, 10);
+        
+        // Render results screen on top if showing
+        if (this.resultsScreen && this.resultsScreen.isShowing) {
+            this.resultsScreen.render(ctx);
+        }
     }
     
     renderSpellEffects(ctx) {

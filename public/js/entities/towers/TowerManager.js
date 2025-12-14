@@ -45,7 +45,6 @@ export class TowerManager {
                 // Set the path on the guard post so it can place defenders on actual path waypoints
                 if (this.level && this.level.path) {
                     tower.setPath(this.level.path);
-                    console.log('[DEBUG] TowerManager: GuardPost placed and path set. Path length:', this.level.path.length);
                 }
                 this.towers.push(tower);
                 // Notify unlock system

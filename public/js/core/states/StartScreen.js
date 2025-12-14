@@ -1,3 +1,5 @@
+import { ParticleSystem } from '../ParticleSystem.js';
+
 export class StartScreen {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -6,36 +8,7 @@ export class StartScreen {
         this.titleOpacity = 0;
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
-        this.particles = [];
-        this.particlesInitialized = false;
-    }
-    
-    initParticles() {
-        // Ensure we have valid canvas dimensions before initializing particles
-        if (!this.stateManager.canvas.width || !this.stateManager.canvas.height) {
-            console.warn('StartScreen: Canvas dimensions not available, skipping particle initialization');
-            return;
-        }
-        
-        // Prevent multiple initializations
-        if (this.particlesInitialized) {
-            return;
-        }
-        
-        this.particles = [];
-        
-        // Reduce particle count to speed up initialization
-        for (let i = 0; i < 25; i++) { // Reduced from 50 to 25
-            this.particles.push({
-                x: Math.random() * this.stateManager.canvas.width,
-                y: Math.random() * this.stateManager.canvas.height,
-                size: Math.random() * 3 + 1,
-                speed: Math.random() * 20 + 10,
-                opacity: Math.random() * 0.5 + 0.1
-            });
-        }
-        
-        this.particlesInitialized = true;
+        this.particleSystem = null;
     }
     
     enter() {
@@ -59,15 +32,10 @@ export class StartScreen {
         this.subtitleOpacity = 0;
         this.continueOpacity = 0;
         
-        // Reset particle state
-        this.particles = [];
-        this.particlesInitialized = false;
-        
-        // Initialize particles immediately if canvas is ready
+        // Get or initialize shared particle system
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
-            this.initParticles();
+            this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
         }
-        
     }
     
     update(deltaTime) {
@@ -89,15 +57,9 @@ export class StartScreen {
             this.continueOpacity = Math.min(1, (this.animationTime - 2.3) / 0.8);
         }
         
-        // Update particles only if they exist
-        if (this.particles.length > 0) {
-            this.particles.forEach(particle => {
-                particle.y += particle.speed * deltaTime;
-                if (particle.y > this.stateManager.canvas.height) {
-                    particle.y = -10;
-                    particle.x = Math.random() * this.stateManager.canvas.width;
-                }
-            });
+        // Update shared particle system
+        if (this.particleSystem) {
+            this.particleSystem.update(deltaTime);
         }
     }
     
@@ -114,11 +76,6 @@ export class StartScreen {
                 return;
             }
             
-            // Initialize particles on first render if needed
-            if (!this.particlesInitialized) {
-                this.initParticles();
-            }
-            
             // Dark medieval background
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#1a0f0a');
@@ -126,16 +83,9 @@ export class StartScreen {
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Render particles (falling embers) if they exist
-            if (this.particles && this.particles.length > 0) {
-                ctx.globalAlpha = 1;
-                this.particles.forEach(particle => {
-                    ctx.globalAlpha = particle.opacity;
-                    ctx.fillStyle = 'rgba(255, 140, 0, 0.6)';
-                    ctx.beginPath();
-                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    ctx.fill();
-                });
+            // Render particles from shared system
+            if (this.particleSystem) {
+                this.particleSystem.render(ctx);
             }
             
             // Title rendering
