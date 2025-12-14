@@ -9,12 +9,3 @@ build/
 .cache/
 src-tauri/target/
 
-# Old Electron files (obsolete - use Tauri instead)
-main.js
-preload.js
-server.js
-Touwers.bat
-Touwers.vbs
-Launch-Touwers.ps1
-Create-Shortcut.ps1
-build.js
