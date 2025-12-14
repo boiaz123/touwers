@@ -1056,7 +1056,7 @@ export class GoldMine extends Building {
     
     getBaseIncome() {
         // Base income adjusted by forge level via building manager
-        return 15; // This will be multiplied by forge bonus in BuildingManager
+        return 30; // This will be multiplied by forge bonus in BuildingManager
     }
     
     darkenColor(color, factor) {

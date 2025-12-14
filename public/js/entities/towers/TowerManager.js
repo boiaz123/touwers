@@ -334,8 +334,8 @@ export class TowerManager {
                     break;
                     
                 case 'ArcherTower':
-                    if (multipliers.fireArrowsEnabled) {
-                        tower.hasFireArrows = true;
+                    if (multipliers.archerDamageBonus > 0) {
+                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.archerDamageBonus;
                     }
                     break;
                     
@@ -343,18 +343,11 @@ export class TowerManager {
                     if (multipliers.poisonDamageBonus > 0) {
                         tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.poisonDamageBonus;
                     }
-                    if (multipliers.fireArrowsEnabled) {
-                        tower.hasFireArrows = true;
-                    }
                     break;
                     
                 case 'CannonTower':
-                    if (multipliers.explosiveRadiusBonus > 0) {
-                        // Store original splash radius if not already stored
-                        if (!tower.originalSplashRadius) {
-                            tower.originalSplashRadius = tower.splashRadius;
-                        }
-                        tower.splashRadius = tower.originalSplashRadius + multipliers.explosiveRadiusBonus;
+                    if (multipliers.cannonDamageBonus > 0) {
+                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
                     }
                     break;
             }

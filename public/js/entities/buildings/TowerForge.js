@@ -33,18 +33,20 @@ export class TowerForge extends Building {
         this.forgeLevel = 1; // Built directly at level 1
         this.maxForgeLevel = 5;
         
-        // Tower upgrade system - rebalanced for the new progression
+        // Tower-specific upgrades
+        // Each tower upgrade has a base cost and effect, and can be upgraded up to forge level
+        // This allows the forge to gate tower upgrades based on its own level
         this.upgrades = {
-            // Level 1 (Base) upgrades
-            basicDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 },
-            barricadeDamage: { level: 0, maxLevel: 5, baseCost: 100, effect: 8 },
-            fireArrows: { level: 0, maxLevel: 3, baseCost: 200, effect: 1 },
+            // Basic towers - always available at forge level 1
+            'basic': { level: 0, baseCost: 80, effect: 8 },
+            'barricade': { level: 0, baseCost: 80, effect: 8 },
+            'archer': { level: 0, baseCost: 90, effect: 8 },
             
-            // Level 2 upgrades
-            poisonDamage: { level: 0, maxLevel: 5, baseCost: 120, effect: 3 },
+            // Poison upgrades - available at forge level 2+
+            'poison': { level: 0, baseCost: 100, effect: 5 },
             
-            // Level 3 upgrades
-            explosiveRadius: { level: 0, maxLevel: 4, baseCost: 180, effect: 15 }
+            // Cannon upgrades - available at forge level 3+
+            'cannon': { level: 0, baseCost: 120, effect: 10 }
         };
     }
     
@@ -1033,59 +1035,72 @@ export class TowerForge extends Building {
     getUpgradeOptions() {
         const options = [];
         
-        // Level 1 (Base) - Always available
+        // We need access to the unlock system to know which towers are unlocked
+        // For now, build options based on forge level (match UnlockSystem's tower unlock progression)
+        
+        // Forge Level 1 - Basic towers available (basic, archer, barricade)
+        // Only show upgrades for towers that are unlocked
+        
+        // Basic Tower - always available from forge level 1
         options.push({
-            id: 'basicDamage',
-            name: 'Reinforced Weapons',
-            description: `Add ${this.upgrades.basicDamage.effect} damage per level to Basic Towers`,
-            level: this.upgrades.basicDamage.level,
-            maxLevel: this.upgrades.basicDamage.maxLevel,
-            cost: this.calculateUpgradeCost('basicDamage'),
+            id: 'basic',
+            name: 'Basic Tower Upgrade',
+            description: `Increase Basic Tower damage by ${this.upgrades.basic.effect} per level`,
+            level: this.upgrades.basic.level,
+            maxLevel: this.forgeLevel, // Capped at forge level
+            baseCost: this.upgrades.basic.baseCost,
+            cost: this.calculateUpgradeCost('basic'),
             icon: '⚔️'
         });
         
+        // Barricade Tower - available from forge level 1
         options.push({
-            id: 'barricadeDamage',
-            name: 'Fortified Structure',
-            description: `Add ${this.upgrades.barricadeDamage.effect} damage per level to Barricade Towers`,
-            level: this.upgrades.barricadeDamage.level,
-            maxLevel: this.upgrades.barricadeDamage.maxLevel,
-            cost: this.calculateUpgradeCost('barricadeDamage'),
+            id: 'barricade',
+            name: 'Barricade Tower Upgrade',
+            description: `Increase Barricade Tower damage by ${this.upgrades.barricade.effect} per level`,
+            level: this.upgrades.barricade.level,
+            maxLevel: this.forgeLevel, // Capped at forge level
+            baseCost: this.upgrades.barricade.baseCost,
+            cost: this.calculateUpgradeCost('barricade'),
             icon: '🛡️'
         });
         
+        // Archer Tower - available from forge level 1
         options.push({
-            id: 'fireArrows',
-            name: 'Flame Arrows',
-            description: 'Archer arrows ignite enemies, dealing burn damage over time',
-            level: this.upgrades.fireArrows.level,
-            maxLevel: this.upgrades.fireArrows.maxLevel,
-            cost: this.calculateUpgradeCost('fireArrows'),
-            icon: '🔥'
+            id: 'archer',
+            name: 'Archer Tower Upgrade',
+            description: `Increase Archer Tower damage by ${this.upgrades.archer.effect} per level`,
+            level: this.upgrades.archer.level,
+            maxLevel: this.forgeLevel, // Capped at forge level
+            baseCost: this.upgrades.archer.baseCost,
+            cost: this.calculateUpgradeCost('archer'),
+            icon: '🏹'
         });
         
-        // Level 2 and above - Poison upgrades
+        // Poison Archer Tower - available from forge level 2+
         if (this.forgeLevel >= 2) {
             options.push({
-                id: 'poisonDamage',
-                name: 'Toxic Coating',
-                description: `Add ${this.upgrades.poisonDamage.effect} poison damage per level to Poison Archers`,
-                level: this.upgrades.poisonDamage.level,
-                maxLevel: this.upgrades.poisonDamage.maxLevel,
-                cost: this.calculateUpgradeCost('poisonDamage'),
+                id: 'poison',
+                name: 'Poison Archer Tower Upgrade',
+                description: `Increase Poison Archer Tower damage by ${this.upgrades.poison.effect} per level`,
+                level: this.upgrades.poison.level,
+                maxLevel: this.forgeLevel, // Capped at forge level
+                baseCost: this.upgrades.poison.baseCost,
+                cost: this.calculateUpgradeCost('poison'),
                 icon: '☠️'
             });
         }
         
-        // Level 3 and above - Explosive upgrades
+        // Cannon Tower - available from forge level 3+
         if (this.forgeLevel >= 3) {
             options.push({
-                id: 'explosiveRadius',
-                name: 'Enhanced Gunpowder',
-                description: `Increase Trebuchet blast radius by ${this.upgrades.explosiveRadius.effect}px per level`,
-                level: this.upgrades.explosiveRadius.level,
-                maxLevel: this.upgrades.explosiveRadius.maxLevel,
-                cost: this.calculateUpgradeCost('explosiveRadius'),
+                id: 'cannon',
+                name: 'Cannon Tower Upgrade',
+                description: `Increase Cannon Tower damage by ${this.upgrades.cannon.effect} per level`,
+                level: this.upgrades.cannon.level,
+                maxLevel: this.forgeLevel, // Capped at forge level
+                baseCost: this.upgrades.cannon.baseCost,
+                cost: this.calculateUpgradeCost('cannon'),
                 icon: '💥'
             });
         }
@@ -1140,7 +1155,7 @@ export class TowerForge extends Building {
     
     calculateUpgradeCost(upgradeType) {
         const upgrade = this.upgrades[upgradeType];
-        if (upgrade.level >= upgrade.maxLevel) return null;
+        if (!upgrade || upgrade.level >= this.forgeLevel) return null;
         return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
     }
     
@@ -1152,7 +1167,7 @@ export class TowerForge extends Building {
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
         
-        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
+        if (!upgrade || !cost || gameState.gold < cost || upgrade.level >= this.forgeLevel) {
             return false;
         }
         
@@ -1186,12 +1201,11 @@ export class TowerForge extends Building {
     
     getUpgradeMultipliers() {
         return {
-            rangeMultiplier: 1.0, // No range upgrades in new system
-            poisonDamageBonus: this.upgrades.poisonDamage.level * this.upgrades.poisonDamage.effect,
-            barricadeDamageBonus: this.upgrades.barricadeDamage.level * this.upgrades.barricadeDamage.effect,
-            basicDamageBonus: this.upgrades.basicDamage.level * this.upgrades.basicDamage.effect,
-            fireArrowsEnabled: this.upgrades.fireArrows.level > 0,
-            explosiveRadiusBonus: this.upgrades.explosiveRadius.level * this.upgrades.explosiveRadius.effect
+            basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
+            barricadeDamageBonus: this.upgrades.barricade.level * this.upgrades.barricade.effect,
+            archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.effect,
+            poisonDamageBonus: this.upgrades.poison.level * this.upgrades.poison.effect,
+            cannonDamageBonus: this.upgrades.cannon.level * this.upgrades.cannon.effect
         };
     }
     

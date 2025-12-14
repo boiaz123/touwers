@@ -783,18 +783,15 @@ export class UIManager {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 
-                // Calculate current effect display
+                // Current effect display
                 let currentEffect = '';
-                if (upgrade.id === 'basicDamage') {
-                    currentEffect = `Damage: +${upgrade.level * upgrade.effect}`;
-                } else if (upgrade.id === 'barricadeDamage') {
-                    currentEffect = `Damage: +${upgrade.level * upgrade.effect}`;
-                } else if (upgrade.id === 'fireArrows') {
-                    currentEffect = `${upgrade.level > 0 ? 'Active' : 'Inactive'} - Burn effect enabled`;
-                } else if (upgrade.id === 'poisonDamage') {
-                    currentEffect = `Poison: +${upgrade.level * upgrade.effect}`;
-                } else if (upgrade.id === 'explosiveRadius') {
-                    currentEffect = `Radius: +${upgrade.level * upgrade.effect}px`;
+                const totalBonus = upgrade.level * (upgrade.baseCost || 0);
+                if (upgrade.id === 'basic' || upgrade.id === 'barricade' || upgrade.id === 'archer') {
+                    currentEffect = `Damage: +${upgrade.level * 8}`;
+                } else if (upgrade.id === 'poison') {
+                    currentEffect = `Poison: +${upgrade.level * 5}`;
+                } else if (upgrade.id === 'cannon') {
+                    currentEffect = `Damage: +${upgrade.level * 10}`;
                 }
                 
                 contentHTML += `
