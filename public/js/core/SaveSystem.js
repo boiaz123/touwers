@@ -212,7 +212,7 @@ export class SaveSystem {
                 type: enemy.type,
                 x: enemy.x,
                 y: enemy.y,
-                pathIndex: enemy.pathIndex || 0,
+                currentPathIndex: enemy.currentPathIndex || 0,
                 health: enemy.health,
                 maxHealth: enemy.maxHealth,
                 speed: enemy.speed
@@ -311,6 +311,43 @@ export class SaveSystem {
     }
 
     /**
+     * Get level name by level ID
+     */
+    static getLevelName(levelId) {
+        const levelNames = {
+            'level1': 'The King\'s Road',
+            'level2': 'Braab\'s Path',
+            'level3': 'Crazy Frogs',
+            'level4': 'Dave\'s Cave',
+            'level5': 'Placeholder Level',
+            'sandbox': 'Sandbox Mode'
+        };
+        return levelNames[levelId] || levelId;
+    }
+
+    /**
+     * Get formatted level display (e.g., "Level 1: The King's Road")
+     */
+    static getFormattedLevelName(levelId) {
+        const levelNumbers = {
+            'level1': 1,
+            'level2': 2,
+            'level3': 3,
+            'level4': 4,
+            'level5': 5,
+            'sandbox': '∞'
+        };
+        
+        const number = levelNumbers[levelId] || '?';
+        const name = this.getLevelName(levelId);
+        
+        if (levelId === 'sandbox') {
+            return `${name}`;
+        }
+        return `Level ${number}: ${name}`;
+    }
+
+    /**
      * Get formatted save data for display
      */
     static getSaveInfo(slotNumber) {
@@ -330,18 +367,29 @@ export class SaveSystem {
         // Check if this is a mid-game save
         const isMidGame = save.isMidGameSave === true && save.midGameState;
         
+        // Count completed levels
+        const completedCount = (save.completedLevels && save.completedLevels.length) || 0;
+        
+        // Get current level name for display
+        const currentLevelId = save.currentLevel || save.lastPlayedLevel || 'level1';
+        const formattedLevelName = this.getFormattedLevelName(currentLevelId);
+        
         return {
             isEmpty: false,
             slotNumber: slotNumber,
             isMidGameSave: isMidGame,
             displayText: isMidGame 
-                ? `In-Progress: Level ${save.currentLevel}` 
-                : `Progress: Level ${save.lastPlayedLevel}`,
+                ? `Playing: ${formattedLevelName}` 
+                : `Completed: ${completedCount} Level${completedCount !== 1 ? 's' : ''}`,
+            detailText: isMidGame
+                ? `Wave ${save.wave || 1}`
+                : formattedLevelName,
             dateString: dateString,
             lastPlayedLevel: save.lastPlayedLevel,
             currentLevel: save.currentLevel,
+            completedLevels: save.completedLevels || [],
             unlockedLevels: save.unlockedLevels,
-            completedLevels: save.completedLevels
+            completedCount: completedCount
         };
     }
 

@@ -361,15 +361,21 @@ export class GameplayState {
                         const enemy = EnemyRegistry.createEnemy(enemyData.type, this.level.path, 1, enemyData.speed);
                         if (enemy) {
                             // Restore position and path progress
-                            enemy.pathIndex = enemyData.pathIndex || 0;
+                            // Set currentPathIndex to the saved waypoint index
+                            enemy.currentPathIndex = enemyData.currentPathIndex || 0;
+                            // Clamp to valid range
+                            enemy.currentPathIndex = Math.max(0, Math.min(enemy.currentPathIndex, this.level.path.length - 2));
+                            
+                            // Restore pixel position
                             enemy.x = enemyData.x || 0;
                             enemy.y = enemyData.y || 0;
+                            
                             // Restore health
                             if (enemyData.health) {
                                 enemy.health = Math.min(enemyData.health, enemy.maxHealth);
                             }
                             this.enemyManager.enemies.push(enemy);
-                            console.log('GameplayState: Successfully restored enemy:', enemy.type);
+                            console.log('GameplayState: Successfully restored enemy:', enemy.type, 'at waypoint', enemy.currentPathIndex);
                         } else {
                             console.warn('GameplayState: Failed to create enemy from registry with type:', enemyData.type);
                         }

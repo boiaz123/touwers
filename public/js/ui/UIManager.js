@@ -2426,11 +2426,12 @@ export class UIManager {
                 if (saveBtn) {
                     const originalText = saveBtn.textContent;
                     saveBtn.textContent = 'Save Error!';
-                    saveBtn.disabled = true;
                     
                     setTimeout(() => {
-                        saveBtn.textContent = originalText;
-                        saveBtn.disabled = false;
+                        const currentBtn = document.getElementById('save-btn');
+                        if (currentBtn) {
+                            currentBtn.textContent = originalText;
+                        }
                     }, 2000);
                 }
                 return;
@@ -2468,11 +2469,14 @@ export class UIManager {
             if (saveBtn) {
                 const originalText = saveBtn.textContent;
                 saveBtn.textContent = 'Game Saved!';
-                saveBtn.disabled = true;
+                // Don't disable the button - keep it functional
+                // Just change the text temporarily
                 
                 setTimeout(() => {
-                    saveBtn.textContent = originalText;
-                    saveBtn.disabled = false;
+                    const currentBtn = document.getElementById('save-btn');
+                    if (currentBtn) {
+                        currentBtn.textContent = originalText;
+                    }
                 }, 2000);
             }
         } catch (error) {
@@ -2483,11 +2487,12 @@ export class UIManager {
             if (saveBtn) {
                 const originalText = saveBtn.textContent;
                 saveBtn.textContent = 'Save Failed!';
-                saveBtn.disabled = true;
                 
                 setTimeout(() => {
-                    saveBtn.textContent = originalText;
-                    saveBtn.disabled = false;
+                    const currentBtn = document.getElementById('save-btn');
+                    if (currentBtn) {
+                        currentBtn.textContent = originalText;
+                    }
                 }, 2000);
             }
         }
