@@ -79,7 +79,8 @@ export class SaveSystem {
                 buildingsCount: buildings.length,
                 castleHealth: castleHealth,
                 gold: gameData.gameState?.gold,
-                health: gameData.gameState?.health
+                health: gameData.gameState?.health,
+                wave: gameData.gameState?.wave
             });
             
             // Full mid-game save with complete state
@@ -106,11 +107,13 @@ export class SaveSystem {
                 
                 // Mid-game state - serialized for restoration
                 midGameState: {
-                    // Game state data
+                    // Game state data - must include wave for proper restoration
                     gameState: {
                         health: gameData.gameState?.health || 0,
                         gold: gameData.gameState?.gold || 0,
-                        wave: gameData.gameState?.wave || 0
+                        wave: gameData.gameState?.wave || 0,
+                        waveInProgress: gameData.gameState?.waveInProgress || false,
+                        waveCompleted: gameData.gameState?.waveCompleted || false
                     },
                     // Castle state
                     castle: {
@@ -124,11 +127,11 @@ export class SaveSystem {
                     // Unlock system
                     unlockedTowers: gameData.unlockedTowers || [],
                     unlockedBuildings: gameData.unlockedBuildings || [],
-                    // Wave progression
-                    waveIndex: gameData.waveIndex || 0,
-                    waveInProgress: gameData.waveInProgress || false,
+                    // Wave progression - save the actual wave number and spawn queue
+                    waveIndex: gameData.gameState?.wave || 1,
                     spawnedEnemyCount: enemies.length,
-                    totalEnemiesInWave: gameData.totalEnemiesInWave || 0
+                    totalEnemiesInWave: gameData.totalEnemiesInWave || 0,
+                    spawnQueue: this.serializeSpawnQueue(gameData.enemyManager)
                 }
             };
         } else {
@@ -159,6 +162,7 @@ export class SaveSystem {
 
     /**
      * Serialize tower data for saving
+     * Saves grid coordinates for accurate restoration
      */
     static serializeTowers(towerManager) {
         if (!towerManager || !towerManager.towers) {
@@ -171,11 +175,12 @@ export class SaveSystem {
                 type: tower.type,
                 x: tower.x,
                 y: tower.y,
+                gridX: tower.gridX !== undefined ? tower.gridX : null,
+                gridY: tower.gridY !== undefined ? tower.gridY : null,
                 level: tower.level || 1,
                 health: tower.health || tower.maxHealth
             };
             
-            // Debug: Log tower being serialized
             console.log('SaveSystem: Serializing tower:', serialized);
             return serialized;
         });
@@ -255,6 +260,18 @@ export class SaveSystem {
         
         console.log('SaveSystem: Serialized', result.length, 'buildings');
         return result;
+    }
+
+    /**
+     * Serialize enemy spawn queue data for saving
+     */
+    static serializeSpawnQueue(enemyManager) {
+        if (!enemyManager || !enemyManager.spawnQueue) {
+            return [];
+        }
+        
+        // The spawn queue contains data about enemies yet to be spawned
+        return Array.from(enemyManager.spawnQueue);
     }
 
     /**

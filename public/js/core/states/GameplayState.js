@@ -1,6 +1,8 @@
 import { TowerManager } from '../../entities/towers/TowerManager.js';
 import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
 import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
+import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
+import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
 import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
@@ -96,7 +98,8 @@ export class GameplayState {
             this.currentLevel = levelInfo.id;
             this.levelType = levelInfo.type || 'campaign';
             this.levelName = levelInfo.name || 'Unknown Level';
-            this.maxWavesForLevel = 100;
+            // Get maxWaves from level, will be set after level is created
+            this.maxWavesForLevel = this.level?.maxWaves || 10;
             this.waveInProgress = midGameState.gameState.waveInProgress;
             this.waveCompleted = midGameState.gameState.waveCompleted;
             // Current wave is restored through enemy spawn data
@@ -115,7 +118,8 @@ export class GameplayState {
                 this.gameState.gold = 100000;
                 this.maxWavesForLevel = Infinity;
             } else {
-                this.maxWavesForLevel = 100;
+                // Get maxWaves from level, will be set after level is created
+                this.maxWavesForLevel = this.level?.maxWaves || 10;
             }
             
             this.waveInProgress = false;
@@ -135,6 +139,12 @@ export class GameplayState {
         
         // Initialize level for current canvas size first
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
+        
+        // Now that level is initialized, set maxWavesForLevel from level.maxWaves
+        if (!this.isSandbox) {
+            this.maxWavesForLevel = this.level?.maxWaves || 10;
+            console.log('GameplayState: Level has', this.maxWavesForLevel, 'waves');
+        }
         
         // Create new enemy manager with the properly initialized path
         this.enemyManager = new EnemyManager(this.level.path);
@@ -252,16 +262,40 @@ export class GameplayState {
                 });
             }
 
-            // Restore towers
+            // Restore towers directly without spending gold again
             if (midGameState.towers && Array.isArray(midGameState.towers)) {
                 midGameState.towers.forEach(towerData => {
                     try {
-                        this.towerManager.placeTower(towerData.x, towerData.y, towerData.type);
-                        // Restore tower level and health
-                        const placedTower = this.towerManager.towers[this.towerManager.towers.length - 1];
-                        if (placedTower) {
-                            if (towerData.level) placedTower.level = towerData.level;
-                            if (towerData.health) placedTower.health = Math.min(towerData.health, placedTower.maxHealth || 999999);
+                        // If we have grid coordinates, use them; otherwise use pixel coordinates
+                        let x = towerData.x;
+                        let y = towerData.y;
+                        let gridX = towerData.gridX;
+                        let gridY = towerData.gridY;
+                        
+                        // If grid coordinates are missing but we have pixel coordinates, try to convert
+                        if ((gridX === null || gridX === undefined) && x !== undefined && y !== undefined) {
+                            const gridCoords = this.level.screenToGrid(x, y);
+                            gridX = gridCoords.gridX;
+                            gridY = gridCoords.gridY;
+                        }
+                        
+                        // If we have grid coordinates but not pixel coordinates, convert
+                        if ((x === null || x === undefined) && gridX !== undefined && gridY !== undefined) {
+                            const screenCoords = this.level.gridToScreen(gridX, gridY, 2);
+                            x = screenCoords.screenX;
+                            y = screenCoords.screenY;
+                        }
+                        
+                        // Create tower directly without spending gold
+                        const tower = TowerRegistry.createTower(towerData.type, x, y, gridX, gridY);
+                        if (tower) {
+                            this.towerManager.towers.push(tower);
+                            // Mark the position as occupied
+                            this.towerManager.markTowerPosition(gridX, gridY);
+                            // Restore tower level and health
+                            if (towerData.level) tower.level = towerData.level;
+                            if (towerData.health) tower.health = Math.min(towerData.health, tower.maxHealth || 999999);
+                            console.log('GameplayState: Restored tower:', towerData.type);
                         }
                     } catch (e) {
                         console.warn('GameplayState: Failed to restore tower:', towerData, e);
@@ -269,27 +303,47 @@ export class GameplayState {
                 });
             }
 
-            // Restore buildings
+            // Restore buildings directly without spending gold again
             if (midGameState.buildings && Array.isArray(midGameState.buildings)) {
                 const buildingManager = this.towerManager.buildingManager;
+                
                 midGameState.buildings.forEach(buildingData => {
                     try {
-                        buildingManager.placeBuilding(
-                            buildingData.gridX,
-                            buildingData.gridY,
+                        // Convert grid coordinates to screen coordinates
+                        const screenCoords = this.level.gridToScreen(buildingData.gridX, buildingData.gridY, 4);
+                        const x = screenCoords.screenX;
+                        const y = screenCoords.screenY;
+                        
+                        // Create building directly without spending gold
+                        const building = BuildingRegistry.createBuilding(
                             buildingData.type,
-                            this.stateManager.resolutionManager
+                            x,
+                            y,
+                            buildingData.gridX,
+                            buildingData.gridY
                         );
-                        // Restore building level and state
-                        const placedBuilding = buildingManager.buildings[buildingManager.buildings.length - 1];
-                        if (placedBuilding) {
-                            if (buildingData.level) placedBuilding.level = buildingData.level;
+                        
+                        if (building) {
+                            buildingManager.buildings.push(building);
+                            // Mark the positions as occupied
+                            const buildingType = BuildingRegistry.getBuildingType(buildingData.type);
+                            if (buildingType) {
+                                buildingManager.markBuildingPosition(buildingData.gridX, buildingData.gridY, buildingType.size);
+                            }
+                            
+                            // Apply building effects
+                            building.applyEffect(buildingManager);
+                            
+                            // Restore building level and state
+                            if (buildingData.level) building.level = buildingData.level;
                             // Restore building-specific data like gems and research
-                            if (buildingData.gems) placedBuilding.gems = { ...buildingData.gems };
-                            if (buildingData.researchProgress) placedBuilding.researchProgress = { ...buildingData.researchProgress };
-                            if (buildingData.gemMiningUnlocked !== undefined) placedBuilding.gemMiningUnlocked = buildingData.gemMiningUnlocked;
-                            if (buildingData.diamondMiningUnlocked !== undefined) placedBuilding.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
-                            if (buildingData.gemMiningResearched !== undefined) placedBuilding.gemMiningResearched = buildingData.gemMiningResearched;
+                            if (buildingData.gems) building.gems = { ...buildingData.gems };
+                            if (buildingData.researchProgress) building.researchProgress = { ...buildingData.researchProgress };
+                            if (buildingData.gemMiningUnlocked !== undefined) building.gemMiningUnlocked = buildingData.gemMiningUnlocked;
+                            if (buildingData.diamondMiningUnlocked !== undefined) building.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
+                            if (buildingData.gemMiningResearched !== undefined) building.gemMiningResearched = buildingData.gemMiningResearched;
+                            
+                            console.log('GameplayState: Restored building:', buildingData.type);
                         }
                     } catch (e) {
                         console.warn('GameplayState: Failed to restore building:', buildingData, e);
@@ -300,11 +354,9 @@ export class GameplayState {
             // Restore enemies - these are already spawned in the level
             if (midGameState.enemies && Array.isArray(midGameState.enemies)) {
                 console.log('GameplayState: Restoring enemies. Total to restore:', midGameState.enemies.length);
-                console.log('GameplayState: Raw enemies data:', JSON.stringify(midGameState.enemies));
                 
                 midGameState.enemies.forEach((enemyData, index) => {
                     try {
-                        console.log('GameplayState: Attempting to restore enemy', index, ':', enemyData);
                         // Use EnemyRegistry to create enemy at correct position
                         const enemy = EnemyRegistry.createEnemy(enemyData.type, this.level.path, 1, enemyData.speed);
                         if (enemy) {
@@ -327,9 +379,24 @@ export class GameplayState {
                 });
             }
 
+            // Restore spawn queue for remaining enemies in the wave
+            if (midGameState.spawnQueue && Array.isArray(midGameState.spawnQueue)) {
+                console.log('GameplayState: Restoring spawn queue with', midGameState.spawnQueue.length, 'enemies to spawn');
+                this.enemyManager.spawnQueue = [...midGameState.spawnQueue];
+            }
+
             // Restore wave progression state - DO NOT start a new wave
-            this.waveIndex = midGameState.waveIndex || 0;
-            this.waveInProgress = midGameState.waveInProgress || false;
+            // The current wave is stored in gameState.wave which was already restored above
+            this.waveInProgress = midGameState.gameState?.waveInProgress || false;
+            this.waveCompleted = midGameState.gameState?.waveCompleted || false;
+            
+            // If a wave is in progress, ensure EnemyManager is NOT in continuous mode
+            if (this.waveInProgress && this.enemyManager) {
+                this.enemyManager.continuousMode = false;
+                this.enemyManager.spawning = true;
+            }
+            
+            console.log('GameplayState: Wave state restored - wave:', this.gameState.wave, 'inProgress:', this.waveInProgress, 'completed:', this.waveCompleted);
             
             console.log('GameplayState: Mid-game state restored successfully');
             console.log('Restored:', {
@@ -833,29 +900,35 @@ export class GameplayState {
             };
         }
         
-        // Get wave config from the level itself
+        // Get wave config from the level itself - MUST exist, no fallback waves
         if (this.level && typeof this.level.getWaveConfig === 'function') {
             const config = this.level.getWaveConfig(wave);
-            return {
-                enemyCount: config.enemyCount,
-                enemyHealth_multiplier: config.enemyHealth_multiplier,
-                enemySpeed: config.enemySpeed,
-                spawnInterval: config.spawnInterval,
-                wavePattern: config.pattern
-            };
+            if (config) {
+                return {
+                    enemyCount: config.enemyCount,
+                    enemyHealth_multiplier: config.enemyHealth_multiplier,
+                    enemySpeed: config.enemySpeed,
+                    spawnInterval: config.spawnInterval,
+                    wavePattern: config.pattern
+                };
+            }
         }
         
-        // Fallback default
+        // No fallback - if we get here, something is wrong. Level exceeded maxWaves
+        console.error('GameplayState: No wave config found for wave', wave, '- level may have fewer waves than expected');
+        // Return empty config that won't spawn enemies
         return {
-            enemyCount: 10,
-            enemyHealth: 100,
-            enemySpeed: 50,
+            enemyCount: 0,
+            enemyHealth_multiplier: 1,
+            enemySpeed: 0,
             spawnInterval: 1.0
         };
     }
     
     startWave() {
+        // For campaign levels, check if we've exceeded the level's wave count
         if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
+            console.log('GameplayState: Wave', this.gameState.wave, 'exceeds maxWaves', this.maxWavesForLevel);
             this.completeLevel();
             return;
         }

@@ -576,7 +576,9 @@ export class UIManager {
         if (this.gameplayState.isSandbox) {
             document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave} (∞)`;
         } else {
-            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave}/${this.gameplayState.maxWavesForLevel}`;
+            // Use the actual number of waves from the level
+            const maxWaves = this.gameplayState.maxWavesForLevel || this.level?.maxWaves || 10;
+            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave}/${maxWaves}`;
         }
         
         // Show level
@@ -2444,11 +2446,12 @@ export class UIManager {
                     currentLevel: this.gameplayState.currentLevel,
                     levelType: this.gameplayState.levelType,
                     levelName: this.gameplayState.levelName,
-                    waveIndex: this.gameplayState.waveIndex || 0,
-                    waveInProgress: this.gameplayState.waveInProgress,
-                    spawnedEnemyCount: this.gameplayState.enemyManager?.enemies?.length || 0,
-                    totalEnemiesInWave: this.gameplayState.totalEnemiesInWave || 0,
-                    gameState: this.gameState,
+                    // Save game state with wave tracking
+                    gameState: {
+                        ...this.gameState,
+                        waveInProgress: this.gameplayState.waveInProgress,
+                        waveCompleted: this.gameplayState.waveCompleted
+                    },
                     towerManager: this.towerManager,
                     enemyManager: this.gameplayState.enemyManager,
                     buildingManager: buildingManager,
