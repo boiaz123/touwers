@@ -814,7 +814,7 @@ export class GameplayState {
                 break;
         }
         
-        this.updateSpellUI();
+        this.uiManager.updateSpellUI();
         // Cancel spell targeting after successful cast to return to normal mode
         this.cancelSpellTargeting();
     }
@@ -1249,6 +1249,7 @@ export class GameplayState {
         
         // FIRST: Check if enemies should engage with defenders BEFORE moving them
         // This prevents enemies from walking through defenders
+        if (this.enemyManager && this.enemyManager.enemies) {
         this.enemyManager.enemies.forEach(enemy => {
             // Check if enemy should engage castle defender
             if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
@@ -1281,10 +1282,13 @@ export class GameplayState {
                 }
             }
         });
+        }
         
         // SECOND: Update enemy positions (they won't move if attacking defender)
-        this.enemyManager.update(deltaTime);
-        this.towerManager.update(deltaTime, this.enemyManager.enemies);
+        if (this.enemyManager) {
+            this.enemyManager.update(deltaTime);
+            if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
+        }
         
         // Update defender combat
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
@@ -1412,6 +1416,9 @@ export class GameplayState {
     }
     
     render(ctx) {
+        if (!this.level || !this.towerManager || !this.enemyManager) {
+            return; // Skip rendering if not fully initialized
+        }
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
