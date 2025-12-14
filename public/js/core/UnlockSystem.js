@@ -10,6 +10,8 @@ export class UnlockSystem {
         this.maxForges = 1;
         this.mineCount = 0;
         this.academyCount = 0;
+        this.trainingGroundsCount = 0;
+        this.superweaponCount = 0;
         this.guardPostCount = 0;
         this.maxGuardPosts = 0;
         
@@ -56,6 +58,28 @@ export class UnlockSystem {
         this.unlockedTowers.add('magic');
         this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
         return true;
+    }
+
+    /**
+     * Handle Training Grounds built
+     */
+    onTrainingGroundsBuilt() {
+        if (this.trainingGroundsCount < 1) {
+            this.trainingGroundsCount++;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handle SuperWeapon Lab built
+     */
+    onSuperweaponLabBuilt() {
+        if (this.superweaponCount < 1 && this.superweaponUnlocked) {
+            this.superweaponCount++;
+            return true;
+        }
+        return false;
     }
     
     // New: Method to unlock superweapon when academy reaches level 3
@@ -118,6 +142,16 @@ export class UnlockSystem {
             case 'academy':
                 if (this.academyCount > 0) {
                     this.academyCount--;
+                }
+                break;
+            case 'training':
+                if (this.trainingGroundsCount > 0) {
+                    this.trainingGroundsCount--;
+                }
+                break;
+            case 'superweapon':
+                if (this.superweaponCount > 0) {
+                    this.superweaponCount--;
                 }
                 break;
             case 'guard-post':
@@ -226,8 +260,14 @@ export class UnlockSystem {
         if (type === 'academy' && this.academyCount >= 1) {
             return false; // Only 1 academy allowed
         }
+        if (type === 'training' && this.trainingGroundsCount >= 1) {
+            return false; // Only 1 training grounds allowed
+        }
         if (type === 'superweapon' && this.superweaponUnlocked === false) {
             return false; // Only unlocked at Academy level 3
+        }
+        if (type === 'superweapon' && this.superweaponCount >= 1) {
+            return false; // Only 1 superweapon lab allowed
         }
         return this.unlockedBuildings.has(type);
     }

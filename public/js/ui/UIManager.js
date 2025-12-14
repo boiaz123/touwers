@@ -2441,6 +2441,33 @@ export class UIManager {
             const buildingManager = this.towerManager?.buildingManager;
             const unlockSystem = this.towerManager?.unlockSystem;
             
+            // Prepare unlock system state for saving
+            const unlockState = {
+                forgeLevel: unlockSystem?.forgeLevel || 0,
+                hasForge: unlockSystem?.hasForge || false,
+                forgeCount: unlockSystem?.forgeCount || 0,
+                mineCount: unlockSystem?.mineCount || 0,
+                academyCount: unlockSystem?.academyCount || 0,
+                trainingGroundsCount: unlockSystem?.trainingGroundsCount || 0,
+                superweaponCount: unlockSystem?.superweaponCount || 0,
+                guardPostCount: unlockSystem?.guardPostCount || 0,
+                maxGuardPosts: unlockSystem?.maxGuardPosts || 0,
+                superweaponUnlocked: unlockSystem?.superweaponUnlocked || false,
+                gemMiningResearched: unlockSystem?.gemMiningResearched || false,
+                unlockedTowers: unlockSystem?.unlockedTowers ? Array.from(unlockSystem.unlockedTowers) : [],
+                unlockedBuildings: unlockSystem?.unlockedBuildings ? Array.from(unlockSystem.unlockedBuildings) : [],
+                unlockedUpgrades: unlockSystem?.unlockedUpgrades ? Array.from(unlockSystem.unlockedUpgrades) : [],
+                unlockedCombinationSpells: unlockSystem?.unlockedCombinationSpells ? Array.from(unlockSystem.unlockedCombinationSpells) : []
+            };
+            
+            // Debug: Log castle state before saving
+            console.log('UIManager.saveGame: this.level exists:', !!this.level);
+            console.log('UIManager.saveGame: this.level.castle exists:', !!this.level?.castle);
+            if (this.level?.castle) {
+                console.log('UIManager.saveGame: Castle health:', this.level.castle.health, 'maxHealth:', this.level.castle.maxHealth);
+                console.log('UIManager.saveGame: Castle defender:', this.level.castle.defender);
+            }
+            
             SaveSystem.saveGame(
                 this.stateManager.currentSaveSlot,
                 {
@@ -2457,8 +2484,9 @@ export class UIManager {
                     enemyManager: this.gameplayState.enemyManager,
                     buildingManager: buildingManager,
                     level: this.level,
-                    unlockedTowers: unlockSystem?.unlockedTowers ? Array.from(unlockSystem.unlockedTowers) : [],
-                    unlockedBuildings: unlockSystem?.unlockedBuildings ? Array.from(unlockSystem.unlockedBuildings) : [],
+                    unlockSystem: unlockState,
+                    unlockedTowers: unlockState.unlockedTowers,
+                    unlockedBuildings: unlockState.unlockedBuildings,
                     unlockedLevels: this.stateManager.currentSaveData?.unlockedLevels || [],
                     completedLevels: this.stateManager.currentSaveData?.completedLevels || []
                 }

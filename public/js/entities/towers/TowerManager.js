@@ -144,7 +144,10 @@ export class TowerManager {
                         }
                     }
                 });
+            } else if (type === 'training') {
+                this.unlockSystem.onTrainingGroundsBuilt();
             } else if (type === 'superweapon') {
+                this.unlockSystem.onSuperweaponLabBuilt();
             }
         }
         

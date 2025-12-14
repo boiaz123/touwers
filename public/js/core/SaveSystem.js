@@ -63,6 +63,12 @@ export class SaveSystem {
 
         if (isMidGameSave) {
             console.log('SaveSystem: Saving mid-game state to slot', slotNumber);
+            console.log('SaveSystem: gameData.level exists:', !!gameData.level);
+            console.log('SaveSystem: gameData.level.castle exists:', !!gameData.level?.castle);
+            if (gameData.level?.castle) {
+                console.log('SaveSystem: Castle health:', gameData.level.castle.health, 'maxHealth:', gameData.level.castle.maxHealth);
+                console.log('SaveSystem: Castle defender:', gameData.level.castle.defender);
+            }
             
             // Get castle health if available
             const castleHealth = gameData.level?.castle?.health || 100;
@@ -115,16 +121,35 @@ export class SaveSystem {
                         waveInProgress: gameData.gameState?.waveInProgress || false,
                         waveCompleted: gameData.gameState?.waveCompleted || false
                     },
-                    // Castle state
-                    castle: {
-                        health: castleHealth,
-                        maxHealth: castleMaxHealth
-                    },
+                    // Castle state - complete with defender and health
+                    castle: (() => {
+                        const castle = this.serializeCastle(gameData.level?.castle);
+                        console.log('SaveSystem: serializeCastle returned:', castle);
+                        return castle;
+                    })(),
                     // Managers and entities
                     towers: towers,
                     enemies: enemies,
                     buildings: buildings,
-                    // Unlock system
+                    // Complete unlock system state for proper restoration
+                    unlockSystem: gameData.unlockSystem || {
+                        forgeLevel: 0,
+                        hasForge: false,
+                        forgeCount: 0,
+                        mineCount: 0,
+                        academyCount: 0,
+                        trainingGroundsCount: 0,
+                        superweaponCount: 0,
+                        guardPostCount: 0,
+                        maxGuardPosts: 0,
+                        superweaponUnlocked: false,
+                        gemMiningResearched: false,
+                        unlockedTowers: [],
+                        unlockedBuildings: [],
+                        unlockedUpgrades: [],
+                        unlockedCombinationSpells: []
+                    },
+                    // Unlock system (kept for compatibility)
                     unlockedTowers: gameData.unlockedTowers || [],
                     unlockedBuildings: gameData.unlockedBuildings || [],
                     // Wave progression - save the actual wave number and spawn queue
@@ -178,7 +203,13 @@ export class SaveSystem {
                 gridX: tower.gridX !== undefined ? tower.gridX : null,
                 gridY: tower.gridY !== undefined ? tower.gridY : null,
                 level: tower.level || 1,
-                health: tower.health || tower.maxHealth
+                health: tower.health || tower.maxHealth,
+                // Additional tower properties
+                targetingMode: tower.targetingMode || 'strongest',
+                upgrades: tower.upgrades ? { ...tower.upgrades } : undefined,
+                // GuardPost defender state
+                defender: tower.constructor.name === 'GuardPost' ? this.serializeDefender(tower.defender) : undefined,
+                defenderDeadCooldown: tower.defenderDeadCooldown !== undefined ? tower.defenderDeadCooldown : undefined
             };
             
             console.log('SaveSystem: Serializing tower:', serialized);
@@ -245,12 +276,39 @@ export class SaveSystem {
                 width: building.width,
                 height: building.height,
                 level: building.level || 1,
-                // Store additional state for buildings like gems, research, etc
+                
+                // GoldMine state
                 gems: building.gems ? { ...building.gems } : undefined,
                 researchProgress: building.researchProgress ? { ...building.researchProgress } : undefined,
                 gemMiningUnlocked: building.gemMiningUnlocked || false,
                 diamondMiningUnlocked: building.diamondMiningUnlocked || false,
-                gemMiningResearched: building.gemMiningResearched || false
+                gemMiningResearched: building.gemMiningResearched || false,
+                incomeMultiplier: building.incomeMultiplier !== undefined ? building.incomeMultiplier : 1,
+                
+                // TowerForge state
+                forgeLevel: building.forgeLevel || undefined,
+                upgrades: building.upgrades ? JSON.parse(JSON.stringify(building.upgrades)) : undefined,
+                
+                // TrainingGrounds state
+                trainingLevel: building.trainingLevel || undefined,
+                defenderUnlocked: building.defenderUnlocked !== undefined ? building.defenderUnlocked : undefined,
+                defenderMaxLevel: building.defenderMaxLevel !== undefined ? building.defenderMaxLevel : undefined,
+                guardPostUnlocked: building.guardPostUnlocked !== undefined ? building.guardPostUnlocked : undefined,
+                maxGuardPosts: building.maxGuardPosts !== undefined ? building.maxGuardPosts : undefined,
+                rangeUpgrades: building.rangeUpgrades ? JSON.parse(JSON.stringify(building.rangeUpgrades)) : undefined,
+                
+                // MagicAcademy state
+                manaRegenRate: building.manaRegenRate !== undefined ? building.manaRegenRate : undefined,
+                currentMana: building.currentMana !== undefined ? building.currentMana : undefined,
+                maxMana: building.maxMana !== undefined ? building.maxMana : undefined,
+                academyLevel: building.academyLevel !== undefined ? building.academyLevel : undefined,
+                elementalUpgrades: building.elementalUpgrades ? JSON.parse(JSON.stringify(building.elementalUpgrades)) : undefined,
+                unlockedCombinations: building.unlockedCombinations instanceof Set ? Array.from(building.unlockedCombinations) : undefined,
+                combinationSpellsUnlocked: building.combinationSpellsUnlocked !== undefined ? building.combinationSpellsUnlocked : undefined,
+                
+                // SuperWeaponLab state
+                labLevel: building.labLevel || undefined,
+                spells: building.spells ? JSON.parse(JSON.stringify(building.spells)) : undefined
             };
             
             // Debug: Log building being serialized
@@ -260,6 +318,59 @@ export class SaveSystem {
         
         console.log('SaveSystem: Serialized', result.length, 'buildings');
         return result;
+    }
+
+    /**
+     * Serialize defender data
+     */
+    static serializeDefender(defender) {
+        if (!defender) {
+            return null;
+        }
+        
+        const serialized = {
+            level: defender.level,
+            health: defender.health,
+            maxHealth: defender.maxHealth,
+            armor: defender.armor,
+            x: defender.x,
+            y: defender.y,
+            attackDamage: defender.attackDamage,
+            attackSpeed: defender.attackSpeed,
+            attackCooldown: defender.attackCooldown,
+            isAttacking: defender.isAttacking,
+            animationTime: defender.animationTime
+        };
+        
+        console.log('SaveSystem: Serialized defender level', defender.level, 'with health', defender.health);
+        return serialized;
+    }
+    
+    /**
+     * Serialize castle state including health and defender
+     */
+    static serializeCastle(castle) {
+        if (!castle) {
+            console.log('SaveSystem: Castle is null/undefined, skipping serialization');
+            return null;
+        }
+        
+        const serialized = {
+            health: castle.health,
+            maxHealth: castle.maxHealth,
+            defender: this.serializeDefender(castle.defender),
+            defenderDeadCooldown: castle.defenderDeadCooldown || 0,
+            maxDefenderCooldown: castle.maxDefenderCooldown || 10
+        };
+        
+        console.log('SaveSystem: Serialized castle state:', {
+            health: serialized.health,
+            maxHealth: serialized.maxHealth,
+            hasDefender: !!serialized.defender,
+            defenderLevel: serialized.defender?.level
+        });
+        
+        return serialized;
     }
 
     /**

@@ -131,7 +131,10 @@ export class LevelBase {
             this.createMeanderingPath(canvasWidth, canvasHeight);
             
             // Create castle at the end of the path
-            this.createCastle();
+            this.castleLoadPromise = this.createCastle();
+            
+            // Don't wait for castle here - it will load asynchronously
+            // The castleLoadPromise can be awaited if needed
             
             // Clear and recalculate occupied cells
             this.occupiedCells.clear();
@@ -1000,47 +1003,62 @@ export class LevelBase {
         });
     }
     
+    /**
+     * Create castle at the end of the path
+     * Returns a Promise that resolves when castle is ready
+     */
     createCastle() {
-        const pathEnd = this.path[this.path.length - 1];
-        const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2;
-        const castleGridY = Math.floor(pathEnd.y / this.cellSize) - 2;
-        
-        const castleScreenX = (castleGridX + 1.5) * this.cellSize;
-        const castleScreenY = (castleGridY + 1.5) * this.cellSize;
-        
-        // Load the real Castle class and create instance
-        import('../buildings/Castle.js').then(module => {
-            this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
-        }).catch(err => {
-            console.error('Level: Could not load Castle:', err);
-            // Create fallback placeholder with render method
-            this.castle = {
-                x: castleScreenX,
-                y: castleScreenY,
-                gridX: castleGridX,
-                gridY: castleGridY,
-                health: 100,
-                maxHealth: 100,
-                takeDamage: function(amount) {
-                    this.health -= amount;
-                },
-                isDestroyed: function() {
-                    return this.health <= 0;
-                },
-                render: function(ctx) {
-                    // Minimal fallback render - just shows a red square
-                    ctx.fillStyle = '#cc0000';
-                    ctx.fillRect(this.x - 40, this.y - 40, 80, 80);
+        return new Promise((resolve, reject) => {
+            const pathEnd = this.path[this.path.length - 1];
+            const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2;
+            const castleGridY = Math.floor(pathEnd.y / this.cellSize) - 2;
+            
+            const castleScreenX = (castleGridX + 1.5) * this.cellSize;
+            const castleScreenY = (castleGridY + 1.5) * this.cellSize;
+            
+            // Load the real Castle class and create instance
+            import('../buildings/Castle.js').then(module => {
+                this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
+                console.log('LevelBase: Castle loaded successfully');
+                resolve();
+            }).catch(err => {
+                console.error('Level: Could not load Castle:', err);
+                // Create fallback placeholder with render method
+                this.castle = {
+                    x: castleScreenX,
+                    y: castleScreenY,
+                    gridX: castleGridX,
+                    gridY: castleGridY,
+                    health: 100,
+                    maxHealth: 100,
+                    defender: null,
+                    defenderDeadCooldown: 0,
+                    maxDefenderCooldown: 10,
+                    takeDamage: function(amount) {
+                        this.health -= amount;
+                    },
+                    isDestroyed: function() {
+                        return this.health <= 0;
+                    },
+                    render: function(ctx) {
+                        // Minimal fallback render - just shows a red square
+                        ctx.fillStyle = '#cc0000';
+                        ctx.fillRect(this.x - 40, this.y - 40, 80, 80);
+                    },
+                    update: function(deltaTime) {
+                        // Fallback update
+                    }
+                };
+                reject(err);
+            });
+            
+            // Mark castle cells as occupied immediately (3x3 size)
+            for (let x = castleGridX; x < castleGridX + 3; x++) {
+                for (let y = castleGridY; y < castleGridY + 3; y++) {
+                    this.occupiedCells.add(`${x},${y}`);
                 }
-            };
-        });
-        
-        // Mark castle cells as occupied immediately (3x3 size)
-        for (let x = castleGridX; x < castleGridX + 3; x++) {
-            for (let y = castleGridY; y < castleGridY + 3; y++) {
-                this.occupiedCells.add(`${x},${y}`);
             }
-        }
+        }); // End of Promise constructor
     }
     
     render(ctx) {

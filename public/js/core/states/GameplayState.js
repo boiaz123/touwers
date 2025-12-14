@@ -3,6 +3,7 @@ import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
 import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
 import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
+import { Defender } from '../../entities/enemies/Defender.js';
 import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
@@ -140,6 +141,16 @@ export class GameplayState {
         // Initialize level for current canvas size first
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
         
+        // Wait for castle to be fully loaded before continuing
+        if (this.level.castleLoadPromise) {
+            try {
+                await this.level.castleLoadPromise;
+                console.log('GameplayState: Castle fully loaded');
+            } catch (error) {
+                console.warn('GameplayState: Castle load failed, using fallback:', error);
+            }
+        }
+        
         // Now that level is initialized, set maxWavesForLevel from level.maxWaves
         if (!this.isSandbox) {
             this.maxWavesForLevel = this.level?.maxWaves || 10;
@@ -244,22 +255,111 @@ export class GameplayState {
                 this.gameState.wave = midGameState.gameState.wave || 0;
             }
 
-            // Restore castle health
+            // Restore castle health and defender state
             if (midGameState.castle && this.level?.castle) {
-                this.level.castle.health = midGameState.castle.health || midGameState.castle.maxHealth || 100;
+                console.log('GameplayState: Restoring castle from save. Data:', midGameState.castle);
+                const castle = this.level.castle;
+                // Use explicit null/undefined check to preserve 0 health values
+                castle.health = (midGameState.castle.health !== undefined && midGameState.castle.health !== null) 
+                    ? midGameState.castle.health 
+                    : (midGameState.castle.maxHealth || 100);
+                castle.maxHealth = midGameState.castle.maxHealth || 100;
+                castle.defenderDeadCooldown = midGameState.castle.defenderDeadCooldown || 0;
+                castle.maxDefenderCooldown = midGameState.castle.maxDefenderCooldown || 10;
+                console.log('GameplayState: Restored castle health to', castle.health);
+                
+                // Restore castle defender if present
+                if (midGameState.castle.defender) {
+                    console.log('GameplayState: Restoring castle defender from save:', midGameState.castle.defender);
+                    const defData = midGameState.castle.defender;
+                    const defender = new Defender(defData.level);
+                    defender.x = defData.x;
+                    defender.y = defData.y;
+                    // Use explicit null/undefined check to preserve 0 health values
+                    defender.health = (defData.health !== undefined && defData.health !== null) ? defData.health : defender.maxHealth;
+                    if (defData.maxHealth !== undefined) {
+                        defender.maxHealth = defData.maxHealth;
+                    }
+                    defender.attackCooldown = defData.attackCooldown || 0;
+                    defender.isAttacking = defData.isAttacking || false;
+                    defender.animationTime = defData.animationTime || 0;
+                    castle.defender = defender;
+                    console.log('GameplayState: Restored castle defender level', defData.level, 'with health', defender.health);
+                } else {
+                    console.log('GameplayState: No castle defender in save data');
+                    castle.defender = null;
+                }
+            } else {
+                console.log('GameplayState: No castle save data found. midGameState.castle:', midGameState.castle, 'level.castle:', this.level?.castle);
             }
 
-            // Restore unlock system
+            // Restore unlock system - complete state restoration
             const unlockSystem = this.towerManager?.unlockSystem;
-            if (unlockSystem && midGameState.unlockedTowers && Array.isArray(midGameState.unlockedTowers)) {
-                midGameState.unlockedTowers.forEach(tower => {
-                    unlockSystem.unlockedTowers.add(tower);
-                });
-            }
-            if (unlockSystem && midGameState.unlockedBuildings && Array.isArray(midGameState.unlockedBuildings)) {
-                midGameState.unlockedBuildings.forEach(building => {
-                    unlockSystem.unlockedBuildings.add(building);
-                });
+            if (unlockSystem) {
+                // Restore building count limits and state
+                if (midGameState.unlockSystem) {
+                    const us = midGameState.unlockSystem;
+                    unlockSystem.forgeLevel = us.forgeLevel || 0;
+                    unlockSystem.hasForge = us.hasForge || false;
+                    unlockSystem.forgeCount = us.forgeCount || 0;
+                    unlockSystem.mineCount = us.mineCount || 0;
+                    unlockSystem.academyCount = us.academyCount || 0;
+                    unlockSystem.trainingGroundsCount = us.trainingGroundsCount || 0;
+                    unlockSystem.superweaponCount = us.superweaponCount || 0;
+                    unlockSystem.guardPostCount = us.guardPostCount || 0;
+                    unlockSystem.maxGuardPosts = us.maxGuardPosts || 0;
+                    unlockSystem.superweaponUnlocked = us.superweaponUnlocked || false;
+                    unlockSystem.gemMiningResearched = us.gemMiningResearched || false;
+                    
+                    console.log('GameplayState: Restored UnlockSystem state:', {
+                        forgeLevel: unlockSystem.forgeLevel,
+                        forgeCount: unlockSystem.forgeCount,
+                        mineCount: unlockSystem.mineCount,
+                        academyCount: unlockSystem.academyCount,
+                        trainingGroundsCount: unlockSystem.trainingGroundsCount,
+                        superweaponCount: unlockSystem.superweaponCount,
+                        guardPostCount: unlockSystem.guardPostCount,
+                        superweaponUnlocked: unlockSystem.superweaponUnlocked
+                    });
+                }
+                
+                // Restore unlocked towers
+                if (midGameState.unlockSystem?.unlockedTowers && Array.isArray(midGameState.unlockSystem.unlockedTowers)) {
+                    midGameState.unlockSystem.unlockedTowers.forEach(tower => {
+                        unlockSystem.unlockedTowers.add(tower);
+                    });
+                } else if (midGameState.unlockedTowers && Array.isArray(midGameState.unlockedTowers)) {
+                    // Fallback for backward compatibility
+                    midGameState.unlockedTowers.forEach(tower => {
+                        unlockSystem.unlockedTowers.add(tower);
+                    });
+                }
+                
+                // Restore unlocked buildings
+                if (midGameState.unlockSystem?.unlockedBuildings && Array.isArray(midGameState.unlockSystem.unlockedBuildings)) {
+                    midGameState.unlockSystem.unlockedBuildings.forEach(building => {
+                        unlockSystem.unlockedBuildings.add(building);
+                    });
+                } else if (midGameState.unlockedBuildings && Array.isArray(midGameState.unlockedBuildings)) {
+                    // Fallback for backward compatibility
+                    midGameState.unlockedBuildings.forEach(building => {
+                        unlockSystem.unlockedBuildings.add(building);
+                    });
+                }
+                
+                // Restore unlocked upgrades
+                if (midGameState.unlockSystem?.unlockedUpgrades && Array.isArray(midGameState.unlockSystem.unlockedUpgrades)) {
+                    midGameState.unlockSystem.unlockedUpgrades.forEach(upgrade => {
+                        unlockSystem.unlockedUpgrades.add(upgrade);
+                    });
+                }
+                
+                // Restore unlocked combination spells
+                if (midGameState.unlockSystem?.unlockedCombinationSpells && Array.isArray(midGameState.unlockSystem.unlockedCombinationSpells)) {
+                    midGameState.unlockSystem.unlockedCombinationSpells.forEach(spell => {
+                        unlockSystem.unlockedCombinationSpells.add(spell);
+                    });
+                }
             }
 
             // Restore towers directly without spending gold again
@@ -295,6 +395,32 @@ export class GameplayState {
                             // Restore tower level and health
                             if (towerData.level) tower.level = towerData.level;
                             if (towerData.health) tower.health = Math.min(towerData.health, tower.maxHealth || 999999);
+                            if (towerData.targetingMode !== undefined) tower.targetingMode = towerData.targetingMode;
+                            if (towerData.upgrades) tower.upgrades = { ...towerData.upgrades };
+                            
+                            // Restore GuardPost defender if present
+                            if (towerData.type === 'guard-post' && towerData.defender) {
+                                try {
+                                    const defData = towerData.defender;
+                                    const defender = new Defender(defData.level);
+                                    defender.x = defData.x;
+                                    defender.y = defData.y;
+                                    // Use explicit null/undefined check to preserve 0 health values
+                                    defender.health = (defData.health !== undefined && defData.health !== null) ? defData.health : defender.maxHealth;
+                                    if (defData.maxHealth !== undefined) {
+                                        defender.maxHealth = defData.maxHealth;
+                                    }
+                                    defender.attackCooldown = defData.attackCooldown || 0;
+                                    defender.isAttacking = defData.isAttacking || false;
+                                    defender.animationTime = defData.animationTime || 0;
+                                    tower.defender = defender;
+                                    tower.defenderDeadCooldown = towerData.defenderDeadCooldown || 0;
+                                    console.log('GameplayState: Restored GuardPost defender level', defData.level, 'with health', defender.health);
+                                } catch (defenderError) {
+                                    console.warn('GameplayState: Failed to restore GuardPost defender:', defenderError);
+                                }
+                            }
+                            
                             console.log('GameplayState: Restored tower:', towerData.type);
                         }
                     } catch (e) {
@@ -339,6 +465,36 @@ export class GameplayState {
                             // Restore building-specific data like gems and research
                             if (buildingData.gems) building.gems = { ...buildingData.gems };
                             if (buildingData.researchProgress) building.researchProgress = { ...buildingData.researchProgress };
+                            if (buildingData.incomeMultiplier !== undefined) building.incomeMultiplier = buildingData.incomeMultiplier;
+                            
+                            // Restore TowerForge state
+                            if (buildingData.forgeLevel !== undefined) building.forgeLevel = buildingData.forgeLevel;
+                            if (buildingData.upgrades) building.upgrades = JSON.parse(JSON.stringify(buildingData.upgrades));
+                            
+                            // Restore TrainingGrounds state
+                            if (buildingData.trainingLevel !== undefined) building.trainingLevel = buildingData.trainingLevel;
+                            if (buildingData.defenderUnlocked !== undefined) building.defenderUnlocked = buildingData.defenderUnlocked;
+                            if (buildingData.defenderMaxLevel !== undefined) building.defenderMaxLevel = buildingData.defenderMaxLevel;
+                            if (buildingData.guardPostUnlocked !== undefined) building.guardPostUnlocked = buildingData.guardPostUnlocked;
+                            if (buildingData.maxGuardPosts !== undefined) building.maxGuardPosts = buildingData.maxGuardPosts;
+                            if (buildingData.rangeUpgrades) building.rangeUpgrades = JSON.parse(JSON.stringify(buildingData.rangeUpgrades));
+                            
+                            // Restore MagicAcademy state
+                            if (buildingData.manaRegenRate !== undefined) building.manaRegenRate = buildingData.manaRegenRate;
+                            if (buildingData.currentMana !== undefined) building.currentMana = buildingData.currentMana;
+                            if (buildingData.maxMana !== undefined) building.maxMana = buildingData.maxMana;
+                            if (buildingData.academyLevel !== undefined) building.academyLevel = buildingData.academyLevel;
+                            if (buildingData.elementalUpgrades) building.elementalUpgrades = JSON.parse(JSON.stringify(buildingData.elementalUpgrades));
+                            if (buildingData.unlockedCombinations && Array.isArray(buildingData.unlockedCombinations)) {
+                                building.unlockedCombinations = new Set(buildingData.unlockedCombinations);
+                            }
+                            if (buildingData.combinationSpellsUnlocked !== undefined) building.combinationSpellsUnlocked = buildingData.combinationSpellsUnlocked;
+                            
+                            // Restore SuperWeaponLab state
+                            if (buildingData.labLevel !== undefined) building.labLevel = buildingData.labLevel;
+                            if (buildingData.spells) building.spells = JSON.parse(JSON.stringify(buildingData.spells));
+                            
+                            // Restore GoldMine state
                             if (buildingData.gemMiningUnlocked !== undefined) building.gemMiningUnlocked = buildingData.gemMiningUnlocked;
                             if (buildingData.diamondMiningUnlocked !== undefined) building.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
                             if (buildingData.gemMiningResearched !== undefined) building.gemMiningResearched = buildingData.gemMiningResearched;
@@ -434,6 +590,12 @@ export class GameplayState {
             this.uiManager.removeUIEventListeners();
             this.uiManager.hideSpeedControls(); // Hide speed controls when leaving gameplay
             this.uiManager.resetGameSpeed(); // Reset speed to 1x when leaving
+        }
+        
+        // Hide spell buttons when exiting gameplay
+        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        if (spellButtonsContainer) {
+            spellButtonsContainer.style.display = 'none';
         }
     }
     
