@@ -284,6 +284,10 @@ export class SaveSystem {
                 diamondMiningUnlocked: building.diamondMiningUnlocked || false,
                 gemMiningResearched: building.gemMiningResearched || false,
                 incomeMultiplier: building.incomeMultiplier !== undefined ? building.incomeMultiplier : 1,
+                goldReady: building.goldReady !== undefined ? building.goldReady : false,
+                currentProduction: building.currentProduction !== undefined ? building.currentProduction : 0,
+                gemMode: building.gemMode !== undefined ? building.gemMode : false,
+                currentGemType: building.currentGemType || null,
                 
                 // TowerForge state
                 forgeLevel: building.forgeLevel || undefined,

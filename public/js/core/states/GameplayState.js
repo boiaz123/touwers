@@ -498,6 +498,15 @@ export class GameplayState {
                             if (buildingData.gemMiningUnlocked !== undefined) building.gemMiningUnlocked = buildingData.gemMiningUnlocked;
                             if (buildingData.diamondMiningUnlocked !== undefined) building.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
                             if (buildingData.gemMiningResearched !== undefined) building.gemMiningResearched = buildingData.gemMiningResearched;
+                            // Restore mining progress
+                            if (buildingData.goldReady !== undefined) building.goldReady = buildingData.goldReady;
+                            if (buildingData.currentProduction !== undefined) building.currentProduction = buildingData.currentProduction;
+                            if (buildingData.gemMode !== undefined) building.gemMode = buildingData.gemMode;
+                            if (buildingData.currentGemType !== undefined) building.currentGemType = buildingData.currentGemType;
+                            
+                            if (buildingData.type === 'gold-mine') {
+                                console.log('GameplayState: Restored GoldMine - goldReady:', building.goldReady, 'progress:', building.currentProduction, 'gemMode:', building.gemMode);
+                            }
                             
                             console.log('GameplayState: Restored building:', buildingData.type);
                         }
@@ -569,6 +578,12 @@ export class GameplayState {
                 enemies: midGameState.enemies?.length || 0,
                 waveInProgress: this.waveInProgress
             });
+            
+            // Force spell UI rebuild on next update to fix event listener closures after loading
+            if (this.uiManager) {
+                this.uiManager.forceSpellUIRebuild = true;
+                console.log('GameplayState: Flagged spell UI for rebuild');
+            }
         } catch (error) {
             console.error('GameplayState: Error restoring mid-game state:', error);
             // Fallback to normal wave start

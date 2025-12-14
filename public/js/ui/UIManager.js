@@ -500,8 +500,10 @@ export class UIManager {
         const availableSpells = superWeaponLab.getAvailableSpells();
         const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
         
-        // Only rebuild if the number of spells changed (new unlock)
-        if (currentButtonCount !== availableSpells.length) {
+        // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
+        // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
+        if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
+            console.log('UIManager: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
             spellButtonsList.innerHTML = '';
             
             // Create a button for each unlocked spell
@@ -512,22 +514,29 @@ export class UIManager {
                 btn.title = `${spell.name}: ${spell.description}`;
                 btn.innerHTML = `<span>${spell.icon}</span>`;
                 
-                // Add click listener that will work permanently
+                // Add click listener with proper closure
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    console.log('UIManager: Spell button clicked:', spell.id, 'cooldown:', spell.currentCooldown);
                     // Prevent spell casting when game is paused
                     if (this.gameplayState.isPaused) {
+                        console.log('UIManager: Game is paused, spell blocked');
                         return;
                     }
                     if (spell.currentCooldown === 0) {
+                        console.log('UIManager: Activating spell targeting for:', spell.id);
                         this.gameplayState.activateSpellTargeting(spell.id);
                     } else {
+                        console.log('UIManager: Spell is on cooldown:', spell.currentCooldown);
                     }
                 });
                 
                 spellButtonsList.appendChild(btn);
             });
+            
+            // Clear the force rebuild flag after rebuilding
+            this.forceSpellUIRebuild = false;
         }
         
         // Update button states (cooldown/ready) without recreating
