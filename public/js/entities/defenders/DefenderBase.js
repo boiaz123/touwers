@@ -1,12 +1,10 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
 
 /**
- * Defender - A protective unit that stands in front of the castle
- * Enemies will attack the defender before they can damage the castle
- * Has 3 levels with different models, health, and stats
- * Refined with idle animations and detailed armor
+ * DefenderBase - Base class for all defenders
+ * Handles combat, rendering, and core defender mechanics
  */
-export class Defender {
+export class DefenderBase {
     constructor(level = 1) {
         this.level = Math.min(3, Math.max(1, level)); // Clamp to 1-3
         

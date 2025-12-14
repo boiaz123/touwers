@@ -1,4 +1,4 @@
-import { Defender } from '../enemies/Defender.js';
+import { CastleDefender } from '../defenders/CastleDefender.js';
 
 export class Castle {
     constructor(x, y, gridX, gridY) {
@@ -648,7 +648,7 @@ export class Castle {
         gameState.spend(cost);
         
         // Create new defender at this position
-        this.defender = new Defender(defenderLevel);
+        this.defender = new CastleDefender(defenderLevel);
         this.defender.x = this.x - 60; // Position in front of castle
         this.defender.y = this.y + 40; // Ground level
         

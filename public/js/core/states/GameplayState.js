@@ -3,7 +3,7 @@ import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
 import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
 import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
-import { Defender } from '../../entities/enemies/Defender.js';
+import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelFactory } from '../../game/LevelFactory.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
@@ -272,7 +272,7 @@ export class GameplayState {
                 if (midGameState.castle.defender) {
                     console.log('GameplayState: Restoring castle defender from save:', midGameState.castle.defender);
                     const defData = midGameState.castle.defender;
-                    const defender = new Defender(defData.level);
+                    const defender = new CastleDefender(defData.level);
                     defender.x = defData.x;
                     defender.y = defData.y;
                     // Use explicit null/undefined check to preserve 0 health values

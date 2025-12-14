@@ -180,4 +180,4 @@ The app is packaged as a Tauri desktop application. Key config in [src-tauri/tau
 - **State not transitioning**: Check state name matches registry key in GameStateManager
 
 don't create summary documents or any .md files other than this one.
-Make sure you run background and check powershell commands in a different powershell window than the one that runs Touwers.
+Make sure you run background and check powershell commands in a different powershell window than the one that runs Touwers. Because you keep putting commands in the active terminal window and that breaks Touwers, dont type messages and waits etc, just check the background console and logging.

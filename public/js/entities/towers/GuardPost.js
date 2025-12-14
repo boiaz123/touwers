@@ -1,5 +1,5 @@
 import { Tower } from './Tower.js';
-import { Defender } from '../enemies/Defender.js';
+import { PathDefender } from '../defenders/PathDefender.js';
 
 /**
  * GuardPost - A small tower that spawns at path intersections
@@ -143,7 +143,7 @@ export class GuardPost extends Tower {
         gameState.gold -= cost;
         
         // Create defender
-        this.defender = new Defender(1);
+        this.defender = new PathDefender(1);
         this.defender.x = this.defenderSpawnX;
         this.defender.y = this.defenderSpawnY;
         
