@@ -494,6 +494,12 @@ export class GameplayState {
                             if (buildingData.labLevel !== undefined) building.labLevel = buildingData.labLevel;
                             if (buildingData.spells) building.spells = JSON.parse(JSON.stringify(buildingData.spells));
                             
+                            // Assign restored SuperWeaponLab to this.superWeaponLab for spell casting
+                            if (buildingData.type === 'superweapon') {
+                                this.superWeaponLab = building;
+                                console.log('GameplayState: Assigned restored SuperWeaponLab for spell casting');
+                            }
+                            
                             // Restore GoldMine state
                             if (buildingData.gemMiningUnlocked !== undefined) building.gemMiningUnlocked = buildingData.gemMiningUnlocked;
                             if (buildingData.diamondMiningUnlocked !== undefined) building.diamondMiningUnlocked = buildingData.diamondMiningUnlocked;
@@ -582,7 +588,10 @@ export class GameplayState {
             // Force spell UI rebuild on next update to fix event listener closures after loading
             if (this.uiManager) {
                 this.uiManager.forceSpellUIRebuild = true;
-                console.log('GameplayState: Flagged spell UI for rebuild');
+                // Update UI immediately to show spell menu if spells were restored
+                this.uiManager.updateSpellUI();
+                this.uiManager.updateUI();
+                console.log('GameplayState: Flagged spell UI for rebuild and updated immediately');
             }
         } catch (error) {
             console.error('GameplayState: Error restoring mid-game state:', error);
@@ -686,17 +695,20 @@ export class GameplayState {
     activateSpellTargeting(spellId) {
         this.selectedSpell = spellId;
         this.stateManager.canvas.style.cursor = 'crosshair';
+        console.log('GameplayState: Activated spell targeting for spell:', spellId);
         
         // Add temporary click handler for spell targeting
         this.spellTargetHandler = (e) => {
+            console.log('GameplayState: Spell target clicked at:', e.clientX, e.clientY);
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const scaleX = this.stateManager.canvas.width / rect.width;
             const scaleY = this.stateManager.canvas.height / rect.height;
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
             
+            console.log('GameplayState: Casting spell at position:', x, y);
             this.castSpellAtPosition(this.selectedSpell, x, y);
-            this.cancelSpellTargeting();
+            // Note: cancelSpellTargeting() is called at the end of castSpellAtPosition()
         };
         
         this.stateManager.canvas.addEventListener('click', this.spellTargetHandler, { once: true });
@@ -704,6 +716,7 @@ export class GameplayState {
         // Allow right-click to cancel
         this.spellCancelHandler = (e) => {
             e.preventDefault();
+            console.log('GameplayState: Spell targeting cancelled');
             this.cancelSpellTargeting();
         };
         this.stateManager.canvas.addEventListener('contextmenu', this.spellCancelHandler, { once: true });
@@ -724,10 +737,20 @@ export class GameplayState {
     }
     
     castSpellAtPosition(spellId, x, y) {
-        if (!this.superWeaponLab) return;
+        console.log('GameplayState: castSpellAtPosition called for spell:', spellId, 'at position:', x, y);
+        console.log('GameplayState: this.superWeaponLab exists:', !!this.superWeaponLab);
+        
+        if (!this.superWeaponLab) {
+            console.error('GameplayState: No SuperWeaponLab available for spell casting!');
+            return;
+        }
         
         const result = this.superWeaponLab.castSpell(spellId, this.enemyManager.enemies, x, y);
-        if (!result) return;
+        console.log('GameplayState: castSpell result:', result);
+        if (!result) {
+            console.warn('GameplayState: Spell cast failed or on cooldown');
+            return;
+        }
         
         const { spell } = result;
         
@@ -792,6 +815,8 @@ export class GameplayState {
         }
         
         this.updateSpellUI();
+        // Cancel spell targeting after successful cast to return to normal mode
+        this.cancelSpellTargeting();
     }
     
     createSpellEffect(type, x, y, spell, targets) {
