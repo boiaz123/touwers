@@ -82,92 +82,41 @@ export class BaseEnemy {
         // NOTE: Hit splatters are now managed by EnemyManager to avoid double-updating
         // They are updated once per frame in EnemyManager.update() for all splatters
         
-        // Don't move if attacking a defender (either on path or at castle)
+        // Don't move if attacking a defender (path or castle)
         if (this.isAttackingDefender) {
             return;
         }
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
-        // Check if approaching any path defenders (guard post defenders on the path)
-        if (this.pathDefenders && this.pathDefenders.length > 0) {
-            for (let defender of this.pathDefenders) {
-                if (!defender.isDead()) {
-                    const distanceToDefender = Math.hypot(
-                        defender.x - this.x,
-                        defender.y - this.y
-                    );
-                    
-                    // If within stopping distance of a path defender, stop here
-                    // Use 50 pixel range to catch enemies approaching the defender
-                    if (distanceToDefender < 50) {
-                        this.reachedEnd = true;
-                        this.isAttackingCastle = false;
-                        return;
-                    }
-                    
-                    // Also check if the defender is on the current path segment
-                    // This prevents enemies from walking past defenders positioned on the path
-                    if (this.currentPathIndex < this.path.length - 1) {
-                        const currentPos = this.path[this.currentPathIndex];
-                        const nextPos = this.path[this.currentPathIndex + 1];
-                        
-                        // Check if defender is on this segment
-                        const dx = nextPos.x - currentPos.x;
-                        const dy = nextPos.y - currentPos.y;
-                        const lengthSquared = dx * dx + dy * dy;
-                        
-                        if (lengthSquared > 0) {
-                            // Calculate projection of defender onto the segment
-                            const t = Math.max(0, Math.min(1, 
-                                ((defender.x - currentPos.x) * dx + (defender.y - currentPos.y) * dy) / lengthSquared
-                            ));
-                            
-                            // Distance from defender to the segment line
-                            const projX = currentPos.x + t * dx;
-                            const projY = currentPos.y + t * dy;
-                            const distToSegment = Math.hypot(defender.x - projX, defender.y - projY);
-                            
-                            // If defender is on or very close to this segment
-                            if (distToSegment < 30 && t > 0 && t < 1) {
-                                // Distance from current position to the defender
-                                const distToDefender = Math.hypot(defender.x - this.x, defender.y - this.y);
-                                
-                                // If moving toward the defender, stop before reaching it
-                                const moveDir = Math.atan2(dy, dx);
-                                const toDefenderDir = Math.atan2(defender.y - this.y, defender.x - this.x);
-                                const angleDiff = Math.abs(moveDir - toDefenderDir);
-                                
-                                // If defender is ahead on our path
-                                if (angleDiff < Math.PI * 0.4 && distToDefender < 100) {
-                                    this.reachedEnd = true;
-                                    this.isAttackingCastle = false;
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Check if we've reached a defender waypoint on the path (for legacy waypoint-based defenders)
+        // PATH DEFENDER LOGIC: Check if we're at a waypoint where a path defender is stationed
+        // If so, engage with the defender instead of continuing to the castle
         if (this.defenderWaypoint) {
             const distanceToWaypoint = Math.hypot(
                 this.defenderWaypoint.x - this.x,
                 this.defenderWaypoint.y - this.y
             );
             
-            // If within stopping distance of defender waypoint, stop here and set reachedEnd
-            // This prevents enemies from walking past path defenders
-            // Larger distance (50) ensures we catch enemies approaching the waypoint
+            // Always log first frame with waypoint
+            if (!this._waypointDebugLogged) {
+                console.log('[DEBUG] Enemy FIRST UPDATE with waypoint. Type:', this.type);
+                console.log('  Enemy pos:', {x: this.x.toFixed(0), y: this.y.toFixed(0)});
+                console.log('  Waypoint pos:', {x: this.defenderWaypoint.x.toFixed(0), y: this.defenderWaypoint.y.toFixed(0)});
+                console.log('  Distance:', distanceToWaypoint.toFixed(1));
+                this._waypointDebugLogged = true;
+            }
+            
+            // If we've reached the defender waypoint, engage with available path defender
             if (distanceToWaypoint < 50) {
+                console.log('[DEBUG] *** ENEMY REACHED WAYPOINT! ***');
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
+                // Will be attacked by defender in GameplayState combat handling
                 return;
             }
         }
         
+        // CASTLE DEFENDER LOGIC: Normal path following to reach the castle
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
@@ -179,30 +128,6 @@ export class BaseEnemy {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
             return;
-        }
-        
-        // Check if any active path defender is blocking the way to the next waypoint
-        if (this.pathDefenders && this.pathDefenders.length > 0) {
-            const currentPos = this.path[this.currentPathIndex];
-            
-            for (let defender of this.pathDefenders) {
-                if (!defender.isDead()) {
-                    // Check if defender is between current position and next waypoint
-                    const defenderToTarget = Math.hypot(target.x - defender.x, target.y - defender.y);
-                    const currentToDefender = Math.hypot(defender.x - this.x, defender.y - this.y);
-                    const currentToTarget = Math.hypot(target.x - this.x, target.y - this.y);
-                    
-                    // If defender is roughly along our path to the next waypoint
-                    // (sum of distances is roughly equal to total distance, within tolerance)
-                    const tolerance = 30;
-                    if (Math.abs((currentToDefender + defenderToTarget) - currentToTarget) < tolerance) {
-                        // Defender is on our path - stop before reaching it
-                        this.reachedEnd = true;
-                        this.isAttackingCastle = false;
-                        return;
-                    }
-                }
-            }
         }
         
         const dx = target.x - this.x;

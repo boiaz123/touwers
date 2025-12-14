@@ -78,6 +78,80 @@ export class LevelBase {
         };
     }
     
+    /**
+     * Build an enhanced path that includes guard post waypoints inserted at their positions
+     * This ensures enemies will naturally stop at guard post locations
+     */
+    buildEnhancedPathWithGuardPosts(towers) {
+        if (!this.path || this.path.length < 2) {
+            return this.path;
+        }
+        
+        // Filter for guard posts with defenders
+        const guardPosts = towers ? towers.filter(t => t.type === 'guard-post' && t.defender && t.defenderWaypoint) : [];
+        
+        if (guardPosts.length === 0) {
+            return this.path;
+        }
+        
+        // Create an enhanced path with guard post waypoints inserted
+        const enhancedPath = [];
+        
+        for (let i = 0; i < this.path.length - 1; i++) {
+            const currentWaypoint = this.path[i];
+            const nextWaypoint = this.path[i + 1];
+            
+            enhancedPath.push(currentWaypoint);
+            
+            // Find guard posts that should be inserted between these waypoints
+            const guardPostsForSegment = guardPosts.filter(gp => {
+                const gpWaypoint = gp.defenderWaypoint;
+                // Check if guard post is on this segment
+                const dx = nextWaypoint.x - currentWaypoint.x;
+                const dy = nextWaypoint.y - currentWaypoint.y;
+                const lengthSquared = dx * dx + dy * dy;
+                
+                if (lengthSquared === 0) return false;
+                
+                // Project guard post onto segment
+                const t = Math.max(0, Math.min(1,
+                    ((gpWaypoint.x - currentWaypoint.x) * dx + (gpWaypoint.y - currentWaypoint.y) * dy) / lengthSquared
+                ));
+                
+                // Check if projection is on this segment (not at endpoints)
+                return t > 0.01 && t < 0.99;
+            });
+            
+            // Sort guard posts by distance along segment and add them
+            if (guardPostsForSegment.length > 0) {
+                guardPostsForSegment.sort((a, b) => {
+                    const dx = nextWaypoint.x - currentWaypoint.x;
+                    const dy = nextWaypoint.y - currentWaypoint.y;
+                    const lengthSquared = dx * dx + dy * dy;
+                    
+                    const tA = ((a.defenderWaypoint.x - currentWaypoint.x) * dx + (a.defenderWaypoint.y - currentWaypoint.y) * dy) / lengthSquared;
+                    const tB = ((b.defenderWaypoint.x - currentWaypoint.x) * dx + (b.defenderWaypoint.y - currentWaypoint.y) * dy) / lengthSquared;
+                    
+                    return tA - tB;
+                });
+                
+                guardPostsForSegment.forEach(gp => {
+                    enhancedPath.push({
+                        x: gp.defenderWaypoint.x,
+                        y: gp.defenderWaypoint.y,
+                        isGuardPostWaypoint: true,
+                        guardPost: gp
+                    });
+                });
+            }
+        }
+        
+        // Add final waypoint
+        enhancedPath.push(this.path[this.path.length - 1]);
+        
+        return enhancedPath;
+    }
+    
     initializeForCanvas(canvasWidth, canvasHeight, resolutionManager = null) {
         // Ensure we have valid canvas dimensions
         if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) {

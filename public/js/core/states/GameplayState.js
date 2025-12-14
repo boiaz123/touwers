@@ -168,6 +168,10 @@ export class GameplayState {
             this.initializeSandboxGems();
         }
         
+        // Build enhanced path with any existing guard posts (for save/load scenarios)
+        const enhancedPath = this.level.buildEnhancedPathWithGuardPosts(this.towerManager.towers);
+        this.enemyManager.updatePath(enhancedPath);
+        
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
         
@@ -953,6 +957,15 @@ export class GameplayState {
             // Guard posts need special handling - use raw click coordinates
             if (this.selectedTowerType === 'guard-post') {
                 if (this.towerManager.placeTower(this.selectedTowerType, x, y, 0, 0)) {
+                    // After placing guard post, rebuild the enemy path to include the new waypoint
+                    const enhancedPath = this.level.buildEnhancedPathWithGuardPosts(this.towerManager.towers);
+                    this.enemyManager.updatePath(enhancedPath);
+                    
+                    // Update all existing enemies to use the new path
+                    this.enemyManager.enemies.forEach(enemy => {
+                        enemy.path = enhancedPath;
+                    });
+                    
                     this.uiManager.updateUI();
                     
                     this.selectedTowerType = null;
@@ -1237,8 +1250,8 @@ export class GameplayState {
         
         // Update guard post defender positions BEFORE checking enemy engagement
         // This ensures they're at the correct waypoint location for distance checks
-        if (this.level.towers) {
-            this.level.towers.forEach(tower => {
+        if (this.towerManager && this.towerManager.towers) {
+            this.towerManager.towers.forEach(tower => {
                 if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     // Maintain defender position on the path
                     tower.defender.x = tower.defenderSpawnX;
@@ -1247,63 +1260,103 @@ export class GameplayState {
             });
         }
         
-        // FIRST: Check if enemies should engage with defenders BEFORE moving them
-        // This prevents enemies from walking through defenders
-        if (this.enemyManager && this.enemyManager.enemies) {
-        this.enemyManager.enemies.forEach(enemy => {
-            // Check if enemy should engage castle defender
-            if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
-                if (enemy.checkDefenderTarget(this.level.castle.defender)) {
-                    // Set attacking defender so enemy won't move in update
-                    return;
-                }
-            }
+        // FIRST: Register path defenders and waypoints on enemies
+        // This allows enemies to know where to stop and engage path defenders
+        if (this.enemyManager && this.enemyManager.enemies && this.towerManager) {
+            // Debug: Log active guard posts
+            let activeGuardPosts = 0;
+            let totalTowers = this.towerManager.towers ? this.towerManager.towers.length : 0;
+            console.log('[DEBUG] GameplayState UPDATE: Total towers:', totalTowers, 'Total enemies:', this.enemyManager.enemies.length);
             
-            // Check if enemy should engage guard post defenders
-            if (this.level.towers) {
-                for (let tower of this.level.towers) {
-                    if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
-                        // Always add this defender to the enemy's list of path defenders to check against
-                        if (!enemy.pathDefenders) {
-                            enemy.pathDefenders = [];
+            if (this.towerManager.towers) {
+                this.towerManager.towers.forEach(t => {
+                    if (t.type === 'guard-post') {
+                        const def = t.getDefender();
+                        console.log('[DEBUG] Found guard-post tower. getDefender() returned:', def ? 'YES' : 'NO');
+                        if (def) {
+                            activeGuardPosts++;
                         }
-                        if (!enemy.pathDefenders.find(d => d === tower.defender)) {
-                            enemy.pathDefenders.push(tower.defender);
-                        }
-                        
-                        // Check if enemy is already close enough to engage
-                        if (enemy.checkDefenderTarget(tower.defender)) {
-                            // Enemy is close enough - set it to attack this defender
-                            enemy.isAttackingDefender = true;
-                            enemy.defenderTarget = tower.defender;
-                            return;
+                    }
+                });
+            }
+            console.log('[DEBUG] Active guard posts with defenders:', activeGuardPosts);
+            
+            this.enemyManager.enemies.forEach((enemy, index) => {
+                // Register guard post defenders and their waypoints
+                if (this.towerManager.towers) {
+                    for (let tower of this.towerManager.towers) {
+                        if (tower.type === 'guard-post') {
+                            const defender = tower.getDefender();
+                            if (defender) {
+                                console.log('[DEBUG] Enemy #', index, 'found guard post defender at', {x: defender.x.toFixed(0), y: defender.y.toFixed(0)});
+                                
+                                // Add defender to the enemy's list of available path defenders
+                                if (!enemy.pathDefenders) {
+                                    enemy.pathDefenders = [];
+                                }
+                                if (!enemy.pathDefenders.find(d => d === defender)) {
+                                    enemy.pathDefenders.push(defender);
+                                }
+                                
+                                // Register the exact waypoint where this defender is stationed
+                                // Enemies will use this to know where to stop and engage
+                                const waypoint = tower.getDefenderWaypoint();
+                                if (waypoint && !enemy.defenderWaypoint) {
+                                    enemy.defenderWaypoint = waypoint;
+                                    console.log('[DEBUG] -> Registered waypoint on enemy #', index, 'at', waypoint);
+                                } else if (!waypoint) {
+                                    console.log('[DEBUG] -> NO WAYPOINT returned from getDefenderWaypoint()');
+                                }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
         }
         
-        // SECOND: Update enemy positions (they won't move if attacking defender)
-        if (this.enemyManager) {
-            this.enemyManager.update(deltaTime);
-            if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
-        }
-        
-        // Update defender combat
+        // UPDATE DEFENDERS FIRST
+        // Update castle defender
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             const defender = this.level.castle.defender;
             defender.update(deltaTime, this.enemyManager.enemies);
         }
         
         // Update guard posts and their defenders
-        if (this.level.towers) {
-            this.level.towers.forEach(tower => {
+        if (this.towerManager && this.towerManager.towers) {
+            this.towerManager.towers.forEach(tower => {
                 if (tower.type === 'guard-post') {
                     tower.update(deltaTime, this.enemyManager.enemies, this.gameState);
                 }
             });
         }
+        
+        // THEN update enemy positions
+        if (this.enemyManager) {
+            this.enemyManager.update(deltaTime);
+            if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
+        }
+        
+        
+        // Clean up dead path defenders
+        // When all defenders at a waypoint are dead, enemies can resume moving
+        this.enemyManager.enemies.forEach(enemy => {
+            if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
+                // Remove dead defenders from the enemy's list
+                enemy.pathDefenders = enemy.pathDefenders.filter(d => !d.isDead());
+                
+                // If all path defenders are dead, allow enemy to resume
+                if (enemy.pathDefenders.length === 0) {
+                    if (enemy.isAttackingDefender) {
+                        // Defender died - reset combat state
+                        enemy.isAttackingDefender = false;
+                        enemy.defenderTarget = null;
+                        enemy.reachedEnd = false; // Resume moving
+                    }
+                    // Clear the waypoint reference
+                    enemy.defenderWaypoint = null;
+                }
+            }
+        });
         
         // Update freeze timers and handle combat
         this.enemyManager.enemies.forEach(enemy => {
@@ -1334,33 +1387,44 @@ export class GameplayState {
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
                 enemy.attackDefender(enemy.defenderTarget, deltaTime);
             } else if (enemy.reachedEnd) {
-                // Enemy reached either a path defender or the castle
+                // Enemy has reached end of path - either at a path defender waypoint or castle
                 let targetDefender = null;
                 
-                // Check if there's a path defender to engage
-                if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
+                // PATH DEFENDER LOGIC: If there's a defenderWaypoint, engage path defenders there
+                if (enemy.defenderWaypoint && enemy.pathDefenders && enemy.pathDefenders.length > 0) {
+                    console.log('[DEBUG] Combat: Enemy at waypoint with defenders available. Defenders count:', enemy.pathDefenders.length);
+                    // Find first alive path defender in the list
                     for (let defender of enemy.pathDefenders) {
                         if (!defender.isDead()) {
                             targetDefender = defender;
+                            console.log('[DEBUG] Combat: Found alive path defender. Engaging.');
                             break;
                         }
                     }
+                    
+                    if (targetDefender) {
+                        // Engage with path defender at waypoint
+                        enemy.isAttackingDefender = true;
+                        enemy.defenderTarget = targetDefender;
+                        enemy.isAttackingCastle = false;
+                        enemy.attackDefender(targetDefender, deltaTime);
+                        return;
+                    }
+                } else if (!enemy.defenderWaypoint) {
+                    console.log('[DEBUG] Combat: Enemy reached end but no defenderWaypoint set. Will check castle defender.');
                 }
                 
-                // If no path defender found, check for castle defender
-                if (!targetDefender && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+                // CASTLE DEFENDER LOGIC: If no path defender, engage castle defender if available
+                if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
                     targetDefender = this.level.castle.defender;
-                    enemy.isAttackingCastle = false;
-                }
-                
-                // Attack the defender if found
-                if (targetDefender) {
                     enemy.isAttackingDefender = true;
                     enemy.defenderTarget = targetDefender;
+                    enemy.isAttackingCastle = false;
                     enemy.attackDefender(targetDefender, deltaTime);
                 } else if (this.level.castle) {
-                    // No defender found, attack the castle
+                    // No defenders available, attack castle directly
                     enemy.isAttackingCastle = true;
+                    enemy.isAttackingDefender = false;
                     enemy.attackCastle(this.level.castle, deltaTime);
                 }
             }
@@ -1429,8 +1493,8 @@ export class GameplayState {
         }
         
         // Render guard post defenders
-        if (this.level.towers) {
-            this.level.towers.forEach(tower => {
+        if (this.towerManager && this.towerManager.towers) {
+            this.towerManager.towers.forEach(tower => {
                 if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     tower.defender.render(ctx);
                 }

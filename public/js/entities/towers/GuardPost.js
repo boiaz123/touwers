@@ -150,14 +150,35 @@ export class GuardPost extends Tower {
         // Set the defender's waypoint to make enemies stop here
         // Enemies will stop at this waypoint instead of reaching the castle
         if (this.pathIndex !== null && this.gamePath) {
-            this.defender.defenderWaypoint = {
+            this.defender.stationedWaypoint = {
                 x: this.defenderSpawnX,
                 y: this.defenderSpawnY,
                 pathIndex: this.pathIndex
             };
-        } else {
+            console.log('[DEBUG] GuardPost: Hired defender at waypoint', this.defender.stationedWaypoint);
         }
         return true;
+    }
+    
+    /**
+     * Get the waypoint where this guard post's defender is stationed
+     * Returns the exact location where the path defender stops enemies
+     */
+    getDefenderWaypoint() {
+        if (this.defender && !this.defender.isDead() && this.defender.stationedWaypoint) {
+            return this.defender.stationedWaypoint;
+        }
+        return null;
+    }
+    
+    /**
+     * Get the path defender instance at this guard post
+     */
+    getDefender() {
+        if (this.defender && !this.defender.isDead()) {
+            return this.defender;
+        }
+        return null;
     }
     
     /**
