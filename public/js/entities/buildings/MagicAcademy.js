@@ -20,19 +20,18 @@ export class MagicAcademy extends Building {
         // New: Gem storage for each element
         this.gems = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         
-        // New: Gem mining tools research
-        this.gemMiningResearched = false;
+        // Gem mining is automatically unlocked at Academy Level 1
+        this.gemMiningResearched = true;
         
-        // New: Diamond mining unlock
-        this.diamondMiningUnlocked = false;
-        
-        // New: Academy upgrade system
-        this.academyLevel = 0;
+        // Academy upgrade system - starts at level 1 on build
+        this.academyLevel = 1;
         this.maxAcademyLevel = 3;
         
-        // New: Track which features are unlocked
-        this.combinationSpellsUnlocked = false;
-        this.diamondMiningUnlocked = false;
+        // Track which features are unlocked
+        // Level 1: Magic Tower + Gem Mining automatically unlocked
+        // Level 2: Magic Tower upgrades unlocked
+        // Level 3: Super Weapon Lab buildable
+        this.gemMiningResearched = true; // Automatic at level 1
         this.superWeaponUnlocked = false;
         
         // New: Track unlocked combination spells (requires gem investment)
@@ -738,45 +737,12 @@ export class MagicAcademy extends Building {
             }
         );
         
-        // New: Add gem mining tools research if not yet researched
-        if (!this.gemMiningResearched) {
-            options.push({
-                id: 'gemMiningTools',
-                name: 'Gem Mining Tools',
-                description: 'Research tools to mine elemental gems in gold mines. Allows toggling mines to gem mode.',
-                level: 0,
-                maxLevel: 1,
-                cost: 500,
-                icon: '⛏️💎',
-                isResearch: true
-            });
-        }
-        
-        // New: Add combination spell unlocks if academy level 1 is reached
-        if (this.combinationSpellsUnlocked) {
-            this.combinationSpells.forEach(spell => {
-                if (!this.unlockedCombinations.has(spell.id)) {
-                    options.push({
-                        id: `unlock_${spell.id}`,
-                        name: `Unlock ${spell.name} Spell`,
-                        description: `Invest gems to unlock the ${spell.name} combination spell for Combination Towers`,
-                        level: 0,
-                        maxLevel: 1,
-                        cost: spell.gemsRequired,
-                        icon: spell.icon,
-                        isCombinationUnlock: true,
-                        gemType: 'combination',
-                        spellId: spell.id,
-                        requiredElements: spell.elements
-                    });
-                }
-            });
-        }
+        // Note: Gem mining is automatically unlocked at Academy Level 1
         
         return options;
     }
     
-    // New: Get academy upgrade option
+    // Get academy upgrade option
     getAcademyUpgradeOption() {
         const nextLevel = this.academyLevel + 1;
         let description = '';
@@ -784,19 +750,14 @@ export class MagicAcademy extends Building {
         let cost = 0;
         
         switch(nextLevel) {
-            case 1:
-                description = 'Enhance the academy to unlock combination spells for Magic Towers.';
-                nextUnlock = 'Unlocks: 4 Combination Spells (Steam, Magma, Tempest, Meteor)';
+            case 2:
+                description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
+                nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
                 cost = 1000;
                 break;
-            case 2:
-                description = 'Further enhance the academy to unlock diamond mining capabilities.';
-                nextUnlock = 'Unlocks: Diamond Mining in Gold Mines + Diamond gem currency';
-                cost = 1500;
-                break;
             case 3:
-                description = 'Achieve maximum academy power to unlock Super Weapon construction.';
-                nextUnlock = 'Unlocks: Super Weapon Lab building';
+                description = 'Achieve maximum academy power to unlock Super Weapon Lab construction.';
+                nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
                 cost = 2000;
                 break;
         }
@@ -814,7 +775,7 @@ export class MagicAcademy extends Building {
         };
     }
     
-    // New: Purchase academy upgrade
+    // Purchase academy upgrade
     purchaseAcademyUpgrade(gameState) {
         if (this.academyLevel >= this.maxAcademyLevel) {
             return false;
@@ -830,16 +791,13 @@ export class MagicAcademy extends Building {
         gameState.spend(cost);
         this.academyLevel++;
         
-        
         // Apply unlocks based on new level
         switch(this.academyLevel) {
-            case 1:
-                this.combinationSpellsUnlocked = true;
-                break;
             case 2:
-                this.diamondMiningUnlocked = true;
+                // Level 2: Magic Tower upgrades become available
                 break;
             case 3:
+                // Level 3: Super Weapon Lab becomes buildable
                 this.superWeaponUnlocked = true;
                 break;
         }

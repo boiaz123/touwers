@@ -384,40 +384,9 @@ export class GoldMine extends Building {
         this.goldReady = false;
         this.currentProduction = 0;
         
-        // New: If in gem mode, produce a random gem instead of gold
+        // New: If in gem mode, use the new collectGems method instead
         if (this.gemMode) {
-            const gemType = this.currentGemType || 'fire'; // Fallback to fire
-            
-            // Assume academy reference is available (set by game state)
-            if (this.academy) {
-                this.academy.addGem(gemType);
-                
-                // Add floating text for gem collection
-                this.floatingTexts.push({
-                    x: this.x,
-                    y: this.y,
-                    text: `+1 ${gemType.toUpperCase()}`,
-                    life: 1.5,
-                    maxLife: 1.5,
-                    gemType: gemType
-                });
-                
-                // New: 10% chance to also get a diamond if diamond mining is unlocked
-                if (this.academy.diamondMiningUnlocked && Math.random() < 0.1) {
-                    this.academy.addDiamond();
-                    
-                    this.floatingTexts.push({
-                        x: this.x,
-                        y: this.y - 20,
-                        text: '+1 DIAMOND',
-                        life: 1.5,
-                        maxLife: 1.5,
-                        gemType: 'diamond'
-                    });
-                }
-            }
-            this.currentGemType = null; // Reset for next cycle
-            return 0; // No gold collected
+            return 0; // No gold collected in gem mode
         } else {
             // Original gold collection logic
             const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
@@ -451,6 +420,51 @@ export class GoldMine extends Building {
         }
     }
     
+    // New: Collect gems (returns gem object instead of adding directly to academy)
+    collectGems() {
+        // Only allow collection if ready
+        if (!this.goldReady) {
+            return { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
+        }
+        
+        // Reset production cycle
+        this.goldReady = false;
+        this.currentProduction = 0;
+        
+        const gemType = this.currentGemType || 'fire'; // Fallback to fire
+        const collectedGems = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
+        
+        // Produce one gem
+        collectedGems[gemType] = 1;
+        
+        // Add floating text for gem collection
+        this.floatingTexts.push({
+            x: this.x,
+            y: this.y,
+            text: `+1 ${gemType.toUpperCase()}`,
+            life: 1.5,
+            maxLife: 1.5,
+            gemType: gemType
+        });
+        
+        // 10% chance to also get a diamond if diamond mining is unlocked
+        if (this.academy && this.academy.diamondMiningUnlocked && Math.random() < 0.1) {
+            collectedGems.diamond = 1;
+            
+            this.floatingTexts.push({
+                x: this.x,
+                y: this.y - 20,
+                text: '+1 DIAMOND',
+                life: 1.5,
+                maxLife: 1.5,
+                gemType: 'diamond'
+            });
+        }
+        
+        this.currentGemType = null; // Reset for next cycle
+        return collectedGems;
+    }
+    
     // New: Method to toggle gem mode
     toggleGemMode() {
         if (this.gemMiningUnlocked) {
@@ -461,9 +475,9 @@ export class GoldMine extends Building {
     // New: Set academy reference and check if gem mining is unlocked
     setAcademy(academy) {
         this.academy = academy;
-        // Only unlock gem mining if research is complete OR if manually enabled (sandbox)
-        if (academy) {
-            this.gemMiningUnlocked = this.gemMiningUnlocked || academy.gemMiningResearched;
+        // Unlock gem mining if academy has researched it
+        if (academy && academy.gemMiningResearched) {
+            this.gemMiningUnlocked = true;
         }
     }
     
@@ -1024,6 +1038,31 @@ export class GoldMine extends Building {
             }
             ctx.fillText(text.text, this.x, text.y);
         });
+        
+        // Render mining mode indicator at top of mine
+        if (this.gemMiningUnlocked) {
+            const modeIconSize = 24;
+            const modeX = this.x;
+            const modeY = this.y - size * 0.6;
+            
+            // Draw mode indicator circle background
+            ctx.fillStyle = this.gemMode ? 'rgba(100, 150, 255, 0.9)' : 'rgba(255, 215, 0, 0.9)';
+            ctx.beginPath();
+            ctx.arc(modeX, modeY, modeIconSize/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw border
+            ctx.strokeStyle = this.gemMode ? 'rgba(200, 220, 255, 1)' : 'rgba(255, 255, 100, 1)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw icon (gem or coin)
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.gemMode ? '💎' : '💰', modeX, modeY);
+        }
     }
     
     onClick() {

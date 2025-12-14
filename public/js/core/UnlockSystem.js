@@ -55,8 +55,9 @@ export class UnlockSystem {
     
     onAcademyBuilt() {
         this.academyCount++;
+        // Level 1: Magic Tower and Gem Mining automatically unlocked
         this.unlockedTowers.add('magic');
-        this.unlockedUpgrades.add('gemMining'); // New: Unlock gem mining research
+        this.gemMiningResearched = true; // Automatically enabled at level 1
         return true;
     }
 
@@ -77,6 +78,8 @@ export class UnlockSystem {
     onSuperweaponLabBuilt() {
         if (this.superweaponCount < 1 && this.superweaponUnlocked) {
             this.superweaponCount++;
+            // Unlock combination tower when super weapon lab is built
+            this.unlockedTowers.add('combination');
             return true;
         }
         return false;

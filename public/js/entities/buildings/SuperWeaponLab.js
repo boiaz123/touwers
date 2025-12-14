@@ -4,10 +4,11 @@ export class SuperWeaponLab extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.isSelected = false;
+        this.academy = null; // Reference to Magic Academy
         
-        // Building upgrade system
+        // Building upgrade system - starts at level 1 on build
         this.labLevel = 1;
-        this.maxLabLevel = 3;
+        this.maxLabLevel = 4;
         
         // Spell system with cooldowns
         this.spells = {
@@ -20,21 +21,21 @@ export class SuperWeaponLab extends Building {
                 radius: 120,
                 cooldown: 30,
                 currentCooldown: 0,
-                unlocked: false,
+                unlocked: true, // Unlocked at Level 1
                 level: 1,
                 maxLevel: 5,
                 upgradeCost: 300
             },
             frostNova: {
                 id: 'frostNova',
-                name: 'Frost Nova',
+                name: 'Frozen Nova',
                 icon: '❄️',
                 description: 'Freezes all enemies for a duration',
                 freezeDuration: 3,
                 radius: 150,
                 cooldown: 45,
                 currentCooldown: 0,
-                unlocked: false,
+                unlocked: false, // Unlocked at Level 2
                 level: 0,
                 maxLevel: 5,
                 upgradeCost: 400,
@@ -50,7 +51,7 @@ export class SuperWeaponLab extends Building {
                 burnDuration: 5,
                 cooldown: 60,
                 currentCooldown: 0,
-                unlocked: false,
+                unlocked: false, // Unlocked at Level 3
                 level: 0,
                 maxLevel: 5,
                 upgradeCost: 500,
@@ -65,7 +66,7 @@ export class SuperWeaponLab extends Building {
                 chainCount: 5,
                 cooldown: 25,
                 currentCooldown: 0,
-                unlocked: false,
+                unlocked: false, // Unlocked at Level 4
                 level: 0,
                 maxLevel: 5,
                 upgradeCost: 350,
@@ -535,34 +536,51 @@ export class SuperWeaponLab extends Building {
     
     onClick() {
         this.isSelected = true;
+        
+        // Get academy reference if available
+        let academy = this.academy;
+        
         return {
             type: 'superweapon_menu',
             building: this,
+            academy: academy,
             spells: this.getAllSpells(),
             labLevel: this.labLevel,
             maxLabLevel: this.maxLabLevel
         };
     }
     
+    setAcademy(academy) {
+        this.academy = academy;
+    }
+    
     getLabUpgradeOption() {
-        if (this.labLevel >= this.maxLabLevel) return null;
-        
         const nextLevel = this.labLevel + 1;
         let description = '';
         let nextUnlock = '';
         let cost = 0;
         
+        // Costs increase with level
+        const baseCost = 1000;
+        cost = baseCost + (this.labLevel - 1) * 500;
+        
+        // Dynamic descriptions based on level
         switch(nextLevel) {
             case 2:
-                description = 'Enhance the lab to reduce all spell cooldowns.';
-                nextUnlock = 'Unlocks: 20% cooldown reduction for all spells';
-                cost = 800;
+                description = 'Unlock Combination Tower Power-up Upgrades and Frozen Nova spell.';
+                nextUnlock = 'Unlocks: Frozen Nova + Combination Tower upgrades';
                 break;
             case 3:
-                description = 'Maximum lab power for devastating spells.';
-                nextUnlock = 'Unlocks: 30% damage bonus + 30% cooldown reduction';
-                cost = 1500;
+                description = 'Unlock Meteor Strike spell. Reduce all spell cooldowns by 20%.';
+                nextUnlock = 'Unlocks: Meteor Strike + 20% cooldown reduction';
                 break;
+            case 4:
+                description = 'Unlock Chain Lightning spell. Further reduce cooldowns by 20%.';
+                nextUnlock = 'Unlocks: Chain Lightning + additional 20% cooldown reduction';
+                break;
+            default:
+                description = `Increase power of all spells and enhance abilities.`;
+                nextUnlock = `Spell damage +${nextLevel * 10}%, Cooldown -5%`;
         }
         
         return {
@@ -571,41 +589,74 @@ export class SuperWeaponLab extends Building {
             description: description,
             nextUnlock: nextUnlock,
             level: this.labLevel,
-            maxLevel: this.maxLabLevel,
+            maxLevel: 999,
             cost: cost,
+            diamondCost: 1,  // Each level upgrade requires 1 diamond
             icon: '🗼'
         };
     }
     
     purchaseLabUpgrade(gameState) {
-        
-        if (this.labLevel >= this.maxLabLevel) {
-            console.error('SuperWeaponLab: Lab already at max level');
-            return false;
-        }
-        
         const upgradeOption = this.getLabUpgradeOption();
         
+        // Check gold cost
         if (!gameState.canAfford(upgradeOption.cost)) {
             console.error('SuperWeaponLab: Cannot afford lab upgrade');
             return false;
         }
         
+        // Check diamond cost - each level requires 1 diamond
+        if (this.academy) {
+            const diamondCost = 1;
+            if ((this.academy.gems.diamond || 0) < diamondCost) {
+                console.error('SuperWeaponLab: Insufficient diamonds for upgrade');
+                return false;
+            }
+        }
+        
+        // Deduct gold
         gameState.spend(upgradeOption.cost);
+        
+        // Deduct diamond
+        if (this.academy) {
+            this.academy.gems.diamond -= 1;
+        }
+        
         this.labLevel++;
         
-        // Apply level bonuses
-        if (this.labLevel >= 2) {
-            // 20% cooldown reduction
-            Object.values(this.spells).forEach(spell => {
-                spell.cooldown *= 0.8;
-            });
+        // Unlock spells based on new level
+        switch(this.labLevel) {
+            case 2:
+                // Level 2: Unlock Frozen Nova and Combination Tower upgrades
+                this.spells.frostNova.unlocked = true;
+                this.spells.frostNova.level = 1;
+                break;
+            case 3:
+                // Level 3: Unlock Meteor Strike + apply cooldown reduction
+                this.spells.meteorStrike.unlocked = true;
+                this.spells.meteorStrike.level = 1;
+                Object.values(this.spells).forEach(spell => {
+                    if (spell.cooldown) spell.cooldown *= 0.8; // 20% cooldown reduction
+                });
+                break;
+            case 4:
+                // Level 4: Unlock Chain Lightning + additional cooldown reduction
+                this.spells.chainLightning.unlocked = true;
+                this.spells.chainLightning.level = 1;
+                Object.values(this.spells).forEach(spell => {
+                    if (spell.cooldown) spell.cooldown *= 0.8; // Additional 20% cooldown reduction
+                });
+                break;
         }
-        if (this.labLevel >= 3) {
-            // Additional damage bonus
+        
+        // For levels 5+: increase spell power only (no cooldown reduction beyond level 4)
+        if (this.labLevel > 4) {
+            // Each level: +10% damage
+            const powerMultiplier = 1 + ((this.labLevel - 4) * 0.10);
+            
             Object.values(this.spells).forEach(spell => {
-                if (spell.damage) spell.damage *= 1.3;
-                if (spell.burnDamage) spell.burnDamage *= 1.3;
+                if (spell.damage) spell.damage *= powerMultiplier;
+                if (spell.burnDamage) spell.burnDamage *= powerMultiplier;
             });
         }
         
@@ -686,13 +737,47 @@ export class SuperWeaponLab extends Building {
         this.spells.arcaneBlast.unlocked = true;
     }
     
+    /**
+     * Get combination tower upgrade options when lab is level 2+
+     * These allow empowering the combination tower with elemental effects
+     */
+    getCombinationUpgradeOptions(academy) {
+        const options = [];
+        
+        // Only show combination upgrades if lab is level 2+
+        if (this.labLevel >= 2 && academy) {
+            // Get the combination spells from academy
+            const combinationSpells = academy.combinationSpells || [];
+            
+            combinationSpells.forEach(spell => {
+                const requiredGems = spell.gemsRequired;
+                const hasAllGems = Object.entries(requiredGems).every(
+                    ([type, amount]) => (academy.gems[type] || 0) >= amount
+                );
+                
+                options.push({
+                    id: spell.id,
+                    name: `${spell.icon} ${spell.name}`,
+                    description: spell.description,
+                    icon: spell.icon,
+                    gemsRequired: requiredGems,
+                    hasAllGems: hasAllGems,
+                    damageMultiplier: spell.damageMultiplier
+                });
+            });
+        }
+        
+        return options;
+    }
+    
     static getInfo() {
         return {
             name: 'Super Weapon Lab',
-            description: 'Mystical spire that channels powerful spells against enemies.',
-            effect: 'Unlocks devastating area spells',
+            description: 'Mystical spire that channels powerful spells against enemies. Costs 1000 gold + 5 diamonds.',
+            effect: 'Unlocks devastating area spells + Arcane Blast spell at level 1',
             size: '4x4',
-            cost: 1000
+            cost: 1000, // Base gold cost; also requires 5 diamonds
+            diamondCost: 5
         };
     }
 }

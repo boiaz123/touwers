@@ -124,64 +124,73 @@ export class CombinationTower extends Tower {
     }
     
     shoot() {
-        if (this.target && this.selectedSpell) {
+        if (this.target) {
             let finalDamage = this.damage;
-            const spell = this.combinationBonuses[this.selectedSpell];
             
-            // Apply combination spell effects
-            switch(this.selectedSpell) {
-                case 'steam':
-                    finalDamage += spell.damageBonus;
-                    this.target.takeDamage(finalDamage, false, 'fire');
-                    // Burn effect
-                    if (this.target.burnTimer) {
-                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
-                    } else {
-                        this.target.burnTimer = 3;
-                        this.target.burnDamage = 5;
-                    }
-                    // Slow effect
-                    const baseSlowEffect = 0.7;
-                    const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - spell.slowBonus);
-                    if (this.target.speed > 20) {
-                        this.target.speed *= enhancedSlowEffect;
-                    }
-                    break;
-                    
-                case 'magma':
-                    finalDamage += spell.damageBonus;
-                    const piercingDamage = finalDamage + spell.piercingBonus;
-                    this.target.takeDamage(piercingDamage, true, 'earth');
-                    // Burn effect
-                    if (this.target.burnTimer) {
-                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
-                    } else {
-                        this.target.burnTimer = 3;
-                        this.target.burnDamage = 5;
-                    }
-                    break;
-                    
-                case 'tempest':
-                    this.target.takeDamage(finalDamage, false, 'water');
-                    // Slow effect
-                    const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
-                    if (this.target.speed > 20) {
-                        this.target.speed *= slowEffect;
-                    }
-                    // Chain to nearby enemies
-                    this.chainToNearbyEnemies(this.target, finalDamage, 'water');
-                    break;
-                    
-                case 'meteor':
-                    const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                    this.target.takeDamage(meteorPiercingDamage, true, 'earth');
-                    // Chain to nearby enemies (splash damage)
-                    this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
-                    break;
+            // If a spell is selected, use combination effects, otherwise do basic attack
+            if (this.selectedSpell) {
+                const spell = this.combinationBonuses[this.selectedSpell];
+                
+                // Apply combination spell effects
+                switch(this.selectedSpell) {
+                    case 'steam':
+                        finalDamage += spell.damageBonus;
+                        this.target.takeDamage(finalDamage, false, 'fire');
+                        // Burn effect
+                        if (this.target.burnTimer) {
+                            this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                        } else {
+                            this.target.burnTimer = 3;
+                            this.target.burnDamage = 5;
+                        }
+                        // Slow effect
+                        const baseSlowEffect = 0.7;
+                        const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - spell.slowBonus);
+                        if (this.target.speed > 20) {
+                            this.target.speed *= enhancedSlowEffect;
+                        }
+                        break;
+                        
+                    case 'magma':
+                        finalDamage += spell.damageBonus;
+                        const piercingDamage = finalDamage + spell.piercingBonus;
+                        this.target.takeDamage(piercingDamage, true, 'earth');
+                        // Burn effect
+                        if (this.target.burnTimer) {
+                            this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                        } else {
+                            this.target.burnTimer = 3;
+                            this.target.burnDamage = 5;
+                        }
+                        break;
+                        
+                    case 'tempest':
+                        this.target.takeDamage(finalDamage, false, 'water');
+                        // Slow effect
+                        const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
+                        if (this.target.speed > 20) {
+                            this.target.speed *= slowEffect;
+                        }
+                        // Chain to nearby enemies
+                        this.chainToNearbyEnemies(this.target, finalDamage, 'water');
+                        break;
+                        
+                    case 'meteor':
+                        const meteorPiercingDamage = finalDamage + spell.piercingBonus;
+                        this.target.takeDamage(meteorPiercingDamage, true, 'earth');
+                        // Chain to nearby enemies (splash damage)
+                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
+                        break;
+                }
+                
+                // Create visual effect
+                this.createCombinationEffect();
+            } else {
+                // Default arcane blast with no spell selected
+                this.target.takeDamage(finalDamage, false, 'water');
+                // Create basic arcane effect
+                this.createBasicArcaneEffect();
             }
-            
-            // Create visual effect
-            this.createCombinationEffect();
         }
     }
     
@@ -201,6 +210,51 @@ export class CombinationTower extends Tower {
             case 'meteor':
                 this.createMeteorEffect();
                 break;
+        }
+    }
+    
+    createBasicArcaneEffect() {
+        if (!this.target) return;
+        
+        // Blue arcane bolt from tower to target
+        const segments = 4;
+        for (let i = 0; i < segments; i++) {
+            const progress = i / segments;
+            const delay = progress * 0.3;
+            
+            this.lightningBolts.push({
+                startX: this.x,
+                startY: this.y,
+                endX: this.target.x,
+                endY: this.target.y,
+                life: 0.3 - delay,
+                maxLife: 0.3,
+                segments: [{
+                    fromX: this.x + (this.target.x - this.x) * progress,
+                    fromY: this.y + (this.target.y - this.y) * progress,
+                    toX: this.x + (this.target.x - this.x) * (progress + 0.25),
+                    toY: this.y + (this.target.y - this.y) * (progress + 0.25)
+                }],
+                color: 'rgba(100, 150, 255, ',
+                size: 6
+            });
+        }
+        
+        // Arcane burst at target
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const speed = 50 + Math.random() * 40;
+            this.magicParticles.push({
+                x: this.target.x,
+                y: this.target.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 20,
+                life: 1,
+                maxLife: 1,
+                size: 0,
+                maxSize: 5 + Math.random() * 4,
+                color: 'rgba(100, 150, 255, '
+            });
         }
     }
     

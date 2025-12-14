@@ -425,7 +425,21 @@ export class UIManager {
             const unlockSystem = this.towerManager.getUnlockSystem();
             if (!unlockSystem.superweaponUnlocked) {
                 disabledNote = '<div style="color: #ff6b6b;">⚠️ Unlock at Academy Level 3</div>';
+            } else {
+                // Check for diamond cost
+                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
+                const needsDiamonds = diamondCount < 5;
+                if (needsDiamonds) {
+                    disabledNote = `<div style="color: #ff9999;">⚠️ Requires 5 💎 (have ${diamondCount})</div>`;
+                }
             }
+        }
+        
+        // Build cost string with additional resources
+        let costString = `$${info.cost}`;
+        if (buildingType === 'superweapon' && info.diamondCost) {
+            costString += ` + 💎${info.diamondCost}`;
         }
         
         // Create hover menu
@@ -437,7 +451,7 @@ export class UIManager {
             <div class="info-stats">
                 <div><span>Effect:</span> <span>${info.effect}</span></div>
                 <div><span>Size:</span> <span>${info.size}</span></div>
-                <div><span>Cost:</span> <span>$${info.cost}</span></div>
+                <div><span>Cost:</span> <span>${costString}</span></div>
             </div>
             <div class="info-description">${info.description}</div>
             ${disabledNote}
@@ -1235,22 +1249,6 @@ export class UIManager {
                             upgrades: academyData.academy.getElementalUpgradeOptions()
                         });
                     }
-                } else if (upgradeId === 'gemMiningTools') {
-                    if (academyData.academy.researchGemMiningTools(this.gameState)) {
-                        this.towerManager.getUnlockSystem().onGemMiningResearched();
-                        this.towerManager.buildingManager.buildings.forEach(building => {
-                            if (building.constructor.name === 'GoldMine') {
-                                building.setAcademy(academyData.academy);
-                            }
-                        });
-                        this.updateUI();
-                        this.updateUIAvailability();
-                        this.showAcademyUpgradeMenu({
-                            type: 'academy_menu',
-                            academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
-                        });
-                    }
                 } else {
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
                         this.updateUI();
@@ -1741,7 +1739,6 @@ export class UIManager {
             return;
         }
         
-        
         let contentHTML = '';
         
         // Add lab level upgrade
@@ -1767,11 +1764,11 @@ export class UIManager {
                             </div>
                         </div>
                         <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= labUpgrade.cost ? 'affordable' : 'unavailable'}">
-                                ${isMaxed ? 'MAX' : `$${labUpgrade.cost}`}
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : (this.gameState.gold >= labUpgrade.cost && (menuData.academy && menuData.academy.gems.diamond >= (labUpgrade.diamondCost || 0)) ? 'affordable' : 'unavailable')}">
+                                ${isMaxed ? 'MAX' : `$${labUpgrade.cost} + 💎${labUpgrade.diamondCost || 0}`}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" data-upgrade="lab_upgrade" 
-                                    ${isMaxed || this.gameState.gold < labUpgrade.cost ? 'disabled' : ''}>
+                                    ${isMaxed || this.gameState.gold < labUpgrade.cost || (menuData.academy && (menuData.academy.gems.diamond || 0) < (labUpgrade.diamondCost || 0)) ? 'disabled' : ''}>
                                 ${isMaxed ? 'MAX' : 'Upgrade'}
                             </button>
                         </div>
@@ -1780,81 +1777,90 @@ export class UIManager {
             `;
         }
         
-        // Add spell unlocks and upgrades in categories
-        
-        // Organize spells into categories
-        const unlockedSpells = menuData.spells.filter(s => s.unlocked);
-        const lockedSpells = menuData.spells.filter(s => !s.unlocked);
-        
-        // Add unlocked spells first
-        if (unlockedSpells.length > 0) {
-            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">Unlocked Spells</div>`;
+        // Add combination tower upgrades if lab is level 2+
+        const combinationUpgrades = menuData.building.getCombinationUpgradeOptions(menuData.academy);
+        if (combinationUpgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FF6BA6; font-weight: bold; border-bottom: 1px solid rgba(255, 107, 166, 0.3); margin-top: 0.6rem;">💎 Combination Tower Power-Ups</div>`;
             
-            unlockedSpells.forEach(spell => {
-                const upgradeCost = spell.upgradeCost * spell.level;
-                const isMaxed = spell.level >= spell.maxLevel;
+            combinationUpgrades.forEach(upgrade => {
+                const gemsHTML = Object.entries(upgrade.gemsRequired)
+                    .map(([type, amount]) => {
+                        const current = menuData.academy.gems[type] || 0;
+                        const isSufficient = current >= amount;
+                        return `<span style="color: ${isSufficient ? '#FFD700' : '#888'};">${amount}x ${type}</span>`;
+                    })
+                    .join(', ');
                 
                 contentHTML += `
                     <div class="upgrade-category">
-                        <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="panel-upgrade-item ${upgrade.hasAllGems ? '' : 'locked'}">
                             <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">${spell.icon}</div>
+                                <div class="upgrade-icon-section">${upgrade.icon}</div>
                                 <div class="upgrade-info-section">
-                                    <div class="upgrade-name">${spell.name}</div>
-                                    <div class="upgrade-description">${spell.description}</div>
-                                    <div class="upgrade-level-display">
-                                        Level: ${spell.level}/${spell.maxLevel}
-                                        <div class="upgrade-level-bar">
-                                            <div class="upgrade-level-bar-fill" style="width: ${(spell.level / spell.maxLevel) * 100}%"></div>
-                                        </div>
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: #a88; margin-top: 0.3rem;">Cooldown: ${spell.cooldown.toFixed(1)}s</div>
+                                    <div class="upgrade-name">${upgrade.name}</div>
+                                    <div class="upgrade-description">${upgrade.description}</div>
+                                    <div style="font-size: 0.75rem; color: #a88; margin-top: 0.3rem;">Requires: ${gemsHTML}</div>
                                 </div>
                             </div>
+                            ${upgrade.hasAllGems ? `
                             <div class="upgrade-action-row">
-                                <div class="upgrade-cost-display ${isMaxed ? 'maxed' : this.gameState.gold >= upgradeCost ? 'affordable' : 'unavailable'}">
-                                    ${isMaxed ? 'MAX' : `$${upgradeCost}`}
-                                </div>
-                                <button class="upgrade-button panel-upgrade-btn" data-spell-upgrade="${spell.id}" 
-                                        ${isMaxed || this.gameState.gold < upgradeCost ? 'disabled' : ''}>
-                                    ${isMaxed ? 'MAX' : 'Upgrade'}
+                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}">
+                                    Activate
                                 </button>
                             </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             });
         }
         
-        // Add locked spells
-        if (lockedSpells.length > 0) {
-            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #888; font-weight: bold; border-bottom: 1px solid rgba(136, 136, 136, 0.3); margin-top: 0.6rem;">🔒 Locked Spells</div>`;
+        // Add spell status display (compact power bars - NOT unlockable/upgradeable via buttons)
+        const unlockedSpells = menuData.spells.filter(s => s.unlocked);
+        const lockedSpells = menuData.spells.filter(s => !s.unlocked);
+        
+        // Create compact spell power display
+        if (unlockedSpells.length > 0 || lockedSpells.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">✨ Spell Power</div>`;
             
-            lockedSpells.forEach(spell => {
+            // Add unlocked spells as power bars
+            unlockedSpells.forEach(spell => {
+                const damage = spell.damage || spell.burnDamage || 0;
                 contentHTML += `
-                    <div class="upgrade-category">
-                        <div class="panel-upgrade-item locked">
-                            <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">${spell.icon}</div>
-                                <div class="upgrade-info-section">
-                                    <div class="upgrade-name">${spell.name}</div>
-                                    <div class="upgrade-description">${spell.description}</div>
-                                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.3rem;">🔒 Locked</div>
+                    <div class="upgrade-category" style="margin-bottom: 0.4rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
+                            <div style="font-size: 1.2rem; min-width: 2rem;">${spell.icon}</div>
+                            <div style="flex: 1;">
+                                <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                    <div style="height: 100%; width: 60%; background: linear-gradient(90deg, #FFD700, #FFA500); display: flex; align-items: center; justify-content: center;">
+                                        <span style="font-size: 0.7rem; color: #000; font-weight: bold;">${damage}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="upgrade-action-row">
-                                <div class="upgrade-cost-display ${this.gameState.gold >= spell.unlockCost ? 'affordable' : 'unavailable'}">
-                                    $${spell.unlockCost}
-                                </div>
-                                <button class="upgrade-button panel-upgrade-btn" data-spell-unlock="${spell.id}"
-                                        ${this.gameState.gold < spell.unlockCost ? 'disabled' : ''}>
-                                    Unlock
-                                </button>
                             </div>
                         </div>
                     </div>
                 `;
             });
+            
+            // Add locked spells
+            if (lockedSpells.length > 0) {
+                contentHTML += `<div style="padding: 0.4rem 0.6rem; color: #888; font-size: 0.75rem; margin-top: 0.3rem;">🔒 Locked Spells:</div>`;
+                lockedSpells.forEach(spell => {
+                    let unlockInfo = 'Level ';
+                    switch(spell.id) {
+                        case 'frost-nova':
+                            unlockInfo += '2';
+                            break;
+                        case 'meteor-strike':
+                            unlockInfo += '3';
+                            break;
+                        case 'chain-lightning':
+                            unlockInfo += '4';
+                            break;
+                    }
+                    contentHTML += `<div style="padding: 0.2rem 0.6rem; color: #999; font-size: 0.7rem;">${spell.icon} ${spell.name} - ${unlockInfo}</div>`;
+                });
+            }
         }
         
         // Add sell button
@@ -1885,7 +1891,7 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('superweapon-panel'), { once: true });
         }
         
-        // Add button handlers
+        // Add button handlers (only for lab upgrade and combo spells)
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (e.target.dataset.upgrade === 'lab_upgrade') {
@@ -1893,18 +1899,10 @@ export class UIManager {
                         this.updateUI();
                         this.showSuperWeaponMenu(menuData);
                     }
-                } else if (e.target.dataset.spellUnlock) {
-                    const spellId = e.target.dataset.spellUnlock;
-                    if (menuData.building.unlockSpell(spellId, this.gameState)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
-                } else if (e.target.dataset.spellUpgrade) {
-                    const spellId = e.target.dataset.spellUpgrade;
-                    if (menuData.building.upgradeSpell(spellId, this.gameState)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
+                } else if (e.target.dataset.comboSpell) {
+                    const spellId = e.target.dataset.comboSpell;
+                    // TODO: Activate combination spell on tower
+                    console.log('Activate combination spell:', spellId);
                 }
             }, { once: true });
         });
@@ -2255,6 +2253,18 @@ export class UIManager {
             </div>
         `;
         
+        // Add gem mining toggle if gem mining is unlocked
+        if (goldMine.gemMiningUnlocked) {
+            const toggleText = goldMine.gemMode ? '💰 Switch to Gold' : '💎 Switch to Gems';
+            contentHTML += `
+                <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
+                    <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#FFB800' : '#4169E1'}; flex: 1; margin: 0;">
+                        ${toggleText}
+                    </button>
+                </div>
+            `;
+        }
+        
         // Add sell button
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
@@ -2295,12 +2305,37 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
         }
         
+        // Add toggle gem mining button listener
+        const toggleBtn = panel.querySelector('.toggle-mine-mode-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                goldMine.gemMode = !goldMine.gemMode;
+                goldMine.currentProduction = 0; // Reset production cycle when switching modes
+                this.updateUI();
+                this.showGoldMineMenu(goldMineData);
+            }, { once: true });
+        }
+        
         // Add collect button listener if button exists
         const collectBtn = panel.querySelector('.collect-gold-btn');
         if (collectBtn) {
             collectBtn.addEventListener('click', () => {
-                const collected = goldMine.collectGold();
-                this.gameState.gold += collected;
+                if (goldMine.gemMode) {
+                    // Collect gems - need to distribute them to academy
+                    const academies = this.towerManager.buildingManager.buildings.filter(b => 
+                        b.constructor.name === 'MagicAcademy'
+                    );
+                    if (academies.length > 0) {
+                        const collectedGems = goldMine.collectGems();
+                        academies[0].gems.fire += collectedGems.fire || 0;
+                        academies[0].gems.water += collectedGems.water || 0;
+                        academies[0].gems.air += collectedGems.air || 0;
+                        academies[0].gems.earth += collectedGems.earth || 0;
+                    }
+                } else {
+                    const collected = goldMine.collectGold();
+                    this.gameState.gold += collected;
+                }
                 this.updateUI();
                 this.closePanelWithAnimation('goldmine-panel');
             }, { once: true });

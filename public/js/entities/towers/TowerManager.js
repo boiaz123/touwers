@@ -148,6 +148,17 @@ export class TowerManager {
                 this.unlockSystem.onTrainingGroundsBuilt();
             } else if (type === 'superweapon') {
                 this.unlockSystem.onSuperweaponLabBuilt();
+                
+                // Set academy reference on newly built super weapon lab
+                const academy = this.buildingManager.buildings.find(building =>
+                    building.constructor.name === 'MagicAcademy'
+                );
+                if (academy) {
+                    const newLab = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
+                    if (newLab && newLab.constructor.name === 'SuperWeaponLab') {
+                        newLab.setAcademy(academy);
+                    }
+                }
             }
         }
         
@@ -271,11 +282,9 @@ export class TowerManager {
             if (academies.length > 0) {
                 const academy = academies[0];
                 
-                // Set available spells
-                const availableSpells = academy.combinationSpells.filter(spell =>
-                    academy.unlockedCombinations.has(spell.id)
-                );
-                tower.setAvailableSpells(availableSpells);
+                // Set available spells - show all combination spells regardless of unlock status
+                // The tower will handle selection of locked vs unlocked spells
+                tower.setAvailableSpells(academy.combinationSpells);
                 
                 // Apply bonuses based on elemental upgrades
                 const elementalBonuses = academy.getElementalBonuses();

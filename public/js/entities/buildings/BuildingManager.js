@@ -38,8 +38,25 @@ export class BuildingManager {
             return false;
         }
         
+        // Check for additional costs (e.g., diamonds for Super Weapon Lab)
+        if (type === 'superweapon') {
+            // Super Weapon Lab requires 5 diamonds + gold
+            const diamondCost = 5;
+            const academy = this.buildings.find(b => b.constructor.name === 'MagicAcademy');
+            if (!academy || (academy.gems.diamond || 0) < diamondCost) {
+                return false;
+            }
+        }
         
         if (this.gameState.spend(buildingType.cost)) {
+            // Deduct additional costs
+            if (type === 'superweapon') {
+                const academy = this.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                if (academy) {
+                    academy.gems.diamond -= 5;
+                }
+            }
+            
             const building = BuildingRegistry.createBuilding(type, x, y, gridX, gridY);
             this.buildings.push(building);
             
