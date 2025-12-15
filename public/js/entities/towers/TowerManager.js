@@ -278,13 +278,26 @@ export class TowerManager {
             const academies = this.buildingManager.buildings.filter(building =>
                 building.constructor.name === 'MagicAcademy'
             );
+            const labs = this.buildingManager.buildings.filter(building =>
+                building.constructor.name === 'SuperWeaponLab'
+            );
             
             if (academies.length > 0) {
                 const academy = academies[0];
                 
-                // Set available spells - show all combination spells regardless of unlock status
-                // The tower will handle selection of locked vs unlocked spells
-                tower.setAvailableSpells(academy.combinationSpells);
+                // Get combination spells from SuperWeaponLab if it exists, otherwise from academy (legacy)
+                let combinationSpells = [];
+                if (labs.length > 0) {
+                    const lab = labs[0];
+                    tower.superweaponLab = lab; // Store reference for accessing spell power
+                    combinationSpells = lab.combinationSpells || [];
+                } else {
+                    // Fallback to academy if lab doesn't exist
+                    combinationSpells = academy.combinationSpells || [];
+                }
+                
+                // Set available spells
+                tower.setAvailableSpells(combinationSpells);
                 
                 // Apply bonuses based on elemental upgrades
                 const elementalBonuses = academy.getElementalBonuses();
@@ -506,6 +519,10 @@ export class TowerManager {
                 return buildingResult;
             } else if (typeof buildingResult === 'number') {
                 // Gold collection
+                return buildingResult;
+            } else if (typeof buildingResult === 'object' && (buildingResult.fire !== undefined || buildingResult.diamond !== undefined)) {
+                // Gem collection from gold mine
+                //console.log('[TowerManager] Passing gem collection to GameplayState:', buildingResult);
                 return buildingResult;
             }
         }

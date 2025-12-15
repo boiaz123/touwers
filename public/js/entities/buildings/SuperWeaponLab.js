@@ -10,69 +10,106 @@ export class SuperWeaponLab extends Building {
         this.labLevel = 1;
         this.maxLabLevel = 4;
         
-        // Spell system with cooldowns
+        // Spell system with individual upgrade levels (0-100 using diamonds)
         this.spells = {
             arcaneBlast: {
                 id: 'arcaneBlast',
                 name: 'Arcane Blast',
                 icon: '💫',
-                description: 'Deals massive damage to all enemies in a large area',
+                description: 'Deals massive damage to all enemies',
+                baseLevel: 1,  // Unlocked at lab level 1
+                upgradeLevel: 0,  // 0-100 using diamonds (at lab level 4+)
+                maxUpgradeLevel: 100,
                 damage: 150,
                 radius: 120,
                 cooldown: 30,
                 currentCooldown: 0,
-                unlocked: true, // Unlocked at Level 1
-                level: 1,
-                maxLevel: 5,
-                upgradeCost: 300
+                unlocked: true
             },
             frostNova: {
                 id: 'frostNova',
                 name: 'Frozen Nova',
                 icon: '❄️',
                 description: 'Freezes all enemies for a duration',
+                baseLevel: 2,  // Unlocked at lab level 2
+                upgradeLevel: 0,
+                maxUpgradeLevel: 100,
                 freezeDuration: 3,
                 radius: 150,
                 cooldown: 45,
                 currentCooldown: 0,
-                unlocked: false, // Unlocked at Level 2
-                level: 0,
-                maxLevel: 5,
-                upgradeCost: 400,
-                unlockCost: 500
+                unlocked: false
             },
             meteorStrike: {
                 id: 'meteorStrike',
                 name: 'Meteor Strike',
                 icon: '☄️',
                 description: 'Calls down meteors that devastate enemies',
+                baseLevel: 3,  // Unlocked at lab level 3
+                upgradeLevel: 0,
+                maxUpgradeLevel: 100,
                 damage: 200,
                 burnDamage: 10,
                 burnDuration: 5,
                 cooldown: 60,
                 currentCooldown: 0,
-                unlocked: false, // Unlocked at Level 3
-                level: 0,
-                maxLevel: 5,
-                upgradeCost: 500,
-                unlockCost: 750
+                unlocked: false
             },
             chainLightning: {
                 id: 'chainLightning',
                 name: 'Chain Lightning',
                 icon: '⚡',
                 description: 'Lightning that jumps between enemies',
+                baseLevel: 4,  // Unlocked at lab level 4
+                upgradeLevel: 0,
+                maxUpgradeLevel: 100,
                 damage: 80,
                 chainCount: 5,
                 cooldown: 25,
                 currentCooldown: 0,
-                unlocked: false, // Unlocked at Level 4
-                level: 0,
-                maxLevel: 5,
-                upgradeCost: 350,
-                unlockCost: 400
+                unlocked: false
             }
         };
+        
+        // Combination spells system - max 5 upgrade levels per spell
+        this.combinationSpells = [
+            {
+                id: 'steam',
+                name: 'Steam',
+                icon: '💨',
+                description: 'Fire + Water: Burn + Slow',
+                upgradeLevel: 0,  // 0-5 upgrades
+                maxUpgradeLevel: 5,
+                upgradesCost: 50  // Cost per upgrade level
+            },
+            {
+                id: 'magma',
+                name: 'Magma',
+                icon: '🌋',
+                description: 'Fire + Earth: Burn + Piercing',
+                upgradeLevel: 0,
+                maxUpgradeLevel: 5,
+                upgradesCost: 50
+            },
+            {
+                id: 'tempest',
+                name: 'Tempest',
+                icon: '⛈️',
+                description: 'Air + Water: Chain + Slow',
+                upgradeLevel: 0,
+                maxUpgradeLevel: 5,
+                upgradesCost: 50
+            },
+            {
+                id: 'meteor',
+                name: 'Meteor',
+                icon: '☄️',
+                description: 'Air + Earth: Chain + Piercing',
+                upgradeLevel: 0,
+                maxUpgradeLevel: 5,
+                upgradesCost: 50
+            }
+        ];
         
         // Visual effects
         this.magicParticles = [];
@@ -575,12 +612,12 @@ export class SuperWeaponLab extends Building {
                 nextUnlock = 'Unlocks: Meteor Strike + 20% cooldown reduction';
                 break;
             case 4:
-                description = 'Unlock Chain Lightning spell. Further reduce cooldowns by 20%.';
-                nextUnlock = 'Unlocks: Chain Lightning + additional 20% cooldown reduction';
+                description = 'Unlock Chain Lightning spell + Main Spell Diamond Upgrades (0-100).';
+                nextUnlock = 'Unlocks: Chain Lightning + Main Spell upgrades with diamonds';
                 break;
             default:
-                description = `Increase power of all spells and enhance abilities.`;
-                nextUnlock = `Spell damage +${nextLevel * 10}%, Cooldown -5%`;
+                description = `Lab is at maximum level.`;
+                nextUnlock = `No further upgrades available`;
         }
         
         return {
@@ -589,7 +626,7 @@ export class SuperWeaponLab extends Building {
             description: description,
             nextUnlock: nextUnlock,
             level: this.labLevel,
-            maxLevel: 999,
+            maxLevel: this.maxLabLevel,
             cost: cost,
             diamondCost: 1,  // Each level upgrade requires 1 diamond
             icon: '🗼'
@@ -597,6 +634,12 @@ export class SuperWeaponLab extends Building {
     }
     
     purchaseLabUpgrade(gameState) {
+        // Check if already at max level
+        if (this.labLevel >= this.maxLabLevel) {
+            console.error('SuperWeaponLab: Already at maximum level');
+            return false;
+        }
+        
         const upgradeOption = this.getLabUpgradeOption();
         
         // Check gold cost
@@ -624,43 +667,79 @@ export class SuperWeaponLab extends Building {
         
         this.labLevel++;
         
-        // Unlock spells based on new level
-        switch(this.labLevel) {
-            case 2:
-                // Level 2: Unlock Frozen Nova and Combination Tower upgrades
-                this.spells.frostNova.unlocked = true;
-                this.spells.frostNova.level = 1;
-                break;
-            case 3:
-                // Level 3: Unlock Meteor Strike + apply cooldown reduction
-                this.spells.meteorStrike.unlocked = true;
-                this.spells.meteorStrike.level = 1;
-                Object.values(this.spells).forEach(spell => {
-                    if (spell.cooldown) spell.cooldown *= 0.8; // 20% cooldown reduction
-                });
-                break;
-            case 4:
-                // Level 4: Unlock Chain Lightning + additional cooldown reduction
-                this.spells.chainLightning.unlocked = true;
-                this.spells.chainLightning.level = 1;
-                Object.values(this.spells).forEach(spell => {
-                    if (spell.cooldown) spell.cooldown *= 0.8; // Additional 20% cooldown reduction
-                });
-                break;
+        // Unlock spells based on new level (max lab level is 4)
+        if (this.labLevel >= 2) {
+            this.spells.frostNova.unlocked = true;
         }
-        
-        // For levels 5+: increase spell power only (no cooldown reduction beyond level 4)
-        if (this.labLevel > 4) {
-            // Each level: +10% damage
-            const powerMultiplier = 1 + ((this.labLevel - 4) * 0.10);
-            
-            Object.values(this.spells).forEach(spell => {
-                if (spell.damage) spell.damage *= powerMultiplier;
-                if (spell.burnDamage) spell.burnDamage *= powerMultiplier;
-            });
+        if (this.labLevel >= 3) {
+            this.spells.meteorStrike.unlocked = true;
+        }
+        if (this.labLevel >= 4) {
+            this.spells.chainLightning.unlocked = true;
         }
         
         return true;
+    }
+    
+    // Upgrade main spell using diamonds (only available at level 4+)
+    upgradeMainSpell(spellId, diamondCost) {
+        if (this.labLevel < 4) {
+            console.error('SuperWeaponLab: Main spell upgrades only available at level 4+');
+            return false;
+        }
+        
+        const spell = this.spells[spellId];
+        if (!spell) {
+            console.error(`SuperWeaponLab: Spell ${spellId} not found`);
+            return false;
+        }
+        
+        if (spell.upgradeLevel >= spell.maxUpgradeLevel) {
+            console.error(`SuperWeaponLab: ${spell.name} already at max upgrade level`);
+            return false;
+        }
+        
+        // Check if we have the diamonds
+        if (this.academy) {
+            if ((this.academy.gems.diamond || 0) < diamondCost) {
+                console.error('SuperWeaponLab: Insufficient diamonds for spell upgrade');
+                return false;
+            }
+            
+            // Deduct diamonds
+            this.academy.gems.diamond -= diamondCost;
+        } else {
+            console.error('SuperWeaponLab: No academy reference for spell upgrade');
+            return false;
+        }
+        
+        // Increase upgrade level
+        spell.upgradeLevel++;
+        
+        return true;
+    }
+    
+    // Upgrade combination spell using gold (anytime after lab level 2+)
+    upgradeComboSpell(spellId, goldCost) {
+        if (this.labLevel < 2) {
+            console.error('SuperWeaponLab: Combination spell upgrades only available at level 2+');
+            return false;
+        }
+        
+        const spell = this.combinationSpells.find(s => s.id === spellId);
+        if (!spell) {
+            console.error(`SuperWeaponLab: Combination spell ${spellId} not found`);
+            return false;
+        }
+        
+        if (spell.upgradeLevel >= spell.maxUpgradeLevel) {
+            console.error(`SuperWeaponLab: ${spell.name} already at max upgrade level`);
+            return false;
+        }
+        
+        // Return false if this is being called elsewhere - need to modify to accept gameState
+        // For now this is a placeholder
+        return false;
     }
     
     unlockSpell(spellId, gameState) {
@@ -745,24 +824,22 @@ export class SuperWeaponLab extends Building {
         const options = [];
         
         // Only show combination upgrades if lab is level 2+
-        if (this.labLevel >= 2 && academy) {
-            // Get the combination spells from academy
-            const combinationSpells = academy.combinationSpells || [];
-            
-            combinationSpells.forEach(spell => {
-                const requiredGems = spell.gemsRequired;
-                const hasAllGems = Object.entries(requiredGems).every(
-                    ([type, amount]) => (academy.gems[type] || 0) >= amount
-                );
+        if (this.labLevel >= 2) {
+            // Return combination spell upgrade options (max 5 levels each)
+            this.combinationSpells.forEach(spell => {
+                const goldCost = spell.upgragesCost; // Gold cost per upgrade
+                const canAfford = spell.upgradeLevel < spell.maxUpgradeLevel;
                 
                 options.push({
                     id: spell.id,
-                    name: `${spell.icon} ${spell.name}`,
-                    description: spell.description,
+                    name: spell.name,
                     icon: spell.icon,
-                    gemsRequired: requiredGems,
-                    hasAllGems: hasAllGems,
-                    damageMultiplier: spell.damageMultiplier
+                    description: spell.description,
+                    upgradeLevel: spell.upgradeLevel,
+                    maxUpgradeLevel: spell.maxUpgradeLevel,
+                    goldCost: goldCost,
+                    canAfford: canAfford,
+                    type: 'comboSpellUpgrade'
                 });
             });
         }

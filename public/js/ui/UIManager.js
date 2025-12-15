@@ -1741,7 +1741,7 @@ export class UIManager {
         
         let contentHTML = '';
         
-        // Add lab level upgrade
+        // 1. Add lab level upgrade at top
         const labUpgrade = menuData.building.getLabUpgradeOption();
         if (labUpgrade) {
             const isMaxed = labUpgrade.level >= labUpgrade.maxLevel;
@@ -1777,35 +1777,44 @@ export class UIManager {
             `;
         }
         
-        // Add combination tower upgrades if lab is level 2+
-        const combinationUpgrades = menuData.building.getCombinationUpgradeOptions(menuData.academy);
-        if (combinationUpgrades.length > 0) {
-            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FF6BA6; font-weight: bold; border-bottom: 1px solid rgba(255, 107, 166, 0.3); margin-top: 0.6rem;">💎 Combination Tower Power-Ups</div>`;
+        // 2. Add main spell upgrade panel (above combination spells)
+        const mainSpells = Object.values(menuData.building.spells);
+        if (mainSpells.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">⚡ Lab Spells</div>`;
             
-            combinationUpgrades.forEach(upgrade => {
-                const gemsHTML = Object.entries(upgrade.gemsRequired)
-                    .map(([type, amount]) => {
-                        const current = menuData.academy.gems[type] || 0;
-                        const isSufficient = current >= amount;
-                        return `<span style="color: ${isSufficient ? '#FFD700' : '#888'};">${amount}x ${type}</span>`;
-                    })
-                    .join(', ');
+            mainSpells.forEach(spell => {
+                const isUnlocked = spell.unlocked;
+                const progressPercent = (spell.upgradeLevel / spell.maxUpgradeLevel) * 100;
+                const canUpgrade = menuData.building.labLevel >= 4 && isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
                 
                 contentHTML += `
-                    <div class="upgrade-category">
-                        <div class="panel-upgrade-item ${upgrade.hasAllGems ? '' : 'locked'}">
+                    <div class="upgrade-category" style="margin-bottom: 0.5rem;">
+                        <div class="panel-upgrade-item ${!isUnlocked ? 'locked' : ''}">
                             <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">${upgrade.icon}</div>
+                                <div class="upgrade-icon-section">${spell.icon}</div>
                                 <div class="upgrade-info-section">
-                                    <div class="upgrade-name">${upgrade.name}</div>
-                                    <div class="upgrade-description">${upgrade.description}</div>
-                                    <div style="font-size: 0.75rem; color: #a88; margin-top: 0.3rem;">Requires: ${gemsHTML}</div>
+                                    <div class="upgrade-name">${spell.name}</div>
+                                    <div class="upgrade-description">${spell.description}</div>
+                                    <div style="font-size: 0.75rem; color: #aaa; margin-top: 0.3rem;">
+                                        ${isUnlocked ? `Level: ${spell.upgradeLevel}/${spell.maxUpgradeLevel}` : `Unlocks at Lab Level ${spell.baseLevel}`}
+                                    </div>
                                 </div>
                             </div>
-                            ${upgrade.hasAllGems ? `
+                            ${isUnlocked ? `
+                            <div style="padding: 0 0.6rem 0.5rem 0.6rem;">
+                                <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                    <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFD700, #FFA500); display: flex; align-items: center; justify-content: center;">
+                                        <span style="font-size: 0.65rem; color: #000; font-weight: bold;">${spell.upgradeLevel}</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="upgrade-action-row">
-                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}">
-                                    Activate
+                                <div class="upgrade-cost-display ${canUpgrade ? 'affordable' : 'unavailable'}">
+                                    ${spell.upgradeLevel >= spell.maxUpgradeLevel ? 'MAX' : '💎1'}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" data-main-spell="${spell.id}" 
+                                        ${!canUpgrade ? 'disabled' : ''}>
+                                    ${spell.upgradeLevel >= spell.maxUpgradeLevel ? 'MAX' : 'Upgrade'}
                                 </button>
                             </div>
                             ` : ''}
@@ -1815,52 +1824,46 @@ export class UIManager {
             });
         }
         
-        // Add spell status display (compact power bars - NOT unlockable/upgradeable via buttons)
-        const unlockedSpells = menuData.spells.filter(s => s.unlocked);
-        const lockedSpells = menuData.spells.filter(s => !s.unlocked);
-        
-        // Create compact spell power display
-        if (unlockedSpells.length > 0 || lockedSpells.length > 0) {
-            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">✨ Spell Power</div>`;
+        // 3. Add combination tower upgrades (below main spells)
+        const combinationUpgrades = menuData.building.getCombinationUpgradeOptions(menuData.academy);
+        if (combinationUpgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FF6BA6; font-weight: bold; border-bottom: 1px solid rgba(255, 107, 166, 0.3); margin-top: 0.6rem;">🔮 Combination Spells</div>`;
             
-            // Add unlocked spells as power bars
-            unlockedSpells.forEach(spell => {
-                const damage = spell.damage || spell.burnDamage || 0;
+            combinationUpgrades.forEach(upgrade => {
+                const progressPercent = (upgrade.upgradeLevel / upgrade.maxUpgradeLevel) * 100;
+                const canUpgrade = upgrade.upgradeLevel < upgrade.maxUpgradeLevel && this.gameState.gold >= (upgrade.goldCost || 50);
+                
                 contentHTML += `
-                    <div class="upgrade-category" style="margin-bottom: 0.4rem;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background: rgba(0,0,0,0.3); border-radius: 4px;">
-                            <div style="font-size: 1.2rem; min-width: 2rem;">${spell.icon}</div>
-                            <div style="flex: 1;">
+                    <div class="upgrade-category" style="margin-bottom: 0.5rem;">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${upgrade.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${upgrade.name}</div>
+                                    <div class="upgrade-description">${upgrade.description}</div>
+                                    <div style="font-size: 0.75rem; color: #aaa; margin-top: 0.3rem;">Upgrades: ${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</div>
+                                </div>
+                            </div>
+                            <div style="padding: 0 0.6rem 0.5rem 0.6rem;">
                                 <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
-                                    <div style="height: 100%; width: 60%; background: linear-gradient(90deg, #FFD700, #FFA500); display: flex; align-items: center; justify-content: center;">
-                                        <span style="font-size: 0.7rem; color: #000; font-weight: bold;">${damage}</span>
+                                    <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FF6BA6, #FF1493); display: flex; align-items: center; justify-content: center;">
+                                        <span style="font-size: 0.65rem; color: #000; font-weight: bold;">${upgrade.upgradeLevel}</span>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${canUpgrade ? 'affordable' : 'unavailable'}">
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : `$${upgrade.goldCost || 50}`}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}" 
+                                        ${!canUpgrade ? 'disabled' : ''}>
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : 'Upgrade'}
+                                </button>
                             </div>
                         </div>
                     </div>
                 `;
             });
-            
-            // Add locked spells
-            if (lockedSpells.length > 0) {
-                contentHTML += `<div style="padding: 0.4rem 0.6rem; color: #888; font-size: 0.75rem; margin-top: 0.3rem;">🔒 Locked Spells:</div>`;
-                lockedSpells.forEach(spell => {
-                    let unlockInfo = 'Level ';
-                    switch(spell.id) {
-                        case 'frost-nova':
-                            unlockInfo += '2';
-                            break;
-                        case 'meteor-strike':
-                            unlockInfo += '3';
-                            break;
-                        case 'chain-lightning':
-                            unlockInfo += '4';
-                            break;
-                    }
-                    contentHTML += `<div style="padding: 0.2rem 0.6rem; color: #999; font-size: 0.7rem;">${spell.icon} ${spell.name} - ${unlockInfo}</div>`;
-                });
-            }
         }
         
         // Add sell button
@@ -1891,7 +1894,7 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('superweapon-panel'), { once: true });
         }
         
-        // Add button handlers (only for lab upgrade and combo spells)
+        // Add button handlers
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (e.target.dataset.upgrade === 'lab_upgrade') {
@@ -1899,10 +1902,23 @@ export class UIManager {
                         this.updateUI();
                         this.showSuperWeaponMenu(menuData);
                     }
+                } else if (e.target.dataset.mainSpell) {
+                    const spellId = e.target.dataset.mainSpell;
+                    const diamondCost = 1;
+                    if (menuData.building.upgradeMainSpell(spellId, diamondCost)) {
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
                 } else if (e.target.dataset.comboSpell) {
                     const spellId = e.target.dataset.comboSpell;
-                    // TODO: Activate combination spell on tower
-                    console.log('Activate combination spell:', spellId);
+                    const goldCost = 50;
+                    const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
+                    if (spell && this.gameState.gold >= goldCost && spell.upgradeLevel < spell.maxUpgradeLevel) {
+                        this.gameState.spend(goldCost);
+                        spell.upgradeLevel++;
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
                 }
             }, { once: true });
         });
@@ -2223,12 +2239,13 @@ export class UIManager {
         
         const goldMine = goldMineData.goldMine;
         const incomeInfo = goldMine.getBaseIncome();
-        const modeText = goldMine.gemMode ? '💎 Gem Mining' : '💰 Gold Mining';
+        const modeIcon = goldMine.gemMode ? '💎' : '💰';
+        const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
         
         // Calculate progress information
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
         const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
-        const readyStatus = goldMine.goldReady ? '✅ READY TO COLLECT' : `⏳ ${timeRemaining.toFixed(1)}s remaining`;
+        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${timeRemaining.toFixed(1)}s`;
         const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
         
         let contentHTML = `
@@ -2237,16 +2254,18 @@ export class UIManager {
                     <div class="upgrade-header-row">
                         <div class="upgrade-icon-section">⛏️</div>
                         <div class="upgrade-info-section">
-                            <div class="upgrade-name">Gold Mine Production</div>
-                            <div class="upgrade-description">Generates resources automatically every 30 seconds.</div>
-                            <div style="font-size: 0.8rem; color: #c9a876; margin-top: 0.3rem;">📊 Mode: ${modeText}</div>
-                            <div style="font-size: 0.8rem; color: #c9a876; margin-top: 0.2rem;">💵 Income: ${incomeInfo} ${goldMine.gemMode ? 'gems' : 'gold'}/cycle</div>
-                            <div style="font-size: 0.8rem; color: ${readyColor}; margin-top: 0.3rem; font-weight: bold;">${readyStatus}</div>
-                            <div style="margin-top: 0.4rem; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden;">
-                                <div style="width: ${progressPercent}%; height: 6px; background: linear-gradient(90deg, #FFB800, #FFD700); transition: width 0.3s;">
+                            <div class="upgrade-name">Gold Mine</div>
+                            <div class="upgrade-description">${modeText} - ${incomeInfo}/cycle</div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem;">
+                                <div style="font-size: 1.2rem; min-width: 2rem;">${modeIcon}</div>
+                                <div style="flex: 1;">
+                                    <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                        <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">
+                                        </div>
+                                    </div>
                                 </div>
+                                <div style="font-size: 0.75rem; color: ${readyColor}; font-weight: bold; min-width: 3.5rem; text-align: right;">${readyStatus}</div>
                             </div>
-                            <div style="font-size: 0.7rem; color: #999; margin-top: 0.2rem; text-align: center;">${progressPercent.toFixed(0)}% complete</div>
                         </div>
                     </div>
                 </div>
@@ -2255,10 +2274,11 @@ export class UIManager {
         
         // Add gem mining toggle if gem mining is unlocked
         if (goldMine.gemMiningUnlocked) {
+            //console.log('[UIManager] Showing gem mining toggle');
             const toggleText = goldMine.gemMode ? '💰 Switch to Gold' : '💎 Switch to Gems';
             contentHTML += `
                 <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
-                    <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#FFB800' : '#4169E1'}; flex: 1; margin: 0;">
+                    <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#4169E1' : '#FFB800'}; flex: 1; margin: 0;">
                         ${toggleText}
                     </button>
                 </div>

@@ -1083,7 +1083,49 @@ export class GameplayState {
                 this.gameState.gold += clickResult;
                 this.uiManager.updateUI();
                 return;
+            } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
+                // Gem collection from gold mine
+                //console.log('[GameplayState] Gem collection detected:', clickResult);
+                const academies = this.towerManager.buildingManager.buildings.filter(b => 
+                    b.constructor.name === 'MagicAcademy'
+                );
+                //console.log('[GameplayState] Found academies:', academies.length);
+                if (academies.length > 0) {
+                    const academy = academies[0];
+                    // Add collected gems to academy
+                    if (clickResult.fire) academy.gems.fire += clickResult.fire;
+                    if (clickResult.water) academy.gems.water += clickResult.water;
+                    if (clickResult.air) academy.gems.air += clickResult.air;
+                    if (clickResult.earth) academy.gems.earth += clickResult.earth;
+                    if (clickResult.diamond) academy.gems.diamond += clickResult.diamond;
+                    
+                    //console.log('[GameplayState] Academy gems updated:', academy.gems);
+                    
+                    // Show gem collection popup
+                    this.showGemCollectionPopup(clickResult);
+                }
+                this.uiManager.updateUI();
+                return;
             }
+        }
+    }
+    
+    showGemCollectionPopup(gemsCollected) {
+        // Create a visual popup showing the gems collected
+        const gemTexts = [];
+        const types = ['fire', 'water', 'air', 'earth', 'diamond'];
+        const icons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨', diamond: '💎' };
+        
+        types.forEach(type => {
+            if (gemsCollected[type] > 0) {
+                gemTexts.push(`${icons[type]} +${gemsCollected[type]} ${type.toUpperCase()}`);
+            }
+        });
+        
+        // Display notification (you can enhance this with better UI)
+        if (gemTexts.length > 0) {
+            // For now, we'll just log it - the floating text on the mine shows the collection
+            //console.log('Gems collected:', gemTexts.join(', '));
         }
     }
     

@@ -384,9 +384,11 @@ export class GoldMine extends Building {
         this.goldReady = false;
         this.currentProduction = 0;
         
-        // New: If in gem mode, use the new collectGems method instead
+        // New: If in gem mode, collect gems and return the gem object
         if (this.gemMode) {
-            return 0; // No gold collected in gem mode
+            const gemsCollected = this.collectGems(); // Return gems object instead of gold amount
+            //console.log('[GoldMine] Collected gems:', gemsCollected, 'gemMode:', this.gemMode);
+            return gemsCollected;
         } else {
             // Original gold collection logic
             const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
@@ -427,38 +429,58 @@ export class GoldMine extends Building {
             return { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         }
         
+        //console.log('[GoldMine.collectGems] Starting gem collection');
+        
         // Reset production cycle
         this.goldReady = false;
         this.currentProduction = 0;
         
-        const gemType = this.currentGemType || 'fire'; // Fallback to fire
+        // Randomized gem collection: 3-7 gems, each roll is random type
+        const gemTypes = ['fire', 'water', 'air', 'earth'];
+        const gemCount = 3 + Math.floor(Math.random() * 5); // Random 3-7 gems
         const collectedGems = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         
-        // Produce one gem
-        collectedGems[gemType] = 1;
+        //console.log('[GoldMine.collectGems] Rolling for', gemCount, 'gems');
         
-        // Add floating text for gem collection
-        this.floatingTexts.push({
-            x: this.x,
-            y: this.y,
-            text: `+1 ${gemType.toUpperCase()}`,
-            life: 1.5,
-            maxLife: 1.5,
-            gemType: gemType
+        for (let i = 0; i < gemCount; i++) {
+            const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
+            collectedGems[randomGem]++;
+        }
+        
+        //console.log('[GoldMine.collectGems] Collected gems:', collectedGems);
+        
+        // Add floating text for each gem type collected with better formatting
+        let offsetY = -25; // Start above the mine for better visibility
+        const gemNames = { fire: 'fire', water: 'water', air: 'air', earth: 'earth' };
+        
+        Object.entries(collectedGems).forEach(([gemType, amount]) => {
+            if (amount > 0) {
+                const gemName = gemNames[gemType];
+                this.floatingTexts.push({
+                    x: this.x,
+                    y: this.y + offsetY,
+                    text: `+${amount} ${gemName}`,
+                    life: 2.0,
+                    maxLife: 2.0,
+                    gemType: gemType
+                });
+                offsetY += 18;
+            }
         });
         
-        // 10% chance to also get a diamond if diamond mining is unlocked
-        if (this.academy && this.academy.diamondMiningUnlocked && Math.random() < 0.1) {
+        // 15% chance to also get a diamond
+        if (Math.random() < 0.15) {
             collectedGems.diamond = 1;
             
             this.floatingTexts.push({
                 x: this.x,
-                y: this.y - 20,
-                text: '+1 DIAMOND',
-                life: 1.5,
-                maxLife: 1.5,
+                y: this.y + offsetY,
+                text: '+1 diamond',
+                life: 2.0,
+                maxLife: 2.0,
                 gemType: 'diamond'
             });
+            //console.log('[GoldMine.collectGems] Diamond bonus awarded!');
         }
         
         this.currentGemType = null; // Reset for next cycle
@@ -475,9 +497,10 @@ export class GoldMine extends Building {
     // New: Set academy reference and check if gem mining is unlocked
     setAcademy(academy) {
         this.academy = academy;
-        // Unlock gem mining if academy has researched it
-        if (academy && academy.gemMiningResearched) {
+        // Unlock gem mining if academy exists and has researched it (or in sandbox mode)
+        if (academy) {
             this.gemMiningUnlocked = true;
+            //console.log('[GoldMine] Gem mining unlocked via setAcademy');
         }
     }
     
@@ -855,30 +878,8 @@ export class GoldMine extends Building {
             ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
             ctx.fill();
         });
-        
-        // Progress bar and indicators
-        const barWidth = size * 0.6;
-        const barHeight = 4;
-        const progressRatio = this.currentProduction / this.productionTime; // Use consistent properties
-        
-        ctx.fillStyle = 'rgba(101, 67, 33, 0.8)';
-        ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
-        
-        if (this.goldReady) { // Use goldReady consistently
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth, barHeight);
-        } else {
-            ctx.fillStyle = '#D2691E';
-            ctx.fillRect(this.x - barWidth/2, this.y + size/2 + 5, barWidth * progressRatio, barHeight);
-        }
-        
-        // Mine indicator
-        ctx.fillStyle = '#8B4513';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('⛏️💰', this.x, this.y + size/2 + 35);
-        
-        // Add production status indicator
+
+        // Production timer shown above mine
         if (!this.goldReady) {
             const progress = this.currentProduction / this.productionTime;
             
@@ -1004,16 +1005,16 @@ export class GoldMine extends Building {
         // Render floating collection text
         this.floatingTexts.forEach(text => {
             const alpha = text.life / text.maxLife;
-            const size = 16 + (1 - alpha) * 6; // Grow slightly as it fades
+            const size = 18 + (1 - alpha) * 8; // Grow slightly as it fades - increased base size
             
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
             ctx.font = `bold ${size}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
             // Add shadow for better visibility
-            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.7})`;
-            ctx.fillText(text.text, this.x + 2, text.y + 2);
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.9})`;
+            ctx.lineWidth = 3;
+            ctx.strokeText(text.text, this.x, text.y);
             
             // Main text with color
             switch (text.gemType) {
@@ -1027,10 +1028,13 @@ export class GoldMine extends Building {
                     ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
                     break;
                 case 'earth':
-                    ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
+                    ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
                     break;
                 case 'diamond':
-                    ctx.fillStyle = `rgba(173, 216, 230, ${alpha})`;
+                    ctx.fillStyle = `rgba(64, 224, 255, ${alpha})`;
+                    break;
+                case 'gold':
+                    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
                     break;
                 default:
                     ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
@@ -1039,30 +1043,7 @@ export class GoldMine extends Building {
             ctx.fillText(text.text, this.x, text.y);
         });
         
-        // Render mining mode indicator at top of mine
-        if (this.gemMiningUnlocked) {
-            const modeIconSize = 24;
-            const modeX = this.x;
-            const modeY = this.y - size * 0.6;
-            
-            // Draw mode indicator circle background
-            ctx.fillStyle = this.gemMode ? 'rgba(100, 150, 255, 0.9)' : 'rgba(255, 215, 0, 0.9)';
-            ctx.beginPath();
-            ctx.arc(modeX, modeY, modeIconSize/2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Draw border
-            ctx.strokeStyle = this.gemMode ? 'rgba(200, 220, 255, 1)' : 'rgba(255, 255, 100, 1)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Draw icon (gem or coin)
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.gemMode ? '💎' : '💰', modeX, modeY);
-        }
+        // Mode icon is now shown in the menu UI, not on the building
     }
     
     onClick() {
