@@ -1777,10 +1777,12 @@ export class UIManager {
             `;
         }
         
-        // 2. Add main spell upgrade panel (above combination spells)
+        // 2. Add main spell upgrade panel (compact progress bars)
         const mainSpells = Object.values(menuData.building.spells);
         if (mainSpells.length > 0) {
             contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">⚡ Lab Spells</div>`;
+            
+            contentHTML += `<div class="spell-bars-container" style="padding: 0.6rem 0.85rem; display: flex; flex-direction: column; gap: 0.6rem;">`;
             
             mainSpells.forEach(spell => {
                 const isUnlocked = spell.unlocked;
@@ -1788,40 +1790,24 @@ export class UIManager {
                 const canUpgrade = menuData.building.labLevel >= 4 && isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
                 
                 contentHTML += `
-                    <div class="upgrade-category" style="margin-bottom: 0.5rem;">
-                        <div class="panel-upgrade-item ${!isUnlocked ? 'locked' : ''}">
-                            <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">${spell.icon}</div>
-                                <div class="upgrade-info-section">
-                                    <div class="upgrade-name">${spell.name}</div>
-                                    <div class="upgrade-description">${spell.description}</div>
-                                    <div style="font-size: 0.75rem; color: #aaa; margin-top: 0.3rem;">
-                                        ${isUnlocked ? `Level: ${spell.upgradeLevel}/${spell.maxUpgradeLevel}` : `Unlocks at Lab Level ${spell.baseLevel}`}
-                                    </div>
-                                </div>
+                    <div class="spell-bar-item" style="display: flex; align-items: center; gap: 0.5rem; opacity: ${isUnlocked ? '1' : '0.5'};">
+                        <div style="font-size: 1.2rem; flex-shrink: 0;">${spell.icon}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 0.2rem;">${spell.name}</div>
+                            <div style="height: 12px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative;">
+                                <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s ease;"></div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.6rem; color: #fff; font-weight: bold; text-shadow: 0 0 2px #000;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</div>
                             </div>
-                            ${isUnlocked ? `
-                            <div style="padding: 0 0.6rem 0.5rem 0.6rem;">
-                                <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
-                                    <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFD700, #FFA500); display: flex; align-items: center; justify-content: center;">
-                                        <span style="font-size: 0.65rem; color: #000; font-weight: bold;">${spell.upgradeLevel}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="upgrade-action-row">
-                                <div class="upgrade-cost-display ${canUpgrade ? 'affordable' : 'unavailable'}">
-                                    ${spell.upgradeLevel >= spell.maxUpgradeLevel ? 'MAX' : '💎1'}
-                                </div>
-                                <button class="upgrade-button panel-upgrade-btn" data-main-spell="${spell.id}" 
-                                        ${!canUpgrade ? 'disabled' : ''}>
-                                    ${spell.upgradeLevel >= spell.maxUpgradeLevel ? 'MAX' : 'Upgrade'}
-                                </button>
-                            </div>
-                            ` : ''}
+                            <div style="font-size: 0.65rem; color: #aaa; margin-top: 0.1rem;">${isUnlocked ? '' : `Unlocks at Level ${spell.baseLevel}`}</div>
                         </div>
+                        ${isUnlocked ? `<button class="spell-upgrade-btn panel-upgrade-btn" data-main-spell="${spell.id}" style="flex-shrink: 0; padding: 0.4rem 0.6rem; font-size: 1rem; background: ${canUpgrade ? '#FFD700' : '#666'}; color: ${canUpgrade ? '#000' : '#999'}; border: none; border-radius: 4px; cursor: ${canUpgrade ? 'pointer' : 'not-allowed'}; font-weight: bold;" ${!canUpgrade ? 'disabled' : ''}>
+                            ${spell.upgradeLevel >= spell.maxUpgradeLevel ? '✓' : '+'}
+                        </button>` : ''}
                     </div>
                 `;
             });
+            
+            contentHTML += `</div>`;
         }
         
         // 3. Add combination tower upgrades (below main spells)
