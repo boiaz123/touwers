@@ -117,6 +117,11 @@ export class SuperWeaponLab extends Building {
         this.crystalRotation = 0;
         this.spellCastEffect = null;
         
+        // Active spell effects for rendering
+        this.fallingMeteors = []; // For meteor strike visual effects
+        this.frozenNovaEffects = []; // For frozen nova visual effects (icicles, frost)
+        this.chainLightningBolts = []; // For lightning rendering
+        
         // Floating runes around the spire
         this.floatingRunes = [];
         for (let i = 0; i < 6; i++) {
@@ -168,6 +173,25 @@ export class SuperWeaponLab extends Building {
             return particle.life > 0;
         });
         
+        // Update falling meteors
+        this.fallingMeteors = this.fallingMeteors.filter(meteor => {
+            meteor.y += meteor.vy * deltaTime;
+            meteor.life -= deltaTime;
+            return meteor.life > 0;
+        });
+        
+        // Update frozen nova effects
+        this.frozenNovaEffects = this.frozenNovaEffects.filter(effect => {
+            effect.life -= deltaTime;
+            return effect.life > 0;
+        });
+        
+        // Update chain lightning bolts
+        this.chainLightningBolts = this.chainLightningBolts.filter(bolt => {
+            bolt.life -= deltaTime;
+            return bolt.life > 0;
+        });
+        
         // Update spell cast effect
         if (this.spellCastEffect) {
             this.spellCastEffect.progress += deltaTime * 2;
@@ -186,6 +210,11 @@ export class SuperWeaponLab extends Building {
         this.renderCrystalTop(ctx, size);
         this.renderMagicParticles(ctx, size);
         this.renderSpellCastEffect(ctx, size);
+        
+        // Render active spell effects
+        this.renderChainLightningBolts(ctx);
+        this.renderFallingMeteors(ctx);
+        this.renderFrozenNovaEffects(ctx);
     }
     
     renderStoneBase(ctx, size) {
@@ -525,6 +554,231 @@ export class SuperWeaponLab extends Building {
         ctx.fillText(spell.icon, this.x, crystalY - progress * 30);
     }
     
+    // Create enhanced meteor strike effect with falling meteors
+    createMeteorStrikeEffect(targetX, targetY, enemyCount) {
+        // Create 3-5 meteors falling from above the target
+        const meteorCount = Math.min(3 + Math.floor(enemyCount / 2), 5);
+        const startY = targetY - 250;
+        
+        for (let i = 0; i < meteorCount; i++) {
+            const offsetX = (Math.random() - 0.5) * 80;
+            const delay = i * 0.1; // Stagger meteor arrivals
+            
+            this.fallingMeteors.push({
+                startX: targetX + offsetX,
+                startY: startY,
+                x: targetX + offsetX,
+                y: startY + delay * 100, // Start slightly lower if delayed
+                vy: 400 + Math.random() * 100, // Fall speed
+                life: 0.8,
+                maxLife: 0.8,
+                size: 12 + Math.random() * 6,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 10
+            });
+            
+            // Add trail particles for meteor
+            for (let j = 0; j < 15; j++) {
+                const progress = j / 15;
+                const trailX = targetX + offsetX + (Math.random() - 0.5) * 20;
+                const trailY = startY + (j / 15) * (targetY - startY);
+                
+                this.magicParticles.push({
+                    x: trailX,
+                    y: trailY,
+                    vx: (Math.random() - 0.5) * 30,
+                    vy: 150 + Math.random() * 100,
+                    life: 0.6,
+                    maxLife: 0.6,
+                    size: 0,
+                    maxSize: 4 + Math.random() * 3,
+                    color: progress < 0.5 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, '
+                });
+            }
+        }
+    }
+    
+    // Create enhanced chain lightning effect
+    createChainLightningEffect(targetX, targetY, chainTargets) {
+        // Create multiple lightning bolts similar to Tempest spell
+        const boltCount = Math.min(chainTargets || 5, 8);
+        
+        for (let b = 0; b < boltCount; b++) {
+            const angle = (b / boltCount) * Math.PI * 2;
+            const distance = 80 + Math.random() * 40;
+            const endX = targetX + Math.cos(angle) * distance;
+            const endY = targetY + Math.sin(angle) * distance;
+            
+            this.chainLightningBolts.push({
+                startX: this.x,
+                startY: this.y,
+                endX: endX,
+                endY: endY,
+                life: 0.15,
+                maxLife: 0.15,
+                segments: this.generateLightningSegments(this.x, this.y, endX, endY),
+                color: 'rgba(100, 200, 255, '
+            });
+        }
+        
+        // Add electrical particles around target
+        for (let i = 0; i < 30; i++) {
+            const angle = (i / 30) * Math.PI * 2;
+            const speed = 100 + Math.random() * 100;
+            
+            this.magicParticles.push({
+                x: targetX,
+                y: targetY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 50,
+                life: 0.8,
+                maxLife: 0.8,
+                size: 0,
+                maxSize: 3 + Math.random() * 2,
+                color: 'rgba(100, 200, 255, '
+            });
+        }
+    }
+    
+    // Create enhanced arcane blast effect
+    createArcaneBlastEffect(targetX, targetY) {
+        // Expanding purple/blue rings
+        for (let ring = 0; ring < 3; ring++) {
+            const delay = ring * 0.1;
+            
+            this.magicParticles.push({
+                x: targetX,
+                y: targetY,
+                vx: 0,
+                vy: 0,
+                life: 0.5,
+                maxLife: 0.5,
+                startDelay: delay,
+                size: 0,
+                maxSize: 0, // Will be rendered as rings instead
+                color: 'rgba(138, 43, 226, ',
+                ringIndex: ring
+            });
+        }
+        
+        // Radial energy particles
+        for (let i = 0; i < 40; i++) {
+            const angle = (i / 40) * Math.PI * 2;
+            const speed = 150 + Math.random() * 100;
+            
+            this.magicParticles.push({
+                x: targetX,
+                y: targetY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 0.7,
+                maxLife: 0.7,
+                size: 0,
+                maxSize: 4 + Math.random() * 2,
+                color: i % 2 === 0 ? 'rgba(167, 139, 250, ' : 'rgba(99, 102, 241, '
+            });
+        }
+        
+        // Central burst particles
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            
+            this.magicParticles.push({
+                x: targetX,
+                y: targetY,
+                vx: Math.cos(angle) * 200,
+                vy: Math.sin(angle) * 200,
+                life: 0.4,
+                maxLife: 0.4,
+                size: 0,
+                maxSize: 6,
+                color: 'rgba(255, 255, 255, '
+            });
+        }
+    }
+    
+    // Create frozen nova effect with blue hue and ice effects
+    createFrozenNovaEffect(targetX, targetY, radius, duration) {
+        // Store the frozen nova effect for persistent rendering
+        this.frozenNovaEffects.push({
+            x: targetX,
+            y: targetY,
+            radius: radius,
+            life: duration,
+            maxLife: duration,
+            icicles: []
+        });
+        
+        // Generate icicles around the frozen area
+        const icicleCount = 12 + Math.floor(radius / 30);
+        const lastEffect = this.frozenNovaEffects[this.frozenNovaEffects.length - 1];
+        
+        for (let i = 0; i < icicleCount; i++) {
+            const angle = (i / icicleCount) * Math.PI * 2;
+            const distance = radius * (0.6 + Math.random() * 0.4);
+            
+            lastEffect.icicles.push({
+                x: targetX + Math.cos(angle) * distance,
+                y: targetY + Math.sin(angle) * distance,
+                angle: angle,
+                height: 20 + Math.random() * 15,
+                width: 4 + Math.random() * 2,
+                rotation: (Math.random() - 0.5) * 0.2
+            });
+        }
+        
+        // Add frost particle burst
+        for (let i = 0; i < 50; i++) {
+            const angle = (i / 50) * Math.PI * 2;
+            const speed = 80 + Math.random() * 60;
+            
+            this.magicParticles.push({
+                x: targetX,
+                y: targetY,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: duration * 0.6,
+                maxLife: duration * 0.6,
+                size: 0,
+                maxSize: 3 + Math.random() * 2,
+                color: 'rgba(173, 216, 230, ' // Light blue
+            });
+        }
+    }
+    
+    // Generate jagged lightning segments
+    generateLightningSegments(startX, startY, endX, endY) {
+        const segments = [];
+        const segmentCount = 8;
+        const variance = 15;
+        
+        let currentX = startX;
+        let currentY = startY;
+        
+        for (let i = 1; i <= segmentCount; i++) {
+            const t = i / segmentCount;
+            let targetX = startX + (endX - startX) * t;
+            let targetY = startY + (endY - startY) * t;
+            
+            if (i < segmentCount) {
+                targetX += (Math.random() - 0.5) * variance;
+                targetY += (Math.random() - 0.5) * variance;
+            }
+            
+            segments.push({
+                fromX: currentX,
+                fromY: currentY,
+                toX: targetX,
+                toY: targetY
+            });
+            
+            currentX = targetX;
+            currentY = targetY;
+        }
+        
+        return segments;
+    }
+    
     // Spell casting methods
     castSpell(spellId, enemies, targetX, targetY) {
         const spell = this.spells[spellId];
@@ -540,6 +794,16 @@ export class SuperWeaponLab extends Building {
             progress: 0
         };
         
+        // Create enhanced spell effects based on spell type
+        if (spellId === 'meteorStrike') {
+            this.createMeteorStrikeEffect(targetX, targetY, enemies ? enemies.length : 0);
+        } else if (spellId === 'chainLightning') {
+            this.createChainLightningEffect(targetX, targetY, spell.chainCount);
+        } else if (spellId === 'arcaneBlast') {
+            this.createArcaneBlastEffect(targetX, targetY);
+        } else if (spellId === 'frostNova') {
+            this.createFrozenNovaEffect(targetX, targetY, spell.radius, spell.freezeDuration);
+        }
         
         return {
             spellId: spellId,
@@ -716,6 +980,13 @@ export class SuperWeaponLab extends Building {
         // Increase upgrade level
         spell.upgradeLevel++;
         
+        // Apply upgrade effects - improve spell abilities, NOT cooldown
+        if (spell.damage) spell.damage *= 1.15;
+        if (spell.freezeDuration) spell.freezeDuration += 0.5;
+        if (spell.burnDamage) spell.burnDamage += 2;
+        if (spell.chainCount) spell.chainCount += 1;
+        if (spell.radius) spell.radius += 10;
+        
         return true;
     }
     
@@ -796,12 +1067,12 @@ export class SuperWeaponLab extends Building {
         gameState.spend(cost);
         spell.level++;
         
-        // Apply upgrade effects
+        // Apply upgrade effects - improve spell abilities, NOT cooldown
         if (spell.damage) spell.damage *= 1.15;
         if (spell.freezeDuration) spell.freezeDuration += 0.5;
         if (spell.burnDamage) spell.burnDamage += 2;
         if (spell.chainCount) spell.chainCount += 1;
-        spell.cooldown *= 0.95; // 5% cooldown reduction per level
+        if (spell.radius) spell.radius += 10;
         
         return true;
     }
@@ -845,6 +1116,145 @@ export class SuperWeaponLab extends Building {
         }
         
         return options;
+    }
+    
+    // Render falling meteors
+    renderFallingMeteors(ctx) {
+        this.fallingMeteors.forEach(meteor => {
+            const alpha = meteor.life / meteor.maxLife;
+            
+            ctx.save();
+            ctx.translate(meteor.x, meteor.y);
+            ctx.rotate(meteor.rotation);
+            
+            // Meteor glow
+            const glowGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, meteor.size * 2);
+            glowGradient.addColorStop(0, `rgba(255, 140, 0, ${alpha * 0.6})`);
+            glowGradient.addColorStop(0.5, `rgba(255, 69, 0, ${alpha * 0.3})`);
+            glowGradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
+            ctx.fillStyle = glowGradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, meteor.size * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Meteor body - rocky texture
+            ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, meteor.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Rocky details
+            ctx.fillStyle = `rgba(160, 82, 45, ${alpha * 0.7})`;
+            for (let i = 0; i < 3; i++) {
+                const angle = (i / 3) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(Math.cos(angle) * meteor.size * 0.4, Math.sin(angle) * meteor.size * 0.4, meteor.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Impact glow
+            ctx.shadowColor = `rgba(255, 100, 0, ${alpha})`;
+            ctx.shadowBlur = 15;
+            ctx.strokeStyle = `rgba(255, 140, 0, ${alpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, meteor.size, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            ctx.restore();
+        });
+    }
+    
+    // Render chain lightning bolts
+    renderChainLightningBolts(ctx) {
+        this.chainLightningBolts.forEach(bolt => {
+            const alpha = bolt.life / bolt.maxLife;
+            
+            // Draw jagged lightning bolts
+            ctx.strokeStyle = 'rgba(100, 200, 255, ' + alpha + ')';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = `rgba(100, 200, 255, ${alpha * 0.8})`;
+            ctx.shadowBlur = 12;
+            
+            bolt.segments.forEach(segment => {
+                ctx.beginPath();
+                ctx.moveTo(segment.fromX, segment.fromY);
+                ctx.lineTo(segment.toX, segment.toY);
+                ctx.stroke();
+            });
+            
+            // Draw bright core
+            ctx.strokeStyle = 'rgba(150, 220, 255, ' + alpha + ')';
+            ctx.lineWidth = 1;
+            bolt.segments.forEach(segment => {
+                ctx.beginPath();
+                ctx.moveTo(segment.fromX, segment.fromY);
+                ctx.lineTo(segment.toX, segment.toY);
+                ctx.stroke();
+            });
+            
+            ctx.shadowBlur = 0;
+        });
+    }
+    
+    // Render frozen nova effects
+    renderFrozenNovaEffects(ctx) {
+        this.frozenNovaEffects.forEach(effect => {
+            const alpha = effect.life / effect.maxLife;
+            
+            // Frozen area blue hue
+            const novaGradient = ctx.createRadialGradient(
+                effect.x, effect.y, 0,
+                effect.x, effect.y, effect.radius
+            );
+            novaGradient.addColorStop(0, `rgba(100, 200, 255, ${alpha * 0.3})`);
+            novaGradient.addColorStop(0.5, `rgba(64, 164, 223, ${alpha * 0.2})`);
+            novaGradient.addColorStop(1, `rgba(30, 144, 255, 0)`);
+            
+            ctx.fillStyle = novaGradient;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Frost edge glow
+            ctx.strokeStyle = `rgba(173, 216, 230, ${alpha * 0.6})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Render icicles
+            effect.icicles.forEach(icicle => {
+                ctx.save();
+                ctx.translate(icicle.x, icicle.y);
+                ctx.rotate(icicle.rotation);
+                
+                // Icicle glow
+                const icicleGlow = ctx.createLinearGradient(0, 0, 0, icicle.height);
+                icicleGlow.addColorStop(0, `rgba(173, 216, 230, ${alpha * 0.8})`);
+                icicleGlow.addColorStop(0.5, `rgba(100, 200, 255, ${alpha * 0.6})`);
+                icicleGlow.addColorStop(1, `rgba(30, 144, 255, ${alpha * 0.4})`);
+                
+                ctx.fillStyle = icicleGlow;
+                ctx.beginPath();
+                ctx.moveTo(-icicle.width / 2, 0);
+                ctx.lineTo(icicle.width / 2, 0);
+                ctx.lineTo(0, icicle.height);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Icicle highlight
+                ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-icicle.width / 4, icicle.height * 0.2);
+                ctx.lineTo(0, icicle.height);
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        });
     }
     
     static getInfo() {

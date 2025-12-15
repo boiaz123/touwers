@@ -1079,6 +1079,10 @@ export class UIManager {
         
         if (panel.style.display === 'none') return; // Already closed
         
+        // Clean up any active tooltips
+        const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
+        existingTooltips.forEach(tooltip => tooltip.remove());
+        
         // Clear active menu tracking
         this.activeMenuType = null;
         this.activeMenuData = null;
@@ -1911,10 +1915,10 @@ export class UIManager {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                     tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
                     if (spell.damage) tooltipText += `<div>Damage: +${(spell.damage * 0.15).toFixed(0)} (×1.15)</div>`;
-                    if (spell.freezeDuration) tooltipText += `<div>Freeze: +0.5s</div>`;
-                    if (spell.burnDamage) tooltipText += `<div>Burn Dmg: +2</div>`;
-                    if (spell.chainCount) tooltipText += `<div>Chains: +1</div>`;
-                    tooltipText += `<div>Cooldown: ×0.95</div>`;
+                    if (spell.freezeDuration) tooltipText += `<div>Freeze Duration: +0.5s</div>`;
+                    if (spell.burnDamage) tooltipText += `<div>Burn Damage: +2 per tick</div>`;
+                    if (spell.chainCount) tooltipText += `<div>Chain Targets: +1</div>`;
+                    if (spell.radius) tooltipText += `<div>Radius: +10px</div>`;
                     tooltipText += `</div>`;
                 }
                 
@@ -2005,17 +2009,23 @@ export class UIManager {
         const setupSpellTooltips = () => {
             const spellIcons = contentContainer.querySelectorAll('.spell-icon-hover');
             
-            let currentTooltip = null;
-            
             spellIcons.forEach(icon => {
+                let tooltipTimeout;
+                
                 icon.addEventListener('mouseenter', (e) => {
-                    // Remove existing tooltip
-                    if (currentTooltip) currentTooltip.remove();
+                    // Cancel any pending hide
+                    clearTimeout(tooltipTimeout);
+                    
+                    // Remove existing tooltips first
+                    const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    existingTooltips.forEach(tooltip => tooltip.remove());
                     
                     const tooltipHTML = icon.dataset.tooltip;
+                    if (!tooltipHTML) return;
                     
                     // Create tooltip element
                     const tooltip = document.createElement('div');
+                    tooltip.setAttribute('data-panel-tooltip', 'true');
                     tooltip.innerHTML = tooltipHTML;
                     tooltip.style.cssText = `
                         position: fixed;
@@ -2028,11 +2038,10 @@ export class UIManager {
                         max-width: 250px;
                         z-index: 10001;
                         box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                        pointer-events: none;
+                        pointer-events: auto;
                     `;
                     
                     document.body.appendChild(tooltip);
-                    currentTooltip = tooltip;
                     
                     // Position tooltip near icon
                     const rect = icon.getBoundingClientRect();
@@ -2050,13 +2059,24 @@ export class UIManager {
                     if (tooltipRect.top < 0) {
                         tooltip.style.top = '10px';
                     }
+                    
+                    // Keep tooltip visible if hovering over it
+                    tooltip.addEventListener('mouseenter', () => {
+                        clearTimeout(tooltipTimeout);
+                    });
+                    
+                    tooltip.addEventListener('mouseleave', () => {
+                        tooltipTimeout = setTimeout(() => {
+                            tooltip.remove();
+                        }, 100);
+                    });
                 });
                 
                 icon.addEventListener('mouseleave', () => {
-                    if (currentTooltip) {
-                        currentTooltip.remove();
-                        currentTooltip = null;
-                    }
+                    tooltipTimeout = setTimeout(() => {
+                        const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                        activeTooltips.forEach(tooltip => tooltip.remove());
+                    }, 100);
                 });
             });
         };

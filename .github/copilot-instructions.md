@@ -189,4 +189,6 @@ Make sure you run background and check powershell commands in a different powers
 
 You always keep overwriting the npm start terminal screen with sleep-commands, which makes it impossible to see logs and errors. Dont do that, use a different terminal window for testing powershell commands.
 
+You always write a wait and sleep command for the npm start terminal, which breaks Touwers. Dont do that, just wait without telling the terminal you are waiting.
+
 Make sure you check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app.
