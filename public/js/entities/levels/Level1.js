@@ -3,90 +3,75 @@ import { LevelBase } from './LevelBase.js';
 export class Level1 extends LevelBase {
     constructor() {
         super();
-        this.levelName = 'The King\'s Road';
+        this.levelName = 'My Level';
         this.levelNumber = 1;
-        this.difficulty = 'Easy';
-        this.maxWaves = 10;
+        this.difficulty = 'Medium';
+        this.maxWaves = 21;
         
-        // Customize visuals for Level 1
+        // Customize visuals
         this.setVisualConfig({
             grassColors: {
-                top: '#2a2a3a',
-                upper: '#3a3a4a',
-                lower: '#4a4a5a',
-                bottom: '#1a1a2a'
+                top: '#3d6d3c',
+                upper: '#578e68',
+                lower: '#265e39',
+                bottom: '#6d4517'
             },
-            grassPatchDensity: 12000,
-            grassPatchSizeMin: 10,
-            grassPatchSizeMax: 20,
-            dirtPatchCount: 20,
-            dirtPatchAlpha: 0.25,
-            flowerDensity: 50000,
-            pathBaseColor: '#6b6b5b',
-            pathEdgeVegetationChance: 0.6,
+            grassPatchDensity: 7000,
+            pathBaseColor: '#cdcd9d',
             edgeBushColor: '#0f3f0f',
-            edgeRockColor: '#666666',
-            edgeGrassColor: '#1a6a1a'
+            edgeRockColor: '#565252',
+            edgeGrassColor: '#1a6a1a',
+            flowerDensity: 31000
         });
-        
     }
-    
+
     createMeanderingPath(canvasWidth, canvasHeight) {
-        // Shorter path for Level 1 - simple S-curve
-        // Use GRID coordinates for consistency across resolutions
         const gridWidth = this.gridWidth || 60;
         const gridHeight = this.gridHeight || 33.75;
-        
+
         const pathInGridCoords = [
-            // Start left, middle height
-            { gridX: 0, gridY: gridHeight * 0.5 },
-            
-            // First turn - go up and right
-            { gridX: gridWidth * 0.2, gridY: gridHeight * 0.5 },
-            { gridX: gridWidth * 0.2, gridY: gridHeight * 0.25 },
-            
-            // Second turn - go right and down
-            { gridX: gridWidth * 0.5, gridY: gridHeight * 0.25 },
-            { gridX: gridWidth * 0.5, gridY: gridHeight * 0.75 },
-            
-            // Final stretch - go right to end
-            { gridX: gridWidth * 0.8, gridY: gridHeight * 0.75 }
+            { gridX: 0.01, gridY: 4.91 },
+            { gridX: 20.64, gridY: 4.96 },
+            { gridX: 20.55, gridY: 15.22 },
+            { gridX: 28.85, gridY: 15.16 },
+            { gridX: 28.94, gridY: 10.56 },
+            { gridX: 34.32, gridY: 10.56 },
+            { gridX: 34.42, gridY: 15.22 },
+            { gridX: 39.84, gridY: 15.01 },
+            { gridX: 39.89, gridY: 27.83 },
+            { gridX: 26.81, gridY: 27.72 }
         ];
-        
-        // Convert grid coordinates to screen coordinates
+
         this.path = pathInGridCoords.map(point => ({
             x: Math.round(point.gridX * this.cellSize),
             y: Math.round(point.gridY * this.cellSize)
         }));
-        
     }
-    
+
     getWaveConfig(wave) {
-        // Wave configuration - 10 waves with only basic, villager, archer
         const waveConfigs = [
-            { enemyCount: 5, enemyHealth_multiplier: 1., enemySpeed: 35, spawnInterval: 1.5, pattern: ['villager'] },
-            { enemyCount: 14, enemyHealth_multiplier: 1.1, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic', 'basic', 'villager'] },
-            { enemyCount: 17, enemyHealth_multiplier: 1.2, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager', 'basic'] },
-            { enemyCount: 20, enemyHealth_multiplier: 1.3, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
-            { enemyCount: 22, enemyHealth_multiplier: 1.4, enemySpeed: 42, spawnInterval: 1.3, pattern: ['basic', 'villager', 'archer', 'basic'] },
-            { enemyCount: 24, enemyHealth_multiplier: 1.5, enemySpeed: 44, spawnInterval: 1.3, pattern: ['archer', 'basic', 'villager', 'archer'] },
-            { enemyCount: 24, enemyHealth_multiplier: 1.6, enemySpeed: 46, spawnInterval: 1.3, pattern: ['villager', 'archer', 'basic', 'archer'] },
-            { enemyCount: 24, enemyHealth_multiplier: 1.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
-            { enemyCount: 26, enemyHealth_multiplier: 1.8, enemySpeed: 50, spawnInterval: 1.1, pattern: ['archer', 'villager', 'basic', 'archer', 'villager'] },
-            { enemyCount: 30, enemyHealth_multiplier: 1.9, enemySpeed: 52, spawnInterval: 1.0, pattern: ['archer', 'archer', 'villager', 'basic', 'archer'] }
+        // Wave 1
+        { 
+            enemyCount: 5, 
+            enemyHealth_multiplier: 1, 
+            enemySpeed: 35, 
+            spawnInterval: 1.5, 
+            pattern: ['basic'] 
+        }
+        // Wave 2
+        , { 
+            enemyCount: 11, 
+            enemyHealth_multiplier: 1.1, 
+            enemySpeed: 37, 
+            spawnInterval: 1.3, 
+            pattern: ['basic'] 
+        }
         ];
-        
+
         if (wave > 0 && wave <= waveConfigs.length) {
             return waveConfigs[wave - 1];
         }
         
-        // Fallback for waves beyond 10
-        return {
-            enemyCount: 10,
-            enemyHealth_multiplier: 2.0,
-            enemySpeed: 55,
-            spawnInterval: 0.6,
-            pattern: ['basic', 'villager', 'archer']
-        };
+        return null;
     }
 }

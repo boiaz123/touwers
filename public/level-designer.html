@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touwers Level Designer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .canvas-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .canvas-wrapper {
+            flex: 1;
+            position: relative;
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .canvas-toolbar {
+            display: flex;
+            gap: 10px;
+            background: #2a2a2a;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button.active {
+            background: #20a050;
+        }
+
+        button.danger {
+            background: #d93535;
+        }
+
+        button.danger:hover {
+            background: #ff4444;
+        }
+
+        .form-section {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .form-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .form-section::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+
+        .form-section::-webkit-scrollbar-thumb {
+            background: #0e639c;
+            border-radius: 4px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #90caf9;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 8px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #0e639c;
+            box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.2);
+        }
+
+        .color-input {
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #58c4dc;
+            margin-top: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #444;
+        }
+
+        .waves-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        .wave-item {
+            padding: 10px;
+            background: #3a3a3a;
+            border-left: 3px solid #0e639c;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .wave-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .wave-item-title {
+            font-weight: 600;
+            color: #90caf9;
+        }
+
+        .wave-item-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .wave-item-controls button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .wave-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .wave-form input {
+            padding: 6px;
+            background: #4a4a4a;
+            color: #e0e0e0;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .enemy-pattern {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .enemy-pattern-item {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .enemy-pattern-item select {
+            flex: 1;
+            padding: 4px;
+            font-size: 12px;
+        }
+
+        .enemy-pattern-item button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .output-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+        }
+
+        .output-code {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .info-box {
+            background: #264f78;
+            border-left: 3px solid #58c4dc;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .path-info {
+            background: #3a5731;
+            color: #9ecf6f;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .status-message.success {
+            background: #264a35;
+            color: #7ae881;
+        }
+
+        .status-message.error {
+            background: #5a3034;
+            color: #ff9999;
+        }
+
+        .grid-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .grid-item {
+            background: #2a2a2a;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+
+        .grid-item-label {
+            color: #90caf9;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .grid-item-value {
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Canvas Section -->
+        <div class="canvas-section">
+            <h1 style="font-size: 24px; color: #58c4dc;">Touwers Level Designer</h1>
+            <div class="canvas-toolbar">
+                <button id="drawPathBtn" class="active">🖌️ Draw Path</button>
+                <button id="placeCastleBtn">🏰 Place Castle</button>
+                <button id="undoBtn">↶ Undo</button>
+                <button id="clearBtn" class="danger">🗑️ Clear Path</button>
+                <button id="exportBtn">📥 Export Level</button>
+            </div>
+            <div class="path-info" id="pathInfo">Click to add path points. Right-click to remove last point.</div>
+            <div class="canvas-wrapper">
+                <canvas id="designCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="form-section">
+            <h2 style="color: #58c4dc;">Level Configuration</h2>
+
+            <div class="form-group">
+                <label>Level Name</label>
+                <input type="text" id="levelName" value="My Level" placeholder="e.g. The Dark Forest">
+            </div>
+
+            <div class="form-group">
+                <label>Level Number</label>
+                <input type="number" id="levelNumber" value="1" min="1" max="99">
+            </div>
+
+            <div class="form-group">
+                <label>Difficulty</label>
+                <select id="difficulty">
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                    <option value="Nightmare">Nightmare</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Max Waves</label>
+                <input type="number" id="maxWaves" value="10" min="1" max="50">
+            </div>
+
+            <div class="form-section-title">Visual Settings</div>
+
+            <div class="grid-display">
+                <div class="form-group">
+                    <label>Grass Top Color</label>
+                    <input type="color" class="color-input" id="grassTopColor" value="#2a2a3a">
+                </div>
+                <div class="form-group">
+                    <label>Grass Upper Color</label>
+                    <input type="color" class="color-input" id="grassUpperColor" value="#3a3a4a">
+                </div>
+                <div class="form-group">
+                    <label>Grass Lower Color</label>
+                    <input type="color" class="color-input" id="grassLowerColor" value="#4a4a5a">
+                </div>
+                <div class="form-group">
+                    <label>Grass Bottom Color</label>
+                    <input type="color" class="color-input" id="grassBottomColor" value="#1a1a2a">
+                </div>
+            </div>
+
+            <div class="grid-display">
+                <div class="form-group">
+                    <label>Path Color</label>
+                    <input type="color" class="color-input" id="pathColor" value="#6b6b5b">
+                </div>
+                <div class="form-group">
+                    <label>Bush Color</label>
+                    <input type="color" class="color-input" id="bushColor" value="#0f3f0f">
+                </div>
+                <div class="form-group">
+                    <label>Rock Color</label>
+                    <input type="color" class="color-input" id="rockColor" value="#666666">
+                </div>
+                <div class="form-group">
+                    <label>Edge Grass Color</label>
+                    <input type="color" class="color-input" id="edgeGrassColor" value="#1a6a1a">
+                </div>
+            </div>
+
+            <div class="grid-display">
+                <div class="form-group">
+                    <label>Grass Patch Density</label>
+                    <input type="number" id="grassDensity" value="12000" min="1000" step="1000">
+                </div>
+                <div class="form-group">
+                    <label>Flower Density</label>
+                    <input type="number" id="flowerDensity" value="50000" min="1000" step="5000">
+                </div>
+            </div>
+
+            <div class="form-section-title">Waves Configuration</div>
+
+            <button id="addWaveBtn" style="margin-bottom: 10px;">+ Add Wave</button>
+
+            <div class="waves-container" id="wavesContainer"></div>
+
+            <div class="info-box">
+                Pattern: Order of enemies to spawn in each wave. Add multiple enemies to create a repeating pattern.
+            </div>
+
+            <div class="output-section">
+                <button id="copyCodeBtn">📋 Copy Generated Code</button>
+                <div class="form-group">
+                    <label>Generated Level Class (Preview)</label>
+                    <div class="output-code" id="outputCode"></div>
+                </div>
+                <div id="statusMessage"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { LevelDesigner } from './js/level-designer/LevelDesigner.js';
+        
+        // Initialize the designer
+        const designer = new LevelDesigner('designCanvas', {
+            gridWidth: 60,
+            gridHeight: 33.75,
+            cellSize: 32
+        });
+
+        // Store reference for global access
+        window.levelDesigner = designer;
+    </script>
+</body>
+</html>
