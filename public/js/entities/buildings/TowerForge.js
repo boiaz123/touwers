@@ -182,12 +182,6 @@ export class TowerForge extends Building {
         
         // Render particles
         this.renderParticles(ctx);
-        
-        // Upgrade indicator
-        ctx.fillStyle = this.isSelected ? '#FFA500' : '#FF8C00';
-        ctx.font = 'bold 14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('🔨⬆️', this.x, this.y + size/2 + 20);
     }
 
     renderFrontAreaItems(ctx, size) {

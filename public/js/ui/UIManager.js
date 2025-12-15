@@ -1789,9 +1789,36 @@ export class UIManager {
                 const progressPercent = (spell.upgradeLevel / spell.maxUpgradeLevel) * 100;
                 const canUpgrade = menuData.building.labLevel >= 4 && isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
                 
+                // Build tooltip text with spell stats
+                let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name}</div>`;
+                tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${spell.description || ''}</div>`;
+                tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+                
+                // Show current stats
+                if (spell.damage) tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${Math.floor(spell.damage)}</span></div>`;
+                if (spell.radius) tooltipText += `<div>◯ Radius: <span style="color: #FFD700;">${Math.floor(spell.radius)}px</span></div>`;
+                if (spell.freezeDuration) tooltipText += `<div>❄️ Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
+                if (spell.burnDuration) tooltipText += `<div>🔥 Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
+                if (spell.chainCount) tooltipText += `<div>⚡ Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
+                tooltipText += `<div>⏱️ Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+                
+                // Show upgrade effects
+                if (isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                    tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
+                    if (spell.damage) tooltipText += `<div>Damage: +${(spell.damage * 0.15).toFixed(0)} (×1.15)</div>`;
+                    if (spell.freezeDuration) tooltipText += `<div>Freeze: +0.5s</div>`;
+                    if (spell.burnDamage) tooltipText += `<div>Burn Dmg: +2</div>`;
+                    if (spell.chainCount) tooltipText += `<div>Chains: +1</div>`;
+                    tooltipText += `<div>Cooldown: ×0.95</div>`;
+                    tooltipText += `</div>`;
+                }
+                
+                tooltipText += `</div>`;
+                
                 contentHTML += `
-                    <div class="spell-bar-item" style="display: flex; align-items: center; gap: 0.5rem; opacity: ${isUnlocked ? '1' : '0.5'};">
-                        <div style="font-size: 1.2rem; flex-shrink: 0;">${spell.icon}</div>
+                    <div class="spell-bar-item" style="display: flex; align-items: center; gap: 0.5rem; opacity: ${isUnlocked ? '1' : '0.5'}; position: relative;">
+                        <div style="font-size: 1.2rem; flex-shrink: 0; cursor: help;" class="spell-icon-hover" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">${spell.icon}</div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 0.2rem;">${spell.name}</div>
                             <div style="height: 12px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative;">
@@ -1870,6 +1897,68 @@ export class UIManager {
             contentContainer.innerHTML = contentHTML;
         }
         
+        // Setup spell icon hover tooltips
+        const setupSpellTooltips = () => {
+            const spellIcons = contentContainer.querySelectorAll('.spell-icon-hover');
+            
+            let currentTooltip = null;
+            
+            spellIcons.forEach(icon => {
+                icon.addEventListener('mouseenter', (e) => {
+                    // Remove existing tooltip
+                    if (currentTooltip) currentTooltip.remove();
+                    
+                    const tooltipHTML = icon.dataset.tooltip;
+                    
+                    // Create tooltip element
+                    const tooltip = document.createElement('div');
+                    tooltip.innerHTML = tooltipHTML;
+                    tooltip.style.cssText = `
+                        position: fixed;
+                        background: rgba(10, 10, 20, 0.95);
+                        border: 2px solid #FFD700;
+                        border-radius: 6px;
+                        padding: 0.8rem;
+                        font-size: 0.75rem;
+                        color: #ddd;
+                        max-width: 250px;
+                        z-index: 10001;
+                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                        pointer-events: none;
+                    `;
+                    
+                    document.body.appendChild(tooltip);
+                    currentTooltip = tooltip;
+                    
+                    // Position tooltip near icon
+                    const rect = icon.getBoundingClientRect();
+                    tooltip.style.left = (rect.right + 10) + 'px';
+                    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                    
+                    // Adjust if tooltip goes off screen
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    if (tooltipRect.right > window.innerWidth) {
+                        tooltip.style.left = (rect.left - tooltip.offsetWidth - 10) + 'px';
+                    }
+                    if (tooltipRect.bottom > window.innerHeight) {
+                        tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                    }
+                    if (tooltipRect.top < 0) {
+                        tooltip.style.top = '10px';
+                    }
+                });
+                
+                icon.addEventListener('mouseleave', () => {
+                    if (currentTooltip) {
+                        currentTooltip.remove();
+                        currentTooltip = null;
+                    }
+                });
+            });
+        };
+        
+        setupSpellTooltips();
+        
         // Show the panel
         panel.style.display = 'flex';
         panel.classList.remove('closing');
@@ -1880,34 +1969,48 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('superweapon-panel'), { once: true });
         }
         
-        // Add button handlers
-        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                if (e.target.dataset.upgrade === 'lab_upgrade') {
-                    if (menuData.building.purchaseLabUpgrade(this.gameState)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
-                } else if (e.target.dataset.mainSpell) {
-                    const spellId = e.target.dataset.mainSpell;
-                    const diamondCost = 1;
-                    if (menuData.building.upgradeMainSpell(spellId, diamondCost)) {
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
-                } else if (e.target.dataset.comboSpell) {
-                    const spellId = e.target.dataset.comboSpell;
-                    const goldCost = 50;
-                    const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
-                    if (spell && this.gameState.gold >= goldCost && spell.upgradeLevel < spell.maxUpgradeLevel) {
-                        this.gameState.spend(goldCost);
-                        spell.upgradeLevel++;
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
+        // Add button handlers - use delegation to support dynamic updates
+        const handleButtonClick = (e) => {
+            const btn = e.target.closest('.panel-upgrade-btn');
+            if (!btn) return;
+            
+            if (btn.dataset.upgrade === 'lab_upgrade') {
+                if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
                 }
-            }, { once: true });
-        });
+            } else if (btn.dataset.mainSpell) {
+                const spellId = btn.dataset.mainSpell;
+                const diamondCost = 1;
+                if (menuData.building.upgradeMainSpell(spellId, diamondCost)) {
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
+            } else if (btn.dataset.comboSpell) {
+                const spellId = btn.dataset.comboSpell;
+                const goldCost = 50;
+                const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
+                if (spell && this.gameState.gold >= goldCost && spell.upgradeLevel < spell.maxUpgradeLevel) {
+                    this.gameState.spend(goldCost);
+                    spell.upgradeLevel++;
+                    
+                    // Refresh all combination towers to apply the new upgrades
+                    this.towerManager.towers.forEach(tower => {
+                        if (tower.constructor.name === 'CombinationTower') {
+                            this.towerManager.applyTowerBonuses(tower);
+                        }
+                    });
+                    
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
+            }
+        };
+        
+        // Remove any previous handler
+        panel.removeEventListener('click', handleButtonClick);
+        // Add delegation handler
+        panel.addEventListener('click', handleButtonClick);
         
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-building-btn');

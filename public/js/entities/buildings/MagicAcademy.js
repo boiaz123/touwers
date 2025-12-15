@@ -606,17 +606,6 @@ export class MagicAcademy extends Building {
             ctx.arc(particle.x, particle.y, particle.size * 3, 0, Math.PI * 2);
             ctx.fill();
         });
-        
-        // Mana indicator (removed gem display from here)
-        const manaBarWidth = size * 0.6;
-        const manaBarHeight = 6;
-        const manaBarY = this.y + size/2 + 10;
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(this.x - manaBarWidth/2, manaBarY, manaBarWidth, manaBarHeight);
-        ctx.fillStyle = '#4169E1';
-        ctx.fillRect(this.x - manaBarWidth/2, manaBarY, 
-                     manaBarWidth * (this.currentMana / this.maxMana), manaBarHeight);
     }
     
     isPointInside(x, y, size) {

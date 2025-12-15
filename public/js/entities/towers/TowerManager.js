@@ -299,9 +299,64 @@ export class TowerManager {
                 // Set available spells
                 tower.setAvailableSpells(combinationSpells);
                 
-                // Apply bonuses based on elemental upgrades
+                // Build combination spell bonuses from upgrade levels
+                const comboSpellBonuses = {
+                    steam: { damageBonus: 0, slowBonus: 0 },
+                    magma: { damageBonus: 0, piercingBonus: 0 },
+                    tempest: { chainRange: 0, slowBonus: 0 },
+                    meteor: { chainRange: 0, piercingBonus: 0 }
+                };
+                
+                // Apply bonuses based on combination spell upgrade levels
+                combinationSpells.forEach(spell => {
+                    if (spell.upgradeLevel > 0) {
+                        const upgradeBonus = spell.upgradeLevel; // Each upgrade level = +1 bonus
+                        
+                        switch(spell.id) {
+                            case 'steam':
+                                comboSpellBonuses.steam.damageBonus += upgradeBonus * 5;
+                                comboSpellBonuses.steam.slowBonus += upgradeBonus * 0.05;
+                                break;
+                            case 'magma':
+                                comboSpellBonuses.magma.damageBonus += upgradeBonus * 5;
+                                comboSpellBonuses.magma.piercingBonus += upgradeBonus * 1;
+                                break;
+                            case 'tempest':
+                                comboSpellBonuses.tempest.chainRange += upgradeBonus * 15;
+                                comboSpellBonuses.tempest.slowBonus += upgradeBonus * 0.05;
+                                break;
+                            case 'meteor':
+                                comboSpellBonuses.meteor.chainRange += upgradeBonus * 15;
+                                comboSpellBonuses.meteor.piercingBonus += upgradeBonus * 1;
+                                break;
+                        }
+                    }
+                });
+                
+                // Also apply elemental upgrades from academy
                 const elementalBonuses = academy.getElementalBonuses();
-                tower.applySpellBonuses(elementalBonuses);
+                
+                // Merge both bonuses together
+                const mergedBonuses = {
+                    steam: { 
+                        damageBonus: (comboSpellBonuses.steam.damageBonus || 0) + (elementalBonuses.steam?.damageBonus || 0),
+                        slowBonus: (comboSpellBonuses.steam.slowBonus || 0) + (elementalBonuses.steam?.slowBonus || 0)
+                    },
+                    magma: { 
+                        damageBonus: (comboSpellBonuses.magma.damageBonus || 0) + (elementalBonuses.magma?.damageBonus || 0),
+                        piercingBonus: (comboSpellBonuses.magma.piercingBonus || 0) + (elementalBonuses.magma?.piercingBonus || 0)
+                    },
+                    tempest: { 
+                        chainRange: (comboSpellBonuses.tempest.chainRange || 0) + (elementalBonuses.tempest?.chainRange || 0),
+                        slowBonus: (comboSpellBonuses.tempest.slowBonus || 0) + (elementalBonuses.tempest?.slowBonus || 0)
+                    },
+                    meteor: { 
+                        chainRange: (comboSpellBonuses.meteor.chainRange || 0) + (elementalBonuses.meteor?.chainRange || 0),
+                        piercingBonus: (comboSpellBonuses.meteor.piercingBonus || 0) + (elementalBonuses.meteor?.piercingBonus || 0)
+                    }
+                };
+                
+                tower.applySpellBonuses(mergedBonuses);
             }
         }
     }
