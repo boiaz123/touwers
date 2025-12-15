@@ -387,7 +387,7 @@ export class GoldMine extends Building {
         // New: If in gem mode, collect gems and return the gem object
         if (this.gemMode) {
             const gemsCollected = this.collectGems(); // Return gems object instead of gold amount
-            //console.log('[GoldMine] Collected gems:', gemsCollected, 'gemMode:', this.gemMode);
+            console.log('[GoldMine] Collected gems:', gemsCollected, 'gemMode:', this.gemMode);
             return gemsCollected;
         } else {
             // Original gold collection logic
@@ -424,16 +424,10 @@ export class GoldMine extends Building {
     
     // New: Collect gems (returns gem object instead of adding directly to academy)
     collectGems() {
-        // Only allow collection if ready
-        if (!this.goldReady) {
-            return { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
-        }
+        // Note: goldReady check is already done in collectGold() before calling this method
+        // No need to check goldReady again here
         
         //console.log('[GoldMine.collectGems] Starting gem collection');
-        
-        // Reset production cycle
-        this.goldReady = false;
-        this.currentProduction = 0;
         
         // Randomized gem collection: 3-7 gems, each roll is random type
         const gemTypes = ['fire', 'water', 'air', 'earth'];
@@ -500,7 +494,7 @@ export class GoldMine extends Building {
         // Unlock gem mining if academy exists and has researched it (or in sandbox mode)
         if (academy) {
             this.gemMiningUnlocked = true;
-            //console.log('[GoldMine] Gem mining unlocked via setAcademy');
+            console.log('[GoldMine] Gem mining unlocked via setAcademy');
         }
     }
     
