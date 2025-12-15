@@ -1152,10 +1152,11 @@ export class LevelBase {
         // Render the path
         this.renderPath(ctx);
         
-        // Render castle
-        if (this.castle) {
-            this.castle.render(ctx);
-        }
+        // Render castle - NOTE: Castle is now rendered by GameplayState after buildings/towers
+        // This ensures proper z-ordering so the castle appears in front of buildings behind it
+        // if (this.castle) {
+        //     this.castle.render(ctx);
+        // }
         
         // Grid is now disabled visually - grid calculations remain active for gameplay
         // To re-enable the grid for debugging, set showDebugGrid to true

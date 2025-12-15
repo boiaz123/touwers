@@ -10,6 +10,14 @@ export class UIManager {
         this.activeMenu = null;
         this.currentForgeData = null;
         this.lastSpellReadyCount = 0;
+        
+        // Menu refresh tracking
+        this.activeMenuType = null; // 'superweapon', 'academy', 'forge', etc.
+        this.activeMenuData = null; // Data needed to re-render the menu
+        this.lastGoldValue = 0;
+        this.lastGemValues = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
+        this.menuRefreshInterval = 0.1; // Refresh every 100ms to check resource changes
+        this.menuRefreshTimer = 0;
     }
 
     // ============ BUTTON STATE MANAGEMENT ============
@@ -725,11 +733,74 @@ export class UIManager {
         this.setGameSpeedButtonState(speed);
     }
 
+    /**
+     * Update active menu based on resource changes (called from GameplayState update loop)
+     * This ensures menus show real-time gold/gem availability and upgrade progress
+     */
+    updateActiveMenuIfNeeded(deltaTime) {
+        if (!this.activeMenuType || !this.activeMenuData) {
+            return; // No menu open
+        }
+
+        this.menuRefreshTimer -= deltaTime;
+        if (this.menuRefreshTimer > 0) {
+            return; // Not time to refresh yet
+        }
+
+        this.menuRefreshTimer = this.menuRefreshInterval;
+
+        // Check if resources have changed
+        const currentGold = this.gameState.gold;
+        const currentGems = this.towerManager.getGemStocks();
+
+        let hasResourcesChanged = currentGold !== this.lastGoldValue;
+        
+        if (!hasResourcesChanged) {
+            for (const gemType of ['fire', 'water', 'air', 'earth', 'diamond']) {
+                if (currentGems[gemType] !== this.lastGemValues[gemType]) {
+                    hasResourcesChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasResourcesChanged) {
+            return; // Resources haven't changed, no need to refresh
+        }
+
+        // Update last known values
+        this.lastGoldValue = currentGold;
+        this.lastGemValues = { ...currentGems };
+
+        // Re-render the active menu based on its type
+        if (this.activeMenuType === 'superweapon' && this.activeMenuData.building) {
+            this.showSuperWeaponMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'academy' && this.activeMenuData.academy) {
+            this.showAcademyUpgradeMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'forge' && this.activeMenuData.forge) {
+            this.showForgeUpgradeMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'magic-tower' && this.activeMenuData.tower) {
+            this.showMagicTowerElementMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'combination-tower' && this.activeMenuData.tower) {
+            this.showCombinationTowerMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'guard-post' && this.activeMenuData.tower) {
+            this.showGuardPostMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'castle' && this.activeMenuData.castle) {
+            this.showCastleUpgradeMenu(this.activeMenuData);
+        }
+    }
+
     // ============ UPGRADE MENUS ============
 
     showForgeUpgradeMenu(forgeData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('forge-panel');
+        
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'forge';
+        this.activeMenuData = forgeData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
         // Store current forge data for this session
         this.currentForgeData = forgeData;
@@ -1008,6 +1079,10 @@ export class UIManager {
         
         if (panel.style.display === 'none') return; // Already closed
         
+        // Clear active menu tracking
+        this.activeMenuType = null;
+        this.activeMenuData = null;
+        
         panel.classList.add('closing');
         setTimeout(() => {
             panel.style.display = 'none';
@@ -1064,6 +1139,11 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('academy-panel');
         
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'academy';
+        this.activeMenuData = academyData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
         const panel = document.getElementById('academy-panel');
         if (!panel) {
@@ -1278,6 +1358,12 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('magic-tower-panel');
         
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'magic-tower';
+        this.activeMenuData = towerData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
+        
         const panel = document.getElementById('magic-tower-panel');
         if (!panel) {
             console.error('UIManager: Magic tower panel not found');
@@ -1374,6 +1460,12 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('combination-tower-panel');
         
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'combination-tower';
+        this.activeMenuData = towerData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
+        
         const panel = document.getElementById('combination-tower-panel');
         if (!panel) {
             console.error('UIManager: Combination tower panel not found');
@@ -1468,6 +1560,12 @@ export class UIManager {
     showGuardPostMenu(towerData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('basic-tower-panel');
+        
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'guard-post';
+        this.activeMenuData = towerData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
         const panel = document.getElementById('basic-tower-panel');
         if (!panel) {
@@ -1733,6 +1831,12 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('superweapon-panel');
         
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'superweapon';
+        this.activeMenuData = menuData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
+        
         const panel = document.getElementById('superweapon-panel');
         if (!panel) {
             console.error('UIManager: SuperWeapon panel not found');
@@ -1972,7 +2076,11 @@ export class UIManager {
         // Add button handlers - use delegation to support dynamic updates
         const handleButtonClick = (e) => {
             const btn = e.target.closest('.panel-upgrade-btn');
-            if (!btn) return;
+            if (!btn || btn.disabled) return;
+            
+            // Prevent multiple clicks
+            btn.disabled = true;
+            setTimeout(() => { btn.disabled = false; }, 100);
             
             if (btn.dataset.upgrade === 'lab_upgrade') {
                 if (menuData.building.purchaseLabUpgrade(this.gameState)) {
@@ -2007,9 +2115,8 @@ export class UIManager {
             }
         };
         
-        // Remove any previous handler
+        // Remove any previous handler and add fresh one
         panel.removeEventListener('click', handleButtonClick);
-        // Add delegation handler
         panel.addEventListener('click', handleButtonClick);
         
         // Add sell button listener
@@ -2027,6 +2134,12 @@ export class UIManager {
     showCastleUpgradeMenu(castleData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('castle-panel');
+        
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'castle';
+        this.activeMenuData = castleData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
         // Castle upgrades menu - using panel-based system
         

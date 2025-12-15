@@ -93,6 +93,13 @@ export class BuildingManager {
         }
     }
     
+    // Mark castle as occupied (call after castle is created)
+    reserveCastleSpace(castle) {
+        if (castle && castle.gridX !== undefined && castle.gridY !== undefined && castle.size !== undefined) {
+            this.markBuildingPosition(castle.gridX, castle.gridY, castle.size);
+        }
+    }
+    
     update(deltaTime) {
         this.buildings.forEach(building => {
             building.update(deltaTime);

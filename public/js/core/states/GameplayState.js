@@ -172,6 +172,11 @@ export class GameplayState {
             this.initializeSandboxGems();
         }
         
+        // Reserve castle space in the building manager to prevent placement on top
+        if (this.level.castle && this.towerManager.buildingManager) {
+            this.towerManager.buildingManager.reserveCastleSpace(this.level.castle);
+        }
+        
         // Build enhanced path with any existing guard posts (for save/load scenarios)
         const enhancedPath = this.level.buildEnhancedPathWithGuardPosts(this.towerManager.towers);
         this.enemyManager.updatePath(enhancedPath);
@@ -1495,6 +1500,9 @@ export class GameplayState {
         // Update spell UI - only updates displays, doesn't recreate every frame
         this.uiManager.updateSpellUI();
         
+        // Update active menu if one is open (for real-time resource availability)
+        this.uiManager.updateActiveMenuIfNeeded(deltaTime);
+        
         // Update spell effects
         this.spellEffects = this.spellEffects.filter(effect => {
             effect.life -= deltaTime;
@@ -1525,6 +1533,12 @@ export class GameplayState {
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
+        
+        // Render castle on top of buildings/towers to ensure it appears in front
+        // This prevents buildings placed "behind" the castle from appearing on top of it
+        if (this.level.castle) {
+            this.level.castle.render(ctx);
+        }
         
         // Render defender if active
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
