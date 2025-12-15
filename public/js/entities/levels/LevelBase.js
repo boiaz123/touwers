@@ -20,6 +20,9 @@ export class LevelBase {
         this.isInitialized = false;
         this.isInitializing = false; // Initialization flag to prevent recursion
         
+        // Terrain elements (trees, rocks, water) from level designer
+        this.terrainElements = [];
+        
         // Cached visual elements - will be generated once
         this.grassPatches = [];
         this.grassGenerated = false;
@@ -213,6 +216,7 @@ export class LevelBase {
             // Clear and recalculate occupied cells
             this.occupiedCells.clear();
             this.markPathCells();
+            this.markTerrainCells();
             
             // Reset visual element generation flags to regenerate for new canvas size
             this.visualElementsGenerated = false;
@@ -346,6 +350,37 @@ export class LevelBase {
                 }
             }
         }
+    }
+
+    markTerrainCells() {
+        // Mark terrain element cells (trees, rocks, water) as occupied
+        // This prevents towers and buildings from being placed on terrain
+        if (!this.terrainElements || this.terrainElements.length === 0) {
+            return;
+        }
+
+        this.terrainElements.forEach(element => {
+            const gridX = Math.floor(element.gridX);
+            const gridY = Math.floor(element.gridY);
+            const radius = element.size * 0.6; // Slightly smaller than visual size for gameplay
+            
+            // Mark cells within the terrain element's radius
+            for (let x = gridX - Math.ceil(radius); x <= gridX + Math.ceil(radius); x++) {
+                for (let y = gridY - Math.ceil(radius); y <= gridY + Math.ceil(radius); y++) {
+                    if (!this.isValidGridPosition(x, y)) continue;
+                    
+                    // Calculate distance from cell center to terrain center
+                    const cellCenterX = x + 0.5;
+                    const cellCenterY = y + 0.5;
+                    const distance = Math.hypot(cellCenterX - element.gridX, cellCenterY - element.gridY);
+                    
+                    // Mark cell if within radius
+                    if (distance <= radius) {
+                        this.occupiedCells.add(`${x},${y}`);
+                    }
+                }
+            }
+        });
     }
     
     isValidGridPosition(gridX, gridY) {
@@ -1149,6 +1184,9 @@ export class LevelBase {
         // Render grass background first
         this.renderGrassBackground(ctx);
         
+        // Render terrain elements (trees, rocks, water)
+        this.renderTerrainElements(ctx);
+        
         // Render the path
         this.renderPath(ctx);
         
@@ -1228,4 +1266,349 @@ export class LevelBase {
             this.previewGridY = gridY;
         }
     }
+
+    renderTerrainElements(ctx) {
+        if (!this.terrainElements || this.terrainElements.length === 0) {
+            return;
+        }
+
+        this.terrainElements.forEach(element => {
+            const screenX = element.gridX * this.cellSize;
+            const screenY = element.gridY * this.cellSize;
+            const size = element.size * this.cellSize;
+
+            switch (element.type) {
+                case 'tree':
+                    this.renderTree(ctx, screenX, screenY, size);
+                    break;
+                case 'rock':
+                    this.renderRock(ctx, screenX, screenY, size);
+                    break;
+                case 'water':
+                    this.renderWater(ctx, screenX, screenY, size);
+                    break;
+            }
+        });
+    }
+
+    renderTree(ctx, x, y, size) {
+        const seed = Math.floor(x + y) % 4;
+        switch(seed) {
+            case 0:
+                this.renderTreeType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderTreeType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderTreeType3(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType4(ctx, x, y, size);
+        }
+    }
+
+    renderTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, x, y, size) {
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.5, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.12, y - size * 0.45);
+        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderRock(ctx, x, y, size) {
+        const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
+        switch(seed) {
+            case 0:
+                this.renderRockType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderRockType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderRockType3(ctx, x, y, size);
+                break;
+            default:
+                this.renderRockType4(ctx, x, y, size);
+        }
+    }
+
+    renderRockType1(ctx, x, y, size) {
+        ctx.fillStyle = '#455A64';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y - size * 0.15);
+        ctx.lineTo(x - size * 0.25, y - size * 0.35);
+        ctx.lineTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.28, y + size * 0.2);
+        ctx.lineTo(x, y + size * 0.35);
+        ctx.lineTo(x - size * 0.32, y + size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#263238';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.28, y + size * 0.2);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.12, y - size * 0.08);
+        ctx.lineTo(x, y + size * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#90A4AE';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y - size * 0.15);
+        ctx.lineTo(x - size * 0.25, y - size * 0.35);
+        ctx.lineTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.28, y + size * 0.2);
+        ctx.lineTo(x, y + size * 0.35);
+        ctx.lineTo(x - size * 0.32, y + size * 0.18);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    renderRockType2(ctx, x, y, size) {
+        ctx.fillStyle = '#546E7A';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#37474F';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.33, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#9E9E9E';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        [{x: -0.18, y: 0.1, r: 0.08}, {x: 0.22, y: -0.12, r: 0.07}, {x: 0.08, y: 0.22, r: 0.06}].forEach(bump => {
+            ctx.beginPath();
+            ctx.arc(x + bump.x * size, y + bump.y * size, size * bump.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    renderRockType3(ctx, x, y, size) {
+        ctx.fillStyle = '#37474F';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y - size * 0.15);
+        ctx.lineTo(x + size * 0.35, y - size * 0.2);
+        ctx.lineTo(x + size * 0.3, y + size * 0.25);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#78909C';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y - size * 0.15);
+        ctx.lineTo(x + size * 0.35, y - size * 0.2);
+        ctx.lineTo(x, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.15);
+        ctx.lineTo(x + size * 0.1, y + size * 0.15);
+        ctx.stroke();
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y - size * 0.15);
+        ctx.lineTo(x + size * 0.35, y - size * 0.2);
+        ctx.lineTo(x + size * 0.3, y + size * 0.25);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    renderRockType4(ctx, x, y, size) {
+        ctx.fillStyle = '#455A64';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.33, y + size * 0.15);
+        ctx.lineTo(x - size * 0.33, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#263238';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.33, y + size * 0.15);
+        ctx.lineTo(x, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#90A4AE';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.1);
+        ctx.lineTo(x + size * 0.1, y + size * 0.12);
+        ctx.stroke();
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.33, y + size * 0.15);
+        ctx.lineTo(x - size * 0.33, y + size * 0.15);
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    renderWater(ctx, x, y, size) {
+        // Water body base - gradient
+        const gradient = ctx.createLinearGradient(x - size * 0.5, y - size * 0.5, x - size * 0.5, y + size * 0.5);
+        gradient.addColorStop(0, '#0277BD');
+        gradient.addColorStop(0.5, '#01579B');
+        gradient.addColorStop(1, '#004D7A');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x - size * 0.5, y - size * 0.5, size, size);
+
+        // Seamless wave pattern
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 0.8;
+        for (let i = 0; i < 3; i++) {
+            const waveY = y - size * 0.35 + (i * size * 0.35);
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.5, waveY);
+            for (let j = 0; j <= 20; j++) {
+                const segmentX = x - size * 0.5 + (j / 20) * size;
+                const phase = (x + y) * 0.05;
+                const amplitude = size * 0.04;
+                const frequency = 0.02;
+                const offsetY = Math.sin(segmentX * frequency + phase + i) * amplitude;
+                ctx.lineTo(segmentX, waveY + offsetY);
+            }
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 5; i++) {
+            const waveY = y - size * 0.4 + (i * size * 0.2);
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.5, waveY);
+            for (let j = 0; j <= 30; j++) {
+                const segmentX = x - size * 0.5 + (j / 30) * size;
+                const phase = (x + y) * 0.1;
+                const amplitude = size * 0.015;
+                const frequency = 0.04;
+                const offsetY = Math.sin(segmentX * frequency + phase + i * 0.5) * amplitude;
+                ctx.lineTo(segmentX, waveY + offsetY);
+            }
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#01579B';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - size * 0.5, y - size * 0.5, size, size);
+    }
 }
+
