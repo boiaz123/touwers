@@ -684,11 +684,23 @@
             <div class="grid-display">
                 <div class="form-group">
                     <label>Grass Patch Density</label>
-                    <input type="number" id="grassDensity" value="12000" min="1000" step="1000">
+                    <select id="grassDensity">
+                        <option value="3000">Very Sparse</option>
+                        <option value="7000">Sparse</option>
+                        <option value="12000" selected>Normal</option>
+                        <option value="18000">Dense</option>
+                        <option value="25000">Very Dense</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Flower Density</label>
-                    <input type="number" id="flowerDensity" value="50000" min="1000" step="5000">
+                    <select id="flowerDensity">
+                        <option value="10000">Very Sparse</option>
+                        <option value="25000">Sparse</option>
+                        <option value="50000" selected>Normal</option>
+                        <option value="80000">Dense</option>
+                        <option value="120000">Very Dense</option>
+                    </select>
                 </div>
             </div>
 

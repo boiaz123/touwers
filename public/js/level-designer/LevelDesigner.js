@@ -543,6 +543,9 @@ export class LevelDesigner {
 
         // Draw terrain elements (before path/castle so they appear behind)
         this.drawTerrainElements();
+        
+        // Draw smooth river overlays for blended corners
+        this.drawRiversSmooth();
 
         // Draw path
         this.drawPath();
@@ -1189,74 +1192,8 @@ export class LevelDesigner {
     }
 
     drawRiver(x, y, size, flowAngle) {
-        // Draw river as elongated shape flowing in the direction of flowAngle
-        const riverLength = size * 0.8;
-        const riverWidth = size * 0.35;
-        
-        // Calculate river ends based on flow angle
-        const endX = x + Math.cos(flowAngle) * riverLength * 0.5;
-        const endY = y + Math.sin(flowAngle) * riverLength * 0.5;
-        const startX = x - Math.cos(flowAngle) * riverLength * 0.5;
-        const startY = y - Math.sin(flowAngle) * riverLength * 0.5;
-        
-        // Calculate perpendicular vector for width
-        const perpAngle = flowAngle + Math.PI / 2;
-        const perpX = Math.cos(perpAngle) * riverWidth;
-        const perpY = Math.sin(perpAngle) * riverWidth;
-        
-        // Create water gradient along river flow
-        const gradient = this.ctx.createLinearGradient(startX, startY, endX, endY);
-        gradient.addColorStop(0, '#0277BD');
-        gradient.addColorStop(0.5, '#01579B');
-        gradient.addColorStop(1, '#0277BD');
-        this.ctx.fillStyle = gradient;
-        
-        // Draw river as curved shape with banks
-        this.ctx.beginPath();
-        // Top bank with gentle curve
-        this.ctx.moveTo(startX + perpX, startY + perpY);
-        this.ctx.quadraticCurveTo(
-            x + perpX + Math.cos(flowAngle) * riverWidth * 0.3,
-            y + perpY + Math.sin(flowAngle) * riverWidth * 0.3,
-            endX + perpX,
-            endY + perpY
-        );
-        // Bottom bank with gentle curve back
-        this.ctx.quadraticCurveTo(
-            x - perpX + Math.cos(flowAngle) * riverWidth * 0.3,
-            y - perpY + Math.sin(flowAngle) * riverWidth * 0.3,
-            startX - perpX,
-            startY - perpY
-        );
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // River edges for definition
-        this.ctx.strokeStyle = '#0277BD';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
-        
-        // Add directional flow arrows
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 3; i++) {
-            const t = (i + 1) / 4;
-            const flowX = startX + (endX - startX) * t;
-            const flowY = startY + (endY - startY) * t;
-            const arrowSize = riverWidth * 0.3;
-            
-            // Arrow line
-            this.ctx.beginPath();
-            this.ctx.moveTo(
-                flowX - Math.cos(flowAngle) * arrowSize,
-                flowY - Math.sin(flowAngle) * arrowSize
-            );
-            this.ctx.lineTo(
-                flowX + Math.cos(flowAngle) * arrowSize,
-                flowY + Math.sin(flowAngle) * arrowSize
-            );
-            this.ctx.stroke();
-        }
+        // River rendering is handled entirely by drawRiversSmooth()
+        // No cell-based rendering needed - smooth line rendering creates the complete visualization
     }
 
     drawModeIndicator() {
@@ -1269,6 +1206,96 @@ export class LevelDesigner {
         this.ctx.textBaseline = 'top';
         const modeText = this.terrainMode ? `${this.mode.toUpperCase()}: ${this.terrainMode.toUpperCase()}` : this.mode.toUpperCase();
         this.ctx.fillText(`Mode: ${modeText}`, 15, 15);
+    }
+
+    drawRiversSmooth() {
+        // Draw smooth river paths using line rendering for automatic corner smoothing
+        // This creates smooth transitions where rivers meet at corners
+        if (!this.terrainElements) return;
+        
+        const cellWidthPixels = this.canvas.width / this.gridWidth;
+        const cellHeightPixels = this.canvas.height / this.gridHeight;
+        const pixelSize = Math.min(cellWidthPixels, cellHeightPixels);
+        
+        // Group river elements by connected segments
+        const riverSegments = [];
+        const processedIndices = new Set();
+        
+        for (let i = 0; i < this.terrainElements.length; i++) {
+            const elem = this.terrainElements[i];
+            if (elem.waterType !== 'river' || processedIndices.has(i)) continue;
+            
+            // Start a new river segment
+            const segment = [elem];
+            processedIndices.add(i);
+            
+            // Find connected river elements
+            let added = true;
+            while (added) {
+                added = false;
+                for (let j = 0; j < this.terrainElements.length; j++) {
+                    if (processedIndices.has(j)) continue;
+                    const candidate = this.terrainElements[j];
+                    if (candidate.waterType !== 'river') continue;
+                    
+                    // Check if connected to end of segment
+                    const lastElem = segment[segment.length - 1];
+                    const dist = Math.hypot(
+                        (candidate.gridX - lastElem.gridX) * cellWidthPixels,
+                        (candidate.gridY - lastElem.gridY) * cellHeightPixels
+                    );
+                    
+                    if (dist < pixelSize * 2.5) {
+                        segment.push(candidate);
+                        processedIndices.add(j);
+                        added = true;
+                    }
+                }
+            }
+            
+            riverSegments.push(segment);
+        }
+        
+        // Draw each river segment with smooth lines
+        riverSegments.forEach(segment => {
+            if (segment.length < 2) return;
+            
+            const path = segment.map(elem => ({
+                x: elem.gridX * cellWidthPixels + cellWidthPixels / 2,
+                y: elem.gridY * cellHeightPixels + cellHeightPixels / 2
+            }));
+            
+            // Draw smooth river outline using line rendering
+            const riverWidthPixels = pixelSize * 1.5;
+            
+            // Main river color with smooth corners
+            this.ctx.strokeStyle = '#0277BD';
+            this.ctx.lineWidth = riverWidthPixels;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.globalAlpha = 0.85;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                this.ctx.lineTo(path[i].x, path[i].y);
+            }
+            this.ctx.stroke();
+            
+            // Add center highlight for depth
+            this.ctx.strokeStyle = '#01579B';
+            this.ctx.lineWidth = riverWidthPixels * 0.6;
+            this.ctx.globalAlpha = 0.6;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                this.ctx.lineTo(path[i].x, path[i].y);
+            }
+            this.ctx.stroke();
+            
+            this.ctx.globalAlpha = 1;
+        });
     }
 
     updateGeneratedCode() {
@@ -1318,9 +1345,15 @@ export class LevelDesigner {
 
         // Generate terrain elements
         const terrainCode = this.terrainElements.length > 0
-            ? this.terrainElements.map((element, idx) =>
-                `            { type: '${element.type}', gridX: ${element.gridX.toFixed(2)}, gridY: ${element.gridY.toFixed(2)}, size: ${element.size} }${idx < this.terrainElements.length - 1 ? ',' : ''}`
-              ).join('\n')
+            ? this.terrainElements.map((element, idx) => {
+                let elementStr = `            { type: '${element.type}', gridX: ${element.gridX.toFixed(2)}, gridY: ${element.gridY.toFixed(2)}, size: ${element.size}`;
+                // Add waterType for water elements
+                if (element.type === 'water' && element.waterType) {
+                    elementStr += `, waterType: '${element.waterType}'`;
+                }
+                elementStr += ` }${idx < this.terrainElements.length - 1 ? ',' : ''}`;
+                return elementStr;
+              }).join('\n')
             : '            // Add terrain elements using the designer';
 
         const code = `import { LevelBase } from './LevelBase.js';

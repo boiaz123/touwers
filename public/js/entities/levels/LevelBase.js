@@ -785,7 +785,23 @@ export class LevelBase {
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
-        // Build path geometry using the same marked cells
+        // Draw smooth path using canvas line rendering for automatic corner smoothing
+        // This is the ONLY path visualization - no cell filling
+        if (this.path && this.path.length >= 2) {
+            ctx.strokeStyle = this.visualConfig.pathBaseColor;
+            ctx.lineWidth = pathWidthPixels;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(this.path[0].x, this.path[0].y);
+            for (let i = 1; i < this.path.length; i++) {
+                ctx.lineTo(this.path[i].x, this.path[i].y);
+            }
+            ctx.stroke();
+        }
+        
+        // Mark path cells for collision detection and tower blocking (internal tracking only)
         const pathCells = new Set();
         
         for (let i = 0; i < this.path.length - 1; i++) {
@@ -805,8 +821,9 @@ export class LevelBase {
                 const gridX = Math.floor(x / this.cellSize);
                 const gridY = Math.floor(y / this.cellSize);
                 
-                for (let offsetX = -2; offsetX <= 2; offsetX++) {
-                    for (let offsetY = -2; offsetY <= 2; offsetY++) {
+                // Only check immediate neighbors, not a 5x5 grid
+                for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                    for (let offsetY = -1; offsetY <= 1; offsetY++) {
                         const cellX = gridX + offsetX;
                         const cellY = gridY + offsetY;
                         
@@ -832,7 +849,8 @@ export class LevelBase {
                         
                         const distToPath = Math.hypot(cellCenterX - closestX, cellCenterY - closestY);
                         
-                        if (distToPath <= pathWidthPixels * 0.5) {
+                        // Mark cells for internal tracking - distance threshold kept conservative
+                        if (distToPath <= pathWidthPixels * 0.35) {
                             pathCells.add(`${cellX},${cellY}`);
                         }
                     }
@@ -840,63 +858,8 @@ export class LevelBase {
             }
         }
         
-        // Base path color - using config
-        ctx.fillStyle = this.visualConfig.pathBaseColor;
-        pathCells.forEach(posStr => {
-            const [cellX, cellY] = posStr.split(',').map(Number);
-            const screenX = cellX * this.cellSize;
-            const screenY = cellY * this.cellSize;
-            ctx.fillRect(screenX, screenY, this.cellSize, this.cellSize);
-        });
-        
-        // Add random details per cell for texture variety without grid appearance
-        pathCells.forEach(posStr => {
-            const [cellX, cellY] = posStr.split(',').map(Number);
-            const screenX = cellX * this.cellSize;
-            const screenY = cellY * this.cellSize;
-            const centerX = screenX + this.cellSize / 2;
-            const centerY = screenY + this.cellSize / 2;
-            
-            // Seeded random for consistent but unique details per cell
-            const seed = cellX * 73856093 ^ cellY * 19349663;
-            const detailType = Math.abs(Math.sin(seed * 0.001)) % 1;
-            
-            if (detailType < 0.25) {
-                // Worn dirt patch
-                ctx.fillStyle = 'rgba(101, 67, 33, 0.15)';
-                ctx.beginPath();
-                ctx.ellipse(centerX, centerY, this.cellSize * 0.35, this.cellSize * 0.25, 0.4, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (detailType < 0.5) {
-                // Sandy area
-                ctx.fillStyle = 'rgba(194, 178, 128, 0.12)';
-                ctx.beginPath();
-                ctx.ellipse(centerX, centerY, this.cellSize * 0.3, this.cellSize * 0.22, -0.3, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (detailType < 0.75) {
-                // Small pebbles
-                const pebbleCount = 2;
-                for (let p = 0; p < pebbleCount; p++) {
-                    const pebbleSeed = seed + p * 17;
-                    const pX = centerX + (Math.sin(pebbleSeed * 0.01) - 0.5) * this.cellSize * 0.3;
-                    const pY = centerY + (Math.cos(pebbleSeed * 0.01) - 0.5) * this.cellSize * 0.3;
-                    
-                    ctx.fillStyle = `rgba(128, 128, 128, 0.18)`;
-                    ctx.beginPath();
-                    ctx.arc(pX, pY, 1.2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            } else {
-                // Light weathering marks
-                ctx.strokeStyle = 'rgba(101, 67, 33, 0.08)';
-                ctx.lineWidth = 1;
-                const wearAngle = Math.sin(seed * 0.005);
-                ctx.beginPath();
-                ctx.moveTo(centerX - this.cellSize * 0.2, centerY + Math.sin(wearAngle) * this.cellSize * 0.1);
-                ctx.lineTo(centerX + this.cellSize * 0.2, centerY + Math.cos(wearAngle) * this.cellSize * 0.1);
-                ctx.stroke();
-            }
-        });
+        // Store pathCells for collision detection but don't render them
+        this.pathCells = pathCells;
         
         // Render path texture elements (dust, leaves, etc. on top)
         this.pathTexture.forEach(element => {
@@ -979,7 +942,7 @@ export class LevelBase {
         });
         
         // Draw inner path edge line and add edge vegetation
-        this.renderPathEdge(ctx, pathCells);
+        this.renderPathEdge(ctx, this.pathCells);
     }
     
     renderPathEdge(ctx, pathCells) {
@@ -1186,6 +1149,9 @@ export class LevelBase {
         
         // Render terrain elements (trees, rocks, water)
         this.renderTerrainElements(ctx);
+        
+        // Render smooth river overlays for blended corners
+        this.renderRiverSmooth(ctx);
         
         // Render the path
         this.renderPath(ctx);
@@ -1628,72 +1594,106 @@ export class LevelBase {
     }
 
     renderRiver(ctx, x, y, size, flowAngle) {
-        // Draw river as elongated shape flowing in the direction of flowAngle
-        const riverLength = size * 0.8;
-        const riverWidth = size * 0.35;
+        // River rendering is handled entirely by renderRiverSmooth()
+        // No cell-based rendering needed - smooth line rendering creates the complete visualization
+    }
+    
+    renderRiverSmooth(ctx) {
+        // Draw smooth river paths using line rendering for automatic corner smoothing
+        // This creates smooth corners where rivers meet
+        if (!this.terrainElements) return;
         
-        // Calculate river ends based on flow angle
-        const endX = x + Math.cos(flowAngle) * riverLength * 0.5;
-        const endY = y + Math.sin(flowAngle) * riverLength * 0.5;
-        const startX = x - Math.cos(flowAngle) * riverLength * 0.5;
-        const startY = y - Math.sin(flowAngle) * riverLength * 0.5;
+        // Group river elements by connected segments
+        const riverSegments = [];
+        const processedIndices = new Set();
         
-        // Calculate perpendicular vector for width
-        const perpAngle = flowAngle + Math.PI / 2;
-        const perpX = Math.cos(perpAngle) * riverWidth;
-        const perpY = Math.sin(perpAngle) * riverWidth;
-        
-        // Create water gradient along river flow
-        const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
-        gradient.addColorStop(0, '#0277BD');
-        gradient.addColorStop(0.5, '#01579B');
-        gradient.addColorStop(1, '#0277BD');
-        ctx.fillStyle = gradient;
-        
-        // Draw river as curved shape with banks
-        ctx.beginPath();
-        // Top bank with gentle curve
-        ctx.moveTo(startX + perpX, startY + perpY);
-        ctx.quadraticCurveTo(
-            x + perpX + Math.cos(flowAngle) * riverWidth * 0.3,
-            y + perpY + Math.sin(flowAngle) * riverWidth * 0.3,
-            endX + perpX,
-            endY + perpY
-        );
-        // Bottom bank with gentle curve back
-        ctx.quadraticCurveTo(
-            x - perpX + Math.cos(flowAngle) * riverWidth * 0.3,
-            y - perpY + Math.sin(flowAngle) * riverWidth * 0.3,
-            startX - perpX,
-            startY - perpY
-        );
-        ctx.closePath();
-        ctx.fill();
-        
-        // River edges for definition
-        ctx.strokeStyle = '#0277BD';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // Add subtle flow direction lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i < 3; i++) {
-            const t = (i + 1) / 4;
-            const flowX = startX + (endX - startX) * t;
-            const flowY = startY + (endY - startY) * t;
-            const flowMarkLength = riverWidth * 0.4;
-            ctx.beginPath();
-            ctx.moveTo(
-                flowX - Math.cos(flowAngle) * flowMarkLength,
-                flowY - Math.sin(flowAngle) * flowMarkLength
-            );
-            ctx.lineTo(
-                flowX + Math.cos(flowAngle) * flowMarkLength,
-                flowY + Math.sin(flowAngle) * flowMarkLength
-            );
-            ctx.stroke();
+        for (let i = 0; i < this.terrainElements.length; i++) {
+            const elem = this.terrainElements[i];
+            if (elem.waterType !== 'river' || processedIndices.has(i)) continue;
+            
+            // Start a new river segment
+            const segment = [elem];
+            processedIndices.add(i);
+            
+            // Find connected river elements
+            let added = true;
+            while (added) {
+                added = false;
+                for (let j = 0; j < this.terrainElements.length; j++) {
+                    if (processedIndices.has(j)) continue;
+                    const candidate = this.terrainElements[j];
+                    if (candidate.waterType !== 'river') continue;
+                    
+                    // Check if connected to end of segment
+                    const lastElem = segment[segment.length - 1];
+                    const dist = Math.hypot(
+                        (candidate.gridX - lastElem.gridX) * this.cellSize,
+                        (candidate.gridY - lastElem.gridY) * this.cellSize
+                    );
+                    
+                    if (dist < this.cellSize * 2.5) {
+                        segment.push(candidate);
+                        processedIndices.add(j);
+                        added = true;
+                    }
+                }
+            }
+            
+            riverSegments.push(segment);
         }
+        
+        // Draw each river segment with smooth lines - filled shape with borders
+        riverSegments.forEach(segment => {
+            if (segment.length < 1) return;
+            
+            const path = segment.map(elem => ({
+                x: elem.gridX * this.cellSize + this.cellSize / 2,
+                y: elem.gridY * this.cellSize + this.cellSize / 2
+            }));
+            
+            // Draw filled river shape with clear borders - matches designer appearance
+            const riverWidthPixels = this.cellSize * 1.8;
+            
+            // Main river fill with smooth corners
+            ctx.strokeStyle = '#0277BD';
+            ctx.lineWidth = riverWidthPixels;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.globalAlpha = 0.95;
+            
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            // Add darker center channel for depth
+            ctx.strokeStyle = '#004D7A';
+            ctx.lineWidth = riverWidthPixels * 0.5;
+            ctx.globalAlpha = 0.8;
+            
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            // Add light highlight for water shimmer
+            ctx.strokeStyle = '#01579B';
+            ctx.lineWidth = riverWidthPixels * 0.3;
+            ctx.globalAlpha = 0.5;
+            
+            ctx.beginPath();
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            
+            ctx.globalAlpha = 1;
+        });
     }
 }
 
