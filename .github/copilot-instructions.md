@@ -187,4 +187,6 @@ Don't create summary documents or any .md files other than this one.
 
 Make sure you run background and check powershell commands in a different powershell window than the one that runs Touwers. Because you keep putting commands in the active terminal window and that breaks Touwers, dont type messages and waits etc, just check the background console and logging.
 
+You always keep overwriting the npm start terminal screen with sleep-commands, which makes it impossible to see logs and errors. Dont do that, use a different terminal window for testing powershell commands.
+
 Make sure you check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app.

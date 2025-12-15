@@ -10,7 +10,6 @@ import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { ResolutionSelector } from '../ui/ResolutionSelector.js';
-import { PixiRenderer } from '../core/rendering/PixiRenderer.js';
 
 export class Game {
     constructor() {
@@ -32,10 +31,10 @@ export class Game {
             this.canvas.width = resolution.width;
             this.canvas.height = resolution.height;
             
-            // Initialize PixiRenderer instead of canvas 2D context
-            this.ctx = new PixiRenderer(this.canvas);
+            // Get native Canvas 2D context for direct rendering (no wrapper overhead)
+            this.ctx = this.canvas.getContext('2d');
             
-            // Emulate the optimization settings for compatibility
+            // Optimize image rendering
             this.ctx.imageSmoothingEnabled = false;
             this.ctx.imageSmoothingQuality = 'low';
             
@@ -293,9 +292,6 @@ export class Game {
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
             }
-            
-            // Render with Pixi
-            this.ctx.render();
             
         } catch (error) {
             console.error('Game: Error in game loop:', error);
