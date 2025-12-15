@@ -220,7 +220,14 @@ export class LevelDesigner {
                 this.riverPoints.push({ gridX, gridY });
             } else if (this.waterMode === 'lake') {
                 // Add single lake circle with variable size
-                this.addTerrainElement('water', gridX, gridY, this.waterSize);
+                const element = {
+                    type: 'water',
+                    waterType: 'lake',
+                    gridX: Math.round(gridX),
+                    gridY: Math.round(gridY),
+                    size: this.waterSize
+                };
+                this.terrainElements.push(element);
             } else {
                 // Regular terrain placement
                 this.addTerrainElement(this.terrainMode, gridX, gridY);
@@ -251,7 +258,7 @@ export class LevelDesigner {
         }
     }
 
-    addTerrainElement(type, gridX, gridY, customSize = null) {
+    addTerrainElement(type, gridX, gridY, customSize = null, waterType = null) {
         // Determine size based on type
         let size = customSize;
         if (size === null) {
@@ -260,19 +267,26 @@ export class LevelDesigner {
             else if (type === 'water') size = 2;
         }
 
-        this.terrainElements.push({
+        const element = {
             type,
             gridX: Math.round(gridX),
             gridY: Math.round(gridY),
             size
-        });
+        };
+        
+        // Add waterType if this is water
+        if (type === 'water' && waterType) {
+            element.waterType = waterType;
+        }
+        
+        this.terrainElements.push(element);
     }
 
     finishRiver() {
         // Convert river waypoints to water tiles along the path
         if (!this.riverPoints || this.riverPoints.length < 2) return;
         
-        // Create water tiles along the river path with interpolation
+        // Store all river segments with direction information
         for (let i = 0; i < this.riverPoints.length - 1; i++) {
             const p1 = this.riverPoints[i];
             const p2 = this.riverPoints[i + 1];
@@ -284,13 +298,21 @@ export class LevelDesigner {
                 const x = p1.gridX + (p2.gridX - p1.gridX) * t;
                 const y = p1.gridY + (p2.gridY - p1.gridY) * t;
                 
-                // Add water tile with rounded coordinates
-                this.terrainElements.push({
+                // Calculate flow direction
+                const dx = p2.gridX - p1.gridX;
+                const dy = p2.gridY - p1.gridY;
+                const flowAngle = Math.atan2(dy, dx);
+                
+                // Add water tile marked as river type
+                const element = {
                     type: 'water',
+                    waterType: 'river',
                     gridX: Math.round(x),
                     gridY: Math.round(y),
-                    size: 1.5
-                });
+                    size: 1.5,
+                    flowAngle: flowAngle
+                };
+                this.terrainElements.push(element);
             }
         }
     }
@@ -528,6 +550,9 @@ export class LevelDesigner {
         // Draw castle
         this.drawCastle();
 
+        // Draw UI safe area border
+        this.drawUISafeBorder();
+
         // Draw current mode indicator
         this.drawModeIndicator();
     }
@@ -557,6 +582,46 @@ export class LevelDesigner {
         }
 
         this.ctx.globalAlpha = 1;
+    }
+
+    drawUISafeBorder() {
+        // Draw a border showing where the in-game UI would be
+        // Typical UI appears in the corners and edges of the screen
+        const cellWidthPixels = this.canvas.width / this.gridWidth;
+        const cellHeightPixels = this.canvas.height / this.gridHeight;
+        
+        // UI safe area margins (in grid cells)
+        const topMargin = 1.5;      // Top UI bar
+        const bottomMargin = 2.5;   // Bottom UI bar (resource info, etc)
+        const leftMargin = 1;       // Left side
+        const rightMargin = 1;      // Right side
+        
+        const safeLeft = leftMargin * cellWidthPixels;
+        const safeTop = topMargin * cellHeightPixels;
+        const safeRight = this.canvas.width - (rightMargin * cellWidthPixels);
+        const safeBottom = this.canvas.height - (bottomMargin * cellHeightPixels);
+        
+        // Draw semi-transparent danger zones (where UI overlaps)
+        this.ctx.fillStyle = 'rgba(255, 100, 100, 0.05)';
+        
+        // Top UI area
+        this.ctx.fillRect(0, 0, this.canvas.width, safeTop);
+        
+        // Bottom UI area
+        this.ctx.fillRect(0, safeBottom, this.canvas.width, this.canvas.height - safeBottom);
+        
+        // Left UI area
+        this.ctx.fillRect(0, safeTop, safeLeft, safeBottom - safeTop);
+        
+        // Right UI area
+        this.ctx.fillRect(safeRight, safeTop, this.canvas.width - safeRight, safeBottom - safeTop);
+        
+        // Draw the safe area border
+        this.ctx.strokeStyle = 'rgba(255, 150, 150, 0.5)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(safeLeft, safeTop, safeRight - safeLeft, safeBottom - safeTop);
+        this.ctx.setLineDash([]);
     }
 
     drawPath() {
@@ -698,7 +763,11 @@ export class LevelDesigner {
                     this.drawRock(x, y, size);
                     break;
                 case 'water':
-                    this.drawWater(x, y, size);
+                    if (element.waterType === 'river') {
+                        this.drawRiver(x, y, size, element.flowAngle);
+                    } else {
+                        this.drawLake(x, y, size);
+                    }
                     break;
             }
         });
@@ -1060,60 +1129,134 @@ export class LevelDesigner {
         this.ctx.stroke();
     }
 
-    drawWater(x, y, size) {
-        // Water body base - gradient effect with subtle variation
-        const gradient = this.ctx.createLinearGradient(x - size * 0.5, y - size * 0.5, x - size * 0.5, y + size * 0.5);
+    drawLake(x, y, size) {
+        // Create organic water shape with rounded edges instead of squares
+        const radius = size * 0.4;
+        
+        // Water gradient
+        const gradient = this.ctx.createRadialGradient(x - size * 0.1, y - size * 0.1, 0, x, y, radius * 1.2);
         gradient.addColorStop(0, '#0277BD');
-        gradient.addColorStop(0.5, '#01579B');
+        gradient.addColorStop(0.6, '#01579B');
         gradient.addColorStop(1, '#004D7A');
         this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(x - size * 0.5, y - size * 0.5, size, size);
-
-        // Seamless wave pattern - using sine waves with varying frequencies
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        this.ctx.lineWidth = 0.8;
         
-        // Primary wave pattern (low frequency)
-        for (let i = 0; i < 3; i++) {
-            const waveY = y - size * 0.35 + (i * size * 0.35);
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - size * 0.5, waveY);
+        // Draw organic water shape with perlin-like noise using sine waves
+        this.ctx.beginPath();
+        const points = 16;
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            // Add sine-based variation to radius for organic look
+            const noise = Math.sin(angle * 3 + x * 0.1 + y * 0.1) * 0.15 + Math.sin(angle * 7 + x * 0.05) * 0.1;
+            const currentRadius = radius * (0.8 + noise);
+            const px = x + Math.cos(angle) * currentRadius;
+            const py = y + Math.sin(angle) * currentRadius;
             
-            for (let j = 0; j <= 20; j++) {
-                const segmentX = x - size * 0.5 + (j / 20) * size;
-                const phase = (x + y) * 0.05; // Deterministic based on position
-                const amplitude = size * 0.04;
-                const frequency = 0.02;
-                const offsetY = Math.sin(segmentX * frequency + phase + i) * amplitude;
-                this.ctx.lineTo(segmentX, waveY + offsetY);
+            if (i === 0) {
+                this.ctx.moveTo(px, py);
+            } else {
+                this.ctx.lineTo(px, py);
             }
-            this.ctx.stroke();
         }
-
-        // Secondary subtle wave pattern (higher frequency)
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.lineWidth = 0.5;
-        for (let i = 0; i < 5; i++) {
-            const waveY = y - size * 0.4 + (i * size * 0.2);
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - size * 0.5, waveY);
-            
-            for (let j = 0; j <= 30; j++) {
-                const segmentX = x - size * 0.5 + (j / 30) * size;
-                const phase = (x + y) * 0.1;
-                const amplitude = size * 0.015;
-                const frequency = 0.04;
-                const offsetY = Math.sin(segmentX * frequency + phase + i * 0.5) * amplitude;
-                this.ctx.lineTo(segmentX, waveY + offsetY);
-            }
-            this.ctx.stroke();
-        }
-
-
-        // Water border - subtle edge
-        this.ctx.strokeStyle = '#01579B';
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Water edge with soft border
+        this.ctx.strokeStyle = '#0277BD';
         this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x - size * 0.5, y - size * 0.5, size, size);
+        this.ctx.stroke();
+        
+        // Subtle wave reflections
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        this.ctx.lineWidth = 0.5;
+        for (let i = 0; i < 2; i++) {
+            const waveRadius = radius * (0.3 + i * 0.3);
+            this.ctx.beginPath();
+            const wavePoints = 12;
+            for (let j = 0; j < wavePoints; j++) {
+                const angle = (j / wavePoints) * Math.PI * 2;
+                const waveNoise = Math.sin(angle * 2 + x * 0.1) * 0.1;
+                const px = x + Math.cos(angle) * (waveRadius * (0.9 + waveNoise));
+                const py = y + Math.sin(angle) * (waveRadius * (0.9 + waveNoise));
+                if (j === 0) {
+                    this.ctx.moveTo(px, py);
+                } else {
+                    this.ctx.lineTo(px, py);
+                }
+            }
+            this.ctx.closePath();
+            this.ctx.stroke();
+        }
+    }
+
+    drawRiver(x, y, size, flowAngle) {
+        // Draw river as elongated shape flowing in the direction of flowAngle
+        const riverLength = size * 0.8;
+        const riverWidth = size * 0.35;
+        
+        // Calculate river ends based on flow angle
+        const endX = x + Math.cos(flowAngle) * riverLength * 0.5;
+        const endY = y + Math.sin(flowAngle) * riverLength * 0.5;
+        const startX = x - Math.cos(flowAngle) * riverLength * 0.5;
+        const startY = y - Math.sin(flowAngle) * riverLength * 0.5;
+        
+        // Calculate perpendicular vector for width
+        const perpAngle = flowAngle + Math.PI / 2;
+        const perpX = Math.cos(perpAngle) * riverWidth;
+        const perpY = Math.sin(perpAngle) * riverWidth;
+        
+        // Create water gradient along river flow
+        const gradient = this.ctx.createLinearGradient(startX, startY, endX, endY);
+        gradient.addColorStop(0, '#0277BD');
+        gradient.addColorStop(0.5, '#01579B');
+        gradient.addColorStop(1, '#0277BD');
+        this.ctx.fillStyle = gradient;
+        
+        // Draw river as curved shape with banks
+        this.ctx.beginPath();
+        // Top bank with gentle curve
+        this.ctx.moveTo(startX + perpX, startY + perpY);
+        this.ctx.quadraticCurveTo(
+            x + perpX + Math.cos(flowAngle) * riverWidth * 0.3,
+            y + perpY + Math.sin(flowAngle) * riverWidth * 0.3,
+            endX + perpX,
+            endY + perpY
+        );
+        // Bottom bank with gentle curve back
+        this.ctx.quadraticCurveTo(
+            x - perpX + Math.cos(flowAngle) * riverWidth * 0.3,
+            y - perpY + Math.sin(flowAngle) * riverWidth * 0.3,
+            startX - perpX,
+            startY - perpY
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // River edges for definition
+        this.ctx.strokeStyle = '#0277BD';
+        this.ctx.lineWidth = 1;
+        this.ctx.stroke();
+        
+        // Add directional flow arrows
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const t = (i + 1) / 4;
+            const flowX = startX + (endX - startX) * t;
+            const flowY = startY + (endY - startY) * t;
+            const arrowSize = riverWidth * 0.3;
+            
+            // Arrow line
+            this.ctx.beginPath();
+            this.ctx.moveTo(
+                flowX - Math.cos(flowAngle) * arrowSize,
+                flowY - Math.sin(flowAngle) * arrowSize
+            );
+            this.ctx.lineTo(
+                flowX + Math.cos(flowAngle) * arrowSize,
+                flowY + Math.sin(flowAngle) * arrowSize
+            );
+            this.ctx.stroke();
+        }
     }
 
     drawModeIndicator() {

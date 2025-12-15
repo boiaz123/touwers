@@ -1279,20 +1279,24 @@ export class LevelBase {
 
             switch (element.type) {
                 case 'tree':
-                    this.renderTree(ctx, screenX, screenY, size);
+                    this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY);
                     break;
                 case 'rock':
-                    this.renderRock(ctx, screenX, screenY, size);
+                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
                     break;
                 case 'water':
-                    this.renderWater(ctx, screenX, screenY, size);
+                    if (element.waterType === 'river') {
+                        this.renderRiver(ctx, screenX, screenY, size, element.flowAngle);
+                    } else {
+                        this.renderLake(ctx, screenX, screenY, size);
+                    }
                     break;
             }
         });
     }
 
-    renderTree(ctx, x, y, size) {
-        const seed = Math.floor(x + y) % 4;
+    renderTree(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX + gridY) % 4;
         switch(seed) {
             case 0:
                 this.renderTreeType1(ctx, x, y, size);
@@ -1360,6 +1364,7 @@ export class LevelBase {
     }
 
     renderTreeType3(ctx, x, y, size) {
+        // Sparse tree with distinct branches
         const trunkWidth = size * 0.22;
         ctx.fillStyle = '#795548';
         ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
@@ -1378,10 +1383,11 @@ export class LevelBase {
         ctx.beginPath();
         ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.5, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
+    }
+
+    renderTreeType4(ctx, x, y, size) {
+        // Pine/Spruce style with layered triangles
+        const trunkWidth = size * 0.18;
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
         ctx.fillStyle = '#0D3817';
@@ -1414,8 +1420,8 @@ export class LevelBase {
         ctx.fill();
     }
 
-    renderRock(ctx, x, y, size) {
-        const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
+    renderRock(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         switch(seed) {
             case 0:
                 this.renderRockType1(ctx, x, y, size);
@@ -1562,53 +1568,132 @@ export class LevelBase {
         ctx.stroke();
     }
 
-    renderWater(ctx, x, y, size) {
-        // Water body base - gradient
-        const gradient = ctx.createLinearGradient(x - size * 0.5, y - size * 0.5, x - size * 0.5, y + size * 0.5);
+    renderLake(ctx, x, y, size) {
+        // Create organic water shape with rounded edges instead of squares
+        const radius = size * 0.4;
+        
+        // Water gradient
+        const gradient = ctx.createRadialGradient(x - size * 0.1, y - size * 0.1, 0, x, y, radius * 1.2);
         gradient.addColorStop(0, '#0277BD');
-        gradient.addColorStop(0.5, '#01579B');
+        gradient.addColorStop(0.6, '#01579B');
         gradient.addColorStop(1, '#004D7A');
         ctx.fillStyle = gradient;
-        ctx.fillRect(x - size * 0.5, y - size * 0.5, size, size);
-
-        // Seamless wave pattern
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 0.8;
-        for (let i = 0; i < 3; i++) {
-            const waveY = y - size * 0.35 + (i * size * 0.35);
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.5, waveY);
-            for (let j = 0; j <= 20; j++) {
-                const segmentX = x - size * 0.5 + (j / 20) * size;
-                const phase = (x + y) * 0.05;
-                const amplitude = size * 0.04;
-                const frequency = 0.02;
-                const offsetY = Math.sin(segmentX * frequency + phase + i) * amplitude;
-                ctx.lineTo(segmentX, waveY + offsetY);
+        
+        // Draw organic water shape with perlin-like noise using sine waves
+        ctx.beginPath();
+        const points = 16;
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            // Add sine-based variation to radius for organic look
+            const noise = Math.sin(angle * 3 + x * 0.1 + y * 0.1) * 0.15 + Math.sin(angle * 7 + x * 0.05) * 0.1;
+            const currentRadius = radius * (0.8 + noise);
+            const px = x + Math.cos(angle) * currentRadius;
+            const py = y + Math.sin(angle) * currentRadius;
+            
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
             }
-            ctx.stroke();
         }
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i < 5; i++) {
-            const waveY = y - size * 0.4 + (i * size * 0.2);
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.5, waveY);
-            for (let j = 0; j <= 30; j++) {
-                const segmentX = x - size * 0.5 + (j / 30) * size;
-                const phase = (x + y) * 0.1;
-                const amplitude = size * 0.015;
-                const frequency = 0.04;
-                const offsetY = Math.sin(segmentX * frequency + phase + i * 0.5) * amplitude;
-                ctx.lineTo(segmentX, waveY + offsetY);
-            }
-            ctx.stroke();
-        }
-
-        ctx.strokeStyle = '#01579B';
+        ctx.closePath();
+        ctx.fill();
+        
+        // Water edge with soft border
+        ctx.strokeStyle = '#0277BD';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x - size * 0.5, y - size * 0.5, size, size);
+        ctx.stroke();
+        
+        // Subtle wave reflections
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 2; i++) {
+            const waveRadius = radius * (0.3 + i * 0.3);
+            ctx.beginPath();
+            const wavePoints = 12;
+            for (let j = 0; j < wavePoints; j++) {
+                const angle = (j / wavePoints) * Math.PI * 2;
+                const waveNoise = Math.sin(angle * 2 + x * 0.1) * 0.1;
+                const px = x + Math.cos(angle) * (waveRadius * (0.9 + waveNoise));
+                const py = y + Math.sin(angle) * (waveRadius * (0.9 + waveNoise));
+                if (j === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+    }
+
+    renderRiver(ctx, x, y, size, flowAngle) {
+        // Draw river as elongated shape flowing in the direction of flowAngle
+        const riverLength = size * 0.8;
+        const riverWidth = size * 0.35;
+        
+        // Calculate river ends based on flow angle
+        const endX = x + Math.cos(flowAngle) * riverLength * 0.5;
+        const endY = y + Math.sin(flowAngle) * riverLength * 0.5;
+        const startX = x - Math.cos(flowAngle) * riverLength * 0.5;
+        const startY = y - Math.sin(flowAngle) * riverLength * 0.5;
+        
+        // Calculate perpendicular vector for width
+        const perpAngle = flowAngle + Math.PI / 2;
+        const perpX = Math.cos(perpAngle) * riverWidth;
+        const perpY = Math.sin(perpAngle) * riverWidth;
+        
+        // Create water gradient along river flow
+        const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+        gradient.addColorStop(0, '#0277BD');
+        gradient.addColorStop(0.5, '#01579B');
+        gradient.addColorStop(1, '#0277BD');
+        ctx.fillStyle = gradient;
+        
+        // Draw river as curved shape with banks
+        ctx.beginPath();
+        // Top bank with gentle curve
+        ctx.moveTo(startX + perpX, startY + perpY);
+        ctx.quadraticCurveTo(
+            x + perpX + Math.cos(flowAngle) * riverWidth * 0.3,
+            y + perpY + Math.sin(flowAngle) * riverWidth * 0.3,
+            endX + perpX,
+            endY + perpY
+        );
+        // Bottom bank with gentle curve back
+        ctx.quadraticCurveTo(
+            x - perpX + Math.cos(flowAngle) * riverWidth * 0.3,
+            y - perpY + Math.sin(flowAngle) * riverWidth * 0.3,
+            startX - perpX,
+            startY - perpY
+        );
+        ctx.closePath();
+        ctx.fill();
+        
+        // River edges for definition
+        ctx.strokeStyle = '#0277BD';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Add subtle flow direction lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < 3; i++) {
+            const t = (i + 1) / 4;
+            const flowX = startX + (endX - startX) * t;
+            const flowY = startY + (endY - startY) * t;
+            const flowMarkLength = riverWidth * 0.4;
+            ctx.beginPath();
+            ctx.moveTo(
+                flowX - Math.cos(flowAngle) * flowMarkLength,
+                flowY - Math.sin(flowAngle) * flowMarkLength
+            );
+            ctx.lineTo(
+                flowX + Math.cos(flowAngle) * flowMarkLength,
+                flowY + Math.sin(flowAngle) * flowMarkLength
+            );
+            ctx.stroke();
+        }
     }
 }
 
