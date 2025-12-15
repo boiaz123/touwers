@@ -132,15 +132,15 @@ export class BuildingManager {
         });
     }
     
-    handleClick(x, y, canvasSize) {
+    handleClick(x, y, resolutionManager) {
         
         // Clear all selections first
         this.buildings.forEach(building => {
             if (building.deselect) building.deselect();
         });
         
-        // Check for ANY building interaction
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasSize.width / 1920)));
+        // Get cell size from ResolutionManager for accurate click detection
+        const cellSize = resolutionManager && resolutionManager.cellSize ? resolutionManager.cellSize : 32;
         
         // First check toggle icon clicks for gold mines (in grid space)
         for (const building of this.buildings) {
@@ -176,7 +176,7 @@ export class BuildingManager {
             const buildingBottomEdge = buildingTopEdge + (buildingGridHeight * cellSize);
             
             // Check if click is within the building's grid area
-            const clickIsValid = x >= buildingLeftEdge && x <= buildingRightEdge && y >= buildingTopEdge && y <= buildingBottomEdge;
+            const clickIsValid = x >= buildingLeftEdge && x < buildingRightEdge && y >= buildingTopEdge && y < buildingBottomEdge;
             
             
             if (clickIsValid) {

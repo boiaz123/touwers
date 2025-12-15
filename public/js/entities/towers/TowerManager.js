@@ -471,15 +471,15 @@ export class TowerManager {
         });
     }
     
-    handleClick(x, y, canvasRect) {
+    handleClick(x, y, resolutionManager) {
         // Clear any previous selections
         this.towers.forEach(tower => tower.isSelected = false);
         this.buildingManager.buildings.forEach(building => {
             if (building.deselect) building.deselect();
         });
         
-        // Calculate cellSize for grid-based click detection
-        const cellSize = Math.floor(32 * Math.max(0.5, Math.min(2.5, canvasRect.width / 1920)));
+        // Get cell size from ResolutionManager for accurate click detection
+        const cellSize = resolutionManager && resolutionManager.cellSize ? resolutionManager.cellSize : 32;
         
         for (const tower of this.towers) {
             // Special handling for GuardPost (uses absolute coordinates, not grid)
@@ -511,7 +511,7 @@ export class TowerManager {
                 const towerRightEdge = towerLeftEdge + towerGridWidth;
                 const towerBottomEdge = towerTopEdge + towerGridHeight;
                 
-                if (x >= towerLeftEdge && x <= towerRightEdge && y >= towerTopEdge && y <= towerBottomEdge) {
+                if (x >= towerLeftEdge && x < towerRightEdge && y >= towerTopEdge && y < towerBottomEdge) {
                     if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
                         return {
@@ -556,7 +556,7 @@ export class TowerManager {
         }
         
         // Then check building icon clicks with improved detection
-        const buildingResult = this.buildingManager.handleClick(x, y, canvasRect);
+        const buildingResult = this.buildingManager.handleClick(x, y, resolutionManager);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;

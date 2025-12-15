@@ -3,9 +3,6 @@ import { Building } from './Building.js';
 export class MagicAcademy extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.manaRegenRate = 1;
-        this.currentMana = 100;
-        this.maxMana = 100;
         this.magicParticles = [];
         this.isSelected = false;
         
@@ -82,9 +79,6 @@ export class MagicAcademy extends Building {
     update(deltaTime) {
         super.update(deltaTime);
         
-        // Regenerate mana
-        this.currentMana = Math.min(this.maxMana, this.currentMana + this.manaRegenRate * deltaTime);
-        
         // Generate magic particles from spires
         if (Math.random() < deltaTime * 4) {
             const spirePositions = [
@@ -150,14 +144,6 @@ export class MagicAcademy extends Building {
         
         // Render magic effects
         this.renderMagicEffects(ctx, size);
-        
-        // Upgrade indicator when selected
-        if (this.isSelected) {
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('🎓⬆️', this.x, this.y + size/2 + 20);
-        }
     }
     
     renderFortress(ctx, size) {
@@ -608,18 +594,6 @@ export class MagicAcademy extends Building {
         });
     }
     
-    isPointInside(x, y, size) {
-        // Calculate icon position and size for precise click detection
-        const cellSize = size / 4;
-        const iconSize = 30; // Matches the updated render size
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
-        
-        // Check if the point is within the icon's bounds
-        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
-    }
-    
     onClick() {
         this.isSelected = true;
         
@@ -635,8 +609,10 @@ export class MagicAcademy extends Building {
     getElementalUpgradeOptions() {
         const options = [];
         
-        // Add academy building upgrades (always show, even when maxed)
-        options.push(this.getAcademyUpgradeOption());
+        // New: Add academy building upgrades first
+        if (this.academyLevel < this.maxAcademyLevel) {
+            options.push(this.getAcademyUpgradeOption());
+        }
         
         // Add elemental upgrades
         options.push(
@@ -690,43 +666,34 @@ export class MagicAcademy extends Building {
     
     // Get academy upgrade option
     getAcademyUpgradeOption() {
-        const isMaxed = this.academyLevel >= this.maxAcademyLevel;
         const nextLevel = this.academyLevel + 1;
-        
         let description = '';
         let nextUnlock = '';
         let cost = 0;
         
-        if (isMaxed) {
-            description = 'The Magic Academy has reached its maximum power.';
-            nextUnlock = 'Super Weapon Lab and all spell upgrades are available.';
-            cost = 0;
-        } else {
-            switch(nextLevel) {
-                case 2:
-                    description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
-                    nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
-                    cost = 1000;
-                    break;
-                case 3:
-                    description = 'Achieve maximum academy power to unlock Super Weapon Lab construction.';
-                    nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
-                    cost = 2000;
-                    break;
-            }
+        switch(nextLevel) {
+            case 2:
+                description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
+                nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
+                cost = 1000;
+                break;
+            case 3:
+                description = 'Achieve maximum academy power to unlock Super Weapon Lab construction.';
+                nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
+                cost = 2000;
+                break;
         }
         
         return {
             id: 'academy_upgrade',
-            name: isMaxed ? 'Magic Academy (MAX)' : `Academy Level ${nextLevel}`,
+            name: `Academy Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.academyLevel,
             maxLevel: this.maxAcademyLevel,
             cost: cost,
             icon: '🎓',
-            isAcademyUpgrade: true,
-            isMaxed: isMaxed
+            isAcademyUpgrade: true
         };
     }
     
@@ -819,8 +786,7 @@ export class MagicAcademy extends Building {
     }
     
     applyEffect(buildingManager) {
-        // Academy provides mana regeneration and elemental research
-        buildingManager.manaPerSecond = this.manaRegenRate;
+        // Academy provides elemental research
         buildingManager.elementalBonuses = this.getElementalBonuses();
     }
     

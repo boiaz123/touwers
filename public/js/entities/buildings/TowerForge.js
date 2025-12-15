@@ -1004,18 +1004,6 @@ export class TowerForge extends Building {
         });
     }
     
-    isPointInside(x, y, size) {
-        // Calculate cellSize from size parameter
-        const cellSize = size / 4; // size is cellSize * 4
-        const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
-        
-        // Check if the point is within the icon's bounds
-        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
-    }
-    
     onClick() {
         this.isSelected = true;
         return {
@@ -1103,45 +1091,41 @@ export class TowerForge extends Building {
     }
     
     getForgeUpgradeOption() {
-        const isMaxed = this.forgeLevel >= this.maxForgeLevel;
-        const nextLevel = this.forgeLevel + 1;
+        if (this.forgeLevel >= this.maxForgeLevel) {
+            return null;
+        }
         
+        const nextLevel = this.forgeLevel + 1;
         let description = "Upgrade the forge itself to unlock new towers and improve mine income.";
         let nextUnlock = "";
         
-        if (isMaxed) {
-            description = "The Tower Forge has reached its maximum capability.";
-            nextUnlock = "All towers and upgrades are available. All mine income bonuses are active.";
-        } else {
-            switch(nextLevel) {
-                case 2:
-                    nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
-                    break;
-                case 3:
-                    nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
-                    break;
-                case 4:
-                    nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
-                    break;
-                case 5:
-                    nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
-                    break;
-                default:
-                    nextUnlock = "Max Level Reached";
-                    break;
-            }
+        switch(nextLevel) {
+            case 2:
+                nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
+                break;
+            case 3:
+                nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
+                break;
+            case 4:
+                nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
+                break;
+            case 5:
+                nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
+                break;
+            default:
+                nextUnlock = "Max Level Reached";
+                break;
         }
         
         return {
             id: 'forge_level',
-            name: isMaxed ? 'Tower Forge (MAX)' : `Forge Level ${nextLevel}`,
+            name: `Forge Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.forgeLevel,
             maxLevel: this.maxForgeLevel,
-            cost: isMaxed ? 0 : this.calculateForgeUpgradeCost(),
-            icon: '🔨',
-            isMaxed: isMaxed
+            cost: this.calculateForgeUpgradeCost(),
+            icon: '🔨'
         };
     }
     

@@ -825,16 +825,6 @@ export class SuperWeaponLab extends Building {
         return Object.values(this.spells);
     }
     
-    isPointInside(x, y, size) {
-        const cellSize = size / 4;
-        const iconSize = 30;
-        const iconX = (this.gridX + 3.5) * cellSize;
-        const iconY = (this.gridY + 3.5) * cellSize - 5;
-        
-        return x >= iconX - iconSize/2 && x <= iconX + iconSize/2 &&
-               y >= iconY - iconSize/2 && y <= iconY + iconSize/2;
-    }
-    
     onClick() {
         this.isSelected = true;
         

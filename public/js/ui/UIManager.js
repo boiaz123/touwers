@@ -1,14 +1,4 @@
 import { SaveSystem } from '../core/SaveSystem.js';
-import { ForgeMenu } from './menus/ForgeMenu.js';
-import { AcademyMenu } from './menus/AcademyMenu.js';
-import { MagicTowerMenu, CombinationTowerMenu, GuardPostMenu } from './menus/TowerMenus.js';
-import { SuperWeaponMenu } from './menus/SuperWeaponMenu.js';
-import { CastleMenu, TrainingGroundsMenu } from './menus/CastleAndTrainingMenu.js';
-import { GoldMineMenu, BasicTowerMenu } from './menus/GoldMineAndTowerMenus.js';
-import { PanelManager } from './utils/PanelManager.js';
-import { InfoTooltips } from './utils/InfoTooltips.js';
-import { ButtonManager } from './utils/ButtonManager.js';
-import { SpellUI } from './utils/SpellUI.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -28,23 +18,6 @@ export class UIManager {
         this.lastGemValues = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         this.menuRefreshInterval = 0.1; // Refresh every 100ms to check resource changes
         this.menuRefreshTimer = 0;
-        
-        // Initialize menu modules
-        this.forgeMenu = new ForgeMenu(this.gameState, this.towerManager, this.level);
-        this.academyMenu = new AcademyMenu(this.gameState, this.towerManager);
-        this.magicTowerMenu = new MagicTowerMenu(this.towerManager, this.level);
-        this.combinationTowerMenu = new CombinationTowerMenu(this.towerManager, this.level);
-        this.guardPostMenu = new GuardPostMenu(this.towerManager, this.level);
-        this.superWeaponMenu = new SuperWeaponMenu(this.gameState, this.towerManager, this.level);
-        this.castleMenu = new CastleMenu(this.gameState);
-        this.trainingGroundsMenu = new TrainingGroundsMenu(this.gameState, this.towerManager, this.level);
-        this.goldMineMenu = new GoldMineMenu(this.gameState, this.towerManager, this.level);
-        this.basicTowerMenu = new BasicTowerMenu(this.towerManager, this.level);
-        
-        // Initialize utility modules
-        this.infoTooltips = new InfoTooltips(this.towerManager);
-        this.buttonManager = new ButtonManager(this.gameState, this.towerManager);
-        this.spellUI = new SpellUI(this.towerManager);
     }
 
     // ============ BUTTON STATE MANAGEMENT ============
@@ -54,7 +27,67 @@ export class UIManager {
      * based on unlock status, resource availability, and build limits
      */
     updateButtonStates() {
-        this.buttonManager.updateButtonStates();
+        // Update tower buttons
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const towerType = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            
+            // For guard-post, check if unlocked separately from limit
+            let isUnlocked = this.towerManager.unlockSystem.unlockedTowers.has(towerType);
+            let canBuild = this.towerManager.unlockSystem.canBuildTower(towerType);
+            
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
+                btn.disabled = true;
+            } else {
+                btn.style.display = 'flex';
+                // Check if affordable
+                const canAfford = this.gameState.canAfford(cost);
+                
+                // Determine if button should be disabled (limit or affordability)
+                if (!canAfford || !canBuild) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            }
+        });
+
+        // Update building buttons
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            const buildingType = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            
+            // Check if building is unlocked (separate from whether it can be built)
+            const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
+            
+            // Debug superweapon button
+            if (buildingType === 'superweapon') {
+            }
+            
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
+                btn.disabled = true;
+            } else {
+                btn.style.display = 'flex';
+                // Check if it can be built (not at limit) and affordable
+                const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+                const canAfford = this.gameState.canAfford(cost);
+                
+                // Determine if button should be disabled
+                if (!canBuild || !canAfford) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            }
+        });
     }
 
     // ============ SETUP ============
@@ -324,25 +357,245 @@ export class UIManager {
     }
 
     showTowerInfo(towerType) {
-        this.infoTooltips.showTowerInfo(towerType);
+        const info = this.towerManager.getTowerInfo(towerType);
+        if (!info) return;
+        
+        // Get the tower button
+        const towerBtn = document.querySelector(`.tower-btn[data-type="${towerType}"]`);
+        if (!towerBtn) return;
+        
+        // Clear existing menu
+        this.clearTowerInfoMenu();
+        
+        // Create hover menu
+        const menu = document.createElement('div');
+        menu.className = 'building-info-menu';
+        menu.id = 'tower-info-hover';
+        menu.innerHTML = `
+            <div class="info-title">${info.name}</div>
+            <div class="info-stats">
+                <div><span>Damage:</span> <span>${info.damage}</span></div>
+                <div><span>Range:</span> <span>${info.range}</span></div>
+                <div><span>Rate:</span> <span>${info.fireRate}</span></div>
+            </div>
+            <div class="info-description">${info.description}</div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Position the menu near the button
+        const btnRect = towerBtn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        
+        // Position to the left of button (outside sidebar)
+        let left = btnRect.left - menuWidth - 10;
+        let top = btnRect.top;
+        
+        // Adjust if menu goes off screen
+        if (left < 10) {
+            left = btnRect.right + 10;
+        }
+        
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight - 10;
+        }
+        
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        
+        // Clean up on mouse leave
+        towerBtn.addEventListener('mouseleave', () => {
+            this.clearTowerInfoMenu();
+        }, { once: true });
     }
 
     clearTowerInfoMenu() {
-        this.infoTooltips.clearTowerInfoMenu();
+        const existingMenu = document.getElementById('tower-info-hover');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
     }
 
     showBuildingInfo(buildingType) {
-        this.infoTooltips.showBuildingInfo(buildingType);
+        const info = this.towerManager.getBuildingInfo(buildingType);
+        if (!info) return;
+        
+        // Get the building button
+        const buildingBtn = document.querySelector(`.building-btn[data-type="${buildingType}"]`);
+        if (!buildingBtn) return;
+        
+        // Clear existing menu
+        this.clearBuildingInfoMenu();
+        
+        // Check if building is disabled
+        let disabledNote = '';
+        if (buildingType === 'superweapon') {
+            const unlockSystem = this.towerManager.getUnlockSystem();
+            if (!unlockSystem.superweaponUnlocked) {
+                disabledNote = '<div style="color: #ff6b6b;">⚠️ Unlock at Academy Level 3</div>';
+            } else {
+                // Check for diamond cost
+                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
+                const needsDiamonds = diamondCount < 5;
+                if (needsDiamonds) {
+                    disabledNote = `<div style="color: #ff9999;">⚠️ Requires 5 💎 (have ${diamondCount})</div>`;
+                }
+            }
+        }
+        
+        // Build cost string with additional resources
+        let costString = `$${info.cost}`;
+        if (buildingType === 'superweapon' && info.diamondCost) {
+            costString += ` + 💎${info.diamondCost}`;
+        }
+        
+        // Create hover menu
+        const menu = document.createElement('div');
+        menu.className = 'building-info-menu';
+        menu.id = 'building-info-hover';
+        menu.innerHTML = `
+            <div class="info-title">${info.name}</div>
+            <div class="info-stats">
+                <div><span>Effect:</span> <span>${info.effect}</span></div>
+                <div><span>Size:</span> <span>${info.size}</span></div>
+                <div><span>Cost:</span> <span>${costString}</span></div>
+            </div>
+            <div class="info-description">${info.description}</div>
+            ${disabledNote}
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Position the menu near the button
+        const btnRect = buildingBtn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        
+        // Position to the left of button (outside sidebar)
+        let left = btnRect.left - menuWidth - 10;
+        let top = btnRect.top;
+        
+        // Adjust if menu goes off screen
+        if (left < 10) {
+            left = btnRect.right + 10;
+        }
+        
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight - 10;
+        }
+        
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        
+        // Clean up on mouse leave
+        buildingBtn.addEventListener('mouseleave', () => {
+            this.clearBuildingInfoMenu();
+        }, { once: true });
     }
 
     clearBuildingInfoMenu() {
-        this.infoTooltips.clearBuildingInfoMenu();
+        const existingMenu = document.getElementById('building-info-hover');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
     }
 
     // ============ SPELL UI ============
 
     updateSpellUI() {
-        this.spellUI.updateSpellUI(this.gameplayState);
+        const spellButtonsList = document.getElementById('spell-buttons-list');
+        
+        if (!spellButtonsList) {
+            return;
+        }
+        
+        // Find super weapon lab
+        const superWeaponLab = this.towerManager.buildingManager.buildings.find(
+            b => b.constructor.name === 'SuperWeaponLab'
+        );
+        
+        if (!superWeaponLab) {
+            spellButtonsList.innerHTML = '';
+            return;
+        }
+        
+        const availableSpells = superWeaponLab.getAvailableSpells();
+        const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
+        
+        // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
+        // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
+        if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
+            console.log('UIManager: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
+            spellButtonsList.innerHTML = '';
+            
+            // Create a button for each unlocked spell
+            availableSpells.forEach(spell => {
+                const btn = document.createElement('button');
+                btn.className = 'spell-btn';
+                btn.dataset.spellId = spell.id;
+                btn.title = `${spell.name}: ${spell.description}`;
+                btn.innerHTML = `<span>${spell.icon}</span>`;
+                
+                // Add click listener with proper closure
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('UIManager: Spell button clicked:', spell.id, 'cooldown:', spell.currentCooldown);
+                    // Prevent spell casting when game is paused
+                    if (this.gameplayState.isPaused) {
+                        console.log('UIManager: Game is paused, spell blocked');
+                        return;
+                    }
+                    if (spell.currentCooldown === 0) {
+                        console.log('UIManager: Activating spell targeting for:', spell.id);
+                        this.gameplayState.activateSpellTargeting(spell.id);
+                    } else {
+                        console.log('UIManager: Spell is on cooldown:', spell.currentCooldown);
+                    }
+                });
+                
+                spellButtonsList.appendChild(btn);
+            });
+            
+            // Clear the force rebuild flag after rebuilding
+            this.forceSpellUIRebuild = false;
+        }
+        
+        // Update button states (cooldown/ready) without recreating
+        availableSpells.forEach(spell => {
+            const btn = spellButtonsList.querySelector(`[data-spell-id="${spell.id}"]`);
+            if (btn) {
+                const isReady = spell.currentCooldown === 0;
+                
+                // Update disabled state
+                btn.disabled = !isReady;
+                
+                // Update class
+                if (isReady && btn.classList.contains('cooling')) {
+                    btn.classList.remove('cooling');
+                } else if (!isReady && !btn.classList.contains('cooling')) {
+                    btn.classList.add('cooling');
+                }
+                
+                // Update cooldown display
+                let cooldownDisplay = btn.querySelector('.spell-cooldown');
+                if (!isReady) {
+                    if (!cooldownDisplay) {
+                        cooldownDisplay = document.createElement('div');
+                        cooldownDisplay.className = 'spell-cooldown';
+                        btn.appendChild(cooldownDisplay);
+                    }
+                    cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                    cooldownDisplay.style.position = 'absolute';
+                    cooldownDisplay.style.fontSize = '0.7em';
+                    cooldownDisplay.style.fontWeight = 'bold';
+                } else {
+                    if (cooldownDisplay) {
+                        cooldownDisplay.remove();
+                    }
+                }
+            }
+        });
     }
 
     // ============ UPDATE UI ============
@@ -387,7 +640,81 @@ export class UIManager {
     }
 
     updateUIAvailability() {
-        this.buttonManager.updateUIAvailability();
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        
+        // Update tower button states - show only when unlocked, disable based on resources
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const type = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            const isUnlocked = unlockSystem.unlockedTowers.has(type);
+            const canBuild = unlockSystem.canBuildTower(type);
+            
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.style.display = 'flex';
+                // Button is unlocked, now check if it can be built (not at limit) and affordable
+                if (!canBuild || !this.gameState.canAfford(cost)) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            }
+        });
+        
+        // Update building button states - show when unlocked, disable based on limits and resources
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            const type = btn.dataset.type;
+            const cost = parseInt(btn.dataset.cost);
+            
+            // Check if building is unlocked (not if it can be built - that's different)
+            const isUnlocked = unlockSystem.isBuildingUnlocked(type);
+            
+            // Debug superweapon button
+            if (type === 'superweapon') {
+            }
+            
+            // Hide if not unlocked, show if unlocked
+            if (!isUnlocked) {
+                btn.style.display = 'none';
+                btn.classList.add('disabled');
+                btn.disabled = true;
+            } else {
+                btn.style.display = 'flex';
+                // Building is unlocked, check if it can be built (at limit or affordable)
+                const canBuild = unlockSystem.canBuildBuilding(type);
+                
+                if (!canBuild || !this.gameState.canAfford(cost)) {
+                    btn.classList.add('disabled');
+                    btn.disabled = true;
+                } else {
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                }
+            }
+        });
+        
+        // Update spell buttons visibility - only show when spells are actually unlocked
+        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        
+        if (spellButtonsContainer) {
+            const superWeaponLab = this.towerManager.buildingManager.buildings.find(
+                b => b.constructor.name === 'SuperWeaponLab'
+            );
+            
+            let hasAvailableSpells = false;
+            if (superWeaponLab) {
+                const availableSpells = superWeaponLab.getAvailableSpells();
+                hasAvailableSpells = availableSpells && availableSpells.length > 0;
+            }
+            
+            spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
+        }
     }
 
     setGameSpeedButtonState(speed) {
@@ -408,19 +735,66 @@ export class UIManager {
 
     /**
      * Update active menu based on resource changes (called from GameplayState update loop)
-     * THIS IS DISABLED - Menus now manage their own state independently
-     * Calling show() repeatedly was interrupting user interactions
+     * This ensures menus show real-time gold/gem availability and upgrade progress
      */
     updateActiveMenuIfNeeded(deltaTime) {
-        // Menu updates are now handled by individual menus
-        // Don't refresh the menu here - let menu classes handle their own state
+        if (!this.activeMenuType || !this.activeMenuData) {
+            return; // No menu open
+        }
+
+        this.menuRefreshTimer -= deltaTime;
+        if (this.menuRefreshTimer > 0) {
+            return; // Not time to refresh yet
+        }
+
+        this.menuRefreshTimer = this.menuRefreshInterval;
+
+        // Check if resources have changed
+        const currentGold = this.gameState.gold;
+        const currentGems = this.towerManager.getGemStocks();
+
+        let hasResourcesChanged = currentGold !== this.lastGoldValue;
+        
+        if (!hasResourcesChanged) {
+            for (const gemType of ['fire', 'water', 'air', 'earth', 'diamond']) {
+                if (currentGems[gemType] !== this.lastGemValues[gemType]) {
+                    hasResourcesChanged = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasResourcesChanged) {
+            return; // Resources haven't changed, no need to refresh
+        }
+
+        // Update last known values
+        this.lastGoldValue = currentGold;
+        this.lastGemValues = { ...currentGems };
+
+        // Re-render the active menu based on its type
+        if (this.activeMenuType === 'superweapon' && this.activeMenuData.building) {
+            this.showSuperWeaponMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'academy' && this.activeMenuData.academy) {
+            this.showAcademyUpgradeMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'forge' && this.activeMenuData.forge) {
+            this.showForgeUpgradeMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'magic-tower' && this.activeMenuData.tower) {
+            this.showMagicTowerElementMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'combination-tower' && this.activeMenuData.tower) {
+            this.showCombinationTowerMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'guard-post' && this.activeMenuData.tower) {
+            this.showGuardPostMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'castle' && this.activeMenuData.castle) {
+            this.showCastleUpgradeMenu(this.activeMenuData);
+        }
     }
 
     // ============ UPGRADE MENUS ============
 
     showForgeUpgradeMenu(forgeData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('forge-panel');
+        this.closeOtherPanelsImmediate('forge-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'forge';
@@ -431,12 +805,208 @@ export class UIManager {
         // Store current forge data for this session
         this.currentForgeData = forgeData;
         
-        // Update UI before showing menu
-        this.updateUI();
-        this.updateUIAvailability();
+        // Get unlock system from tower manager
+        const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Show the forge menu
-        this.forgeMenu.show(forgeData);
+        // Get panel and container
+        const panel = document.getElementById('forge-panel');
+        const upgradesContainer = document.getElementById('forge-panel-upgrades');
+        
+        if (!panel || !upgradesContainer) {
+            console.error('UIManager: Forge panel elements not found');
+            return;
+        }
+        
+        // Build upgraded HTML with better visual structure
+        let contentHTML = '';
+        
+        // Forge Level Section - Special styling
+        if (forgeData.forgeUpgrade) {
+            const forgeUpgrade = forgeData.forgeUpgrade;
+            const isMaxed = forgeUpgrade.level >= forgeUpgrade.maxLevel;
+            const canAfford = forgeUpgrade.cost && this.gameState.gold >= forgeUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category forge-level-upgrade">
+                    <div class="panel-upgrade-item forge-level-upgrade ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${forgeUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${forgeUpgrade.name}</div>
+                                <div class="upgrade-description">${forgeUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(forgeUpgrade.level / forgeUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${forgeUpgrade.nextUnlock}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${forgeUpgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${forgeUpgrade.id}" 
+                                    data-forge-level="true"
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade Forge'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Tower Upgrades Section - Organized by availability
+        if (forgeData.upgrades && forgeData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category">
+                <div class="upgrade-category-header">Tower Upgrades</div>`;
+            
+            forgeData.upgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                
+                // Current effect display
+                let currentEffect = '';
+                const totalBonus = upgrade.level * (upgrade.baseCost || 0);
+                if (upgrade.id === 'basic' || upgrade.id === 'barricade' || upgrade.id === 'archer') {
+                    currentEffect = `Damage: +${upgrade.level * 8}`;
+                } else if (upgrade.id === 'poison') {
+                    currentEffect = `Poison: +${upgrade.level * 5}`;
+                } else if (upgrade.id === 'cannon') {
+                    currentEffect = `Damage: +${upgrade.level * 10}`;
+                }
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        // Add sell button for forge
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Forge
+                </button>
+            </div>
+        `;
+        
+        // Update container
+        upgradesContainer.innerHTML = contentHTML;
+        
+        // Show the panel with animation
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup event listeners
+        this.setupForgePanelListeners(forgeData, unlockSystem);
+    }
+
+    setupForgePanelListeners(forgeData, unlockSystem) {
+        const panel = document.getElementById('forge-panel');
+        if (!panel) return;
+        
+        // Close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closeForgePanelWithAnimation();
+            }, { once: true });
+        }
+        
+        // Upgrade buttons
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                const isForgeLevel = e.target.dataset.forgeLevel === 'true';
+                
+                if (isForgeLevel) {
+                    // Handle forge level upgrade
+                    if (forgeData.forge.purchaseForgeUpgrade(this.gameState)) {
+                        // Notify unlock system of forge upgrade
+                        unlockSystem.onForgeUpgraded(forgeData.forge.getForgeLevel());
+                        this.updateUI();
+                        this.updateUIAvailability();
+                        
+                        // Refresh the panel
+                        this.showForgeUpgradeMenu({
+                            type: 'forge_menu',
+                            forge: forgeData.forge,
+                            upgrades: forgeData.forge.getUpgradeOptions(),
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                        });
+                    }
+                } else {
+                    // Handle tower upgrades
+                    if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        
+                        // Refresh the panel
+                        this.showForgeUpgradeMenu({
+                            type: 'forge_menu',
+                            forge: forgeData.forge,
+                            upgrades: forgeData.forge.getUpgradeOptions(),
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                        });
+                    }
+                }
+            });
+        });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(forgeData.forge);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closeForgePanelWithAnimation();
+            }, { once: true });
+        }
+    }
+
+    closeForgePanelWithAnimation() {
+        const panel = document.getElementById('forge-panel');
+        if (!panel) return;
+        
+        if (panel.style.display === 'none') return; // Already closed
+        
+        panel.classList.add('closing');
+        setTimeout(() => {
+            panel.style.display = 'none';
+            panel.classList.remove('closing');
+            this.currentForgeData = null;
+        }, 250);
     }
 
     // ============ GENERIC PANEL SYSTEM ============
@@ -571,7 +1141,7 @@ export class UIManager {
 
     showAcademyUpgradeMenu(academyData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('academy-panel');
+        this.closeOtherPanelsImmediate('academy-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'academy';
@@ -579,17 +1149,218 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        // Update UI before showing menu
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('academy-panel');
+        if (!panel) {
+            console.error('UIManager: Academy panel not found');
+            return;
+        }
         
-        // Show the academy menu
-        this.academyMenu.show(academyData);
+        let contentHTML = '';
+        
+        // Add academy building upgrades first
+        const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
+        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
+            const isMaxed = academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel;
+            const canAfford = academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${academyUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${academyUpgrade.name}</div>
+                                <div class="upgrade-description">${academyUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(academyUpgrade.level / academyUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${academyUpgrade.nextUnlock}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${academyUpgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="academy_upgrade" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add elemental upgrades section
+        if (academyData.upgrades && academyData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Elemental & Research</div>`;
+            
+            academyData.upgrades.forEach(upgrade => {
+                if (upgrade.isAcademyUpgrade) return;
+                
+                let isDisabled = false;
+                let costDisplay = '';
+                let canAfford = false;
+                
+                // Handle combination spell unlocks
+                if (upgrade.isCombinationUnlock) {
+                    let allGemsAvailable = true;
+                    const gemCosts = [];
+                    const gemIcons = {
+                        fire: '🔥',
+                        water: '💧',
+                        air: '💨',
+                        earth: '🪨'
+                    };
+                    
+                    for (const [gemType, amount] of Object.entries(upgrade.cost)) {
+                        const gemCount = academyData.academy.gems[gemType] || 0;
+                        const icon = gemIcons[gemType] || gemType[0];
+                        gemCosts.push(`${icon}${amount}`);
+                        if (gemCount < amount) {
+                            allGemsAvailable = false;
+                        }
+                    }
+                    
+                    isDisabled = !allGemsAvailable;
+                    costDisplay = gemCosts.join(' + ');
+                    canAfford = allGemsAvailable;
+                } else if (upgrade.isResearch) {
+                    canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
+                    costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
+                } else {
+                    const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
+                    canAfford = upgrade.cost && gemCount >= upgrade.cost;
+                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
+                    costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
+                }
+                
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    ${upgrade.isCombinationUnlock ? 'Investment' : 'Level'}: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : costDisplay}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    ${isDisabled ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        // Add sell button for academy
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Academy
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🎓 Magic Academy';
+        
+        const contentContainer = panel.querySelector('#academy-panel-upgrades') || panel.querySelector('.panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('academy-panel'), { once: true });
+        }
+        
+        // Setup button listeners
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                
+                if (upgradeId === 'academy_upgrade') {
+                    if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
+                        const newLevel = academyData.academy.academyLevel;
+                        if (newLevel === 3) {
+                            this.towerManager.getUnlockSystem().onAcademyLevelThree();
+                        }
+                        this.updateUI();
+                        this.updateUIAvailability();
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else if (upgradeId.startsWith('unlock_')) {
+                    const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
+                    if (result && result.success) {
+                        this.towerManager.getUnlockSystem().onCombinationSpellUnlocked(result.spellId);
+                        this.updateUI();
+                        this.updateUIAvailability();
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                } else {
+                    if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                        this.updateUI();
+                        this.showAcademyUpgradeMenu({
+                            type: 'academy_menu',
+                            academy: academyData.academy,
+                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                        });
+                    }
+                }
+            }, { once: true });
+        });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(academyData.academy);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('academy-panel');
+            }, { once: true });
+        }
     }
 
     showMagicTowerElementMenu(towerData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('magic-tower-panel');
+        this.closeOtherPanelsImmediate('magic-tower-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'magic-tower';
@@ -597,15 +1368,101 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('magic-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Magic tower panel not found');
+            return;
+        }
         
-        this.magicTowerMenu.show(towerData);
+        
+        // Generate panel content with element selection
+        let contentHTML = '';
+        
+        towerData.elements.forEach(element => {
+            const isCurrent = element.id === towerData.currentElement;
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${element.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${element.name} Element</div>
+                                <div class="upgrade-description">${element.description}</div>
+                                ${isCurrent ? '<div class="upgrade-current">Currently Selected</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">Free</div>
+                            <button class="upgrade-button panel-element-btn" data-element="${element.id}" ${isCurrent ? 'disabled' : ''}>
+                                ${isCurrent ? 'Active' : 'Select'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Add sell button for tower
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '⚡ Magic Tower Elements';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('magic-tower-panel'), { once: true });
+        }
+        
+        // Add element selection handlers
+        panel.querySelectorAll('.panel-element-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const elementId = e.target.dataset.element;
+                
+                
+                if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
+                    // Refresh the menu
+                    this.showMagicTowerElementMenu({
+                        type: 'magic_tower_menu',
+                        tower: towerData.tower,
+                        elements: towerData.elements,
+                        currentElement: elementId
+                    });
+                }
+            }, { once: true });
+        });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(towerData.tower);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('magic-tower-panel');
+            }, { once: true });
+        }
     }
 
     showCombinationTowerMenu(towerData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('combination-tower-panel');
+        this.closeOtherPanelsImmediate('combination-tower-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'combination-tower';
@@ -613,15 +1470,100 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('combination-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Combination tower panel not found');
+            return;
+        }
         
-        this.combinationTowerMenu.show(towerData);
+        
+        // Generate panel content with spell selection
+        let contentHTML = '';
+        
+        towerData.spells.forEach(spell => {
+            const isCurrent = spell.id === towerData.currentSpell;
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${spell.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${spell.name} Spell</div>
+                                <div class="upgrade-description">${spell.description}</div>
+                                ${isCurrent ? '<div class="upgrade-current">Currently Active</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">Free</div>
+                            <button class="upgrade-button panel-spell-btn" data-spell="${spell.id}" ${isCurrent ? 'disabled' : ''}>
+                                ${isCurrent ? 'Active' : 'Select'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Add sell button for tower
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '✨ Combination Tower Spells';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('combination-tower-panel'), { once: true });
+        }
+        
+        // Add spell selection handlers
+        panel.querySelectorAll('.panel-spell-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const spellId = e.target.dataset.spell;
+                
+                
+                if (this.towerManager.selectCombinationTowerSpell(towerData.tower, spellId)) {
+                    this.showCombinationTowerMenu({
+                        type: 'combination_tower_menu',
+                        tower: towerData.tower,
+                        spells: towerData.spells,
+                        currentSpell: spellId
+                    });
+                }
+            }, { once: true });
+        });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(towerData.tower);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('combination-tower-panel');
+            }, { once: true });
+        }
     }
 
     showGuardPostMenu(towerData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('basic-tower-panel');
+        this.closeOtherPanelsImmediate('basic-tower-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'guard-post';
@@ -629,35 +1571,269 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('basic-tower-panel');
+        if (!panel) {
+            console.error('UIManager: Panel not found for Guard Post menu');
+            return;
+        }
+
+
+        const tower = towerData.tower;
+        const towerInfo = tower.constructor.getInfo();
+        const gameState = towerData.gameState;
         
-        this.guardPostMenu.show(towerData);
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">${towerInfo.icon}</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${towerInfo.name}</div>
+                            <div class="upgrade-description">${towerInfo.description}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Defender hiring section
+        if (!tower.defender || tower.defender.isDead()) {
+            if (tower.defenderDeadCooldown > 0) {
+                // Show cooldown message
+                contentHTML += `
+                    <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">⏱️</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">Defender Cooldown</div>
+                                    <div class="upgrade-description">Wait before hiring another defender</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display" style="color: #ff9999;">${tower.defenderDeadCooldown.toFixed(1)}s</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show hiring option
+                const canAfford = gameState.gold >= 100;
+                contentHTML += `
+                    <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">🛡️</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">Hire Defender L1</div>
+                                    <div class="upgrade-description">Summons a Level 1 defender to guard this post</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display">$100</div>
+                                <button class="upgrade-button hire-defender-btn" ${!canAfford ? 'disabled' : ''}>
+                                    ${canAfford ? 'Hire' : 'Not Enough Gold'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // Defender is active
+            contentHTML += `
+                <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                    <div class="panel-upgrade-item">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">✅</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">Defender Active</div>
+                                <div class="upgrade-description">A defender is currently stationed here</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display">${tower.defender.health}/${tower.defender.maxHealth} HP</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Guard Post
+                </button>
+            </div>
+        `;
+
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🛡️ Guard Post';
+
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('basic-tower-panel'), { once: true });
+        }
+
+        // Setup hire defender button
+        const hireBtn = panel.querySelector('.hire-defender-btn');
+        if (hireBtn) {
+            hireBtn.addEventListener('click', () => {
+                if (tower.hireDefender(gameState)) {
+                    this.updateUI();
+                    // Refresh menu
+                    this.showGuardPostMenu(towerData);
+                }
+            }, { once: true });
+        }
+
+        // Setup sell button
+        const sellBtn = panel.querySelector('.sell-tower-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(tower);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('basic-tower-panel');
+            }, { once: true });
+        }
     }
 
     showTowerStatsMenu(towerData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('basic-tower-panel');
+        this.closeOtherPanelsImmediate('basic-tower-panel');
         
-        this.updateUI();
-        this.updateUIAvailability();
+        // Generic tower stats menu for any tower type
         
-        this.basicTowerMenu.show(towerData);
+        const tower = towerData.tower;
+        const towerInfo = tower.constructor.getInfo();
+        
+        const stats = {
+            name: towerInfo.name,
+            damage: tower.damage,
+            range: tower.range,
+            fireRate: tower.fireRate,
+            description: towerInfo.description,
+            cost: towerInfo.cost,
+            icon: towerInfo.icon || '🏰'
+        };
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">${stats.icon}</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${stats.name}</div>
+                            <div class="upgrade-description">${stats.description}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Tower
+                </button>
+            </div>
+        `;
+        
+        // Display in panel using the non-closing method so menu stays open when clicking towers
+        this.showPanelWithoutClosing('basic-tower-panel', `${stats.icon} Tower Stats`, contentHTML);
+        
+        // Add sell button handler
+        const sellBtn = document.getElementById(`sell-tower-btn-${tower.gridX}-${tower.gridY}`);
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellTower(tower);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('basic-tower-panel');
+            });
+        }
     }
 
     showBasicTowerStatsMenu(towerData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('basic-tower-panel');
+        this.closeOtherPanelsImmediate('basic-tower-panel');
         
-        this.updateUI();
-        this.updateUIAvailability();
+        // Basic tower stats menu - using panel-based system
         
-        this.basicTowerMenu.show(towerData);
+        
+        const tower = towerData.tower;
+        const stats = {
+            name: 'Basic Tower',
+            damage: tower.damage,
+            range: tower.range,
+            fireRate: tower.fireRate,
+            description: 'A reliable wooden watchtower with defenders hurling rocks.',
+            cost: tower.constructor.getInfo().cost
+        };
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">🏹</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${stats.name}</div>
+                            <div class="upgrade-description">${stats.description}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
+            </div>
+        `;
+        
+        // Display in panel with close button
+        this.showPanel('basic-tower-panel', '🏹 Tower Stats', contentHTML);
+        
+        // Add sell button to the panel's action row
+        const panel = document.getElementById('basic-tower-panel');
+        const panelContent = panel.querySelector('.panel-content');
+        
+        // Create sell button container
+        const sellContainer = document.createElement('div');
+        sellContainer.style.cssText = 'padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;';
+        sellContainer.innerHTML = `
+            <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
+                💰 Sell Tower
+            </button>
+        `;
+        panelContent.appendChild(sellContainer);
+        
+        // Add sell button handler
+        panel.querySelector('.sell-tower-btn').addEventListener('click', () => {
+            this.towerManager.sellTower(tower);
+            this.updateUI();
+            this.level.setPlacementPreview(0, 0, false);
+            this.closePanelWithAnimation('basic-tower-panel');
+        });
     }
 
     showSuperWeaponMenu(menuData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('superweapon-panel');
+        this.closeOtherPanelsImmediate('superweapon-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'superweapon';
@@ -665,15 +1841,319 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('superweapon-panel');
+        if (!panel) {
+            console.error('UIManager: SuperWeapon panel not found');
+            return;
+        }
         
-        this.superWeaponMenu.show(menuData);
+        let contentHTML = '';
+        
+        // 1. Add lab level upgrade at top
+        const labUpgrade = menuData.building.getLabUpgradeOption();
+        if (labUpgrade) {
+            const isMaxed = labUpgrade.level >= labUpgrade.maxLevel;
+            const labCost = isMaxed ? 0 : labUpgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category">
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${labUpgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${labUpgrade.name}</div>
+                                <div class="upgrade-description">${labUpgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${labUpgrade.level}/${labUpgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(labUpgrade.level / labUpgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : (this.gameState.gold >= labUpgrade.cost && (menuData.academy && menuData.academy.gems.diamond >= (labUpgrade.diamondCost || 0)) ? 'affordable' : 'unavailable')}">
+                                ${isMaxed ? 'MAX' : `$${labUpgrade.cost} + 💎${labUpgrade.diamondCost || 0}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="lab_upgrade" 
+                                    ${isMaxed || this.gameState.gold < labUpgrade.cost || (menuData.academy && (menuData.academy.gems.diamond || 0) < (labUpgrade.diamondCost || 0)) ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 2. Add main spell upgrade panel (compact progress bars)
+        const mainSpells = Object.values(menuData.building.spells);
+        if (mainSpells.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-top: 0.6rem;">⚡ Lab Spells</div>`;
+            
+            contentHTML += `<div class="spell-bars-container" style="padding: 0.6rem 0.85rem; display: flex; flex-direction: column; gap: 0.6rem;">`;
+            
+            mainSpells.forEach(spell => {
+                const isUnlocked = spell.unlocked;
+                const progressPercent = (spell.upgradeLevel / spell.maxUpgradeLevel) * 100;
+                const canUpgrade = menuData.building.labLevel >= 4 && isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
+                
+                // Build tooltip text with spell stats
+                let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name}</div>`;
+                tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${spell.description || ''}</div>`;
+                tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+                
+                // Show current stats
+                if (spell.damage) tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${Math.floor(spell.damage)}</span></div>`;
+                if (spell.radius) tooltipText += `<div>◯ Radius: <span style="color: #FFD700;">${Math.floor(spell.radius)}px</span></div>`;
+                if (spell.freezeDuration) tooltipText += `<div>❄️ Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
+                if (spell.burnDuration) tooltipText += `<div>🔥 Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
+                if (spell.chainCount) tooltipText += `<div>⚡ Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
+                tooltipText += `<div>⏱️ Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+                
+                // Show upgrade effects
+                if (isUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                    tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
+                    if (spell.damage) tooltipText += `<div>Damage: +${(spell.damage * 0.15).toFixed(0)} (×1.15)</div>`;
+                    if (spell.freezeDuration) tooltipText += `<div>Freeze Duration: +0.5s</div>`;
+                    if (spell.burnDamage) tooltipText += `<div>Burn Damage: +2 per tick</div>`;
+                    if (spell.chainCount) tooltipText += `<div>Chain Targets: +1</div>`;
+                    if (spell.radius) tooltipText += `<div>Radius: +10px</div>`;
+                    tooltipText += `</div>`;
+                }
+                
+                tooltipText += `</div>`;
+                
+                contentHTML += `
+                    <div class="spell-bar-item" style="display: flex; align-items: center; gap: 0.5rem; opacity: ${isUnlocked ? '1' : '0.5'}; position: relative;">
+                        <div style="font-size: 1.2rem; flex-shrink: 0; cursor: help;" class="spell-icon-hover" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">${spell.icon}</div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 0.2rem;">${spell.name}</div>
+                            <div style="height: 12px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative;">
+                                <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s ease;"></div>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.6rem; color: #fff; font-weight: bold; text-shadow: 0 0 2px #000;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</div>
+                            </div>
+                            <div style="font-size: 0.65rem; color: #aaa; margin-top: 0.1rem;">${isUnlocked ? '' : `Unlocks at Level ${spell.baseLevel}`}</div>
+                        </div>
+                        ${isUnlocked ? `<button class="spell-upgrade-btn panel-upgrade-btn" data-main-spell="${spell.id}" style="flex-shrink: 0; padding: 0.4rem 0.6rem; font-size: 1rem; background: ${canUpgrade ? '#FFD700' : '#666'}; color: ${canUpgrade ? '#000' : '#999'}; border: none; border-radius: 4px; cursor: ${canUpgrade ? 'pointer' : 'not-allowed'}; font-weight: bold;" ${!canUpgrade ? 'disabled' : ''}>
+                            ${spell.upgradeLevel >= spell.maxUpgradeLevel ? '✓' : '+'}
+                        </button>` : ''}
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        // 3. Add combination tower upgrades (below main spells)
+        const combinationUpgrades = menuData.building.getCombinationUpgradeOptions(menuData.academy);
+        if (combinationUpgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category-header" style="padding: 0.6rem 0.85rem; color: #FF6BA6; font-weight: bold; border-bottom: 1px solid rgba(255, 107, 166, 0.3); margin-top: 0.6rem;">🔮 Combination Spells</div>`;
+            
+            combinationUpgrades.forEach(upgrade => {
+                const progressPercent = (upgrade.upgradeLevel / upgrade.maxUpgradeLevel) * 100;
+                const canUpgrade = upgrade.upgradeLevel < upgrade.maxUpgradeLevel && this.gameState.gold >= (upgrade.goldCost || 50);
+                
+                contentHTML += `
+                    <div class="upgrade-category" style="margin-bottom: 0.5rem;">
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${upgrade.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${upgrade.name}</div>
+                                    <div class="upgrade-description">${upgrade.description}</div>
+                                    <div style="font-size: 0.75rem; color: #aaa; margin-top: 0.3rem;">Upgrades: ${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</div>
+                                </div>
+                            </div>
+                            <div style="padding: 0 0.6rem 0.5rem 0.6rem;">
+                                <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                    <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FF6BA6, #FF1493); display: flex; align-items: center; justify-content: center;">
+                                        <span style="font-size: 0.65rem; color: #000; font-weight: bold;">${upgrade.upgradeLevel}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${canUpgrade ? 'affordable' : 'unavailable'}">
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : `$${upgrade.goldCost || 50}`}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}" 
+                                        ${!canUpgrade ? 'disabled' : ''}>
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : 'Upgrade'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="superweapon" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Lab
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '💥 Super Weapon Lab';
+        
+        const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Setup spell icon hover tooltips
+        const setupSpellTooltips = () => {
+            const spellIcons = contentContainer.querySelectorAll('.spell-icon-hover');
+            
+            spellIcons.forEach(icon => {
+                let tooltipTimeout;
+                
+                icon.addEventListener('mouseenter', (e) => {
+                    // Cancel any pending hide
+                    clearTimeout(tooltipTimeout);
+                    
+                    // Remove existing tooltips first
+                    const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    existingTooltips.forEach(tooltip => tooltip.remove());
+                    
+                    const tooltipHTML = icon.dataset.tooltip;
+                    if (!tooltipHTML) return;
+                    
+                    // Create tooltip element
+                    const tooltip = document.createElement('div');
+                    tooltip.setAttribute('data-panel-tooltip', 'true');
+                    tooltip.innerHTML = tooltipHTML;
+                    tooltip.style.cssText = `
+                        position: fixed;
+                        background: rgba(10, 10, 20, 0.95);
+                        border: 2px solid #FFD700;
+                        border-radius: 6px;
+                        padding: 0.8rem;
+                        font-size: 0.75rem;
+                        color: #ddd;
+                        max-width: 250px;
+                        z-index: 10001;
+                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                        pointer-events: auto;
+                    `;
+                    
+                    document.body.appendChild(tooltip);
+                    
+                    // Position tooltip near icon
+                    const rect = icon.getBoundingClientRect();
+                    tooltip.style.left = (rect.right + 10) + 'px';
+                    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                    
+                    // Adjust if tooltip goes off screen
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    if (tooltipRect.right > window.innerWidth) {
+                        tooltip.style.left = (rect.left - tooltip.offsetWidth - 10) + 'px';
+                    }
+                    if (tooltipRect.bottom > window.innerHeight) {
+                        tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                    }
+                    if (tooltipRect.top < 0) {
+                        tooltip.style.top = '10px';
+                    }
+                    
+                    // Keep tooltip visible if hovering over it
+                    tooltip.addEventListener('mouseenter', () => {
+                        clearTimeout(tooltipTimeout);
+                    });
+                    
+                    tooltip.addEventListener('mouseleave', () => {
+                        tooltipTimeout = setTimeout(() => {
+                            tooltip.remove();
+                        }, 100);
+                    });
+                });
+                
+                icon.addEventListener('mouseleave', () => {
+                    tooltipTimeout = setTimeout(() => {
+                        const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                        activeTooltips.forEach(tooltip => tooltip.remove());
+                    }, 100);
+                });
+            });
+        };
+        
+        setupSpellTooltips();
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('superweapon-panel'), { once: true });
+        }
+        
+        // Add button handlers - use delegation to support dynamic updates
+        const handleButtonClick = (e) => {
+            const btn = e.target.closest('.panel-upgrade-btn');
+            if (!btn || btn.disabled) return;
+            
+            // Prevent multiple clicks
+            btn.disabled = true;
+            setTimeout(() => { btn.disabled = false; }, 100);
+            
+            if (btn.dataset.upgrade === 'lab_upgrade') {
+                if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
+            } else if (btn.dataset.mainSpell) {
+                const spellId = btn.dataset.mainSpell;
+                const diamondCost = 1;
+                if (menuData.building.upgradeMainSpell(spellId, diamondCost)) {
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
+            } else if (btn.dataset.comboSpell) {
+                const spellId = btn.dataset.comboSpell;
+                const goldCost = 50;
+                const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
+                if (spell && this.gameState.gold >= goldCost && spell.upgradeLevel < spell.maxUpgradeLevel) {
+                    this.gameState.spend(goldCost);
+                    spell.upgradeLevel++;
+                    
+                    // Refresh all combination towers to apply the new upgrades
+                    this.towerManager.towers.forEach(tower => {
+                        if (tower.constructor.name === 'CombinationTower') {
+                            this.towerManager.applyTowerBonuses(tower);
+                        }
+                    });
+                    
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
+            }
+        };
+        
+        // Remove any previous handler and add fresh one
+        panel.removeEventListener('click', handleButtonClick);
+        panel.addEventListener('click', handleButtonClick);
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(menuData.building);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('superweapon-panel');
+            }, { once: true });
+        }
     }
 
     showCastleUpgradeMenu(castleData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('castle-panel');
+        this.closeOtherPanelsImmediate('castle-panel');
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'castle';
@@ -681,20 +2161,287 @@ export class UIManager {
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
         
-        this.updateUI();
-        this.updateUIAvailability();
+        // Castle upgrades menu - using panel-based system
         
-        this.castleMenu.show(castleData);
+        let contentHTML = '';
+        
+        const castle = castleData.castle;
+        const trainingGrounds = castleData.trainingGrounds;
+        const maxHealth = castle.maxHealth;
+        const currentHealth = castle.health;
+        const healthPercent = (currentHealth / maxHealth) * 100;
+        
+        contentHTML += `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">🛡️</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Reinforced Walls</div>
+                            <div class="upgrade-description">Improve castle defenses and structural integrity</div>
+                            <div class="upgrade-level-display">
+                                Health: ${currentHealth}/${maxHealth}
+                                <div class="upgrade-level-bar">
+                                    <div class="upgrade-level-bar-fill" style="width: ${healthPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="upgrade-action-row">
+                        <div class="upgrade-cost-display">Info Only</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add defender hiring section if Training Grounds is available
+        if (trainingGrounds && trainingGrounds.defenderUnlocked) {
+            const defenderOptions = castle.getDefenderHiringOptions(trainingGrounds);
+            
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Defender Hiring</div>`;
+            
+            defenderOptions.forEach(option => {
+                if (option.type === 'defender_status') {
+                    // Status messages (active, cooldown, locked)
+                    contentHTML += `
+                        <div class="panel-upgrade-item">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${option.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${option.name}</div>
+                                    <div class="upgrade-description">${option.description}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (option.type === 'defender_hire' && option.canHire) {
+                    // Hiring options
+                    const canAfford = this.gameState.gold >= option.cost;
+                    const statusClass = canAfford ? 'affordable' : 'unaffordable';
+                    
+                    contentHTML += `
+                        <div class="panel-upgrade-item ${statusClass}">
+                            <div class="upgrade-header-row">
+                                <div class="upgrade-icon-section">${option.icon}</div>
+                                <div class="upgrade-info-section">
+                                    <div class="upgrade-name">${option.name}</div>
+                                    <div class="upgrade-description">${option.description}</div>
+                                </div>
+                            </div>
+                            <div class="upgrade-action-row">
+                                <div class="upgrade-cost-display ${canAfford ? 'affordable' : ''}">
+                                    $${option.cost}
+                                </div>
+                                <button class="upgrade-button panel-upgrade-btn" 
+                                        data-defender-level="${option.level}" 
+                                        ${!canAfford ? 'disabled' : ''}>
+                                    Hire Level ${option.level}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        this.showPanel('castle-panel', '🏰 Castle Upgrades', contentHTML);
+        
+        // Add event listeners for defender hiring
+        if (trainingGrounds && trainingGrounds.defenderUnlocked) {
+            document.querySelectorAll('[data-defender-level]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const level = parseInt(btn.dataset.defenderLevel);
+                    if (castle.hireDefender(level, this.gameState)) {
+                        this.updateUI();
+                        this.updateButtonStates();
+                        this.closePanelWithAnimation('castle-panel');
+                    } else {
+                    }
+                }, { once: true });
+            });
+        }
     }
 
     showTrainingGroundsUpgradeMenu(trainingData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('training-panel');
+        this.closeOtherPanelsImmediate('training-panel');
         
-        this.updateUI();
-        this.updateUIAvailability();
+        const panel = document.getElementById('training-panel');
+        if (!panel) {
+            console.error('UIManager: Training panel not found');
+            return;
+        }
         
-        this.trainingGroundsMenu.show(trainingData);
+        
+        let contentHTML = '';
+        
+        // Add training grounds building level upgrade first
+        if (trainingData.trainingUpgrade) {
+            const upgrade = trainingData.trainingUpgrade;
+            const isMaxed = upgrade.level >= upgrade.maxLevel;
+            const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+            
+            contentHTML += `
+                <div class="upgrade-category training-level-upgrade">
+                    <div class="panel-upgrade-item training-level-upgrade ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${upgrade.nextUnlock}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="training_level" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade Training'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add range upgrades section
+        if (trainingData.upgrades && trainingData.upgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Manned Tower Range Training</div>`;
+            
+            trainingData.upgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const isUnlocked = upgrade.isUnlocked;
+                const isDisabled = isMaxed || !canAfford || !isUnlocked;
+                
+                let statusClass = '';
+                if (isMaxed) {
+                    statusClass = 'maxed';
+                } else if (!isUnlocked) {
+                    statusClass = 'locked';
+                } else if (!canAfford) {
+                    statusClass = 'unaffordable';
+                } else {
+                    statusClass = 'affordable';
+                }
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${statusClass}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                ${!isUnlocked ? `<div style="font-size: 0.8rem; color: #ff6b6b; margin-top: 0.3rem;">⚠️ Unlock at Training Level ${upgrade.level + 1}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isDisabled ? (isMaxed ? 'maxed' : 'unavailable') : canAfford ? 'affordable' : 'unaffordable'}">
+                                ${isMaxed ? 'MAX' : isUnlocked ? (canAfford ? `$${upgrade.cost}` : `$${upgrade.cost}`) : 'LOCKED'}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    data-tower-type="${upgrade.towerType}"
+                                    ${isDisabled ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : isUnlocked ? 'Train Range' : 'LOCKED'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button class="upgrade-button sell-building-btn" data-building-id="training" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Training Grounds
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '🏛️ Training Grounds';
+        
+        const contentContainer = panel.querySelector('#training-panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('training-panel'), { once: true });
+        }
+        
+        // Get unlock system for tower unlock notifications
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        
+        // Add button handlers for upgrades
+        panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = e.target.dataset.upgrade;
+                const towerType = e.target.dataset.towerType;
+                
+                
+                let success = false;
+                if (upgradeId === 'training_level') {
+                    success = trainingData.trainingGrounds.purchaseTrainingLevelUpgrade(this.gameState);
+                    // Notify unlock system of training grounds upgrade
+                    if (success) {
+                        unlockSystem.onTrainingGroundsUpgraded(trainingData.trainingGrounds.trainingLevel);
+                    }
+                } else if (towerType) {
+                    success = trainingData.trainingGrounds.purchaseRangeUpgrade(towerType, this.gameState);
+                }
+                
+                if (success) {
+                    this.updateUI();
+                    this.updateUIAvailability();
+                    // Refresh the menu
+                    this.showTrainingGroundsUpgradeMenu({
+                        trainingGrounds: trainingData.trainingGrounds,
+                        upgrades: trainingData.trainingGrounds.getRangeUpgradeOptions(),
+                        trainingUpgrade: trainingData.trainingGrounds.getTrainingLevelUpgradeOption()
+                    });
+                }
+            }, { once: true });
+        });
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(trainingData.trainingGrounds);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('training-panel');
+            }, { once: true });
+        }
     }
 
     showTrainingGroundsMenu(trainingData) {
@@ -704,11 +2451,148 @@ export class UIManager {
 
     showGoldMineMenu(goldMineData) {
         // Close other panels to prevent stacking
-        PanelManager.closeOtherPanelsImmediate('goldmine-panel');
+        this.closeOtherPanelsImmediate('goldmine-panel');
         
-        this.updateUI();
+        const panel = document.getElementById('goldmine-panel');
+        if (!panel) {
+            console.error('UIManager: Gold Mine panel not found');
+            return;
+        }
         
-        this.goldMineMenu.show(goldMineData);
+        const goldMine = goldMineData.goldMine;
+        const incomeInfo = goldMine.getBaseIncome();
+        const modeIcon = goldMine.gemMode ? '💎' : '💰';
+        const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
+        
+        // Calculate progress information
+        const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
+        const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
+        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${timeRemaining.toFixed(1)}s`;
+        const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
+        
+        let contentHTML = `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">⛏️</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Gold Mine</div>
+                            <div class="upgrade-description">${modeText} - ${incomeInfo}/cycle</div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem;">
+                                <div style="font-size: 1.2rem; min-width: 2rem;">${modeIcon}</div>
+                                <div style="flex: 1;">
+                                    <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                        <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: ${readyColor}; font-weight: bold; min-width: 3.5rem; text-align: right;">${readyStatus}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add gem mining toggle if gem mining is unlocked
+        if (goldMine.gemMiningUnlocked) {
+            //console.log('[UIManager] Showing gem mining toggle');
+            const toggleText = goldMine.gemMode ? '💰 Switch to Gold' : '💎 Switch to Gems';
+            contentHTML += `
+                <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
+                    <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#4169E1' : '#FFB800'}; flex: 1; margin: 0;">
+                        ${toggleText}
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Add sell button
+        contentHTML += `
+            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+        `;
+        
+        // Add collect button if ready
+        if (goldMine.goldReady) {
+            contentHTML += `
+                <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
+                    💰 Collect Now
+                </button>
+            `;
+        }
+        
+        contentHTML += `
+                <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; flex: 1; margin: 0;">
+                    💰 Sell Mine
+                </button>
+            </div>
+        `;
+        
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '⛏️ Gold Mine';
+        
+        const contentContainer = panel.querySelector('#goldmine-panel-content') || panel.querySelector('.panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+        
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
+        }
+        
+        // Add toggle gem mining button listener
+        const toggleBtn = panel.querySelector('.toggle-mine-mode-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                goldMine.gemMode = !goldMine.gemMode;
+                goldMine.currentProduction = 0; // Reset production cycle when switching modes
+                this.updateUI();
+                this.showGoldMineMenu(goldMineData);
+            }, { once: true });
+        }
+        
+        // Add collect button listener if button exists
+        const collectBtn = panel.querySelector('.collect-gold-btn');
+        if (collectBtn) {
+            collectBtn.addEventListener('click', () => {
+                if (goldMine.gemMode) {
+                    // Collect gems - need to distribute them to academy
+                    const academies = this.towerManager.buildingManager.buildings.filter(b => 
+                        b.constructor.name === 'MagicAcademy'
+                    );
+                    if (academies.length > 0) {
+                        const collectedGems = goldMine.collectGems();
+                        academies[0].gems.fire += collectedGems.fire || 0;
+                        academies[0].gems.water += collectedGems.water || 0;
+                        academies[0].gems.air += collectedGems.air || 0;
+                        academies[0].gems.earth += collectedGems.earth || 0;
+                    }
+                } else {
+                    const collected = goldMine.collectGold();
+                    this.gameState.gold += collected;
+                }
+                this.updateUI();
+                this.closePanelWithAnimation('goldmine-panel');
+            }, { once: true });
+        }
+        
+        // Add sell button listener
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(goldMine);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('goldmine-panel');
+            }, { once: true });
+        }
     }
 
     getUpgradeCurrentEffect(upgrade) {

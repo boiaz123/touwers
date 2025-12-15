@@ -662,8 +662,11 @@ export class GameplayState {
         // FIXED: Unified click handler that properly routes all menu types
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const canvasX = e.clientX - rect.left;
-            const canvasY = e.clientY - rect.top;
+            // Account for CSS scaling (same as mousemove handler)
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const canvasX = (e.clientX - rect.left) * scaleX;
+            const canvasY = (e.clientY - rect.top) * scaleY;
             
             // All click handling is now done in handleClick method, which prioritizes placement
             this.handleClick(canvasX, canvasY);
@@ -1044,10 +1047,7 @@ export class GameplayState {
         }
         
         // Only show menus if not in placement mode
-        const clickResult = this.towerManager.handleClick(x, y, { 
-            width: this.stateManager.canvas.width, 
-            height: this.stateManager.canvas.height 
-        });
+        const clickResult = this.towerManager.handleClick(x, y, this.level.resolutionManager);
         
         
         if (clickResult) {
