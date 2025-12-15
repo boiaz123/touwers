@@ -635,10 +635,8 @@ export class MagicAcademy extends Building {
     getElementalUpgradeOptions() {
         const options = [];
         
-        // New: Add academy building upgrades first
-        if (this.academyLevel < this.maxAcademyLevel) {
-            options.push(this.getAcademyUpgradeOption());
-        }
+        // Add academy building upgrades (always show, even when maxed)
+        options.push(this.getAcademyUpgradeOption());
         
         // Add elemental upgrades
         options.push(
@@ -692,34 +690,43 @@ export class MagicAcademy extends Building {
     
     // Get academy upgrade option
     getAcademyUpgradeOption() {
+        const isMaxed = this.academyLevel >= this.maxAcademyLevel;
         const nextLevel = this.academyLevel + 1;
+        
         let description = '';
         let nextUnlock = '';
         let cost = 0;
         
-        switch(nextLevel) {
-            case 2:
-                description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
-                nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
-                cost = 1000;
-                break;
-            case 3:
-                description = 'Achieve maximum academy power to unlock Super Weapon Lab construction.';
-                nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
-                cost = 2000;
-                break;
+        if (isMaxed) {
+            description = 'The Magic Academy has reached its maximum power.';
+            nextUnlock = 'Super Weapon Lab and all spell upgrades are available.';
+            cost = 0;
+        } else {
+            switch(nextLevel) {
+                case 2:
+                    description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
+                    nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
+                    cost = 1000;
+                    break;
+                case 3:
+                    description = 'Achieve maximum academy power to unlock Super Weapon Lab construction.';
+                    nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
+                    cost = 2000;
+                    break;
+            }
         }
         
         return {
             id: 'academy_upgrade',
-            name: `Academy Level ${nextLevel}`,
+            name: isMaxed ? 'Magic Academy (MAX)' : `Academy Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.academyLevel,
             maxLevel: this.maxAcademyLevel,
             cost: cost,
             icon: '🎓',
-            isAcademyUpgrade: true
+            isAcademyUpgrade: true,
+            isMaxed: isMaxed
         };
     }
     

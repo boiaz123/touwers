@@ -1103,41 +1103,45 @@ export class TowerForge extends Building {
     }
     
     getForgeUpgradeOption() {
-        if (this.forgeLevel >= this.maxForgeLevel) {
-            return null;
-        }
-        
+        const isMaxed = this.forgeLevel >= this.maxForgeLevel;
         const nextLevel = this.forgeLevel + 1;
+        
         let description = "Upgrade the forge itself to unlock new towers and improve mine income.";
         let nextUnlock = "";
         
-        switch(nextLevel) {
-            case 2:
-                nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
-                break;
-            case 3:
-                nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
-                break;
-            case 4:
-                nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
-                break;
-            case 5:
-                nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
-                break;
-            default:
-                nextUnlock = "Max Level Reached";
-                break;
+        if (isMaxed) {
+            description = "The Tower Forge has reached its maximum capability.";
+            nextUnlock = "All towers and upgrades are available. All mine income bonuses are active.";
+        } else {
+            switch(nextLevel) {
+                case 2:
+                    nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
+                    break;
+                case 3:
+                    nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
+                    break;
+                case 4:
+                    nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
+                    break;
+                case 5:
+                    nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
+                    break;
+                default:
+                    nextUnlock = "Max Level Reached";
+                    break;
+            }
         }
         
         return {
             id: 'forge_level',
-            name: `Forge Level ${nextLevel}`,
+            name: isMaxed ? 'Tower Forge (MAX)' : `Forge Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.forgeLevel,
             maxLevel: this.maxForgeLevel,
-            cost: this.calculateForgeUpgradeCost(),
-            icon: '🔨'
+            cost: isMaxed ? 0 : this.calculateForgeUpgradeCost(),
+            icon: '🔨',
+            isMaxed: isMaxed
         };
     }
     

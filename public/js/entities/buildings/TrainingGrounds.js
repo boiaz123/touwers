@@ -1002,41 +1002,45 @@ export class TrainingGrounds extends Building {
      * Get the training grounds level upgrade option
      */
     getTrainingLevelUpgradeOption() {
-        if (this.trainingLevel >= this.maxTrainingLevel) {
-            return null;
-        }
-        
+        const isMaxed = this.trainingLevel >= this.maxTrainingLevel;
         const nextLevel = this.trainingLevel + 1;
+        
         let description = "Upgrade the training grounds to unlock the next range training level for manned towers.";
         let nextUnlock = "";
         
-        switch(nextLevel) {
-            case 2:
-                nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
-                break;
-            case 3:
-                nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
-                break;
-            case 4:
-                nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers";
-                break;
-            case 5:
-                nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
-                break;
-            default:
-                nextUnlock = "Max Level Reached";
-                break;
+        if (isMaxed) {
+            description = "The Training Grounds has reached maximum capability.";
+            nextUnlock = "All manned tower range upgrades are available.";
+        } else {
+            switch(nextLevel) {
+                case 2:
+                    nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
+                    break;
+                case 3:
+                    nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
+                    break;
+                case 4:
+                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers";
+                    break;
+                case 5:
+                    nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
+                    break;
+                default:
+                    nextUnlock = "Max Level Reached";
+                    break;
+            }
         }
         
         return {
             id: 'training_level',
-            name: `Training Grounds Level ${nextLevel}`,
+            name: isMaxed ? 'Training Grounds (MAX)' : `Training Grounds Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.trainingLevel,
             maxLevel: this.maxTrainingLevel,
-            cost: this.calculateTrainingLevelCost(),
-            icon: '🏫'
+            cost: isMaxed ? 0 : this.calculateTrainingLevelCost(),
+            icon: '🏫',
+            isMaxed: isMaxed
         };
     }
     
