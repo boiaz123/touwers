@@ -159,10 +159,10 @@ export class EnemyManager {
     }
     
     removeDeadEnemies() {
-        let killedCount = 0;
+        let totalGold = 0;
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.isDead()) {
-                killedCount++;
+                totalGold += enemy.goldReward || 0;
                 // Preserve splatters from dead enemies so they continue to animate and fade
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     this.orphanedSplatters.push(...enemy.hitSplatters);
@@ -171,7 +171,7 @@ export class EnemyManager {
             }
             return true;
         });
-        return killedCount;
+        return totalGold;
     }
     
     render(ctx) {

@@ -1477,10 +1477,9 @@ export class GameplayState {
             return;
         }
         
-        const killedEnemies = this.enemyManager.removeDeadEnemies();
-        if (killedEnemies > 0) {
-            const goldPerEnemy = 10 + Math.floor(this.gameState.wave / 2);
-            this.gameState.gold += killedEnemies * goldPerEnemy;
+        const goldFromEnemies = this.enemyManager.removeDeadEnemies();
+        if (goldFromEnemies > 0) {
+            this.gameState.gold += goldFromEnemies;
             this.uiManager.updateUI();
             this.uiManager.updateButtonStates();
         }
