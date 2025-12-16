@@ -13,7 +13,6 @@ export class BarricadeTower extends Tower {
         this.rollingBarrels = [];
         this.slowZones = [];
         
-        this.staticEnvironment = this.generateStaticEnvironment();
         this.originalRange = this.range;
     }
     
@@ -127,235 +126,18 @@ export class BarricadeTower extends Tower {
             radius: 40,
             life: 8.0,
             maxLife: 8.0,
-            smokeIntensity: 0,
-            smokeParticles: this.generateSmokeParticles(x, y)
+            smokeIntensity: 0
         });
-    }
-    
-    generateSmokeParticles(centerX, centerY) {
-        const particles = [];
-        for (let i = 0; i < 20; i++) {
-            particles.push({
-                x: centerX + (Math.random() - 0.5) * 60,
-                y: centerY + (Math.random() - 0.5) * 60,
-                size: Math.random() * 8 + 4,
-                opacity: Math.random() * 0.6 + 0.2,
-                drift: (Math.random() - 0.5) * 0.5
-            });
-        }
-        return particles;
-    }
-    
-    generateStaticEnvironment() {
-        const baseResolution = 1920;
-        const scaleFactor = Math.max(0.5, Math.min(2.5, 1920 / baseResolution));
-        const cellSize = Math.floor(32 * scaleFactor);
-        const towerGridSize = cellSize * 2;
-        const halfGrid = towerGridSize * 0.5;
-        
-        return {
-            bushes: [
-                { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.25 },
-                { x: this.x + halfGrid * 0.3, y: this.y + halfGrid * 0.15 },
-                { x: this.x - halfGrid * 0.25, y: this.y - halfGrid * 0.1 },
-                { x: this.x + halfGrid * 0.5, y: this.y - halfGrid * 0.15 },
-                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.1 },
-                { x: this.x + halfGrid * 0.6, y: this.y + halfGrid * 0.4 },
-                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.5 }
-            ],
-            rocks: [
-                { x: this.x - halfGrid * 0.15, y: this.y + halfGrid * 0.12, size: 3 },
-                { x: this.x + halfGrid * 0.15, y: this.y + halfGrid * 0.08, size: 2 },
-                { x: this.x - halfGrid * 0.4, y: this.y + halfGrid * 0.3, size: 4 },
-                { x: this.x + halfGrid * 0.35, y: this.y + halfGrid * 0.25, size: 3 },
-                { x: this.x - halfGrid * 0.3, y: this.y - halfGrid * 0.15, size: 2 },
-                { x: this.x + halfGrid * 0.4, y: this.y - halfGrid * 0.12, size: 3 }
-            ],
-            smallTrees: [
-                { x: this.x - halfGrid * 0.35, y: this.y + halfGrid * 0.2, size: 12 },
-                { x: this.x + halfGrid * 0.25, y: this.y + halfGrid * 0.12, size: 10 },
-                { x: this.x - halfGrid * 0.4, y: this.y - halfGrid * 0.12, size: 14 },
-                { x: this.x + halfGrid * 0.3, y: this.y - halfGrid * 0.15, size: 9 },
-                { x: this.x - halfGrid * 0.2, y: this.y + halfGrid * 0.4, size: 12 },
-                { x: this.x + halfGrid * 0.5, y: this.y + halfGrid * 0.03, size: 11 }
-            ],
-            mediumTrees: [
-                { x: this.x - halfGrid * 0.5, y: this.y + halfGrid * 0.4, size: 18 },
-                { x: this.x + halfGrid * 0.45, y: this.y + halfGrid * 0.3, size: 16 },
-                { x: this.x - halfGrid * 0.6, y: this.y - halfGrid * 0.03, size: 20 },
-                { x: this.x + halfGrid * 0.55, y: this.y - halfGrid * 0.12, size: 15 },
-                { x: this.x - halfGrid * 0.25, y: this.y + halfGrid * 0.6, size: 18 }
-            ],
-            forestTrees: [
-                { x: this.x - halfGrid * 0.6, y: this.y + halfGrid * 0.6, size: 25 },
-                { x: this.x + halfGrid * 0.55, y: this.y + halfGrid * 0.5, size: 23 },
-                { x: this.x - halfGrid * 0.55, y: this.y + halfGrid * 0.08, size: 27 },
-                { x: this.x + halfGrid * 0.6, y: this.y - halfGrid * 0.03, size: 24 }
-            ],
-            rubblePiles: [
-                {
-                    x: this.x + halfGrid * 0.12,
-                    y: this.y + halfGrid * 0.15,
-                    pieces: [
-                        { offsetX: -1, offsetY: 1, size: 1.2 },
-                        { offsetX: 2, offsetY: -1, size: 1.5 }
-                    ]
-                },
-                {
-                    x: this.x - halfGrid * 0.15,
-                    y: this.y - halfGrid * 0.2,
-                    pieces: [
-                        { offsetX: 1, offsetY: 0, size: 1.0 },
-                        { offsetX: -2, offsetY: 1, size: 1.3 }
-                    ]
-                }
-            ]
-        };
     }
 
     render(ctx) {
-        // Get tower size - use ResolutionManager if available
+        // Get tower size
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
         
         // Subtle tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.fillRect(this.x - towerSize * 0.3 + 2, this.y - towerSize * 0.2 + 2, towerSize * 0.6, towerSize * 0.4);
-        
-        // Forest canopy trees (background, tallest)
-        this.staticEnvironment.forestTrees.forEach(tree => {
-            // Thick trunk for forest trees
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(tree.x - 3, tree.y - 3, 6, tree.size);
-            
-            // 4 layers for tall forest trees
-            for (let layer = 0; layer < 4; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.25);
-                const layerSize = tree.size * (0.9 - layer * 0.15);
-                
-                ctx.fillStyle = layer < 2 ? '#0F2F0F' : '#1F4F1F';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.7, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.7, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#004400';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
-        });
-        
-        // Medium understory trees
-        this.staticEnvironment.mediumTrees.forEach(tree => {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(tree.x - 2.5, tree.y - 2.5, 5, tree.size);
-            
-            for (let layer = 0; layer < 3; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.3);
-                const layerSize = tree.size * (0.85 - layer * 0.2);
-                
-                ctx.fillStyle = layer === 0 ? '#1F5F1F' : '#2F7F2F';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.65, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.65, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#005500';
-                ctx.lineWidth = 0.8;
-                ctx.stroke();
-            }
-        });
-        
-        // Small trees close to tower
-        this.staticEnvironment.smallTrees.forEach(tree => {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(tree.x - 1.5, tree.y - 1.5, 3, tree.size);
-            
-            for (let layer = 0; layer < 2; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.4);
-                const layerSize = tree.size * (0.7 - layer * 0.2);
-                
-                ctx.fillStyle = layer === 0 ? '#228B22' : '#32CD32';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.5, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.5, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#006400';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
-        });
-        
-        // Forest floor elements close to tower
-        this.staticEnvironment.bushes.forEach(bush => {
-            ctx.fillStyle = '#1F5F1F';
-            ctx.beginPath();
-            ctx.arc(bush.x, bush.y, 6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#2F7F2F';
-            const bushParts = [
-                { offsetX: -2, offsetY: -1, size: 4 },
-                { offsetX: 3, offsetY: 0, size: 3 },
-                { offsetX: 0, offsetY: 2, size: 4 },
-                { offsetX: -1, offsetY: 1, size: 3 }
-            ];
-            
-            bushParts.forEach(part => {
-                ctx.beginPath();
-                ctx.arc(bush.x + part.offsetX, bush.y + part.offsetY, part.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            
-            ctx.fillStyle = '#4F9F4F';
-            ctx.beginPath();
-            ctx.arc(bush.x - 1, bush.y - 2, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        this.staticEnvironment.rocks.forEach(rock => {
-            ctx.fillStyle = '#555555';
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.arc(rock.x, rock.y, rock.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        });
-        
-        this.staticEnvironment.rubblePiles.forEach(pile => {
-            pile.pieces.forEach(piece => {
-                ctx.fillStyle = '#8B6F47';
-                ctx.beginPath();
-                ctx.arc(pile.x + piece.offsetX, pile.y + piece.offsetY, piece.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        });
-        
-        // Tower foundation stones (integrated with landscape)
-        const foundationStones = [
-            { x: this.x - 25, y: this.y + 5, size: 4 },
-            { x: this.x + 20, y: this.y + 8, size: 3 },
-            { x: this.x - 18, y: this.y - 12, size: 5 },
-            { x: this.x + 22, y: this.y - 8, size: 4 }
-        ];
-        
-        foundationStones.forEach(stone => {
-            ctx.fillStyle = '#696969';
-            ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(stone.x, stone.y, stone.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        });
         
         // Watch tower base platform - more defined structure
         const baseWidth = towerSize * 0.5;
@@ -389,7 +171,166 @@ export class BarricadeTower extends Tower {
             ctx.strokeRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
         }
         
-        // Tower supports - more defined and structural
+        this.renderTowerSupports(ctx, baseWidth, baseHeight, towerSize);
+        this.renderUpperPlatform(ctx, baseWidth, baseHeight, towerSize);
+        this.renderDefenders(ctx, baseWidth, baseHeight, towerSize);
+        this.renderRollingBarrels(ctx);
+        this.renderSmokeZones(ctx);
+        
+        // Render trees in front so tower stands behind them
+        this.renderTrees(ctx);
+        
+        // Range indicator
+        if (this.target) {
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Render attack radius circle if selected
+        this.renderAttackRadiusCircle(ctx);
+    }
+    
+    renderTrees(ctx) {
+        // Render trees overlapping the tower to make it look like it's in a forest
+        // Position trees so trunk bases stay within the 2x2 grid
+        const treePositions = [
+            { x: this.x - 20, y: this.y - 15, size: 50, seed: 0 },
+            { x: this.x + 22, y: this.y - 18, size: 48, seed: 1 },
+            { x: this.x - 22, y: this.y + 8, size: 52, seed: 2 },
+            { x: this.x + 20, y: this.y + 10, size: 49, seed: 3 }
+        ];
+        
+        treePositions.forEach(tree => {
+            this.renderTreeType(ctx, tree.x, tree.y, tree.size, tree.seed % 4);
+        });
+    }
+    
+    renderTreeType(ctx, x, y, size, typeId) {
+        switch(typeId) {
+            case 0:
+                this.renderTreeType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderTreeType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderTreeType3(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType4(ctx, x, y, size);
+        }
+    }
+    
+    renderTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, x, y, size) {
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType4(ctx, x, y, size) {
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.12, y - size * 0.45);
+        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    renderTowerSupports(ctx, baseWidth, baseHeight, towerSize) {
         const supportWidth = 8;
         const supportHeight = towerSize * 0.55;
         
@@ -432,8 +373,10 @@ export class BarricadeTower extends Tower {
                 ctx.fill();
             });
         }
-        
-        // Upper platform - more defined structure
+    }
+    
+    renderUpperPlatform(ctx, baseWidth, baseHeight, towerSize) {
+        const supportHeight = towerSize * 0.55;
         const platformWidth = baseWidth * 0.9;
         const platformHeight = 10;
         const platformY = this.y - baseHeight - supportHeight;
@@ -509,8 +452,14 @@ export class BarricadeTower extends Tower {
             ctx.lineTo(barrelX + 4, barrelY + 2);
             ctx.stroke();
         }
+    }
+    
+    renderDefenders(ctx, baseWidth, baseHeight, towerSize) {
+        const supportHeight = towerSize * 0.55;
+        const platformWidth = baseWidth * 0.9;
+        const platformHeight = 10;
+        const platformY = this.y - baseHeight - supportHeight;
         
-        // Render defenders on platform
         this.defenders.forEach((defender, index) => {
             ctx.save();
             
@@ -573,8 +522,9 @@ export class BarricadeTower extends Tower {
             
             ctx.restore();
         });
-        
-        // Render rolling barrels
+    }
+    
+    renderRollingBarrels(ctx) {
         this.rollingBarrels.forEach(barrel => {
             ctx.save();
             ctx.translate(barrel.x, barrel.y);
@@ -598,13 +548,17 @@ export class BarricadeTower extends Tower {
             
             ctx.restore();
         });
-        
-        // Render smoke zones with rubble
+    }
+    
+    renderSmokeZones(ctx) {
         this.slowZones.forEach(zone => {
             const alpha = zone.life / zone.maxLife;
             const smokeAlpha = zone.smokeIntensity * alpha;
             
-            // Static rubble on ground (fix flickering by using zone ID for consistent positioning)
+            // Skip rendering if alpha is too low
+            if (smokeAlpha < 0.01) return;
+            
+            // Static rubble particles positioned deterministically
             ctx.fillStyle = `rgba(105, 105, 105, ${alpha * 0.8})`;
             for (let i = 0; i < 12; i++) {
                 const angle = (i / 12) * Math.PI * 2;
@@ -618,21 +572,18 @@ export class BarricadeTower extends Tower {
                 ctx.fill();
             }
             
-            // Smoke particles
-            zone.smokeParticles.forEach(particle => {
-                const particleAlpha = smokeAlpha * particle.opacity;
-                ctx.fillStyle = `rgba(128, 128, 128, ${particleAlpha})`;
-                
-                const smokeX = particle.x + Math.sin(this.animationTime + particle.drift) * 5;
-                const smokeY = particle.y + Math.cos(this.animationTime * 0.5 + particle.drift) * 3;
-                
-                ctx.beginPath();
-                ctx.arc(smokeX, smokeY, particle.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
+            // Expanding cloud effect
+            const expandPulse = Math.sin(this.animationTime * 3) * 0.2 + 1;
+            const cloudRadius = zone.radius * expandPulse;
+            
+            // Outer smoke cloud
+            ctx.fillStyle = `rgba(128, 128, 128, ${smokeAlpha * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(zone.x, zone.y, cloudRadius, 0, Math.PI * 2);
+            ctx.fill();
             
             // Zone outline
-            ctx.strokeStyle = `rgba(105, 105, 105, ${alpha * 0.3})`;
+            ctx.strokeStyle = `rgba(105, 105, 105, ${alpha * 0.4})`;
             ctx.lineWidth = 2;
             ctx.setLineDash([3, 3]);
             ctx.beginPath();
@@ -640,91 +591,6 @@ export class BarricadeTower extends Tower {
             ctx.stroke();
             ctx.setLineDash([]);
         });
-        
-        // NOW RENDER TREES IN FOREGROUND TO OVERLAP TOWER
-        
-        // Forest canopy trees (foreground, tallest) - reduced size
-        this.staticEnvironment.forestTrees.forEach(tree => {
-            // Thick trunk for forest trees
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(tree.x - 3, tree.y - 3, 6, tree.size);
-            
-            // 4 layers for tall forest trees
-            for (let layer = 0; layer < 4; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.22);
-                const layerSize = tree.size * (0.95 - layer * 0.15);
-                
-                ctx.fillStyle = layer < 2 ? '#0F2F0F' : '#1F4F1F';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.75, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.75, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#004400';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
-        });
-        
-        // Medium understory trees - reduced size
-        this.staticEnvironment.mediumTrees.forEach(tree => {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(tree.x - 2.5, tree.y - 2.5, 5, tree.size);
-            
-            for (let layer = 0; layer < 3; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.3);
-                const layerSize = tree.size * (0.85 - layer * 0.2);
-                
-                ctx.fillStyle = layer === 0 ? '#1F5F1F' : layer === 1 ? '#2F7F2F' : '#3F8F3F';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.65, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.65, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#005500';
-                ctx.lineWidth = 0.8;
-                ctx.stroke();
-            }
-        });
-        
-        // Small trees close to tower - reduced size
-        this.staticEnvironment.smallTrees.forEach(tree => {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(tree.x - 1.5, tree.y - 1.5, 3, tree.size);
-            
-            for (let layer = 0; layer < 2; layer++) {
-                const layerY = tree.y - layer * (tree.size * 0.4);
-                const layerSize = tree.size * (0.7 - layer * 0.2);
-                
-                ctx.fillStyle = layer === 0 ? '#228B22' : '#32CD32';
-                ctx.beginPath();
-                ctx.moveTo(tree.x, layerY - layerSize);
-                ctx.lineTo(tree.x - layerSize * 0.5, layerY);
-                ctx.lineTo(tree.x + layerSize * 0.5, layerY);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.strokeStyle = '#006400';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
-        });
-        
-        // Range indicator
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
     
     static getInfo() {
