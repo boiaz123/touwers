@@ -764,7 +764,13 @@ export class UIManager {
             }
         }
 
-        if (!hasResourcesChanged) {
+        // Special case for goldmine: always refresh to show production progress
+        let shouldRefresh = hasResourcesChanged;
+        if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
+            shouldRefresh = true; // Always refresh goldmine menu to show progress
+        }
+
+        if (!shouldRefresh) {
             return; // Resources haven't changed, no need to refresh
         }
 
@@ -787,6 +793,8 @@ export class UIManager {
             this.showGuardPostMenu(this.activeMenuData);
         } else if (this.activeMenuType === 'castle' && this.activeMenuData.castle) {
             this.showCastleUpgradeMenu(this.activeMenuData);
+        } else if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
+            this.showGoldMineMenu(this.activeMenuData);
         }
     }
 
@@ -2453,6 +2461,10 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('goldmine-panel');
         
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'goldmine';
+        this.activeMenuData = goldMineData;
+        
         const panel = document.getElementById('goldmine-panel');
         if (!panel) {
             console.error('UIManager: Gold Mine panel not found');
@@ -2464,10 +2476,10 @@ export class UIManager {
         const modeIcon = goldMine.gemMode ? '💎' : '💰';
         const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
         
-        // Calculate progress information
+        // Calculate progress information (no milliseconds)
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
         const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
-        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${timeRemaining.toFixed(1)}s`;
+        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${Math.ceil(timeRemaining)}s`;
         const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
         
         let contentHTML = `
@@ -2496,7 +2508,6 @@ export class UIManager {
         
         // Add gem mining toggle if gem mining is unlocked
         if (goldMine.gemMiningUnlocked) {
-            //console.log('[UIManager] Showing gem mining toggle');
             const toggleText = goldMine.gemMode ? '💰 Switch to Gold' : '💎 Switch to Gems';
             contentHTML += `
                 <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
@@ -2507,7 +2518,7 @@ export class UIManager {
             `;
         }
         
-        // Add sell button
+        // Add collect and sell buttons
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
         `;

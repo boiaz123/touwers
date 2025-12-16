@@ -209,7 +209,16 @@ export class BuildingManager {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(building.x - buildingSize/2 + 5, building.y - buildingSize/2 + 5, buildingSize, buildingSize);
         
+        // Attach buildingManager to context for performance optimization checks
+        ctx.buildingManager = this;
+        
+        // Also set it directly on the building if it supports it
+        if (building.buildingManager !== undefined) {
+            building.buildingManager = this;
+        }
+        
         building.render(ctx, buildingSize);
+        delete ctx.buildingManager; // Clean up after
     }
     
     getBuildingInfo(type) {

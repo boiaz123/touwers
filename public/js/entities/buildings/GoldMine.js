@@ -10,6 +10,9 @@ export class GoldMine extends Building {
         this.nextSparkTime = 0;
         this.incomeMultiplier = 1;
         
+        // Building manager reference for performance optimization
+        this.buildingManager = null;
+        
         // New: Gem mining mode
         this.gemMode = false;
         this.gemMiningUnlocked = false;
@@ -38,6 +41,10 @@ export class GoldMine extends Building {
         this.cartPosition = 0;
         this.cartDirection = 1;
         this.cartSpeed = 0.15; // Reduced from 0.3 to 0.15
+        
+        // Performance optimization: Cache for static rendered elements
+        this.staticBackgroundCanvas = null;
+        this.staticBackgroundCacheSize = null;
         
         // Natural environment elements within the mine area
         this.trees = [];
@@ -295,6 +302,14 @@ export class GoldMine extends Building {
             this.cartDirection = 1;
         }
         
+        // Count how many GoldMines exist for aggressive performance optimization
+        let mineCount = 1;
+        if (this.buildingManager) {
+            mineCount = this.buildingManager.buildings.filter(
+                b => b.constructor.name === 'GoldMine'
+            ).length;
+        }
+        
         // Update workers
         this.workers.forEach(worker => {
             worker.miningCooldown -= deltaTime;
@@ -305,33 +320,43 @@ export class GoldMine extends Building {
                 worker.pickaxeRaised = 1;
                 worker.miningCooldown = 2 + Math.random() * 2;
                 
-                // Create dust particles when mining
-                this.smokePuffs.push({
-                    x: this.x + worker.x + (Math.random() - 0.5) * 8,
-                    y: this.y + worker.y + (Math.random() - 0.5) * 8,
-                    vx: (Math.random() - 0.5) * 15,
-                    vy: -10 - Math.random() * 10,
-                    life: 1.5,
-                    maxLife: 1.5,
-                    size: Math.random() * 2 + 1,
-                    color: 'rgba(139, 115, 85, 0.6)'
-                });
+                // OPTIMIZATION: Particle generation scales dramatically with mine count
+                // 1 mine: 50% chance (normal), 2 mines: 70% skip, 3+ mines: 90% skip
+                let skipParticle = mineCount === 1 ? 0.5 : (mineCount === 2 ? 0.7 : 0.9);
+                if (Math.random() > skipParticle) {
+                    // Create dust particles when mining
+                    this.smokePuffs.push({
+                        x: this.x + worker.x + (Math.random() - 0.5) * 8,
+                        y: this.y + worker.y + (Math.random() - 0.5) * 8,
+                        vx: (Math.random() - 0.5) * 15,
+                        vy: -10 - Math.random() * 10,
+                        life: 1.5,
+                        maxLife: 1.5,
+                        size: Math.random() * 2 + 1,
+                        color: 'rgba(139, 115, 85, 0.6)'
+                    });
+                }
             }
         });
         
         // Generate ambient dust from cave
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0 && !this.goldReady) { // Use goldReady instead of isReady
-            this.smokePuffs.push({
-                x: this.x - 20 + Math.random() * 15, // From cave entrance
-                y: this.y - 10 + Math.random() * 10,
-                vx: (Math.random() - 0.5) * 8,
-                vy: -5 - Math.random() * 5,
-                life: 2,
-                maxLife: 2,
-                size: Math.random() * 3 + 1,
-                color: 'rgba(101, 67, 33, 0.4)'
-            });
+            // OPTIMIZATION: Ambient dust heavily reduced with multiple mines
+            // 1 mine: 30% skip, 2 mines: 80% skip, 3+ mines: 95% skip
+            let skipAmbient = mineCount === 1 ? 0.3 : (mineCount === 2 ? 0.8 : 0.95);
+            if (Math.random() > skipAmbient) {
+                this.smokePuffs.push({
+                    x: this.x - 20 + Math.random() * 15, // From cave entrance
+                    y: this.y - 10 + Math.random() * 10,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: -5 - Math.random() * 5,
+                    life: 2,
+                    maxLife: 2,
+                    size: Math.random() * 3 + 1,
+                    color: 'rgba(101, 67, 33, 0.4)'
+                });
+            }
             this.nextSmokeTime = 2.0 + Math.random() * 2.0;
         }
         
@@ -393,9 +418,9 @@ export class GoldMine extends Building {
             // Original gold collection logic
             const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
             
-            // Create collection sparks
+            // Create collection sparks - reduced for performance
             this.sparks = [];
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 5; i++) { // Reduced from 8 to 5
                 this.sparks.push({
                     x: this.x + (Math.random() - 0.5) * 30,
                     y: this.y + (Math.random() - 0.5) * 30,
@@ -502,244 +527,75 @@ export class GoldMine extends Building {
         // Render excavated ground base first
         this.renderExcavatedGround(ctx, size);
         
-        // Render trees (now much denser forest)
-        this.trees.forEach(tree => {
-            ctx.save();
-            ctx.translate(this.x + tree.x, this.y + tree.y);
-            
-            // Tree shadow (fixed position)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-            ctx.beginPath();
-            ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.8, tree.crownRadius * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Tree trunk - more realistic brown colors
-            const trunkGradient = ctx.createLinearGradient(-tree.trunkWidth/2, 0, tree.trunkWidth/2, 0);
-            trunkGradient.addColorStop(0, '#4A4A4A'); // Dark bark
-            trunkGradient.addColorStop(0.3, '#654321'); // Brown bark
-            trunkGradient.addColorStop(0.7, '#8B4513'); // Lighter brown
-            trunkGradient.addColorStop(1, '#5D4E37'); // Dark brown edge
-            
-            ctx.fillStyle = trunkGradient;
-            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height * 0.3);
-            
-            // Trunk texture (fixed bark lines)
-            ctx.strokeStyle = '#3A3A3A';
-            ctx.lineWidth = 1;
-            const barkLines = tree.heightCategory === 'tall' ? 4 : (tree.heightCategory === 'medium' ? 3 : 2);
-            for (let i = 1; i <= barkLines; i++) {
-                const lineY = -(tree.height * 0.3) * (i / barkLines);
-                ctx.beginPath();
-                ctx.moveTo(-tree.trunkWidth/2, lineY);
-                ctx.lineTo(tree.trunkWidth/2, lineY);
-                ctx.stroke();
-            }
-            
-            // Christmas tree layered crown - proper coniferous shape
-            const layerCount = tree.layers;
-            const layerHeight = (tree.height * 0.8) / layerCount;
-            
-            for (let layer = 0; layer < layerCount; layer++) {
-                const layerTop = -tree.height + (layer * layerHeight * 0.7); // Overlap layers
-                const layerBottom = layerTop + layerHeight;
-                
-                // Each layer gets progressively larger towards bottom
-                const layerRadius = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6);
-                
-                // Layer color - darker at bottom, lighter at top
-                const layerLightness = 1 - (layer * 0.1);
-                const greenBase = Math.floor(27 * layerLightness); // Dark forest green base
-                const greenSecondary = Math.floor(67 * layerLightness); // Forest green
-                ctx.fillStyle = `rgb(${greenBase}, ${greenSecondary}, ${greenBase + 10})`;
-                
-                // Draw triangular layer with slight curve
-                ctx.beginPath();
-                
-                if (layer === 0) {
-                    // Top layer - pointed
-                    ctx.moveTo(0, layerTop);
-                    ctx.lineTo(-layerRadius * 0.9, layerBottom);
-                    ctx.lineTo(layerRadius * 0.9, layerBottom);
-                } else {
-                    // Lower layers - fuller
-                    ctx.moveTo(0, layerTop + layerHeight * 0.2); // Start slightly down for overlap
-                    ctx.lineTo(-layerRadius, layerBottom);
-                    ctx.lineTo(layerRadius, layerBottom);
-                }
-                
-                ctx.closePath();
-                ctx.fill();
-                
-                // Add subtle layer outline for definition
-                ctx.strokeStyle = `rgb(${Math.floor(greenBase * 0.7)}, ${Math.floor(greenSecondary * 0.7)}, ${Math.floor((greenBase + 10) * 0.7)})`;
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-                
-                // Add needle texture to each layer
-                ctx.strokeStyle = `rgb(${Math.floor(greenBase * 0.6)}, ${Math.floor(greenSecondary * 0.6)}, ${Math.floor((greenBase + 10) * 0.6)})`;
-                ctx.lineWidth = 0.5;
-                
-                // Horizontal needle lines
-                const needleLines = Math.floor(layerRadius / 4);
-                for (let n = 1; n <= needleLines; n++) {
-                    const needleY = layerTop + (layerHeight * n / (needleLines + 1));
-                    const needleWidth = layerRadius * (1 - n / (needleLines + 2));
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(-needleWidth, needleY);
-                    ctx.lineTo(needleWidth, needleY);
-                    ctx.stroke();
-                }
-            }
-            
-            // Add snow highlights for winter forest look
-            if (tree.heightCategory !== 'small') {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                for (let layer = 0; layer < layerCount; layer++) {
-                    const snowY = -tree.height + (layer * layerHeight * 0.7) + layerHeight;
-                    const snowWidth = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6) * 0.8;
-                    
-                    ctx.beginPath();
-                    ctx.ellipse(0, snowY, snowWidth, snowWidth * 0.2, 0, 0, Math.PI);
-                    ctx.fill();
-                }
-            }
-            
-            // Pine tree highlights for depth
-            ctx.fillStyle = 'rgba(60, 120, 60, 0.4)';
-            for (let layer = 0; layer < Math.min(3, layerCount); layer++) {
-                const highlightY = -tree.height + (layer * layerHeight * 0.7) + layerHeight * 0.3;
-                const highlightX = (layer % 2 === 0 ? -1 : 1) * tree.crownRadius * 0.4;
-                
-                ctx.beginPath();
-                ctx.arc(highlightX, highlightY, tree.crownRadius * 0.08, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            ctx.restore();
-        });
+        // Render static elements (trees, rocks, bushes, cave) - batch operations
+        this.renderStaticEnvironment(ctx, size);
         
-        // Render excavated debris and rock piles
-        this.excavatedDebris.forEach(debris => {
-            ctx.save();
-            ctx.translate(this.x + debris.x, this.y + debris.y);
-            ctx.rotate(debris.rotation);
-            
-            // Debris shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(2, 2, debris.size * 0.9, debris.size * 0.4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            switch (debris.type) {
-                case 'rockPile':
-                    // Pile of rocks from excavation
-                    if (debris.layers > 1) {
-                        for (let layer = 0; layer < debris.layers; layer++) {
-                            const layerSize = debris.size * (1 - layer * 0.1);
-                            const layerY = -layer * debris.size * 0.3;
-                            const layerColor = layer === 0 ? debris.color : this.darkenColor(debris.color, 0.15 * layer);
-                            
-                            ctx.fillStyle = layerColor;
-                            ctx.strokeStyle = '#654321';
-                            ctx.lineWidth = 1;
-                            
-                            // Irregular rock pile shape
-                            for (let rock = 0; rock < 3 + layer; rock++) {
-                                const rockAngle = (rock / (3 + layer)) * Math.PI * 2;
-                                const rockDist = layerSize * (0.6 + (rock % 2) * 0.3);
-                                const rockX = Math.cos(rockAngle) * rockDist;
-                                const rockY = Math.sin(rockAngle) * rockDist * 0.7 + layerY;
-                                const rockSize = layerSize * (0.3 + (rock % 3) * 0.1);
-                                
-                                ctx.beginPath();
-                                ctx.ellipse(rockX, rockY, rockSize, rockSize * 0.8, 0, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.stroke();
-                            }
-                        }
-                    } else {
-                        // Single rock
-                        ctx.fillStyle = debris.color;
-                        ctx.strokeStyle = '#654321';
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.ellipse(0, 0, debris.size, debris.size * 0.8, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 'dirtMound':
-                    // Mounds of excavated dirt
-                    const dirtGradient = ctx.createRadialGradient(0, -debris.size * 0.3, 0, 0, 0, debris.size);
-                    dirtGradient.addColorStop(0, '#D2B48C');
-                    dirtGradient.addColorStop(0.6, '#CD853F');
-                    dirtGradient.addColorStop(1, '#8B7355');
-                    
-                    ctx.fillStyle = dirtGradient;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, debris.size, debris.size * 0.6, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Dirt texture
-                    ctx.strokeStyle = '#A0522D';
-                    ctx.lineWidth = 1;
-                    for (let i = 0; i < 3; i++) {
-                        const lineAngle = (i / 3) * Math.PI * 2;
-                        const lineStart = debris.size * 0.3;
-                        const lineEnd = debris.size * 0.8;
-                        ctx.beginPath();
-                        ctx.moveTo(Math.cos(lineAngle) * lineStart, Math.sin(lineAngle) * lineStart);
-                        ctx.lineTo(Math.cos(lineAngle) * lineEnd, Math.sin(lineAngle) * lineEnd * 0.6);
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 'scatteredRock':
-                    // Individual scattered rocks
-                    ctx.fillStyle = debris.color;
-                    ctx.strokeStyle = '#654321';
-                    ctx.lineWidth = 1;
-                    
-                    // Irregular rock shape
-                    ctx.beginPath();
-                    const points = 5 + Math.floor(debris.size / 3);
-                    for (let i = 0; i < points; i++) {
-                        const angle = (i / points) * Math.PI * 2;
-                        const radius = debris.size * (0.7 + (i % 2) * 0.3);
-                        const x = Math.cos(angle) * radius;
-                        const y = Math.sin(angle) * radius * 0.8;
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                    break;
-            }
-            
-            // Highlight for 3D effect
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.3)';
-            ctx.beginPath();
-            ctx.arc(-debris.size * 0.3, -debris.size * 0.3, debris.size * 0.15, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.restore();
-        });
+        // Render mine cart track and cart
+        this.renderMineTrack(ctx, size);
         
-        // Render bushes with fixed segment positions
+        // Render workers (animated)
+        this.renderWorkers(ctx, size);
+        
+        // Render gold piles when ready
+        if (this.goldReady) {
+            this.renderGoldPiles(ctx, size);
+        }
+        
+        // Render dust clouds
+        this.renderDustClouds(ctx);
+
+        // Production timer shown above mine
+        this.renderProductionStatus(ctx, size);
+        
+        // Toggle icon with medieval border
+        if (this.gemMiningUnlocked) {
+            this.renderToggleIcon(ctx, size);
+        }
+        
+        // Add subtle magical flash effect when gold becomes ready
+        if (this.flashOpacity > 0) {
+            this.renderFlashEffect(ctx, size);
+        }
+        
+        // Render floating collection text
+        this.renderFloatingTexts(ctx);
+    }
+    
+    // ============ OPTIMIZED RENDERING METHODS ============
+    
+    renderStaticEnvironment(ctx, size) {
+        // OPTIMIZATION: Skip rendering decorative trees/rocks if many mines exist (perf hit)
+        // Check if we're in "high mine count" mode by counting nearby buildings
+        const shouldSimplify = this.shouldSimplifyRendering();
+        
+        // Render trees only if not simplifying (trees are expensive)
+        if (!shouldSimplify) {
+            this.renderTrees(ctx);
+        }
+        
+        // Render debris (simplified)
+        if (!shouldSimplify) {
+            this.renderDebris(ctx);
+        } else {
+            // Simplified debris - just basic shapes
+            this.excavatedDebris.forEach(debris => {
+                ctx.fillStyle = debris.color;
+                ctx.beginPath();
+                ctx.ellipse(this.x + debris.x, this.y + debris.y, debris.size * 0.8, debris.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Bushes - always render (lightweight)
         this.bushes.forEach(bush => {
             ctx.save();
             ctx.translate(this.x + bush.x, this.y + bush.y);
             
-            // Bush shadow (fixed)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.beginPath();
             ctx.ellipse(1, 1, bush.radius * 0.8, bush.radius * 0.2, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Main bush shape using fixed segment positions
             ctx.fillStyle = bush.color;
             bush.segmentPositions.forEach(segment => {
                 ctx.beginPath();
@@ -747,55 +603,189 @@ export class GoldMine extends Building {
                 ctx.fill();
             });
             
-            // Fixed bush highlights
-            ctx.fillStyle = 'rgba(144, 238, 144, 0.5)';
-            const highlights = [
-                {x: -bush.radius * 0.2, y: -bush.radius * 0.3},
-                {x: bush.radius * 0.3, y: bush.radius * 0.2}
-            ];
-            highlights.forEach(highlight => {
-                ctx.beginPath();
-                ctx.arc(highlight.x, highlight.y, bush.radius * 0.1, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            
             ctx.restore();
         });
         
-        // Render simplified cave entrance integrated into excavated ground
+        // Cave entrance
         this.renderCaveEntrance(ctx, size);
+    }
+    
+    shouldSimplifyRendering(ctx) {
+        // Try to get mine count from the rendering context
+        if (!ctx || !ctx.buildingManager) {
+            return false;
+        }
         
-        // Render workers (updated position and blue shirts)
+        // Count how many GoldMines exist
+        const mineCount = ctx.buildingManager.buildings.filter(
+            b => b.constructor.name === 'GoldMine'
+        ).length;
+        
+        // Simplify if more than 2 mines exist (aggressive optimization)
+        return mineCount > 2;
+    }
+    
+    renderTrees(ctx) {
+        this.trees.forEach(tree => {
+            ctx.save();
+            ctx.translate(this.x + tree.x, this.y + tree.y);
+            
+            // Tree shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.7, tree.crownRadius * 0.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tree trunk - simplified
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height * 0.3);
+            
+            // Tree crown - simplified (fewer layers)
+            const layerCount = tree.layers;
+            const layerHeight = (tree.height * 0.8) / layerCount;
+            
+            for (let layer = 0; layer < Math.min(3, layerCount); layer++) {
+                const layerTop = -tree.height + (layer * layerHeight * 0.7);
+                const layerBottom = layerTop + layerHeight;
+                const layerRadius = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6);
+                const greenBase = Math.floor(27 * (1 - layer * 0.1));
+                const greenSecondary = Math.floor(67 * (1 - layer * 0.1));
+                
+                ctx.fillStyle = `rgb(${greenBase}, ${greenSecondary}, ${greenBase + 10})`;
+                ctx.beginPath();
+                
+                if (layer === 0) {
+                    ctx.moveTo(0, layerTop);
+                    ctx.lineTo(-layerRadius * 0.9, layerBottom);
+                    ctx.lineTo(layerRadius * 0.9, layerBottom);
+                } else {
+                    ctx.moveTo(0, layerTop + layerHeight * 0.2);
+                    ctx.lineTo(-layerRadius, layerBottom);
+                    ctx.lineTo(layerRadius, layerBottom);
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        });
+    }
+    
+    renderDebris(ctx) {
+        this.excavatedDebris.forEach(debris => {
+            ctx.save();
+            ctx.translate(this.x + debris.x, this.y + debris.y);
+            ctx.rotate(debris.rotation);
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(2, 2, debris.size * 0.8, debris.size * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = debris.color;
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, debris.size, debris.size * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.restore();
+        });
+    }
+    
+    renderMineTrack(ctx, size) {
+        const trackY = this.y + size * 0.2;
+        const trackStartX = this.x - size * 0.08;
+        const trackEndX = this.x + size * 0.35;
+        
+        // Track rails
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY - size * 0.015);
+        ctx.lineTo(trackEndX, trackY - size * 0.015);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(trackStartX, trackY + size * 0.015);
+        ctx.lineTo(trackEndX, trackY + size * 0.015);
+        ctx.stroke();
+        
+        // Railroad ties
+        ctx.fillStyle = '#654321';
+        for (let i = 0; i < 6; i++) {
+            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
+            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
+        }
+        
+        // Mine cart
+        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
+        
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
+        
+        // Wheels
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Gold ore in cart
+        if (this.goldReady && this.cartPosition > 0.5) {
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 3; i++) {
+                const oreX = cartX - size * 0.02 + (i * size * 0.013);
+                const oreY = trackY - size * 0.07;
+                ctx.beginPath();
+                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    
+    renderWorkers(ctx, size) {
         this.workers.forEach(worker => {
             ctx.save();
             ctx.translate(this.x + worker.x, this.y + worker.y);
             
-            // Worker body - blue shirt (different from water blue)
-            ctx.fillStyle = '#1E3A8A'; // Dark blue, distinct from water colors
+            // Body
+            ctx.fillStyle = '#1E3A8A';
             ctx.fillRect(-2, -4, 4, 8);
             
-            // Worker head
+            // Head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
             ctx.arc(0, -6, 2.5, 0, Math.PI * 2);
             ctx.fill();
             
-            // Miner's helmet with lamp
+            // Helmet
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
             ctx.arc(0, -6, 3, Math.PI, Math.PI * 2);
             ctx.fill();
             
-            // Helmet lamp
+            // Lamp
             ctx.fillStyle = '#FFFF99';
             ctx.beginPath();
             ctx.arc(0, -8, 1, 0, Math.PI * 2);
             ctx.fill();
             
-            // Pickaxe animation
+            // Pickaxe arm
             const armAngle = worker.pickaxeRaised > 0 ? -Math.PI/2 : Math.PI/6;
-            
-            // Mining arm
             ctx.strokeStyle = '#DDBEA9';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -803,12 +793,10 @@ export class GoldMine extends Building {
             ctx.lineTo(Math.cos(armAngle) * 5, -2 + Math.sin(armAngle) * 5);
             ctx.stroke();
             
-            // Pickaxe
             if (worker.pickaxeRaised > 0.2) {
                 const pickaxeX = Math.cos(armAngle) * 7;
                 const pickaxeY = -2 + Math.sin(armAngle) * 7;
                 
-                // Pickaxe handle
                 ctx.strokeStyle = '#8B4513';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -816,55 +804,54 @@ export class GoldMine extends Building {
                 ctx.lineTo(pickaxeX - Math.cos(armAngle) * 8, pickaxeY - Math.sin(armAngle) * 8);
                 ctx.stroke();
                 
-                // Pickaxe head
                 ctx.fillStyle = '#696969';
                 ctx.fillRect(pickaxeX - 2, pickaxeY - 6, 4, 2);
             }
             
             ctx.restore();
         });
-        
-        // Render gold piles when ready
-        if (this.goldReady) { // Use goldReady instead of isReady
-            this.goldPiles.forEach((pile, index) => {
-                const bob = this.bobAnimations[index];
-                const bobOffset = bob ? Math.sin(bob.time) * 1.5 : 0;
+    }
+    
+    renderGoldPiles(ctx, size) {
+        this.goldPiles.forEach((pile, index) => {
+            const bob = this.bobAnimations[index];
+            const bobOffset = bob ? Math.sin(bob.time) * 1.5 : 0;
+            
+            ctx.save();
+            ctx.translate(this.x + pile.x, this.y + pile.y + bobOffset);
+            
+            // Glow
+            const glimmerIntensity = Math.sin(pile.glimmer) * 0.3 + 0.7;
+            const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+            goldGlow.addColorStop(0, `rgba(255, 215, 0, ${glimmerIntensity * 0.8})`);
+            goldGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            
+            ctx.fillStyle = goldGlow;
+            ctx.beginPath();
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Nuggets
+            ctx.fillStyle = '#FFD700';
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < 3; i++) {
+                const nuggetAngle = (i / 3) * Math.PI * 2;
+                const nuggetX = Math.cos(nuggetAngle) * 3;
+                const nuggetY = Math.sin(nuggetAngle) * 3;
                 
-                ctx.save();
-                ctx.translate(this.x + pile.x, this.y + pile.y + bobOffset);
-                
-                // Gold pile glow
-                const glimmerIntensity = Math.sin(pile.glimmer) * 0.3 + 0.7;
-                const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-                goldGlow.addColorStop(0, `rgba(255, 215, 0, ${glimmerIntensity * 0.8})`);
-                goldGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
-                
-                ctx.fillStyle = goldGlow;
                 ctx.beginPath();
-                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.arc(nuggetX, nuggetY, 2, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // Gold nuggets
-                ctx.fillStyle = '#FFD700';
-                ctx.strokeStyle = '#B8860B';
-                ctx.lineWidth = 1;
-                
-                for (let i = 0; i < 3; i++) {
-                    const nuggetAngle = (i / 3) * Math.PI * 2;
-                    const nuggetX = Math.cos(nuggetAngle) * 3;
-                    const nuggetY = Math.sin(nuggetAngle) * 3;
-                    
-                    ctx.beginPath();
-                    ctx.arc(nuggetX, nuggetY, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-                
-                ctx.restore();
-            });
-        }
-        
-        // Render dust clouds
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        });
+    }
+    
+    renderDustClouds(ctx) {
         this.smokePuffs.forEach(smoke => {
             const alpha = smoke.life / smoke.maxLife;
             ctx.fillStyle = `rgba(139, 115, 85, ${alpha * 0.4})`;
@@ -872,12 +859,12 @@ export class GoldMine extends Building {
             ctx.arc(smoke.x, smoke.y, smoke.size, 0, Math.PI * 2);
             ctx.fill();
         });
-
-        // Production timer shown above mine
+    }
+    
+    renderProductionStatus(ctx, size) {
         if (!this.goldReady) {
             const progress = this.currentProduction / this.productionTime;
             
-            // Production timer bar
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50, 8);
             
@@ -888,129 +875,112 @@ export class GoldMine extends Building {
             ctx.lineWidth = 1;
             ctx.strokeRect(this.x - 25, this.y - size/2 - 15, 50, 8);
             
-            // Timer text
             const timeLeft = Math.ceil(this.productionTime - this.currentProduction);
             ctx.fillStyle = '#FFF';
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
-            // Ready indicator
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(this.gemMode ? '💎 READY' : '💰 READY', this.x, this.y - size/2 - 10);
         }
+    }
+    
+    renderToggleIcon(ctx, size) {
+        const toggleIconSize = 25;
+        const toggleX = this.x - size/2 + 12;
+        const toggleY = this.y - size/2 + 12;
+        const togglePulse = 0.7 + 0.3 * Math.sin(this.animationTime * 3);
         
-        // Toggle icon with medieval border
-        if (this.gemMiningUnlocked) {
-            const toggleIconSize = 25;
-            const toggleX = this.x - size/2 + 12;
-            const toggleY = this.y - size/2 + 12;
-            
-            const togglePulse = 0.7 + 0.3 * Math.sin(this.animationTime * 3);
-            
-            // Enhanced shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.fillRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize, toggleIconSize);
-            
-            // Toggle background - gem color if in gem mode
-            let toggleBg = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
-            ctx.fillStyle = toggleBg;
-            ctx.fillRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
-            
-            // Medieval ornate border with gem color
-            let toggleBorder = this.gemMode ? '#8A2BE2' : '#696969';
-            ctx.strokeStyle = toggleBorder;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
-            
-            // Inner decorative line
-            ctx.strokeStyle = this.gemMode ? '#DA70D6' : '#A9A9A9';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize - 4, toggleIconSize - 4);
-            
-            // Corner ornaments on toggle
-            const cornSize = 2;
-            ctx.fillStyle = toggleBorder;
-            ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
-            ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
-            ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
-            ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
-            
-            // Toggle glow
-            const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
-            const glowColor0 = this.gemMode ? `rgba(138, 43, 226, ${togglePulse * 0.2})` : `rgba(200, 200, 200, ${togglePulse * 0.2})`;
-            const glowColor1 = this.gemMode ? 'rgba(138, 43, 226, 0)' : 'rgba(200, 200, 200, 0)';
-            toggleGlow.addColorStop(0, glowColor0);
-            toggleGlow.addColorStop(1, glowColor1);
-            ctx.fillStyle = toggleGlow;
-            ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
-            
-            // Toggle icon
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
-            
-            // Label
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 8px Arial';
-            ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
-        }
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize, toggleIconSize);
         
-        // Add subtle magical flash effect when gold becomes ready
-        if (this.flashOpacity > 0) {
-            let flashColor = '#FFD700'; // Gold by default
-            
-            if (this.gemMode && this.currentGemType) {
-                switch(this.currentGemType) {
-                    case 'fire': flashColor = '#FF6B35'; break;
-                    case 'water': flashColor = '#4ECDC4'; break;
-                    case 'air': flashColor = '#FFE66D'; break;
-                    case 'earth': flashColor = '#8B6F47'; break;
-                }
+        let toggleBg = this.gemMode ? 'rgba(138, 43, 226, 0.8)' : 'rgba(169, 169, 169, 0.8)';
+        ctx.fillStyle = toggleBg;
+        ctx.fillRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+        
+        let toggleBorder = this.gemMode ? '#8A2BE2' : '#696969';
+        ctx.strokeStyle = toggleBorder;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(toggleX - toggleIconSize/2, toggleY - toggleIconSize/2, toggleIconSize, toggleIconSize);
+        
+        ctx.strokeStyle = this.gemMode ? '#DA70D6' : '#A9A9A9';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(toggleX - toggleIconSize/2 + 2, toggleY - toggleIconSize/2 + 2, toggleIconSize - 4, toggleIconSize - 4);
+        
+        const cornSize = 2;
+        ctx.fillStyle = toggleBorder;
+        ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
+        ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY - toggleIconSize/2 - 1, cornSize, cornSize);
+        ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
+        ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
+        
+        const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
+        const glowColor0 = this.gemMode ? `rgba(138, 43, 226, ${togglePulse * 0.2})` : `rgba(200, 200, 200, ${togglePulse * 0.2})`;
+        const glowColor1 = this.gemMode ? 'rgba(138, 43, 226, 0)' : 'rgba(200, 200, 200, 0)';
+        toggleGlow.addColorStop(0, glowColor0);
+        toggleGlow.addColorStop(1, glowColor1);
+        ctx.fillStyle = toggleGlow;
+        ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
+        
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 8px Arial';
+        ctx.fillText(this.gemMode ? 'GEM' : 'GOLD', toggleX, toggleY + toggleIconSize/2 + 5);
+    }
+    
+    renderFlashEffect(ctx, size) {
+        let flashColor = '#FFD700';
+        
+        if (this.gemMode && this.currentGemType) {
+            switch(this.currentGemType) {
+                case 'fire': flashColor = '#FF6B35'; break;
+                case 'water': flashColor = '#4ECDC4'; break;
+                case 'air': flashColor = '#FFE66D'; break;
+                case 'earth': flashColor = '#8B6F47'; break;
             }
-            
-            // Create a soft, magical glow that pulses outward
-            const maxRadius = size * 2;
-            const pulseRadius = maxRadius * (1 - this.flashOpacity);
-            
-            // Outer expanding ring with soft edges
-            const ringGradient = ctx.createRadialGradient(this.x, this.y, pulseRadius * 0.8, this.x, this.y, pulseRadius * 1.2);
-            ringGradient.addColorStop(0, `${flashColor}00`);
-            ringGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 40).toString(16).padStart(2, '0')}`);
-            ringGradient.addColorStop(1, `${flashColor}00`);
-            
-            ctx.fillStyle = ringGradient;
-            ctx.fillRect(this.x - pulseRadius * 1.5, this.y - pulseRadius * 1.5, pulseRadius * 3, pulseRadius * 3);
-            
-            // Inner soft glow that fades
-            const glowGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 0.8);
-            glowGradient.addColorStop(0, `${flashColor}${Math.floor(this.flashOpacity * 30).toString(16).padStart(2, '0')}`);
-            glowGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 15).toString(16).padStart(2, '0')}`);
-            glowGradient.addColorStop(1, `${flashColor}00`);
-            
-            ctx.fillStyle = glowGradient;
-            ctx.fillRect(this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
         }
         
-        // Render floating collection text
+        const maxRadius = size * 2;
+        const pulseRadius = maxRadius * (1 - this.flashOpacity);
+        
+        const ringGradient = ctx.createRadialGradient(this.x, this.y, pulseRadius * 0.8, this.x, this.y, pulseRadius * 1.2);
+        ringGradient.addColorStop(0, `${flashColor}00`);
+        ringGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 40).toString(16).padStart(2, '0')}`);
+        ringGradient.addColorStop(1, `${flashColor}00`);
+        
+        ctx.fillStyle = ringGradient;
+        ctx.fillRect(this.x - pulseRadius * 1.5, this.y - pulseRadius * 1.5, pulseRadius * 3, pulseRadius * 3);
+        
+        const glowGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, size * 0.8);
+        glowGradient.addColorStop(0, `${flashColor}${Math.floor(this.flashOpacity * 30).toString(16).padStart(2, '0')}`);
+        glowGradient.addColorStop(0.5, `${flashColor}${Math.floor(this.flashOpacity * 15).toString(16).padStart(2, '0')}`);
+        glowGradient.addColorStop(1, `${flashColor}00`);
+        
+        ctx.fillStyle = glowGradient;
+        ctx.fillRect(this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
+    }
+    
+    renderFloatingTexts(ctx) {
         this.floatingTexts.forEach(text => {
             const alpha = text.life / text.maxLife;
-            const size = 18 + (1 - alpha) * 8; // Grow slightly as it fades - increased base size
+            const textSize = 18 + (1 - alpha) * 8;
             
-            ctx.font = `bold ${size}px Arial`;
+            ctx.font = `bold ${textSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
-            // Add shadow for better visibility
             ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.9})`;
             ctx.lineWidth = 3;
             ctx.strokeText(text.text, this.x, text.y);
             
-            // Main text with color
             switch (text.gemType) {
                 case 'fire':
                     ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
@@ -1036,8 +1006,6 @@ export class GoldMine extends Building {
             }
             ctx.fillText(text.text, this.x, text.y);
         });
-        
-        // Mode icon is now shown in the menu UI, not on the building
     }
     
     onClick() {
@@ -1101,32 +1069,36 @@ export class GoldMine extends Building {
     }
     
     renderExcavatedGround(ctx, size) {
-        // Render natural forest floor that blends excavated and grassy areas
-        const maxArea = size * 0.45; // Keep within the 4x4 grid boundaries
+        // Render natural forest floor that organically blends around forest and lake
+        const maxArea = size * 0.35; // Smaller footprint - don't fill entire 4x4
         
-        // Base forest floor - natural green-brown blend
-        const baseGradient = ctx.createRadialGradient(
-            this.x, this.y, 0,
-            this.x, this.y, maxArea * 1.2
-        );
-        baseGradient.addColorStop(0, '#A0522D'); // Brown center (excavated)
-        baseGradient.addColorStop(0.4, '#8B7355'); // Tan-brown
-        baseGradient.addColorStop(0.7, '#6B8E23'); // Olive green
-        baseGradient.addColorStop(1, '#228B22'); // Forest green edge
+        // First: Render the base ground layer
+        ctx.fillStyle = '#A0522D'; // Brown dirt base
         
-        // Fill entire area with natural blend
-        ctx.fillStyle = baseGradient;
-        ctx.fillRect(this.x - maxArea * 1.1, this.y - maxArea * 1.1, maxArea * 2.2, maxArea * 2.2);
+        // Primary excavation area (organic shape)
+        ctx.beginPath();
+        ctx.ellipse(this.x - maxArea * 0.1, this.y + maxArea * 0.05, maxArea, maxArea * 0.8, 0.1, 0, Math.PI * 2);
+        ctx.fill();
         
-        // Add natural grass patches that blend organically (repositioned to avoid track area)
+        // Secondary clearing patches to break up the square
+        ctx.fillStyle = '#8B7355';
+        ctx.beginPath();
+        ctx.ellipse(this.x - maxArea * 0.6, this.y + maxArea * 0.6, maxArea * 0.5, maxArea * 0.4, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Left side clearing
+        ctx.fillStyle = '#9B8B7B';
+        ctx.beginPath();
+        ctx.ellipse(this.x - maxArea * 0.8, this.y - maxArea * 0.2, maxArea * 0.4, maxArea * 0.5, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add natural grass patches EARLY - before water so water appears on top
         const grassPatches = [
-            { x: -maxArea * 0.8, y: -maxArea * 0.6, radius: 15, intensity: 0.6 },
-            { x: -maxArea * 0.9, y: maxArea * 0.8, radius: 18, intensity: 0.7 }, // Moved to bottom left
-            { x: -maxArea * 0.7, y: maxArea * 0.9, radius: 16, intensity: 0.6 }, // Moved to bottom left
-            { x: maxArea * 0.9, y: maxArea * 0.4, radius: 14, intensity: 0.5 },
-            { x: -maxArea * 1.0, y: maxArea * 0.1, radius: 20, intensity: 0.9 },
-            { x: -maxArea * 0.6, y: maxArea * 1.0, radius: 14, intensity: 0.8 }, // Moved to bottom left
-            { x: -maxArea * 0.2, y: -maxArea * 1.0, radius: 13, intensity: 0.7 }
+            { x: -maxArea * 0.2, y: -maxArea * 0.8, radius: 15, intensity: 0.5 },
+            { x: maxArea * 0.3, y: -maxArea * 0.6, radius: 12, intensity: 0.4 },
+            { x: -maxArea * 0.8, y: maxArea * 0.5, radius: 14, intensity: 0.6 },
+            { x: maxArea * 0.2, y: maxArea * 0.7, radius: 13, intensity: 0.45 },
+            { x: -maxArea * 0.4, y: -maxArea * 0.4, radius: 11, intensity: 0.35 }
         ];
         
         grassPatches.forEach(patch => {
@@ -1135,7 +1107,8 @@ export class GoldMine extends Building {
                 this.x + patch.x, this.y + patch.y, patch.radius
             );
             grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
-            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.8})`);
+            grassGradient.addColorStop(0.5, `rgba(76, 175, 80, ${patch.intensity * 0.6})`);
+            grassGradient.addColorStop(0.8, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
             grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
             
             ctx.fillStyle = grassGradient;
@@ -1144,12 +1117,12 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Add dirt/excavated patches in the center
+        // Add dirt patches and texture layers
         const dirtPatches = [
-            { x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.7 },
+            { x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.8 },
             { x: maxArea * 0.1, y: -maxArea * 0.4, radius: 10, intensity: 0.6 },
-            { x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.8 },
-            { x: maxArea * 0.4, y: maxArea * 0.1, radius: 8, intensity: 0.5 },
+            { x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.7 },
+            { x: maxArea * 0.3, y: maxArea * 0.1, radius: 8, intensity: 0.5 },
             { x: 0, y: 0, radius: 16, intensity: 0.9 }
         ];
         
@@ -1168,129 +1141,107 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Add small water pool repositioned to bottom left corner
-        const poolX = this.x - maxArea * 0.7; // Moved to left
-        const poolY = this.y + maxArea * 0.8;  // Moved to bottom
-        const poolRadius = 16; // Slightly smaller
+        // Render WATER POOL - positioned bottom left with natural integration
+        const poolX = this.x - maxArea * 0.65;
+        const poolY = this.y + maxArea * 0.55;
+        const poolRadius = 16;
         
         // Water pool shadow/depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(poolX + 1, poolY + 1, poolRadius, poolRadius * 0.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX + 1, poolY + 2, poolRadius, poolRadius * 0.75, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Water surface
+        // Water surface with gradient
         const waterGradient = ctx.createRadialGradient(
             poolX - poolRadius * 0.3, poolY - poolRadius * 0.3, 0,
             poolX, poolY, poolRadius
         );
-        waterGradient.addColorStop(0, '#87CEEB'); // Light blue
-        waterGradient.addColorStop(0.4, '#4682B4'); // Steel blue
-        waterGradient.addColorStop(0.8, '#2F4F4F'); // Dark slate gray
-        waterGradient.addColorStop(1, '#1C1C1C'); // Very dark edge
+        waterGradient.addColorStop(0, '#87CEEB');
+        waterGradient.addColorStop(0.3, '#5FA8D3');
+        waterGradient.addColorStop(0.6, '#4682B4');
+        waterGradient.addColorStop(0.85, '#2F4F4F');
+        waterGradient.addColorStop(1, '#1a3a3a');
         
         ctx.fillStyle = waterGradient;
         ctx.beginPath();
-        ctx.ellipse(poolX, poolY, poolRadius, poolRadius * 0.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX, poolY, poolRadius, poolRadius * 0.75, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Water highlights/reflections
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         ctx.beginPath();
-        ctx.ellipse(poolX - poolRadius * 0.4, poolY - poolRadius * 0.3, poolRadius * 0.3, poolRadius * 0.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX - poolRadius * 0.35, poolY - poolRadius * 0.35, poolRadius * 0.35, poolRadius * 0.25, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
         ctx.beginPath();
-        ctx.ellipse(poolX + poolRadius * 0.2, poolY + poolRadius * 0.1, poolRadius * 0.15, poolRadius * 0.1, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX + poolRadius * 0.25, poolY + poolRadius * 0.2, poolRadius * 0.2, poolRadius * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Reeds around the water pool (fixed positions to prevent flickering)
+        // Reeds around water
         const reedPositions = [
-            { x: poolX - poolRadius * 1.2, y: poolY - poolRadius * 0.5, height: 12 },
-            { x: poolX - poolRadius * 0.9, y: poolY + poolRadius * 0.8, height: 15 },
-            { x: poolX + poolRadius * 1.0, y: poolY - poolRadius * 0.4, height: 10 },
-            { x: poolX + poolRadius * 0.7, y: poolY + poolRadius * 0.9, height: 14 },
-            { x: poolX - poolRadius * 1.3, y: poolY + poolRadius * 0.1, height: 8 },
-            { x: poolX + poolRadius * 1.1, y: poolY + poolRadius * 0.5, height: 11 }
+            { x: poolX - poolRadius * 1.15, y: poolY - poolRadius * 0.4, height: 14, bendDir: 1 },
+            { x: poolX - poolRadius * 0.85, y: poolY + poolRadius * 0.75, height: 16, bendDir: -1 },
+            { x: poolX + poolRadius * 0.65, y: poolY + poolRadius * 0.8, height: 13, bendDir: 1 },
+            { x: poolX - poolRadius * 1.25, y: poolY + poolRadius * 0.15, height: 11, bendDir: -1 },
+            { x: poolX + poolRadius * 0.4, y: poolY - poolRadius * 0.6, height: 9, bendDir: 1 }
         ];
         
-        reedPositions.forEach((reed, index) => {
-            // Fixed reed positions to prevent flickering
-            const fixedBend = index % 2 === 0 ? 1 : -1; // Alternate bending direction
-            
+        reedPositions.forEach((reed) => {
             // Reed stem
-            ctx.strokeStyle = '#6B8E23'; // Olive green
+            ctx.strokeStyle = '#6B8E23';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(reed.x, reed.y);
-            ctx.lineTo(reed.x + fixedBend, reed.y - reed.height); // Fixed bend instead of random
+            ctx.lineTo(reed.x + reed.bendDir * 1.5, reed.y - reed.height);
             ctx.stroke();
             
-            // Reed top
-            ctx.fillStyle = '#8FBC8F'; // Dark sea green
+            // Reed head
+            ctx.fillStyle = '#8FBC8F';
             ctx.beginPath();
-            ctx.ellipse(reed.x + fixedBend, reed.y - reed.height, 2, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(reed.x + reed.bendDir * 1.5, reed.y - reed.height, 2.5, 4, 0, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Add cattails near water (repositioned)
-        const cattailPositions = [
-            { x: poolX - poolRadius * 1.0, y: poolY - poolRadius * 0.6 },
-            { x: poolX + poolRadius * 0.8, y: poolY + poolRadius * 0.8 },
-            { x: poolX - poolRadius * 1.1, y: poolY + poolRadius * 0.4 }
+        // Grass around water pool blending naturally
+        const poolGrassPatches = [
+            { x: poolX - poolRadius * 0.8, y: poolY - poolRadius * 1.2, radius: 10, intensity: 0.4 },
+            { x: poolX + poolRadius * 0.9, y: poolY - poolRadius * 0.5, radius: 8, intensity: 0.35 },
+            { x: poolX - poolRadius * 1.4, y: poolY + poolRadius * 0.5, radius: 9, intensity: 0.45 },
+            { x: poolX + poolRadius * 1.2, y: poolY + poolRadius * 0.9, radius: 8, intensity: 0.38 }
         ];
         
-        cattailPositions.forEach(cattail => {
-            // Cattail stem
-            ctx.strokeStyle = '#228B22';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(cattail.x, cattail.y);
-            ctx.lineTo(cattail.x, cattail.y - 16);
-            ctx.stroke();
+        poolGrassPatches.forEach(patch => {
+            const grassGradient = ctx.createRadialGradient(
+                patch.x, patch.y, 0,
+                patch.x, patch.y, patch.radius
+            );
+            grassGradient.addColorStop(0, `rgba(76, 175, 80, ${patch.intensity})`);
+            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
+            grassGradient.addColorStop(1, `rgba(107, 142, 35, 0)`);
             
-            // Cattail head (brown fuzzy part)
-            ctx.fillStyle = '#8B4513';
+            ctx.fillStyle = grassGradient;
             ctx.beginPath();
-            ctx.ellipse(cattail.x, cattail.y - 14, 2, 6, 0, 0, Math.PI * 2);
+            ctx.arc(patch.x, patch.y, patch.radius, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Scattered grass blades (fixed positions, avoid bottom right clearing)
-        const grassBlades = [
-            { x: -maxArea * 0.9, y: -maxArea * 0.3, length: 6, bend: 1 },
-            { x: -maxArea * 0.8, y: maxArea * 0.7, length: 4, bend: -1 },
-            { x: -maxArea * 0.6, y: maxArea * 0.9, length: 5, bend: 1 },
-            { x: -maxArea * 0.4, y: -maxArea * 0.9, length: 5, bend: -1 },
-            { x: -maxArea * 0.5, y: maxArea * 0.8, length: 6, bend: 1 }
-            // Removed grass blades from bottom right clearing area
+        // Add rock formations scattered around the excavated area (OPTIMIZATION: simplified)
+        const rockFormations = [
+            { x: -maxArea * 0.5, y: -maxArea * 0.3, size: 6 },
+            { x: maxArea * 0.4, y: -maxArea * 0.5, size: 5 },
+            { x: -maxArea * 0.7, y: maxArea * 0.4, size: 7 },
+            { x: maxArea * 0.6, y: maxArea * 0.3, size: 5 }
         ];
         
-        grassBlades.forEach(blade => {
-            ctx.strokeStyle = 'rgba(34, 139, 34, 0.8)';
+        rockFormations.forEach(formation => {
+            ctx.fillStyle = '#8B7355';
+            ctx.strokeStyle = '#654321';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(this.x + blade.x, this.y + blade.y);
-            ctx.lineTo(this.x + blade.x + blade.bend, this.y + blade.y - blade.length); // Fixed bend
-            ctx.stroke();
-        });
-        
-        // Fixed excavation tool marks for realism
-        ctx.strokeStyle = 'rgba(101, 67, 33, 0.3)';
-        ctx.lineWidth = 2;
-        
-        const toolMarks = [
-            { x1: -maxArea * 0.6, y1: -maxArea * 0.3, x2: -maxArea * 0.2, y2: -maxArea * 0.1 },
-            { x1: maxArea * 0.1, y1: -maxArea * 0.5, x2: maxArea * 0.4, y2: -maxArea * 0.2 },
-            { x1: -maxArea * 0.3, y1: maxArea * 0.2, x2: maxArea * 0.1, y2: maxArea * 0.4 },
-            { x1: maxArea * 0.2, y1: 0, x2: maxArea * 0.5, y2: maxArea * 0.3 }
-        ];
-        
-        toolMarks.forEach(mark => {
-            ctx.beginPath();
-            ctx.moveTo(this.x + mark.x1, this.y + mark.y1);
-            ctx.lineTo(this.x + mark.x2, this.y + mark.y2);
+            ctx.ellipse(this.x + formation.x, this.y + formation.y, formation.size, formation.size * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
             ctx.stroke();
         });
     }
