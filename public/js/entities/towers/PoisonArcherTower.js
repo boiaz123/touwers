@@ -142,34 +142,31 @@ export class PoisonArcherTower extends Tower {
         });
         
         // Update poison effects on enemies - HIGHLY OPTIMIZED
-        // Create a Set for O(1) enemy lookup instead of O(n) array.includes()
-        const enemySet = this._enemySet || new Set(enemies);
-        this._enemySet = enemySet;
-        enemySet.clear();
-        for (const enemy of enemies) {
-            enemySet.add(enemy);
-        }
+        // Skip entirely if no poisoned enemies (early exit)
+        if (this.poisonedEnemies.size === 0) return;
         
-        // Iterate and update poison states, removing dead enemies
-        for (let [enemy, state] of this.poisonedEnemies) {
-            // Check if enemy is still alive using O(1) Set lookup
-            if (!enemySet.has(enemy)) {
+        // Single pass: check duration and apply damage at tick times
+        for (const [enemy, state] of this.poisonedEnemies) {
+            // Direct health check
+            if (enemy.health <= 0) {
                 this.poisonedEnemies.delete(enemy);
                 continue;
             }
             
+            // Decrement duration once per frame
             state.duration -= deltaTime;
-            
             if (state.duration <= 0) {
                 this.poisonedEnemies.delete(enemy);
-            } else {
-                // Apply poison damage on tick (every 1 second)
-                state.tickTimer -= deltaTime;
-                if (state.tickTimer <= 0) {
-                    const poisonDamage = state.baseDamage + towerForgeBonus;
-                    enemy.takeDamage(poisonDamage, false, 'poison', true);
-                    state.tickTimer = 1.0;
-                }
+                continue;
+            }
+            
+            // Use timestamp-based ticking instead of decrementing timer
+            // Avoids float arithmetic every frame - only check elapsed time
+            state.elapsedSinceTick += deltaTime;
+            if (state.elapsedSinceTick >= 1.0) {
+                const poisonDamage = state.baseDamage + towerForgeBonus;
+                enemy.takeDamage(poisonDamage, false, 'poison', true);
+                state.elapsedSinceTick -= 1.0; // Reset for next tick
             }
         }
     }
@@ -186,7 +183,7 @@ export class PoisonArcherTower extends Tower {
             this.poisonedEnemies.set(enemy, {
                 duration: poisonDuration,
                 baseDamage: basePoisonDamage,
-                tickTimer: 0 // Damage immediately on first tick
+                elapsedSinceTick: 0 // Damage immediately on first tick
             });
         }
     }
