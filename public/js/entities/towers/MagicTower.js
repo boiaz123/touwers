@@ -63,8 +63,8 @@ export class MagicTower extends Tower {
             return particle.life > 0;
         });
         
-        // Generate ambient magic particles
-        if (Math.random() < deltaTime * 3) {
+        // Generate ambient magic particles - reduced frequency for performance
+        if (Math.random() < deltaTime * 1.2) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 50 + 20;
             this.magicParticles.push({
@@ -217,9 +217,9 @@ export class MagicTower extends Tower {
             color: boltColor
         });
         
-        // Create impact particles with elemental colors
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
+        // Create impact particles with elemental colors - reduced from 8 to 6
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
             const speed = Math.random() * 100 + 50;
             this.magicParticles.push({
                 x: this.target.x,
@@ -315,16 +315,8 @@ export class MagicTower extends Tower {
         const baseRadius = towerSize * 0.35;
         const towerHeight = towerSize * 0.5;
         
-        // Tower foundation
-        const foundationGradient = ctx.createRadialGradient(
-            this.x - baseRadius * 0.3, this.y - baseRadius * 0.3, 0,
-            this.x, this.y, baseRadius
-        );
-        foundationGradient.addColorStop(0, '#6A5ACD');
-        foundationGradient.addColorStop(0.7, '#483D8B');
-        foundationGradient.addColorStop(1, '#2E0A4F');
-        
-        ctx.fillStyle = foundationGradient;
+        // Tower foundation - use solid colors instead of gradients
+        ctx.fillStyle = '#6A5ACD';
         ctx.strokeStyle = '#4B0082';
         ctx.lineWidth = 2;
         
@@ -342,20 +334,12 @@ export class MagicTower extends Tower {
         ctx.fill();
         ctx.stroke();
         
-        // Tower walls with 3D effect
-        const wallGradient = ctx.createLinearGradient(
-            this.x - baseRadius, this.y - towerHeight,
-            this.x + baseRadius * 0.3, this.y
-        );
-        wallGradient.addColorStop(0, '#9370DB');
-        wallGradient.addColorStop(0.5, '#6A5ACD');
-        wallGradient.addColorStop(1, '#483D8B');
-        
-        ctx.fillStyle = wallGradient;
+        // Tower walls with 3D effect - simplified
+        ctx.fillStyle = '#6A5ACD';
         ctx.strokeStyle = '#4B0082';
         ctx.lineWidth = 2;
         
-        // Draw tower cylinder (FIXED: proper alignment)
+        // Draw tower cylinder
         ctx.beginPath();
         ctx.arc(this.x, this.y - towerHeight/2, baseRadius * 0.9, 0, Math.PI * 2);
         ctx.fill();
@@ -377,11 +361,8 @@ export class MagicTower extends Tower {
             const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
             const windowY = this.y - towerHeight/2;
             
-            // Window glow
-            const windowGlow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, 8);
-            windowGlow.addColorStop(0, `rgba(138, 43, 226, ${this.crystalPulse})`);
-            windowGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
-            ctx.fillStyle = windowGlow;
+            // Window glow - simplified without gradient
+            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`;
             ctx.beginPath();
             ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
             ctx.fill();
@@ -393,7 +374,7 @@ export class MagicTower extends Tower {
             ctx.fill();
         }
         
-        // Tesla coil base platform (FIXED: aligned with tower)
+        // Tesla coil base platform
         const coilBaseRadius = baseRadius * 0.6;
         const coilBaseY = this.y - towerHeight;
         
@@ -405,27 +386,18 @@ export class MagicTower extends Tower {
         ctx.fill();
         ctx.stroke();
         
-        // Tesla coil central column (FIXED: proper positioning)
+        // Tesla coil central column
         const coilHeight = towerSize * 0.4;
         const coilWidth = baseRadius * 0.15;
         
-        // Main coil column
-        const coilGradient = ctx.createLinearGradient(
-            this.x - coilWidth, coilBaseY - coilHeight,
-            this.x + coilWidth, coilBaseY
-        );
-        coilGradient.addColorStop(0, '#C0C0C0');
-        coilGradient.addColorStop(0.3, '#808080');
-        coilGradient.addColorStop(0.7, '#696969');
-        coilGradient.addColorStop(1, '#2F2F2F');
-        
-        ctx.fillStyle = coilGradient;
+        // Main coil column - solid color
+        ctx.fillStyle = '#808080';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
         ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
         
-        // Tesla coil rings (FIXED: proper alignment)
+        // Tesla coil rings
         const ringCount = 5;
         for (let i = 0; i < ringCount; i++) {
             const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
@@ -445,19 +417,11 @@ export class MagicTower extends Tower {
             ctx.stroke();
         }
         
-        // Tesla coil top sphere (FIXED: aligned properly)
+        // Tesla coil top sphere
         const sphereRadius = coilWidth * 1.5;
         const sphereY = coilBaseY - coilHeight;
         
-        const sphereGradient = ctx.createRadialGradient(
-            this.x - sphereRadius * 0.3, sphereY - sphereRadius * 0.3, 0,
-            this.x, sphereY, sphereRadius
-        );
-        sphereGradient.addColorStop(0, '#E0E0E0');
-        sphereGradient.addColorStop(0.7, '#A0A0A0');
-        sphereGradient.addColorStop(1, '#696969');
-        
-        ctx.fillStyle = sphereGradient;
+        ctx.fillStyle = '#A0A0A0';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -486,11 +450,8 @@ export class MagicTower extends Tower {
             const runeX = this.x + Math.cos(runeAngle) * runeRadius;
             const runeY = this.y - towerHeight * 0.3 + Math.sin(runeAngle) * runeRadius * 0.3 + floatY;
             
-            // Rune glow
-            const runeGlow = ctx.createRadialGradient(runeX, runeY, 0, runeX, runeY, 12);
-            runeGlow.addColorStop(0, `rgba(138, 43, 226, ${this.crystalPulse * 0.6})`);
-            runeGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
-            ctx.fillStyle = runeGlow;
+            // Rune glow - simplified without gradient
+            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.4})`;
             ctx.beginPath();
             ctx.arc(runeX, runeY, 12, 0, Math.PI * 2);
             ctx.fill();
@@ -503,21 +464,12 @@ export class MagicTower extends Tower {
             ctx.fillText(rune.symbol, runeX, runeY);
         });
         
-        // Render magic particles
+        // Render magic particles - simplified without individual glows
         this.magicParticles.forEach(particle => {
             const alpha = particle.life / particle.maxLife;
             ctx.fillStyle = particle.color + alpha + ')';
             ctx.beginPath();
             ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Particle glow
-            const particleGlow = ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.size * 2);
-            particleGlow.addColorStop(0, particle.color + (alpha * 0.3) + ')');
-            particleGlow.addColorStop(1, particle.color + '0)');
-            ctx.fillStyle = particleGlow;
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size * 2, 0, Math.PI * 2);
             ctx.fill();
         });
         
@@ -539,9 +491,9 @@ export class MagicTower extends Tower {
                 ctx.stroke();
             });
             
-            // Lightning glow
-            ctx.strokeStyle = (bolt.color || 'rgba(138, 43, 226, ') + (alpha * 0.6) + ')';
-            ctx.lineWidth = 8;
+            // Lightning glow - single pass instead of double
+            ctx.strokeStyle = (bolt.color || 'rgba(138, 43, 226, ') + (alpha * 0.4) + ')';
+            ctx.lineWidth = 6;
             bolt.segments.forEach(segment => {
                 ctx.beginPath();
                 ctx.moveTo(segment.fromX, segment.fromY);
