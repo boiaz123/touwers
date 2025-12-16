@@ -626,50 +626,130 @@ export class GoldMine extends Building {
     }
     
     renderTrees(ctx) {
-        this.trees.forEach(tree => {
+        this.trees.forEach((tree, index) => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
             
-            // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.ellipse(3, tree.height * 0.1, tree.crownRadius * 0.7, tree.crownRadius * 0.25, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Tree trunk - simplified
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(-tree.trunkWidth/2, 0, tree.trunkWidth, -tree.height * 0.3);
-            
-            // Tree crown - simplified (fewer layers)
-            const layerCount = tree.layers;
-            const layerHeight = (tree.height * 0.8) / layerCount;
-            
-            for (let layer = 0; layer < Math.min(3, layerCount); layer++) {
-                const layerTop = -tree.height + (layer * layerHeight * 0.7);
-                const layerBottom = layerTop + layerHeight;
-                const layerRadius = tree.crownRadius * (0.4 + (layer / (layerCount - 1)) * 0.6);
-                const greenBase = Math.floor(27 * (1 - layer * 0.1));
-                const greenSecondary = Math.floor(67 * (1 - layer * 0.1));
-                
-                ctx.fillStyle = `rgb(${greenBase}, ${greenSecondary}, ${greenBase + 10})`;
-                ctx.beginPath();
-                
-                if (layer === 0) {
-                    ctx.moveTo(0, layerTop);
-                    ctx.lineTo(-layerRadius * 0.9, layerBottom);
-                    ctx.lineTo(layerRadius * 0.9, layerBottom);
-                } else {
-                    ctx.moveTo(0, layerTop + layerHeight * 0.2);
-                    ctx.lineTo(-layerRadius, layerBottom);
-                    ctx.lineTo(layerRadius, layerBottom);
-                }
-                
-                ctx.closePath();
-                ctx.fill();
+            // Use different tree types like LevelBase does
+            const treeType = (index + Math.floor(tree.x + tree.y)) % 4;
+            switch(treeType) {
+                case 0:
+                    this.renderTreeType1(ctx, tree);
+                    break;
+                case 1:
+                    this.renderTreeType2(ctx, tree);
+                    break;
+                case 2:
+                    this.renderTreeType3(ctx, tree);
+                    break;
+                default:
+                    this.renderTreeType4(ctx, tree);
             }
-            
             ctx.restore();
         });
+    }
+    
+    renderTreeType1(ctx, tree) {
+        const size = tree.crownRadius * 1.5;
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(-trunkWidth * 0.5, 0, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(0, 0, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.6);
+        ctx.lineTo(size * 0.35, -size * 0.1);
+        ctx.lineTo(-size * 0.35, -size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.35);
+        ctx.lineTo(size * 0.3, size * 0.05);
+        ctx.lineTo(-size * 0.3, size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.15);
+        ctx.lineTo(size * 0.25, size * 0.2);
+        ctx.lineTo(-size * 0.25, size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, tree) {
+        const size = tree.crownRadius * 1.5;
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(-trunkWidth * 0.5, 0, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(-trunkWidth * 0.5 + trunkWidth * 0.6, 0, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, tree) {
+        const size = tree.crownRadius * 1.5;
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(-trunkWidth * 0.5, -size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(trunkWidth * 0.25, 0, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(-size * 0.28, -size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(size * 0.28, -size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType4(ctx, tree) {
+        const size = tree.crownRadius * 1.5;
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(-trunkWidth * 0.5, -size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.05);
+        ctx.lineTo(size * 0.38, size * 0.15);
+        ctx.lineTo(-size * 0.38, size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.25);
+        ctx.lineTo(size * 0.3, 0);
+        ctx.lineTo(-size * 0.3, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(0, -size * 0.45);
+        ctx.lineTo(size * 0.2, -size * 0.15);
+        ctx.lineTo(-size * 0.2, -size * 0.15);
+        ctx.closePath();
+        ctx.fill();
     }
     
     renderDebris(ctx) {

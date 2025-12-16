@@ -142,30 +142,7 @@ export class BuildingManager {
         // Get cell size from ResolutionManager for accurate click detection
         const cellSize = resolutionManager && resolutionManager.cellSize ? resolutionManager.cellSize : 32;
         
-        // First check toggle icon clicks for gold mines (in grid space)
-        for (const building of this.buildings) {
-            if (building.constructor.name === 'GoldMine' && building.gemMiningUnlocked) {
-                // Toggle icon is at the top-left of the 4x4 building grid
-                const toggleGridX = building.gridX;
-                const toggleGridY = building.gridY;
-                const togglePixelX = toggleGridX * cellSize + 12; // Offset within grid cell
-                const togglePixelY = toggleGridY * cellSize + 12;
-                
-                const toggleIconSize = 25;
-                const clickBuffer = 5;
-                if (x >= togglePixelX - (toggleIconSize/2 + clickBuffer) && x <= togglePixelX + (toggleIconSize/2 + clickBuffer) &&
-                    y >= togglePixelY - (toggleIconSize/2 + clickBuffer) && y <= togglePixelY + (toggleIconSize/2 + clickBuffer)) {
-                    
-                    // Call toggle method
-                    building.toggleGemMode();
-                    building.goldReady = false;
-                    building.currentProduction = 0;
-                    return 0; // No gold collected on toggle
-                }
-            }
-        }
-        
-        // Then check regular building grid-based clicks
+        // Check regular building grid-based clicks
         for (const building of this.buildings) {
             // Use grid-based coordinates, not screen coordinates
             const buildingGridWidth = building.size;
