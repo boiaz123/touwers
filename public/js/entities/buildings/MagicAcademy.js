@@ -136,30 +136,25 @@ export class MagicAcademy extends Building {
     render(ctx, size) {
         // Render surrounding elements first
         this.renderWaterMoat(ctx, size);
+        
+        // Render fortress base (cobblestone and gate - below trees)
+        this.renderCobblestoneBase(ctx, size);
+        
+        // Render trees and bushes - they appear in front of the base
         this.renderTrees(ctx, size);
         this.renderBushes(ctx, size);
         
-        // Render the fortress
-        this.renderFortress(ctx, size);
+        // Render the upper fortress structures (towers, spires, details - above trees)
+        this.renderCentralTower(ctx, size);
+        this.renderSideSpires(ctx, size);
+        this.renderFortressDetails(ctx, size);
         
         // Render magic effects
         this.renderMagicEffects(ctx, size);
     }
     
     renderFortress(ctx, size) {
-        // NO SHADOW RENDERING - this was causing the grey square
-        
-        // Main fortress base (cobblestone)
-        this.renderCobblestoneBase(ctx, size);
-        
-        // Main central tower
-        this.renderCentralTower(ctx, size);
-        
-        // Side towers/spires
-        this.renderSideSpires(ctx, size);
-        
-        // Fortress details
-        this.renderFortressDetails(ctx, size);
+        // This method is no longer used - rendering order is handled in render()
     }
     
     renderWaterMoat(ctx, size) {
@@ -209,58 +204,146 @@ export class MagicAcademy extends Building {
     }
     
     renderTrees(ctx, size) {
-        this.trees.forEach(tree => {
+        // Render trees naturally - fortress will cover lower portions
+        this.trees.forEach((tree, index) => {
             const treeX = this.x + tree.x;
             const treeY = this.y + tree.y;
-            const scale = tree.size;
+            const scale = tree.size * 40;
             
             // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
             ctx.save();
-            ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.5);
+            ctx.translate(treeX + 3, treeY + 4);
+            ctx.scale(1, 0.4);
             ctx.beginPath();
-            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+            ctx.arc(0, 0, scale * 0.35, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
             
-            // Tree trunk
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
-            
-            // Trunk texture
-            ctx.strokeStyle = '#5D4037';
-            ctx.lineWidth = 1;
-            for (let i = 1; i < 3; i++) {
-                const y = treeY - (6 * scale * i / 3);
-                ctx.beginPath();
-                ctx.moveTo(treeX - 1 * scale, y);
-                ctx.lineTo(treeX + 1 * scale, y);
-                ctx.stroke();
+            // Use different tree types based on index for variety
+            const treeType = index % 4;
+            switch(treeType) {
+                case 0:
+                    this.renderTreeType1(ctx, treeX, treeY, scale);
+                    break;
+                case 1:
+                    this.renderTreeType2(ctx, treeX, treeY, scale);
+                    break;
+                case 2:
+                    this.renderTreeType3(ctx, treeX, treeY, scale);
+                    break;
+                default:
+                    this.renderTreeType4(ctx, treeX, treeY, scale);
             }
-            
-            // Pine layers (same as barricade tower)
-            const layers = [
-                { y: -10 * scale, width: 8 * scale, color: '#0F3B0F' },
-                { y: -7 * scale, width: 6 * scale, color: '#228B22' },
-                { y: -4 * scale, width: 4 * scale, color: '#32CD32' }
-            ];
-            
-            layers.forEach(layer => {
-                ctx.fillStyle = layer.color;
-                ctx.beginPath();
-                ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Tree outline
-                ctx.strokeStyle = '#0F3B0F';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            });
         });
+    }
+    
+    renderTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, x, y, size) {
+        // Sparse tree with distinct branches
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType4(ctx, x, y, size) {
+        // Pine/Spruce style with layered triangles
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.12, y - size * 0.45);
+        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.closePath();
+        ctx.fill();
     }
     
     renderBushes(ctx, size) {
@@ -313,7 +396,7 @@ export class MagicAcademy extends Building {
         ctx.fillStyle = wallGradient;
         ctx.fillRect(this.x - baseWidth/2, this.y - wallHeight/2, baseWidth, wallHeight);
         
-        // Cobblestone pattern
+        // Cobblestone pattern - improved with better edge alignment
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         
@@ -327,18 +410,48 @@ export class MagicAcademy extends Building {
             for (let col = 0; col < 12; col++) {
                 const stoneX = this.x - baseWidth/2 + offsetX + (col * stoneWidth);
                 
-                // Stone color variation
-                const stoneShade = 0.8 + Math.sin(row * col * 0.3) * 0.2;
+                // Stone color variation with better shading
+                const stoneShade = 0.75 + Math.sin(row * col * 0.3) * 0.25;
                 ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
                 
                 ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
                 ctx.strokeRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
                 
-                // Stone highlight
-                ctx.fillStyle = `rgba(200, 200, 200, ${0.3 * stoneShade})`;
-                ctx.fillRect(stoneX, rowY, stoneWidth/3, stoneHeight/3);
+                // Stone highlight with better gradation
+                ctx.fillStyle = `rgba(210, 210, 210, ${0.25 * stoneShade})`;
+                ctx.fillRect(stoneX + 1, rowY + 1, stoneWidth/3 - 1, stoneHeight/3 - 1);
+                
+                // Stone shadow for depth
+                ctx.fillStyle = `rgba(100, 100, 100, ${0.15 * stoneShade})`;
+                ctx.fillRect(stoneX + stoneWidth - 3, rowY + stoneHeight - 3, 2, 2);
             }
         }
+        
+        // Wall edges (left and right borders for finished look)
+        ctx.strokeStyle = '#1C1C1C';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - baseWidth/2, this.y - wallHeight/2);
+        ctx.lineTo(this.x - baseWidth/2, this.y + wallHeight/2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x + baseWidth/2, this.y - wallHeight/2);
+        ctx.lineTo(this.x + baseWidth/2, this.y + wallHeight/2);
+        ctx.stroke();
+        
+        // Top and bottom edge finishing
+        ctx.strokeStyle = '#4F4F4F';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.x - baseWidth/2, this.y - wallHeight/2);
+        ctx.lineTo(this.x + baseWidth/2, this.y - wallHeight/2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.x - baseWidth/2, this.y + wallHeight/2);
+        ctx.lineTo(this.x + baseWidth/2, this.y + wallHeight/2);
+        ctx.stroke();
         
         // Fortress gate
         const gateWidth = size * 0.15;
@@ -485,22 +598,92 @@ export class MagicAcademy extends Building {
             ctx.lineWidth = 1;
             ctx.strokeRect(spire.x - spireRadius, spire.y - spire.height, spireRadius * 2, spire.height);
             
-            // Spire cap
-            const capHeight = size * 0.1;
-            ctx.fillStyle = '#4B0082';
+            // Spire stone courses/rings for texture
+            for (let i = 0; i < 5; i++) {
+                const ringY = spire.y - spire.height + (i * spire.height / 5);
+                ctx.strokeStyle = '#3E2B6D';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(spire.x - spireRadius, ringY);
+                ctx.lineTo(spire.x + spireRadius, ringY);
+                ctx.stroke();
+            }
+            
+            // Spire windows with glow
+            for (let i = 0; i < 3; i++) {
+                const windowY = spire.y - spire.height * (0.2 + i * 0.3);
+                
+                // Window glow (magical)
+                const windowGlow = ctx.createRadialGradient(spire.x, windowY, 0, spire.x, windowY, 6);
+                windowGlow.addColorStop(0, 'rgba(138, 43, 226, 0.6)');
+                windowGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
+                ctx.fillStyle = windowGlow;
+                ctx.beginPath();
+                ctx.arc(spire.x, windowY, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Window frame
+                ctx.fillStyle = '#1C1C1C';
+                ctx.beginPath();
+                ctx.arc(spire.x, windowY, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Window shine
+                ctx.fillStyle = 'rgba(200, 100, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(spire.x - 0.5, windowY - 0.5, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Spire cap with more detail
+            const capHeight = size * 0.12;
+            const capGradient = ctx.createLinearGradient(spire.x - spireRadius * 1.2, spire.y - spire.height - capHeight, spire.x + spireRadius * 1.2, spire.y - spire.height);
+            capGradient.addColorStop(0, '#5B3A9D');
+            capGradient.addColorStop(1, '#3D2673');
+            
+            ctx.fillStyle = capGradient;
             ctx.beginPath();
             ctx.moveTo(spire.x, spire.y - spire.height - capHeight);
             ctx.lineTo(spire.x - spireRadius * 1.2, spire.y - spire.height);
             ctx.lineTo(spire.x + spireRadius * 1.2, spire.y - spire.height);
             ctx.closePath();
             ctx.fill();
+            
+            // Cap outline
+            ctx.strokeStyle = '#2E0A4F';
+            ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Spire crystal
-            const crystalPulse = Math.sin(this.animationTime * 4 + spire.x) * 0.3 + 0.7;
-            ctx.fillStyle = `rgba(75, 0, 130, ${crystalPulse})`;
+            // Cap ridge detail
+            ctx.strokeStyle = '#7A4FBB';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(spire.x, spire.y - spire.height - capHeight, 3, 0, Math.PI * 2);
+            ctx.moveTo(spire.x, spire.y - spire.height - capHeight);
+            ctx.lineTo(spire.x, spire.y - spire.height);
+            ctx.stroke();
+            
+            // Spire crystal with pulsing glow
+            const crystalPulse = Math.sin(this.animationTime * 4 + spire.x) * 0.3 + 0.7;
+            
+            // Crystal glow (larger)
+            const crystalGlow = ctx.createRadialGradient(spire.x, spire.y - spire.height - capHeight, 0, spire.x, spire.y - spire.height - capHeight, 10);
+            crystalGlow.addColorStop(0, `rgba(138, 43, 226, ${crystalPulse * 0.4})`);
+            crystalGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
+            ctx.fillStyle = crystalGlow;
+            ctx.beginPath();
+            ctx.arc(spire.x, spire.y - spire.height - capHeight, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Crystal itself
+            ctx.fillStyle = `rgba(200, 100, 255, ${crystalPulse})`;
+            ctx.beginPath();
+            ctx.arc(spire.x, spire.y - spire.height - capHeight, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Crystal highlight
+            ctx.fillStyle = `rgba(255, 150, 255, ${crystalPulse * 0.7})`;
+            ctx.beginPath();
+            ctx.arc(spire.x - 1, spire.y - spire.height - capHeight - 1, 1.5, 0, Math.PI * 2);
             ctx.fill();
         });
     }
@@ -532,29 +715,8 @@ export class MagicAcademy extends Building {
             ctx.closePath();
             ctx.fill();
             
-            // Banner symbol
-            ctx.fillStyle = '#FFD700';
-            ctx.font = '10px serif';
-            ctx.fillText('🔮', banner.x + 5, banner.y - 14);
+
         });
-        
-        // Fortress bridge over moat (main entrance)
-        const bridgeWidth = size * 0.2;
-        const bridgeLength = size * 0.3;
-        
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(this.x - bridgeWidth/2, this.y + size * 0.2, bridgeWidth, bridgeLength);
-        
-        // Bridge planks
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 5; i++) {
-            const plankY = this.y + size * 0.2 + (i * bridgeLength / 5);
-            ctx.beginPath();
-            ctx.moveTo(this.x - bridgeWidth/2, plankY);
-            ctx.lineTo(this.x + bridgeWidth/2, plankY);
-            ctx.stroke();
-        }
     }
     
     renderMagicEffects(ctx, size) {
