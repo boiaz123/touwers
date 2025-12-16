@@ -46,6 +46,10 @@ export class GameplayState {
         this.performanceMonitor = new PerformanceMonitor();
         this.performanceMonitor.enable(); // Enable by default to show FPS
         
+        // Placement flags to prevent menu opening immediately after placement
+        this.justPlacedTower = false;
+        this.justPlacedBuilding = false;
+        
     }
 
     setGameSpeed(speed) {
@@ -989,6 +993,8 @@ export class GameplayState {
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    // Mark that placement just happened - prevent menu opening on next click of same location
+                    this.justPlacedTower = true;
                     return; // Exit after placement - don't open menus
                 }
             } else {
@@ -1005,6 +1011,8 @@ export class GameplayState {
                         this.selectedTowerType = null;
                         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
                         this.level.setPlacementPreview(0, 0, false);
+                        // Mark that placement just happened - prevent menu opening on next click of same location
+                        this.justPlacedTower = true;
                         return; // Exit after placement - don't open menus
                     }
                 }
@@ -1040,10 +1048,19 @@ export class GameplayState {
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
+                    // Mark that placement just happened - prevent menu opening
+                    this.justPlacedBuilding = true;
                     return; // Exit after placement - don't open menus
                 }
             }
             return; // Exit if placement check failed - don't open menus
+        }
+        
+        // Skip menu opening if we just placed something
+        if (this.justPlacedTower || this.justPlacedBuilding) {
+            this.justPlacedTower = false;
+            this.justPlacedBuilding = false;
+            return;
         }
         
         // Only show menus if not in placement mode
