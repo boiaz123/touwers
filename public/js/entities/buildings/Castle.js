@@ -23,14 +23,14 @@ export class Castle {
         this.bridgeLength = 50;
         this.bridgeHeight = 10;
         
-        // Flags on towers - positioned at tower roof peak
+        // Flags on towers - pole base positioned at tower roof peak
         // roofPeakY = topY - creneH - meralonH - roofH
         // where topY = -this.towerHeight = -66.5, creneH = 10, meralonH = 4, roofH = 12
         // roofPeakY = -66.5 - 10 - 4 - 12 = -92.5
-        const flagRoofPeakY = -this.towerHeight - 10 - 4 - 12; // -92.5
+        const roofPeakY = -this.towerHeight - 10 - 4 - 12;
         this.flags = [
-            { x: -72, y: flagRoofPeakY, rotation: 0.1 },
-            { x: 72, y: flagRoofPeakY, rotation: -0.15 }
+            { x: -72, y: roofPeakY, rotation: 0.1 },
+            { x: 72, y: roofPeakY, rotation: -0.15 }
         ];
         
         // Window lights on wall and towers
@@ -115,6 +115,9 @@ export class Castle {
         
         // Draw right tower with front perspective
         this.drawTower(ctx, this.wallWidth/2 + this.towerWidth/2, 'right');
+        
+        // Draw castle base to cover floating bricks
+        this.drawCastleBase(ctx);
         
         // Draw gate
         this.drawGate(ctx);
@@ -493,17 +496,68 @@ export class Castle {
         }
     }
     
+    drawCastleBase(ctx) {
+        // Draw a stone base platform below the castle to cover floating bricks
+        const baseWidth = this.wallWidth + 100;  // Extend beyond castle walls
+        const baseHeight = 20;
+        const baseY = this.wallHeight / 2;  // At the bottom of the wall
+        
+        // Stone base gradient - darker at bottom, lighter at top
+        const baseGrad = ctx.createLinearGradient(0, baseY, 0, baseY + baseHeight);
+        baseGrad.addColorStop(0, '#6B5D4D');
+        baseGrad.addColorStop(0.3, '#5A4D3D');
+        baseGrad.addColorStop(1, '#4A3D2D');
+        
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-baseWidth/2, baseY, baseWidth, baseHeight);
+        
+        // Base outline
+        ctx.strokeStyle = '#2D1810';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-baseWidth/2, baseY, baseWidth, baseHeight);
+        
+        // Stone block pattern on base
+        ctx.strokeStyle = '#3D2810';
+        ctx.lineWidth = 0.6;
+        const blockSize = 20;
+        
+        for (let x = -baseWidth/2; x < baseWidth/2; x += blockSize) {
+            // Vertical lines
+            ctx.beginPath();
+            ctx.moveTo(x, baseY);
+            ctx.lineTo(x, baseY + baseHeight);
+            ctx.stroke();
+            
+            // Horizontal line in middle
+            ctx.beginPath();
+            ctx.moveTo(x, baseY + baseHeight/2);
+            ctx.lineTo(x + blockSize, baseY + baseHeight/2);
+            ctx.stroke();
+        }
+        
+        // Add subtle shadows/highlights on base blocks for depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        for (let x = -baseWidth/2; x < baseWidth/2; x += blockSize) {
+            ctx.fillRect(x, baseY + baseHeight/2, blockSize, baseHeight/2);
+        }
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        for (let x = -baseWidth/2; x < baseWidth/2; x += blockSize) {
+            ctx.fillRect(x, baseY, blockSize, baseHeight/2);
+        }
+    }
+    
     drawFlags(ctx) {
         this.flags.forEach((flag, idx) => {
             ctx.save();
             ctx.translate(flag.x, flag.y);
             
-            // Flag pole base is at (0, 0) which is the roof peak
+            // Flag pole extends upward from base to roof peak
             ctx.strokeStyle = '#5A4A3A';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(0, 15);
+            ctx.lineTo(0, -15);  // Draw upward (negative Y)
             ctx.stroke();
             
             // Flag - animated waving
