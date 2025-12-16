@@ -46,7 +46,10 @@ export class TowerForge extends Building {
             'poison': { level: 0, baseCost: 100, effect: 5 },
             
             // Cannon upgrades - available at forge level 3+
-            'cannon': { level: 0, baseCost: 120, effect: 10 }
+            'cannon': { level: 0, baseCost: 120, effect: 10 },
+            
+            // Castle reinforcements - available at forge level 5+
+            'reinforce_wall': { level: 0, baseCost: 150, effect: 50 }
         };
     }
     
@@ -1084,6 +1087,20 @@ export class TowerForge extends Building {
                 baseCost: this.upgrades.cannon.baseCost,
                 cost: this.calculateUpgradeCost('cannon'),
                 icon: '💥'
+            });
+        }
+        
+        // Castle Reinforcements - available from forge level 5+
+        if (this.forgeLevel >= 5) {
+            options.push({
+                id: 'reinforce_wall',
+                name: 'Castle Reinforcement',
+                description: `Increase Castle max health by ${this.upgrades.reinforce_wall.effect} per level`,
+                level: this.upgrades.reinforce_wall.level,
+                maxLevel: this.forgeLevel, // Capped at forge level
+                baseCost: this.upgrades.reinforce_wall.baseCost,
+                cost: this.calculateUpgradeCost('reinforce_wall'),
+                icon: '🏰'
             });
         }
         

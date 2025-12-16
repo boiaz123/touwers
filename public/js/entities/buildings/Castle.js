@@ -209,13 +209,15 @@ export class Castle {
             const offsetX = (Math.abs(y - topY) / blockH) % 2 * blockW/2;
             const halfRowW = rowW / 2;
             
-            for (let i = 0; i < 5; i++) {
+            // Draw more bricks to fill the wider base
+            for (let i = -1; i <= 5; i++) {
                 const xPos = -rowW/2 + (i * blockW);
                 const brickLeft = xPos + offsetX;
                 const brickRight = brickLeft + (blockW - 0.8);
                 
-                // Only draw brick if it fits within tower width at this row
-                if (brickLeft >= -halfRowW && brickRight <= halfRowW) {
+                // Draw brick if it's within reasonable range of tower width at this row
+                // Allow slightly more bricks at the base to avoid gaps
+                if (brickLeft >= -halfRowW - blockW/2 && brickRight <= halfRowW + blockW/2) {
                     ctx.strokeRect(brickLeft, y, blockW - 0.8, blockH - 0.8);
                 }
             }

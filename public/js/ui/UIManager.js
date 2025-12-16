@@ -883,6 +883,8 @@ export class UIManager {
                     currentEffect = `Poison: +${upgrade.level * 5}`;
                 } else if (upgrade.id === 'cannon') {
                     currentEffect = `Damage: +${upgrade.level * 10}`;
+                } else if (upgrade.id === 'reinforce_wall') {
+                    currentEffect = `Health: +${upgrade.level * 50}`;
                 }
                 
                 contentHTML += `
@@ -975,6 +977,13 @@ export class UIManager {
                 } else {
                     // Handle tower upgrades
                     if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
+                        // Special handling for reinforce_wall upgrade - apply to castle
+                        if (upgradeId === 'reinforce_wall' && forgeData.castle) {
+                            const healthBonus = 50; // From TowerForge.upgrades['reinforce_wall'].effect
+                            forgeData.castle.maxHealth += healthBonus;
+                            forgeData.castle.health = Math.min(forgeData.castle.health + healthBonus, forgeData.castle.maxHealth);
+                        }
+                        
                         this.updateUI();
                         
                         // Refresh the panel
@@ -982,7 +991,8 @@ export class UIManager {
                             type: 'forge_menu',
                             forge: forgeData.forge,
                             upgrades: forgeData.forge.getUpgradeOptions(),
-                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption(),
+                            castle: forgeData.castle
                         });
                     }
                 }
@@ -2173,6 +2183,9 @@ export class UIManager {
         
         const castle = castleData.castle;
         const trainingGrounds = castleData.trainingGrounds;
+        const forgeLevel = castleData.forgeLevel || 0;
+        
+        // Add castle health display and wall visual
         const maxHealth = castle.maxHealth;
         const currentHealth = castle.health;
         const healthPercent = (currentHealth / maxHealth) * 100;
@@ -2181,10 +2194,10 @@ export class UIManager {
             <div class="upgrade-category">
                 <div class="panel-upgrade-item">
                     <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">🛡️</div>
+                        <div class="upgrade-icon-section">🏰</div>
                         <div class="upgrade-info-section">
-                            <div class="upgrade-name">Reinforced Walls</div>
-                            <div class="upgrade-description">Improve castle defenses and structural integrity</div>
+                            <div class="upgrade-name">Castle Wall</div>
+                            <div class="upgrade-description">Current condition of the castle defenses</div>
                             <div class="upgrade-level-display">
                                 Health: ${currentHealth}/${maxHealth}
                                 <div class="upgrade-level-bar">
@@ -2193,12 +2206,52 @@ export class UIManager {
                             </div>
                         </div>
                     </div>
-                    <div class="upgrade-action-row">
-                        <div class="upgrade-cost-display">Info Only</div>
-                    </div>
                 </div>
             </div>
         `;
+        
+        // Add castle upgrade options (fortification only, available at forge level 5+)
+        const castleUpgrades = castle.getUpgradeOptions().filter(u => u.id === 'fortification');
+        
+        if (forgeLevel >= 5 && castleUpgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Castle Upgrades</div>`;
+            
+            castleUpgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${upgrade.currentEffect}</div>
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : upgrade.cost ? `$${upgrade.cost}` : 'N/A'}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-castle-upgrade="${upgrade.id}" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
         
         // Add defender hiring section if Training Grounds is available
         if (trainingGrounds && trainingGrounds.defenderUnlocked) {
@@ -2252,7 +2305,21 @@ export class UIManager {
             contentHTML += `</div>`;
         }
         
-        this.showPanel('castle-panel', '🏰 Castle Upgrades', contentHTML);
+        this.showPanelWithoutClosing('castle-panel', '🏰 Castle Upgrades', contentHTML);
+        
+        // Add event listeners for castle upgrades
+        document.querySelectorAll('[data-castle-upgrade]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const upgradeId = btn.dataset.castleUpgrade;
+                if (castle.purchaseUpgrade(upgradeId, this.gameState)) {
+                    this.updateUI();
+                    this.updateButtonStates();
+                    // Refresh the menu to show updated state
+                    this.showCastleUpgradeMenu(castleData);
+                } else {
+                }
+            }, { once: true });
+        });
         
         // Add event listeners for defender hiring
         if (trainingGrounds && trainingGrounds.defenderUnlocked) {

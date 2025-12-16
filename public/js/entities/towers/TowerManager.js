@@ -569,6 +569,10 @@ export class TowerManager {
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
+                // Add castle reference for reinforce_wall upgrade
+                if (this.level && this.level.castle) {
+                    buildingResult.castle = this.level.castle;
+                }
                 return buildingResult;
             } else if (buildingResult.type === 'academy_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;
@@ -596,7 +600,15 @@ export class TowerManager {
             if (this.level.castle.isPointInside(x, y, this.level.cellSize)) {
                 // Get training grounds for defender options
                 const trainingGrounds = this.buildingManager.buildings.find(b => b.constructor.name === 'TrainingGrounds');
-                return this.level.castle.onClick(trainingGrounds);
+                const castleMenuData = this.level.castle.onClick(trainingGrounds);
+                
+                // Add forge level for UI reference
+                const forge = this.buildingManager.buildings.find(b => b.constructor.name === 'TowerForge');
+                if (forge) {
+                    castleMenuData.forgeLevel = forge.getForgeLevel();
+                }
+                
+                return castleMenuData;
             }
         }
         
