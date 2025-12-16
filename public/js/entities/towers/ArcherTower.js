@@ -58,19 +58,37 @@ export class ArcherTower extends Tower {
             shooter.drawback = 1;
             shooter.shootTimer = 0.3;
             
+            // Get archer's position on the platform
+            const cellSize = 32; // Default fallback
+            const towerSize = cellSize * 2;
+            const towerHeight = towerSize * 0.7;
+            const platformWidth = towerSize * 0.6 * 1.2;
+            const platformY = this.y - towerHeight;
+            const railingHeight = towerSize * 0.15;
+            
+            const archerPositions = [
+                { x: this.x - platformWidth * 0.3, y: platformY - platformWidth * 0.08 - railingHeight/2 },
+                { x: this.x + platformWidth * 0.3, y: platformY - platformWidth * 0.08 - railingHeight/2 },
+                { x: this.x - platformWidth * 0.1, y: platformY - platformWidth * 0.08 - railingHeight/2 },
+                { x: this.x + platformWidth * 0.1, y: platformY - platformWidth * 0.08 - railingHeight/2 }
+            ];
+            
+            const archerIndex = Math.floor(Math.random() * this.archers.length);
+            const archerPos = archerPositions[archerIndex];
+            
             // Predict where the target will be
             const arrowSpeed = 400;
             const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
             
             // Calculate arrow trajectory with arc to predicted position
-            const dx = predicted.x - this.x;
-            const dy = predicted.y - this.y;
+            const dx = predicted.x - archerPos.x;
+            const dy = predicted.y - archerPos.y;
             const distance = Math.hypot(dx, dy);
             const arcHeight = distance * 0.1; // Slight arc for realism
             
             this.arrows.push({
-                x: this.x + Math.cos(shooter.angle) * 20,
-                y: this.y + Math.sin(shooter.angle) * 20,
+                x: archerPos.x,
+                y: archerPos.y,
                 vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
                 vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
                 rotation: shooter.angle,
