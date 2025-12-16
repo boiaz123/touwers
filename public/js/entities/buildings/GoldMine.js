@@ -1069,81 +1069,41 @@ export class GoldMine extends Building {
     }
     
     renderExcavatedGround(ctx, size) {
-        // Render natural forest floor that organically blends around forest and lake
-        const maxArea = size * 0.35; // Smaller footprint - don't fill entire 4x4
+        // Create a natural grass ground base for the entire mine area
+        const baseArea = size * 0.5; // Larger base area
         
-        // First: Render the base ground layer
-        ctx.fillStyle = '#A0522D'; // Brown dirt base
+        // First: Create a natural grass foundation for the whole mine clearing
+        const grassGradient = ctx.createRadialGradient(
+            this.x, this.y + baseArea * 0.1, 0,
+            this.x, this.y + baseArea * 0.2, baseArea * 1.2
+        );
+        grassGradient.addColorStop(0, 'rgba(76, 175, 80, 0.7)'); // Bright grass in center
+        grassGradient.addColorStop(0.4, 'rgba(56, 155, 60, 0.5)'); // Medium grass
+        grassGradient.addColorStop(0.8, 'rgba(107, 142, 35, 0.3)'); // Darker grass fade
+        grassGradient.addColorStop(1, 'rgba(107, 142, 35, 0)'); // Fade to transparent
         
-        // Primary excavation area (organic shape)
+        ctx.fillStyle = grassGradient;
         ctx.beginPath();
-        ctx.ellipse(this.x - maxArea * 0.1, this.y + maxArea * 0.05, maxArea, maxArea * 0.8, 0.1, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseArea * 0.1, baseArea, baseArea * 0.8, 0.1, 0, Math.PI * 2);
         ctx.fill();
         
-        // Secondary clearing patches to break up the square
-        ctx.fillStyle = '#8B7355';
-        ctx.beginPath();
-        ctx.ellipse(this.x - maxArea * 0.6, this.y + maxArea * 0.6, maxArea * 0.5, maxArea * 0.4, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Left side clearing
-        ctx.fillStyle = '#9B8B7B';
-        ctx.beginPath();
-        ctx.ellipse(this.x - maxArea * 0.8, this.y - maxArea * 0.2, maxArea * 0.4, maxArea * 0.5, -0.2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add natural grass patches EARLY - before water so water appears on top
-        const grassPatches = [
-            { x: -maxArea * 0.2, y: -maxArea * 0.8, radius: 15, intensity: 0.5 },
-            { x: maxArea * 0.3, y: -maxArea * 0.6, radius: 12, intensity: 0.4 },
-            { x: -maxArea * 0.8, y: maxArea * 0.5, radius: 14, intensity: 0.6 },
-            { x: maxArea * 0.2, y: maxArea * 0.7, radius: 13, intensity: 0.45 },
-            { x: -maxArea * 0.4, y: -maxArea * 0.4, radius: 11, intensity: 0.35 }
+        // Add natural dirt/earth texture overlay (varied earth tones)
+        const earthAreas = [
+            { x: -baseArea * 0.4, y: -baseArea * 0.3, radiusX: baseArea * 0.4, radiusY: baseArea * 0.3, color: 'rgba(139, 115, 85, 0.3)' },
+            { x: baseArea * 0.35, y: baseArea * 0.15, radiusX: baseArea * 0.35, radiusY: baseArea * 0.35, color: 'rgba(160, 82, 45, 0.25)' },
+            { x: -baseArea * 0.1, y: baseArea * 0.45, radiusX: baseArea * 0.45, radiusY: baseArea * 0.25, color: 'rgba(139, 69, 19, 0.2)' }
         ];
         
-        grassPatches.forEach(patch => {
-            const grassGradient = ctx.createRadialGradient(
-                this.x + patch.x, this.y + patch.y, 0,
-                this.x + patch.x, this.y + patch.y, patch.radius
-            );
-            grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
-            grassGradient.addColorStop(0.5, `rgba(76, 175, 80, ${patch.intensity * 0.6})`);
-            grassGradient.addColorStop(0.8, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
-            grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
-            
-            ctx.fillStyle = grassGradient;
+        earthAreas.forEach(area => {
+            ctx.fillStyle = area.color;
             ctx.beginPath();
-            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
+            ctx.ellipse(this.x + area.x, this.y + area.y, area.radiusX, area.radiusY, 0, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Add dirt patches and texture layers
-        const dirtPatches = [
-            { x: -maxArea * 0.3, y: -maxArea * 0.2, radius: 12, intensity: 0.8 },
-            { x: maxArea * 0.1, y: -maxArea * 0.4, radius: 10, intensity: 0.6 },
-            { x: -maxArea * 0.1, y: maxArea * 0.3, radius: 14, intensity: 0.7 },
-            { x: maxArea * 0.3, y: maxArea * 0.1, radius: 8, intensity: 0.5 },
-            { x: 0, y: 0, radius: 16, intensity: 0.9 }
-        ];
-        
-        dirtPatches.forEach(patch => {
-            const dirtGradient = ctx.createRadialGradient(
-                this.x + patch.x, this.y + patch.y, 0,
-                this.x + patch.x, this.y + patch.y, patch.radius
-            );
-            dirtGradient.addColorStop(0, `rgba(160, 82, 45, ${patch.intensity})`);
-            dirtGradient.addColorStop(0.6, `rgba(139, 115, 85, ${patch.intensity * 0.8})`);
-            dirtGradient.addColorStop(1, `rgba(139, 69, 19, 0)`);
-            
-            ctx.fillStyle = dirtGradient;
-            ctx.beginPath();
-            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Render WATER POOL - positioned bottom left with natural integration
-        const poolX = this.x - maxArea * 0.65;
-        const poolY = this.y + maxArea * 0.55;
+        // Render WATER POOL - positioned naturally within the grass ground
+        const poolX = this.x - baseArea * 0.65;
+        const poolY = this.y + baseArea * 0.55;
         const poolRadius = 16;
         
         // Water pool shadow/depth
@@ -1179,7 +1139,7 @@ export class GoldMine extends Building {
         ctx.ellipse(poolX + poolRadius * 0.25, poolY + poolRadius * 0.2, poolRadius * 0.2, poolRadius * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Reeds around water
+        // Reeds around water - natural integrated look
         const reedPositions = [
             { x: poolX - poolRadius * 1.15, y: poolY - poolRadius * 0.4, height: 14, bendDir: 1 },
             { x: poolX - poolRadius * 0.85, y: poolY + poolRadius * 0.75, height: 16, bendDir: -1 },
@@ -1204,7 +1164,7 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Grass around water pool blending naturally
+        // Grass patches around water - seamless integration
         const poolGrassPatches = [
             { x: poolX - poolRadius * 0.8, y: poolY - poolRadius * 1.2, radius: 10, intensity: 0.4 },
             { x: poolX + poolRadius * 0.9, y: poolY - poolRadius * 0.5, radius: 8, intensity: 0.35 },
@@ -1227,12 +1187,12 @@ export class GoldMine extends Building {
             ctx.fill();
         });
         
-        // Add rock formations scattered around the excavated area (OPTIMIZATION: simplified)
+        // Rock formations scattered around the excavated area (OPTIMIZATION: simplified)
         const rockFormations = [
-            { x: -maxArea * 0.5, y: -maxArea * 0.3, size: 6 },
-            { x: maxArea * 0.4, y: -maxArea * 0.5, size: 5 },
-            { x: -maxArea * 0.7, y: maxArea * 0.4, size: 7 },
-            { x: maxArea * 0.6, y: maxArea * 0.3, size: 5 }
+            { x: -baseArea * 0.5, y: -baseArea * 0.3, size: 6 },
+            { x: baseArea * 0.4, y: -baseArea * 0.5, size: 5 },
+            { x: -baseArea * 0.7, y: baseArea * 0.4, size: 7 },
+            { x: baseArea * 0.6, y: baseArea * 0.3, size: 5 }
         ];
         
         rockFormations.forEach(formation => {

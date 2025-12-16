@@ -205,9 +205,8 @@ export class BuildingManager {
         const cellSize = building.getCellSize(ctx);
         const buildingSize = cellSize * building.size;
         
-        // Building shadow - FIXED: Only for the actual building, not full grid
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(building.x - buildingSize/2 + 5, building.y - buildingSize/2 + 5, buildingSize, buildingSize);
+        // No shadow square - let the building's natural ground (grass/water) be the base
+        // building.render() will handle all ground rendering including excavated areas
         
         // Attach buildingManager to context for performance optimization checks
         ctx.buildingManager = this;
