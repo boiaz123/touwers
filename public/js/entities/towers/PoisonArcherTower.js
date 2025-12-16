@@ -141,10 +141,19 @@ export class PoisonArcherTower extends Tower {
             return true;
         });
         
-        // Update poison effects on enemies - OPTIMIZED
+        // Update poison effects on enemies - HIGHLY OPTIMIZED
+        // Create a Set for O(1) enemy lookup instead of O(n) array.includes()
+        const enemySet = this._enemySet || new Set(enemies);
+        this._enemySet = enemySet;
+        enemySet.clear();
+        for (const enemy of enemies) {
+            enemySet.add(enemy);
+        }
+        
+        // Iterate and update poison states, removing dead enemies
         for (let [enemy, state] of this.poisonedEnemies) {
-            // Check if enemy is still alive (if not in enemies array, it's dead)
-            if (!enemies.includes(enemy)) {
+            // Check if enemy is still alive using O(1) Set lookup
+            if (!enemySet.has(enemy)) {
                 this.poisonedEnemies.delete(enemy);
                 continue;
             }
