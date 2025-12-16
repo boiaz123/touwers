@@ -598,14 +598,15 @@ export class SuperWeaponLab extends Building {
         }
     }
     
-    // Create enhanced chain lightning effect
+    // Create enhanced chain lightning effect with Tempest-like visual
     createChainLightningEffect(targetX, targetY, chainTargets) {
-        // Create multiple lightning bolts similar to Tempest spell
-        const boltCount = Math.min(chainTargets || 5, 8);
+        // Create multiple lightning bolts similar to Tempest spell - jagged look
+        const boltCount = Math.min(chainTargets || 5, 6);
         
         for (let b = 0; b < boltCount; b++) {
             const angle = (b / boltCount) * Math.PI * 2;
             const distance = 80 + Math.random() * 40;
+            const offsetX = Math.cos(angle) * distance * 0.5;
             const endX = targetX + Math.cos(angle) * distance;
             const endY = targetY + Math.sin(angle) * distance;
             
@@ -614,28 +615,29 @@ export class SuperWeaponLab extends Building {
                 startY: this.y,
                 endX: endX,
                 endY: endY,
-                life: 0.15,
-                maxLife: 0.15,
+                life: 0.3,
+                maxLife: 0.3,
                 segments: this.generateLightningSegments(this.x, this.y, endX, endY),
-                color: 'rgba(100, 200, 255, '
+                color: 'rgba(100, 200, 255, ',
+                isTempest: true  // Use jagged rendering style
             });
         }
         
-        // Add electrical particles around target
-        for (let i = 0; i < 30; i++) {
-            const angle = (i / 30) * Math.PI * 2;
-            const speed = 100 + Math.random() * 100;
+        // Add electrical particles around target - reduced count for performance
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2;
+            const speed = 80 + Math.random() * 80;
             
             this.magicParticles.push({
                 x: targetX,
                 y: targetY,
                 vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 50,
-                life: 0.8,
-                maxLife: 0.8,
+                vy: Math.sin(angle) * speed - 30,
+                life: 0.6,
+                maxLife: 0.6,
                 size: 0,
                 maxSize: 3 + Math.random() * 2,
-                color: 'rgba(100, 200, 255, '
+                color: 'rgba(150, 220, 255, '
             });
         }
     }
@@ -746,11 +748,11 @@ export class SuperWeaponLab extends Building {
         }
     }
     
-    // Generate jagged lightning segments
+    // Generate jagged lightning segments - optimized for performance
     generateLightningSegments(startX, startY, endX, endY) {
         const segments = [];
-        const segmentCount = 8;
-        const variance = 15;
+        const segmentCount = 6;  // Reduced from 8 for better performance
+        const variance = 12;     // Reduced for less random calculation
         
         let currentX = startX;
         let currentY = startY;
@@ -760,6 +762,7 @@ export class SuperWeaponLab extends Building {
             let targetX = startX + (endX - startX) * t;
             let targetY = startY + (endY - startY) * t;
             
+            // Only add variance to non-final segments
             if (i < segmentCount) {
                 targetX += (Math.random() - 0.5) * variance;
                 targetY += (Math.random() - 0.5) * variance;
@@ -1156,35 +1159,33 @@ export class SuperWeaponLab extends Building {
         });
     }
     
-    // Render chain lightning bolts
+    // Render chain lightning bolts - using Tempest-style jagged look
     renderChainLightningBolts(ctx) {
         this.chainLightningBolts.forEach(bolt => {
             const alpha = bolt.life / bolt.maxLife;
             
-            // Draw jagged lightning bolts
-            ctx.strokeStyle = 'rgba(100, 200, 255, ' + alpha + ')';
-            ctx.lineWidth = 3;
-            ctx.shadowColor = `rgba(100, 200, 255, ${alpha * 0.8})`;
-            ctx.shadowBlur = 12;
-            
-            bolt.segments.forEach(segment => {
-                ctx.beginPath();
-                ctx.moveTo(segment.fromX, segment.fromY);
-                ctx.lineTo(segment.toX, segment.toY);
-                ctx.stroke();
-            });
-            
-            // Draw bright core
-            ctx.strokeStyle = 'rgba(150, 220, 255, ' + alpha + ')';
-            ctx.lineWidth = 1;
-            bolt.segments.forEach(segment => {
-                ctx.beginPath();
-                ctx.moveTo(segment.fromX, segment.fromY);
-                ctx.lineTo(segment.toX, segment.toY);
-                ctx.stroke();
-            });
-            
-            ctx.shadowBlur = 0;
+            if (bolt.isTempest) {
+                // Render tempest-style jagged lightning (matching CombinationTower)
+                ctx.strokeStyle = 'rgba(100, 200, 255, ' + alpha + ')';
+                ctx.lineWidth = 3;
+                
+                bolt.segments.forEach(segment => {
+                    ctx.beginPath();
+                    ctx.moveTo(segment.fromX, segment.fromY);
+                    ctx.lineTo(segment.toX, segment.toY);
+                    ctx.stroke();
+                });
+                
+                // Inner glow stroke - thin inner core
+                ctx.strokeStyle = 'rgba(200, 240, 255, ' + (alpha * 0.7) + ')';
+                ctx.lineWidth = 1;
+                bolt.segments.forEach(segment => {
+                    ctx.beginPath();
+                    ctx.moveTo(segment.fromX, segment.fromY);
+                    ctx.lineTo(segment.toX, segment.toY);
+                    ctx.stroke();
+                });
+            }
         });
     }
     
