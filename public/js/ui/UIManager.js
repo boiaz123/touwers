@@ -749,6 +749,12 @@ export class UIManager {
 
         this.menuRefreshTimer = this.menuRefreshInterval;
 
+        // SPECIAL CASE: For goldmine, only update timer - NEVER recreate menu
+        if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
+            this.updateGoldMineTimerDisplay(this.activeMenuData.goldMine);
+            return; // STOP - don't recreate menu!
+        }
+
         // Check if resources have changed
         const currentGold = this.gameState.gold;
         const currentGems = this.towerManager.getGemStocks();
@@ -764,13 +770,7 @@ export class UIManager {
             }
         }
 
-        // Special case for goldmine: always refresh to show production progress
-        let shouldRefresh = hasResourcesChanged;
-        if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
-            shouldRefresh = true; // Always refresh goldmine menu to show progress
-        }
-
-        if (!shouldRefresh) {
+        if (!hasResourcesChanged) {
             return; // Resources haven't changed, no need to refresh
         }
 
@@ -793,8 +793,6 @@ export class UIManager {
             this.showGuardPostMenu(this.activeMenuData);
         } else if (this.activeMenuType === 'castle' && this.activeMenuData.castle) {
             this.showCastleUpgradeMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
-            this.showGoldMineMenu(this.activeMenuData);
         }
     }
 
@@ -2476,7 +2474,7 @@ export class UIManager {
         const modeIcon = goldMine.gemMode ? '💎' : '💰';
         const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
         
-        // Calculate progress information (no milliseconds)
+        // Calculate progress information
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
         const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
         const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${Math.ceil(timeRemaining)}s`;
@@ -2494,11 +2492,11 @@ export class UIManager {
                                 <div style="font-size: 1.2rem; min-width: 2rem;">${modeIcon}</div>
                                 <div style="flex: 1;">
                                     <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
-                                        <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">
+                                        <div id="goldmine-progress-bar" style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">
                                         </div>
                                     </div>
                                 </div>
-                                <div style="font-size: 0.75rem; color: ${readyColor}; font-weight: bold; min-width: 3.5rem; text-align: right;">${readyStatus}</div>
+                                <div id="goldmine-timer" style="font-size: 0.75rem; color: ${readyColor}; font-weight: bold; min-width: 3.5rem; text-align: right;">${readyStatus}</div>
                             </div>
                         </div>
                     </div>
@@ -2539,7 +2537,7 @@ export class UIManager {
             </div>
         `;
         
-        // Update panel title and content
+        // Update panel title and content - set it directly, no fancy comparison
         const titleElement = panel.querySelector('.panel-title');
         if (titleElement) titleElement.textContent = '⛏️ Gold Mine';
         
@@ -2548,31 +2546,27 @@ export class UIManager {
             contentContainer.innerHTML = contentHTML;
         }
         
-        // Show the panel
-        panel.style.display = 'flex';
-        panel.classList.remove('closing');
-        
-        // Setup close button
+        // Attach event listeners (they will be destroyed when content updates)
         const closeBtn = panel.querySelector('.panel-close-btn');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('goldmine-panel'), { once: true });
+            closeBtn.onclick = () => this.closePanelWithAnimation('goldmine-panel');
         }
         
         // Add toggle gem mining button listener
         const toggleBtn = panel.querySelector('.toggle-mine-mode-btn');
         if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
+            toggleBtn.onclick = () => {
                 goldMine.gemMode = !goldMine.gemMode;
                 goldMine.currentProduction = 0; // Reset production cycle when switching modes
                 this.updateUI();
                 this.showGoldMineMenu(goldMineData);
-            }, { once: true });
+            };
         }
         
         // Add collect button listener if button exists
         const collectBtn = panel.querySelector('.collect-gold-btn');
         if (collectBtn) {
-            collectBtn.addEventListener('click', () => {
+            collectBtn.onclick = () => {
                 if (goldMine.gemMode) {
                     // Collect gems - need to distribute them to academy
                     const academies = this.towerManager.buildingManager.buildings.filter(b => 
@@ -2591,18 +2585,58 @@ export class UIManager {
                 }
                 this.updateUI();
                 this.closePanelWithAnimation('goldmine-panel');
-            }, { once: true });
+            };
         }
         
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-building-btn');
         if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
+            sellBtn.onclick = () => {
                 this.towerManager.sellBuilding(goldMine);
                 this.updateUI();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('goldmine-panel');
-            }, { once: true });
+            };
+        }
+        
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+    }
+
+    updateGoldMineTimerDisplay(goldMine) {
+        // SIMPLE: Only update timer and progress bar values in the existing menu
+        const panel = document.getElementById('goldmine-panel');
+        if (!panel || panel.style.display === 'none') {
+            console.log('[Timer Update] Panel not visible');
+            return; // Menu not visible, nothing to update
+        }
+
+        console.log('[Timer Update] Updating...');
+
+        // Calculate current values
+        const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
+        const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
+        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${Math.ceil(timeRemaining)}s`;
+        const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
+
+        // 1. Update progress bar
+        const progressBar = panel.querySelector('#goldmine-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = Math.min(100, progressPercent) + '%';
+            console.log('[Timer Update] Progress bar:', progressPercent + '%');
+        } else {
+            console.log('[Timer Update] Progress bar element not found');
+        }
+
+        // 2. Update timer text
+        const timerDiv = panel.querySelector('#goldmine-timer');
+        if (timerDiv) {
+            timerDiv.textContent = readyStatus;
+            timerDiv.style.color = readyColor;
+            console.log('[Timer Update] Timer text:', readyStatus);
+        } else {
+            console.log('[Timer Update] Timer element not found');
         }
     }
 

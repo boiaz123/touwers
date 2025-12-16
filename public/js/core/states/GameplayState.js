@@ -1107,11 +1107,9 @@ export class GameplayState {
                 return;
             } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
                 // Gem collection from gold mine
-                //console.log('[GameplayState] Gem collection detected:', clickResult);
                 const academies = this.towerManager.buildingManager.buildings.filter(b => 
                     b.constructor.name === 'MagicAcademy'
                 );
-                //console.log('[GameplayState] Found academies:', academies.length);
                 if (academies.length > 0) {
                     const academy = academies[0];
                     // Add collected gems to academy
@@ -1120,8 +1118,6 @@ export class GameplayState {
                     if (clickResult.air) academy.gems.air += clickResult.air;
                     if (clickResult.earth) academy.gems.earth += clickResult.earth;
                     if (clickResult.diamond) academy.gems.diamond += clickResult.diamond;
-                    
-                    //console.log('[GameplayState] Academy gems updated:', academy.gems);
                     
                     // Show gem collection popup
                     this.showGemCollectionPopup(clickResult);

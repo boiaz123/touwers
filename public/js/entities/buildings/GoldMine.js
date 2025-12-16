@@ -1056,47 +1056,45 @@ export class GoldMine extends Building {
             ctx.font = `bold ${textSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.lineWidth = 0; // No border/stroke
             
-            ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.9})`;
-            ctx.lineWidth = 3;
-            ctx.strokeText(text.text, this.x, text.y);
+            // Set color based on gem type - vivid, distinct colors
+            let fillColor = 'rgba(255, 215, 0, ' + alpha + ')'; // Default gold
             
             switch (text.gemType) {
                 case 'fire':
-                    ctx.fillStyle = `rgba(255, 69, 0, ${alpha})`;
+                    fillColor = `rgba(255, 50, 0, ${alpha})`; // Bright red-orange
                     break;
                 case 'water':
-                    ctx.fillStyle = `rgba(64, 164, 223, ${alpha})`;
+                    fillColor = `rgba(30, 180, 255, ${alpha})`; // Bright cyan-blue
                     break;
                 case 'air':
-                    ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+                    fillColor = `rgba(255, 255, 100, ${alpha})`; // Bright yellow
                     break;
                 case 'earth':
-                    ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
+                    fillColor = `rgba(180, 100, 20, ${alpha})`; // Warm brown
                     break;
                 case 'diamond':
-                    ctx.fillStyle = `rgba(64, 224, 255, ${alpha})`;
+                    fillColor = `rgba(100, 255, 255, ${alpha})`; // Bright cyan
                     break;
                 case 'gold':
-                    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
-                    break;
-                default:
-                    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+                    fillColor = `rgba(255, 215, 0, ${alpha})`; // Vivid gold
                     break;
             }
+            
+            ctx.fillStyle = fillColor;
             ctx.fillText(text.text, this.x, text.y);
         });
     }
     
     onClick() {
-        
-        // If ready, collect immediately without showing menu
-        if (this.goldReady) {
+        // If ready, collect - otherwise show menu
+        if (this.goldReady === true) {
             const collected = this.collectGold();
-            return collected;
+            return collected; // number or gem object
         }
         
-        // Otherwise show the mine menu with progress
+        // Show menu when not ready
         this.isSelected = true;
         return {
             type: 'goldmine_menu',
