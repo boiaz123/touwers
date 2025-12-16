@@ -39,100 +39,100 @@ export class TrainingGrounds extends Building {
         
         // Left Archer Lane - organized firing line with row of targets
         this.leftArcherLane = {
-            groundY: -35,
+            groundY: -28,
             archers: [
-                { x: -50, y: -35, angle: 0, drawback: 0, animationOffset: 0, targetIdx: 0 },
-                { x: -30, y: -35, angle: 0, drawback: 0, animationOffset: 0.4, targetIdx: 1 }
+                { x: -38, y: -28, angle: 0, drawback: 0, animationOffset: 0, targetIdx: 0 },
+                { x: -22, y: -28, angle: 0, drawback: 0, animationOffset: 0.4, targetIdx: 1 }
             ],
             targets: [
-                { x: -35, distance: 50, hits: 0 },
-                { x: -17, distance: 50, hits: 0 },
-                { x: 0, distance: 50, hits: 0 },
-                { x: 17, distance: 50, hits: 0 },
-                { x: 35, distance: 50, hits: 0 }
+                { x: -28, distance: 35, hits: 0 },
+                { x: -14, distance: 35, hits: 0 },
+                { x: 0, distance: 35, hits: 0 },
+                { x: 14, distance: 35, hits: 0 },
+                { x: 28, distance: 35, hits: 0 }
             ]
         };
         
         // Right Archer Lane - organized firing line (mirrors left)
         this.rightArcherLane = {
-            groundY: -35,
+            groundY: -28,
             archers: [
-                { x: 50, y: -35, angle: 0, drawback: 0, animationOffset: 0.2, targetIdx: 3 },
-                { x: 30, y: -35, angle: 0, drawback: 0, animationOffset: 0.6, targetIdx: 4 }
+                { x: 38, y: -28, angle: 0, drawback: 0, animationOffset: 0.2, targetIdx: 3 },
+                { x: 22, y: -28, angle: 0, drawback: 0, animationOffset: 0.6, targetIdx: 4 }
             ],
             targets: [
-                { x: -35, distance: 50, hits: 0 },
-                { x: -17, distance: 50, hits: 0 },
-                { x: 0, distance: 50, hits: 0 },
-                { x: 17, distance: 50, hits: 0 },
-                { x: 35, distance: 50, hits: 0 }
+                { x: -28, distance: 35, hits: 0 },
+                { x: -14, distance: 35, hits: 0 },
+                { x: 0, distance: 35, hits: 0 },
+                { x: 14, distance: 35, hits: 0 },
+                { x: 28, distance: 35, hits: 0 }
             ]
         };
         
         // Sword Fighting Area - two separate dueling circles with spacing
         this.swordFightArea = {
             duelCircles: [
-                { x: -30, y: 25 },
-                { x: 30, y: 25 }
+                { x: -24, y: 20 },
+                { x: 24, y: 20 }
             ],
             fighters: [
-                { circleIdx: 0, x: -8, y: 0, direction: 1, color: '#8B0000' },
-                { circleIdx: 0, x: 8, y: 0, direction: -1, color: '#000080' },
-                { circleIdx: 1, x: -8, y: 0, direction: 1, color: '#000080' },
-                { circleIdx: 1, x: 8, y: 0, direction: -1, color: '#8B0000' }
+                { circleIdx: 0, x: -4, y: 0, direction: 1, color: '#8B0000' },
+                { circleIdx: 0, x: 4, y: 0, direction: -1, color: '#000080' },
+                { circleIdx: 1, x: -4, y: 0, direction: 1, color: '#000080' },
+                { circleIdx: 1, x: 4, y: 0, direction: -1, color: '#8B0000' }
             ]
         };
         
         // Training dummies for solo practice - positioned away from main areas
         this.dummies = [
-            { x: -50, y: 10, type: 'wood', rotation: 0 },
-            { x: 50, y: 10, type: 'wood', rotation: 0 }
+            { x: -38, y: 8, type: 'wood', rotation: 0 },
+            { x: 38, y: 8, type: 'wood', rotation: 0 }
         ];
         
         // Wooden hut in corner
         this.hut = {
-            x: -55,
-            y: -50,
-            width: 20,
-            height: 18
+            x: -42,
+            y: -38,
+            width: 10,
+            height: 9
         };
         
-        // Environmental decorations around fence - LARGER and OUTSIDE
+        // Environmental decorations around fence - LARGER and OUTSIDE (but within grid)
         this.fenceDecorations = {
             trees: [
-                { x: -75, y: -70, size: 1.5 },
-                { x: -60, y: -75, size: 1.8 },
-                { x: 65, y: -70, size: 1.6 },
-                { x: 80, y: -65, size: 1.4 },
-                { x: -80, y: 70, size: 1.7 },
-                { x: 75, y: 75, size: 1.5 }
+                { x: -54, y: -52, size: 1.8, gridX: -1, gridY: -1 },
+                { x: -46, y: -54, size: 2.0, gridX: -1, gridY: -2 },
+                { x: 54, y: -52, size: 1.9, gridX: 1, gridY: -1 },
+                { x: 56, y: -48, size: 1.7, gridX: 2, gridY: -1 },
+                { x: -56, y: 52, size: 1.95, gridX: -2, gridY: 1 },
+                { x: 54, y: 54, size: 1.8, gridX: 1, gridY: 2 }
             ],
             rocks: [
-                { x: -85, y: -55, size: 3.5 },
-                { x: 80, y: -60, size: 4.0 },
-                { x: -82, y: 50, size: 3.8 },
-                { x: 85, y: 45, size: 3.2 }
+                { x: -60, y: -40, size: 1.75 },
+                { x: 60, y: -42, size: 2.0 },
+                { x: -60, y: 36, size: 1.9 },
+                { x: 60, y: 32, size: 1.6 }
             ],
             bushes: [
-                { x: -78, y: -45, size: 1.2 },
-                { x: 80, y: -50, size: 1.3 },
-                { x: -75, y: 65, size: 1.1 },
-                { x: 78, y: 70, size: 1.4 }
+                { x: -57, y: -32, size: 0.6 },
+                { x: 58, y: -36, size: 0.65 },
+                { x: -56, y: 48, size: 0.55 },
+                { x: 57, y: 52, size: 0.7 }
             ],
             barrels: [
-                { x: -88, y: -35, type: 'wood' },
-                { x: 88, y: -32, type: 'wood' },
-                { x: -85, y: 40, type: 'wood' },
-                { x: 85, y: 38, type: 'wood' }
+                { x: -64, y: -24, type: 'wood' },
+                { x: 64, y: -22, type: 'wood' },
+                { x: -62, y: 28, type: 'wood' },
+                { x: 62, y: 26, type: 'wood' }
             ]
         };
         
         this.fencePerimeter = {
             segments: [
-                { startX: -65, startY: -60, endX: 65, endY: -60, posts: 13 },
-                { startX: 65, startY: -60, endX: 65, endY: 60, posts: 12 },
-                { startX: 65, startY: 60, endX: -65, endY: 60, posts: 13 },
-                { startX: -65, startY: 60, endX: -65, endY: -60, posts: 12 }
+                { startX: -50, startY: -48, endX: 50, endY: -48, posts: 13 },
+                { startX: 50, startY: -48, endX: 50, endY: 48, posts: 12 },
+                { startX: 50, startY: 48, endX: -50, endY: 48, posts: 13 },
+                { startX: -50, startY: 48, endX: -50, endY: -48, posts: 12 }
             ]
         };
     }
@@ -186,7 +186,10 @@ export class TrainingGrounds extends Building {
                     life: (distance / speed) + 0.5,
                     maxLife: (distance / speed) + 0.5,
                     type: 'arrow',
-                    size: 2
+                    size: 2,
+                    targetX: targetScreenX,
+                    targetY: targetScreenY,
+                    hitRadius: 6
                 });
             } else if (particleType === 1 && Math.random() > 0.3) {
                 // Arrow from right archer lane toward specific target
@@ -212,7 +215,10 @@ export class TrainingGrounds extends Building {
                     life: (distance / speed) + 0.5,
                     maxLife: (distance / speed) + 0.5,
                     type: 'arrow',
-                    size: 2
+                    size: 2,
+                    targetX: targetScreenX,
+                    targetY: targetScreenY,
+                    hitRadius: 6
                 });
             } else {
                 // Dust from sword fight
@@ -239,6 +245,18 @@ export class TrainingGrounds extends Building {
             particle.life -= deltaTime;
             particle.vy += 120 * deltaTime;
             
+            // Check if arrow hit its target
+            if (particle.type === 'arrow' && particle.targetX && particle.targetY) {
+                const dx = particle.x - particle.targetX;
+                const dy = particle.y - particle.targetY;
+                const distance = Math.hypot(dx, dy);
+                
+                // If arrow is close to target, it hits and disappears
+                if (distance < particle.hitRadius) {
+                    return false; // Remove the arrow
+                }
+            }
+            
             if (particle.type === 'dust') {
                 particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
             }
@@ -262,31 +280,31 @@ export class TrainingGrounds extends Building {
     }
     
     renderDetailedGround(ctx, size) {
-        // Main grass base
+        // Main grass base - only within fence
         const grassGradient = ctx.createLinearGradient(
-            this.x, this.y - size/2,
-            this.x, this.y + size/2
+            this.x - 50, this.y - 48,
+            this.x - 50, this.y + 48
         );
         grassGradient.addColorStop(0, '#5A7A3A');
         grassGradient.addColorStop(0.5, '#6B8E3A');
         grassGradient.addColorStop(1, '#4A6A2A');
         
         ctx.fillStyle = grassGradient;
-        ctx.fillRect(this.x - size/2, this.y - size/2, size, size);
+        ctx.fillRect(this.x - 50, this.y - 48, 100, 96);
         
         // Dirt paths and wear areas
         const wearPatches = [
             // Left archer lane
-            { x: -50, y: -35, width: 35, height: 6, intensity: 0.5 },
+            { x: -38, y: -28, width: 27, height: 4, intensity: 0.5 },
             // Right archer lane
-            { x: 50, y: -35, width: 35, height: 6, intensity: 0.5 },
+            { x: 38, y: -28, width: 27, height: 4, intensity: 0.5 },
             // Left sword fight area
-            { x: -30, y: 25, width: 22, height: 22, intensity: 0.6 },
+            { x: -24, y: 20, width: 18, height: 18, intensity: 0.6 },
             // Right sword fight area
-            { x: 30, y: 25, width: 22, height: 22, intensity: 0.6 },
+            { x: 24, y: 20, width: 18, height: 18, intensity: 0.6 },
             // Dummy areas
-            { x: -50, y: 10, width: 16, height: 10, intensity: 0.4 },
-            { x: 50, y: 10, width: 16, height: 10, intensity: 0.4 }
+            { x: -38, y: 8, width: 13, height: 8, intensity: 0.4 },
+            { x: 38, y: 8, width: 13, height: 8, intensity: 0.4 }
         ];
         
         wearPatches.forEach(patch => {
@@ -304,10 +322,10 @@ export class TrainingGrounds extends Building {
         
         // Grass variations around perimeter
         const grassVariations = [
-            { x: -55, y: -50, radius: 8, opacity: 0.25 },
-            { x: 55, y: -50, radius: 8, opacity: 0.25 },
-            { x: -55, y: 50, radius: 10, opacity: 0.3 },
-            { x: 55, y: 50, radius: 10, opacity: 0.3 }
+            { x: -42, y: -38, radius: 5, opacity: 0.25 },
+            { x: 42, y: -38, radius: 5, opacity: 0.25 },
+            { x: -42, y: 38, radius: 6, opacity: 0.3 },
+            { x: 42, y: 38, radius: 6, opacity: 0.3 }
         ];
         
         grassVariations.forEach(area => {
@@ -324,12 +342,12 @@ export class TrainingGrounds extends Building {
             ctx.fill();
         });
         
-        // Scattered stones and rocks
+        // Scattered stones and rocks - inside fence
         const rocks = [
-            { x: -60, y: -45, size: 2 },
-            { x: 60, y: -45, size: 2 },
-            { x: -60, y: 45, size: 2.2 },
-            { x: 60, y: 50, size: 2 }
+            { x: -47, y: -35, size: 1 },
+            { x: 47, y: -35, size: 1 },
+            { x: -47, y: 35, size: 1.1 },
+            { x: 47, y: 35, size: 1 }
         ];
         
         rocks.forEach(rock => {
@@ -350,13 +368,13 @@ export class TrainingGrounds extends Building {
         ctx.setLineDash([8, 8]);
         
         ctx.beginPath();
-        ctx.moveTo(this.x - 60, this.y - 35);
-        ctx.lineTo(this.x + 60, this.y - 35);
+        ctx.moveTo(this.x - 48, this.y - 28);
+        ctx.lineTo(this.x + 48, this.y - 28);
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.moveTo(this.x - 60, this.y + 10);
-        ctx.lineTo(this.x + 60, this.y + 10);
+        ctx.moveTo(this.x - 48, this.y + 8);
+        ctx.lineTo(this.x + 48, this.y + 8);
         ctx.stroke();
         
         ctx.setLineDash([]);
@@ -379,20 +397,20 @@ export class TrainingGrounds extends Building {
                 const postY = startY + Math.sin(angle) * (i * postSpacing);
                 
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                ctx.fillRect(postX - 2, postY + 2, 4, 3);
+                ctx.fillRect(postX - 1, postY + 1, 2, 1.5);
                 
                 ctx.fillStyle = '#8B6F47';
-                ctx.fillRect(postX - 2.5, postY - 22, 5, 24);
+                ctx.fillRect(postX - 1.25, postY - 11, 2.5, 12);
                 
                 ctx.fillStyle = '#654321';
-                ctx.fillRect(postX - 3.5, postY - 24, 7, 3);
+                ctx.fillRect(postX - 1.75, postY - 12, 3.5, 1.5);
                 
                 ctx.strokeStyle = '#654321';
                 ctx.lineWidth = 0.5;
                 for (let g = 0; g < 3; g++) {
                     ctx.beginPath();
-                    ctx.moveTo(postX - 2.5, postY - 20 + (g * 7));
-                    ctx.lineTo(postX + 2.5, postY - 19 + (g * 7));
+                    ctx.moveTo(postX - 1.25, postY - 10 + (g * 3.5));
+                    ctx.lineTo(postX + 1.25, postY - 9.5 + (g * 3.5));
                     ctx.stroke();
                 }
             }
@@ -404,71 +422,43 @@ export class TrainingGrounds extends Building {
                 const railEndY = startY + Math.sin(angle) * ((i + 1) * postSpacing);
                 
                 ctx.strokeStyle = '#CD853F';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.moveTo(railStartX, railStartY - 10);
-                ctx.lineTo(railEndX, railEndY - 10);
+                ctx.moveTo(railStartX, railStartY - 5);
+                ctx.lineTo(railEndX, railEndY - 5);
                 ctx.stroke();
                 
                 ctx.beginPath();
-                ctx.moveTo(railStartX, railStartY - 3);
-                ctx.lineTo(railEndX, railEndY - 3);
+                ctx.moveTo(railStartX, railStartY - 1.5);
+                ctx.lineTo(railEndX, railEndY - 1.5);
                 ctx.stroke();
             }
         });
     }
     
     renderFenceDecorations(ctx, size) {
-        // Render trees around fence - LARGER
+        // Render trees around fence using level-based rendering
         this.fenceDecorations.trees.forEach(tree => {
             const treeX = this.x + tree.x;
             const treeY = this.y + tree.y;
-            const scale = tree.size;
+            const treeSize = tree.size * 15; // Scale up the tree size (increased from 8)
             
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.save();
-            ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.4);
-            ctx.beginPath();
-            ctx.arc(0, 0, 8 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            
-            ctx.fillStyle = '#5a341d';
-            ctx.fillRect(treeX - 1.5 * scale, treeY, 3 * scale, -10 * scale);
-            
-            const layers = [
-                { y: -15 * scale, width: 12 * scale, color: '#0e3a0e' },
-                { y: -10 * scale, width: 9 * scale, color: '#1f6f1f' },
-                { y: -5 * scale, width: 6 * scale, color: '#2fa02f' }
-            ];
-            
-            layers.forEach(layer => {
-                ctx.fillStyle = layer.color;
-                ctx.beginPath();
-                ctx.moveTo(treeX, treeY + layer.y);
-                ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#0b2b0b';
-                ctx.lineWidth = 0.8;
-                ctx.stroke();
-            });
+            // Render tree using level-based method
+            this.renderTree(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY);
         });
         
-        // Render rocks around fence - LARGER
+        // Render rocks around fence
         this.fenceDecorations.rocks.forEach(rock => {
             ctx.fillStyle = '#696969';
             ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.arc(this.x + rock.x, this.y + rock.y, rock.size, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
         });
         
-        // Render bushes around fence - LARGER
+        // Render bushes around fence
         this.fenceDecorations.bushes.forEach(bush => {
             const bushX = this.x + bush.x;
             const bushY = this.y + bush.y;
@@ -476,44 +466,170 @@ export class TrainingGrounds extends Building {
             
             ctx.fillStyle = '#1f6f1f';
             ctx.beginPath();
-            ctx.arc(bushX, bushY, 5 * scale, 0, Math.PI * 2);
+            ctx.arc(bushX, bushY, 2.5 * scale, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.fillStyle = '#28a028';
             ctx.beginPath();
-            ctx.arc(bushX - 2 * scale, bushY - 2 * scale, 3.5 * scale, 0, Math.PI * 2);
+            ctx.arc(bushX - 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.beginPath();
-            ctx.arc(bushX + 2 * scale, bushY - 2 * scale, 3.5 * scale, 0, Math.PI * 2);
+            ctx.arc(bushX + 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
             ctx.fill();
         });
         
-        // Render barrels around fence - LARGER
+        // Render barrels around fence
         this.fenceDecorations.barrels.forEach(barrel => {
             const barrelX = this.x + barrel.x;
             const barrelY = this.y + barrel.y;
             
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(barrelX - 5, barrelY + 3, 10, 3);
+            ctx.fillRect(barrelX - 2.5, barrelY + 1.5, 5, 1.5);
             
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(barrelX - 5, barrelY - 10, 10, 13);
+            ctx.fillRect(barrelX - 2.5, barrelY - 5, 5, 6.5);
             
             ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(barrelX - 5, barrelY - 10, 10, 13);
+            ctx.lineWidth = 0.75;
+            ctx.strokeRect(barrelX - 2.5, barrelY - 5, 5, 6.5);
             
             ctx.beginPath();
-            ctx.moveTo(barrelX - 5, barrelY - 6);
-            ctx.lineTo(barrelX + 5, barrelY - 6);
+            ctx.moveTo(barrelX - 2.5, barrelY - 3);
+            ctx.lineTo(barrelX + 2.5, barrelY - 3);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(barrelX - 5, barrelY - 2);
-            ctx.lineTo(barrelX + 5, barrelY - 2);
+            ctx.moveTo(barrelX - 2.5, barrelY - 1);
+            ctx.lineTo(barrelX + 2.5, barrelY - 1);
             ctx.stroke();
         });
+    }
+    
+    // Tree rendering methods from LevelBase (adapted for scaled usage)
+    renderTree(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX + gridY) % 4;
+        switch(seed) {
+            case 0:
+                this.renderTreeType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderTreeType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderTreeType3(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType4(ctx, x, y, size);
+        }
+    }
+
+    renderTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, x, y, size) {
+        // Sparse tree with distinct branches
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType4(ctx, x, y, size) {
+        // Pine/Spruce style with layered triangles
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.65);
+        ctx.lineTo(x + size * 0.12, y - size * 0.35);
+        ctx.lineTo(x - size * 0.12, y - size * 0.35);
+        ctx.closePath();
+        ctx.fill();
     }
     
     renderHut(ctx, size) {
@@ -522,7 +638,7 @@ export class TrainingGrounds extends Building {
         
         // Hut shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(hutX - this.hut.width/2 + 2, hutY + 2, this.hut.width, this.hut.height);
+        ctx.fillRect(hutX - this.hut.width/2 + 1, hutY + 1, this.hut.width, this.hut.height);
         
         // Hut main body - wooden walls
         ctx.fillStyle = '#8B6F47';
@@ -530,12 +646,12 @@ export class TrainingGrounds extends Building {
         
         // Hut wall outline
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.strokeRect(hutX - this.hut.width/2, hutY, this.hut.width, this.hut.height);
         
         // Wooden plank details on walls
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 0.25;
         for (let i = 1; i < 4; i++) {
             const plankY = hutY + (this.hut.height * i / 4);
             ctx.beginPath();
@@ -545,51 +661,51 @@ export class TrainingGrounds extends Building {
         }
         
         // Hut door
-        const doorWidth = 5;
-        const doorHeight = 10;
+        const doorWidth = 2.5;
+        const doorHeight = 5;
         ctx.fillStyle = '#654321';
         ctx.fillRect(hutX - doorWidth/2, hutY + this.hut.height - doorHeight, doorWidth, doorHeight);
         
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 0.25;
         ctx.strokeRect(hutX - doorWidth/2, hutY + this.hut.height - doorHeight, doorWidth, doorHeight);
         
         // Door handle
         ctx.fillStyle = '#C0C0C0';
         ctx.beginPath();
-        ctx.arc(hutX + doorWidth/2 - 1, hutY + this.hut.height - doorHeight/2, 0.5, 0, Math.PI * 2);
+        ctx.arc(hutX + doorWidth/2 - 0.5, hutY + this.hut.height - doorHeight/2, 0.25, 0, Math.PI * 2);
         ctx.fill();
         
         // Hut roof - peaked gable
         ctx.fillStyle = '#654321';
         ctx.beginPath();
         ctx.moveTo(hutX - this.hut.width/2, hutY);
-        ctx.lineTo(hutX, hutY - 8);
+        ctx.lineTo(hutX, hutY - 4);
         ctx.lineTo(hutX + this.hut.width/2, hutY);
         ctx.closePath();
         ctx.fill();
         
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
         
         // Roof tiles (simple lines)
         ctx.strokeStyle = '#5D4E37';
-        ctx.lineWidth = 0.5;
+        ctx.lineWidth = 0.25;
         for (let i = 0; i < 3; i++) {
-            const roofY = hutY - (8 * (i + 1) / 3);
+            const roofY = hutY - (4 * (i + 1) / 3);
             ctx.beginPath();
-            ctx.moveTo(hutX - this.hut.width/2 + (i * 2), roofY);
-            ctx.lineTo(hutX + this.hut.width/2 - (i * 2), roofY);
+            ctx.moveTo(hutX - this.hut.width/2 + (i * 1), roofY);
+            ctx.lineTo(hutX + this.hut.width/2 - (i * 1), roofY);
             ctx.stroke();
         }
         
         // Small window
         ctx.fillStyle = '#4169E1';
-        ctx.fillRect(hutX - 3, hutY + 4, 3, 3);
+        ctx.fillRect(hutX - 1.5, hutY + 2, 1.5, 1.5);
         ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(hutX - 3, hutY + 4, 3, 3);
+        ctx.lineWidth = 0.25;
+        ctx.strokeRect(hutX - 1.5, hutY + 2, 1.5, 1.5);
     }
     
     renderArcherLane(ctx, lane, isLeftLane) {
@@ -602,22 +718,22 @@ export class TrainingGrounds extends Building {
             ctx.translate(targetX, targetY);
             
             ctx.fillStyle = '#654321';
-            ctx.fillRect(-1, 0, 2, 15);
+            ctx.fillRect(-0.75, 0, 1.5, 10);
             
             ctx.fillStyle = '#5D4E37';
-            ctx.fillRect(-3, 15, 6, 1.5);
+            ctx.fillRect(-2, 10, 4, 1);
             
             const rings = [
-                { radius: 8, color: '#DC143C', shadow: 1 },
-                { radius: 5.5, color: '#FFD700', shadow: 0.8 },
-                { radius: 3, color: '#DC143C', shadow: 0.6 },
-                { radius: 1.2, color: '#FFD700', shadow: 0.4 }
+                { radius: 5.5, color: '#DC143C', shadow: 1 },
+                { radius: 3.7, color: '#FFD700', shadow: 0.8 },
+                { radius: 2, color: '#DC143C', shadow: 0.6 },
+                { radius: 0.8, color: '#FFD700', shadow: 0.4 }
             ];
             
             rings.forEach(ring => {
                 ctx.fillStyle = `rgba(0, 0, 0, ${0.15 * ring.shadow})`;
                 ctx.beginPath();
-                ctx.arc(0.5, 0.5, ring.radius, 0, Math.PI * 2);
+                ctx.arc(0.3, 0.3, ring.radius, 0, Math.PI * 2);
                 ctx.fill();
                 
                 ctx.fillStyle = ring.color;
@@ -627,9 +743,9 @@ export class TrainingGrounds extends Building {
             });
             
             ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.5;
             ctx.beginPath();
-            ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
             ctx.stroke();
             
             ctx.restore();
@@ -648,64 +764,64 @@ export class TrainingGrounds extends Building {
             // Archer shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
-            ctx.ellipse(1, 1, 3, 1, 0, 0, Math.PI * 2);
+            ctx.ellipse(0.5, 0.5, 2, 0.7, 0, 0, Math.PI * 2);
             ctx.fill();
             
             // Archer body
             ctx.fillStyle = '#2D5016';
-            ctx.fillRect(-3.5, -10, 7, 12);
+            ctx.fillRect(-2.5, -6.5, 5, 8);
             
             // Archer head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -12, 2.5, 0, Math.PI * 2);
+            ctx.arc(0, -7.5, 1.7, 0, Math.PI * 2);
             ctx.fill();
             
             // Archer helm
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -12.5, 3, Math.PI, Math.PI * 2);
+            ctx.arc(0, -7.8, 2, Math.PI, Math.PI * 2);
             ctx.fill();
             
             // Bow
-            const bowX = 4;
-            const bowDrawAmount = archer.drawback * 3;
+            const bowX = 2.5;
+            const bowDrawAmount = archer.drawback * 2;
             
             ctx.strokeStyle = '#8B6914';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.2;
             ctx.beginPath();
-            ctx.moveTo(bowX, -8);
-            ctx.quadraticCurveTo(bowX + 3, -12, bowX + 2, -14);
+            ctx.moveTo(bowX, -5);
+            ctx.quadraticCurveTo(bowX + 2, -7.5, bowX + 1.3, -9);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(bowX, -8);
-            ctx.quadraticCurveTo(bowX + 3, -4, bowX + 2, -2);
+            ctx.moveTo(bowX, -5);
+            ctx.quadraticCurveTo(bowX + 2, -2.5, bowX + 1.3, -1);
             ctx.stroke();
             
             // Bowstring
             ctx.strokeStyle = '#D2B48C';
-            ctx.lineWidth = 1.5;
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(bowX + 2, -14);
-            ctx.lineTo(bowX - bowDrawAmount, -8);
-            ctx.lineTo(bowX + 2, -2);
+            ctx.moveTo(bowX + 1.3, -9);
+            ctx.lineTo(bowX - bowDrawAmount, -5);
+            ctx.lineTo(bowX + 1.3, -1);
             ctx.stroke();
             
             // Arrow nocked
             if (archer.drawback > 0.3) {
                 ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.7;
                 ctx.beginPath();
-                ctx.moveTo(bowX - bowDrawAmount, -8);
-                ctx.lineTo(bowX - bowDrawAmount - 6, -8);
+                ctx.moveTo(bowX - bowDrawAmount, -5);
+                ctx.lineTo(bowX - bowDrawAmount - 4, -5);
                 ctx.stroke();
                 
                 ctx.fillStyle = '#696969';
                 ctx.beginPath();
-                ctx.moveTo(bowX - bowDrawAmount - 6, -8);
-                ctx.lineTo(bowX - bowDrawAmount - 8, -7);
-                ctx.lineTo(bowX - bowDrawAmount - 8, -9);
+                ctx.moveTo(bowX - bowDrawAmount - 4, -5);
+                ctx.lineTo(bowX - bowDrawAmount - 5.2, -4.2);
+                ctx.lineTo(bowX - bowDrawAmount - 5.2, -5.8);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -718,10 +834,10 @@ export class TrainingGrounds extends Building {
         // Render duel circles with proper spacing
         this.swordFightArea.duelCircles.forEach((circle, circleIdx) => {
             ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.5;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            ctx.arc(this.x + circle.x, this.y + circle.y, 12, 0, Math.PI * 2);
+            ctx.arc(this.x + circle.x, this.y + circle.y, 8, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
         });
@@ -738,91 +854,91 @@ export class TrainingGrounds extends Building {
             // Fighter shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.beginPath();
-            ctx.ellipse(0, 3, 3.5, 1, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 2, 2.3, 0.7, 0, 0, Math.PI * 2);
             ctx.fill();
             
             // Fighter body
             ctx.fillStyle = fighter.color;
-            ctx.fillRect(-4, -12, 8, 14);
+            ctx.fillRect(-2.7, -8, 5.4, 9.5);
             
             // Fighter armor
             ctx.fillStyle = '#696969';
-            ctx.fillRect(-3.5, -10, 7, 8);
+            ctx.fillRect(-2.3, -6.5, 4.6, 5.3);
             
             ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(-3.5, -10, 7, 8);
+            ctx.lineWidth = 0.3;
+            ctx.strokeRect(-2.3, -6.5, 4.6, 5.3);
             
             // Fighter head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -14, 2.5, 0, Math.PI * 2);
+            ctx.arc(0, -8.5, 1.6, 0, Math.PI * 2);
             ctx.fill();
             
             // Fighter helmet
             ctx.fillStyle = '#696969';
             ctx.beginPath();
-            ctx.arc(0, -14.5, 3, Math.PI, Math.PI * 2);
+            ctx.arc(0, -8.8, 1.95, Math.PI, Math.PI * 2);
             ctx.fill();
             
             // Shield
-            const shieldX = fighter.direction > 0 ? -5 : 5;
+            const shieldX = fighter.direction > 0 ? -3.2 : 3.2;
             ctx.fillStyle = '#CD853F';
             ctx.beginPath();
-            ctx.arc(shieldX, -6, 3, 0, Math.PI * 2);
+            ctx.arc(shieldX, -4, 2, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
-            ctx.arc(shieldX, -6, 3, 0, Math.PI * 2);
+            ctx.arc(shieldX, -4, 2, 0, Math.PI * 2);
             ctx.stroke();
             
             ctx.fillStyle = '#DC143C';
             ctx.beginPath();
-            ctx.arc(shieldX, -6, 1.2, 0, Math.PI * 2);
+            ctx.arc(shieldX, -4, 0.8, 0, Math.PI * 2);
             ctx.fill();
             
             // Sword with swing
-            const swordX = fighter.direction > 0 ? 4 : -4;
+            const swordX = fighter.direction > 0 ? 2.7 : -2.7;
             const swingAmount = fighter.swingAngle * fighter.direction;
             
             ctx.strokeStyle = '#C0C0C0';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.2;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(swordX, -8);
-            ctx.lineTo(swordX + (swingAmount * 5), -8 - 8 + (Math.abs(swingAmount) * 3));
+            ctx.moveTo(swordX, -5);
+            ctx.lineTo(swordX + (swingAmount * 3.3), -5 - 5 + (Math.abs(swingAmount) * 2));
             ctx.stroke();
             
             ctx.fillStyle = '#FFD700';
             ctx.beginPath();
-            ctx.arc(swordX, -8, 1.5, 0, Math.PI * 2);
+            ctx.arc(swordX, -5, 1, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.fillStyle = '#808080';
-            const tipX = swordX + (swingAmount * 5);
-            const tipY = -8 - 8 + (Math.abs(swingAmount) * 3);
+            const tipX = swordX + (swingAmount * 3.3);
+            const tipY = -5 - 5 + (Math.abs(swingAmount) * 2);
             ctx.beginPath();
             ctx.moveTo(tipX, tipY);
-            ctx.lineTo(tipX + 1, tipY - 2);
-            ctx.lineTo(tipX - 1, tipY - 2);
+            ctx.lineTo(tipX + 0.7, tipY - 1.3);
+            ctx.lineTo(tipX - 0.7, tipY - 1.3);
             ctx.closePath();
             ctx.fill();
             
             // Legs
             ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.2;
             ctx.lineCap = 'round';
-            const stanceShift = fighter.stance * 2;
+            const stanceShift = fighter.stance * 1.3;
             ctx.beginPath();
-            ctx.moveTo(-1, 2);
-            ctx.lineTo(-1 + stanceShift, 5);
+            ctx.moveTo(-0.7, 1.5);
+            ctx.lineTo(-0.7 + stanceShift, 3.2);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(1, 2);
-            ctx.lineTo(1 - stanceShift, 5);
+            ctx.moveTo(0.7, 1.5);
+            ctx.lineTo(0.7 - stanceShift, 3.2);
             ctx.stroke();
             
             ctx.restore();
@@ -840,56 +956,56 @@ export class TrainingGrounds extends Building {
             
             // Dummy post/stand
             ctx.fillStyle = '#654321';
-            ctx.fillRect(-2, 0, 4, 28);
+            ctx.fillRect(-1.5, 0, 3, 19);
             
             ctx.fillStyle = '#5D4E37';
-            ctx.fillRect(-6, 28, 12, 3);
+            ctx.fillRect(-4, 19, 8, 2);
             
             ctx.fillStyle = '#8B6F47';
             ctx.beginPath();
-            ctx.arc(0, -26, 6, 0, Math.PI * 2);
+            ctx.arc(0, -16, 4, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
-            ctx.arc(0, -26, 6, 0, Math.PI * 2);
+            ctx.arc(0, -16, 4, 0, Math.PI * 2);
             ctx.stroke();
             
             ctx.fillStyle = '#A0522D';
-            ctx.fillRect(-6, -18, 12, 14);
+            ctx.fillRect(-4, -10, 8, 9);
             
             ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
-            ctx.moveTo(-6, -12);
-            ctx.lineTo(6, -12);
+            ctx.moveTo(-4, -7);
+            ctx.lineTo(4, -7);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(-6, -6);
-            ctx.lineTo(6, -6);
+            ctx.moveTo(-4, -4);
+            ctx.lineTo(4, -4);
             ctx.stroke();
             
             ctx.strokeStyle = '#8B6F47';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(-6, -12);
-            ctx.lineTo(-13, -10);
+            ctx.moveTo(-4, -7);
+            ctx.lineTo(-8.5, -5);
             ctx.stroke();
             
             ctx.beginPath();
-            ctx.moveTo(6, -12);
-            ctx.lineTo(13, -10);
+            ctx.moveTo(4, -7);
+            ctx.lineTo(8.5, -5);
             ctx.stroke();
             
             ctx.fillStyle = 'rgba(100, 50, 0, 0.5)';
             ctx.beginPath();
-            ctx.arc(-2, -8, 2, 0, Math.PI * 2);
+            ctx.arc(-1.3, -5, 1.3, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.arc(3, -4, 1.5, 0, Math.PI * 2);
+            ctx.arc(2, -2.5, 1, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.restore();
@@ -908,29 +1024,29 @@ export class TrainingGrounds extends Building {
                 ctx.rotate(arrowAngle);
                 
                 ctx.strokeStyle = `rgba(139, 69, 19, ${alpha})`;
-                ctx.lineWidth = 1.5;
+                ctx.lineWidth = 0.75;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(10, 0);
+                ctx.lineTo(5, 0);
                 ctx.stroke();
                 
                 ctx.fillStyle = `rgba(192, 192, 192, ${alpha})`;
                 ctx.beginPath();
-                ctx.moveTo(10, 0);
-                ctx.lineTo(12, -1.5);
-                ctx.lineTo(12, 1.5);
+                ctx.moveTo(5, 0);
+                ctx.lineTo(6, -0.75);
+                ctx.lineTo(6, 0.75);
                 ctx.closePath();
                 ctx.fill();
                 
                 ctx.strokeStyle = `rgba(220, 20, 60, ${alpha})`;
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 0.5;
                 ctx.beginPath();
-                ctx.moveTo(0, -1);
-                ctx.lineTo(-4, -2);
+                ctx.moveTo(0, -0.5);
+                ctx.lineTo(-2, -1);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.moveTo(0, 1);
-                ctx.lineTo(-4, 2);
+                ctx.moveTo(0, 0.5);
+                ctx.lineTo(-2, 1);
                 ctx.stroke();
                 
                 ctx.restore();
