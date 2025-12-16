@@ -1,6 +1,6 @@
-import { ArcherTower } from './ArcherTower.js';
+import { Tower } from './Tower.js';
 
-export class PoisonArcherTower extends ArcherTower {
+export class PoisonArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 130;
@@ -11,15 +11,35 @@ export class PoisonArcherTower extends ArcherTower {
         
         // Animation properties
         this.animationTime = 0;
-        this.archerPosition = { x: 0, y: 0, hidden: true };
         this.drawback = 0;
         this.poisonArrows = [];
-        this.poisonClouds = [];
+        
+        // Poison state tracking - track which enemies are poisoned to avoid creating duplicate splatters
+        this.poisonedEnemies = new Map(); // Map of enemy -> { duration, baseDamage, tickTimer }
         
         // Create compact cover elements within 2x2 grid (64x64 area)
-        this.coverElements = [];
+        this.coverElements = this.generateCoverElements(gridX, gridY);
         
-        // 4 strategic bushes closer together in corners of the grid
+        // Ranger position in center between bushes - initialize BEFORE archerPosition
+        this.rangerSpot = {
+            x: this.x + ((gridX % 2) - 0.5) * 4,
+            y: this.y + ((gridY % 2) - 0.5) * 4
+        };
+        
+        // Initialize archer position to rangerSpot, hidden until target acquired
+        this.archerPosition = {
+            x: this.rangerSpot.x,
+            y: this.rangerSpot.y,
+            hidden: true
+        };
+    }
+    
+    /**
+     * Pre-generate cover elements (bushes) with cached rendering data
+     * Optimized to avoid recalculation every frame
+     */
+    generateCoverElements(gridX, gridY) {
+        const coverElements = [];
         const positions = [
             { x: this.x - 15, y: this.y - 15 },
             { x: this.x + 15, y: this.y - 15 },
@@ -35,9 +55,8 @@ export class PoisonArcherTower extends ArcherTower {
                 type: 'bush',
                 size: baseSize,
                 rustleOffset: i * 0.5,
-                pattern: (i * 1.2), // Deterministic pattern
+                pattern: (i * 1.2),
                 branchPattern: (i * 0.3),
-                // Cache branch data to prevent flickering
                 branches: [],
                 leafClusters: []
             };
@@ -68,38 +87,29 @@ export class PoisonArcherTower extends ArcherTower {
                 });
             }
             
-            this.coverElements.push(element);
+            coverElements.push(element);
         });
         
-        // Ranger position in center between bushes
-        this.rangerSpot = {
-            x: this.x + ((gridX % 2) - 0.5) * 4,
-            y: this.y + ((gridY % 2) - 0.5) * 4
-        };
+        return coverElements;
     }
     
-    update(deltaTime, enemies) {
+    update(deltaTime, enemies, towerForgeBonus = 0) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
         this.drawback = Math.max(0, this.drawback - deltaTime * 3);
         
         this.target = this.findTarget(enemies);
         
-        // Update archer position
-        if (this.target) {
-            this.archerPosition.x = this.rangerSpot.x;
-            this.archerPosition.y = this.rangerSpot.y;
-            this.archerPosition.hidden = false;
-        } else {
-            this.archerPosition.hidden = true;
-        }
+        // Update archer visibility based on target
+        this.archerPosition.hidden = !this.target;
         
+        // Only shoot if we have a valid target and proper positioning
         if (this.target && this.cooldown === 0 && !this.archerPosition.hidden) {
             this.shoot();
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update poison arrows
+        // Update poison arrows - SINGLE TARGET HIT
         this.poisonArrows = this.poisonArrows.filter(arrow => {
             arrow.x += arrow.vx * deltaTime;
             arrow.y += arrow.vy * deltaTime;
@@ -107,90 +117,96 @@ export class PoisonArcherTower extends ArcherTower {
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
-            // Check if arrow hits target area
+            // Check if arrow hits target area (within 15px of target position)
             if (arrow.life <= 0 || Math.hypot(arrow.x - arrow.targetX, arrow.y - arrow.targetY) < 15) {
-                this.createPoisonCloud(arrow.x, arrow.y);
-                return false;
+                // Only poison the intended target - find closest enemy to impact point
+                let hitTarget = null;
+                let minDist = 20; // Only hit if very close
+                
+                for (const enemy of enemies) {
+                    const dist = Math.hypot(enemy.x - arrow.x, enemy.y - arrow.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        hitTarget = enemy;
+                    }
+                }
+                
+                // Apply poison only to the hit target
+                if (hitTarget) {
+                    this.applyPoisonToEnemy(hitTarget, towerForgeBonus);
+                }
+                
+                return false; // Remove arrow
             }
             return true;
         });
         
-        // Update poison clouds
-        this.poisonClouds = this.poisonClouds.filter(cloud => {
-            cloud.life -= deltaTime;
-            cloud.radius = cloud.maxRadius * (1 - cloud.life / cloud.maxLife) * 0.8 + cloud.maxRadius * 0.2;
-            
-            // Apply poison effect to enemies in cloud
-            enemies.forEach(enemy => {
-                const distance = Math.hypot(enemy.x - cloud.x, enemy.y - cloud.y);
-                if (distance <= cloud.radius) {
-                    if (!enemy.poisoned || enemy.poisonTimer <= 0) {
-                        enemy.poisoned = true;
-                        enemy.poisonTimer = 5.0; // Longer duration
-                        enemy.poisonDamage = 4; // Balanced DoT damage
-                        enemy.poisonTickTimer = 0;
-                    }
-                }
-            });
-            
-            return cloud.life > 0;
-        });
-        
-        // Apply poison effects to enemies
-        enemies.forEach(enemy => {
-            if (enemy.poisoned && enemy.poisonTimer > 0) {
-                enemy.poisonTimer -= deltaTime;
-                enemy.poisonTickTimer = (enemy.poisonTickTimer || 0) - deltaTime;
-                
-                if (enemy.poisonTickTimer <= 0) {
-                    enemy.takeDamage(enemy.poisonDamage || 4, false, 'poison', true); // true = follow target
-                    enemy.poisonTickTimer = 1.0; // Tick every second
-                }
-                
-                if (enemy.poisonTimer <= 0) {
-                    enemy.poisoned = false;
-                }
+        // Update poison effects on enemies - OPTIMIZED
+        for (let [enemy, state] of this.poisonedEnemies) {
+            // Check if enemy is still alive (if not in enemies array, it's dead)
+            if (!enemies.includes(enemy)) {
+                this.poisonedEnemies.delete(enemy);
+                continue;
             }
-        });
-    }
-    
-    findTarget(enemies) {
-        let closest = null;
-        let closestDist = this.range;
-        
-        for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
-                closest = enemy;
-                closestDist = dist;
+            
+            state.duration -= deltaTime;
+            
+            if (state.duration <= 0) {
+                this.poisonedEnemies.delete(enemy);
+            } else {
+                // Apply poison damage on tick (every 1 second)
+                state.tickTimer -= deltaTime;
+                if (state.tickTimer <= 0) {
+                    const poisonDamage = state.baseDamage + towerForgeBonus;
+                    enemy.takeDamage(poisonDamage, false, 'poison', true);
+                    state.tickTimer = 1.0;
+                }
             }
         }
+    }
+    
+    applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
+        const basePoisonDamage = 4;
+        const poisonDuration = 5.0;
         
-        return closest;
+        // Refresh poison if already applied, or create new poison effect
+        if (this.poisonedEnemies.has(enemy)) {
+            const state = this.poisonedEnemies.get(enemy);
+            state.duration = poisonDuration;
+        } else {
+            this.poisonedEnemies.set(enemy, {
+                duration: poisonDuration,
+                baseDamage: basePoisonDamage,
+                tickTimer: 0 // Damage immediately on first tick
+            });
+        }
     }
     
     shoot() {
-        if (this.target) {
-            // Don't deal direct damage - only apply poison over time via clouds
-            // this.target.takeDamage(this.damage, false, 'poison');
-            
-            // Shoot poison arrow
-            this.drawback = 1;
-            
-            // Predict where the target will be
-            const arrowSpeed = 350;
-            const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
-            
-            const dx = predicted.x - this.archerPosition.x;
-            const dy = predicted.y - this.archerPosition.y;
-            const distance = Math.hypot(dx, dy);
-            const arcHeight = distance * 0.08;
-            
+        if (!this.target) return;
+        
+        this.drawback = 1;
+        
+        // Predict where the target will be
+        const arrowSpeed = 350;
+        const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
+        
+        // Ensure archer position is valid - use rangerSpot as fallback
+        const startX = this.archerPosition.x || this.rangerSpot.x;
+        const startY = this.archerPosition.y || this.rangerSpot.y;
+        
+        const dx = predicted.x - startX;
+        const dy = predicted.y - startY;
+        const distance = Math.hypot(dx, dy);
+        const arcHeight = distance * 0.08;
+        
+        // Only create arrow if distance is reasonable (avoid zero-distance or invalid arrows)
+        if (distance > 10) {
             this.poisonArrows.push({
-                x: this.archerPosition.x,
-                y: this.archerPosition.y,
-                vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
-                vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
+                x: startX,
+                y: startY,
+                vx: (dx / distance) * arrowSpeed,
+                vy: (dy / distance) * arrowSpeed - arcHeight,
                 rotation: Math.atan2(dy, dx),
                 life: distance / Math.max(arrowSpeed, 1) + 0.5,
                 targetX: predicted.x,
@@ -199,20 +215,26 @@ export class PoisonArcherTower extends ArcherTower {
         }
     }
     
-    createPoisonCloud(x, y) {
-        this.poisonClouds.push({
-            x: x,
-            y: y,
-            radius: 5,
-            maxRadius: 30,
-            life: 6.0, // Longer lasting clouds
-            maxLife: 6.0
-        });
+    render(ctx) {
+        // Render cover elements (bushes)
+        this.renderCoverElements(ctx);
+        
+        // Render ranger archer - skip if no target
+        if (this.target) {
+            this.renderArcher(ctx);
+        }
+        
+        // Render flying poison arrows - only if arrows exist
+        if (this.poisonArrows.length > 0) {
+            this.renderArrows(ctx);
+        }
+        
+        // Render range indicator and markers
+        this.renderIndicators(ctx);
     }
     
-    render(ctx) {
-        // Render cover elements (improved bushes)
-        this.coverElements.forEach((element, index) => {
+    renderCoverElements(ctx) {
+        this.coverElements.forEach((element) => {
             ctx.save();
             ctx.translate(element.x, element.y);
             
@@ -225,17 +247,15 @@ export class PoisonArcherTower extends ArcherTower {
             ctx.arc(2, 2, element.size, 0, Math.PI * 2);
             ctx.fill();
             
-            // Main bush structure with branches
+            // Trunk
             ctx.strokeStyle = '#8B4513';
             ctx.lineWidth = 2;
-            
-            // Central trunk/stem
             ctx.beginPath();
             ctx.moveTo(0, element.size * 0.7);
             ctx.lineTo(0, -element.size * 0.3);
             ctx.stroke();
             
-            // Main branches (using cached data)
+            // Branches with cached data
             element.branches.forEach(branch => {
                 const branchX = Math.cos(branch.angle) * branch.length;
                 const branchY = Math.sin(branch.angle) * branch.length;
@@ -245,7 +265,7 @@ export class PoisonArcherTower extends ArcherTower {
                 ctx.lineTo(branchX, branchY);
                 ctx.stroke();
                 
-                // Sub-branches (using cached data)
+                // Sub-branches
                 ctx.lineWidth = 1;
                 branch.subBranches.forEach(subBranch => {
                     const subX = branchX + Math.cos(subBranch.angle) * subBranch.length;
@@ -259,12 +279,11 @@ export class PoisonArcherTower extends ArcherTower {
                 ctx.lineWidth = 2;
             });
             
-            // Leafy clusters on branches (using cached data)
-            element.leafClusters.forEach((cluster, i) => {
+            // Leaf clusters
+            element.leafClusters.forEach((cluster) => {
                 const leafX = Math.cos(cluster.angle) * cluster.distance;
                 const leafY = Math.sin(cluster.angle) * cluster.distance;
                 
-                // Leaf cluster
                 ctx.fillStyle = cluster.color;
                 ctx.beginPath();
                 ctx.arc(leafX, leafY, element.size * 0.2, 0, Math.PI * 2);
@@ -300,102 +319,102 @@ export class PoisonArcherTower extends ArcherTower {
             
             ctx.restore();
         });
+    }
+    
+    renderArcher(ctx) {
+        if (this.archerPosition.hidden || !this.target) return;
         
-        // Render ranger between bushes
-        if (!this.archerPosition.hidden && this.target) {
-            ctx.save();
-            ctx.translate(this.archerPosition.x, this.archerPosition.y);
+        ctx.save();
+        ctx.translate(this.archerPosition.x, this.archerPosition.y);
+        
+        // Ranger shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(1, 3, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Crouched stance
+        ctx.save();
+        ctx.scale(1, 0.8);
+        
+        // Legs
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(-3, 2, 2, 8);
+        ctx.fillRect(1, 2, 2, 8);
+        
+        // Body (forest cloak)
+        ctx.fillStyle = '#2F4F2F';
+        ctx.fillRect(-4, -2, 8, 8);
+        
+        // Arms
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(-6, -1, 2, 6);
+        ctx.fillRect(4, -1, 2, 6);
+        
+        // Hood
+        ctx.fillStyle = '#1F3F1F';
+        ctx.beginPath();
+        ctx.arc(0, -4, 5, 0, Math.PI);
+        ctx.fill();
+        
+        // Face
+        ctx.fillStyle = 'rgba(221, 190, 169, 0.7)';
+        ctx.beginPath();
+        ctx.arc(0, -3, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Glowing eyes
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(-1.5, -4, 1, 1);
+        ctx.fillRect(0.5, -4, 1, 1);
+        
+        ctx.restore();
+        
+        // Bow and aiming
+        const aimAngle = Math.atan2(this.target.y - this.archerPosition.y, this.target.x - this.archerPosition.x);
+        ctx.rotate(aimAngle);
+        
+        // Longbow
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(10, 0, 8, -0.6, 0.6);
+        ctx.stroke();
+        
+        // Bow string
+        ctx.strokeStyle = '#F5F5DC';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(10 + 6, -5);
+        ctx.lineTo(this.drawback > 0 ? 10 - this.drawback * 5 : 10 + 6, 0);
+        ctx.lineTo(10 + 6, 5);
+        ctx.stroke();
+        
+        // Arrow when drawing
+        if (this.drawback > 0) {
+            const arrowX = 10 - this.drawback * 5;
             
-            // Ranger shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(1, 3, 8, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Crouched stance
-            ctx.save();
-            ctx.scale(1, 0.8); // Slightly crouched
-            
-            // Legs
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(-3, 2, 2, 8);
-            ctx.fillRect(1, 2, 2, 8);
-            
-            // Body (forest cloak)
-            ctx.fillStyle = '#2F4F2F';
-            ctx.fillRect(-4, -2, 8, 8);
-            
-            // Arms
-            ctx.fillStyle = '#654321';
-            ctx.fillRect(-6, -1, 2, 6);
-            ctx.fillRect(4, -1, 2, 6);
-            
-            // Hood
-            ctx.fillStyle = '#1F3F1F';
-            ctx.beginPath();
-            ctx.arc(0, -4, 5, 0, Math.PI);
-            ctx.fill();
-            
-            // Face partially visible
-            ctx.fillStyle = 'rgba(221, 190, 169, 0.7)';
-            ctx.beginPath();
-            ctx.arc(0, -3, 3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Glowing eyes
-            ctx.fillStyle = '#87CEEB';
-            ctx.fillRect(-1.5, -4, 1, 1);
-            ctx.fillRect(0.5, -4, 1, 1);
-            
-            ctx.restore();
-            
-            // Bow and aiming
-            const aimAngle = Math.atan2(this.target.y - this.archerPosition.y, this.target.x - this.archerPosition.x);
-            ctx.rotate(aimAngle);
-            
-            // Longbow
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(10, 0, 8, -0.6, 0.6);
+            ctx.moveTo(arrowX, 0);
+            ctx.lineTo(arrowX - 12, 0);
             ctx.stroke();
             
-            // Bow string
-            ctx.strokeStyle = '#F5F5DC';
-            ctx.lineWidth = 1;
+            // Poison tip
+            ctx.fillStyle = '#32CD32';
             ctx.beginPath();
-            ctx.moveTo(10 + 6, -5);
-            if (this.drawback > 0) {
-                ctx.lineTo(10 - this.drawback * 5, 0);
-            } else {
-                ctx.lineTo(10 + 6, 0);
-            }
-            ctx.lineTo(10 + 6, 5);
-            ctx.stroke();
-            
-            // Arrow when drawing
-            if (this.drawback > 0) {
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(10 - this.drawback * 5, 0);
-                ctx.lineTo(10 - this.drawback * 5 - 12, 0);
-                ctx.stroke();
-                
-                // Poison tip
-                ctx.fillStyle = '#32CD32';
-                ctx.beginPath();
-                ctx.moveTo(10 - this.drawback * 5 - 12, 0);
-                ctx.lineTo(10 - this.drawback * 5 - 15, -2);
-                ctx.lineTo(10 - this.drawback * 5 - 15, 2);
-                ctx.closePath();
-                ctx.fill();
-            }
-            
-            ctx.restore();
+            ctx.moveTo(arrowX - 12, 0);
+            ctx.lineTo(arrowX - 15, -2);
+            ctx.lineTo(arrowX - 15, 2);
+            ctx.closePath();
+            ctx.fill();
         }
         
-        // Render flying poison arrows
+        ctx.restore();
+    }
+    
+    renderArrows(ctx) {
         this.poisonArrows.forEach(arrow => {
             ctx.save();
             ctx.translate(arrow.x, arrow.y);
@@ -409,24 +428,14 @@ export class PoisonArcherTower extends ArcherTower {
             ctx.lineTo(6, 0);
             ctx.stroke();
             
-            // Poison-tipped arrow head
-            ctx.fillStyle = 'rgba(50, 205, 50, 0.9)';
+            // Poison-tipped arrow head (bright green)
+            ctx.fillStyle = 'rgba(50, 205, 50, 0.95)';
             ctx.beginPath();
             ctx.moveTo(6, 0);
             ctx.lineTo(2, -2);
             ctx.lineTo(2, 2);
             ctx.closePath();
             ctx.fill();
-            
-            // Poison drip trail
-            for (let i = 0; i < 3; i++) {
-                const trailX = -4 - i * 3;
-                const trailY = Math.sin(arrow.life * 10 + i) * 2;
-                ctx.fillStyle = `rgba(50, 205, 50, ${0.3 - i * 0.1})`;
-                ctx.beginPath();
-                ctx.arc(trailX, trailY, 1, 0, Math.PI * 2);
-                ctx.fill();
-            }
             
             // Arrow fletching
             ctx.strokeStyle = 'rgba(34, 139, 34, 0.9)';
@@ -440,39 +449,9 @@ export class PoisonArcherTower extends ArcherTower {
             
             ctx.restore();
         });
-        
-        // Render poison clouds
-        this.poisonClouds.forEach(cloud => {
-            const alpha = cloud.life / cloud.maxLife;
-            
-            // Main poison cloud
-            const cloudGradient = ctx.createRadialGradient(
-                cloud.x, cloud.y, 0,
-                cloud.x, cloud.y, cloud.radius
-            );
-            cloudGradient.addColorStop(0, `rgba(50, 205, 50, ${alpha * 0.4})`);
-            cloudGradient.addColorStop(0.5, `rgba(34, 139, 34, ${alpha * 0.3})`);
-            cloudGradient.addColorStop(1, `rgba(0, 100, 0, 0)`);
-            
-            ctx.fillStyle = cloudGradient;
-            ctx.beginPath();
-            ctx.arc(cloud.x, cloud.y, cloud.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Poison particles
-            for (let i = 0; i < 6; i++) {
-                const angle = (i / 6) * Math.PI * 2 + this.animationTime;
-                const distance = Math.sin(this.animationTime * 2 + i) * cloud.radius * 0.5 + cloud.radius * 0.5;
-                const particleX = cloud.x + Math.cos(angle) * distance;
-                const particleY = cloud.y + Math.sin(angle) * distance;
-                
-                ctx.fillStyle = `rgba(50, 205, 50, ${alpha * 0.6})`;
-                ctx.beginPath();
-                ctx.arc(particleX, particleY, 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-        
+    }
+    
+    renderIndicators(ctx) {
         // Range indicator (subtle)
         if (this.target) {
             ctx.strokeStyle = 'rgba(34, 139, 34, 0.1)';

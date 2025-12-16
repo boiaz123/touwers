@@ -253,7 +253,16 @@ export class TowerManager {
             // Apply academy elemental bonuses to Magic Towers
             this.applyAcademyUpgrades(tower);
             
-            tower.update(deltaTime, enemies);
+            // Get poison damage bonus for Poison Archer Towers
+            let poisonBonus = 0;
+            if (tower.constructor.name === 'PoisonArcherTower') {
+                forges.forEach(forge => {
+                    const multipliers = forge.getUpgradeMultipliers();
+                    poisonBonus = multipliers.poisonDamageBonus || 0;
+                });
+            }
+            
+            tower.update(deltaTime, enemies, poisonBonus);
         });
         
         // Update building manager
