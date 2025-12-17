@@ -4,6 +4,7 @@ import { TowerForge } from '../../entities/buildings/TowerForge.js';
 import { MagicAcademy } from '../../entities/buildings/MagicAcademy.js';
 import { GoldMine } from '../../entities/buildings/GoldMine.js';
 import { GuardPost } from '../../entities/towers/GuardPost.js';
+import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
 
 /**
  * SettlementHub State
@@ -31,6 +32,7 @@ export class SettlementHub {
         this.activePopup = null;
         this.upgradesPopup = null;
         this.optionsPopup = null;
+        this.statsPopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -91,17 +93,12 @@ export class SettlementHub {
             },
             // Gold Mine - positioned at red circle (far right)
             {
-                building: new GoldMine(centerX + 820, centerY - 80, 1, 1),
+                building: new GoldMine(centerX + 700, centerY - 90, 1, 1),
                 scale: 29,
-                clickable: false,
-                action: null
+                clickable: true,
+                action: 'stats'
             }
         ];
-        
-        // Disable GoldMine timer mechanism for settlement hub display
-        if (this.settlementBuildings[3].building) {
-            this.settlementBuildings[3].building.goldReady = true;
-        }
         
         this.setupMouseListeners();
     }
@@ -212,6 +209,8 @@ export class SettlementHub {
             this.upgradesPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'stats' && this.statsPopup) {
+            this.statsPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             let isHoveringBuilding = false;
@@ -256,6 +255,9 @@ export class SettlementHub {
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.handleClick(x, y);
             return;
+        } else if (this.activePopup === 'stats' && this.statsPopup) {
+            this.statsPopup.handleClick(x, y);
+            return;
         }
 
         // Check settlement building clicks
@@ -274,8 +276,8 @@ export class SettlementHub {
                 } else {
                     const size = item.scale * 4;
                     bounds = {
-                        x: item.building.x,
-                        y: item.building.y,
+                        x: item.building.x - size / 2,
+                        y: item.building.y - size / 2,
                         width: size,
                         height: size
                     };
@@ -305,6 +307,12 @@ export class SettlementHub {
                 this.optionsPopup = new SettlementOptionsMenu(this.stateManager, this);
             }
             this.optionsPopup.open();
+        } else if (buildingItem.action === 'stats') {
+            this.activePopup = 'stats';
+            if (!this.statsPopup) {
+                this.statsPopup = new StatsPanel(this.stateManager, this);
+            }
+            this.statsPopup.open();
         }
     }
 
@@ -326,6 +334,8 @@ export class SettlementHub {
             this.upgradesPopup.update(deltaTime);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.update(deltaTime);
+        } else if (this.activePopup === 'stats' && this.statsPopup) {
+            this.statsPopup.update(deltaTime);
         }
 
         // Update settlement buildings for animations
@@ -370,6 +380,8 @@ export class SettlementHub {
                 this.upgradesPopup.render(ctx);
             } else if (this.activePopup === 'options' && this.optionsPopup) {
                 this.optionsPopup.render(ctx);
+            } else if (this.activePopup === 'stats' && this.statsPopup) {
+                this.statsPopup.render(ctx);
             }
 
             ctx.globalAlpha = 1;
@@ -1078,9 +1090,16 @@ export class SettlementHub {
     }
 
     renderSettlementBuildings(ctx, canvas) {
-        // Render all actual building instances with their full game rendering
+        // Render all actual building instances with settlement-specific visuals
+        const headers = {
+            'TrainingGrounds': 'Campaign',
+            'MagicAcademy': 'Options',
+            'TowerForge': 'Upgrades',
+            'GoldMine': 'Stats'
+        };
+
         this.settlementBuildings.forEach(item => {
-            if (item.building && item.building.render) {
+            if (item.building) {
                 ctx.globalAlpha = this.contentOpacity;
                 
                 // Special handling for TrainingGrounds: render scaled-down version at 70% for settlement
@@ -1088,7 +1107,32 @@ export class SettlementHub {
                     this.renderTrainingGroundsSettlement(ctx, item.building);
                 } else {
                     const size = item.scale * 4; // Convert scale to building size (4x4 grid)
-                    item.building.render(ctx, size);
+                    
+                    // Use SettlementBuildingVisuals for custom settlement rendering
+                    const visuals = new SettlementBuildingVisuals(item.building);
+                    visuals.render(ctx, size);
+                }
+                
+                // Render header for clickable buildings
+                if (item.clickable && item.action) {
+                    const buildingType = item.building.constructor.name;
+                    const headerText = headers[buildingType] || '';
+                    
+                    if (headerText) {
+                        const headerX = item.building.x;
+                        const headerY = item.building.y - 120;
+                        
+                        // Header text shadow
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.font = 'bold 24px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(headerText, headerX + 1, headerY + 1);
+                        
+                        // Header text
+                        ctx.fillStyle = '#FFD700';
+                        ctx.fillText(headerText, headerX, headerY);
+                    }
                 }
                 
                 ctx.globalAlpha = 1;
@@ -1097,34 +1141,109 @@ export class SettlementHub {
     }
 
     renderTrainingGroundsSettlement(ctx, building) {
-        // Render a 70% scaled version of training grounds for the settlement display
-        const scale = 0.7;
+        // Render a scaled version of training grounds for the settlement display
+        // Base scale is 0.7, then adjusted to fit within the red square area (~0.4x)
+        const baseScale = 0.7;
+        const settlementScale = 2.2; // Scales it down to fit in the red square
+        const scale = baseScale * settlementScale;
         const x = building.x;
         const y = building.y;
         
-        // Grass base
+        // ===== BACKGROUND & TERRAIN =====
+        
+        // Grass base - 70% of original size
         const grassGradient = ctx.createLinearGradient(
-            x - (200 * scale), y - (192 * scale),
-            x - (200 * scale), y + (192 * scale)
+            x - (50 * scale), y - (48 * scale),
+            x - (50 * scale), y + (48 * scale)
         );
         grassGradient.addColorStop(0, '#5A7A3A');
         grassGradient.addColorStop(0.5, '#6B8E3A');
         grassGradient.addColorStop(1, '#4A6A2A');
         
         ctx.fillStyle = grassGradient;
-        ctx.fillRect(x - (200 * scale), y - (192 * scale), 400 * scale, 384 * scale);
+        ctx.fillRect(x - (50 * scale), y - (48 * scale), 100 * scale, 96 * scale);
         
-        // Fence perimeter at 70%
-        const posts = [
-            { x: -200, y: -192, endX: 200, endY: -192, posts: 13 },
-            { x: 200, y: -192, endX: 200, endY: 192, posts: 12 },
-            { x: 200, y: 192, endX: -200, endY: 192, posts: 13 },
-            { x: -200, y: 192, endX: -200, endY: -192, posts: 12 }
+        // Dirt wear patches
+        const wearPatches = [
+            { x: -38, y: -28, width: 27, height: 4, intensity: 0.5 },
+            { x: 38, y: -28, width: 27, height: 4, intensity: 0.5 },
+            { x: -24, y: 20, width: 18, height: 18, intensity: 0.6 },
+            { x: 24, y: 20, width: 18, height: 18, intensity: 0.6 },
+            { x: -38, y: 8, width: 13, height: 8, intensity: 0.4 },
+            { x: 38, y: 8, width: 13, height: 8, intensity: 0.4 }
         ];
         
-        posts.forEach(segment => {
-            const startX = x + (segment.x * scale);
-            const startY = y + (segment.y * scale);
+        wearPatches.forEach(patch => {
+            const dirtGradient = ctx.createRadialGradient(
+                x + (patch.x * scale), y + (patch.y * scale), 0,
+                x + (patch.x * scale), y + (patch.y * scale), Math.max(patch.width, patch.height)
+            );
+            dirtGradient.addColorStop(0, `rgba(139, 90, 43, ${patch.intensity})`);
+            dirtGradient.addColorStop(0.7, `rgba(139, 90, 43, ${patch.intensity * 0.5})`);
+            dirtGradient.addColorStop(1, `rgba(139, 90, 43, 0)`);
+            
+            ctx.fillStyle = dirtGradient;
+            ctx.fillRect(
+                x + (patch.x * scale) - (patch.width * scale / 2),
+                y + (patch.y * scale) - (patch.height * scale / 2),
+                patch.width * scale,
+                patch.height * scale
+            );
+        });
+        
+        // Grass variations
+        const grassVariations = [
+            { x: -42, y: -38, radius: 5, opacity: 0.25 },
+            { x: 42, y: -38, radius: 5, opacity: 0.25 },
+            { x: -42, y: 38, radius: 6, opacity: 0.3 },
+            { x: 42, y: 38, radius: 6, opacity: 0.3 }
+        ];
+        
+        grassVariations.forEach(area => {
+            const grassVarGradient = ctx.createRadialGradient(
+                x + (area.x * scale), y + (area.y * scale), 0,
+                x + (area.x * scale), y + (area.y * scale), area.radius * scale
+            );
+            grassVarGradient.addColorStop(0, `rgba(34, 139, 34, ${area.opacity})`);
+            grassVarGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
+            
+            ctx.fillStyle = grassVarGradient;
+            ctx.beginPath();
+            ctx.arc(x + (area.x * scale), y + (area.y * scale), area.radius * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Scattered stones
+        const rocks = [
+            { x: -47, y: -35, size: 1 },
+            { x: 47, y: -35, size: 1 },
+            { x: -47, y: 35, size: 1.1 },
+            { x: 47, y: 35, size: 1 }
+        ];
+        
+        rocks.forEach(rock => {
+            ctx.fillStyle = '#8B8680';
+            ctx.strokeStyle = '#696969';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(x + (rock.x * scale), y + (rock.y * scale), rock.size * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        });
+        
+        // ===== FENCE & DECORATIONS =====
+        
+        // Fence perimeter at 70% scale
+        const segments = [
+            { startX: -50, startY: -48, endX: 50, endY: -48, posts: 13 },
+            { startX: 50, startY: -48, endX: 50, endY: 48, posts: 12 },
+            { startX: 50, startY: 48, endX: -50, endY: 48, posts: 13 },
+            { startX: -50, startY: 48, endX: -50, endY: -48, posts: 12 }
+        ];
+        
+        segments.forEach(segment => {
+            const startX = x + (segment.startX * scale);
+            const startY = y + (segment.startY * scale);
             const endX = x + (segment.endX * scale);
             const endY = y + (segment.endY * scale);
             
@@ -1136,41 +1255,595 @@ export class SettlementHub {
                 const postX = startX + Math.cos(angle) * (i * postSpacing);
                 const postY = startY + Math.sin(angle) * (i * postSpacing);
                 
+                // Post shadow
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                ctx.fillRect(postX - 0.7, postY + 0.7, 1.4, 1.05);
+                ctx.fillRect(postX - (1 * scale), postY + (1 * scale), 2 * scale, 1.5 * scale);
                 
-                ctx.fillStyle = '#8B7355';
-                ctx.fillRect(postX - 0.7, postY - (8 * scale), 1.4, 8 * scale);
+                // Post
+                ctx.fillStyle = '#8B6F47';
+                ctx.fillRect(postX - (1.25 * scale), postY - (11 * scale), 2.5 * scale, 12 * scale);
                 
-                ctx.strokeStyle = '#696969';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(postX - 0.7, postY - (8 * scale), 1.4, 8 * scale);
+                // Post top
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(postX - (1.75 * scale), postY - (12 * scale), 3.5 * scale, 1.5 * scale);
+                
+                // Post crossbeams
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 0.5 * scale;
+                for (let g = 0; g < 3; g++) {
+                    ctx.beginPath();
+                    ctx.moveTo(postX - (1.25 * scale), postY - (10 * scale) + (g * 3.5 * scale));
+                    ctx.lineTo(postX + (1.25 * scale), postY - (9.5 * scale) + (g * 3.5 * scale));
+                    ctx.stroke();
+                }
+            }
+            
+            // Rails between posts
+            for (let i = 0; i < segment.posts - 1; i++) {
+                const railStartX = startX + Math.cos(angle) * (i * postSpacing);
+                const railStartY = startY + Math.sin(angle) * (i * postSpacing);
+                const railEndX = startX + Math.cos(angle) * ((i + 1) * postSpacing);
+                const railEndY = startY + Math.sin(angle) * ((i + 1) * postSpacing);
+                
+                ctx.strokeStyle = '#CD853F';
+                ctx.lineWidth = 1.5 * scale;
+                ctx.beginPath();
+                ctx.moveTo(railStartX, railStartY - (5 * scale));
+                ctx.lineTo(railEndX, railEndY - (5 * scale));
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(railStartX, railStartY - (1.5 * scale));
+                ctx.lineTo(railEndX, railEndY - (1.5 * scale));
+                ctx.stroke();
             }
         });
         
-        // Hut
-        ctx.fillStyle = '#8B6914';
-        ctx.fillRect(x + (-168 * scale), y + (-152 * scale), 40 * scale, 36 * scale);
-        ctx.strokeStyle = '#5a4630';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + (-168 * scale), y + (-152 * scale), 40 * scale, 36 * scale);
+        // ===== HUTS & STRUCTURES =====
+        
+        // Wooden hut
+        const hutX = x + (-42 * scale);
+        const hutY = y + (-38 * scale);
+        const hutWidth = 10 * scale;
+        const hutHeight = 9 * scale;
+        
+        // Hut shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(hutX - (hutWidth / 2) + (1 * scale), hutY + (1 * scale), hutWidth, hutHeight);
+        
+        // Hut main body
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillRect(hutX - (hutWidth / 2), hutY, hutWidth, hutHeight);
+        
+        // Hut outline
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.strokeRect(hutX - (hutWidth / 2), hutY, hutWidth, hutHeight);
+        
+        // Hut planks
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 0.2 * scale;
+        for (let i = 1; i < 4; i++) {
+            const plankY = hutY + (hutHeight * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(hutX - (hutWidth / 2), plankY);
+            ctx.lineTo(hutX + (hutWidth / 2), plankY);
+            ctx.stroke();
+        }
+        
+        // Hut roof
+        ctx.fillStyle = '#654321';
+        ctx.beginPath();
+        ctx.moveTo(hutX - (hutWidth / 2), hutY);
+        ctx.lineTo(hutX, hutY - (4 * scale));
+        ctx.lineTo(hutX + (hutWidth / 2), hutY);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.stroke();
+        
+        // ===== TREES AROUND FENCE =====
+        
+        const trees = [
+            { x: -54, y: -52, size: 15 * 1.8 * scale },
+            { x: -46, y: -54, size: 15 * 2.0 * scale },
+            { x: 54, y: -52, size: 15 * 1.9 * scale },
+            { x: 56, y: -48, size: 15 * 1.7 * scale },
+            { x: -56, y: 52, size: 15 * 1.95 * scale },
+            { x: 54, y: 54, size: 15 * 1.8 * scale }
+        ];
+        
+        trees.forEach((tree, idx) => {
+            this.renderSettlementTree(ctx, x, y, tree.x, tree.y, tree.size, scale, idx);
+        });
+        
+        // ===== ROCKS =====
+        
+        const decorRocks = [
+            { x: -60, y: -40, size: 1.75 * scale },
+            { x: 60, y: -42, size: 2.0 * scale },
+            { x: -60, y: 36, size: 1.9 * scale },
+            { x: 60, y: 32, size: 1.6 * scale }
+        ];
+        
+        decorRocks.forEach(rock => {
+            ctx.fillStyle = '#696969';
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 0.5 * scale;
+            ctx.beginPath();
+            ctx.arc(x + (rock.x * scale), y + (rock.y * scale), rock.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        });
+        
+        // ===== BUSHES =====
+        
+        const bushes = [
+            { x: -57, y: -32, size: 0.6 * scale },
+            { x: 58, y: -36, size: 0.65 * scale },
+            { x: -56, y: 48, size: 0.55 * scale },
+            { x: 57, y: 52, size: 0.7 * scale }
+        ];
+        
+        bushes.forEach(bush => {
+            const bushX = x + (bush.x * scale);
+            const bushY = y + (bush.y * scale);
+            
+            ctx.fillStyle = '#1f6f1f';
+            ctx.beginPath();
+            ctx.arc(bushX, bushY, 2.5 * bush.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#28a028';
+            ctx.beginPath();
+            ctx.arc(bushX - (1 * bush.size), bushY - (1 * bush.size), 1.75 * bush.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(bushX + (1 * bush.size), bushY - (1 * bush.size), 1.75 * bush.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // ===== BARRELS =====
+        
+        const barrels = [
+            { x: -64, y: -24 },
+            { x: 64, y: -22 },
+            { x: -62, y: 28 },
+            { x: 62, y: 26 }
+        ];
+        
+        barrels.forEach(barrel => {
+            const barrelX = x + (barrel.x * scale);
+            const barrelY = y + (barrel.y * scale);
+            
+            // Barrel shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(barrelX - (2.5 * scale), barrelY + (1.5 * scale), 5 * scale, 1.5 * scale);
+            
+            // Barrel body
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(barrelX - (2.5 * scale), barrelY - (5 * scale), 5 * scale, 6.5 * scale);
+            
+            // Barrel outline
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 0.75 * scale;
+            ctx.strokeRect(barrelX - (2.5 * scale), barrelY - (5 * scale), 5 * scale, 6.5 * scale);
+            
+            // Barrel bands
+            ctx.beginPath();
+            ctx.moveTo(barrelX - (2.5 * scale), barrelY - (3 * scale));
+            ctx.lineTo(barrelX + (2.5 * scale), barrelY - (3 * scale));
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(barrelX - (2.5 * scale), barrelY - (1 * scale));
+            ctx.lineTo(barrelX + (2.5 * scale), barrelY - (1 * scale));
+            ctx.stroke();
+        });
+        
+        // ===== ARCHER TRAINING ELEMENTS =====
         
         // Lane dividers
         ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
         ctx.lineWidth = 0.7;
-        ctx.setLineDash([32 * scale, 32 * scale]);
+        ctx.setLineDash([8 * scale, 8 * scale]);
         
         ctx.beginPath();
-        ctx.moveTo(x + (-192 * scale), y + (-112 * scale));
-        ctx.lineTo(x + (192 * scale), y + (-112 * scale));
+        ctx.moveTo(x - (48 * scale), y + (-28 * scale));
+        ctx.lineTo(x + (48 * scale), y + (-28 * scale));
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.moveTo(x + (-192 * scale), y + (32 * scale));
-        ctx.lineTo(x + (192 * scale), y + (32 * scale));
+        ctx.moveTo(x - (48 * scale), y + (8 * scale));
+        ctx.lineTo(x + (48 * scale), y + (8 * scale));
         ctx.stroke();
         
         ctx.setLineDash([]);
+        
+        // Archer targets (left side)
+        const targetPositions = [
+            { x: -28, y: -28 - 35 },
+            { x: -14, y: -28 - 35 },
+            { x: 0, y: -28 - 35 },
+            { x: 14, y: -28 - 35 },
+            { x: 28, y: -28 - 35 }
+        ];
+        
+        targetPositions.forEach(targetPos => {
+            this.renderSettlementTarget(ctx, x, y, targetPos.x, targetPos.y, scale);
+        });
+        
+        // Archers
+        const archerPositions = [
+            { x: -38, y: -28, isLeft: true },
+            { x: -22, y: -28, isLeft: true },
+            { x: 38, y: -28, isLeft: false },
+            { x: 22, y: -28, isLeft: false }
+        ];
+        
+        archerPositions.forEach(archer => {
+            this.renderSettlementArcher(ctx, x, y, archer.x, archer.y, archer.isLeft, scale);
+        });
+        
+        // ===== SWORD DUEL CIRCLES =====
+        
+        const duelCircles = [
+            { x: -24, y: 20 },
+            { x: 24, y: 20 }
+        ];
+        
+        duelCircles.forEach((circle, circleIdx) => {
+            const circleX = x + (circle.x * scale);
+            const circleY = y + (circle.y * scale);
+            
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.5)';
+            ctx.lineWidth = 1 * scale;
+            ctx.beginPath();
+            ctx.arc(circleX, circleY, 9 * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.strokeStyle = 'rgba(160, 82, 45, 0.3)';
+            ctx.lineWidth = 0.5 * scale;
+            ctx.beginPath();
+            ctx.arc(circleX, circleY, 7 * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Render animated sword fighters in each circle
+            // Left fighter
+            this.renderSwordFighter(ctx, circleX - (4 * scale), circleY, 1, scale);
+            // Right fighter
+            this.renderSwordFighter(ctx, circleX + (4 * scale), circleY, -1, scale);
+        });
+        
+        // ===== TRAINING DUMMIES =====
+        
+        const dummyPositions = [
+            { x: -38, y: 8 },
+            { x: 38, y: 8 }
+        ];
+        
+        dummyPositions.forEach(dummy => {
+            this.renderSettlementDummy(ctx, x, y, dummy.x, dummy.y, scale);
+        });
+    }
+    
+    renderSettlementTree(ctx, centerX, centerY, treeOffsetX, treeOffsetY, size, scale, idx) {
+        const treeX = centerX + (treeOffsetX * scale);
+        const treeY = centerY + (treeOffsetY * scale);
+        const treeType = idx % 4;
+        
+        ctx.save();
+        ctx.translate(treeX, treeY);
+        
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        
+        if (treeType === 0) {
+            // Tree type 1
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(-trunkWidth * 0.5, 0, trunkWidth, trunkHeight);
+            ctx.fillStyle = '#3E2723';
+            ctx.fillRect(0, 0, trunkWidth * 0.5, trunkHeight);
+            ctx.fillStyle = '#0D3817';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.6);
+            ctx.lineTo(size * 0.35, -size * 0.1);
+            ctx.lineTo(-size * 0.35, -size * 0.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#1B5E20';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.35);
+            ctx.lineTo(size * 0.3, size * 0.05);
+            ctx.lineTo(-size * 0.3, size * 0.05);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.15);
+            ctx.lineTo(size * 0.25, size * 0.2);
+            ctx.lineTo(-size * 0.25, size * 0.2);
+            ctx.closePath();
+            ctx.fill();
+        } else if (treeType === 1) {
+            // Tree type 2
+            ctx.fillStyle = '#6B4423';
+            ctx.fillRect(-trunkWidth * 0.5, 0, trunkWidth, trunkHeight);
+            ctx.fillStyle = '#8B5A3C';
+            ctx.fillRect(-trunkWidth * 0.5 + trunkWidth * 0.6, 0, trunkWidth * 0.4, trunkHeight);
+            ctx.fillStyle = '#1B5E20';
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.1, size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.35, size * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#43A047';
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.55, size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (treeType === 2) {
+            // Tree type 3
+            ctx.fillStyle = '#795548';
+            ctx.fillRect(-trunkWidth * 0.5, -size * 0.2, trunkWidth, size * 0.6);
+            ctx.fillStyle = '#4E342E';
+            ctx.beginPath();
+            ctx.arc(trunkWidth * 0.25, 0, trunkWidth * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#1B5E20';
+            ctx.beginPath();
+            ctx.arc(-size * 0.28, -size * 0.35, size * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(size * 0.28, -size * 0.3, size * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.arc(0, -size * 0.55, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Tree type 4
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-trunkWidth * 0.5, -size * 0.05, trunkWidth, size * 0.45);
+            ctx.fillStyle = '#0D3817';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.05);
+            ctx.lineTo(size * 0.38, size * 0.15);
+            ctx.lineTo(-size * 0.38, size * 0.15);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#1B5E20';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.25);
+            ctx.lineTo(size * 0.3, 0);
+            ctx.lineTo(-size * 0.3, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.45);
+            ctx.lineTo(size * 0.2, -size * 0.15);
+            ctx.lineTo(-size * 0.2, -size * 0.15);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#43A047';
+            ctx.beginPath();
+            ctx.moveTo(0, -size * 0.65);
+            ctx.lineTo(size * 0.12, -size * 0.35);
+            ctx.lineTo(-size * 0.12, -size * 0.35);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    }
+    
+    renderSettlementTarget(ctx, centerX, centerY, targetOffsetX, targetOffsetY, scale) {
+        const targetX = centerX + (targetOffsetX * scale);
+        const targetY = centerY + (targetOffsetY * scale);
+        
+        ctx.save();
+        ctx.translate(targetX, targetY);
+        
+        // Target stand
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(-0.75 * scale, 0, 1.5 * scale, 10 * scale);
+        
+        ctx.fillStyle = '#5D4E37';
+        ctx.fillRect(-2 * scale, 10 * scale, 4 * scale, 1 * scale);
+        
+        // Target rings
+        const rings = [
+            { radius: 5.5, color: '#DC143C', shadow: 1 },
+            { radius: 3.7, color: '#FFD700', shadow: 0.8 },
+            { radius: 2, color: '#DC143C', shadow: 0.6 },
+            { radius: 0.8, color: '#FFD700', shadow: 0.4 }
+        ];
+        
+        rings.forEach(ring => {
+            ctx.fillStyle = `rgba(0, 0, 0, ${0.15 * ring.shadow})`;
+            ctx.beginPath();
+            ctx.arc(0.3 * scale, 0.3 * scale, ring.radius * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = ring.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, ring.radius * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.beginPath();
+        ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+    
+    renderSettlementArcher(ctx, centerX, centerY, archerOffsetX, archerOffsetY, isLeft, scale) {
+        const archerX = centerX + (archerOffsetX * scale);
+        const archerY = centerY + (archerOffsetY * scale);
+        
+        // Animate drawback based on settlement animation time
+        const drawback = (Math.sin(this.animationTime * 3) + 1) * 0.5;
+        
+        ctx.save();
+        ctx.translate(archerX, archerY);
+        
+        if (!isLeft) {
+            ctx.scale(-1, 1);
+        }
+        
+        // Archer shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(0.5 * scale, 0.5 * scale, 2 * scale, 0.7 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Archer body
+        ctx.fillStyle = '#2D5016';
+        ctx.fillRect(-2.5 * scale, -6.5 * scale, 5 * scale, 8 * scale);
+        
+        // Archer head
+        ctx.fillStyle = '#DDBEA9';
+        ctx.beginPath();
+        ctx.arc(0, -7.5 * scale, 1.7 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Archer helm
+        ctx.fillStyle = '#696969';
+        ctx.beginPath();
+        ctx.arc(0, -7.8 * scale, 2 * scale, Math.PI, Math.PI * 2);
+        ctx.fill();
+        
+        // Bow
+        const bowX = 2.5 * scale;
+        const bowDrawAmount = drawback * 2;
+        
+        ctx.strokeStyle = '#8B6914';
+        ctx.lineWidth = 1.2 * scale;
+        ctx.beginPath();
+        ctx.moveTo(bowX, -5 * scale);
+        ctx.quadraticCurveTo(bowX + 2 * scale, -7.5 * scale, bowX + 1.3 * scale, -9 * scale);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(bowX, -5 * scale);
+        ctx.quadraticCurveTo(bowX + 2 * scale, -2.5 * scale, bowX + 1.3 * scale, -1 * scale);
+        ctx.stroke();
+        
+        // Bow string with animation
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.beginPath();
+        ctx.moveTo(bowX + (bowDrawAmount * 0.5), -9 * scale);
+        ctx.lineTo(bowX - bowDrawAmount, -5 * scale);
+        ctx.lineTo(bowX + (bowDrawAmount * 0.5), -1 * scale);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+    
+    renderSettlementDummy(ctx, centerX, centerY, dummyOffsetX, dummyOffsetY, scale) {
+        const dummyX = centerX + (dummyOffsetX * scale);
+        const dummyY = centerY + (dummyOffsetY * scale);
+        
+        ctx.save();
+        ctx.translate(dummyX, dummyY);
+        
+        // Dummy shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0.5 * scale, 0.5 * scale, 2.5 * scale, 0.8 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Dummy body - wooden post
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillRect(-1.5 * scale, -5 * scale, 3 * scale, 10 * scale);
+        
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.strokeRect(-1.5 * scale, -5 * scale, 3 * scale, 10 * scale);
+        
+        // Dummy crossbar for arms
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillRect(-3.5 * scale, -1 * scale, 7 * scale, 1.2 * scale);
+        
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 0.5 * scale;
+        ctx.strokeRect(-3.5 * scale, -1 * scale, 7 * scale, 1.2 * scale);
+        
+        // Dummy head
+        ctx.fillStyle = '#696969';
+        ctx.beginPath();
+        ctx.arc(0, -6 * scale, 1 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    renderSwordFighter(ctx, fighterX, fighterY, direction, scale) {
+        // Animate sword swing based on settlement animation time
+        const swingAngle = Math.sin(this.animationTime * 4 + direction) * 0.6;
+        const stance = Math.sin(this.animationTime * 2) * 0.3;
+        
+        // Determine fighter color (alternating red and blue)
+        const isRed = direction > 0;
+        const bodyColor = isRed ? '#8B0000' : '#000080';
+        
+        ctx.save();
+        ctx.translate(fighterX, fighterY);
+        
+        // Fighter shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0.3 * scale, 0.5 * scale, 1.8 * scale, 0.6 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Fighter body
+        ctx.fillStyle = bodyColor;
+        ctx.fillRect(-1.2 * scale, -3.5 * scale, 2.4 * scale, 4.5 * scale);
+        
+        // Fighter head
+        ctx.fillStyle = '#DDBEA9';
+        ctx.beginPath();
+        ctx.arc(0, -4.2 * scale, 1 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Fighter helm
+        ctx.fillStyle = '#696969';
+        ctx.beginPath();
+        ctx.arc(0, -4.5 * scale, 1.2 * scale, Math.PI, Math.PI * 2);
+        ctx.fill();
+        
+        // Sword - animated swing
+        ctx.save();
+        ctx.rotate(swingAngle * direction);
+        ctx.strokeStyle = '#C0C0C0';
+        ctx.lineWidth = 0.6 * scale;
+        ctx.beginPath();
+        ctx.moveTo(0.8 * scale, -2 * scale);
+        ctx.lineTo(1.5 * scale, -4 * scale);
+        ctx.stroke();
+        
+        // Sword guard
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(0.5 * scale, -2.3 * scale, 0.6 * scale, 0.8 * scale);
+        ctx.restore();
+        
+        // Arm holding sword
+        ctx.fillStyle = bodyColor;
+        ctx.fillRect(0.8 * scale - (0.3 * scale), -3 * scale, 0.8 * scale, 2.5 * scale);
+        
+        // Other arm
+        ctx.fillRect(-1.2 * scale, -2.5 * scale - (stance * scale), 0.8 * scale, 2 * scale);
+        
+        ctx.restore();
     }
 
     renderSettlementTerrain(ctx, canvas, centerX, centerY) {
@@ -1863,6 +2536,136 @@ class SettlementOptionsMenu {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
+        });
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+class StatsPanel {
+    constructor(stateManager, settlementHub) {
+        this.stateManager = stateManager;
+        this.settlementHub = settlementHub;
+        this.animationProgress = 0;
+        this.targetAnimationProgress = 1;
+        this.isOpen = false;
+        
+        // Get stats from SaveSystem
+        const currentSlot = SaveSystem.getCurrentSlot();
+        const saveData = SaveSystem.getSave(currentSlot) || {};
+        
+        this.stats = {
+            'Total Enemies Killed': saveData.enemiesKilled || 0,
+            'Total Gold Earned': saveData.totalGoldEarned || 0,
+            'Level Progress': (saveData.currentLevel || 0) + ' / 5',
+            'Time Played': this.formatTime(saveData.timePlayed || 0),
+            'Wave Record': saveData.waveRecord || 0,
+            'Towers Built': saveData.towersBuild || 0
+        };
+    }
+
+    formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        }
+        return `${minutes}m ${secs}s`;
+    }
+
+    open() {
+        this.isOpen = true;
+        this.animationProgress = 0;
+        this.targetAnimationProgress = 1;
+    }
+
+    close() {
+        this.isOpen = false;
+        this.targetAnimationProgress = 0;
+    }
+
+    update(deltaTime) {
+        this.animationProgress += (this.targetAnimationProgress - this.animationProgress) * deltaTime * 5;
+    }
+
+    updateHoverState(x, y) {
+        // Not needed for stats panel
+    }
+
+    handleClick(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 200;
+        const menuY = canvas.height / 2 - 150;
+        const closeButtonX = menuX + 360;
+        const closeButtonY = menuY + 10;
+        
+        // Check if close button clicked
+        if (x >= closeButtonX && x <= closeButtonX + 30 &&
+            y >= closeButtonY && y <= closeButtonY + 30) {
+            this.close();
+            this.settlementHub.closePopup();
+        }
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+
+        const menuX = canvas.width / 2 - 200;
+        const menuY = canvas.height / 2 - 150;
+        const menuWidth = 400;
+        const menuHeight = 300;
+
+        // Popup background
+        ctx.globalAlpha = Math.min(1, this.animationProgress);
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Border
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Title
+        ctx.font = 'bold 22px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.fillText('STATS', canvas.width / 2, menuY + 40);
+
+        // Close button
+        ctx.fillStyle = '#d4af37';
+        ctx.fillRect(menuX + 360, menuY + 10, 30, 30);
+        ctx.fillStyle = '#2a1a0f';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('X', menuX + 375, menuY + 25);
+
+        // Stats display
+        let yOffset = 70;
+        const statSpacing = 35;
+        
+        Object.entries(this.stats).forEach(([label, value]) => {
+            // Label
+            ctx.font = '14px serif';
+            ctx.fillStyle = '#c9a876';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(label + ':', menuX + 30, menuY + yOffset);
+
+            // Value
+            ctx.font = 'bold 14px serif';
+            ctx.fillStyle = '#d4af37';
+            ctx.textAlign = 'right';
+            ctx.fillText(String(value), menuX + menuWidth - 30, menuY + yOffset);
+
+            yOffset += statSpacing;
         });
 
         ctx.globalAlpha = 1;
