@@ -139,8 +139,8 @@ export class SaveSlotSelection {
                 this.stateManager.currentSaveSlot = slotNum;
                 this.stateManager.currentSaveData = newGameData;
 
-                // Go to level select
-                this.stateManager.changeState('levelSelect');
+                // Go to settlement hub
+                this.stateManager.changeState('settlementHub');
             }
         });
     }

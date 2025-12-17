@@ -6,6 +6,7 @@ import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
 import { LevelSelect } from '../core/states/LevelSelect.js';
 import { GameplayState } from '../core/states/GameplayState.js';
+import { SettlementHub } from '../core/states/SettlementHub.js';
 import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
@@ -94,6 +95,9 @@ export class Game {
             
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
+            
+            const settlementHub = new SettlementHub(this.stateManager);
+            this.stateManager.addState('settlementHub', settlementHub);
             
             const levelSelect = new LevelSelect(this.stateManager);
             this.stateManager.addState('levelSelect', levelSelect);

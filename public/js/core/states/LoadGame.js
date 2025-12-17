@@ -151,9 +151,9 @@ export class LoadGame {
                         };
                         this.stateManager.changeState('game');
                     } else {
-                        console.log('LoadGame: Simple save found, going to level select');
-                        // Load level select to choose a level
-                        this.stateManager.changeState('levelSelect');
+                        console.log('LoadGame: Simple save found, going to settlement hub');
+                        // Load settlement hub to choose options
+                        this.stateManager.changeState('settlementHub');
                     }
                 } else {
                     console.log('LoadGame: No save data found for slot', slotNum);
