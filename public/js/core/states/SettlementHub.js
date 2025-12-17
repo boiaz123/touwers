@@ -414,6 +414,10 @@ export class SettlementHub {
         ctx.fillStyle = skyGradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
 
+        // Render sun and sky colors
+        this.renderSun(ctx, canvas);
+        this.renderClouds(ctx, canvas);
+
         // Atmospheric haze at horizon
         const hazeGradient = ctx.createLinearGradient(0, canvas.height * 0.5, 0, canvas.height * 0.75);
         hazeGradient.addColorStop(0, 'rgba(200, 220, 255, 0)');
@@ -437,6 +441,115 @@ export class SettlementHub {
 
         // Ground texture/detail
         this.renderGroundDetail(ctx, canvas);
+    }
+
+    renderSun(ctx, canvas) {
+        // Sun position in upper right area
+        const sunX = canvas.width * 0.75;
+        const sunY = canvas.height * 0.15;
+        const sunRadius = 50;
+
+        // Sun glow - multi-layer outer aura
+        const glowGradient1 = ctx.createRadialGradient(sunX, sunY, sunRadius, sunX, sunY, sunRadius * 3);
+        glowGradient1.addColorStop(0, 'rgba(255, 200, 100, 0.3)');
+        glowGradient1.addColorStop(0.4, 'rgba(255, 180, 80, 0.15)');
+        glowGradient1.addColorStop(1, 'rgba(255, 150, 0, 0)');
+        ctx.fillStyle = glowGradient1;
+        ctx.fillRect(sunX - sunRadius * 3.2, sunY - sunRadius * 3.2, sunRadius * 6.4, sunRadius * 6.4);
+
+        // Medium glow layer
+        const glowGradient2 = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.8, sunX, sunY, sunRadius * 2);
+        glowGradient2.addColorStop(0, 'rgba(255, 220, 120, 0.4)');
+        glowGradient2.addColorStop(1, 'rgba(255, 180, 80, 0)');
+        ctx.fillStyle = glowGradient2;
+        ctx.fillRect(sunX - sunRadius * 2.2, sunY - sunRadius * 2.2, sunRadius * 4.4, sunRadius * 4.4);
+
+        // Sun core - bright yellow gradient
+        const sunGradient = ctx.createRadialGradient(sunX - 12, sunY - 12, 8, sunX, sunY, sunRadius);
+        sunGradient.addColorStop(0, '#fffacd');    // Light yellow
+        sunGradient.addColorStop(0.3, '#ffeb3b');  // Bright yellow
+        sunGradient.addColorStop(0.6, '#ffd700');  // Gold
+        sunGradient.addColorStop(1, '#ff8c00');    // Dark orange
+        ctx.fillStyle = sunGradient;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sun rim - darker orange edge
+        ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Primary shine highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.arc(sunX - 18, sunY - 18, sunRadius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Secondary shine highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(sunX - 25, sunY - 10, sunRadius * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderClouds(ctx, canvas) {
+        // Render many clouds at different positions with varying sizes
+        const clouds = [
+            // Large clouds
+            { x: canvas.width * 0.15, y: canvas.height * 0.12, scale: 1.8, opacity: 0.7 },
+            { x: canvas.width * 0.75, y: canvas.height * 0.08, scale: 2.0, opacity: 0.65 },
+            { x: canvas.width * 0.45, y: canvas.height * 0.22, scale: 1.9, opacity: 0.6 },
+            
+            // Medium clouds
+            { x: canvas.width * 0.35, y: canvas.height * 0.18, scale: 1.2, opacity: 0.6 },
+            { x: canvas.width * 0.55, y: canvas.height * 0.1, scale: 1.3, opacity: 0.65 },
+            { x: canvas.width * 0.85, y: canvas.height * 0.25, scale: 1.4, opacity: 0.65 },
+            { x: canvas.width * 0.25, y: canvas.height * 0.32, scale: 1.1, opacity: 0.55 },
+            { x: canvas.width * 0.65, y: canvas.height * 0.28, scale: 1.2, opacity: 0.6 },
+            
+            // Small clouds for depth
+            { x: canvas.width * 0.1, y: canvas.height * 0.08, scale: 0.8, opacity: 0.5 },
+            { x: canvas.width * 0.5, y: canvas.height * 0.05, scale: 0.7, opacity: 0.45 },
+            { x: canvas.width * 0.9, y: canvas.height * 0.15, scale: 0.9, opacity: 0.5 },
+            { x: canvas.width * 0.3, y: canvas.height * 0.25, scale: 0.7, opacity: 0.48 },
+        ];
+
+        clouds.forEach(cloud => {
+            this.renderCloud(ctx, cloud.x, cloud.y, cloud.scale, cloud.opacity);
+        });
+    }
+
+    renderCloud(ctx, x, y, scale, opacity) {
+        // Cloud made of overlapping circles with gradient
+        ctx.globalAlpha = opacity * this.contentOpacity;
+        
+        // Cloud shadow/bottom
+        ctx.fillStyle = 'rgba(200, 210, 220, 0.3)';
+        ctx.beginPath();
+        ctx.arc(x - 30 * scale, y + 5 * scale, 20 * scale, 0, Math.PI * 2);
+        ctx.arc(x, y + 8 * scale, 22 * scale, 0, Math.PI * 2);
+        ctx.arc(x + 30 * scale, y + 5 * scale, 20 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cloud body - white
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.beginPath();
+        ctx.arc(x - 30 * scale, y, 22 * scale, 0, Math.PI * 2);
+        ctx.arc(x, y, 26 * scale, 0, Math.PI * 2);
+        ctx.arc(x + 30 * scale, y, 22 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cloud highlight - light white
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x - 20 * scale, y - 8 * scale, 15 * scale, 0, Math.PI * 2);
+        ctx.arc(x + 20 * scale, y - 6 * scale, 12 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = this.contentOpacity;
     }
 
     renderDistantHills(ctx, canvas) {
@@ -1869,78 +1982,271 @@ export class SettlementHub {
         
         // Scattered trees throughout the entire settlement area
         // Create a natural forest feel with many trees in various sizes and depths
+        // Settlement boundary: ellipse center (centerX, centerY), radiusX=360, radiusY=140
+        // Trees positioned OUTSIDE the walls in the surrounding green area
+        // ALL TREES: y-values must be >= centerY - 190 (not reaching into mountains)
         const treePositions = [
-            // Far background - smallest trees (upper area, far away)
-            { x: centerX - 600, y: centerY - 190, size: 20 },
-            { x: centerX - 300, y: centerY - 170, size: 18 },
-            { x: centerX + 100, y: centerY - 180, size: 19 },
-            { x: centerX + 300, y: centerY - 170, size: 18 },
-            { x: centerX + 600, y: centerY - 190, size: 20 },
+            // Far background - smallest trees (y >= centerY - 190)
+            { x: centerX - 800, y: centerY - 190, size: 20 },
+            { x: centerX - 500, y: centerY - 188, size: 18 },
+            { x: centerX - 200, y: centerY - 190, size: 19 },
+            { x: centerX + 200, y: centerY - 190, size: 19 },
+            { x: centerX + 500, y: centerY - 188, size: 18 },
+            { x: centerX + 800, y: centerY - 190, size: 20 },
+            { x: centerX - 350, y: centerY - 189, size: 19 },
+            { x: centerX + 350, y: centerY - 189, size: 19 },
             
-            // Back row - small trees
-            { x: centerX - 360, y: centerY - 110, size: 24 },
-            { x: centerX - 220, y: centerY - 120, size: 22 },
-            { x: centerX - 80, y: centerY - 125, size: 23 },
-            { x: centerX + 80, y: centerY - 125, size: 23 },
-            { x: centerX + 220, y: centerY - 120, size: 22 },
-            { x: centerX + 360, y: centerY - 110, size: 24 },
+            // Upper left area - outside settlement (x < centerX - 360)
+            { x: centerX - 400, y: centerY - 180, size: 24 },
+            { x: centerX - 550, y: centerY - 185, size: 22 },
+            { x: centerX - 650, y: centerY - 178, size: 23 },
+            { x: centerX - 650, y: centerY - 182, size: 21 },
+            { x: centerX - 600, y: centerY - 179, size: 22 },
+            { x: centerX - 900, y: centerY - 186, size: 21 },
+            { x: centerX - 850, y: centerY - 183, size: 22 },
             
-            // Upper-mid left cluster
-            { x: centerX - 320, y: centerY - 80, size: 32 },
-            { x: centerX - 360, y: centerY - 60, size: 35 },
-            { x: centerX - 280, y: centerY - 70, size: 30 },
-            { x: centerX - 350, y: centerY - 20, size: 28 },
-            { x: centerX - 310, y: centerY - 40, size: 29 },
+            // Upper right area - outside settlement (x > centerX + 360)
+            { x: centerX + 700, y: centerY - 180, size: 24 },
+            { x: centerX + 550, y: centerY - 185, size: 22 },
+            { x: centerX + 750, y: centerY - 178, size: 23 },
+            { x: centerX + 650, y: centerY - 182, size: 21 },
+            { x: centerX + 600, y: centerY - 179, size: 22 },
+            { x: centerX + 900, y: centerY - 186, size: 21 },
+            { x: centerX + 850, y: centerY - 183, size: 22 },
             
-            // Upper-mid right cluster
-            { x: centerX + 320, y: centerY - 80, size: 32 },
-            { x: centerX + 360, y: centerY - 60, size: 35 },
-            { x: centerX + 280, y: centerY - 70, size: 30 },
-            { x: centerX + 350, y: centerY - 20, size: 28 },
-            { x: centerX + 310, y: centerY - 40, size: 29 },
+            // Left side cluster - far outside walls
+            { x: centerX - 820, y: centerY - 172, size: 32 },
+            { x: centerX - 920, y: centerY - 168, size: 35 },
+            { x: centerX - 850, y: centerY - 170, size: 30 },
+            { x: centerX - 880, y: centerY - 165, size: 28 },
+            { x: centerX - 800, y: centerY - 169, size: 29 },
+            { x: centerX - 950, y: centerY - 170, size: 26 },
+            { x: centerX - 600, y: centerY - 167, size: 27 },
             
-            // Mid-left area
-            { x: centerX - 280, y: centerY + 0, size: 31 },
-            { x: centerX - 200, y: centerY - 10, size: 28 },
-            { x: centerX - 320, y: centerY + 20, size: 33 },
-            { x: centerX - 240, y: centerY + 30, size: 26 },
-            { x: centerX - 180, y: centerY + 15, size: 27 },
+            // Right side cluster - far outside walls
+            { x: centerX + 820, y: centerY - 172, size: 32 },
+            { x: centerX + 920, y: centerY - 168, size: 35 },
+            { x: centerX + 750, y: centerY - 170, size: 30 },
+            { x: centerX + 880, y: centerY - 165, size: 28 },
+            { x: centerX + 800, y: centerY - 169, size: 29 },
+            { x: centerX + 950, y: centerY - 170, size: 26 },
+            { x: centerX + 700, y: centerY - 167, size: 27 },
             
-            // Mid-center area
-            { x: centerX - 60, y: centerY - 20, size: 25 },
-            { x: centerX + 30, y: centerY + 10, size: 24 },
-            { x: centerX - 40, y: centerY + 35, size: 28 },
-            { x: centerX + 50, y: centerY + 25, size: 26 },
+            // Far left area
+            { x: centerX - 600, y: centerY - 155, size: 31 },
+            { x: centerX - 500, y: centerY - 160, size: 28 },
+            { x: centerX - 950, y: centerY - 150, size: 33 },
+            { x: centerX - 850, y: centerY - 145, size: 26 },
+            { x: centerX - 550, y: centerY - 158, size: 27 },
+            { x: centerX - 550, y: centerY - 152, size: 25 },
+            { x: centerX - 900, y: centerY - 148, size: 29 },
             
-            // Mid-right area
-            { x: centerX + 280, y: centerY + 0, size: 31 },
-            { x: centerX + 200, y: centerY - 10, size: 28 },
-            { x: centerX + 320, y: centerY + 20, size: 33 },
-            { x: centerX + 240, y: centerY + 30, size: 26 },
-            { x: centerX + 180, y: centerY + 15, size: 27 },
+            // Far right area
+            { x: centerX + 700, y: centerY - 155, size: 31 },
+            { x: centerX + 600, y: centerY - 160, size: 28 },
+            { x: centerX + 850, y: centerY - 150, size: 33 },
+            { x: centerX + 750, y: centerY - 145, size: 26 },
+            { x: centerX + 650, y: centerY - 158, size: 27 },
+            { x: centerX + 550, y: centerY - 152, size: 25 },
+            { x: centerX + 900, y: centerY - 148, size: 29 },
             
-            // Lower-mid left
-            { x: centerX - 300, y: centerY + 50, size: 34 },
-            { x: centerX - 360, y: centerY + 60, size: 36 },
-            { x: centerX - 240, y: centerY + 70, size: 32 },
-            { x: centerX - 180, y: centerY + 60, size: 29 },
+            // Middle-left area
+            { x: centerX - 550, y: centerY - 130, size: 34 },
+            { x: centerX - 500, y: centerY - 125, size: 36 },
+            { x: centerX - 450, y: centerY - 135, size: 32 },
+            { x: centerX - 600, y: centerY - 128, size: 29 },
+            { x: centerX - 900, y: centerY - 132, size: 31 },
+            { x: centerX - 480, y: centerY - 118, size: 27 },
             
-            // Lower-mid right
-            { x: centerX + 300, y: centerY + 50, size: 34 },
-            { x: centerX + 360, y: centerY + 60, size: 36 },
-            { x: centerX + 240, y: centerY + 70, size: 32 },
-            { x: centerX + 180, y: centerY + 60, size: 29 },
+            // Middle-right area
+            { x: centerX + 550, y: centerY - 130, size: 34 },
+            { x: centerX + 700, y: centerY - 125, size: 36 },
+            { x: centerX + 450, y: centerY - 135, size: 32 },
+            { x: centerX + 600, y: centerY - 128, size: 29 },
+            { x: centerX + 800, y: centerY - 132, size: 31 },
+            { x: centerX + 680, y: centerY - 118, size: 27 },
             
-            // Foreground - largest trees (closest to viewer)
-            { x: centerX - 320, y: centerY + 100, size: 40 },
-            { x: centerX - 120, y: centerY + 110, size: 38 },
-            { x: centerX + 120, y: centerY + 110, size: 38 },
-            { x: centerX + 320, y: centerY + 100, size: 40 },
+            // Lower-middle left
+            { x: centerX - 500, y: centerY - 110, size: 38 },
+            { x: centerX - 750, y: centerY - 105, size: 40 },
+            { x: centerX - 350, y: centerY - 115, size: 35 },
+            { x: centerX - 650, y: centerY - 100, size: 32 },
+            { x: centerX - 900, y: centerY - 108, size: 36 },
             
-            // Very front edge - extra large
-            { x: centerX - 280, y: centerY + 130, size: 42 },
-            { x: centerX, y: centerY + 135, size: 44 },
-            { x: centerX + 280, y: centerY + 130, size: 42 },
+            // Lower-middle right
+            { x: centerX + 500, y: centerY - 110, size: 38 },
+            { x: centerX + 750, y: centerY - 105, size: 40 },
+            { x: centerX + 350, y: centerY - 115, size: 35 },
+            { x: centerX + 650, y: centerY - 100, size: 32 },
+            { x: centerX + 900, y: centerY - 108, size: 36 },
+            
+            // Distant foreground left
+            { x: centerX - 650, y: centerY - 70, size: 40 },
+            { x: centerX - 450, y: centerY - 75, size: 38 },
+            { x: centerX - 800, y: centerY - 65, size: 39 },
+            
+            // Distant foreground right
+            { x: centerX + 650, y: centerY - 70, size: 40 },
+            { x: centerX + 450, y: centerY - 75, size: 38 },
+            { x: centerX + 800, y: centerY - 65, size: 39 },
+            
+            // ===== LOWER GREEN AREA TREES (below settlement) =====
+            // Far left lower area
+            { x: centerX - 550, y: centerY + 20, size: 36 },
+            { x: centerX - 900, y: centerY + 30, size: 38 },
+            { x: centerX - 450, y: centerY + 15, size: 34 },
+            { x: centerX - 650, y: centerY + 35, size: 37 },
+            { x: centerX - 800, y: centerY + 25, size: 39 },
+            { x: centerX - 900, y: centerY + 28, size: 40 },
+            
+            // Far right lower area
+            { x: centerX + 550, y: centerY + 20, size: 36 },
+            { x: centerX + 700, y: centerY + 30, size: 38 },
+            { x: centerX + 450, y: centerY + 15, size: 34 },
+            { x: centerX + 650, y: centerY + 35, size: 37 },
+            { x: centerX + 800, y: centerY + 25, size: 39 },
+            { x: centerX + 900, y: centerY + 28, size: 40 },
+            
+            // Middle-lower left
+            { x: centerX - 600, y: centerY + 50, size: 38 },
+            { x: centerX - 850, y: centerY + 55, size: 40 },
+            { x: centerX - 350, y: centerY + 45, size: 35 },
+            { x: centerX - 500, y: centerY + 60, size: 36 },
+            { x: centerX - 850, y: centerY + 52, size: 41 },
+            
+            // Middle-lower right
+            { x: centerX + 600, y: centerY + 50, size: 38 },
+            { x: centerX + 750, y: centerY + 55, size: 40 },
+            { x: centerX + 350, y: centerY + 45, size: 35 },
+            { x: centerX + 500, y: centerY + 60, size: 36 },
+            { x: centerX + 850, y: centerY + 52, size: 41 },
+            
+            // Lower left fringe
+            { x: centerX - 900, y: centerY + 70, size: 39 },
+            { x: centerX - 550, y: centerY + 75, size: 37 },
+            { x: centerX - 850, y: centerY + 65, size: 40 },
+            { x: centerX - 450, y: centerY + 72, size: 36 },
+            
+            // Lower right fringe
+            { x: centerX + 700, y: centerY + 70, size: 39 },
+            { x: centerX + 550, y: centerY + 75, size: 37 },
+            { x: centerX + 850, y: centerY + 65, size: 40 },
+            { x: centerX + 450, y: centerY + 72, size: 36 },
+            
+            // Bottom left corner
+            { x: centerX - 600, y: centerY + 85, size: 38 },
+            { x: centerX - 950, y: centerY + 80, size: 41 },
+            { x: centerX - 400, y: centerY + 88, size: 36 },
+            
+            // Bottom right corner
+            { x: centerX + 600, y: centerY + 85, size: 38 },
+            { x: centerX + 750, y: centerY + 80, size: 41 },
+            { x: centerX + 400, y: centerY + 88, size: 36 },
+            
+            // Extra bottom edge left
+            { x: centerX - 650, y: centerY + 100, size: 37 },
+            { x: centerX - 500, y: centerY + 95, size: 35 },
+            
+            // Extra bottom edge right
+            { x: centerX + 650, y: centerY + 100, size: 37 },
+            { x: centerX + 500, y: centerY + 95, size: 35 },
+            
+            // ===== CAMPAIGN AREA TREES (far left, marked by red square) =====
+            // Dense trees in the Campaign/Training Grounds area - larger sizes
+            // Upper Campaign area
+            { x: centerX - 900, y: centerY + 50, size: 42 },
+            { x: centerX - 1000, y: centerY + 45, size: 44 },
+            { x: centerX - 800, y: centerY + 35, size: 40 },
+            { x: centerX - 1100, y: centerY + 40, size: 43 },
+            { x: centerX - 650, y: centerY + 30, size: 38 },
+            
+            // Mid-upper Campaign area
+            { x: centerX - 950, y: centerY + 170, size: 42 },
+            { x: centerX - 1050, y: centerY + 150, size: 45 },
+            { x: centerX - 850, y: centerY + 160, size: 40 },
+            { x: centerX - 900, y: centerY + 180, size: 38 },
+            { x: centerX - 1150, y: centerY + 100, size: 41 },
+            
+            // Mid Campaign area
+            { x: centerX - 900, y: centerY + 100, size: 43 },
+            { x: centerX - 1000, y: centerY + 150, size: 46 },
+            { x: centerX - 800, y: centerY + 105, size: 40 },
+            { x: centerX - 1100, y: centerY + 120, size: 42 },
+            { x: centerX - 450, y: centerY + 108, size: 39 },
+            
+            // Mid-lower Campaign area
+            { x: centerX - 950, y: centerY + 140, size: 44 },
+            { x: centerX - 1050, y: centerY + 145, size: 45 },
+            { x: centerX - 850, y: centerY + 135, size: 41 },
+            { x: centerX - 600, y: centerY + 142, size: 40 },
+            { x: centerX - 1150, y: centerY + 150, size: 43 },
+            
+            // Lower Campaign area
+            { x: centerX - 900, y: centerY + 165, size: 43 },
+            { x: centerX - 1000, y: centerY + 170, size: 46 },
+            { x: centerX - 800, y: centerY + 160, size: 41 },
+            { x: centerX - 1100, y: centerY + 175, size: 42 },
+            { x: centerX - 850, y: centerY + 168, size: 40 },
+            
+            // Bottom Campaign area
+            { x: centerX - 950, y: centerY + 190, size: 42 },
+            { x: centerX - 1050, y: centerY + 195, size: 44 },
+            { x: centerX - 850, y: centerY + 185, size: 39 },
+            { x: centerX - 600, y: centerY + 192, size: 38 },
+            { x: centerX - 1150, y: centerY + 200, size: 41 },
+            
+            // Extra Campaign edge trees
+            { x: centerX - 1200, y: centerY + 125, size: 40 },
+            { x: centerX - 1250, y: centerY + 130, size: 42 },
+            { x: centerX - 1200, y: centerY + 170, size: 40 },
+            { x: centerX - 1300, y: centerY + 115, size: 43 },
+
+            { x: centerX + 900, y: centerY + 50, size: 42 },
+            { x: centerX + 1000, y: centerY + 45, size: 44 },
+            { x: centerX + 800, y: centerY + 35, size: 40 },
+            { x: centerX + 1100, y: centerY + 40, size: 43 },
+            { x: centerX + 750, y: centerY + 30, size: 38 },
+            
+            // Mid-upper Campaign area
+            { x: centerX + 950, y: centerY + 200, size: 42 },
+            { x: centerX + 1050, y: centerY + 150, size: 45 },
+            { x: centerX + 850, y: centerY + 140, size: 40 },
+            { x: centerX + 700, y: centerY + 180, size: 38 },
+            { x: centerX + 1150, y: centerY + 100, size: 41 },
+            
+            // Mid Campaign area
+            { x: centerX + 900, y: centerY + 100, size: 43 },
+            { x: centerX + 1000, y: centerY + 150, size: 46 },
+            { x: centerX + 800, y: centerY + 105, size: 40 },
+            { x: centerX + 1100, y: centerY + 120, size: 42 },
+            { x: centerX + 750, y: centerY + 108, size: 39 },
+            
+            // Mid-lower Campaign area
+            { x: centerX + 950, y: centerY + 140, size: 44 },
+            { x: centerX + 1050, y: centerY + 145, size: 45 },
+            { x: centerX + 850, y: centerY + 135, size: 41 },
+            { x: centerX + 700, y: centerY + 142, size: 40 },
+            { x: centerX + 1150, y: centerY + 150, size: 43 },
+            
+            // Lower Campaign area
+            { x: centerX + 900, y: centerY + 165, size: 43 },
+            { x: centerX + 1000, y: centerY + 170, size: 46 },
+            { x: centerX + 800, y: centerY + 160, size: 41 },
+            { x: centerX + 1100, y: centerY + 175, size: 42 },
+            { x: centerX + 750, y: centerY + 168, size: 40 },
+            
+            // Bottom Campaign area
+            { x: centerX + 950, y: centerY + 190, size: 42 },
+            { x: centerX + 1050, y: centerY + 195, size: 44 },
+            { x: centerX + 850, y: centerY + 185, size: 39 },
+            { x: centerX + 700, y: centerY + 192, size: 38 },
+            { x: centerX + 1150, y: centerY + 200, size: 41 },
+            
+            // Extra Campaign edge trees
+            { x: centerX + 1200, y: centerY + 125, size: 40 },
+            { x: centerX + 1250, y: centerY + 130, size: 42 },
+            { x: centerX + 1200, y: centerY + 170, size: 40 },
+            { x: centerX + 1300, y: centerY + 115, size: 43 },
         ];
 
         // Render trees with proper z-ordering (by Y position)
