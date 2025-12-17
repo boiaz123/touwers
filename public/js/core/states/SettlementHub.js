@@ -91,9 +91,9 @@ export class SettlementHub {
                 clickable: true,
                 action: 'options'
             },
-            // Gold Mine - positioned at red circle (far right)
+            // Gold Mine - positioned to the right side of settlement
             {
-                building: new GoldMine(centerX + 700, centerY - 90, 1, 1),
+                building: new GoldMine(centerX + 700, centerY - 80, 1, 1),
                 scale: 29,
                 clickable: true,
                 action: 'stats'
@@ -1859,14 +1859,92 @@ export class SettlementHub {
         // Flower beds and gardens - positioned within boundary
         this.renderFlowerBeds(ctx, centerX, centerY);
         
-        // Small decorative trees positioned inside boundary
-        this.renderSimpleTree(ctx, centerX - 310, centerY - 15, 30, '#0D3817');
-        this.renderSimpleTree(ctx, centerX - 300, centerY + 40, 26, '#1B5E20');
+        // Scattered trees throughout the entire settlement area
+        // Create a natural forest feel with many trees in various sizes and depths
+        const treePositions = [
+            // Far background - smallest trees (upper area, far away)
+            { x: centerX - 600, y: centerY - 210, size: 20 },
+            { x: centerX - 300, y: centerY - 200, size: 18 },
+            { x: centerX + 100, y: centerY - 200, size: 19 },
+            { x: centerX + 300, y: centerY - 208, size: 18 },
+            { x: centerX + 600, y: centerY - 190, size: 20 },
+            
+            // Back row - small trees
+            { x: centerX - 360, y: centerY - 110, size: 24 },
+            { x: centerX - 220, y: centerY - 120, size: 22 },
+            { x: centerX - 80, y: centerY - 125, size: 23 },
+            { x: centerX + 80, y: centerY - 125, size: 23 },
+            { x: centerX + 220, y: centerY - 120, size: 22 },
+            { x: centerX + 360, y: centerY - 110, size: 24 },
+            
+            // Upper-mid left cluster
+            { x: centerX - 320, y: centerY - 80, size: 32 },
+            { x: centerX - 360, y: centerY - 60, size: 35 },
+            { x: centerX - 280, y: centerY - 70, size: 30 },
+            { x: centerX - 350, y: centerY - 20, size: 28 },
+            { x: centerX - 310, y: centerY - 40, size: 29 },
+            
+            // Upper-mid right cluster
+            { x: centerX + 320, y: centerY - 80, size: 32 },
+            { x: centerX + 360, y: centerY - 60, size: 35 },
+            { x: centerX + 280, y: centerY - 70, size: 30 },
+            { x: centerX + 350, y: centerY - 20, size: 28 },
+            { x: centerX + 310, y: centerY - 40, size: 29 },
+            
+            // Mid-left area
+            { x: centerX - 280, y: centerY + 0, size: 31 },
+            { x: centerX - 200, y: centerY - 10, size: 28 },
+            { x: centerX - 320, y: centerY + 20, size: 33 },
+            { x: centerX - 240, y: centerY + 30, size: 26 },
+            { x: centerX - 180, y: centerY + 15, size: 27 },
+            
+            // Mid-center area
+            { x: centerX - 60, y: centerY - 20, size: 25 },
+            { x: centerX + 30, y: centerY + 10, size: 24 },
+            { x: centerX - 40, y: centerY + 35, size: 28 },
+            { x: centerX + 50, y: centerY + 25, size: 26 },
+            
+            // Mid-right area
+            { x: centerX + 280, y: centerY + 0, size: 31 },
+            { x: centerX + 200, y: centerY - 10, size: 28 },
+            { x: centerX + 320, y: centerY + 20, size: 33 },
+            { x: centerX + 240, y: centerY + 30, size: 26 },
+            { x: centerX + 180, y: centerY + 15, size: 27 },
+            
+            // Lower-mid left
+            { x: centerX - 300, y: centerY + 50, size: 34 },
+            { x: centerX - 360, y: centerY + 60, size: 36 },
+            { x: centerX - 240, y: centerY + 70, size: 32 },
+            { x: centerX - 180, y: centerY + 60, size: 29 },
+            
+            // Lower-mid right
+            { x: centerX + 300, y: centerY + 50, size: 34 },
+            { x: centerX + 360, y: centerY + 60, size: 36 },
+            { x: centerX + 240, y: centerY + 70, size: 32 },
+            { x: centerX + 180, y: centerY + 60, size: 29 },
+            
+            // Foreground - largest trees (closest to viewer)
+            { x: centerX - 320, y: centerY + 100, size: 40 },
+            { x: centerX - 120, y: centerY + 110, size: 38 },
+            { x: centerX + 120, y: centerY + 110, size: 38 },
+            { x: centerX + 320, y: centerY + 100, size: 40 },
+            
+            // Very front edge - extra large
+            { x: centerX - 280, y: centerY + 130, size: 42 },
+            { x: centerX, y: centerY + 135, size: 44 },
+            { x: centerX + 280, y: centerY + 130, size: 42 },
+        ];
+
+        // Render trees with proper z-ordering (by Y position)
+        treePositions.sort((a, b) => a.y - b.y);
         
-        // Right side inside
-        this.renderSimpleTree(ctx, centerX + 310, centerY - 15, 30, '#0D3817');
-        this.renderSimpleTree(ctx, centerX + 300, centerY + 40, 26, '#1B5E20');
-        
+        treePositions.forEach((treePos, index) => {
+            // Generate a consistent seed for tree type variation based on position
+            const gridX = Math.floor(treePos.x / 50);
+            const gridY = Math.floor(treePos.y / 50);
+            this.renderTree(ctx, treePos.x, treePos.y, treePos.size, gridX, gridY);
+        });
+
         // Small decorative rocks inside boundary
         this.renderSimpleRock(ctx, centerX - 280, centerY + 95, 20);
         this.renderSimpleRock(ctx, centerX + 280, centerY + 95, 20);
@@ -2272,6 +2350,130 @@ export class SettlementHub {
         ctx.fillText('Click buildings to interact', canvas.width / 2, 65);
         ctx.globalAlpha = 1;
     }
+
+    // Tree rendering methods (from LevelBase.js)
+    renderTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType3(ctx, x, y, size) {
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderTreeType4(ctx, x, y, size) {
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.12, y - size * 0.45);
+        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTree(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX + gridY) % 4;
+        switch(seed) {
+            case 0:
+                this.renderTreeType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderTreeType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderTreeType3(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType4(ctx, x, y, size);
+        }
+    }
 }
 
 /**
@@ -2540,6 +2742,7 @@ class SettlementOptionsMenu {
 
         ctx.globalAlpha = 1;
     }
+
 }
 
 class StatsPanel {
