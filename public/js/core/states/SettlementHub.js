@@ -68,10 +68,10 @@ export class SettlementHub {
         // Training Grounds OUTSIDE the settlement to the left (as per user request)
         // Other buildings spread naturally INSIDE the boundary
         this.settlementBuildings = [
-            // Training Grounds - OUTSIDE far left area
+            // Training Grounds - positioned at the black square (far left)
             {
-                building: new TrainingGrounds(centerX - 520, centerY - 100, 0, 0),
-                scale: 32,
+                building: new TrainingGrounds(centerX - 720, centerY - 30, 0, 0),
+                scale: 1,
                 clickable: true,
                 action: 'levelSelect'
             },
@@ -82,16 +82,16 @@ export class SettlementHub {
                 clickable: true,
                 action: 'upgrades'
             },
-            // Magic Academy - inside left area
+            // Magic Academy - positioned at purple circle arrow
             {
-                building: new MagicAcademy(centerX - 160, centerY + 20, 0, 1),
+                building: new MagicAcademy(centerX - 130, centerY - 55, 1, 0),
                 scale: 29,
                 clickable: true,
                 action: 'options'
             },
-            // Gold Mine - inside upper right where arrow points
+            // Gold Mine - positioned at red circle (far right)
             {
-                building: new GoldMine(centerX + 280, centerY - 60, 1, 1),
+                building: new GoldMine(centerX + 820, centerY - 80, 1, 1),
                 scale: 29,
                 clickable: false,
                 action: null
