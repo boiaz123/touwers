@@ -111,16 +111,18 @@ export class CampaignBase {
         }
         
         // Check level slots
-        for (let i = 0; i < this.levels.length; i++) {
-            const bounds = this.getLevelSlotBounds(i);
-            if (bounds) {
-                const distance = Math.sqrt(
-                    Math.pow(x - bounds.centerX, 2) + Math.pow(y - bounds.centerY, 2)
-                );
-                
-                if (distance <= 50) {
-                    this.hoveredLevel = i;
-                    break;
+        if (this.levelSlots && this.levelSlots.length > 0) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                const slot = this.levelSlots[i];
+                if (slot) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - slot.x, 2) + Math.pow(y - slot.y, 2)
+                    );
+                    
+                    if (distance <= 50) {
+                        this.hoveredLevel = i;
+                        break;
+                    }
                 }
             }
         }
@@ -139,21 +141,24 @@ export class CampaignBase {
         }
         
         // Check level clicks
-        for (let i = 0; i < this.levels.length; i++) {
-            const level = this.levels[i];
-            const bounds = this.getLevelSlotBounds(i);
-            
-            if (bounds) {
-                const distance = Math.sqrt(
-                    Math.pow(x - bounds.centerX, 2) + Math.pow(y - bounds.centerY, 2)
-                );
+        if (this.levelSlots && this.levelSlots.length > 0) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                const slot = this.levelSlots[i];
+                const level = slot.level;
                 
-                if (distance <= 50) {
-                    if (level.unlocked) {
-                        this.stateManager.selectedLevelInfo = level;
-                        this.stateManager.changeState('game');
+                if (slot) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - slot.x, 2) + Math.pow(y - slot.y, 2)
+                    );
+                    
+                    if (distance <= 50) {
+                        // Only allow clicking unlocked levels
+                        if (level.unlocked && !level.id.startsWith('placeholder-')) {
+                            this.stateManager.levelToLoad = level;
+                            this.stateManager.changeState('gameplay');
+                        }
+                        return;
                     }
-                    return;
                 }
             }
         }
@@ -199,23 +204,25 @@ export class CampaignBase {
     }
     
     renderLevelSlots(ctx) {
-        for (let i = 0; i < this.levels.length; i++) {
-            this.renderLevelSlot(ctx, i);
+        if (this.levelSlots && this.levelSlots.length > 0) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                this.renderLevelSlot(ctx, i);
+            }
         }
     }
     
     renderLevelSlot(ctx, index) {
-        const level = this.levels[index];
-        if (!level || !this.levelSlots[index]) return;
+        if (!this.levelSlots || index >= this.levelSlots.length) return;
         
-        const bounds = this.getLevelSlotBounds(index);
+        const slot = this.levelSlots[index];
+        const level = slot.level;
         const isHovered = index === this.hoveredLevel;
         const isLocked = !level.unlocked;
         
         // Draw slot circle with shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.arc(bounds.centerX + 3, bounds.centerY + 3, 45, 0, Math.PI * 2);
+        ctx.arc(slot.x + 3, slot.y + 3, 45, 0, Math.PI * 2);
         ctx.fill();
         
         let bgColor = '#8b5a2b';
@@ -234,20 +241,20 @@ export class CampaignBase {
         
         ctx.fillStyle = bgColor;
         ctx.beginPath();
-        ctx.arc(bounds.centerX, bounds.centerY, 45, 0, Math.PI * 2);
+        ctx.arc(slot.x, slot.y, 45, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = borderWidth;
         ctx.beginPath();
-        ctx.arc(bounds.centerX, bounds.centerY, 45, 0, Math.PI * 2);
+        ctx.arc(slot.x, slot.y, 45, 0, Math.PI * 2);
         ctx.stroke();
         
         // Inner highlight
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(bounds.centerX - 15, bounds.centerY - 15, 30, 0, Math.PI * 1.5);
+        ctx.arc(slot.x - 15, slot.y - 15, 30, 0, Math.PI * 1.5);
         ctx.stroke();
         
         if (isLocked) {
@@ -255,13 +262,13 @@ export class CampaignBase {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#666';
-            ctx.fillText('🔒', bounds.centerX, bounds.centerY);
+            ctx.fillText('🔒', slot.x, slot.y);
         } else {
             ctx.font = 'bold 28px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#ffffcc';
-            ctx.fillText(index + 1, bounds.centerX, bounds.centerY);
+            ctx.fillText(index + 1, slot.x, slot.y);
         }
     }
     

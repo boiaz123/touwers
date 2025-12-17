@@ -94,12 +94,6 @@ export class Castle {
         ctx.save();
         ctx.translate(this.x, this.y);
         
-        // Ground shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(0, this.wallHeight/2 + 10, this.wallWidth/2 + 60, 15, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
         // Damage flash effect
         if (this.damageFlashTimer > 0) {
             const flashIntensity = this.damageFlashTimer / this.damageFlashDuration;
@@ -213,14 +207,13 @@ export class Castle {
             const halfRowW = rowW / 2;
             
             // Draw more bricks to fill the wider base
-            for (let i = -1; i <= 5; i++) {
+            for (let i = 0; i < 6; i++) {
                 const xPos = -rowW/2 + (i * blockW);
                 const brickLeft = xPos + offsetX;
                 const brickRight = brickLeft + (blockW - 0.8);
                 
-                // Draw brick if it's within reasonable range of tower width at this row
-                // Allow slightly more bricks at the base to avoid gaps
-                if (brickLeft >= -halfRowW - blockW/2 && brickRight <= halfRowW + blockW/2) {
+                // Strictly clip bricks to tower bounds - no overflow
+                if (brickLeft >= -halfRowW && brickRight <= halfRowW) {
                     ctx.strokeRect(brickLeft, y, blockW - 0.8, blockH - 0.8);
                 }
             }
@@ -234,12 +227,12 @@ export class Castle {
             const offsetX = (Math.abs(y - topY) / blockH) % 2 * blockW/2;
             const halfRowW = rowW / 2;
             
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 6; i++) {
                 const xPos = -rowW/2 + (i * blockW);
                 const highlightLeft = xPos + offsetX + 1.5;
                 const highlightRight = highlightLeft + blockW/3;
                 
-                // Only draw highlight if it fits within tower width at this row
+                // Strictly clip highlights to tower width at this row
                 if (highlightLeft >= -halfRowW && highlightRight <= halfRowW) {
                     ctx.fillRect(highlightLeft, y + 1.5, blockW/3, blockH/3);
                 }
@@ -292,9 +285,15 @@ export class Castle {
         const meralonW = towerTopW/4;
         const meralonH = 4;
         
+        // Left merlon
         ctx.fillRect(-towerTopW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
         ctx.strokeRect(-towerTopW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
         
+        // Center merlon
+        ctx.fillRect(-meralonW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
+        ctx.strokeRect(-meralonW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
+        
+        // Right merlon
         ctx.fillRect(towerTopW/2 - meralonW + 1, topY - creneH - meralonH, meralonW - 3, meralonH);
         ctx.strokeRect(towerTopW/2 - meralonW + 1, topY - creneH - meralonH, meralonW - 3, meralonH);
         
@@ -313,6 +312,26 @@ export class Castle {
         ctx.strokeStyle = '#3D2810';
         ctx.lineWidth = 1;
         ctx.stroke();
+        
+        // Left roof side face
+        ctx.fillStyle = 'rgba(80, 70, 60, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(-towerTopW/2, topY - creneH - meralonH);
+        ctx.lineTo(0, roofPeakY);
+        ctx.lineTo(-2, roofPeakY - 2);
+        ctx.lineTo(-towerTopW/2 - 2, topY - creneH - meralonH - 2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right roof side face
+        ctx.fillStyle = 'rgba(60, 50, 40, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(towerTopW/2, topY - creneH - meralonH);
+        ctx.lineTo(0, roofPeakY);
+        ctx.lineTo(2, roofPeakY - 2);
+        ctx.lineTo(towerTopW/2 + 2, topY - creneH - meralonH - 2);
+        ctx.closePath();
+        ctx.fill();
         
         // 3D top face of tower platform only (no side face)
         ctx.fillStyle = 'rgba(100, 85, 70, 0.7)';
@@ -497,9 +516,9 @@ export class Castle {
     }
     
     drawCastleBase(ctx) {
-        // Draw a stone base platform below the castle to cover floating bricks
+        // Draw a stone base platform below the castle to connect walls to ground
         const baseWidth = this.wallWidth + 100;  // Extend beyond castle walls
-        const baseHeight = 20;
+        const baseHeight = 30;  // Taller base for proper connection
         const baseY = this.wallHeight / 2;  // At the bottom of the wall
         
         // Stone base gradient - darker at bottom, lighter at top
