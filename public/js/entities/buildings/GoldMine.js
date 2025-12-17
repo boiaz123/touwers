@@ -548,9 +548,7 @@ export class GoldMine extends Building {
         this.renderProductionStatus(ctx, size);
         
         // Toggle icon with medieval border
-        if (this.gemMiningUnlocked) {
-            this.renderToggleIcon(ctx, size);
-        }
+        this.renderToggleIcon(ctx, size);
         
         // Add subtle magical flash effect when gold becomes ready
         if (this.flashOpacity > 0) {
@@ -961,10 +959,12 @@ export class GoldMine extends Building {
             ctx.textAlign = 'center';
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
+            // Show "READY" text when gold is ready
+            const readyText = this.gemMode ? '💎 READY' : '💰 READY';
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 14px Arial';
+            ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(this.gemMode ? '💎 READY' : '💰 READY', this.x, this.y - size/2 - 10);
+            ctx.fillText(readyText, this.x, this.y - size/2 - 15);
         }
     }
     

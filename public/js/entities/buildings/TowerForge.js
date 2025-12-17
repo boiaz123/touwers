@@ -108,13 +108,19 @@ export class TowerForge extends Building {
         // Generate chimney smoke - FROM TOP OF INTEGRATED CHIMNEY
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0) {
+            // Calculate chimney top position - must match renderChimney calculations
             const size = 128; // Approximate building size
             const buildingWidth = size * 0.9;
-            const chimneyX = this.x + buildingWidth/2 - size * 0.08; // Integrated corner position
-            const chimneyTopY = this.y - size * 0.55; // Top of integrated chimney
+            const chimneyWidth = size * 0.16;
+            const chimneyHeight = size * 0.7;
+            const wallHeight = size * 0.5;
+            
+            const chimneyX = this.x + buildingWidth/2; // Right edge of building
+            const shaftHeight = chimneyHeight - wallHeight;
+            const chimneyTopY = this.y - wallHeight - shaftHeight; // Top of chimney shaft (= this.y - size * 0.7)
             
             this.smokeParticles.push({
-                x: chimneyX + (Math.random() - 0.5) * 10, // From chimney top opening
+                x: chimneyX + chimneyWidth/2 + (Math.random() - 0.5) * 10, // From chimney opening
                 y: chimneyTopY,
                 vx: (Math.random() - 0.5) * 20,
                 vy: -30 - Math.random() * 20,

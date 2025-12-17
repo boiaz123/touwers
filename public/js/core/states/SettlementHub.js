@@ -70,7 +70,7 @@ export class SettlementHub {
         this.settlementBuildings = [
             // Training Grounds - positioned at the black square (far left)
             {
-                building: new TrainingGrounds(centerX - 720, centerY - 30, 0, 0),
+                building: new TrainingGrounds(centerX - 720, centerY - 0, 0, 0),
                 scale: 1,
                 clickable: true,
                 action: 'levelSelect'
@@ -217,13 +217,29 @@ export class SettlementHub {
             let isHoveringBuilding = false;
             this.settlementBuildings.forEach(item => {
                 if (item.clickable) {
-                    const size = item.scale * 4;
-                    const buildingX = item.building.x;
-                    const buildingY = item.building.y;
+                    // Get building bounds from buildingPositions if available, else use scale-based sizing
+                    let bounds;
+                    if (item.building instanceof TrainingGrounds) {
+                        // TrainingGrounds has fence perimeter, use actual visual bounds
+                        bounds = {
+                            x: item.building.x - 150,
+                            y: item.building.y - 150,
+                            width: 300,
+                            height: 300
+                        };
+                    } else {
+                        const size = item.scale * 4;
+                        bounds = {
+                            x: item.building.x,
+                            y: item.building.y,
+                            width: size,
+                            height: size
+                        };
+                    }
                     
-                    // Simple bounding box check for hover detection
-                    if (x >= buildingX && x <= buildingX + size &&
-                        y >= buildingY && y <= buildingY + size) {
+                    // Check if mouse is within building bounds
+                    if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                        y >= bounds.y && y <= bounds.y + bounds.height) {
                         isHoveringBuilding = true;
                     }
                 }
@@ -245,13 +261,29 @@ export class SettlementHub {
         // Check settlement building clicks
         this.settlementBuildings.forEach(item => {
             if (item.clickable) {
-                const size = item.scale * 4;
-                const buildingX = item.building.x;
-                const buildingY = item.building.y;
+                // Get building bounds from buildingPositions if available, else use scale-based sizing
+                let bounds;
+                if (item.building instanceof TrainingGrounds) {
+                    // TrainingGrounds has fence perimeter, use actual visual bounds
+                    bounds = {
+                        x: item.building.x - 150,
+                        y: item.building.y - 150,
+                        width: 300,
+                        height: 300
+                    };
+                } else {
+                    const size = item.scale * 4;
+                    bounds = {
+                        x: item.building.x,
+                        y: item.building.y,
+                        width: size,
+                        height: size
+                    };
+                }
                 
                 // Check if click is within building bounds
-                if (x >= buildingX && x <= buildingX + size &&
-                    y >= buildingY && y <= buildingY + size) {
+                if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                    y >= bounds.y && y <= bounds.y + bounds.height) {
                     this.onBuildingClick(item);
                 }
             }
@@ -461,14 +493,14 @@ export class SettlementHub {
         // Render decorative terrain (trees and rocks) - behind everything
         this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
 
-        // Render 3D palisade walls - so buildings can render on top
+        // Render paths connecting buildings BEFORE walls so they appear underneath
+        this.renderSettlementPaths(ctx, canvas, centerX, centerY);
+
+        // Render 3D palisade walls - on top of paths, behind buildings
         this.renderEllipticalPalisade(ctx, canvas, centerX, centerY);
 
         // Render settlement buildings (after walls so they appear on top)
         this.renderSettlementBuildings(ctx, canvas);
-        
-        // Render paths connecting buildings
-        this.renderSettlementPaths(ctx, canvas, centerX, centerY);
 
         // Ground shadow under settlement
         ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
@@ -495,22 +527,33 @@ export class SettlementHub {
         ctx.fill();
         
         // Draw vertical STICK posts around the ellipse with 3D trunk texture
+        // Render in proper z-order: back posts first, then sides, then front for natural layering
         const postSpacing = 18; // Vertical sticks
         const perimeter = Math.PI * (radiusX + radiusY) * 1.5;
         const postCount = Math.ceil(perimeter / postSpacing);
         
+        // Collect all posts with depth info
+        const posts = [];
         for (let i = 0; i < postCount; i++) {
             const angle = (i / postCount) * Math.PI * 2;
             const x = centerX + radiusX * Math.cos(angle);
             const y = centerY + radiusY * Math.sin(angle);
             
-            // Skip if this is a gate area
-            const distFromLeftGate = Math.abs(x - (centerX - 120));
-            const distFromRightGate = Math.abs(x - (centerX + 120));
-            if ((distFromLeftGate < 50 && y > centerY + radiusY - 20) ||
-                (distFromRightGate < 50 && y > centerY + radiusY - 20)) {
+            // Skip if this is the center gate area
+            const distFromCenterGate = Math.abs(x - centerX);
+            if (distFromCenterGate < 50 && y > centerY + radiusY - 20) {
                 continue;
             }
+            
+            posts.push({ x, y, angle, i });
+        }
+        
+        // Sort posts by Y position (depth) - back (smaller Y) to front (larger Y)
+        posts.sort((a, b) => a.y - b.y);
+        
+        // Render posts in depth order
+        posts.forEach(post => {
+            const { x, y } = post;
             
             // Draw 3D trunk with texture
             const postWidth = 12;
@@ -550,15 +593,14 @@ export class SettlementHub {
             ctx.lineTo(x, y - postHeight - 4);
             ctx.lineTo(x + postWidth/2, y - postHeight);
             ctx.fill();
-        }
+        });
         
-        // Draw integrated GATES into the wall structure
-        this.renderIntegratedGate(ctx, centerX - 120, centerY + radiusY - 5);
-        this.renderIntegratedGate(ctx, centerX + 120, centerY + radiusY - 5);
+        // Draw single integrated GATE in the middle of the front wall
+        this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5);
         
-        // Draw WATCHTOWERS next to gates - properly scaled
-        this.renderWatchtowerStructure(ctx, centerX - 200, centerY + radiusY - 60, 0.7);
-        this.renderWatchtowerStructure(ctx, centerX + 200, centerY + radiusY - 60, 0.7);
+        // Draw GUARD TOWERS on either side of gate - properly scaled
+        this.renderGuardTowerWithBase(ctx, centerX - 120, centerY + radiusY + 15);
+        this.renderGuardTowerWithBase(ctx, centerX + 120, centerY + radiusY + 15);
     }
     
     renderIntegratedGate(ctx, x, y) {
@@ -614,6 +656,48 @@ export class SettlementHub {
         ctx.fillRect(x - gateWidth/2 - 6, y - 18, 4, 5);
         ctx.fillRect(x + gateWidth/2 + 2, y - gateHeight + 10, 4, 5);
         ctx.fillRect(x + gateWidth/2 + 2, y - 18, 4, 5);
+        
+        // Fill gaps between gate and wall with wall pieces (left and right)
+        const wallGapSize = 8;
+        const wallGapHeight = gateHeight;
+        
+        // Left wall gap - small wooden fill posts
+        for (let i = 0; i < 3; i++) {
+            const fillX = x - gateWidth/2 - 5 - (i * 8);
+            ctx.fillStyle = '#6b5a47';
+            ctx.fillRect(fillX, y - gateHeight, 6, wallGapHeight);
+            
+            ctx.strokeStyle = '#4a3a2a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(fillX, y - gateHeight, 6, wallGapHeight);
+            
+            // Wood grain
+            for (let g = 0; g < wallGapHeight; g += 8) {
+                ctx.beginPath();
+                ctx.moveTo(fillX + 1, y - gateHeight + g);
+                ctx.lineTo(fillX + 5, y - gateHeight + g);
+                ctx.stroke();
+            }
+        }
+        
+        // Right wall gap - small wooden fill posts
+        for (let i = 0; i < 3; i++) {
+            const fillX = x + gateWidth/2 + 5 + (i * 8);
+            ctx.fillStyle = '#6b5a47';
+            ctx.fillRect(fillX, y - gateHeight, 6, wallGapHeight);
+            
+            ctx.strokeStyle = '#4a3a2a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(fillX, y - gateHeight, 6, wallGapHeight);
+            
+            // Wood grain
+            for (let g = 0; g < wallGapHeight; g += 8) {
+                ctx.beginPath();
+                ctx.moveTo(fillX + 1, y - gateHeight + g);
+                ctx.lineTo(fillX + 5, y - gateHeight + g);
+                ctx.stroke();
+            }
+        }
     }
     
     renderWatchtowerStructure(ctx, x, y) {
@@ -765,6 +849,148 @@ export class SettlementHub {
         ctx.fill();
     }
 
+    renderGuardTowerWithBase(ctx, x, y) {
+        // Guard tower styled like BasicTower - wooden tower with stone base, connected to ground
+        const towerSize = 50;
+        const towerHeight = 70;
+        const baseSize = 60;
+        const baseHeight = 12;
+        const platformSize = 55;
+        const platformHeight = 8;
+        const roofSize = 58;
+        const roofHeight = 30;
+        
+        // Shadow - connected to ground
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.save();
+        ctx.translate(x + 3, y + 3);
+        ctx.scale(1, 0.3);
+        ctx.fillRect(-baseSize/2, -baseSize/2, baseSize, baseSize);
+        ctx.restore();
+        
+        // Stone base platform - connected to ground
+        ctx.fillStyle = '#A9A9A9';
+        ctx.fillRect(x - baseSize/2, y - baseHeight, baseSize, baseHeight);
+        
+        // Base top highlight
+        ctx.fillStyle = '#D3D3D3';
+        ctx.fillRect(x - baseSize/2, y - baseHeight, baseSize, 2);
+        
+        // Stone base detail
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - baseSize/2, y - baseHeight, baseSize, baseHeight);
+        
+        // Main tower body - wood
+        const towerY = y - baseHeight - towerHeight;
+        
+        // Wooden posts at corners
+        ctx.fillStyle = '#7a3f18';
+        const postSize = 6;
+        const postOffset = towerSize/2 - postSize;
+        ctx.fillRect(x - postOffset, towerY, postSize, towerHeight);
+        ctx.fillRect(x + postOffset, towerY, postSize, towerHeight);
+        
+        // Wood grain lines
+        ctx.strokeStyle = '#5a2f10';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 7; i++) {
+            const grainY = towerY + (towerHeight * i / 8);
+            ctx.beginPath();
+            ctx.moveTo(x - postOffset, grainY);
+            ctx.lineTo(x + postOffset + postSize, grainY);
+            ctx.stroke();
+        }
+        
+        // Tower main fill between posts
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(x - towerSize/2 + postSize, towerY, towerSize - (postSize * 2), towerHeight);
+        
+        // Tower stones/planks
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < towerHeight; i += 10) {
+            ctx.beginPath();
+            ctx.moveTo(x - towerSize/2, towerY + i);
+            ctx.lineTo(x + towerSize/2, towerY + i);
+            ctx.stroke();
+        }
+        
+        // Metal corner plates
+        ctx.fillStyle = '#606060';
+        ctx.fillRect(x - postOffset - 1, towerY, 5, 12);
+        ctx.fillRect(x + postOffset, towerY, 5, 12);
+        ctx.strokeStyle = '#333';
+        ctx.strokeRect(x - postOffset - 1, towerY, 5, 12);
+        ctx.strokeRect(x + postOffset, towerY, 5, 12);
+        
+        // Platform at top
+        ctx.fillStyle = '#DABE94';
+        ctx.fillRect(x - platformSize/2, towerY - platformHeight, platformSize, platformHeight);
+        
+        // Platform planks
+        ctx.strokeStyle = '#8B7355';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const plankX = x - platformSize/2 + (platformSize * i / 5);
+            ctx.beginPath();
+            ctx.moveTo(plankX, towerY - platformHeight);
+            ctx.lineTo(plankX, towerY);
+            ctx.stroke();
+        }
+        
+        // Platform edge
+        ctx.strokeStyle = '#8B6914';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - platformSize/2, towerY - platformHeight, platformSize, platformHeight);
+        
+        // Roof posts - center and sides
+        ctx.fillStyle = '#5a341d';
+        ctx.fillRect(x - platformSize/2 + 2, towerY - platformHeight - roofHeight, 3, roofHeight);
+        ctx.fillRect(x + platformSize/2 - 5, towerY - platformHeight - roofHeight, 3, roofHeight);
+        ctx.fillRect(x - 2, towerY - platformHeight - roofHeight, 3, roofHeight);
+        
+        // Roof
+        const roofY = towerY - platformHeight - roofHeight;
+        ctx.fillStyle = '#6f3b1a';
+        ctx.fillRect(x - roofSize/2, roofY, roofSize, 4);
+        
+        // Roof planks
+        ctx.strokeStyle = '#4a2a17';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const plankX = x - roofSize/2 + (roofSize * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(plankX, roofY);
+            ctx.lineTo(plankX, roofY + 4);
+            ctx.stroke();
+        }
+        
+        // Roof peak
+        ctx.fillStyle = '#4a2a1a';
+        ctx.beginPath();
+        ctx.moveTo(x - roofSize/2, roofY);
+        ctx.lineTo(x, roofY - 12);
+        ctx.lineTo(x + roofSize/2, roofY);
+        ctx.fill();
+        
+        // Crenellations on top
+        ctx.fillStyle = '#696969';
+        const battlementCount = 5;
+        const battlementSpacing = roofSize / (battlementCount + 1);
+        for (let i = 1; i <= battlementCount; i++) {
+            const bx = x - roofSize/2 + battlementSpacing * i;
+            ctx.fillRect(bx - 3, roofY - 8, 6, 8);
+        }
+        
+        // Arrow slits
+        ctx.fillStyle = '#2a2a2a';
+        for (let h = 0; h < 3; h++) {
+            ctx.fillRect(x - towerSize/4, towerY + 15 + (h * 15), 2, 8);
+            ctx.fillRect(x + towerSize/4 - 2, towerY + 15 + (h * 15), 2, 8);
+        }
+    }
+
     renderWoodenPalisadeSide(ctx, x1, y1, x2, y2, side) {
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -856,11 +1082,95 @@ export class SettlementHub {
         this.settlementBuildings.forEach(item => {
             if (item.building && item.building.render) {
                 ctx.globalAlpha = this.contentOpacity;
-                const size = item.scale * 4; // Convert scale to building size (4x4 grid)
-                item.building.render(ctx, size);
+                
+                // Special handling for TrainingGrounds: render scaled-down version at 70% for settlement
+                if (item.building instanceof TrainingGrounds) {
+                    this.renderTrainingGroundsSettlement(ctx, item.building);
+                } else {
+                    const size = item.scale * 4; // Convert scale to building size (4x4 grid)
+                    item.building.render(ctx, size);
+                }
+                
                 ctx.globalAlpha = 1;
             }
         });
+    }
+
+    renderTrainingGroundsSettlement(ctx, building) {
+        // Render a 70% scaled version of training grounds for the settlement display
+        const scale = 0.7;
+        const x = building.x;
+        const y = building.y;
+        
+        // Grass base
+        const grassGradient = ctx.createLinearGradient(
+            x - (200 * scale), y - (192 * scale),
+            x - (200 * scale), y + (192 * scale)
+        );
+        grassGradient.addColorStop(0, '#5A7A3A');
+        grassGradient.addColorStop(0.5, '#6B8E3A');
+        grassGradient.addColorStop(1, '#4A6A2A');
+        
+        ctx.fillStyle = grassGradient;
+        ctx.fillRect(x - (200 * scale), y - (192 * scale), 400 * scale, 384 * scale);
+        
+        // Fence perimeter at 70%
+        const posts = [
+            { x: -200, y: -192, endX: 200, endY: -192, posts: 13 },
+            { x: 200, y: -192, endX: 200, endY: 192, posts: 12 },
+            { x: 200, y: 192, endX: -200, endY: 192, posts: 13 },
+            { x: -200, y: 192, endX: -200, endY: -192, posts: 12 }
+        ];
+        
+        posts.forEach(segment => {
+            const startX = x + (segment.x * scale);
+            const startY = y + (segment.y * scale);
+            const endX = x + (segment.endX * scale);
+            const endY = y + (segment.endY * scale);
+            
+            const angle = Math.atan2(endY - startY, endX - startX);
+            const distance = Math.hypot(endX - startX, endY - startY);
+            const postSpacing = distance / (segment.posts - 1);
+            
+            for (let i = 0; i < segment.posts; i++) {
+                const postX = startX + Math.cos(angle) * (i * postSpacing);
+                const postY = startY + Math.sin(angle) * (i * postSpacing);
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(postX - 0.7, postY + 0.7, 1.4, 1.05);
+                
+                ctx.fillStyle = '#8B7355';
+                ctx.fillRect(postX - 0.7, postY - (8 * scale), 1.4, 8 * scale);
+                
+                ctx.strokeStyle = '#696969';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(postX - 0.7, postY - (8 * scale), 1.4, 8 * scale);
+            }
+        });
+        
+        // Hut
+        ctx.fillStyle = '#8B6914';
+        ctx.fillRect(x + (-168 * scale), y + (-152 * scale), 40 * scale, 36 * scale);
+        ctx.strokeStyle = '#5a4630';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + (-168 * scale), y + (-152 * scale), 40 * scale, 36 * scale);
+        
+        // Lane dividers
+        ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+        ctx.lineWidth = 0.7;
+        ctx.setLineDash([32 * scale, 32 * scale]);
+        
+        ctx.beginPath();
+        ctx.moveTo(x + (-192 * scale), y + (-112 * scale));
+        ctx.lineTo(x + (192 * scale), y + (-112 * scale));
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(x + (-192 * scale), y + (32 * scale));
+        ctx.lineTo(x + (192 * scale), y + (32 * scale));
+        ctx.stroke();
+        
+        ctx.setLineDash([]);
     }
 
     renderSettlementTerrain(ctx, canvas, centerX, centerY) {
@@ -980,64 +1290,131 @@ export class SettlementHub {
 
     renderSettlementPaths(ctx, canvas, centerX, centerY) {
         // Stone/dirt paths connecting buildings inside the settlement
-        // Creates a more lived-in, realistic settlement layout
-        const pathColor = '#8b8570';
-        const pathDark = '#6b6550';
+        // Uses natural curved paths for organic feel
+        const pathColor = '#9d9181';
+        const pathDark = '#7a6f5d';
+        const pathEdge = '#6b5f4d';
         
-        // Main central path - vertical through settlement
+        // Set line cap and join for smoother curves
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Path 1: From entrance (left-bottom) sweeping up to Magic Academy (upper-left)
+        this.drawCurvedPath(ctx, [
+            { x: centerX - 200, y: centerY + 100 },
+            { x: centerX - 160, y: centerY + 60 },
+            { x: centerX - 140, y: centerY - 20 }
+        ], 28, pathColor, pathDark);
+        
+        // Path 2: From Magic Academy sweeping across to Tower Forge area
+        this.drawCurvedPath(ctx, [
+            { x: centerX - 130, y: centerY - 40 },
+            { x: centerX - 40, y: centerY - 60 },
+            { x: centerX + 100, y: centerY - 40 }
+        ], 26, pathColor, pathDark);
+        
+        // Path 3: From Tower Forge down and around
+        this.drawCurvedPath(ctx, [
+            { x: centerX + 120, y: centerY - 20 },
+            { x: centerX + 140, y: centerY + 40 },
+            { x: centerX + 160, y: centerY + 80 }
+        ], 24, pathColor, pathDark);
+        
+        // Path 4: Connecting bottom area from left to right (passes near Gold Mine area)
+        this.drawCurvedPath(ctx, [
+            { x: centerX - 180, y: centerY + 100 },
+            { x: centerX, y: centerY + 110 },
+            { x: centerX + 180, y: centerY + 100 }
+        ], 26, pathColor, pathDark);
+        
+        // Central gathering area - slightly elevated
         ctx.fillStyle = pathColor;
-        ctx.fillRect(centerX - 12, centerY - 100, 24, 160);
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 10, 90, 70, 0, 0, Math.PI * 2);
+        ctx.fill();
         
-        // Path to Magic Academy (left side)
-        ctx.fillRect(centerX - 140, centerY + 10, 140, 18);
-        
-        // Path to Tower Forge (right side)
-        ctx.fillRect(centerX + 20, centerY - 30, 120, 16);
-        
-        // Path around bottom for Gold Mine access
-        ctx.fillRect(centerX - 80, centerY + 50, 160, 18);
-        
-        // Path edges - darker shading for depth
+        // Central area edge highlight
         ctx.strokeStyle = pathDark;
         ctx.lineWidth = 1;
-        
-        // Central path left edge
         ctx.beginPath();
-        ctx.moveTo(centerX - 14, centerY - 100);
-        ctx.lineTo(centerX - 14, centerY + 60);
-        ctx.stroke();
-        
-        // Central path right edge
-        ctx.beginPath();
-        ctx.moveTo(centerX + 14, centerY - 100);
-        ctx.lineTo(centerX + 14, centerY + 60);
+        ctx.ellipse(centerX, centerY - 10, 92, 72, 0, 0, Math.PI * 2);
         ctx.stroke();
         
         // Add stone texture details to paths
-        ctx.fillStyle = 'rgba(100, 100, 100, 0.15)';
-        for (let i = 0; i < 15; i++) {
-            const x = centerX - 150 + Math.random() * 300;
-            const y = centerY - 80 + Math.random() * 140;
-            ctx.fillRect(x, y, 2 + Math.random() * 3, 2);
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.12)';
+        for (let i = 0; i < 25; i++) {
+            const x = centerX - 220 + Math.random() * 440;
+            const y = centerY - 120 + Math.random() * 220;
+            const size = 2 + Math.random() * 4;
+            ctx.fillRect(x, y, size, size);
         }
         
-        // Small connecting crossroads
-        ctx.fillStyle = pathColor;
-        ctx.fillRect(centerX - 20, centerY - 20, 40, 20);
+        // Add some worn spots where paths intersect
+        const intersectionPoints = [
+            { x: centerX - 140, y: centerY - 20 },
+            { x: centerX, y: centerY - 10 },
+            { x: centerX + 100, y: centerY - 20 }
+        ];
         
-        // Grass around paths for natural feel
-        ctx.fillStyle = 'rgba(100, 140, 100, 0.4)';
+        intersectionPoints.forEach(point => {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.beginPath();
+            ctx.ellipse(point.x, point.y, 30, 25, 0, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+    
+    drawCurvedPath(ctx, points, width, color, darkColor) {
+        // Draw a smooth curved path using quadratic curves
+        // Main path fill
+        ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.strokeStyle = color;
         ctx.beginPath();
-        ctx.ellipse(centerX - 160, centerY + 60, 60, 40, 0, 0, Math.PI * 2);
-        ctx.fill();
         
-        ctx.beginPath();
-        ctx.ellipse(centerX + 160, centerY + 20, 50, 45, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            const prevPoint = points[i - 1];
+            const currPoint = points[i];
+            const nextPoint = points[i + 1];
+            
+            if (nextPoint) {
+                // Calculate control point for smooth curve
+                const cpX = currPoint.x;
+                const cpY = currPoint.y;
+                ctx.quadraticCurveTo(cpX, cpY, 
+                    (currPoint.x + nextPoint.x) / 2, 
+                    (currPoint.y + nextPoint.y) / 2);
+            } else {
+                ctx.lineTo(currPoint.x, currPoint.y);
+            }
+        }
         
+        ctx.stroke();
+        
+        // Path edge for depth - draw offset parallel line
+        ctx.strokeStyle = darkColor;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(centerX - 80, centerY - 60, 40, 30, 0, 0, Math.PI * 2);
-        ctx.fill();
+        
+        ctx.moveTo(points[0].x - width/2.5, points[0].y - width/2.5);
+        for (let i = 1; i < points.length; i++) {
+            const prevPoint = points[i - 1];
+            const currPoint = points[i];
+            const nextPoint = points[i + 1];
+            
+            if (nextPoint) {
+                const cpX = currPoint.x - width/2.5;
+                const cpY = currPoint.y - width/2.5;
+                ctx.quadraticCurveTo(cpX, cpY, 
+                    (currPoint.x + nextPoint.x) / 2 - width/2.5, 
+                    (currPoint.y + nextPoint.y) / 2 - width/2.5);
+            } else {
+                ctx.lineTo(currPoint.x - width/2.5, currPoint.y - width/2.5);
+            }
+        }
+        
+        ctx.stroke();
     }
 
     renderGuardPostQuarters(ctx, centerX, centerY) {
