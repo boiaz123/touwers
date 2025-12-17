@@ -302,7 +302,7 @@ export class SettlementHub {
 
     onBuildingClick(buildingItem) {
         if (buildingItem.action === 'levelSelect') {
-            this.stateManager.changeState('levelSelect');
+            this.stateManager.changeState('campaignMenu');
         } else if (buildingItem.action === 'upgrades') {
             this.activePopup = 'upgrades';
             if (!this.upgradesPopup) {

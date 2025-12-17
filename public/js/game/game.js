@@ -4,13 +4,15 @@ import { LoadGame } from '../core/states/LoadGame.js';
 import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
-import { LevelSelect } from '../core/states/LevelSelect.js';
+import { CampaignMenu } from '../core/states/CampaignMenu.js';
+import { Campaign1 } from '../entities/campaigns/Campaign1.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SettlementHub } from '../core/states/SettlementHub.js';
 import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { ResolutionSelector } from '../ui/ResolutionSelector.js';
+import { CampaignRegistry } from './CampaignRegistry.js';
 
 export class Game {
     constructor() {
@@ -99,8 +101,15 @@ export class Game {
             const settlementHub = new SettlementHub(this.stateManager);
             this.stateManager.addState('settlementHub', settlementHub);
             
-            const levelSelect = new LevelSelect(this.stateManager);
-            this.stateManager.addState('levelSelect', levelSelect);
+            const campaignMenu = new CampaignMenu(this.stateManager);
+            this.stateManager.addState('campaignMenu', campaignMenu);
+            
+            // Initialize campaign registry with campaign classes
+            CampaignRegistry.initialize({ Campaign1 });
+            
+            // Add campaign states
+            const campaign1 = new Campaign1(this.stateManager);
+            this.stateManager.addState('levelSelect', campaign1);
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);
