@@ -578,12 +578,12 @@ export class SettlementHub {
 
     renderBirds(ctx, canvas) {
         // Sporadic bird flocks flying across the sky
-        // Deterministic but appearing at different times
+        // Slower birds, less frequently, better V-formation
         
         const flocks = [
-            { startTime: 5, duration: 5, yOffset: canvas.height * 0.20, birdCount: 5, cycleLength: 20 },
-            { startTime: 10, duration: 4.5, yOffset: canvas.height * 0.28, birdCount: 4, cycleLength: 25 },
-            { startTime: 16, duration: 5, yOffset: canvas.height * 0.15, birdCount: 6, cycleLength: 30 },
+            { startTime: 6, duration: 20, yOffset: canvas.height * 0.20, birdCount: 5, cycleLength: 45 },
+            { startTime: 31, duration: 20, yOffset: canvas.height * 0.28, birdCount: 4, cycleLength: 70 },
+            { startTime: 46, duration: 20, yOffset: canvas.height * 0.15, birdCount: 6, cycleLength: 100 },
         ];
         
         flocks.forEach(flock => {
@@ -602,21 +602,34 @@ export class SettlementHub {
                     visibility = (flock.duration - timeInFlock) / 0.5; // Fade out
                 }
                 
-                // Slower movement across screen
+                // Much slower movement across screen
                 const flockX = -80 + (timeInFlock / flock.duration) * (canvas.width + 160);
                 
                 ctx.globalAlpha = visibility * this.contentOpacity * 0.7;
                 
-                // Draw bird formation (loose V-shape)
+                // Draw bird formation - natural V-shape
                 for (let i = 0; i < flock.birdCount; i++) {
-                    const offsetX = (i % 2) * 35 - 17.5;
-                    const offsetY = Math.floor(i / 2) * 28;
+                    // Create V-formation: center lead bird, others offset in V pattern
+                    let offsetX, offsetY;
+                    if (i === 0) {
+                        // Lead bird at center front
+                        offsetX = 0;
+                        offsetY = 0;
+                    } else {
+                        // Birds arranged in V behind lead
+                        const vIndex = i - 1;
+                        const side = vIndex % 2; // 0 = left, 1 = right
+                        const row = Math.floor(vIndex / 2);
+                        offsetX = side === 0 ? -28 - (row * 10) : 28 + (row * 10);
+                        offsetY = (row + 1) * 22;
+                    }
+                    
                     const birdX = flockX + offsetX;
                     const birdY = flock.yOffset + offsetY;
                     
                     if (birdX > -30 && birdX < canvas.width + 30) {
-                        // Wing flapping animation
-                        const wingFlap = Math.sin(this.animationTime * 4 + i * 0.3) * 0.5 + 0.5;
+                        // Slower wing flapping animation
+                        const wingFlap = Math.sin(this.animationTime * 2.5 + i * 0.3) * 0.5 + 0.5;
                         this.renderBird(ctx, birdX, birdY, 2, wingFlap);
                     }
                 }
@@ -2547,6 +2560,9 @@ export class SettlementHub {
         ctx.ellipse(centerX, centerY, 82, 62, 0, 0, Math.PI * 2);
         ctx.stroke();
         
+        // Render fountain/well centerpiece in plaza
+        this.renderFountainCenterpiece(ctx, centerX, centerY);
+        
         // BRANCH 1: From plaza up-left to Magic Academy - meandering path
         this.drawCurvedPath(ctx, [
             { x: centerX - 60, y: centerY - 50 },
@@ -2560,18 +2576,6 @@ export class SettlementHub {
             { x: centerX + 85, y: centerY - 70 },
             { x: centerX + 110, y: centerY - 80 }
         ], 22, pathColor, pathDark);
-        
-        // BRANCH 3: From plaza down-left with gentle curve
-        this.drawCurvedPath(ctx, [
-            { x: centerX - 40, y: centerY + 65 },
-            { x: centerX - 60, y: centerY + 85 }
-        ], 20, pathColor, pathDark);
-        
-        // BRANCH 4: From plaza down-right with gentle curve
-        this.drawCurvedPath(ctx, [
-            { x: centerX + 40, y: centerY + 65 },
-            { x: centerX + 60, y: centerY + 85 }
-        ], 20, pathColor, pathDark);
         
         // Add stone texture details to main paths
         ctx.fillStyle = 'rgba(100, 100, 100, 0.12)';
@@ -2587,6 +2591,87 @@ export class SettlementHub {
         ctx.beginPath();
         ctx.ellipse(centerX, centerY, 50, 40, 0, 0, Math.PI * 2);
         ctx.fill();
+    }
+    
+    renderFountainCenterpiece(ctx, centerX, centerY) {
+        // Decorative fountain/well centerpiece in the plaza
+        const fountainScale = 1.0;
+        
+        // Base stone platform
+        ctx.fillStyle = '#9a8a77';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 3, 35, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Base edge shadow
+        ctx.fillStyle = '#7a7a67';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 5, 33, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Base highlight rim
+        ctx.strokeStyle = '#b9b9a7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 2, 34, 27, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Stone blocks on base - horizontal lines for stone pattern
+        ctx.strokeStyle = '#8a8a77';
+        ctx.lineWidth = 1;
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY + 3 + (i * 8), 34, 27, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Central well/fountain structure
+        // Inner stone ring
+        ctx.fillStyle = '#8a7a67';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 20, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner stone ring top highlight
+        ctx.fillStyle = '#aaa97a';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 2, 18, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Water surface reflection
+        ctx.fillStyle = 'rgba(100, 150, 200, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 1, 16, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Central post/spout structure
+        ctx.fillStyle = '#9a8a77';
+        ctx.fillRect(centerX - 3, centerY - 8, 6, 10);
+        
+        // Post top
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 8, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Water spout light
+        ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
+        ctx.fillRect(centerX - 2, centerY - 12, 4, 5);
+        
+        // Small decorative accent stones on corners
+        ctx.fillStyle = '#a9a997';
+        const cornerDistance = 25;
+        const corners = [
+            { x: centerX - cornerDistance, y: centerY - cornerDistance },
+            { x: centerX + cornerDistance, y: centerY - cornerDistance },
+            { x: centerX - cornerDistance, y: centerY + cornerDistance },
+            { x: centerX + cornerDistance, y: centerY + cornerDistance }
+        ];
+        
+        corners.forEach(corner => {
+            ctx.beginPath();
+            ctx.arc(corner.x, corner.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
     
     drawCurvedPath(ctx, points, width, color, darkColor) {
