@@ -70,6 +70,7 @@ export class SettlementHub {
         // Training Grounds OUTSIDE the settlement to the left (as per user request)
         // Other buildings spread naturally INSIDE the boundary
         this.settlementBuildings = [
+            // === MAIN INTERACTIVE BUILDINGS ===
             // Training Grounds - positioned at the black square (far left)
             {
                 building: new TrainingGrounds(centerX - 720, centerY - 0, 0, 0),
@@ -97,6 +98,84 @@ export class SettlementHub {
                 scale: 29,
                 clickable: true,
                 action: 'stats'
+            },
+
+            // === GUARD POST QUARTERS (BARRACKS) ===
+            // Left side positions
+            {
+                building: new GuardPost(centerX - 260, centerY - 20, 0, 0),
+                scale: 0.65,
+                clickable: false,
+                action: null
+            },
+            {
+                building: new GuardPost(centerX - 240, centerY - 60, 0, 0),
+                scale: 0.65,
+                clickable: false,
+                action: null
+            },
+            
+            {
+                building: new GuardPost(centerX - 220, centerY + 20, 0, 0),
+                scale: 0.65,
+                clickable: false,
+                action: null
+            },
+            {
+                building: new GuardPost(centerX - 200, centerY - 30, 0, 0),
+                scale: 0.65,
+                clickable: false,
+                action: null
+            },
+            
+            {
+                building: new GuardPost(centerX - 180, centerY + 15, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+
+            {
+                building: new GuardPost(centerX + 165, centerY + 15, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+
+            {
+                building: new GuardPost(centerX + 180, centerY + 35, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+
+            {
+                building: new GuardPost(centerX + 240, centerY + 20, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+                                   
+
+            {
+                building: new GuardPost(centerX - 560, centerY - 80, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+
+            {
+                building: new GuardPost(centerX + 500, centerY - 60, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
+            },
+
+            {
+                building: new GuardPost(centerX + 460, centerY - 25, 0, 0),
+                scale: 0.6,
+                clickable: false,
+                action: null
             }
         ];
         
@@ -105,77 +184,6 @@ export class SettlementHub {
 
     exit() {
         this.removeMouseListeners();
-    }
-
-    initializeBuildingPositions() {
-        const canvas = this.stateManager.canvas;
-        
-        // Settlement center area
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        
-        // Position buildings around the settlement center
-        // Training Grounds - center left
-        this.buildingPositions['trainingGrounds'] = {
-            x: centerX - 200,
-            y: centerY - 80,
-            width: 120,
-            height: 100
-        };
-        
-        // Tower Forge - center
-        this.buildingPositions['towerForge'] = {
-            x: centerX - 60,
-            y: centerY + 40,
-            width: 120,
-            height: 100
-        };
-        
-        // Magic Academy - center right
-        this.buildingPositions['magicAcademy'] = {
-            x: centerX + 140,
-            y: centerY - 80,
-            width: 120,
-            height: 100
-        };
-        
-        // Mine - right side
-        this.buildingPositions['goldMine'] = {
-            x: centerX + 280,
-            y: centerY + 40,
-            width: 100,
-            height: 80
-        };
-        
-        // Guard Post cluster - various positions
-        this.buildingPositions['guardPost1'] = {
-            x: centerX - 140,
-            y: centerY + 120,
-            width: 80,
-            height: 70
-        };
-        
-        this.buildingPositions['guardPost2'] = {
-            x: centerX + 200,
-            y: centerY + 120,
-            width: 80,
-            height: 70
-        };
-        
-        // Houses (variations of guard post style)
-        this.buildingPositions['house1'] = {
-            x: centerX - 280,
-            y: centerY - 20,
-            width: 70,
-            height: 60
-        };
-        
-        this.buildingPositions['house2'] = {
-            x: centerX + 360,
-            y: centerY - 40,
-            width: 70,
-            height: 60
-        };
     }
 
     setupMouseListeners() {
@@ -1863,10 +1871,10 @@ export class SettlementHub {
         // Create a natural forest feel with many trees in various sizes and depths
         const treePositions = [
             // Far background - smallest trees (upper area, far away)
-            { x: centerX - 600, y: centerY - 210, size: 20 },
-            { x: centerX - 300, y: centerY - 200, size: 18 },
-            { x: centerX + 100, y: centerY - 200, size: 19 },
-            { x: centerX + 300, y: centerY - 208, size: 18 },
+            { x: centerX - 600, y: centerY - 190, size: 20 },
+            { x: centerX - 300, y: centerY - 170, size: 18 },
+            { x: centerX + 100, y: centerY - 180, size: 19 },
+            { x: centerX + 300, y: centerY - 170, size: 18 },
             { x: centerX + 600, y: centerY - 190, size: 20 },
             
             // Back row - small trees
@@ -2071,7 +2079,7 @@ export class SettlementHub {
             { x: centerX + 160, y: centerY + 80 }
         ], 24, pathColor, pathDark);
         
-        // Path 4: Connecting bottom area from left to right (passes near Gold Mine area)
+        // Path 4: Connecting bottom area from left to right
         this.drawCurvedPath(ctx, [
             { x: centerX - 180, y: centerY + 100 },
             { x: centerX, y: centerY + 110 },
