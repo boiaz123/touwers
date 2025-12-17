@@ -497,29 +497,53 @@ export class SettlementHub {
 
     renderClouds(ctx, canvas) {
         // Render many clouds at different positions with varying sizes
+        // Clouds move from left to right with subtle animation
+        const cloudSpeed = 8; // pixels per second (subtle speed)
+        const cloudDistance = canvas.width + 300; // Distance cloud travels before looping
+        
+        // Calculate smooth continuous offset
+        const offset = (this.animationTime * cloudSpeed) % cloudDistance;
+        
         const clouds = [
-            // Large clouds
-            { x: canvas.width * 0.15, y: canvas.height * 0.12, scale: 1.8, opacity: 0.7 },
-            { x: canvas.width * 0.75, y: canvas.height * 0.08, scale: 2.0, opacity: 0.65 },
-            { x: canvas.width * 0.45, y: canvas.height * 0.22, scale: 1.9, opacity: 0.6 },
+            // Large clouds - baseX, y position, scale, opacity, parallax speed multiplier
+            { baseX: canvas.width * 0.15, y: canvas.height * 0.12, scale: 1.8, opacity: 0.7, speed: 0.8 },
+            { baseX: canvas.width * 0.75, y: canvas.height * 0.08, scale: 2.0, opacity: 0.65, speed: 0.9 },
+            { baseX: canvas.width * 0.45, y: canvas.height * 0.22, scale: 1.9, opacity: 0.6, speed: 0.7 },
             
             // Medium clouds
-            { x: canvas.width * 0.35, y: canvas.height * 0.18, scale: 1.2, opacity: 0.6 },
-            { x: canvas.width * 0.55, y: canvas.height * 0.1, scale: 1.3, opacity: 0.65 },
-            { x: canvas.width * 0.85, y: canvas.height * 0.25, scale: 1.4, opacity: 0.65 },
-            { x: canvas.width * 0.25, y: canvas.height * 0.32, scale: 1.1, opacity: 0.55 },
-            { x: canvas.width * 0.65, y: canvas.height * 0.28, scale: 1.2, opacity: 0.6 },
+            { baseX: canvas.width * 0.35, y: canvas.height * 0.18, scale: 1.2, opacity: 0.6, speed: 1.0 },
+            { baseX: canvas.width * 0.55, y: canvas.height * 0.1, scale: 1.3, opacity: 0.65, speed: 0.75 },
+            { baseX: canvas.width * 0.85, y: canvas.height * 0.25, scale: 1.4, opacity: 0.65, speed: 0.85 },
+            { baseX: canvas.width * 0.25, y: canvas.height * 0.32, scale: 1.1, opacity: 0.55, speed: 1.1 },
+            { baseX: canvas.width * 0.65, y: canvas.height * 0.28, scale: 1.2, opacity: 0.6, speed: 0.7 },
             
             // Small clouds for depth
-            { x: canvas.width * 0.1, y: canvas.height * 0.08, scale: 0.8, opacity: 0.5 },
-            { x: canvas.width * 0.5, y: canvas.height * 0.05, scale: 0.7, opacity: 0.45 },
-            { x: canvas.width * 0.9, y: canvas.height * 0.15, scale: 0.9, opacity: 0.5 },
-            { x: canvas.width * 0.3, y: canvas.height * 0.25, scale: 0.7, opacity: 0.48 },
+            { baseX: canvas.width * 0.1, y: canvas.height * 0.08, scale: 0.8, opacity: 0.5, speed: 1.2 },
+            { baseX: canvas.width * 0.5, y: canvas.height * 0.05, scale: 0.7, opacity: 0.45, speed: 0.6 },
+            { baseX: canvas.width * 0.9, y: canvas.height * 0.15, scale: 0.9, opacity: 0.5, speed: 0.95 },
+            { baseX: canvas.width * 0.3, y: canvas.height * 0.25, scale: 0.7, opacity: 0.48, speed: 1.15 },
         ];
 
         clouds.forEach(cloud => {
-            this.renderCloud(ctx, cloud.x, cloud.y, cloud.scale, cloud.opacity);
+            // Calculate animated x position with parallax
+            let cloudX = cloud.baseX + (offset * cloud.speed);
+            
+            // Wrap cloud smoothly - only restart when completely off screen (left side)
+            if (cloudX > canvas.width + 150) {
+                cloudX = cloudX - cloudDistance;
+            }
+            
+            // Only render if cloud is at least partially visible
+            if (cloudX > -150) {
+                this.renderCloud(ctx, cloudX, cloud.y, cloud.scale, cloud.opacity);
+            }
         });
+
+        // Render bird flocks (sporadic)
+        this.renderBirds(ctx, canvas);
+
+        // Render wind gust animation (occasional)
+        this.renderWindGust(ctx, canvas);
     }
 
     renderCloud(ctx, x, y, scale, opacity) {
@@ -550,6 +574,143 @@ export class SettlementHub {
         ctx.fill();
 
         ctx.globalAlpha = this.contentOpacity;
+    }
+
+    renderBirds(ctx, canvas) {
+        // Sporadic bird flocks flying across the sky
+        // Deterministic but appearing at different times
+        
+        const flocks = [
+            { startTime: 5, duration: 5, yOffset: canvas.height * 0.20, birdCount: 5, cycleLength: 20 },
+            { startTime: 10, duration: 4.5, yOffset: canvas.height * 0.28, birdCount: 4, cycleLength: 25 },
+            { startTime: 16, duration: 5, yOffset: canvas.height * 0.15, birdCount: 6, cycleLength: 30 },
+        ];
+        
+        flocks.forEach(flock => {
+            // Calculate position in cycle
+            const cyclePosition = (this.animationTime % flock.cycleLength);
+            
+            // Check if flock should be visible
+            if (cyclePosition >= flock.startTime && cyclePosition < flock.startTime + flock.duration) {
+                const timeInFlock = cyclePosition - flock.startTime;
+                
+                // Ease in and out
+                let visibility = 1.0;
+                if (timeInFlock < 0.5) {
+                    visibility = timeInFlock / 0.5; // Fade in
+                } else if (timeInFlock > flock.duration - 0.5) {
+                    visibility = (flock.duration - timeInFlock) / 0.5; // Fade out
+                }
+                
+                // Slower movement across screen
+                const flockX = -80 + (timeInFlock / flock.duration) * (canvas.width + 160);
+                
+                ctx.globalAlpha = visibility * this.contentOpacity * 0.7;
+                
+                // Draw bird formation (loose V-shape)
+                for (let i = 0; i < flock.birdCount; i++) {
+                    const offsetX = (i % 2) * 35 - 17.5;
+                    const offsetY = Math.floor(i / 2) * 28;
+                    const birdX = flockX + offsetX;
+                    const birdY = flock.yOffset + offsetY;
+                    
+                    if (birdX > -30 && birdX < canvas.width + 30) {
+                        // Wing flapping animation
+                        const wingFlap = Math.sin(this.animationTime * 4 + i * 0.3) * 0.5 + 0.5;
+                        this.renderBird(ctx, birdX, birdY, 2, wingFlap);
+                    }
+                }
+                
+                ctx.globalAlpha = this.contentOpacity;
+            }
+        });
+    }
+
+    renderBird(ctx, x, y, scale, wingFlap) {
+        // Bird body with flapping wings
+        // wingFlap is 0-1 indicating wing position in flap cycle
+        
+        // Calculate wing positions based on flap
+        const wingUp = wingFlap > 0.5;
+        const wingAngle = (wingFlap - 0.5) * Math.PI; // 0 to PI for full flap
+        
+        // Draw left wing
+        ctx.strokeStyle = 'rgba(80, 80, 80, 0.8)';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.beginPath();
+        ctx.moveTo(x - 2 * scale, y);
+        const leftWingX = x - 8 * scale - Math.abs(Math.sin(wingAngle) * 4 * scale);
+        const leftWingY = wingUp ? y - 2 * scale : y + 1 * scale;
+        ctx.quadraticCurveTo(x - 5 * scale, leftWingY, leftWingX, leftWingY + 1 * scale);
+        ctx.stroke();
+        
+        // Draw right wing
+        ctx.beginPath();
+        ctx.moveTo(x + 2 * scale, y);
+        const rightWingX = x + 8 * scale + Math.abs(Math.sin(wingAngle) * 4 * scale);
+        const rightWingY = wingUp ? y - 2 * scale : y + 1 * scale;
+        ctx.quadraticCurveTo(x + 5 * scale, rightWingY, rightWingX, rightWingY + 1 * scale);
+        ctx.stroke();
+        
+        // Draw bird body
+        ctx.fillStyle = 'rgba(60, 60, 60, 0.9)';
+        ctx.beginPath();
+        // Main body (ellipse)
+        ctx.ellipse(x, y, 3 * scale, 2 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bird head
+        ctx.beginPath();
+        ctx.arc(x + 2.5 * scale, y - 0.5 * scale, 1.2 * scale, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eye highlight
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.7)';
+        ctx.beginPath();
+        ctx.arc(x + 3.2 * scale, y - 0.8 * scale, 0.4 * scale, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderWindGust(ctx, canvas) {
+        // Occasional wind gust visual effect - longer streaks, fewer lines
+        // Creates subtle effect that moves slower and more naturally
+        
+        const gustCycle = (this.animationTime % 15);
+        if (gustCycle > 10 && gustCycle < 12) {
+            const gustProgress = (gustCycle - 10) / 2;
+            const gustOpacity = (Math.sin(gustProgress * Math.PI) * 0.25) * this.contentOpacity;
+            
+            if (gustOpacity > 0.01) {
+                // Multiple longer parallel wind streaks at different heights
+                const streakLayers = [
+                    { yBase: canvas.height * 0.16, count: 2, spacing: 40 },
+                    { yBase: canvas.height * 0.26, count: 2, spacing: 45 },
+                    { yBase: canvas.height * 0.33, count: 2, spacing: 38 },
+                ];
+                
+                streakLayers.forEach(layer => {
+                    for (let i = 0; i < layer.count; i++) {
+                        const y = layer.yBase + (i * layer.spacing);
+                        const streakLength = 150 + Math.sin(gustProgress * Math.PI + i * 0.5) * 30;
+                        const streakX = -100 + gustProgress * (canvas.width + 200) * 0.8; // Slower movement
+                        
+                        // Soft gradient wind streak - longer and more subtle
+                        const gradient = ctx.createLinearGradient(
+                            streakX - streakLength, y,
+                            streakX + streakLength, y
+                        );
+                        gradient.addColorStop(0, `rgba(200, 220, 255, 0)`);
+                        gradient.addColorStop(0.2, `rgba(200, 220, 255, ${gustOpacity * 0.5})`);
+                        gradient.addColorStop(0.5, `rgba(200, 220, 255, ${gustOpacity})`);
+                        gradient.addColorStop(0.8, `rgba(200, 220, 255, ${gustOpacity * 0.5})`);
+                        gradient.addColorStop(1, `rgba(200, 220, 255, 0)`);
+                        
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(streakX - streakLength, y - 1, streakLength * 2, 2);
+                    }
+                });
+            }
+        }
     }
 
     renderDistantHills(ctx, canvas) {
@@ -626,13 +787,16 @@ export class SettlementHub {
         // Render decorative terrain (trees and rocks) - behind everything
         this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
 
-        // Render paths connecting buildings BEFORE walls so they appear underneath
-        this.renderSettlementPaths(ctx, canvas, centerX, centerY);
-
-        // Render 3D palisade walls - on top of paths, behind buildings
+        // Render 3D palisade walls - foundation layer (behind paths and buildings)
         this.renderEllipticalPalisade(ctx, canvas, centerX, centerY);
 
-        // Render settlement buildings (after walls so they appear on top)
+        // Render paths INSIDE the walls - clipped to ellipse interior
+        ctx.save();
+        this.createEllipseClipPath(ctx, centerX, centerY, 360, 140);
+        this.renderSettlementPaths(ctx, canvas, centerX, centerY);
+        ctx.restore();
+
+        // Render settlement buildings (on top of paths)
         this.renderSettlementBuildings(ctx, canvas);
 
         // Ground shadow under settlement
@@ -640,6 +804,13 @@ export class SettlementHub {
         ctx.beginPath();
         ctx.ellipse(centerX, centerY + 50, 340, 120, 0, 0, Math.PI * 2);
         ctx.fill();
+    }
+
+    createEllipseClipPath(ctx, x, y, radiusX, radiusY) {
+        // Create a clipping region that is an ellipse - paths will only render inside
+        ctx.beginPath();
+        ctx.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.clip();
     }
 
     renderEllipticalPalisade(ctx, canvas, centerX, centerY) {
@@ -2354,79 +2525,68 @@ export class SettlementHub {
     }
 
     renderSettlementPaths(ctx, canvas, centerX, centerY) {
-        // Stone/dirt paths connecting buildings inside the settlement
-        // Uses natural curved paths for organic feel
+        // Stone/dirt paths - simple layout focused on central plaza with meandering branches
+        // All paths contained within the settlement walls
         const pathColor = '#9d9181';
         const pathDark = '#7a6f5d';
-        const pathEdge = '#6b5f4d';
         
         // Set line cap and join for smoother curves
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Path 1: From entrance (left-bottom) sweeping up to Magic Academy (upper-left)
-        this.drawCurvedPath(ctx, [
-            { x: centerX - 200, y: centerY + 100 },
-            { x: centerX - 160, y: centerY + 60 },
-            { x: centerX - 140, y: centerY - 20 }
-        ], 28, pathColor, pathDark);
-        
-        // Path 2: From Magic Academy sweeping across to Tower Forge area
-        this.drawCurvedPath(ctx, [
-            { x: centerX - 130, y: centerY - 40 },
-            { x: centerX - 40, y: centerY - 60 },
-            { x: centerX + 100, y: centerY - 40 }
-        ], 26, pathColor, pathDark);
-        
-        // Path 3: From Tower Forge down and around
-        this.drawCurvedPath(ctx, [
-            { x: centerX + 120, y: centerY - 20 },
-            { x: centerX + 140, y: centerY + 40 },
-            { x: centerX + 160, y: centerY + 80 }
-        ], 24, pathColor, pathDark);
-        
-        // Path 4: Connecting bottom area from left to right
-        this.drawCurvedPath(ctx, [
-            { x: centerX - 180, y: centerY + 100 },
-            { x: centerX, y: centerY + 110 },
-            { x: centerX + 180, y: centerY + 100 }
-        ], 26, pathColor, pathDark);
-        
-        // Central gathering area - slightly elevated
+        // CENTRAL GATHERING PLAZA - main feature (smaller, original size)
         ctx.fillStyle = pathColor;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 10, 90, 70, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, 80, 60, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Central area edge highlight
+        // Central plaza edge highlight
         ctx.strokeStyle = pathDark;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 10, 92, 72, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, 82, 62, 0, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Add stone texture details to paths
+        // BRANCH 1: From plaza up-left to Magic Academy - meandering path
+        this.drawCurvedPath(ctx, [
+            { x: centerX - 60, y: centerY - 50 },
+            { x: centerX - 85, y: centerY - 70 },
+            { x: centerX - 110, y: centerY - 80 }
+        ], 22, pathColor, pathDark);
+        
+        // BRANCH 2: From plaza up-right to Tower Forge - meandering path
+        this.drawCurvedPath(ctx, [
+            { x: centerX + 60, y: centerY - 50 },
+            { x: centerX + 85, y: centerY - 70 },
+            { x: centerX + 110, y: centerY - 80 }
+        ], 22, pathColor, pathDark);
+        
+        // BRANCH 3: From plaza down-left with gentle curve
+        this.drawCurvedPath(ctx, [
+            { x: centerX - 40, y: centerY + 65 },
+            { x: centerX - 60, y: centerY + 85 }
+        ], 20, pathColor, pathDark);
+        
+        // BRANCH 4: From plaza down-right with gentle curve
+        this.drawCurvedPath(ctx, [
+            { x: centerX + 40, y: centerY + 65 },
+            { x: centerX + 60, y: centerY + 85 }
+        ], 20, pathColor, pathDark);
+        
+        // Add stone texture details to main paths
         ctx.fillStyle = 'rgba(100, 100, 100, 0.12)';
-        for (let i = 0; i < 25; i++) {
-            const x = centerX - 220 + Math.random() * 440;
+        for (let i = 0; i < 15; i++) {
+            const x = centerX - 130 + Math.random() * 260;
             const y = centerY - 120 + Math.random() * 220;
-            const size = 2 + Math.random() * 4;
+            const size = 2 + Math.random() * 3;
             ctx.fillRect(x, y, size, size);
         }
         
-        // Add some worn spots where paths intersect
-        const intersectionPoints = [
-            { x: centerX - 140, y: centerY - 20 },
-            { x: centerX, y: centerY - 10 },
-            { x: centerX + 100, y: centerY - 20 }
-        ];
-        
-        intersectionPoints.forEach(point => {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-            ctx.beginPath();
-            ctx.ellipse(point.x, point.y, 30, 25, 0, 0, Math.PI * 2);
-            ctx.fill();
-        });
+        // Add worn spots at path junctions
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 50, 40, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     drawCurvedPath(ctx, points, width, color, darkColor) {
