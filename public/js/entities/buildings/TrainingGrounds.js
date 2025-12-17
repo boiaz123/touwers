@@ -15,7 +15,7 @@ export class TrainingGrounds extends Building {
         
         // Guard Post system unlock and limits
         this.guardPostUnlocked = false; // Unlocked at training level 4
-        this.maxGuardPosts = 0; // 1 at level 4, 2 at level 5
+        this.maxGuardPosts = 0; // 1 at level 4, stays at 1 at level 5 (no additional posts)
         
         // Range upgrades for manned towers - each tower has 5 levels
         // Towers: ArcherTower, BarricadeTower, BasicTower, PoisonArcherTower, CannonTower
@@ -1221,16 +1221,17 @@ export class TrainingGrounds extends Building {
             this.defenderMaxLevel = 1;
         }
         
-        // Check for defender upgrades at levels 4 and 5
+        // Check for guard post unlock at level 4
         if (this.trainingLevel === 4) {
-            this.defenderMaxLevel = 2;
             this.guardPostUnlocked = true;
             this.maxGuardPosts = 1;
+            this.defenderMaxLevel = 2;
         }
         
+        // Check for defender level 3 unlock at level 5 (no additional guard posts)
         if (this.trainingLevel === 5) {
             this.defenderMaxLevel = 3;
-            this.maxGuardPosts = 2;
+            // maxGuardPosts stays at 1 - no additional guard posts
         }
         
         return true;

@@ -122,9 +122,11 @@ export class GuardPost extends Tower {
 
         return { x: nearestX, y: nearestY };
     }    /**
-     * Hire a level 1 defender at this guard post
+     * Hire a defender at this guard post with specified level
+     * @param {GameState} gameState - The game state for gold deduction
+     * @param {number} level - The level of defender to hire (1, 2, or 3)
      */
-    hireDefender(gameState) {
+    hireDefender(gameState, level = 1) {
         if (this.defender && !this.defender.isDead()) {
             return false;
         }
@@ -133,8 +135,10 @@ export class GuardPost extends Tower {
             return false;
         }
         
-        // Cost to hire
-        const cost = 100; // Level 1 defender at guard post
+        // Cost to hire - increases with level
+        const costs = { 1: 100, 2: 150, 3: 200 };
+        const cost = costs[level] || 100;
+        
         if (gameState.gold < cost) {
             return false;
         }
@@ -142,8 +146,8 @@ export class GuardPost extends Tower {
         // Deduct gold
         gameState.gold -= cost;
         
-        // Create defender
-        this.defender = new PathDefender(1);
+        // Create defender with specified level
+        this.defender = new PathDefender(level);
         this.defender.x = this.defenderSpawnX;
         this.defender.y = this.defenderSpawnY;
         
@@ -183,8 +187,14 @@ export class GuardPost extends Tower {
     /**
      * Get available hiring options for this guard post
      */
-    getDefenderHiringOptions() {
+    getDefenderHiringOptions(trainingGrounds = null) {
         const options = [];
+        
+        // Get the maximum available defender level from training grounds
+        let maxDefenderLevel = 1;
+        if (trainingGrounds && trainingGrounds.defenderMaxLevel) {
+            maxDefenderLevel = trainingGrounds.defenderMaxLevel;
+        }
         
         // Check if we need to hire a new defender
         if (!this.defender || this.defender.isDead()) {
@@ -197,18 +207,24 @@ export class GuardPost extends Tower {
                     reason: 'Cooldown active'
                 });
             } else {
-                // Show hiring option
-                options.push({
-                    label: 'Hire Defender L1 - 100g',
-                    cost: 100,
-                    available: true,
-                    type: 'hireDefender'
-                });
+                // Show hiring options for all available defender levels
+                const defenderCosts = [100, 150, 200]; // Cost increases with level
+                const defenderLabels = ['Level 1', 'Level 2 - Medium', 'Level 3 - Heavy'];
+                
+                for (let level = 1; level <= maxDefenderLevel; level++) {
+                    options.push({
+                        label: `Hire ${defenderLabels[level - 1]} - ${defenderCosts[level - 1]}g`,
+                        cost: defenderCosts[level - 1],
+                        level: level,
+                        available: true,
+                        type: 'hireDefender'
+                    });
+                }
             }
         } else {
             // Defender is active
             options.push({
-                label: `Defender Active (${this.defender.health}/${this.defender.maxHealth} HP)`,
+                label: `Defender Active (Level ${this.defender.level}) (${this.defender.health}/${this.defender.maxHealth} HP)`,
                 cost: 0,
                 available: false,
                 reason: 'Defender active'

@@ -1597,6 +1597,7 @@ export class UIManager {
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
         const gameState = towerData.gameState;
+        const trainingGrounds = towerData.trainingGrounds;
         
         let contentHTML = `
             <div class="upgrade-category">
@@ -1633,27 +1634,39 @@ export class UIManager {
                     </div>
                 `;
             } else {
-                // Show hiring option
-                const canAfford = gameState.gold >= 100;
-                contentHTML += `
-                    <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                        <div class="panel-upgrade-item">
-                            <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">🛡️</div>
-                                <div class="upgrade-info-section">
-                                    <div class="upgrade-name">Hire Defender L1</div>
-                                    <div class="upgrade-description">Summons a Level 1 defender to guard this post</div>
+                // Show hiring options for available defender levels
+                const maxDefenderLevel = (trainingGrounds && trainingGrounds.defenderMaxLevel) ? trainingGrounds.defenderMaxLevel : 1;
+                const defenderCosts = [100, 150, 200];
+                const defenderLabels = ['Level 1', 'Level 2 - Medium', 'Level 3 - Heavy'];
+                const defenderDescriptions = [
+                    'Fast, weak defender. Good for early game.',
+                    'Balanced defender with moderate stats.',
+                    'Slow, heavily armored tank. Maximum strength.'
+                ];
+                
+                for (let level = 1; level <= maxDefenderLevel; level++) {
+                    const cost = defenderCosts[level - 1];
+                    const canAfford = gameState.gold >= cost;
+                    contentHTML += `
+                        <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                            <div class="panel-upgrade-item">
+                                <div class="upgrade-header-row">
+                                    <div class="upgrade-icon-section">🛡️</div>
+                                    <div class="upgrade-info-section">
+                                        <div class="upgrade-name">Hire ${defenderLabels[level - 1]}</div>
+                                        <div class="upgrade-description">${defenderDescriptions[level - 1]}</div>
+                                    </div>
+                                </div>
+                                <div class="upgrade-action-row">
+                                    <div class="upgrade-cost-display">$${cost}</div>
+                                    <button class="upgrade-button hire-defender-btn" data-level="${level}" ${!canAfford ? 'disabled' : ''}>
+                                        ${canAfford ? 'Hire' : 'Not Enough Gold'}
+                                    </button>
                                 </div>
                             </div>
-                            <div class="upgrade-action-row">
-                                <div class="upgrade-cost-display">$100</div>
-                                <button class="upgrade-button hire-defender-btn" ${!canAfford ? 'disabled' : ''}>
-                                    ${canAfford ? 'Hire' : 'Not Enough Gold'}
-                                </button>
-                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
         } else {
             // Defender is active
@@ -1663,7 +1676,7 @@ export class UIManager {
                         <div class="upgrade-header-row">
                             <div class="upgrade-icon-section">✅</div>
                             <div class="upgrade-info-section">
-                                <div class="upgrade-name">Defender Active</div>
+                                <div class="upgrade-name">Defender Active (Level ${tower.defender.level})</div>
                                 <div class="upgrade-description">A defender is currently stationed here</div>
                             </div>
                         </div>
@@ -1703,17 +1716,18 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('basic-tower-panel'), { once: true });
         }
 
-        // Setup hire defender button
-        const hireBtn = panel.querySelector('.hire-defender-btn');
-        if (hireBtn) {
-            hireBtn.addEventListener('click', () => {
-                if (tower.hireDefender(gameState)) {
+        // Setup hire defender buttons - handle multiple levels
+        const hireBtns = panel.querySelectorAll('.hire-defender-btn');
+        hireBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const level = parseInt(btn.getAttribute('data-level')) || 1;
+                if (tower.hireDefender(gameState, level)) {
                     this.updateUI();
                     // Refresh menu
                     this.showGuardPostMenu(towerData);
                 }
             }, { once: true });
-        }
+        });
 
         // Setup sell button
         const sellBtn = panel.querySelector('.sell-tower-btn');

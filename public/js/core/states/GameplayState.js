@@ -709,7 +709,7 @@ export class GameplayState {
         const y = (e.clientY - rect.top) * scaleY;
         
         const size = this.selectedBuildingType ? 4 : 2;
-        this.level.setPlacementPreview(x, y, true, this.towerManager, size);
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
     }
     
     activateSpellTargeting(spellId) {

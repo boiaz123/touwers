@@ -1191,24 +1191,31 @@ export class LevelBase {
         }
         
         // Highlight valid placement areas when tower/building is selected
-        if (this.showPlacementPreview && this.previewGridX !== undefined && this.previewGridY !== undefined) {
-            const isBuilding = this.previewSize === 4;
-            const canPlace = isBuilding ? 
-                this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewSize, this.previewTowerManager) :
-                this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
-            
-            ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
-            
-            const size = this.previewSize * this.cellSize;
-            // Center the preview on the grid cell
-            const centerX = (this.previewGridX + this.previewSize / 2) * this.cellSize;
-            const centerY = (this.previewGridY + this.previewSize / 2) * this.cellSize;
-            ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size);
-            
-            // Add border to preview
-            ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
+        if (this.showPlacementPreview) {
+            // Special handling for guard-post placement preview
+            if (this.previewTowerType === 'guard-post' && this.previewScreenX !== undefined && this.previewScreenY !== undefined) {
+                this.renderGuardPostPlacementPreview(ctx);
+            }
+            // Regular grid-based placement preview for other towers and buildings
+            else if (this.previewGridX !== undefined && this.previewGridY !== undefined) {
+                const isBuilding = this.previewSize === 4;
+                const canPlace = isBuilding ? 
+                    this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewSize, this.previewTowerManager) :
+                    this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
+                
+                ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
+                
+                const size = this.previewSize * this.cellSize;
+                // Center the preview on the grid cell
+                const centerX = (this.previewGridX + this.previewSize / 2) * this.cellSize;
+                const centerY = (this.previewGridY + this.previewSize / 2) * this.cellSize;
+                ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size);
+                
+                // Add border to preview
+                ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
+            }
         }
         
         // DEBUG: Render occupied cells (REMOVE THIS AFTER DEBUGGING)
@@ -1222,14 +1229,102 @@ export class LevelBase {
         }
     }
     
-    setPlacementPreview(screenX, screenY, show = true, towerManager = null, size = 2) {
+    setPlacementPreview(screenX, screenY, show = true, towerManager = null, size = 2, towerType = null) {
         this.showPlacementPreview = show;
         this.previewTowerManager = towerManager;
         this.previewSize = size;
+        this.previewTowerType = towerType;
         if (show) {
-            const { gridX, gridY } = this.screenToGrid(screenX, screenY);
-            this.previewGridX = gridX;
-            this.previewGridY = gridY;
+            if (towerType === 'guard-post') {
+                // For guard posts, store raw screen coordinates
+                this.previewScreenX = screenX;
+                this.previewScreenY = screenY;
+            } else {
+                // For regular towers/buildings, use grid coordinates
+                const { gridX, gridY } = this.screenToGrid(screenX, screenY);
+                this.previewGridX = gridX;
+                this.previewGridY = gridY;
+            }
+        }
+    }
+
+    /**
+     * Render placement preview for guard posts
+     * Shows green when on path, red when off path
+     */
+    renderGuardPostPlacementPreview(ctx) {
+        if (!this.path || this.path.length < 2) {
+            return;
+        }
+
+        const x = this.previewScreenX;
+        const y = this.previewScreenY;
+
+        // Find the nearest point on the path
+        let nearestPoint = null;
+        let nearestDistance = Infinity;
+
+        for (let i = 0; i < this.path.length - 1; i++) {
+            const p1 = this.path[i];
+            const p2 = this.path[i + 1];
+
+            // Find closest point on this line segment
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const lengthSquared = dx * dx + dy * dy;
+
+            if (lengthSquared === 0) {
+                continue;
+            }
+
+            let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSquared;
+            t = Math.max(0, Math.min(1, t));
+
+            const closestX = p1.x + t * dx;
+            const closestY = p1.y + t * dy;
+
+            const distance = Math.hypot(closestX - x, closestY - y);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestPoint = { x: closestX, y: closestY };
+            }
+        }
+
+        // Check distance to last waypoint as well
+        const lastWaypoint = this.path[this.path.length - 1];
+        const distanceToLast = Math.hypot(lastWaypoint.x - x, lastWaypoint.y - y);
+        if (distanceToLast < nearestDistance) {
+            nearestPoint = { x: lastWaypoint.x, y: lastWaypoint.y };
+            nearestDistance = distanceToLast;
+        }
+
+        // Determine if close enough to path (within 60px)
+        const isOnPath = nearestDistance <= 60;
+
+        // Render the placement preview circle
+        const radius = 25;
+        ctx.fillStyle = isOnPath ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add border
+        ctx.strokeStyle = isOnPath ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw an indicator line from click point to path if not on path
+        if (!isOnPath && nearestPoint) {
+            ctx.strokeStyle = isOnPath ? 'rgba(0, 255, 0, 0.6)' : 'rgba(255, 0, 0, 0.6)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(nearestPoint.x, nearestPoint.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
         }
     }
 

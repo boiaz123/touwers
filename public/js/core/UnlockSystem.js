@@ -100,8 +100,8 @@ export class UnlockSystem {
                 this.maxGuardPosts = 1;
                 break;
             case 5:
-                // Training Grounds level 5 increases limit
-                this.maxGuardPosts = 2;
+                // Training Grounds level 5 keeps guard post limit at 1
+                this.maxGuardPosts = 1;
                 break;
             default:
                 break;
@@ -122,6 +122,11 @@ export class UnlockSystem {
         if (this.guardPostCount > 0) {
             this.guardPostCount--;
         }
+    }
+    
+    // Alias for selling guard posts
+    onGuardPostSold() {
+        this.onGuardPostDestroyed();
     }
     
     /**

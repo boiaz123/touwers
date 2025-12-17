@@ -74,7 +74,8 @@ export class TowerManager {
     
     /**
      * Find the nearest point on the path to given coordinates
-     * Allows placement in the 2x2 border around the path (up to 60px from path center)
+     * For guard posts, positions them half on/half off the path at the edge
+     * Returns null if too far from path (>60px)
      */
     findNearestPathPoint(x, y) {
         if (!this.level || !this.level.path || this.level.path.length < 2) {
@@ -82,23 +83,89 @@ export class TowerManager {
         }
         
         let nearest = null;
-        let minDistance = 60; // Maximum placement distance from path - allows 2x2 border placement
+        let minDistance = 60; // Maximum placement distance from path
+        let closestSegment = null;
+        let closestSegmentIndex = -1;
+        let closestT = 0;
+        let closestOnPath = null;
         
         for (let i = 0; i < this.level.path.length - 1; i++) {
             const p1 = this.level.path[i];
             const p2 = this.level.path[i + 1];
             
             // Find closest point on line segment
-            const t = Math.max(0, Math.min(1, ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / (Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2))));
-            const closestX = p1.x + t * (p2.x - p1.x);
-            const closestY = p1.y + t * (p2.y - p1.y);
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const lengthSquared = dx * dx + dy * dy;
+            
+            if (lengthSquared === 0) {
+                continue;
+            }
+            
+            let t = ((x - p1.x) * dx + (y - p1.y) * dy) / lengthSquared;
+            t = Math.max(0, Math.min(1, t));
+            
+            const closestX = p1.x + t * dx;
+            const closestY = p1.y + t * dy;
             
             const distance = Math.hypot(closestX - x, closestY - y);
             if (distance < minDistance) {
                 minDistance = distance;
-                // Return the clicked position, not the closest point on path
-                // This allows placement in the 2x2 border around the path
-                nearest = { x: x, y: y };
+                closestOnPath = { x: closestX, y: closestY };
+                closestSegment = { p1, p2 };
+                closestSegmentIndex = i;
+                closestT = t;
+            }
+        }
+        
+        // Also check the last waypoint
+        const lastWaypoint = this.level.path[this.level.path.length - 1];
+        const distanceToLast = Math.hypot(lastWaypoint.x - x, lastWaypoint.y - y);
+        if (distanceToLast < minDistance) {
+            minDistance = distanceToLast;
+            closestOnPath = { x: lastWaypoint.x, y: lastWaypoint.y };
+            closestSegment = null; // No segment for endpoint
+            closestSegmentIndex = this.level.path.length - 1;
+        }
+        
+        if (!closestOnPath || minDistance > 60) {
+            return null;
+        }
+        
+        // Position the guard post half on/half off the path
+        // Calculate the perpendicular offset from the path
+        if (closestSegment) {
+            const dx = closestSegment.p2.x - closestSegment.p1.x;
+            const dy = closestSegment.p2.y - closestSegment.p1.y;
+            const length = Math.hypot(dx, dy);
+            
+            // Get perpendicular direction (rotated 90 degrees)
+            const perpX = -dy / length;
+            const perpY = dx / length;
+            
+            // Determine which side to offset based on click position
+            const toClickX = x - closestOnPath.x;
+            const toClickY = y - closestOnPath.y;
+            const sideIndicator = perpX * toClickX + perpY * toClickY;
+            
+            const offsetDistance = 25; // Half the guard post width
+            const finalX = closestOnPath.x + (sideIndicator > 0 ? offsetDistance : -offsetDistance) * perpX;
+            const finalY = closestOnPath.y + (sideIndicator > 0 ? offsetDistance : -offsetDistance) * perpY;
+            
+            nearest = { x: finalX, y: finalY };
+        } else {
+            // For endpoints, offset in the direction of the click
+            const toClickX = x - closestOnPath.x;
+            const toClickY = y - closestOnPath.y;
+            const clickDistance = Math.hypot(toClickX, toClickY);
+            
+            if (clickDistance > 0) {
+                const offsetDistance = 25;
+                const finalX = closestOnPath.x + (toClickX / clickDistance) * offsetDistance;
+                const finalY = closestOnPath.y + (toClickY / clickDistance) * offsetDistance;
+                nearest = { x: finalX, y: finalY };
+            } else {
+                nearest = closestOnPath;
             }
         }
         
@@ -503,12 +570,15 @@ export class TowerManager {
                 
                 if (x >= guardPostLeft && x <= guardPostRight && y >= guardPostTop && y <= guardPostBottom) {
                     tower.isSelected = true;
-                    const hireOptions = tower.getDefenderHiringOptions();
+                    // Get training grounds to pass defender max level info
+                    const trainingGrounds = this.buildingManager.buildings.find(b => b.constructor.name === 'TrainingGrounds');
+                    const hireOptions = tower.getDefenderHiringOptions(trainingGrounds);
                     return {
                         type: 'guard_post_menu',
                         tower: tower,
                         options: hireOptions,
-                        gameState: this.gameState
+                        gameState: this.gameState,
+                        trainingGrounds: trainingGrounds
                     };
                 }
             } else {
@@ -703,6 +773,11 @@ export class TowerManager {
         // Remove from level's occupied cells
         if (this.level) {
             this.level.removeTower(tower.gridX, tower.gridY);
+        }
+        
+        // Notify unlock system if selling a guard post
+        if (tower.type === 'guard-post') {
+            this.unlockSystem.onGuardPostSold();
         }
         
         this.removeTower(tower);
