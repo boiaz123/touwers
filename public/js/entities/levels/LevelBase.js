@@ -1509,11 +1509,11 @@ export class LevelBase {
         // 2. Render terrain rocks/mountains FIRST - these form the landscape base
         this.renderTerrainElementsByType(ctx, ['rock', 'water']);
         
-        // 3. Render path/road - on top of terrain but below trees
-        this.renderPath(ctx);
-        
-        // 4. Render smooth river overlays for blended corners and water effects
+        // 3. Render smooth river overlays for blended corners and water effects
         this.renderRiverSmooth(ctx);
+        
+        // 4. Render path/road - on top of terrain and rivers
+        this.renderPath(ctx);
         
         // 5. Render trees and vegetation - LAST, on top of everything
         this.renderTerrainElementsByType(ctx, ['tree']);

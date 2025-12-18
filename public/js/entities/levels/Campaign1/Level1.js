@@ -11,10 +11,10 @@ export class Level1 extends LevelBase {
         // Customize visuals
         this.setVisualConfig({
             grassColors: {
-                top: '#2a2a3a',
-                upper: '#3a3a4a',
-                lower: '#4a4a5a',
-                bottom: '#1a1a2a'
+                top: '#234b13ff',
+                upper: '#528530ff',
+                lower: '#307044ff',
+                bottom: '#118b3aff'
             },
             grassPatchDensity: 12000,
             pathBaseColor: '#6b6b5b',

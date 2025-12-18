@@ -1441,7 +1441,7 @@ export class LevelDesigner {
               }).join('\n')
             : '            // Add terrain elements using the designer';
 
-        const code = `import { LevelBase } from './LevelBase.js';
+        const code = `import { LevelBase } from '../LevelBase.js';
 
 export class Level${levelNumber} extends LevelBase {
     constructor() {
