@@ -1,6 +1,13 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level3 extends LevelBase {
+    static levelId = 'level3';
+    static levelMetadata = {
+        name: 'Crazy Frogs',
+        difficulty: 'Medium',
+        order: 3
+    };
+    
     constructor() {
         super();
         this.levelName = 'Crazy Frogs';
@@ -89,3 +96,5 @@ export class Level3 extends LevelBase {
         };
     }
 }
+
+export const levelMetadata = Level3.levelMetadata;

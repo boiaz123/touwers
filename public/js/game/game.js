@@ -13,6 +13,8 @@ import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { ResolutionSelector } from '../ui/ResolutionSelector.js';
 import { CampaignRegistry } from './CampaignRegistry.js';
+import { LevelRegistry } from '../entities/levels/LevelRegistry.js';
+import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
 
 export class Game {
     constructor() {
@@ -103,6 +105,9 @@ export class Game {
             
             const campaignMenu = new CampaignMenu(this.stateManager);
             this.stateManager.addState('campaignMenu', campaignMenu);
+            
+            // Register special levels
+            LevelRegistry.registerLevel('sandbox', 'sandbox', SandboxLevel, SandboxLevel.levelMetadata);
             
             // Initialize campaign registry with campaign classes
             CampaignRegistry.initialize({ Campaign1 });

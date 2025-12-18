@@ -4,7 +4,7 @@ import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
 import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
 import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
-import { LevelFactory } from '../../game/LevelFactory.js';
+import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
@@ -82,9 +82,9 @@ export class GameplayState {
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign' };
         
-        // Create the level using LevelFactory
+        // Create the level using LevelRegistry
         try {
-            this.level = await LevelFactory.createLevel(levelInfo.id);
+            this.level = LevelRegistry.createLevel(levelInfo.id);
         } catch (error) {
             console.error('GameplayState: Failed to create level:', error);
             this.level = null;

@@ -1,6 +1,13 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level2 extends LevelBase {
+    static levelId = 'level2';
+    static levelMetadata = {
+        name: 'Braab\'s Path',
+        difficulty: 'Easy',
+        order: 2
+    };
+    
     constructor() {
         super();
         this.levelName = 'Braab\'s Road';
@@ -103,3 +110,4 @@ export class Level2 extends LevelBase {
         };
     }
 }
+export const levelMetadata = Level2.levelMetadata;

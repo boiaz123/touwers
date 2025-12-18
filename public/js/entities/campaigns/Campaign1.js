@@ -1,5 +1,11 @@
 import { CampaignBase } from './CampaignBase.js';
-import { LevelFactory } from '../../game/LevelFactory.js';
+import { LevelRegistry } from '../levels/LevelRegistry.js';
+// Import level classes - they auto-register when imported
+import { Level1 } from '../levels/Campaign1/Level1.js';
+import { Level2 } from '../levels/Campaign1/Level2.js';
+import { Level3 } from '../levels/Campaign1/Level3.js';
+import { Level4 } from '../levels/Campaign1/Level4.js';
+import { Level5 } from '../levels/Campaign1/Level5.js';
 
 /**
  * Campaign1: The Great Northern Campaign
@@ -22,15 +28,37 @@ export class Campaign1 extends CampaignBase {
         // Terrain cache - generated once on enter to prevent flickering
         this.terrainDetails = null;
         this.pathPoints = [];
+        
+        // Register campaign levels once during construction
+        this.registerLevels();
+    }
+    
+    registerLevels() {
+        /**
+         * Register all Campaign 1 levels with their metadata.
+         * Each level file exports levelMetadata with: name, difficulty, order
+         */
+        LevelRegistry.registerLevel('campaign-1', 'level1', Level1, Level1.levelMetadata);
+        LevelRegistry.registerLevel('campaign-1', 'level2', Level2, Level2.levelMetadata);
+        LevelRegistry.registerLevel('campaign-1', 'level3', Level3, Level3.levelMetadata);
+        LevelRegistry.registerLevel('campaign-1', 'level4', Level4, Level4.levelMetadata);
+        LevelRegistry.registerLevel('campaign-1', 'level5', Level5, Level5.levelMetadata);
     }
     
     enter() {
-        // Load levels from factory
+        // Get levels from registry for this campaign
+        let registeredLevels = LevelRegistry.getLevelsByCampaign('campaign-1');
+        
+        // Apply unlock status from save data
         const saveData = this.stateManager.currentSaveData;
-        const allLevels = LevelFactory.getLevelList(saveData);
-        this.levels = allLevels.filter(level => 
-            ['level1', 'level2', 'level3', 'level4', 'level5'].includes(level.id)
-        );
+        this.levels = registeredLevels.map(level => ({
+            id: level.id,
+            name: level.name,
+            difficulty: level.difficulty,
+            unlocked: !saveData || !saveData.unlockedLevels || saveData.unlockedLevels.includes(level.id) || level.id === 'level1',
+            type: 'campaign'
+        }));
+
         
         // Generate level slot positions along a natural winding path
         this.generatePathAndSlots();

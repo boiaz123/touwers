@@ -1,6 +1,13 @@
 import { LevelBase } from './LevelBase.js';
 
 export class SandboxLevel extends LevelBase {
+    static levelId = 'sandbox';
+    static levelMetadata = {
+        name: 'Sandbox Mode',
+        difficulty: 'Endless',
+        order: 999
+    };
+    
     constructor() {
         super();
         this.levelName = 'Sandbox Mode';
@@ -31,3 +38,5 @@ export class SandboxLevel extends LevelBase {
         
     }
 }
+
+export const levelMetadata = SandboxLevel.levelMetadata;
