@@ -673,9 +673,6 @@ export class LevelDesigner {
         // Draw castle
         this.drawCastle();
 
-        // Draw UI safe area border
-        this.drawUISafeBorder();
-
         // Draw current mode indicator
         this.drawModeIndicator();
     }
@@ -727,46 +724,6 @@ export class LevelDesigner {
         this.ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(x - cellWidthPixels / 2, y - cellHeightPixels / 2, cellWidthPixels, cellHeightPixels);
-    }
-
-    drawUISafeBorder() {
-        // Draw a border showing where the in-game UI would be
-        // Typical UI appears in the corners and edges of the screen
-        const cellWidthPixels = this.canvas.width / this.gridWidth;
-        const cellHeightPixels = this.canvas.height / this.gridHeight;
-        
-        // UI safe area margins (in grid cells)
-        const topMargin = 1.5;      // Top UI bar
-        const bottomMargin = 2.5;   // Bottom UI bar (resource info, etc)
-        const leftMargin = 1;       // Left side
-        const rightMargin = 1;      // Right side
-        
-        const safeLeft = leftMargin * cellWidthPixels;
-        const safeTop = topMargin * cellHeightPixels;
-        const safeRight = this.canvas.width - (rightMargin * cellWidthPixels);
-        const safeBottom = this.canvas.height - (bottomMargin * cellHeightPixels);
-        
-        // Draw semi-transparent danger zones (where UI overlaps)
-        this.ctx.fillStyle = 'rgba(255, 100, 100, 0.05)';
-        
-        // Top UI area
-        this.ctx.fillRect(0, 0, this.canvas.width, safeTop);
-        
-        // Bottom UI area
-        this.ctx.fillRect(0, safeBottom, this.canvas.width, this.canvas.height - safeBottom);
-        
-        // Left UI area
-        this.ctx.fillRect(0, safeTop, safeLeft, safeBottom - safeTop);
-        
-        // Right UI area
-        this.ctx.fillRect(safeRight, safeTop, this.canvas.width - safeRight, safeBottom - safeTop);
-        
-        // Draw the safe area border
-        this.ctx.strokeStyle = 'rgba(255, 150, 150, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([5, 5]);
-        this.ctx.strokeRect(safeLeft, safeTop, safeRight - safeLeft, safeBottom - safeTop);
-        this.ctx.setLineDash([]);
     }
 
     drawPath() {
