@@ -8,20 +8,38 @@ export class Level1 extends LevelBase {
         this.difficulty = 'Easy';
         this.maxWaves = 10;
         
-        // Customize visuals
+        // Improved medieval-themed visuals
         this.setVisualConfig({
+            // Improved grass colors - warmer, more natural medieval landscape
             grassColors: {
-                top: '#2a2a3a',
-                upper: '#3a3a4a',
-                lower: '#4a4a5a',
-                bottom: '#1a1a2a'
+                top: '#3a4a2f',      // Upper portion - lighter green-brown
+                upper: '#4a5a3f',    // Transition zone
+                lower: '#5a6a4f',    // Lower transition
+                bottom: '#2a3a1f'    // Bottom - darker earth tone
             },
-            grassPatchDensity: 12000,
-            pathBaseColor: '#6b6b5b',
-            edgeBushColor: '#0f3f0f',
-            edgeRockColor: '#666666',
-            edgeGrassColor: '#1a6a1a',
-            flowerDensity: 50000
+            
+            // More varied grass patches for organic feel
+            grassPatchDensity: 6000,   // More patches, smaller spacing
+            grassPatchSizeMin: 4,
+            grassPatchSizeMax: 14,
+            
+            // Ground textures - varied soil types replacing square patterns
+            dirtPatchCount: 0,         // Not used anymore - using density instead
+            dirtPatchAlpha: 0.2,       // Subtle appearance
+            
+            // Flowers - wildflowers scattered naturally
+            flowerDensity: 20000,      // More flowers, creates lively medieval feel
+            
+            // Path visuals - medieval stone road
+            pathBaseColor: '#8b7355',
+            pathTextureSpacing: 15,    // Stone block spacing
+            pathEdgeVegetationChance: 0.3,
+            
+            // Edge vegetation - natural roadside growth
+            edgeBushColor: '#2f5f2f',
+            edgeBushAccentColor: '#3a8a3a',
+            edgeRockColor: '#6a7a6a',
+            edgeGrassColor: '#3a7a3a'
         });
 
         // Set terrain elements (prevent tower placement on these areas)

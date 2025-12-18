@@ -32,6 +32,7 @@ export class LevelBase {
         this.flowers = [];
         this.pathLeaves = [];
         this.visualElementsGenerated = false;
+        this.backgroundCanvas = null; // Cache for pre-rendered background
         
         this.castle = null;
         
@@ -228,6 +229,9 @@ export class LevelBase {
             this.dirtPatches = [];
             this.flowers = [];
             this.pathLeaves = [];
+            
+            // CRITICAL: Clear the cached background canvas so it gets rerendered with new visuals
+            this.backgroundCanvas = null;
             
             this.lastCanvasWidth = canvasWidth;
             this.lastCanvasHeight = canvasHeight;
@@ -521,15 +525,46 @@ export class LevelBase {
             });
         }
         
-        // Generate dirt patches
+        // Generate natural ground texture patches (organic, not square)
         this.dirtPatches = [];
-        for (let i = 0; i < this.visualConfig.dirtPatchCount; i++) {
+        const groundTextureCount = Math.floor(canvasWidth * canvasHeight / 15000); // Natural distribution
+        for (let i = 0; i < groundTextureCount; i++) {
+            // Create more varied and organic texture distribution
+            const textureType = Math.floor(Math.random() * 5);
+            
+            // Different patch sizes based on texture type for more natural appearance
+            let sizeX, sizeY;
+            if (textureType === 0) {
+                // Soil patches - medium, organic
+                sizeX = Math.random() * 50 + 40;
+                sizeY = Math.random() * 35 + 30;
+            } else if (textureType === 1) {
+                // Moss - irregular shapes, smaller
+                sizeX = Math.random() * 35 + 20;
+                sizeY = Math.random() * 30 + 15;
+            } else if (textureType === 2) {
+                // Pebbles - scattered pattern, varied
+                sizeX = Math.random() * 40 + 25;
+                sizeY = Math.random() * 35 + 20;
+            } else if (textureType === 3) {
+                // Clay/mud - larger, flowing shapes
+                sizeX = Math.random() * 70 + 50;
+                sizeY = Math.random() * 45 + 35;
+            } else {
+                // Leaf litter - small, scattered
+                sizeX = Math.random() * 30 + 15;
+                sizeY = Math.random() * 25 + 12;
+            }
+            
             this.dirtPatches.push({
                 x: Math.random() * canvasWidth,
                 y: Math.random() * canvasHeight,
-                sizeX: Math.random() * 120 + 60, // Increased size for fewer patches
-                sizeY: (Math.random() * 120 + 60) * 0.6,
-                rotation: Math.random() * Math.PI
+                sizeX: sizeX,
+                sizeY: sizeY,
+                rotation: Math.random() * Math.PI * 2,
+                textureType: textureType,
+                intensity: Math.random() * 0.35 + 0.15,
+                irregularity: Math.random() * 0.6 + 0.4 // How irregular/organic the patch is
             });
         }
         
@@ -692,15 +727,105 @@ export class LevelBase {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Render cached dirt patches
-        ctx.fillStyle = `rgba(101, 67, 33, ${this.visualConfig.dirtPatchAlpha})`;
+        // Render cached dirt patches with improved textures
         this.dirtPatches.forEach(patch => {
             ctx.save();
             ctx.translate(patch.x, patch.y);
             ctx.rotate(patch.rotation);
-            ctx.beginPath();
-            ctx.ellipse(0, 0, patch.sizeX, patch.sizeY, 0, 0, Math.PI * 2);
-            ctx.fill();
+            
+            // Different ground texture types with organic appearance
+            switch (patch.textureType) {
+                case 0: // Soil - organic splotch with irregular edges
+                    ctx.fillStyle = `rgba(92, 64, 51, ${patch.intensity})`;
+                    // Create irregular blob shape instead of perfect ellipse
+                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX, patch.sizeY, patch.irregularity, 1);
+                    ctx.fill();
+                    
+                    // Add subtle inner variation
+                    ctx.fillStyle = `rgba(76, 51, 40, ${patch.intensity * 0.5})`;
+                    this.drawIrregularBlob(ctx, patch.sizeX * 0.2, patch.sizeY * 0.2, 
+                        patch.sizeX * 0.4, patch.sizeY * 0.3, patch.irregularity, 1);
+                    ctx.fill();
+                    break;
+                    
+                case 1: // Moss/algae - subtle greenish with natural spreading
+                    ctx.fillStyle = `rgba(80, 100, 60, ${patch.intensity * 0.7})`;
+                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX * 0.8, patch.sizeY * 0.8, 
+                        patch.irregularity * 1.2, 0.8);
+                    ctx.fill();
+                    
+                    // Add some darker moss spots
+                    ctx.fillStyle = `rgba(60, 80, 40, ${patch.intensity * 0.4})`;
+                    for (let i = 0; i < 3; i++) {
+                        const offsetX = (Math.sin(i * 1.3 + patch.x * 0.01) - 0.5) * patch.sizeX * 0.4;
+                        const offsetY = (Math.cos(i * 1.3 + patch.y * 0.01) - 0.5) * patch.sizeY * 0.3;
+                        this.drawIrregularBlob(ctx, offsetX, offsetY, patch.sizeX * 0.3, 
+                            patch.sizeY * 0.25, patch.irregularity, 0.7);
+                        ctx.fill();
+                    }
+                    break;
+                    
+                case 2: // Scattered pebbles - rocky terrain
+                    ctx.fillStyle = `rgba(110, 110, 110, ${patch.intensity})`;
+                    for (let i = 0; i < 8; i++) {
+                        const offsetX = (Math.sin(i * 2.1 + patch.x * 0.005) - 0.5) * patch.sizeX;
+                        const offsetY = (Math.cos(i * 2.1 + patch.y * 0.005) - 0.5) * patch.sizeY;
+                        const size = Math.random() * 5 + 3;
+                        ctx.beginPath();
+                        ctx.arc(offsetX, offsetY, size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Rock shadow
+                        ctx.fillStyle = `rgba(80, 80, 80, ${patch.intensity * 0.6})`;
+                        ctx.beginPath();
+                        ctx.arc(offsetX + 1, offsetY + 1, size * 0.6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = `rgba(110, 110, 110, ${patch.intensity})`;
+                    }
+                    break;
+                    
+                case 3: // Clay/dirt - warmer tone with flowing texture
+                    ctx.fillStyle = `rgba(120, 80, 40, ${patch.intensity * 0.8})`;
+                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX, patch.sizeY, 
+                        patch.irregularity * 0.9, 1);
+                    ctx.fill();
+                    
+                    // Add cracks/texture lines for clay appearance
+                    ctx.strokeStyle = `rgba(100, 60, 20, ${patch.intensity * 0.25})`;
+                    ctx.lineWidth = 0.8;
+                    const cracksCount = Math.floor(3 + patch.irregularity * 2);
+                    for (let i = 0; i < cracksCount; i++) {
+                        const startX = (Math.sin(i * 0.5 + patch.x * 0.02) - 0.5) * patch.sizeX * 0.8;
+                        const startY = (Math.cos(i * 0.5 + patch.y * 0.02) - 0.5) * patch.sizeY * 0.6;
+                        const endX = startX + (Math.sin(i * 1.3 + patch.x * 0.03) - 0.5) * patch.sizeX * 0.4;
+                        const endY = startY + (Math.cos(i * 1.3 + patch.y * 0.03) - 0.5) * patch.sizeY * 0.4;
+                        ctx.beginPath();
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(endX, endY);
+                        ctx.stroke();
+                    }
+                    break;
+                    
+                case 4: // Leaf litter - scattered autumn leaves
+                    ctx.fillStyle = `rgba(139, 115, 85, ${patch.intensity * 0.6})`;
+                    for (let i = 0; i < 6; i++) {
+                        const offsetX = (Math.sin(i * 1.7 + patch.x * 0.008) - 0.5) * patch.sizeX;
+                        const offsetY = (Math.cos(i * 1.7 + patch.y * 0.008) - 0.5) * patch.sizeY;
+                        const leafSize = Math.random() * 3 + 2;
+                        ctx.beginPath();
+                        ctx.ellipse(offsetX, offsetY, leafSize, leafSize * 0.6, 
+                            Math.random() * Math.PI, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Darker decomposed leaves
+                    ctx.fillStyle = `rgba(100, 80, 60, ${patch.intensity * 0.4})`;
+                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX * 0.6, patch.sizeY * 0.5, 
+                        patch.irregularity * 1.1, 0.6);
+                    ctx.fill();
+                    break;
+            }
+            
             ctx.restore();
         });
         
@@ -778,6 +903,90 @@ export class LevelBase {
         });
     }
     
+    drawCobblestoneBlock(ctx, x, y, width, height, seed) {
+        // Draw a single cobblestone with realistic stone appearance
+        const noise = Math.abs(Math.sin(seed * 0.1) * Math.cos(seed * 0.05));
+        const colorVariation = 0.9 + noise * 0.2;
+        
+        // Base color with slight variation
+        const baseColor = Math.floor(150 * colorVariation);
+        const darkColor = Math.floor(120 * colorVariation);
+        
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // Slight rotation for organic look
+        const rotation = Math.sin(seed * 0.2) * 0.05;
+        ctx.rotate(rotation);
+        
+        // Main stone body
+        ctx.fillStyle = `rgb(${baseColor}, ${Math.floor(130 * colorVariation)}, ${Math.floor(110 * colorVariation)})`;
+        ctx.beginPath();
+        ctx.rect(-width * 0.5, -height * 0.5, width, height);
+        ctx.fill();
+        
+        // Border for stone separation
+        ctx.strokeStyle = `rgba(60, 50, 40, 0.5)`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Weathering and highlight for depth
+        if (Math.sin(seed * 0.3) > 0) {
+            // Light spot (top-left)
+            ctx.fillStyle = `rgba(200, 190, 170, ${0.15 + Math.abs(Math.sin(seed * 0.4)) * 0.15})`;
+            ctx.beginPath();
+            ctx.arc(-width * 0.3, -height * 0.3, width * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Dark spot (bottom-right)
+            ctx.fillStyle = `rgba(80, 70, 60, ${0.15 + Math.abs(Math.cos(seed * 0.4)) * 0.15})`;
+            ctx.beginPath();
+            ctx.arc(width * 0.3, height * 0.3, width * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Subtle texture lines
+        if (Math.sin(seed * 0.6) > 0.5) {
+            ctx.strokeStyle = `rgba(100, 90, 80, 0.2)`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(-width * 0.4, 0);
+            ctx.lineTo(width * 0.4, 0);
+            ctx.stroke();
+        }
+        
+        ctx.restore();
+    }
+    
+    drawIrregularBlob(ctx, x, y, radiusX, radiusY, irregularity, waveIntensity) {
+        // Draw an irregular organic blob using perlin-like noise
+        const points = 20; // Number of points around the blob
+        const path = [];
+        
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            
+            // Add irregularity using seeded random variation
+            const seed = x * 0.01 + y * 0.01 + i * 0.5;
+            const noise = (Math.sin(seed * 0.5) + Math.cos(seed * 0.3)) * irregularity;
+            const waveVariation = Math.sin(angle * 3 + seed) * waveIntensity * 0.5;
+            
+            const radius = 1 + noise * 0.3 + waveVariation;
+            const px = Math.cos(angle) * radiusX * radius;
+            const py = Math.sin(angle) * radiusY * radius;
+            
+            path.push({ x: px, y: py });
+        }
+        
+        // Draw the irregular blob
+        ctx.beginPath();
+        ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) {
+            ctx.lineTo(path[i].x, path[i].y);
+        }
+        ctx.closePath();
+    }
+    
     renderPath(ctx) {
         // Path width should be exactly 2 grid cells wide for alignment
         const pathWidthPixels = this.cellSize * 2;
@@ -785,10 +994,22 @@ export class LevelBase {
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
-        // Draw smooth path using canvas line rendering for automatic corner smoothing
-        // This is the ONLY path visualization - no cell filling
+        // Draw smooth dirt road using canvas line rendering
         if (this.path && this.path.length >= 2) {
-            ctx.strokeStyle = this.visualConfig.pathBaseColor;
+            // Layer 1: Dark shadow base for depth and grounding
+            ctx.strokeStyle = 'rgba(40, 30, 25, 0.5)';
+            ctx.lineWidth = pathWidthPixels + 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(this.path[0].x + 3, this.path[0].y + 3);
+            for (let i = 1; i < this.path.length; i++) {
+                ctx.lineTo(this.path[i].x + 3, this.path[i].y + 3);
+            }
+            ctx.stroke();
+            
+            // Layer 2: Main dirt road color - warm earth tones
+            ctx.strokeStyle = 'rgba(170, 145, 110, 1)';
             ctx.lineWidth = pathWidthPixels;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -799,6 +1020,143 @@ export class LevelBase {
                 ctx.lineTo(this.path[i].x, this.path[i].y);
             }
             ctx.stroke();
+            
+            // Layer 3: Lighter center stripe - worn dirt from heavy use
+            ctx.strokeStyle = 'rgba(190, 165, 135, 0.6)';
+            ctx.lineWidth = pathWidthPixels * 0.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(this.path[0].x, this.path[0].y);
+            for (let i = 1; i < this.path.length; i++) {
+                ctx.lineTo(this.path[i].x, this.path[i].y);
+            }
+            ctx.stroke();
+            
+            // Layer 4: Subtle wheel rut on left side
+            ctx.strokeStyle = 'rgba(120, 100, 80, 0.3)';
+            ctx.lineWidth = pathWidthPixels * 0.12;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            const perpX = this.path.length > 1 ? -(this.path[1].y - this.path[0].y) : 0;
+            const perpY = this.path.length > 1 ? (this.path[1].x - this.path[0].x) : 0;
+            const perpLen = Math.hypot(perpX, perpY);
+            const normPerpX = perpLen > 0 ? perpX / perpLen : 0;
+            const normPerpY = perpLen > 0 ? perpY / perpLen : 0;
+            
+            ctx.moveTo(this.path[0].x + normPerpX * pathWidthPixels * 0.22, 
+                      this.path[0].y + normPerpY * pathWidthPixels * 0.22);
+            for (let i = 1; i < this.path.length; i++) {
+                // Calculate perpendicular for this segment
+                let segPerpX = 0, segPerpY = 0;
+                if (i < this.path.length - 1) {
+                    const dx = this.path[i + 1].x - this.path[i - 1].x;
+                    const dy = this.path[i + 1].y - this.path[i - 1].y;
+                    const len = Math.hypot(dx, dy);
+                    segPerpX = len > 0 ? -dy / len : 0;
+                    segPerpY = len > 0 ? dx / len : 0;
+                } else {
+                    segPerpX = normPerpX;
+                    segPerpY = normPerpY;
+                }
+                ctx.lineTo(this.path[i].x + segPerpX * pathWidthPixels * 0.22, 
+                          this.path[i].y + segPerpY * pathWidthPixels * 0.22);
+            }
+            ctx.stroke();
+            
+            // Layer 5: Subtle wheel rut on right side
+            ctx.beginPath();
+            ctx.moveTo(this.path[0].x - normPerpX * pathWidthPixels * 0.22, 
+                      this.path[0].y - normPerpY * pathWidthPixels * 0.22);
+            for (let i = 1; i < this.path.length; i++) {
+                let segPerpX = 0, segPerpY = 0;
+                if (i < this.path.length - 1) {
+                    const dx = this.path[i + 1].x - this.path[i - 1].x;
+                    const dy = this.path[i + 1].y - this.path[i - 1].y;
+                    const len = Math.hypot(dx, dy);
+                    segPerpX = len > 0 ? -dy / len : 0;
+                    segPerpY = len > 0 ? dx / len : 0;
+                } else {
+                    segPerpX = normPerpX;
+                    segPerpY = normPerpY;
+                }
+                ctx.lineTo(this.path[i].x - segPerpX * pathWidthPixels * 0.22, 
+                          this.path[i].y - segPerpY * pathWidthPixels * 0.22);
+            }
+            ctx.stroke();
+            
+            // Layer 6: Scattered small stones and pebbles on the road - subtle
+            for (let i = 0; i < this.path.length - 1; i++) {
+                const start = this.path[i];
+                const end = this.path[i + 1];
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const dist = Math.hypot(dx, dy);
+                const stepSize = 35;
+                
+                for (let d = 0; d < dist; d += stepSize) {
+                    const t = d / dist;
+                    const x = start.x + dx * t;
+                    const y = start.y + dy * t;
+                    
+                    // Add scattered pebbles with seed-based pseudo-randomness
+                    const seed = Math.floor(d / stepSize) + i * 100;
+                    const pebbleChance = Math.abs(Math.sin(seed * 0.5));
+                    
+                    if (pebbleChance > 0.65) {
+                        const offsetX = (Math.sin(seed * 0.3) - 0.5) * pathWidthPixels * 0.5;
+                        const offsetY = (Math.cos(seed * 0.4) - 0.5) * pathWidthPixels * 0.5;
+                        const pebbleSize = 1.5 + Math.abs(Math.sin(seed * 0.7)) * 2.5;
+                        
+                        ctx.fillStyle = `rgba(130, 115, 95, ${0.3 + Math.abs(Math.sin(seed)) * 0.2})`;
+                        ctx.beginPath();
+                        ctx.arc(x + offsetX, y + offsetY, pebbleSize, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Layer 7: Subtle dirt dust/wear marks at edges - very light
+            for (let i = 0; i < this.path.length - 1; i++) {
+                const start = this.path[i];
+                const end = this.path[i + 1];
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const dist = Math.hypot(dx, dy);
+                const steps = Math.ceil(dist / 20);
+                
+                for (let step = 0; step < steps; step++) {
+                    const t = step / steps;
+                    const x = start.x + dx * t;
+                    const y = start.y + dy * t;
+                    
+                    // Calculate perpendicular at this point
+                    let perpX = 0, perpY = 0;
+                    if (i < this.path.length - 1) {
+                        const segDx = this.path[i + 1].x - this.path[i].x;
+                        const segDy = this.path[i + 1].y - this.path[i].y;
+                        const segLen = Math.hypot(segDx, segDy);
+                        perpX = segLen > 0 ? -segDy / segLen : 0;
+                        perpY = segLen > 0 ? segDx / segLen : 0;
+                    }
+                    
+                    // Add subtle dust at edges
+                    const seed = Math.floor(x * 0.02) + Math.floor(y * 0.02) * 7;
+                    const dustChance = Math.abs(Math.sin(seed * 0.3));
+                    
+                    if (dustChance > 0.7) {
+                        ctx.fillStyle = `rgba(185, 160, 130, ${0.15 + Math.abs(Math.sin(seed * 2)) * 0.1})`;
+                        const edgeOffset = (Math.sin(seed * 2) > 0 ? 1 : -1) * pathWidthPixels * 0.48;
+                        ctx.beginPath();
+                        ctx.arc(x + perpX * edgeOffset, y + perpY * edgeOffset, 
+                               1.5 + Math.abs(Math.sin(seed * 1.5)) * 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
         }
         
         // Mark path cells for collision detection and tower blocking (internal tracking only)
@@ -1144,17 +1502,21 @@ export class LevelBase {
             return;
         }
         
-        // Render grass background first
+        // Proper render order for natural terrain integration:
+        // 1. Grass background (base layer)
         this.renderGrassBackground(ctx);
         
-        // Render terrain elements (trees, rocks, water)
-        this.renderTerrainElements(ctx);
+        // 2. Render terrain rocks/mountains FIRST - these form the landscape base
+        this.renderTerrainElementsByType(ctx, ['rock', 'water']);
         
-        // Render smooth river overlays for blended corners
+        // 3. Render path/road - on top of terrain but below trees
+        this.renderPath(ctx);
+        
+        // 4. Render smooth river overlays for blended corners and water effects
         this.renderRiverSmooth(ctx);
         
-        // Render the path
-        this.renderPath(ctx);
+        // 5. Render trees and vegetation - LAST, on top of everything
+        this.renderTerrainElementsByType(ctx, ['tree']);
         
         // Render castle - NOTE: Castle is now rendered by GameplayState after buildings/towers
         // This ensures proper z-ordering so the castle appears in front of buildings behind it
@@ -1356,6 +1718,39 @@ export class LevelBase {
         });
     }
 
+    renderTerrainElementsByType(ctx, typeFilters) {
+        if (!this.terrainElements || this.terrainElements.length === 0) {
+            return;
+        }
+
+        this.terrainElements.forEach(element => {
+            // Only render elements that match the type filters
+            if (!typeFilters.includes(element.type)) {
+                return;
+            }
+
+            const screenX = element.gridX * this.cellSize;
+            const screenY = element.gridY * this.cellSize;
+            const size = element.size * this.cellSize;
+
+            switch (element.type) {
+                case 'tree':
+                    this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    break;
+                case 'rock':
+                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    break;
+                case 'water':
+                    if (element.waterType === 'river') {
+                        this.renderRiver(ctx, screenX, screenY, size, element.flowAngle);
+                    } else {
+                        this.renderLake(ctx, screenX, screenY, size);
+                    }
+                    break;
+            }
+        });
+    }
+
     renderTree(ctx, x, y, size, gridX, gridY) {
         const seed = Math.floor(gridX + gridY) % 4;
         switch(seed) {
@@ -1499,134 +1894,353 @@ export class LevelBase {
     }
 
     renderRockType1(ctx, x, y, size) {
-        ctx.fillStyle = '#455A64';
+        // Large rough mountain-like rock with better depth and integration
+        
+        // Create layered shadow for depth effect
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.4)';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.3, y - size * 0.15);
-        ctx.lineTo(x - size * 0.25, y - size * 0.35);
-        ctx.lineTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.28, y + size * 0.2);
-        ctx.lineTo(x, y + size * 0.35);
-        ctx.lineTo(x - size * 0.32, y + size * 0.18);
+        ctx.moveTo(x - size * 0.36, y - size * 0.22);
+        ctx.lineTo(x - size * 0.21, y - size * 0.38);
+        ctx.lineTo(x + size * 0.06, y - size * 0.43);
+        ctx.lineTo(x + size * 0.36, y - size * 0.13);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x + 1, y + size * 0.42);
+        ctx.lineTo(x - size * 0.34, y + size * 0.23);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#263238';
+        
+        // Main mountain body with multiple shades
+        ctx.fillStyle = '#505050';
         ctx.beginPath();
-        ctx.moveTo(x + size * 0.28, y + size * 0.2);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.12, y - size * 0.08);
-        ctx.lineTo(x, y + size * 0.35);
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#90A4AE';
+        
+        // Right shadow side for dimension
+        ctx.fillStyle = '#343434';
         ctx.beginPath();
-        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.1, 0, Math.PI * 2);
+        ctx.moveTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.08, y - size * 0.3);
+        ctx.lineTo(x + size * 0.02, y + size * 0.32);
+        ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#1A1A1A';
+        
+        // Light highlights on top faces
+        ctx.fillStyle = '#8a8a8a';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.3 + x * 0.01) - 0.5) * size * 0.25;
+            const offsetY = (Math.cos(i * 1.3 + y * 0.01) - 0.5) * size * 0.15;
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y - size * 0.15 + offsetY, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Weathering spots and moss - spread naturally
+        ctx.fillStyle = 'rgba(90, 110, 70, 0.4)';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.38;
+            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.28;
+            const spotSize = size * (0.08 + Math.abs(Math.sin(i * 0.7)) * 0.04);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Rock cracks/texture
+        ctx.strokeStyle = 'rgba(40, 35, 30, 0.3)';
         ctx.lineWidth = 1.5;
+        const crackCount = 2 + Math.floor(Math.abs(Math.sin(x * 0.02)) * 2);
+        for (let i = 0; i < crackCount; i++) {
+            const startX = (Math.sin(i * 0.7 + x * 0.01) - 0.5) * size * 0.3;
+            const startY = (Math.cos(i * 0.7 + y * 0.01) - 0.5) * size * 0.2;
+            const endX = startX + (Math.sin(i * 1.2 + x * 0.02) - 0.5) * size * 0.2;
+            const endY = startY + (Math.cos(i * 1.2 + y * 0.02) - 0.5) * size * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(x + startX, y + startY);
+            ctx.lineTo(x + endX, y + endY);
+            ctx.stroke();
+        }
+        
+        // Outline for definition
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.3, y - size * 0.15);
-        ctx.lineTo(x - size * 0.25, y - size * 0.35);
-        ctx.lineTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.28, y + size * 0.2);
-        ctx.lineTo(x, y + size * 0.35);
-        ctx.lineTo(x - size * 0.32, y + size * 0.18);
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
         ctx.closePath();
         ctx.stroke();
+        
+        // Natural growth at base - connects mountain to ground
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.32, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderRockType2(ctx, x, y, size) {
-        ctx.fillStyle = '#546E7A';
+        // Rounded mountain form with better integration and detail
+        
+        // Shadow base for grounding
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
+        ctx.arc(x + 2, y + 2, size * 0.39, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#37474F';
+        
+        // Main rounded mountain body
+        ctx.fillStyle = '#595959';
         ctx.beginPath();
-        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.33, 0, Math.PI * 2);
+        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#9E9E9E';
+        
+        // Darker overlay for form and depth
+        ctx.fillStyle = '#414141';
         ctx.beginPath();
-        ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.15, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.12, y + size * 0.12, size * 0.34, 0, Math.PI * 2);
         ctx.fill();
-        [{x: -0.18, y: 0.1, r: 0.08}, {x: 0.22, y: -0.12, r: 0.07}, {x: 0.08, y: 0.22, r: 0.06}].forEach(bump => {
+        
+        // Light highlights on upper portions
+        ctx.fillStyle = '#9a9a9a';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#888888';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.25, y - size * 0.05, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Weathering and moss spread naturally across the mountain
+        ctx.fillStyle = 'rgba(85, 105, 65, 0.35)';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const distance = size * (0.15 + Math.abs(Math.sin(i * 0.5)) * 0.12);
+            const vx = x + Math.cos(angle) * distance;
+            const vy = y + Math.sin(angle) * distance;
+            const spotSize = size * (0.09 + Math.abs(Math.cos(i * 0.7)) * 0.05);
             ctx.beginPath();
-            ctx.arc(x + bump.x * size, y + bump.y * size, size * bump.r, 0, Math.PI * 2);
+            ctx.arc(vx, vy, spotSize, 0, Math.PI * 2);
             ctx.fill();
-        });
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 1.5;
+        }
+        
+        // Darker moss in crevices
+        ctx.fillStyle = 'rgba(60, 80, 45, 0.4)';
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3 + 0.3) * Math.PI * 2;
+            const vx = x + Math.cos(angle) * size * 0.2;
+            const vy = y + Math.sin(angle) * size * 0.2;
+            ctx.beginPath();
+            ctx.arc(vx, vy, size * 0.07, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Subtle cracks for texture
+        ctx.strokeStyle = 'rgba(40, 35, 30, 0.25)';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(
+                x + Math.cos(angle) * size * 0.3,
+                y + Math.sin(angle) * size * 0.3
+            );
+            ctx.stroke();
+        }
+        
+        // Define outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
+        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
         ctx.stroke();
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.34, size * 0.42, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderRockType3(ctx, x, y, size) {
-        ctx.fillStyle = '#37474F';
+        // Jagged angular mountain with better weathering and integration
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        ctx.lineTo(x + size * 0.3, y + size * 0.25);
-        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.moveTo(x - size * 0.36, y - size * 0.09);
+        ctx.lineTo(x - size * 0.1, y - size * 0.37);
+        ctx.lineTo(x + size * 0.32, y - size * 0.17);
+        ctx.lineTo(x + size * 0.36, y + size * 0.31);
+        ctx.lineTo(x - size * 0.34, y + size * 0.28);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#78909C';
+        
+        // Main mountain body
+        ctx.fillStyle = '#535353';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        ctx.lineTo(x, y - size * 0.05);
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x - size * 0.35, y + size * 0.25);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 1;
+        
+        // Highlighted face (left side)
+        ctx.fillStyle = '#8a8a8a';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.1, y - size * 0.15);
-        ctx.lineTo(x + size * 0.1, y + size * 0.15);
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.15, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Darker right side face
+        ctx.fillStyle = '#414141';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.15, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Moss and weathering spots
+        ctx.fillStyle = 'rgba(90, 110, 70, 0.35)';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.35;
+            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.25;
+            const spotSize = size * (0.07 + Math.abs(Math.sin(i * 0.6)) * 0.04);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Cracks for detail
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.2);
+        ctx.lineTo(x + size * 0.1, y + size * 0.12);
         ctx.stroke();
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 1.5;
+        
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        ctx.lineTo(x + size * 0.3, y + size * 0.25);
-        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.moveTo(x - size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.stroke();
+        
+        // Outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x - size * 0.35, y + size * 0.25);
         ctx.closePath();
         ctx.stroke();
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.3, size * 0.38, size * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderRockType4(ctx, x, y, size) {
-        ctx.fillStyle = '#455A64';
+        // Peaked mountain form with better depth and weathering
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        ctx.lineTo(x - size * 0.33, y + size * 0.15);
+        ctx.moveTo(x, y - size * 0.39);
+        ctx.lineTo(x + size * 0.39, y + size * 0.2);
+        ctx.lineTo(x - size * 0.39, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#263238';
+        
+        // Main mountain body
+        ctx.fillStyle = '#575757';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        ctx.lineTo(x, y + size * 0.08);
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x + size * 0.38, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#90A4AE';
+        
+        // Light highlighted left face
+        ctx.fillStyle = '#8a8a8a';
         ctx.beginPath();
-        ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.1, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.lineTo(x - size * 0.1, y - size * 0.05);
+        ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 1;
+        
+        // Dark shadowed right side
+        ctx.fillStyle = '#353535';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.15, y - size * 0.1);
-        ctx.lineTo(x + size * 0.1, y + size * 0.12);
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x + size * 0.38, y + size * 0.18);
+        ctx.lineTo(x + size * 0.08, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Moss and weathering spread across slopes
+        ctx.fillStyle = 'rgba(85, 105, 65, 0.35)';
+        for (let i = 0; i < 6; i++) {
+            const offsetX = (Math.sin(i * 1.3 + x * 0.01) - 0.5) * size * 0.3;
+            const offsetY = (Math.cos(i * 1.3 + y * 0.01) - 0.5) * size * 0.22;
+            const spotSize = size * (0.08 + Math.abs(Math.sin(i * 0.7)) * 0.05);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Rocky texture detail
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.25)';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.25;
+            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.15;
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Peak highlight for dimension
+        ctx.fillStyle = '#a0a0a0';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.08, y - size * 0.25, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x + size * 0.38, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.closePath();
         ctx.stroke();
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 1.5;
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        ctx.lineTo(x - size * 0.33, y + size * 0.15);
-        ctx.closePath();
-        ctx.stroke();
+        ctx.ellipse(x, y + size * 0.2, size * 0.4, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderLake(ctx, x, y, size) {
