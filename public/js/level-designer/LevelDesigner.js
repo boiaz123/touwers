@@ -57,10 +57,13 @@ export class LevelDesigner {
         });
         this.canvas.addEventListener('dblclick', (e) => {
             if (this.waterMode === 'river' && this.riverPoints) {
+                // Finish river on double-click
+                this.finishRiver();
                 this.riverPoints = [];
                 this.waterMode = null;
                 document.getElementById('waterRiverBtn')?.classList.remove('active');
                 this.setTerrainMode('water'); // Reset to base water mode
+                this.updateGeneratedCode();
                 this.render();
             }
         });
@@ -196,7 +199,7 @@ export class LevelDesigner {
         
         const pathInfo = document.getElementById('pathInfo');
         if (mode === 'river') {
-            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to finish river. Double-click to cancel.';
+            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Double-click to finish river.';
             if (!this.riverPoints) {
                 this.riverPoints = [];
             }
@@ -288,11 +291,8 @@ export class LevelDesigner {
             this.render();
         } else if (this.mode === 'terrain') {
             if (this.waterMode === 'river' && this.riverPoints && this.riverPoints.length > 0) {
-                // Finish river - convert waypoints to water tiles
-                this.finishRiver();
-                this.riverPoints = [];
-                this.waterMode = null;
-                document.getElementById('waterRiverBtn')?.classList.remove('active');
+                // Remove last river waypoint on right-click
+                this.riverPoints.pop();
             } else if (this.terrainElements.length > 0) {
                 this.terrainElements.pop();
             }
@@ -596,6 +596,11 @@ export class LevelDesigner {
         // Draw path
         this.drawPath();
 
+        // Draw river waypoints if in river mode
+        if (this.mode === 'terrain' && this.waterMode === 'river' && this.riverPoints) {
+            this.drawRiverPoints();
+        }
+
         // Draw castle
         this.drawCastle();
 
@@ -735,11 +740,6 @@ export class LevelDesigner {
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(idx + 1, x, y);
         });
-
-        // Draw river points if in river mode
-        if (this.mode === 'terrain' && this.waterMode === 'river' && this.riverPoints) {
-            this.drawRiverPoints();
-        }
     }
 
     drawRiverPoints() {
@@ -1274,6 +1274,23 @@ export class LevelDesigner {
         this.ctx.textBaseline = 'top';
         const modeText = this.terrainMode ? `${this.mode.toUpperCase()}: ${this.terrainMode.toUpperCase()}` : this.mode.toUpperCase();
         this.ctx.fillText(`Mode: ${modeText}`, 15, 15);
+
+        // Draw river waypoint counter if in river mode
+        if (this.mode === 'terrain' && this.waterMode === 'river' && this.riverPoints) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(10, 50, 250, 60);
+
+            this.ctx.fillStyle = '#1e90ff';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText(`River Waypoints: ${this.riverPoints.length}`, 15, 55);
+
+            this.ctx.fillStyle = '#90caf9';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText('Right-click to remove last', 15, 72);
+            this.ctx.fillText('Double-click to finish river', 15, 85);
+        }
     }
 
     drawRiversSmooth() {
