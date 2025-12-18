@@ -23,6 +23,7 @@ export class LevelDesigner {
         this.terrainElements = []; // Array of {type, gridX, gridY, size}
         this.currentEditingWaveId = null;
         this.hoveredGridCell = null; // For visual feedback during mouse movement
+        this.pathLocked = false; // Whether path editing is finished
         
         // Enemies and towers for form
         this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog'];
@@ -55,18 +56,6 @@ export class LevelDesigner {
             e.preventDefault();
             this.handleCanvasRightClick();
         });
-        this.canvas.addEventListener('dblclick', (e) => {
-            if (this.waterMode === 'river' && this.riverPoints) {
-                // Finish river on double-click
-                this.finishRiver();
-                this.riverPoints = [];
-                this.waterMode = null;
-                document.getElementById('waterRiverBtn')?.classList.remove('active');
-                this.setTerrainMode('water'); // Reset to base water mode
-                this.updateGeneratedCode();
-                this.render();
-            }
-        });
         this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
         this.canvas.addEventListener('mouseleave', (e) => {
             this.hoveredGridCell = null;
@@ -81,6 +70,8 @@ export class LevelDesigner {
         document.getElementById('undoBtn').addEventListener('click', () => this.undo());
         document.getElementById('clearBtn').addEventListener('click', () => this.clearPath());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportLevel());
+        document.getElementById('finishPathBtn')?.addEventListener('click', () => this.finishPath());
+        document.getElementById('finishRiverBtn')?.addEventListener('click', () => this.finishRiverConfirm());
 
         // Terrain buttons
         document.getElementById('drawTreeBtn')?.addEventListener('click', () => this.setTerrainMode('tree'));
@@ -143,9 +134,15 @@ export class LevelDesigner {
         document.getElementById('drawRockBtn')?.classList.toggle('active', false);
         document.getElementById('drawWaterBtn')?.classList.toggle('active', false);
         
+        // Show/hide finish path button
+        const finishPathBtn = document.getElementById('finishPathBtn');
+        if (finishPathBtn) {
+            finishPathBtn.style.display = newMode === 'path' ? 'inline-block' : 'none';
+        }
+        
         const pathInfo = document.getElementById('pathInfo');
         if (newMode === 'path') {
-            pathInfo.textContent = '🖌️ Click to add path points. Right-click to remove last point.';
+            pathInfo.textContent = '🖌️ Click to add path points. Right-click to remove last point. Click "Finish Path" when done.';
         } else {
             pathInfo.textContent = '🏰 Click on canvas to place castle.';
         }
@@ -162,6 +159,12 @@ export class LevelDesigner {
         document.getElementById('drawRockBtn')?.classList.toggle('active', terrainType === 'rock');
         document.getElementById('drawWaterBtn')?.classList.toggle('active', terrainType === 'water');
         
+        // Hide finish path button when leaving path mode
+        const finishPathBtn = document.getElementById('finishPathBtn');
+        if (finishPathBtn) {
+            finishPathBtn.style.display = 'none';
+        }
+        
         // Show water mode buttons when water is selected
         const waterRiverBtn = document.getElementById('waterRiverBtn');
         const waterLakeBtn = document.getElementById('waterLakeBtn');
@@ -171,6 +174,9 @@ export class LevelDesigner {
         } else {
             if (waterRiverBtn) waterRiverBtn.style.display = 'none';
             if (waterLakeBtn) waterLakeBtn.style.display = 'none';
+            // Hide finish river button if not in river mode
+            const finishRiverBtn = document.getElementById('finishRiverBtn');
+            if (finishRiverBtn) finishRiverBtn.style.display = 'none';
         }
         
         const pathInfo = document.getElementById('pathInfo');
@@ -182,6 +188,12 @@ export class LevelDesigner {
         this.waterMode = mode;
         document.getElementById('waterRiverBtn')?.classList.toggle('active', mode === 'river');
         document.getElementById('waterLakeBtn')?.classList.toggle('active', mode === 'lake');
+        
+        // Show/hide finish river button
+        const finishRiverBtn = document.getElementById('finishRiverBtn');
+        if (finishRiverBtn) {
+            finishRiverBtn.style.display = mode === 'river' ? 'inline-block' : 'none';
+        }
         
         // Show/hide water size slider
         const sizeSlider = document.getElementById('waterSizeSlider');
@@ -199,7 +211,7 @@ export class LevelDesigner {
         
         const pathInfo = document.getElementById('pathInfo');
         if (mode === 'river') {
-            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Double-click to finish river.';
+            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" button when done.';
             if (!this.riverPoints) {
                 this.riverPoints = [];
             }
@@ -358,6 +370,63 @@ export class LevelDesigner {
                 this.terrainElements.push(element);
             }
         }
+    }
+
+    finishPath() {
+        if (this.pathPoints.length < 2) {
+            alert('Path must have at least 2 points!');
+            return;
+        }
+        
+        // Lock path editing
+        this.pathLocked = true;
+        this.mode = null;
+        this.terrainMode = null;
+        
+        // Hide finish path button
+        const finishPathBtn = document.getElementById('finishPathBtn');
+        if (finishPathBtn) {
+            finishPathBtn.style.display = 'none';
+        }
+        
+        // Deselect all mode buttons
+        document.getElementById('drawPathBtn').classList.remove('active');
+        document.getElementById('placeCastleBtn').classList.remove('active');
+        
+        const pathInfo = document.getElementById('pathInfo');
+        pathInfo.textContent = '✓ Path finished! You can now edit terrain or export.';
+        
+        this.updateGeneratedCode();
+        this.render();
+    }
+
+    finishRiverConfirm() {
+        if (!this.riverPoints || this.riverPoints.length < 2) {
+            alert('River must have at least 2 waypoints!');
+            return;
+        }
+        
+        // Convert river waypoints to terrain elements
+        this.finishRiver();
+        
+        // Clear river waypoints and reset to water mode
+        this.riverPoints = [];
+        this.waterMode = null;
+        
+        // Hide finish river button
+        const finishRiverBtn = document.getElementById('finishRiverBtn');
+        if (finishRiverBtn) {
+            finishRiverBtn.style.display = 'none';
+        }
+        
+        // Reset water mode buttons
+        document.getElementById('waterRiverBtn')?.classList.remove('active');
+        
+        const pathInfo = document.getElementById('pathInfo');
+        pathInfo.textContent = '💧 Water - Click to place circular lakes (size: ' + this.waterSize.toFixed(1) + '). Right-click to erase.';
+        
+        this.updateGeneratedCode();
+        this.render();
     }
 
     undo() {
@@ -706,11 +775,64 @@ export class LevelDesigner {
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
 
-        // Draw path line
+        if (this.pathLocked) {
+            // Draw smooth finished path (true game rendering)
+            this.drawPathSmooth(cellWidthPixels, cellHeightPixels);
+        } else {
+            // Draw editing mode: thin waypoint line like river editing
+            this.drawPathWaypoints(cellWidthPixels, cellHeightPixels);
+        }
+    }
+
+    drawPathSmooth(cellWidthPixels, cellHeightPixels) {
+        // Render the true smooth path as it appears in game
+        const pixelPoints = this.pathPoints.map(p => ({
+            x: p.gridX * cellWidthPixels,
+            y: p.gridY * cellHeightPixels
+        }));
+
+        // Calculate path width to match river rendering (which is true to game)
+        const pixelSize = Math.min(cellWidthPixels, cellHeightPixels);
+        const pathWidth = pixelSize * 1.5;
+        
+        // Main path color with smooth rendering
         this.ctx.strokeStyle = '#58c4dc';
-        this.ctx.lineWidth = 6;
+        this.ctx.lineWidth = pathWidth;
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
+        this.ctx.globalAlpha = 0.9;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
+        for (let i = 1; i < pixelPoints.length; i++) {
+            this.ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+        }
+        this.ctx.stroke();
+        
+        // Add center highlight for depth (darker blue)
+        this.ctx.strokeStyle = '#2a8fa8';
+        this.ctx.lineWidth = pathWidth * 0.5;
+        this.ctx.globalAlpha = 0.6;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
+        for (let i = 1; i < pixelPoints.length; i++) {
+            this.ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+        }
+        this.ctx.stroke();
+        
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawPathWaypoints(cellWidthPixels, cellHeightPixels) {
+        // Draw thin waypoint line while editing (like river mode)
+        if (this.pathPoints.length < 2) return;
+
+        this.ctx.strokeStyle = '#58c4dc';
+        this.ctx.lineWidth = 5;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.ctx.globalAlpha = 0.6;
 
         this.ctx.beginPath();
         const firstPoint = this.pathPoints[0];
@@ -722,12 +844,14 @@ export class LevelDesigner {
         }
         this.ctx.stroke();
 
-        // Draw points
+        this.ctx.globalAlpha = 1;
+
+        // Draw waypoints
         this.pathPoints.forEach((point, idx) => {
             const x = point.gridX * cellWidthPixels;
             const y = point.gridY * cellHeightPixels;
 
-            // Point circle
+            // Point circle with distinct colors
             this.ctx.fillStyle = idx === 0 ? '#7ae881' : idx === this.pathPoints.length - 1 ? '#ff9999' : '#90caf9';
             this.ctx.beginPath();
             this.ctx.arc(x, y, 8, 0, Math.PI * 2);
@@ -1275,6 +1399,23 @@ export class LevelDesigner {
         const modeText = this.terrainMode ? `${this.mode.toUpperCase()}: ${this.terrainMode.toUpperCase()}` : this.mode.toUpperCase();
         this.ctx.fillText(`Mode: ${modeText}`, 15, 15);
 
+        // Draw path waypoint counter if in path editing mode
+        if (this.mode === 'path' && this.pathPoints && !this.pathLocked) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(10, 50, 250, 60);
+
+            this.ctx.fillStyle = '#58c4dc';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText(`Path Waypoints: ${this.pathPoints.length}`, 15, 55);
+
+            this.ctx.fillStyle = '#90caf9';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText('Right-click to remove last', 15, 72);
+            this.ctx.fillText('Click "Finish Path" button when done', 15, 85);
+        }
+
         // Draw river waypoint counter if in river mode
         if (this.mode === 'terrain' && this.waterMode === 'river' && this.riverPoints) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
@@ -1289,7 +1430,7 @@ export class LevelDesigner {
             this.ctx.fillStyle = '#90caf9';
             this.ctx.font = '11px Arial';
             this.ctx.fillText('Right-click to remove last', 15, 72);
-            this.ctx.fillText('Double-click to finish river', 15, 85);
+            this.ctx.fillText('Click "Finish River" button when done', 15, 85);
         }
     }
 
