@@ -132,7 +132,6 @@ export class Campaign1 extends CampaignBase {
             shrubs: [],
             mountains: [],
             boulders: [],
-            groundTextures: [],
             smallRocks: []
         };
         
@@ -148,21 +147,16 @@ export class Campaign1 extends CampaignBase {
         ];
         this.terrainDetails.mountains = mountains;
         
-        // Generate ground texture variations for visual interest - more organic shapes
-        // Keep minimal for cleaner look
-        const groundTextures = [];
-        this.terrainDetails.groundTextures = groundTextures;
-        
-        // Generate grass patches for variety and depth
-        const grassPatchCount = 25;
+        // Generate grass patches for variety and depth - more organic with more opacity variation
+        const grassPatchCount = 35;
         for (let i = 0; i < grassPatchCount; i++) {
             this.terrainDetails.grassPatches.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                width: 80 + Math.random() * 120,
-                height: 60 + Math.random() * 100,
+                width: 100 + Math.random() * 150,
+                height: 80 + Math.random() * 120,
                 color: Math.random() > 0.5 ? '#5aa85a' : '#4a8a4a',
-                opacity: 0.25 + Math.random() * 0.25
+                opacity: 0.15 + Math.random() * 0.2
             });
         }
         
@@ -182,33 +176,33 @@ export class Campaign1 extends CampaignBase {
         }
         this.terrainDetails.smallRocks = smallRocks;
         
-        // Generate forest clusters - spread out more naturally with looser groupings
+        // Generate forest clusters - positioned FAR from mountains, not on them, and away from road
         const forestClusters = [
-            // Left side - looser, more spread out
-            {x: 100, y: 180, size: 100, treeCount: 18, density: 0.6},
-            {x: 170, y: 350, size: 90, treeCount: 14, density: 0.55},
-            {x: 70, y: 520, size: 95, treeCount: 16, density: 0.58},
+            // Far left corners
+            {x: 30, y: 80, size: 95, treeCount: 16, density: 0.58},
+            {x: 50, y: 250, size: 100, treeCount: 17, density: 0.59},
+            {x: 40, y: 500, size: 105, treeCount: 18, density: 0.60},
+            {x: 60, y: height - 80, size: 100, treeCount: 17, density: 0.59},
             
-            // Right side - spread out
-            {x: width - 140, y: 280, size: 110, treeCount: 17, density: 0.58},
-            {x: width - 110, y: 480, size: 85, treeCount: 12, density: 0.52},
+            // Far right corners
+            {x: width - 40, y: 100, size: 95, treeCount: 16, density: 0.58},
+            {x: width - 60, y: 280, size: 100, treeCount: 17, density: 0.59},
+            {x: width - 50, y: 520, size: 105, treeCount: 18, density: 0.60},
+            {x: width - 70, y: height - 90, size: 100, treeCount: 17, density: 0.59},
             
-            // Center area - less dense
-            {x: width / 2 + 240, y: 260, size: 80, treeCount: 12, density: 0.5},
-            {x: width / 2 - 280, y: 400, size: 95, treeCount: 14, density: 0.55},
+            // Far bottom edges
+            {x: 150, y: height - 60, size: 95, treeCount: 16, density: 0.58},
+            {x: width / 2, y: height - 70, size: 110, treeCount: 19, density: 0.61},
+            {x: width - 150, y: height - 65, size: 95, treeCount: 16, density: 0.58},
             
-            // Top areas - spread out
-            {x: 200, y: 90, size: 80, treeCount: 11, density: 0.5},
-            {x: width - 180, y: 130, size: 85, treeCount: 12, density: 0.52},
+            // Far top edges  
+            {x: 120, y: 40, size: 90, treeCount: 15, density: 0.56},
+            {x: width / 2, y: 50, size: 100, treeCount: 17, density: 0.59},
+            {x: width - 130, y: 45, size: 90, treeCount: 15, density: 0.56},
             
-            // Bottom areas - more spread
-            {x: width / 2 - 140, y: height - 110, size: 100, treeCount: 15, density: 0.56},
-            {x: width / 2 + 160, y: height - 100, size: 90, treeCount: 13, density: 0.54},
-            
-            // Isolated groups for natural distribution
-            {x: 120, y: 280, size: 60, treeCount: 8, density: 0.45},
-            {x: width - 150, y: 350, size: 70, treeCount: 9, density: 0.47},
-            {x: 280, y: 150, size: 75, treeCount: 10, density: 0.48}
+            // Distant outer left and right
+            {x: 20, y: height / 2, size: 85, treeCount: 14, density: 0.55},
+            {x: width - 25, y: height / 2, size: 85, treeCount: 14, density: 0.55}
         ];
         
         for (const cluster of forestClusters) {
@@ -233,30 +227,55 @@ export class Campaign1 extends CampaignBase {
             });
         }
         
-        // Generate water features with more natural, organic shapes
+        // Generate water features - positioned away from mountains
+        const mountainsForWater = this.terrainDetails.mountains;
         const waterFeatures = [
-            {x: 280, y: 220, radiusX: 55, radiusY: 35, rotation: 0.3},
-            {x: width - 220, y: 330, radiusX: 50, radiusY: 42, rotation: -0.2},
+            {x: 280, y: 380, radiusX: 55, radiusY: 35, rotation: 0.3},
+            {x: width - 220, y: 480, radiusX: 50, radiusY: 42, rotation: -0.2},
             {x: width / 2 + 170, y: height - 140, radiusX: 60, radiusY: 38, rotation: 0.5},
-            {x: 220, y: 480, radiusX: 45, radiusY: 32, rotation: -0.4},
+            {x: 220, y: height - 160, radiusX: 45, radiusY: 32, rotation: -0.4},
             {x: width - 180, y: height - 100, radiusX: 48, radiusY: 36, rotation: 0.1}
-        ];
+        ].filter(water => {
+            // Remove water if too close to any mountain
+            for (const mountain of mountainsForWater) {
+                const dist = Math.hypot(water.x - mountain.x, water.y - mountain.y);
+                const minDist = Math.max(mountain.width, mountain.height) * 0.9;
+                if (dist < minDist) {
+                    return false;
+                }
+            }
+            return true;
+        });
         this.terrainDetails.water = waterFeatures;
         
-        // Generate rock formations with variety
+        // Generate rock formations with variety - away from mountains
+        const mountainsList = this.terrainDetails.mountains || [];
         const rocks = [
             {x: 210, y: 430, size: 28, type: 'large'},
             {x: 380, y: 180, size: 22, type: 'medium'},
             {x: width - 210, y: 520, size: 32, type: 'large'},
             {x: width / 2 + 120, y: 380, size: 24, type: 'medium'},
-            {x: width - 120, y: 180, size: 20, type: 'small'},
+            {x: width - 120, y: 280, size: 20, type: 'small'},
             {x: 450, y: 520, size: 28, type: 'large'},
-            {x: 320, y: 310, size: 18, type: 'small'},
-            {x: width - 280, y: 310, size: 22, type: 'medium'},
+            {x: 320, y: 380, size: 18, type: 'small'},
+            {x: width - 280, y: 410, size: 22, type: 'medium'},
             {x: 140, y: 560, size: 25, type: 'large'},
-            {x: width - 100, y: 240, size: 19, type: 'medium'}
+            {x: width - 100, y: 340, size: 19, type: 'medium'}
         ];
-        this.terrainDetails.rocks = rocks;
+        
+        // Filter rocks to remove any that are too close to mountains
+        const filteredRocks = rocks.filter(rock => {
+            for (const mountain of mountainsList) {
+                const dist = Math.hypot(rock.x - mountain.x, rock.y - mountain.y);
+                const minDist = Math.max(mountain.width, mountain.height) * 0.65;
+                if (dist < minDist) {
+                    return false; // Remove this rock
+                }
+            }
+            return true;
+        });
+        
+        this.terrainDetails.rocks = filteredRocks;
         
         // Generate scattered shrubs for variety
         const shrubCount = 60;
@@ -270,60 +289,106 @@ export class Campaign1 extends CampaignBase {
             });
         }
         
-        // Generate scattered trees for diversity - with water avoidance
+        // Generate scattered trees for diversity - with STRICT mountain, water, AND road avoidance
         const scatteredTrees = [];
-        const maxAttempts = 200;
         let treesAdded = 0;
         const waterRegions = this.terrainDetails.water;
+        const mountainRegions = this.terrainDetails.mountains;
+        const roadPathPoints = this.pathPoints;
         
-        while (treesAdded < 100 && maxAttempts > treesAdded) {
+        // Very high attempt count to force trees away from mountains
+        for (let attempt = 0; attempt < 3000 && treesAdded < 250; attempt++) {
             const x = Math.random() * width;
             const y = Math.random() * height;
             
-            // Check if tree is too close to water
+            // FIRST CHECK: Absolutely NO point inside mountain shape
+            let insideMountain = false;
+            for (const mountain of mountainRegions) {
+                if (this.isPointInMountain(x, y, mountain)) {
+                    insideMountain = true;
+                    break;
+                }
+            }
+            
+            if (insideMountain) continue;
+            
+            // SECOND CHECK: Not too close to water
             let tooCloseToWater = false;
             for (const water of waterRegions) {
                 const dist = Math.hypot(x - water.x, y - water.y);
-                const minDist = Math.max(water.radiusX, water.radiusY) + 40; // 40px buffer
+                const minDist = Math.max(water.radiusX, water.radiusY) + 80;
                 if (dist < minDist) {
                     tooCloseToWater = true;
                     break;
                 }
             }
             
-            // Only place tree if not near water
-            if (!tooCloseToWater) {
-                scatteredTrees.push({
-                    x: x,
-                    y: y,
-                    size: 10 + Math.random() * 20,
-                    variant: Math.floor(Math.random() * 3)
-                });
-                treesAdded++;
+            if (tooCloseToWater) continue;
+            
+            // THIRD CHECK: Large safety buffer from mountain centers
+            let tooCloseToMountain = false;
+            for (const mountain of mountainRegions) {
+                const dist = Math.hypot(x - mountain.x, y - mountain.y);
+                // Much larger buffer to keep trees far away even from base
+                const minDist = Math.max(mountain.width, mountain.height) * 1.15;
+                if (dist < minDist) {
+                    tooCloseToMountain = true;
+                    break;
+                }
             }
+            
+            if (tooCloseToMountain) continue;
+            
+            // Check if tree is too close to road path - strict buffer
+            let tooCloseToRoad = false;
+            for (const roadPoint of roadPathPoints) {
+                const dist = Math.hypot(x - roadPoint.x, y - roadPoint.y);
+                if (dist < 70) { // 70px buffer around road
+                    tooCloseToRoad = true;
+                    break;
+                }
+            }
+            
+            if (tooCloseToRoad) continue;
+            
+            // Only place tree if not near water, mountains, or road
+            scatteredTrees.push({
+                x: x,
+                y: y,
+                size: 10 + Math.random() * 20,
+                variant: Math.floor(Math.random() * 3)
+            });
+            treesAdded++;
         }
         this.terrainDetails.trees = scatteredTrees;
     }
     
-    getPointOnPath(t) {
-        // Interpolate along the path based on parameter t (0 to 1)
-        const points = this.pathPoints;
-        const segmentLength = 1 / (points.length - 1);
-        const segment = Math.floor(t / segmentLength);
-        const localT = (t - segment * segmentLength) / segmentLength;
+    // Helper function to check if a point is inside a mountain shape
+    isPointInMountain(x, y, mountain) {
+        const { x: mx, y: my, width: mw, height: mh } = mountain;
         
-        if (segment >= points.length - 1) {
-            return points[points.length - 1];
+        // Extended bounds check
+        if (x < mx - mw / 2 - 40 || x > mx + mw / 2 + 40) {
+            return false;
         }
         
-        const p1 = points[segment];
-        const p2 = points[segment + 1];
+        // Normalize x position to 0-1 range
+        const t = (x - (mx - mw / 2)) / mw;
         
-        return {
-            x: p1.x + (p2.x - p1.x) * localT,
-            y: p1.y + (p2.y - p1.y) * localT
-        };
+        // Use exact same formula as drawing for consistency
+        const peak1 = Math.sin(t * Math.PI) * mh * 0.75;
+        const peak2 = Math.sin(t * Math.PI * 2 + 0.3) * mh * 0.35;
+        const peak3 = Math.sin(t * Math.PI * 4.2 + 2) * mh * 0.08;
+        
+        // Smooth edge transition (same as drawing)
+        const edgeSmooth = Math.pow(Math.sin(t * Math.PI), 0.6);
+        const mountainTopY = my + mh * 0.2 - (peak1 + peak2 + peak3) * edgeSmooth;
+        
+        // Point is in mountain if y is above (less than) the mountain top
+        // With 10 pixel buffer for extra safety
+        return y < mountainTopY + 10;
     }
+    
     
     renderBackground(ctx, canvas) {
         // Base grass - render once
@@ -336,29 +401,15 @@ export class Campaign1 extends CampaignBase {
         const w = canvas.width;
         const h = canvas.height;
         
-        // Render background mountains (far background)
+        // Render background mountains first (far background, behind everything)
         if (this.terrainDetails && this.terrainDetails.mountains) {
             for (const mountain of this.terrainDetails.mountains) {
                 this.drawMountain(ctx, mountain);
             }
         }
         
-        // Render ground texture variations for depth
-        if (this.terrainDetails && this.terrainDetails.groundTextures) {
-            for (const texture of this.terrainDetails.groundTextures) {
-                this.drawGroundTexture(ctx, texture);
-            }
-        }
-        
-        // Render grass patches for depth variation
-        if (this.terrainDetails && this.terrainDetails.grassPatches) {
-            for (const patch of this.terrainDetails.grassPatches) {
-                ctx.fillStyle = patch.color;
-                ctx.globalAlpha = patch.opacity;
-                ctx.fillRect(patch.x, patch.y, patch.width, patch.height);
-                ctx.globalAlpha = 1;
-            }
-        }
+        // THEN: Render the winding path after mountains so it sits on the ground
+        this.renderPath(ctx);
         
         // Render large boulders (background layer before water)
         if (this.terrainDetails && this.terrainDetails.boulders) {
@@ -395,7 +446,7 @@ export class Campaign1 extends CampaignBase {
             }
         }
         
-        // Render forests and individual trees (foreground)
+        // Render forests and individual trees (foreground) - on top of everything
         if (this.terrainDetails && this.terrainDetails.forests) {
             for (const cluster of this.terrainDetails.forests) {
                 for (const tree of cluster.trees) {
@@ -404,85 +455,89 @@ export class Campaign1 extends CampaignBase {
             }
         }
         
-        // Render scattered trees (front layer)
+        // Render scattered trees (front layer) - on top of everything
         if (this.terrainDetails && this.terrainDetails.trees) {
             for (const tree of this.terrainDetails.trees) {
                 this.drawTreeTopDown(ctx, tree.x, tree.y, tree.size, tree.variant);
             }
         }
-        
-        // Render the winding path (on top)
-        this.renderPath(ctx);
     }
     
     drawMountain(ctx, mountain) {
         const { x, y, width, height, rolliness, rockiness } = mountain;
         
-        // Create rolling hills using sine waves for natural shape
         ctx.save();
-        ctx.globalAlpha = 0.7;
         
-        // Generate smooth hill profile with cached coordinates
+        // Helper to build mountain profile points
+        const buildMountainProfile = (peaks) => {
+            const points = [];
+            for (let i = 0; i <= 150; i++) {
+                const t = i / 150;
+                const mountainX = x - width / 2 + t * width;
+                
+                const peak1 = Math.sin(t * Math.PI) * height * peaks.p1;
+                const peak2 = Math.sin(t * Math.PI * 2 + peaks.offset2) * height * peaks.p2;
+                const peak3 = Math.sin(t * Math.PI * peaks.freq3 + peaks.offset3) * height * peaks.p3;
+                
+                const edgeSmooth = Math.pow(Math.sin(t * Math.PI), 0.6);
+                const mountainY = y + height * peaks.base - (peak1 + peak2 + peak3) * edgeSmooth;
+                points.push({ x: mountainX, y: mountainY });
+            }
+            return points;
+        };
+        
+        // Draw far mountain layer
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#505050';
+        const farPoints = buildMountainProfile({
+            p1: 0.5, p2: 0.2, p3: 0.12, 
+            offset2: 0.7, offset3: 1.2, freq3: 3.5,
+            base: 0.35
+        });
         ctx.beginPath();
         ctx.moveTo(x - width / 2, y + height);
-        
-        // Draw simple rolling hills - less complex for better performance
-        const points = [];
-        for (let i = 0; i <= 100; i++) {
-            const t = i / 100;
-            const hillX = x - width / 2 + t * width;
-            
-            // Single smooth sine wave for consistent rendering
-            const hillY = y + height * 0.3 - Math.sin(t * Math.PI) * height * 0.7;
-            points.push({ x: hillX, y: hillY });
-            ctx.lineTo(hillX, hillY);
+        for (const pt of farPoints) {
+            ctx.lineTo(pt.x, pt.y);
         }
-        
         ctx.lineTo(x + width / 2, y + height);
         ctx.closePath();
-        
-        // Mountain gradient - solid grey
-        const gradient = ctx.createLinearGradient(x, y, x, y + height);
-        gradient.addColorStop(0, '#909090');
-        gradient.addColorStop(0.5, '#707070');
-        gradient.addColorStop(1, '#505050');
-        
-        ctx.fillStyle = gradient;
         ctx.fill();
         
-        // Add subtle rocky texture - no random opacity
-        ctx.strokeStyle = '#505050';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        ctx.restore();
-    }
-    
-    drawGroundTexture(ctx, texture) {
-        ctx.globalAlpha = texture.opacity;
-        ctx.save();
-        ctx.translate(texture.x, texture.y);
-        ctx.rotate(texture.rotation);
-        
-        switch (texture.type) {
-            case 0: // Dirt patches
-                ctx.fillStyle = '#7a6a5a';
-                break;
-            case 1: // Sandy areas
-                ctx.fillStyle = '#a89870';
-                break;
-            case 2: // Clay areas
-                ctx.fillStyle = '#8a6a5a';
-                break;
-        }
-        
-        // Draw organic ellipse shape instead of rectangle
+        // Draw mid-layer mountain
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#6a7a7a';
+        const midPoints = buildMountainProfile({
+            p1: 0.62, p2: 0.28, p3: 0.1,
+            offset2: 0.5, offset3: 1.5, freq3: 3.8,
+            base: 0.28
+        });
         ctx.beginPath();
-        ctx.ellipse(0, 0, texture.radiusX, texture.radiusY, 0, 0, Math.PI * 2);
+        ctx.moveTo(x - width / 2, y + height);
+        for (const pt of midPoints) {
+            ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.lineTo(x + width / 2, y + height);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw front mountain layer
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#9a9a9a';
+        const frontPoints = buildMountainProfile({
+            p1: 0.75, p2: 0.35, p3: 0.08,
+            offset2: 0.3, offset3: 2, freq3: 4.2,
+            base: 0.2
+        });
+        ctx.beginPath();
+        ctx.moveTo(x - width / 2, y + height);
+        for (const pt of frontPoints) {
+            ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.lineTo(x + width / 2, y + height);
+        ctx.closePath();
         ctx.fill();
         
         ctx.restore();
-        ctx.globalAlpha = 1;
     }
     
     drawBoulder(ctx, x, y, size, type) {
@@ -714,47 +769,24 @@ export class Campaign1 extends CampaignBase {
         
         const canvas = this.stateManager.canvas;
         
-        // Shadow path - slightly offset for depth
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 42;
+        // Very subtle shadow - barely visible
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = 40;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x + 3, this.pathPoints[0].y + 3);
+        ctx.moveTo(this.pathPoints[0].x + 2, this.pathPoints[0].y + 2);
         for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x + 3, this.pathPoints[i].y + 3);
+            ctx.lineTo(this.pathPoints[i].x + 2, this.pathPoints[i].y + 2);
         }
         ctx.stroke();
         
-        // Darker road base for depth
-        ctx.strokeStyle = '#9d8d7d';
+        // Main road surface - blends with ground, natural stone color
+        ctx.strokeStyle = '#7a8a6a';
         ctx.lineWidth = 38;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        
-        // Main path - dusty tan color with gradient-like quality
-        ctx.strokeStyle = '#c9b89b';
-        ctx.lineWidth = 36;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        
-        // Road center line - worn appearance
-        ctx.strokeStyle = '#a89878';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 8]);
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = 0.85;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
         for (let i = 1; i < this.pathPoints.length; i++) {
@@ -762,27 +794,20 @@ export class Campaign1 extends CampaignBase {
         }
         ctx.stroke();
         ctx.globalAlpha = 1;
+        
+        // Subtle worn centerline
+        ctx.strokeStyle = 'rgba(80, 70, 60, 0.3)';
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([8, 10]);
+        ctx.beginPath();
+        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
+        for (let i = 1; i < this.pathPoints.length; i++) {
+            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
+        }
+        ctx.stroke();
         ctx.setLineDash([]);
-        
-        // Road edge highlights - worn edges
-        ctx.strokeStyle = 'rgba(200, 180, 150, 0.3)';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x - 16, this.pathPoints[0].y - 16);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x - 16, this.pathPoints[i].y - 16);
-        }
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x + 16, this.pathPoints[0].y + 16);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x + 16, this.pathPoints[i].y + 16);
-        }
-        ctx.stroke();
     }
+
     
     renderLevelSlot(ctx, index) {
         const slot = this.levelSlots[index];
