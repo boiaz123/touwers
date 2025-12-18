@@ -110,7 +110,9 @@ export class CampaignBase {
             this.hoveredExitButton = true;
         }
         
-        // Check level slots
+        // Check level slots using circular hit detection
+        // Radius of 110px matches castle visual size at 0.5 scale (base castle ~220px)
+        // Castles are drawn via drawCastleTopDown(ctx, centerX, centerY, this.castleScale)
         if (this.levelSlots && this.levelSlots.length > 0) {
             for (let i = 0; i < this.levelSlots.length; i++) {
                 const slot = this.levelSlots[i];
@@ -119,7 +121,8 @@ export class CampaignBase {
                         Math.pow(x - slot.x, 2) + Math.pow(y - slot.y, 2)
                     );
                     
-                    if (distance <= 50) {
+                    // Increased from 50 to 110 to match castle visual size at 0.5 scale
+                    if (distance <= 110) {
                         this.hoveredLevel = i;
                         break;
                     }
@@ -140,7 +143,8 @@ export class CampaignBase {
             return;
         }
         
-        // Check level clicks
+        // Check level clicks using circular hit detection
+        // Radius of 110px matches castle visual size at 0.5 scale
         if (this.levelSlots && this.levelSlots.length > 0) {
             for (let i = 0; i < this.levelSlots.length; i++) {
                 const slot = this.levelSlots[i];
@@ -151,11 +155,14 @@ export class CampaignBase {
                         Math.pow(x - slot.x, 2) + Math.pow(y - slot.y, 2)
                     );
                     
-                    if (distance <= 50) {
-                        // Only allow clicking unlocked levels
+                    // Increased from 50 to 110 to match castle visual size at 0.5 scale
+                    if (distance <= 110) {
+                        // Only allow clicking unlocked levels (not placeholders or locked levels)
                         if (level.unlocked && !level.id.startsWith('placeholder-')) {
-                            this.stateManager.levelToLoad = level;
-                            this.stateManager.changeState('gameplay');
+                            // Pass level info to GameplayState via stateManager
+                            this.stateManager.selectedLevelInfo = level;
+                            // GameplayState will read selectedLevelInfo.id to create the level
+                            this.stateManager.changeState('game');
                         }
                         return;
                     }

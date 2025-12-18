@@ -1,4 +1,4 @@
-import { LevelBase } from './LevelBase.js';
+import { LevelBase } from '../LevelBase.js';
 
 export class Level4 extends LevelBase {
     constructor() {
