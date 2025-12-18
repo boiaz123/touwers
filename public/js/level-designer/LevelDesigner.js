@@ -22,6 +22,7 @@ export class LevelDesigner {
         this.waves = [];
         this.terrainElements = []; // Array of {type, gridX, gridY, size}
         this.currentEditingWaveId = null;
+        this.hoveredGridCell = null; // For visual feedback during mouse movement
         
         // Enemies and towers for form
         this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog'];
@@ -62,6 +63,11 @@ export class LevelDesigner {
                 this.setTerrainMode('water'); // Reset to base water mode
                 this.render();
             }
+        });
+        this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+        this.canvas.addEventListener('mouseleave', (e) => {
+            this.hoveredGridCell = null;
+            this.render();
         });
         
         window.addEventListener('resize', () => this.handleResize());
@@ -200,37 +206,74 @@ export class LevelDesigner {
         }
     }
 
+    pixelToGrid(canvasX, canvasY) {
+        const gridX = (canvasX / this.canvas.width) * this.gridWidth;
+        const gridY = (canvasY / this.canvas.height) * this.gridHeight;
+        return { gridX, gridY };
+    }
+
+    snapToGrid(gridX, gridY) {
+        return {
+            gridX: Math.round(gridX),
+            gridY: Math.round(gridY)
+        };
+    }
+
+    handleCanvasMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+
+        // Get raw grid coordinates
+        const gridCoords = this.pixelToGrid(canvasX, canvasY);
+        
+        // Only snap for terrain and path modes
+        if (this.mode === 'terrain' || (this.mode === 'path' && this.waterMode !== 'river') || this.mode === 'castle') {
+            this.hoveredGridCell = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
+        } else if (this.mode === 'path' || (this.mode === 'terrain' && this.waterMode === 'river')) {
+            // For path and river, show the unsnapped position
+            this.hoveredGridCell = gridCoords;
+        }
+        
+        this.render();
+    }
+
     handleCanvasClick(e) {
         const rect = this.canvas.getBoundingClientRect();
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
 
         // Convert to grid coordinates
-        const gridX = (canvasX / this.canvas.width) * this.gridWidth;
-        const gridY = (canvasY / this.canvas.height) * this.gridHeight;
+        const gridCoords = this.pixelToGrid(canvasX, canvasY);
 
         if (this.mode === 'path') {
-            this.pathPoints.push({ gridX, gridY });
+            // Snap path points to grid
+            const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
+            this.pathPoints.push(snapped);
         } else if (this.mode === 'castle') {
-            this.castlePosition = { gridX, gridY };
+            // Snap castle to grid
+            const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
+            this.castlePosition = snapped;
         } else if (this.mode === 'terrain' && this.terrainMode) {
             if (this.waterMode === 'river') {
-                // Add point to river
+                // Add point to river (not snapped for smooth curves)
                 if (!this.riverPoints) this.riverPoints = [];
-                this.riverPoints.push({ gridX, gridY });
+                this.riverPoints.push(gridCoords);
             } else if (this.waterMode === 'lake') {
-                // Add single lake circle with variable size
+                // Add single lake circle with variable size (snapped to grid)
+                const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
                 const element = {
                     type: 'water',
                     waterType: 'lake',
-                    gridX: Math.round(gridX),
-                    gridY: Math.round(gridY),
+                    gridX: snapped.gridX,
+                    gridY: snapped.gridY,
                     size: this.waterSize
                 };
                 this.terrainElements.push(element);
             } else {
-                // Regular terrain placement
-                this.addTerrainElement(this.terrainMode, gridX, gridY);
+                // Regular terrain placement (snapped to grid)
+                const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
+                this.addTerrainElement(this.terrainMode, snapped.gridX, snapped.gridY);
             }
         }
 
@@ -547,6 +590,9 @@ export class LevelDesigner {
         // Draw smooth river overlays for blended corners
         this.drawRiversSmooth();
 
+        // Draw hovered grid cell for snapping feedback
+        this.drawHoveredCell();
+
         // Draw path
         this.drawPath();
 
@@ -585,6 +631,28 @@ export class LevelDesigner {
         }
 
         this.ctx.globalAlpha = 1;
+    }
+
+    drawHoveredCell() {
+        if (!this.hoveredGridCell) return;
+
+        const cellWidthPixels = this.canvas.width / this.gridWidth;
+        const cellHeightPixels = this.canvas.height / this.gridHeight;
+
+        const { gridX, gridY } = this.hoveredGridCell;
+        const x = gridX * cellWidthPixels;
+        const y = gridY * cellHeightPixels;
+
+        // Draw a highlight circle at the hovered cell position
+        this.ctx.fillStyle = 'rgba(255, 200, 100, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 12, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Draw a subtle cell outline
+        this.ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x - cellWidthPixels / 2, y - cellHeightPixels / 2, cellWidthPixels, cellHeightPixels);
     }
 
     drawUISafeBorder() {
