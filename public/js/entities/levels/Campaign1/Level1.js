@@ -1,13 +1,6 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level1 extends LevelBase {
-    static levelId = 'level1';
-    static levelMetadata = {
-        name: 'The King\'s Road',
-        difficulty: 'Easy',
-        order: 1
-    };
-    
     constructor() {
         super();
         this.levelName = 'My Level';
@@ -333,7 +326,88 @@ export class Level1 extends LevelBase {
             { type: 'rock', gridX: 32.00, gridY: 11.00, size: 1.5 },
             { type: 'rock', gridX: 30.00, gridY: 13.00, size: 1.5 },
             { type: 'tree', gridX: 33.00, gridY: 11.00, size: 1.5 },
-            { type: 'tree', gridX: 34.00, gridY: 12.00, size: 1.5 }
+            { type: 'tree', gridX: 34.00, gridY: 12.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 2.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 3.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 4.00, size: 1.5 },
+            { type: 'tree', gridX: 2.00, gridY: 6.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 8.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 6.00, size: 1.5 },
+            { type: 'tree', gridX: 2.00, gridY: 8.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 10.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 10.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 7.00, size: 1.5 },
+            { type: 'tree', gridX: 3.00, gridY: 8.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 19.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 19.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 21.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 22.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 24.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 25.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 27.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 29.00, size: 1.5 },
+            { type: 'tree', gridX: 0.00, gridY: 30.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 31.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 1.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 3.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 4.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 5.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 7.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 8.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 11.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 13.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 12.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 16.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 19.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 21.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 24.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 24.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 17.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 18.00, gridY: 34.00, size: 1.5 },
+            { type: 'tree', gridX: 23.00, gridY: 34.00, size: 1.5 },
+            { type: 'tree', gridX: 23.00, gridY: 32.00, size: 1.5 },
+            { type: 'tree', gridX: 28.00, gridY: 33.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 31.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 29.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 29.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 26.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 23.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 21.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 19.00, size: 1.5 },
+            { type: 'tree', gridX: 57.00, gridY: 19.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 17.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 15.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 13.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 11.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 16.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 18.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 11.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 8.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 7.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 6.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 4.00, size: 1.5 },
+            { type: 'tree', gridX: 59.00, gridY: 2.00, size: 1.5 },
+            { type: 'tree', gridX: 58.00, gridY: 2.00, size: 1.5 },
+            { type: 'tree', gridX: 60.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 58.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 56.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 56.00, gridY: 2.00, size: 1.5 },
+            { type: 'tree', gridX: 54.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 51.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 52.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 52.00, gridY: 3.00, size: 1.5 },
+            { type: 'tree', gridX: 48.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 49.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 45.00, gridY: 2.00, size: 1.5 },
+            { type: 'tree', gridX: 45.00, gridY: 3.00, size: 1.5 },
+            { type: 'tree', gridX: 47.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 17.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 12.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 10.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 20.00, gridY: 1.00, size: 1.5 },
+            { type: 'tree', gridX: 23.00, gridY: 5.00, size: 1.5 }
         ];
     }
 
@@ -450,7 +524,7 @@ export class Level1 extends LevelBase {
         // Wave 12
         , { 
             enemyCount: 1, 
-            enemyHealth_multiplier: 14, 
+            enemyHealth_multiplier: 25, 
             enemySpeed: 25, 
             spawnInterval: 1, 
             pattern: ['beefyenemy'] 
@@ -464,5 +538,3 @@ export class Level1 extends LevelBase {
         return null;
     }
 }
-
-export const levelMetadata = Level1.levelMetadata;

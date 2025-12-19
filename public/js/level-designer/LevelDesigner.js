@@ -91,6 +91,28 @@ export class LevelDesigner {
 
         // Copy code button
         document.getElementById('copyCodeBtn').addEventListener('click', () => this.copyCode());
+
+        // Load level button
+        document.getElementById('loadLevelBtn').addEventListener('click', () => this.openLoadLevelModal());
+
+        // Load level modal controls
+        document.getElementById('loadLevelCloseBtn').addEventListener('click', () => this.closeLoadLevelModal());
+        document.getElementById('loadLevelCancelBtn').addEventListener('click', () => this.closeLoadLevelModal());
+        document.getElementById('loadLevelConfirmBtn').addEventListener('click', () => {
+            const select = document.getElementById('levelSelect');
+            if (select.value) {
+                this.loadLevel(select.value);
+            } else {
+                alert('Please select a level to load');
+            }
+        });
+
+        // Close load level modal on overlay click
+        document.getElementById('loadLevelModal').addEventListener('click', (e) => {
+            if (e.target.id === 'loadLevelModal') {
+                this.closeLoadLevelModal();
+            }
+        });
     }
 
     setupFormHandlers() {
@@ -1635,5 +1657,179 @@ ${pathCode}
         setTimeout(() => {
             statusMsg.innerHTML = '';
         }, 3000);
+    }
+
+    /**
+     * Open the load level modal
+     */
+    openLoadLevelModal() {
+        const modal = document.getElementById('loadLevelModal');
+        modal.classList.add('active');
+        
+        // Populate level select dropdown
+        this.populateLevelSelect();
+    }
+
+    /**
+     * Close the load level modal
+     */
+    closeLoadLevelModal() {
+        const modal = document.getElementById('loadLevelModal');
+        modal.classList.remove('active');
+    }
+
+    /**
+     * Populate the level select dropdown with available levels
+     */
+    async populateLevelSelect() {
+        const select = document.getElementById('levelSelect');
+        
+        // Clear existing options except placeholder
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        // List of available levels - these are the Campaign1 levels
+        const availableLevels = [
+            { value: 'Campaign1.Level1', label: 'Level 1 - The King\'s Road' },
+            { value: 'Campaign1.Level2', label: 'Level 2 - The Dark Forest' },
+            { value: 'Campaign1.Level3', label: 'Level 3 - Mountain Pass' },
+            { value: 'Campaign1.Level4', label: 'Level 4 - Swamp Crossing' },
+            { value: 'Campaign1.Level5', label: 'Level 5 - Dragon\'s Lair' }
+        ];
+
+        availableLevels.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level.value;
+            option.textContent = level.label;
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Load a level by its module path (e.g., 'Campaign1.Level1')
+     */
+    async loadLevel(modulePath) {
+        try {
+            // Dynamically import the level module
+            const [campaignName, levelName] = modulePath.split('.');
+            const module = await import(`../entities/levels/${campaignName}/${levelName}.js`);
+            const LevelClass = module[levelName];
+            
+            // Create instance of the level (without resolution manager so it doesn't initialize)
+            const level = new LevelClass();
+            
+            // Clear current state
+            this.clearAll();
+            
+            // Load level metadata
+            if (level.levelName) document.getElementById('levelName').value = level.levelName;
+            if (level.levelNumber) document.getElementById('levelNumber').value = level.levelNumber;
+            if (level.difficulty) document.getElementById('difficulty').value = level.difficulty;
+            if (level.maxWaves) document.getElementById('maxWaves').value = level.maxWaves;
+            
+            // Load visual configuration
+            if (level.visualConfig) {
+                const config = level.visualConfig;
+                if (config.grassColors) {
+                    if (config.grassColors.top) document.getElementById('grassTopColor').value = config.grassColors.top;
+                    if (config.grassColors.upper) document.getElementById('grassUpperColor').value = config.grassColors.upper;
+                    if (config.grassColors.lower) document.getElementById('grassLowerColor').value = config.grassColors.lower;
+                    if (config.grassColors.bottom) document.getElementById('grassBottomColor').value = config.grassColors.bottom;
+                }
+                if (config.grassPatchDensity) document.getElementById('grassDensity').value = config.grassPatchDensity;
+                if (config.pathBaseColor) document.getElementById('pathColor').value = config.pathBaseColor;
+                if (config.edgeBushColor) document.getElementById('bushColor').value = config.edgeBushColor;
+                if (config.edgeRockColor) document.getElementById('rockColor').value = config.edgeRockColor;
+                if (config.edgeGrassColor) document.getElementById('edgeGrassColor').value = config.edgeGrassColor;
+                if (config.flowerDensity) document.getElementById('flowerDensity').value = config.flowerDensity;
+            }
+            
+            // Load terrain elements
+            if (level.terrainElements && Array.isArray(level.terrainElements)) {
+                this.terrainElements = JSON.parse(JSON.stringify(level.terrainElements));
+            }
+            
+            // Load path - the level.path is populated by the level's initialization
+            // But since we didn't call initialize(), we need to manually call createMeanderingPath
+            // with dummy parameters to populate the path
+            if (typeof level.createMeanderingPath === 'function') {
+                // Set temporary cellSize if not already set
+                if (!level.cellSize) {
+                    level.cellSize = this.cellSize;
+                }
+                // Call the method to generate the path
+                level.createMeanderingPath(1920, 1080);
+                
+                // Now extract the path from pixels back to grid coordinates
+                if (level.path && Array.isArray(level.path)) {
+                    const cellSize = level.cellSize || this.cellSize;
+                    this.pathPoints = level.path.map(point => ({
+                        gridX: Math.round(point.x / cellSize),
+                        gridY: Math.round(point.y / cellSize)
+                    }));
+                    this.pathLocked = true;
+                }
+            }
+            
+            // Load waves
+            this.waves = [];
+            if (level.getWaveConfig) {
+                let waveIndex = 1;
+                let waveConfig = level.getWaveConfig(waveIndex);
+                while (waveConfig) {
+                    this.waves.push({
+                        id: waveIndex,
+                        enemyCount: waveConfig.enemyCount || 5,
+                        enemyHealthMultiplier: waveConfig.enemyHealth_multiplier || waveConfig.enemyHealthMultiplier || 1.0,
+                        enemySpeed: waveConfig.enemySpeed || 35,
+                        spawnInterval: waveConfig.spawnInterval || 1.5,
+                        pattern: waveConfig.pattern || ['basic']
+                    });
+                    waveIndex++;
+                    waveConfig = level.getWaveConfig(waveIndex);
+                }
+            }
+            
+            // Update UI
+            this.renderWavesList();
+            this.updateGeneratedCode();
+            this.render();
+            
+            // Close modal and show success message
+            this.closeLoadLevelModal();
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.innerHTML = `<div class="status-message success">✓ Loaded ${modulePath}</div>`;
+            setTimeout(() => {
+                statusMsg.innerHTML = '';
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Error loading level:', error);
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.innerHTML = `<div class="status-message error">✗ Error loading level: ${error.message}</div>`;
+            setTimeout(() => {
+                statusMsg.innerHTML = '';
+            }, 3000);
+        }
+    }
+
+    /**
+     * Clear all designer state
+     */
+    clearAll() {
+        this.pathPoints = [];
+        this.pathLocked = false;
+        this.terrainElements = [];
+        this.waves = [];
+        this.castlePosition = {
+            gridX: this.gridWidth - 2,
+            gridY: this.gridHeight / 2
+        };
+        this.mode = 'path';
+        this.terrainMode = null;
+        this.waterMode = null;
+        this.currentEditingWaveId = null;
+        this.riverPoints = [];
     }
 }

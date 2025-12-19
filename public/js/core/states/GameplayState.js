@@ -5,7 +5,6 @@ import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
 import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
-import { GameState } from './GameState.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
 import { PerformanceMonitor } from '../PerformanceMonitor.js';
@@ -14,7 +13,7 @@ import { ResultsScreen } from './ResultsScreen.js';
 export class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.gameState = new GameState();
+        this.gameState = this.createGameState();
         this.level = null;
         this.towerManager = null;
         this.enemyManager = null;
@@ -73,6 +72,34 @@ export class GameplayState {
     setPaused(paused) {
         this.isPaused = paused;
     }
+
+    /**
+     * Create a new game state with initial values
+     * Consolidated from GameState.js
+     */
+    createGameState() {
+        const state = {
+            health: 20,
+            gold: 100,
+            wave: 1,
+            canAfford: function(cost) {
+                return this.gold >= cost;
+            },
+            spend: function(amount) {
+                if (this.canAfford(amount)) {
+                    this.gold -= amount;
+                    return true;
+                }
+                return false;
+            },
+            reset: function() {
+                this.health = 20;
+                this.gold = 100;
+                this.wave = 1;
+            }
+        };
+        return state;
+    }
     
     async enter() {
         
@@ -101,7 +128,7 @@ export class GameplayState {
         
         if (isMidGameResume) {
             // Restore game state from mid-game save
-            this.gameState = new GameState();
+            this.gameState = this.createGameState();
             this.gameState.health = midGameState.gameState.health;
             this.gameState.gold = midGameState.gameState.gold;
             this.currentLevel = levelInfo.id;
@@ -115,7 +142,7 @@ export class GameplayState {
             this.isSandbox = false;
         } else {
             // Normal level start - reset game state
-            this.gameState = new GameState();
+            this.gameState = this.createGameState();
             this.currentLevel = levelInfo.id;
             this.levelType = levelInfo.type || 'campaign';
             this.levelName = levelInfo.name || 'Unknown Level';

@@ -606,6 +606,7 @@
                 <button id="finishRiverBtn" style="display: none; background: #20a050;">✓ Finish River</button>
                 <button id="undoBtn">↶ Undo</button>
                 <button id="clearBtn" class="danger">🗑️ Clear Path</button>
+                <button id="loadLevelBtn">📂 Load Level</button>
                 <button id="exportBtn">📥 Export Level</button>
             </div>
             <div class="path-info" id="pathInfo">Click to add path points. Right-click to remove last point. Terrain: Left-click to place, right-click to erase.</div>
@@ -764,6 +765,30 @@
             <div class="modal-buttons">
                 <button class="cancel-btn" id="modalCancelBtn">Cancel</button>
                 <button class="save-btn" id="modalSaveBtn">Save Wave</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Level Modal -->
+    <div class="modal-overlay" id="loadLevelModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Load Level</h2>
+                <button class="modal-close-btn" id="loadLevelCloseBtn">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-form-group">
+                    <label>Select Level to Load</label>
+                    <select id="levelSelect" style="padding: 8px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
+                        <option value="">-- Choose a level --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="cancel-btn" id="loadLevelCancelBtn">Cancel</button>
+                <button class="save-btn" id="loadLevelConfirmBtn">Load</button>
             </div>
         </div>
     </div>
