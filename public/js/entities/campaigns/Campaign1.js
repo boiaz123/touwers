@@ -36,13 +36,18 @@ export class Campaign1 extends CampaignBase {
     registerLevels() {
         /**
          * Register all Campaign 1 levels with their metadata.
-         * Each level file exports levelMetadata with: name, difficulty, order
+         * Metadata can be provided via static levelMetadata property or extracted from instance.
          */
-        LevelRegistry.registerLevel('campaign-1', 'level1', Level1, Level1.levelMetadata);
-        LevelRegistry.registerLevel('campaign-1', 'level2', Level2, Level2.levelMetadata);
-        LevelRegistry.registerLevel('campaign-1', 'level3', Level3, Level3.levelMetadata);
-        LevelRegistry.registerLevel('campaign-1', 'level4', Level4, Level4.levelMetadata);
-        LevelRegistry.registerLevel('campaign-1', 'level5', Level5, Level5.levelMetadata);
+        const registerLevel = (levelId, levelClass, name, difficulty, order) => {
+            const metadata = levelClass.levelMetadata || { name, difficulty, order };
+            LevelRegistry.registerLevel('campaign-1', levelId, levelClass, metadata);
+        };
+
+        registerLevel('level1', Level1, 'The King\'s Road', 'Easy', 1);
+        registerLevel('level2', Level2, 'Forrest Road', 'Easy', 2);
+        registerLevel('level3', Level3, 'Crazy Frogs', 'Medium', 3);
+        registerLevel('level4', Level4, 'Dave\'s Cave', 'Medium', 4);
+        registerLevel('level5', Level5, 'Placeholder', 'Hard', 5);
     }
     
     enter() {

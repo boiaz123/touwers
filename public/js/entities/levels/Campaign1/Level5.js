@@ -1,18 +1,11 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level5 extends LevelBase {
-    static levelId = 'level5';
-    static levelMetadata = {
-        name: 'Placeholder',
-        difficulty: 'Hard',
-        order: 5
-    };
-    
     constructor() {
         super();
         this.levelName = 'Placeholder Level';
         this.levelNumber = 5;
-        this.difficulty = 'Easy';
+        this.difficulty = 'Hard';
         this.maxWaves = 10;
         
         // Customize visuals for Level 5

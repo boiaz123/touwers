@@ -1,18 +1,11 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level4 extends LevelBase {
-    static levelId = 'level4';
-    static levelMetadata = {
-        name: 'Dave\'s cave',
-        difficulty: 'Medium',
-        order: 4
-    };
-    
     constructor() {
         super();
-        this.levelName = 'Davey\'s Cave';
+        this.levelName = 'Dave\'s Cave';
         this.levelNumber = 4;
-        this.difficulty = 'Easy';
+        this.difficulty = 'Medium';
         this.maxWaves = 10;
         
         // Customize visuals for cave theme - darker, rockier
