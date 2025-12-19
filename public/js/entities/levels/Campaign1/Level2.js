@@ -6,7 +6,7 @@ export class Level2 extends LevelBase {
         this.levelName = 'Forrest Road';
         this.levelNumber = 2;
         this.difficulty = 'Easy';
-        this.maxWaves = 16;
+        this.maxWaves = 14;
         
         // Customize visuals
         this.setVisualConfig({
