@@ -6,6 +6,7 @@ import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
 import { CampaignMenu } from '../core/states/CampaignMenu.js';
 import { Campaign1 } from '../entities/campaigns/Campaign1.js';
+import { Campaign5 } from '../entities/campaigns/Campaign5.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SettlementHub } from '../core/states/SettlementHub.js';
 import { SaveSystem } from '../core/SaveSystem.js';
@@ -121,7 +122,7 @@ export class Game {
             LevelRegistry.registerLevel('sandbox', 'sandbox', SandboxLevel, SandboxLevel.levelMetadata);
             
             // Initialize campaign registry with campaign classes
-            CampaignRegistry.initialize({ Campaign1 });
+            CampaignRegistry.initialize({ Campaign1, Campaign5 });
             
             // Add campaign states
             const campaign1 = new Campaign1(this.stateManager);

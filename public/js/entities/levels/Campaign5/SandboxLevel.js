@@ -1,4 +1,4 @@
-import { LevelBase } from './LevelBase.js';
+import { LevelBase } from '../LevelBase.js';
 
 export class SandboxLevel extends LevelBase {
     static levelId = 'sandbox';

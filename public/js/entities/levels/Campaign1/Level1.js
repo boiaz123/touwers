@@ -1,11 +1,18 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level1 extends LevelBase {
+    static levelMetadata = {
+        name: 'The King\'s Road',
+        difficulty: 'Easy',
+        order: 1
+    };
+
     constructor() {
         super();
-        this.levelName = 'The King\'s Road';
-        this.levelNumber = 1;
-        this.difficulty = 'Easy';
+        // Derive instance properties from static metadata
+        this.levelName = Level1.levelMetadata.name;
+        this.levelNumber = Level1.levelMetadata.order;
+        this.difficulty = Level1.levelMetadata.difficulty;
         this.maxWaves = 12;
         
         // Customize visuals

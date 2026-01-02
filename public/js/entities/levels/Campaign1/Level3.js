@@ -1,11 +1,18 @@
 import { LevelBase } from '../LevelBase.js';
 
 export class Level3 extends LevelBase {
+    static levelMetadata = {
+        name: 'Crazy Frogs',
+        difficulty: 'Medium',
+        order: 3
+    };
+
     constructor() {
         super();
-        this.levelName = 'Crazy Frogs';
-        this.levelNumber = 3;
-        this.difficulty = 'Medium';
+        // Derive instance properties from static metadata
+        this.levelName = Level3.levelMetadata.name;
+        this.levelNumber = Level3.levelMetadata.order;
+        this.difficulty = Level3.levelMetadata.difficulty;
         this.maxWaves = 10;
         
         // Customize visuals for swampy/frog theme

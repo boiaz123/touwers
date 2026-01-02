@@ -81,19 +81,19 @@ export class CampaignRegistry {
             },
             'campaign-5': {
                 id: 'campaign-5',
-                name: 'The Final Stand',
-                description: 'In a desperate last battle, face the ultimate darkness.',
-                icon: '💀',
-                difficulty: 'Nightmare',
-                class: null, // Will be Campaign5 when created
+                name: 'Level Testing Campaign',
+                description: 'A sandbox campaign with all slots available for level testing purposes.',
+                icon: '🧪',
+                difficulty: 'Testing',
+                class: campaignClasses.Campaign5,
                 rewards: {
-                    gold: 20000,
-                    experience: 5000,
-                    unlocks: ['Legendary Title', 'Ultimate Weapons']
+                    gold: 0,
+                    experience: 0,
+                    unlocks: []
                 },
-                story: 'All previous victories have led to this moment. The final battle for the realm itself awaits.',
+                story: 'A test environment for level design and gameplay mechanics.',
                 progress: 0,
-                locked: true
+                locked: false
             }
         };
     }

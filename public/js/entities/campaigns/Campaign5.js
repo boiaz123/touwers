@@ -1,23 +1,20 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
-// Import level classes - they auto-register when imported
-import { Level1 } from '../levels/Campaign1/Level1.js';
-import { Level2 } from '../levels/Campaign1/Level2.js';
-import { Level3 } from '../levels/Campaign1/Level3.js';
-import { Level4 } from '../levels/Campaign1/Level4.js';
-import { Level5 } from '../levels/Campaign1/Level5.js';
+// Import test levels from Campaign5 folder
+import { SandboxLevel } from '../levels/Campaign5/SandboxLevel.js';
+import { Level6 } from '../levels/Campaign5/Level2.js';
 
 /**
- * Campaign1: The Great Northern Campaign
- * Top-down landscape view with castles representing levels along a winding road
- * Castles rendered using exact Castle.js rendering methods for consistency
+ * Campaign5: Level Testing Campaign
+ * A sandbox campaign with all slots available for level testing purposes.
+ * Uses the same visual style as Campaign1 (castles, winding path, terrain)
  */
-export class Campaign1 extends CampaignBase {
+export class Campaign5 extends CampaignBase {
     constructor(stateManager) {
         super(stateManager);
         
-        this.campaignId = 'campaign-1';
-        this.campaignName = 'The Great Northern Campaign';
+        this.campaignId = 'campaign-5';
+        this.campaignName = 'Level Testing Campaign';
         
         // Castle rendering scale for campaign map
         this.castleScale = 0.5;
@@ -35,36 +32,42 @@ export class Campaign1 extends CampaignBase {
     
     registerLevels() {
         /**
-         * Register all Campaign 1 levels.
-         * Metadata is read from static levelMetadata property in each level class.
+         * Register all Campaign 5 sandbox test levels.
+         * Level metadata is read from static levelMetadata properties in each level class.
          */
         const registerLevel = (levelId, levelClass) => {
             const metadata = levelClass.levelMetadata;
             if (!metadata) {
                 throw new Error(`Level ${levelId} does not have static levelMetadata property`);
             }
-            LevelRegistry.registerLevel('campaign-1', levelId, levelClass, metadata);
+            LevelRegistry.registerLevel('campaign-5', levelId, levelClass, metadata);
         };
 
-        registerLevel('level1', Level1);
-        registerLevel('level2', Level2);
-        registerLevel('level3', Level3);
-        registerLevel('level4', Level4);
-        registerLevel('level5', Level5);
+        // Register sandbox level in multiple slots for testing
+        // Each SandboxLevel instance uses the same static metadata (Sandbox Mode, Endless)
+        registerLevel('sandbox-test-1', SandboxLevel);
+        registerLevel('spiraling-into-control', Level6);
+        registerLevel('sandbox-test-3', SandboxLevel);
+        registerLevel('sandbox-test-4', SandboxLevel);
+        registerLevel('sandbox-test-5', SandboxLevel);
+        registerLevel('sandbox-test-6', SandboxLevel);
+        registerLevel('sandbox-test-7', SandboxLevel);
+        registerLevel('sandbox-test-8', SandboxLevel);
     }
     
     enter() {
         // Get levels from registry for this campaign
-        let registeredLevels = LevelRegistry.getLevelsByCampaign('campaign-1');
+        let registeredLevels = LevelRegistry.getLevelsByCampaign('campaign-5');
         
-        // Apply unlock status from save data
+        // Apply unlock status from save data - ALL LEVELS UNLOCKED FOR TESTING
         const saveData = this.stateManager.currentSaveData;
         this.levels = registeredLevels.map(level => ({
             id: level.id,
             name: level.name,
             difficulty: level.difficulty,
-            unlocked: !saveData || !saveData.unlockedLevels || saveData.unlockedLevels.includes(level.id) || level.id === 'level1',
-            type: 'campaign'
+            unlocked: true, // All levels unlocked for testing
+            // Mark as sandbox if it's a sandbox test or endless difficulty
+            type: (level.id.includes('sandbox') || level.difficulty === 'Endless') ? 'sandbox' : 'campaign'
         }));
 
         
@@ -154,6 +157,45 @@ export class Campaign1 extends CampaignBase {
             
             this.levelSlots.push(pos);
         }
+    }
+    
+    getPointOnPath(t) {
+        // Interpolate along the path
+        if (!this.pathPoints || this.pathPoints.length < 2) {
+            return { x: 0, y: 0 };
+        }
+        
+        const totalDistance = this.getPathLength();
+        const targetDistance = totalDistance * t;
+        let currentDistance = 0;
+        
+        for (let i = 0; i < this.pathPoints.length - 1; i++) {
+            const p1 = this.pathPoints[i];
+            const p2 = this.pathPoints[i + 1];
+            const segmentLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            
+            if (currentDistance + segmentLength >= targetDistance) {
+                const segmentT = (targetDistance - currentDistance) / segmentLength;
+                return {
+                    x: p1.x + (p2.x - p1.x) * segmentT,
+                    y: p1.y + (p2.y - p1.y) * segmentT
+                };
+            }
+            
+            currentDistance += segmentLength;
+        }
+        
+        return { ...this.pathPoints[this.pathPoints.length - 1] };
+    }
+    
+    getPathLength() {
+        let length = 0;
+        for (let i = 0; i < this.pathPoints.length - 1; i++) {
+            const p1 = this.pathPoints[i];
+            const p2 = this.pathPoints[i + 1];
+            length += Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        }
+        return length;
     }
     
     generateTerrainCache() {
@@ -303,52 +345,32 @@ export class Campaign1 extends CampaignBase {
         const filteredRocks = rocks.filter(rock => {
             for (const mountain of mountainsList) {
                 const dist = Math.hypot(rock.x - mountain.x, rock.y - mountain.y);
-                const minDist = Math.max(mountain.width, mountain.height) * 0.65;
-                if (dist < minDist) {
-                    return false; // Remove this rock
+                if (dist < 150) {
+                    return false;
                 }
             }
             return true;
         });
-        
         this.terrainDetails.rocks = filteredRocks;
         
-        // Generate scattered shrubs for variety
-        const shrubCount = 60;
-        for (let i = 0; i < shrubCount; i++) {
-            this.terrainDetails.shrubs.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: 5 + Math.random() * 14,
-                color: Math.random() > 0.5 ? '#4a6b4a' : '#3a5a3a',
-                opacity: 0.4 + Math.random() * 0.4
-            });
-        }
-        
-        // Generate scattered trees for diversity - with STRICT mountain, water, AND road avoidance
-        const scatteredTrees = [];
-        let treesAdded = 0;
+        // Generate scattered trees - random but avoiding mountains, water, and roads
+        const roadPathPoints = this.pathPoints;
         const waterRegions = this.terrainDetails.water;
         const mountainRegions = this.terrainDetails.mountains;
-        const roadPathPoints = this.pathPoints;
         
-        // Very high attempt count to force trees away from mountains
-        for (let attempt = 0; attempt < 3000 && treesAdded < 250; attempt++) {
+        const scatteredTrees = [];
+        let treesAdded = 0;
+        const targetTrees = 80;
+        let attempts = 0;
+        const maxAttempts = 2000;
+        
+        while (treesAdded < targetTrees && attempts < maxAttempts) {
+            attempts++;
+            
             const x = Math.random() * width;
             const y = Math.random() * height;
             
-            // FIRST CHECK: Absolutely NO point inside mountain shape
-            let insideMountain = false;
-            for (const mountain of mountainRegions) {
-                if (this.isPointInMountain(x, y, mountain)) {
-                    insideMountain = true;
-                    break;
-                }
-            }
-            
-            if (insideMountain) continue;
-            
-            // SECOND CHECK: Not too close to water
+            // FIRST CHECK: Not in water regions
             let tooCloseToWater = false;
             for (const water of waterRegions) {
                 const dist = Math.hypot(x - water.x, y - water.y);
@@ -425,7 +447,6 @@ export class Campaign1 extends CampaignBase {
         return y < mountainTopY + 10;
     }
     
-    
     renderBackground(ctx, canvas) {
         // Base grass - render once
         ctx.fillStyle = '#4a9d4a';
@@ -433,21 +454,26 @@ export class Campaign1 extends CampaignBase {
     }
     
     renderTerrain(ctx) {
-        const canvas = this.stateManager.canvas;
-        const w = canvas.width;
-        const h = canvas.height;
+        if (!this.terrainDetails) return;
         
-        // Render background mountains first (far background, behind everything)
+        // Render mountains (background layer)
         if (this.terrainDetails && this.terrainDetails.mountains) {
             for (const mountain of this.terrainDetails.mountains) {
                 this.drawMountain(ctx, mountain);
             }
         }
         
-        // THEN: Render the winding path after mountains so it sits on the ground
-        this.renderPath(ctx);
+        // Render grass patches
+        if (this.terrainDetails && this.terrainDetails.grassPatches) {
+            for (const patch of this.terrainDetails.grassPatches) {
+                ctx.fillStyle = patch.color;
+                ctx.globalAlpha = patch.opacity;
+                ctx.fillRect(patch.x, patch.y, patch.width, patch.height);
+                ctx.globalAlpha = 1;
+            }
+        }
         
-        // Render large boulders (background layer before water)
+        // Render boulders (front layer, in front of water and trees)
         if (this.terrainDetails && this.terrainDetails.boulders) {
             for (const boulder of this.terrainDetails.boulders) {
                 this.drawBoulder(ctx, boulder.x, boulder.y, boulder.size, boulder.type);
@@ -702,102 +728,55 @@ export class Campaign1 extends CampaignBase {
         ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.fill();
         
-        // Rock detail - cracks and texture
-        ctx.strokeStyle = '#5a4a3a';
-        ctx.lineWidth = 1;
+        // Rock outline
+        ctx.strokeStyle = '#4a3a2a';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
+        ctx.arc(x, y, size, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Rock highlight - shiny surface
+        // Rock shine/highlight
         ctx.fillStyle = 'rgba(200, 190, 170, 0.4)';
         ctx.beginPath();
-        ctx.ellipse(x - size * 0.3, y - size * 0.3, size * 0.5, size * 0.35, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.ellipse(x - size * 0.3, y - size * 0.3, size * 0.5, size * 0.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Additional texture for larger rocks
-        if (type === 'large') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.beginPath();
-            ctx.ellipse(x + size * 0.2, y + size * 0.1, size * 0.4, size * 0.3, Math.PI / 6, 0, Math.PI * 2);
-            ctx.fill();
-        }
     }
     
     drawTreeTopDown(ctx, x, y, size, variant = 0) {
-        const treeSize = size * 0.7;
+        const variants = [
+            { baseColor: '#2d5a2d', topColor: '#3d7d3d' },
+            { baseColor: '#1a4a1a', topColor: '#2d6d2d' },
+            { baseColor: '#2d6d2d', topColor: '#3d8d3d' }
+        ];
         
-        // Tree shadow - cast outward
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        const v = variants[variant % variants.length];
+        
+        // Tree shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.beginPath();
-        ctx.ellipse(x + treeSize * 0.3, y + treeSize * 0.4, treeSize * 0.8, treeSize * 0.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + size * 0.2, y + size * 0.3, size * 0.6, size * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Choose tree variant for visual variety
-        let canopyColor1, canopyColor2, trunkColor;
-        switch (variant) {
-            case 0:
-                canopyColor1 = '#2d5a2d';
-                canopyColor2 = '#3d7a3d';
-                trunkColor = '#5a4a3a';
-                break;
-            case 1:
-                canopyColor1 = '#3a6b3a';
-                canopyColor2 = '#4a8a4a';
-                trunkColor = '#6a5a4a';
-                break;
-            case 2:
-                canopyColor1 = '#1f4a1f';
-                canopyColor2 = '#2f6a2f';
-                trunkColor = '#4a3a2a';
-                break;
-            default:
-                canopyColor1 = '#2d5a2d';
-                canopyColor2 = '#3d7a3d';
-                trunkColor = '#5a4a3a';
-        }
+        // Tree trunk - thin, low profile
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(x - size * 0.15, y + size * 0.4, size * 0.3, size * 0.5);
         
-        // Tree canopy - outer layer
-        ctx.fillStyle = canopyColor2;
+        // Tree canopy - concentric circles for top-down view
+        ctx.fillStyle = v.baseColor;
         ctx.beginPath();
-        ctx.arc(x, y, treeSize, 0, Math.PI * 2);
+        ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tree canopy - inner (darker) layer
-        ctx.fillStyle = canopyColor1;
+        // Tree highlights
+        ctx.fillStyle = v.topColor;
         ctx.beginPath();
-        ctx.arc(x, y, treeSize * 0.75, 0, Math.PI * 2);
+        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tree canopy - core
-        ctx.fillStyle = canopyColor1;
-        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = 'rgba(100, 150, 100, 0.4)';
         ctx.beginPath();
-        ctx.arc(x, y, treeSize * 0.5, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.1, y + size * 0.1, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
-        
-        // Tree trunk
-        const trunkWidth = treeSize * 0.25;
-        const trunkHeight = treeSize * 0.55;
-        
-        // Trunk shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(x - trunkWidth / 2 + 1, y + treeSize * 0.25, trunkWidth, trunkHeight);
-        
-        // Main trunk
-        const trunkGradient = ctx.createLinearGradient(x - trunkWidth / 2, y, x + trunkWidth / 2, y);
-        trunkGradient.addColorStop(0, '#4a3a2a');
-        trunkGradient.addColorStop(0.5, trunkColor);
-        trunkGradient.addColorStop(1, '#4a3a2a');
-        ctx.fillStyle = trunkGradient;
-        ctx.fillRect(x - trunkWidth / 2, y + treeSize * 0.25, trunkWidth, trunkHeight);
-        
-        // Trunk highlight
-        ctx.fillStyle = '#7a6a5a';
-        ctx.globalAlpha = 0.5;
-        ctx.fillRect(x - trunkWidth / 3, y + treeSize * 0.25, trunkWidth * 0.4, trunkHeight * 0.6);
-        ctx.globalAlpha = 1;
     }
     
     renderPath(ctx) {

@@ -159,8 +159,13 @@ export class CampaignMenu {
                 y >= pos.y && y <= pos.y + pos.height) {
                 // Click selects campaign or enters if already selected
                 if (this.selectedCampaignId === campaign.id && !campaign.locked) {
-                    // Enter campaign - switch to the campaign state (levelSelect)
-                    this.stateManager.changeState('levelSelect');
+                    // Enter campaign - create the campaign state dynamically
+                    const CampaignClass = campaign.class;
+                    if (CampaignClass) {
+                        const campaignState = new CampaignClass(this.stateManager);
+                        this.stateManager.addState('levelSelect', campaignState);
+                        this.stateManager.changeState('levelSelect');
+                    }
                 } else {
                     // Select campaign to show info panel
                     this.selectedCampaignId = campaign.id;

@@ -1564,11 +1564,18 @@ export class LevelDesigner {
         const code = `import { LevelBase } from '../LevelBase.js';
 
 export class Level${levelNumber} extends LevelBase {
+    static levelMetadata = {
+        name: '${levelName}',
+        difficulty: '${difficulty}',
+        order: ${levelNumber}
+    };
+
     constructor() {
         super();
-        this.levelName = '${levelName}';
-        this.levelNumber = ${levelNumber};
-        this.difficulty = '${difficulty}';
+        // Derive instance properties from static metadata
+        this.levelName = Level${levelNumber}.levelMetadata.name;
+        this.levelNumber = Level${levelNumber}.levelMetadata.order;
+        this.difficulty = Level${levelNumber}.levelMetadata.difficulty;
         this.maxWaves = ${maxWaves};
         
         // Customize visuals
