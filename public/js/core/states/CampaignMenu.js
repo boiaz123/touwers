@@ -48,6 +48,11 @@ export class CampaignMenu {
         this.infoPanelOpen = false;
         this.infoPanelOpacity = 0;
         
+        // Play menu theme music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic('menu-theme');
+        }
+        
         this.setupMouseListeners();
     }
     

@@ -36,6 +36,11 @@ export class StartScreen {
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
             this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
         }
+        
+        // Play menu theme music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic('menu-theme');
+        }
     }
     
     update(deltaTime) {

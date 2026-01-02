@@ -36,6 +36,11 @@ export class LoadGame {
         this.contentOpacity = 0;
         this.backButtonHovered = false;
         this.hoveredSlot = -1;
+        
+        // Play menu theme music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic('menu-theme');
+        }
 
         this.setupMouseListeners();
     }

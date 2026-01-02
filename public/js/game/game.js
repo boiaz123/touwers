@@ -15,6 +15,9 @@ import { ResolutionSelector } from '../ui/ResolutionSelector.js';
 import { CampaignRegistry } from './CampaignRegistry.js';
 import { LevelRegistry } from '../entities/levels/LevelRegistry.js';
 import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
+import { AudioManager } from '../core/AudioManager.js';
+import { MusicRegistry, initializeMusicRegistry } from '../core/MusicRegistry.js';
+import { SFXRegistry, initializeSFXRegistry } from '../core/SFXRegistry.js';
 
 export class Game {
     constructor() {
@@ -53,11 +56,19 @@ export class Game {
             this.canvas.resolutionManager = this.resolutionManager;
             this.ctx.resolutionManager = this.resolutionManager;
             
+            // Initialize audio system
+            this.audioManager = new AudioManager();
+            initializeMusicRegistry();
+            initializeSFXRegistry();
+            this.audioManager.setMusicRegistry(MusicRegistry.getAllMusic());
+            this.audioManager.setSFXRegistry(SFXRegistry.getAllSFX());
+            
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
             this.stateManager.SaveSystem = SaveSystem;
             this.stateManager.resolutionManager = this.resolutionManager;
             this.stateManager.game = this; // Set game reference for resolution selector access
+            this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             
             // Initialize game loop timing
             this.lastTime = 0;

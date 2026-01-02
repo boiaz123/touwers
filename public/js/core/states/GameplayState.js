@@ -220,6 +220,12 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         
+        // Play level-specific music
+        const levelMusicTrack = this.getAudioTrackForLevel(levelInfo.id);
+        if (this.stateManager.audioManager && levelMusicTrack) {
+            this.stateManager.audioManager.playMusic(levelMusicTrack);
+        }
+        
         // Restore mid-game state if applicable
         if (isMidGameResume) {
             this.restoreMidGameState(midGameState);
@@ -651,6 +657,29 @@ export class GameplayState {
         }
     }
     
+    /**
+     * Get the audio track name for a specific level
+     * Maps level IDs to their corresponding music tracks
+     */
+    getAudioTrackForLevel(levelId) {
+        // Map level IDs to music track names
+        const levelMusicMap = {
+            'level-1': 'level-1-theme',
+            'level-2': 'level-2-theme',
+            'level-3': 'level-3-theme',
+            'level-4': 'level-4-theme',
+            'level-5': 'level-5-theme',
+            'campaign-1-level-1': 'level-1-theme',
+            'campaign-1-level-2': 'level-2-theme',
+            'campaign-1-level-3': 'level-3-theme',
+            'campaign-1-level-4': 'level-4-theme',
+            'campaign-1-level-5': 'level-5-theme',
+            'sandbox': 'level-1-theme' // Default to level 1 music for sandbox
+        };
+        
+        return levelMusicMap[levelId] || 'level-1-theme'; // Fallback to level 1 theme
+    }
+
     exit() {
         // Clean up event listeners when leaving game state
         this.removeEventListeners();

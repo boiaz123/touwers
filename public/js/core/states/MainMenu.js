@@ -47,6 +47,11 @@ export class MainMenu {
             this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
         }
 
+        // Play menu theme music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic('menu-theme');
+        }
+
         this.setupMouseListeners();
     }
 

@@ -57,6 +57,11 @@ export class SettlementHub {
         this.contentOpacity = 0;
         this.activePopup = null;
         
+        // Play menu theme music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic('menu-theme');
+        }
+        
         // Create settlement building instances positioned WITHIN the settlement boundary
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;  // Settlement center X

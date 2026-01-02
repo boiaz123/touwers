@@ -1,0 +1,320 @@
+/**
+ * AudioManager - Centralized audio system for the game
+ * Handles background music, sound effects, and audio state management
+ */
+export class AudioManager {
+    constructor() {
+        // Audio elements
+        this.musicElement = null;
+        this.soundElements = {};
+        
+        // State tracking
+        this.currentMusicTrack = null;
+        this.isMusicPlaying = false;
+        this.isMuted = false;
+        
+        // Volume settings (0.0 - 1.0)
+        this.musicVolume = 0.7;
+        this.sfxVolume = 0.8;
+        
+        // Track metadata
+        this.musicRegistry = {};
+        this.sfxRegistry = {};
+        
+        // Initialize audio
+        this.initialize();
+    }
+    
+    /**
+     * Initialize the audio system
+     */
+    initialize() {
+        // Create music element
+        this.musicElement = new Audio();
+        this.musicElement.loop = true;
+        this.musicElement.volume = this.musicVolume;
+        
+        // Load registries from MusicRegistry and SFXRegistry
+        this.loadRegistries();
+        
+        // console.log('AudioManager: Initialized');
+    }
+    
+    /**
+     * Load music and SFX registries
+     * This will be called by the MusicRegistry and SFXRegistry
+     */
+    loadRegistries() {
+        // Registries will populate this through setMusicRegistry() and setSFXRegistry()
+    }
+    
+    /**
+     * Register music tracks from registry
+     * Called by MusicRegistry during initialization
+     */
+    setMusicRegistry(registry) {
+        this.musicRegistry = registry;
+        // console.log('AudioManager: Music registry loaded', Object.keys(this.musicRegistry));
+    }
+    
+    /**
+     * Register sound effects from registry
+     * Called by SFXRegistry during initialization
+     */
+    setSFXRegistry(registry) {
+        this.sfxRegistry = registry;
+        // console.log('AudioManager: SFX registry loaded', Object.keys(this.sfxRegistry));
+    }
+    
+    /**
+     * Play a background music track
+     * @param {string} trackName - Name of the track to play
+     * @param {boolean} fadeIn - Whether to fade in (optional)
+     */
+    playMusic(trackName, fadeIn = false) {
+        if (!this.musicRegistry[trackName]) {
+            console.warn(`AudioManager: Music track '${trackName}' not found in registry`);
+            return false;
+        }
+        
+        const trackData = this.musicRegistry[trackName];
+        
+        // Don't restart if already playing
+        if (this.currentMusicTrack === trackName && this.isMusicPlaying) {
+            return true;
+        }
+        
+        // Stop current music
+        if (this.musicElement) {
+            this.musicElement.pause();
+            this.musicElement.currentTime = 0;
+        }
+        
+        // Update track info
+        this.currentMusicTrack = trackName;
+        
+        // Set up new track
+        this.musicElement.src = trackData.path;
+        this.musicElement.loop = trackData.loop !== false; // Default to true
+        
+        // Play with optional fade
+        if (fadeIn) {
+            this.musicElement.volume = 0;
+            this.musicElement.play().catch(err => {
+                console.warn('AudioManager: Could not play music:', err);
+            });
+            this.fadeInMusic(this.musicVolume, 1000);
+        } else {
+            this.musicElement.play().catch(err => {
+                console.warn('AudioManager: Could not play music:', err);
+            });
+        }
+        
+        this.isMusicPlaying = true;
+        // console.log(`AudioManager: Playing music '${trackName}'`);
+        
+        return true;
+    }
+    
+    /**
+     * Stop background music
+     * @param {boolean} fadeOut - Whether to fade out (optional)
+     */
+    stopMusic(fadeOut = false) {
+        if (!this.musicElement) return;
+        
+        if (fadeOut) {
+            this.fadeOutMusic(500, () => {
+                this.musicElement.pause();
+                this.musicElement.currentTime = 0;
+                this.isMusicPlaying = false;
+                this.currentMusicTrack = null;
+            });
+        } else {
+            this.musicElement.pause();
+            this.musicElement.currentTime = 0;
+            this.isMusicPlaying = false;
+            this.currentMusicTrack = null;
+        }
+    }
+    
+    /**
+     * Pause current music
+     */
+    pauseMusic() {
+        if (this.musicElement && this.isMusicPlaying) {
+            this.musicElement.pause();
+            this.isMusicPlaying = false;
+        }
+    }
+    
+    /**
+     * Resume paused music
+     */
+    resumeMusic() {
+        if (this.musicElement && !this.isMusicPlaying && this.currentMusicTrack) {
+            this.musicElement.play().catch(err => {
+                console.warn('AudioManager: Could not resume music:', err);
+            });
+            this.isMusicPlaying = true;
+        }
+    }
+    
+    /**
+     * Fade in music over time
+     * @param {number} targetVolume - Target volume (0.0 - 1.0)
+     * @param {number} duration - Duration in milliseconds
+     */
+    fadeInMusic(targetVolume, duration = 1000) {
+        const startVolume = this.musicElement.volume;
+        const startTime = Date.now();
+        
+        const fadeInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            this.musicElement.volume = startVolume + (targetVolume - startVolume) * progress;
+            
+            if (progress >= 1) {
+                clearInterval(fadeInterval);
+                this.musicElement.volume = targetVolume;
+            }
+        }, 16); // ~60fps
+    }
+    
+    /**
+     * Fade out music over time
+     * @param {number} duration - Duration in milliseconds
+     * @param {function} callback - Optional callback when fade completes
+     */
+    fadeOutMusic(duration = 500, callback = null) {
+        const startVolume = this.musicElement.volume;
+        const startTime = Date.now();
+        
+        const fadeInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            this.musicElement.volume = startVolume * (1 - progress);
+            
+            if (progress >= 1) {
+                clearInterval(fadeInterval);
+                this.musicElement.volume = 0;
+                if (callback) {
+                    callback();
+                }
+            }
+        }, 16); // ~60fps
+    }
+    
+    /**
+     * Play a sound effect
+     * @param {string} sfxName - Name of the sound effect
+     * @param {number} volume - Optional volume override (0.0 - 1.0)
+     */
+    playSFX(sfxName, volume = null) {
+        if (!this.musicRegistry[sfxName] && !this.sfxRegistry[sfxName]) {
+            console.warn(`AudioManager: Sound effect '${sfxName}' not found in registry`);
+            return false;
+        }
+        
+        const sfxData = this.sfxRegistry[sfxName] || this.musicRegistry[sfxName];
+        const finalVolume = volume !== null ? volume : this.sfxVolume;
+        
+        try {
+            // Create new audio element for sound effect (allows multiple simultaneous plays)
+            const sfxElement = new Audio();
+            sfxElement.src = sfxData.path;
+            sfxElement.volume = finalVolume;
+            sfxElement.play().catch(err => {
+                console.warn('AudioManager: Could not play SFX:', err);
+            });
+            
+            // Clean up after playing
+            sfxElement.addEventListener('ended', () => {
+                sfxElement.pause();
+                sfxElement.currentTime = 0;
+            }, { once: true });
+            
+            // console.log(`AudioManager: Playing SFX '${sfxName}'`);
+            return true;
+        } catch (error) {
+            console.error('AudioManager: Error playing SFX:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Set music volume (0.0 - 1.0)
+     */
+    setMusicVolume(volume) {
+        this.musicVolume = Math.max(0, Math.min(1, volume));
+        if (this.musicElement) {
+            this.musicElement.volume = this.musicVolume;
+        }
+    }
+    
+    /**
+     * Set SFX volume (0.0 - 1.0)
+     */
+    setSFXVolume(volume) {
+        this.sfxVolume = Math.max(0, Math.min(1, volume));
+    }
+    
+    /**
+     * Get current music volume
+     */
+    getMusicVolume() {
+        return this.musicVolume;
+    }
+    
+    /**
+     * Get current SFX volume
+     */
+    getSFXVolume() {
+        return this.sfxVolume;
+    }
+    
+    /**
+     * Mute all audio
+     */
+    mute() {
+        this.isMuted = true;
+        if (this.musicElement) {
+            this.musicElement.muted = true;
+        }
+        // console.log('AudioManager: Muted');
+    }
+    
+    /**
+     * Unmute all audio
+     */
+    unmute() {
+        this.isMuted = false;
+        if (this.musicElement) {
+            this.musicElement.muted = false;
+        }
+        // console.log('AudioManager: Unmuted');
+    }
+    
+    /**
+     * Get mute state
+     */
+    isMutedState() {
+        return this.isMuted;
+    }
+    
+    /**
+     * Get current playing track name
+     */
+    getCurrentTrack() {
+        return this.currentMusicTrack;
+    }
+    
+    /**
+     * Check if music is currently playing
+     */
+    isPlaying() {
+        return this.isMusicPlaying;
+    }
+}
