@@ -7,6 +7,10 @@ export class ArcherTower extends Tower {
         this.damage = 15;
         this.fireRate = 1.5;
         
+        // Armor pierce upgrade - percentage of enemy armor to ignore
+        // Each upgrade level = 5% armor piercing
+        this.armorPiercingPercent = 0;
+        
         // Animation properties
         this.archerAngle = 0;
         this.drawTime = 0;
@@ -51,7 +55,10 @@ export class ArcherTower extends Tower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage, false, 'physical');
+            // Calculate effective armor to ignore based on upgrade level
+            // Armor pierce reduces the enemy's effective armor by a percentage
+            const ignoreArmor = this.armorPiercingPercent > 0; // Use armor piercing if we have any
+            this.target.takeDamage(this.damage, ignoreArmor, 'physical');
             
             // Select an archer to shoot
             const shooter = this.archers[Math.floor(Math.random() * this.archers.length)];

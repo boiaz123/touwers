@@ -260,10 +260,25 @@ export class BaseEnemy {
     }
     
     takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
-        this.health -= amount;
+        let finalDamage = amount;
         
-        // Create a hit splatter effect
-        const splatter = new HitSplatter(this.x, this.y - 20, amount, damageType, followTarget ? this : null);
+        // Apply armor reduction for physical damage types (unless armor is ignored)
+        if (!ignoreArmor && damageType === 'physical' && this.armour > 0) {
+            // Armor reduces damage by a percentage: each armor point = 1% damage reduction (max 80% reduction)
+            const armorReductionPercent = Math.min(0.8, this.armour * 0.01);
+            finalDamage = amount * (1 - armorReductionPercent);
+        } else if (damageType === 'physical' && this.armour > 0) {
+            // ignoreArmor is true, so completely bypass armor reduction
+            finalDamage = amount;
+        }
+        
+        // Ensure minimum 1 damage gets through
+        finalDamage = Math.max(1, finalDamage);
+        
+        this.health -= finalDamage;
+        
+        // Create a hit splatter effect with the final calculated damage
+        const splatter = new HitSplatter(this.x, this.y - 20, finalDamage, damageType, followTarget ? this : null);
         this.hitSplatters.push(splatter);
     }
     

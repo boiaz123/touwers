@@ -41,6 +41,7 @@ export class TowerForge extends Building {
             'basic': { level: 0, baseCost: 80, effect: 8 },
             'barricade': { level: 0, baseCost: 80, effect: 8 },
             'archer': { level: 0, baseCost: 90, effect: 8 },
+            'archer_armor_pierce': { level: 0, baseCost: 120, effect: 5 }, // 5% per level
             
             // Poison upgrades - available at forge level 2+
             'poison': { level: 0, baseCost: 100, effect: 5 },
@@ -1068,6 +1069,18 @@ export class TowerForge extends Building {
             icon: '🏹'
         });
         
+        // Archer Tower Armor Pierce - available from forge level 1
+        options.push({
+            id: 'archer_armor_pierce',
+            name: 'Archer Armor Pierce Upgrade',
+            description: `Increase Archer Tower armor pierce by ${this.upgrades.archer_armor_pierce.effect}% per level`,
+            level: this.upgrades.archer_armor_pierce.level,
+            maxLevel: this.forgeLevel, // Capped at forge level
+            baseCost: this.upgrades.archer_armor_pierce.baseCost,
+            cost: this.calculateUpgradeCost('archer_armor_pierce'),
+            icon: '💢'
+        });
+        
         // Poison Archer Tower - available from forge level 2+
         if (this.forgeLevel >= 2) {
             options.push({
@@ -1209,6 +1222,7 @@ export class TowerForge extends Building {
             basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
             barricadeDamageBonus: this.upgrades.barricade.level * this.upgrades.barricade.effect,
             archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.effect,
+            archerArmorPierceBonus: this.upgrades.archer_armor_pierce.level * this.upgrades.archer_armor_pierce.effect,
             poisonDamageBonus: this.upgrades.poison.level * this.upgrades.poison.effect,
             cannonDamageBonus: this.upgrades.cannon.level * this.upgrades.cannon.effect
         };

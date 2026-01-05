@@ -509,6 +509,10 @@ export class TowerManager {
                 if (multipliers.archerDamageBonus > 0) {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.archerDamageBonus;
                 }
+                // Apply armor piercing upgrade if present
+                if (multipliers.archerArmorPierceBonus > 0) {
+                    tower.armorPiercingPercent = multipliers.archerArmorPierceBonus;
+                }
                 break;
                 
             case 'PoisonArcherTower':

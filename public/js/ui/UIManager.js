@@ -915,6 +915,8 @@ export class UIManager {
                 const totalBonus = upgrade.level * (upgrade.baseCost || 0);
                 if (upgrade.id === 'basic' || upgrade.id === 'barricade' || upgrade.id === 'archer') {
                     currentEffect = `Damage: +${upgrade.level * 8}`;
+                } else if (upgrade.id === 'archer_armor_pierce') {
+                    currentEffect = `Armor Pierce: +${upgrade.level * 5}%`;
                 } else if (upgrade.id === 'poison') {
                     currentEffect = `Poison: +${upgrade.level * 5}`;
                 } else if (upgrade.id === 'cannon') {
