@@ -290,7 +290,7 @@ export class EarthFrogEnemy extends BaseEnemy {
         // Enemy shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 1.5, baseSize * 0.85, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 0.4, baseSize * 0.85, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.save();
@@ -309,31 +309,31 @@ export class EarthFrogEnemy extends BaseEnemy {
         }
         
         // --- BACK LEGS (DRAW FIRST) ---
-        this.drawBattleLeg(ctx, -baseSize * 0.35, baseSize * 0.5, baseSize, false, true);
-        this.drawBattleLeg(ctx, baseSize * 0.35, baseSize * 0.5, baseSize, true, true);
+        this.drawBattleLeg(ctx, -baseSize * 0.3, baseSize * 0.32, baseSize, false, true);
+        this.drawBattleLeg(ctx, baseSize * 0.3, baseSize * 0.32, baseSize, true, true);
         
         // --- LOWER ROBE/BODY ---
-        // Robe skirt (wider, more wizardly)
+        // Robe skirt (smaller, less bulbous)
         ctx.fillStyle = '#2a2010';
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.65, baseSize * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.22, baseSize * 0.45, baseSize * 0.25, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Robe outline
         ctx.strokeStyle = '#1a1000';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.65, baseSize * 0.45, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.22, baseSize * 0.45, baseSize * 0.25, 0, 0, Math.PI * 2);
         ctx.stroke();
         
         // Robe detail lines (vertical folds)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.lineWidth = 1;
         for (let i = -2; i <= 2; i++) {
-            const x = i * baseSize * 0.18;
+            const x = i * baseSize * 0.12;
             ctx.beginPath();
-            ctx.moveTo(x, baseSize * 0.08);
-            ctx.quadraticCurveTo(x + baseSize * 0.08, baseSize * 0.3, x + baseSize * 0.05, baseSize * 0.65);
+            ctx.moveTo(x, baseSize * 0.05);
+            ctx.quadraticCurveTo(x + baseSize * 0.06, baseSize * 0.18, x + baseSize * 0.04, baseSize * 0.45);
             ctx.stroke();
         }
         
@@ -373,8 +373,8 @@ export class EarthFrogEnemy extends BaseEnemy {
         ctx.fill();
         
         // --- FRONT ARMS/HANDS ---
-        this.drawBattleArm(ctx, -baseSize * 0.3, -baseSize * 0.1, baseSize, false);
-        this.drawBattleArm(ctx, baseSize * 0.3, -baseSize * 0.1, baseSize, true);
+        this.drawBattleArm(ctx, -baseSize * 0.3, baseSize * 0.05, baseSize, false);
+        this.drawBattleArm(ctx, baseSize * 0.3, baseSize * 0.05, baseSize, true);
         
         // --- HEAD ---
         ctx.fillStyle = this.skinColor;
@@ -508,66 +508,70 @@ export class EarthFrogEnemy extends BaseEnemy {
         }
     }
     
-    drawBattleLeg(ctx, hipX, hipY, baseSize, isRight) {
+    drawBattleLeg(ctx, hipX, hipY, baseSize, isRight, isBackLeg) {
         const side = isRight ? 1 : -1;
         const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
         
+        // Reverse compression: start extended, compress when jumping, extend after
         let compression = 0;
         if (jumpPhase < 0.5) {
-            compression = (0.5 - jumpPhase) * 2;
+            compression = jumpPhase * 2 * -1; // 0 to -1 (normal to extended downward)
         } else {
-            compression = (jumpPhase - 0.5) * 2 * -1;
+            compression = (1 - jumpPhase) * 2 * -1; // -1 to 0 (extended to normal)
         }
         
-        const thighLength = baseSize * 0.5;
-        const calfLength = baseSize * 0.55;
+        if (isBackLeg) {
+            // Back legs - powerful, extend downward
+            const thighLength = baseSize * 0.09;
+            const calfLength = baseSize * 0.11;
+            
+            const baseThighAngle = side > 0 ? Math.PI / 2.2 : Math.PI - Math.PI / 2.2;
+            const thighBend = compression * 0.4;
+            const thighAngle = baseThighAngle - thighBend * side;
+            
+            const kneeX = hipX + Math.cos(thighAngle) * thighLength;
+            const kneeY = hipY + Math.sin(thighAngle) * thighLength;
+            
+            const calfBend = compression * 0.5;
+            const calfAngle = thighAngle - calfBend * side;
+            
+            const footX = kneeX + Math.cos(calfAngle) * calfLength;
+            const footY = kneeY + Math.sin(calfAngle) * calfLength;
         
-        const baseThighAngle = side > 0 ? -Math.PI / 2.2 : -Math.PI + Math.PI / 2.2;
-        const thighBend = compression * 0.4;
-        const thighAngle = baseThighAngle - thighBend * side;
-        
-        const kneeX = hipX + Math.cos(thighAngle) * thighLength;
-        const kneeY = hipY + Math.sin(thighAngle) * thighLength;
-        
-        const calfBend = compression * 0.5;
-        const calfAngle = thighAngle - calfBend * side;
-        
-        const footX = kneeX + Math.cos(calfAngle) * calfLength;
-        const footY = kneeY + Math.sin(calfAngle) * calfLength;
-        
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.lineWidth = baseSize * 0.22;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(hipX + 1.5, hipY + 1.5);
-        ctx.lineTo(kneeX + 1.5, kneeY + 1.5);
-        ctx.lineTo(footX + 1.5, footY + 1.5);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#5a4a2a';
-        ctx.lineWidth = baseSize * 0.22;
-        ctx.beginPath();
-        ctx.moveTo(hipX, hipY);
-        ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
-        
-        ctx.fillStyle = '#8B6F47';
-        ctx.beginPath();
-        ctx.ellipse(footX, footY, baseSize * 0.18, baseSize * 0.2, calfAngle + 0.1 * side, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#5a4a2a';
-        ctx.lineWidth = 1;
-        for (let t = -1; t <= 1; t++) {
-            const toeAngle = calfAngle + (t * 0.35);
-            const toeX = footX + Math.cos(toeAngle) * baseSize * 0.11;
-            const toeY = footY + Math.sin(toeAngle) * baseSize * 0.14;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = baseSize * 0.12;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.beginPath();
-            ctx.moveTo(footX, footY);
-            ctx.lineTo(toeX, toeY);
+            ctx.moveTo(hipX + 1.5, hipY + 1.5);
+            ctx.lineTo(kneeX + 1.5, kneeY + 1.5);
+            ctx.lineTo(footX + 1.5, footY + 1.5);
             ctx.stroke();
+            
+            ctx.strokeStyle = '#5a4a2a';
+            ctx.lineWidth = baseSize * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(hipX, hipY);
+            ctx.lineTo(kneeX, kneeY);
+            ctx.lineTo(footX, footY);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#8B6F47';
+            ctx.beginPath();
+            ctx.ellipse(footX, footY, baseSize * 0.18, baseSize * 0.2, calfAngle + 0.1 * side, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#5a4a2a';
+            ctx.lineWidth = 1;
+            for (let t = -1; t <= 1; t++) {
+                const toeAngle = calfAngle + (t * 0.35);
+                const toeX = footX + Math.cos(toeAngle) * baseSize * 0.11;
+                const toeY = footY + Math.sin(toeAngle) * baseSize * 0.14;
+                ctx.beginPath();
+                ctx.moveTo(footX, footY);
+                ctx.lineTo(toeX, toeY);
+                ctx.stroke();
+            }
         }
     }
     
@@ -575,50 +579,72 @@ export class EarthFrogEnemy extends BaseEnemy {
         const side = isRight ? 1 : -1;
         const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
         
-        let armLift = 0;
+        // Front legs: lift during jump, move downward during stance
+        let legLift = 0;
         if (jumpPhase < 0.6) {
-            armLift = jumpPhase / 0.6;
+            legLift = jumpPhase / 0.6; // Lift up to peak
         } else {
-            armLift = (1 - jumpPhase) / 0.4;
+            legLift = (1 - jumpPhase) / 0.4; // Release down
         }
         
-        const upperLength = baseSize * 0.28;
-        const lowerLength = baseSize * 0.26;
+const upperLength = baseSize * 0.035;
+            const lowerLength = baseSize * 0.035;
         
-        const baseUpperAngle = side > 0 ? Math.PI / 4.5 : 3.5 * Math.PI / 4.5;
-        const upperAngle = baseUpperAngle + armLift * 0.35 * side;
+        const baseUpperAngle = side > 0 ? -Math.PI / 4 : -Math.PI + Math.PI / 4;
+        const upperAngle = baseUpperAngle + legLift * 0.25 * side; // Spread outward during jump
         
         const elbowX = shoulderX + Math.cos(upperAngle) * upperLength;
-        const elbowY = shoulderY + Math.sin(upperAngle) * upperLength;
+        const elbowY = shoulderY + Math.sin(upperAngle) * upperLength + legLift * baseSize * 0.08;
         
-        const baseLowerAngle = Math.PI / 2.1 + (side > 0 ? 0.2 : -0.2);
-        const lowerAngle = baseLowerAngle + armLift * 0.25 * side;
+        const baseLowerAngle = Math.PI / 2 + (side > 0 ? 0.2 : -0.2);
+        const lowerAngle = baseLowerAngle + legLift * 0.15 * side;
         
         const handX = elbowX + Math.cos(lowerAngle) * lowerLength;
         const handY = elbowY + Math.sin(lowerAngle) * lowerLength;
         
+        // Draw shadow
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.lineWidth = baseSize * 0.16;
+        ctx.lineWidth = baseSize * 0.12;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(shoulderX + 1, shoulderY + 1);
-        ctx.lineTo(elbowX + 1, elbowY + 1);
-        ctx.lineTo(handX + 1, handY + 1);
-        ctx.stroke();
-        
-        ctx.strokeStyle = '#5a4a2a';
-        ctx.lineWidth = baseSize * 0.16;
         ctx.beginPath();
         ctx.moveTo(shoulderX, shoulderY);
         ctx.lineTo(elbowX, elbowY);
         ctx.lineTo(handX, handY);
         ctx.stroke();
         
-        ctx.fillStyle = '#8B6F47';
+        // Draw front legs
+        ctx.strokeStyle = '#5a4a2a';
+        ctx.lineWidth = baseSize * 0.12;
         ctx.beginPath();
-        ctx.ellipse(handX, handY, baseSize * 0.12, baseSize * 0.14, lowerAngle, 0, Math.PI * 2);
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(elbowX, elbowY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+        
+        // Front foot pads with frog toes
+        ctx.fillStyle = '#a8886a';
+        ctx.beginPath();
+        ctx.ellipse(handX, handY, baseSize * 0.1, baseSize * 0.12, lowerAngle, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Front toe details
+        ctx.strokeStyle = '#5a4a2a';
+        ctx.lineWidth = 0.7;
+        for (let t = -1; t <= 1; t++) {
+            const toeAngle = lowerAngle + (t * 0.2);
+            const toeX = handX + Math.cos(toeAngle) * baseSize * 0.06;
+            const toeY = handY + Math.sin(toeAngle) * baseSize * 0.08;
+            ctx.beginPath();
+            ctx.moveTo(handX, handY);
+            ctx.lineTo(toeX, toeY);
+            ctx.stroke();
+            // Toe tip
+            ctx.fillStyle = '#5a4a2a';
+            ctx.beginPath();
+            ctx.arc(toeX, toeY, baseSize * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
     
     drawBattleMageHat(ctx, baseSize) {
