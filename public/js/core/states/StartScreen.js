@@ -73,8 +73,8 @@ export class StartScreen {
             this.transitionActive = true;
             this.transitionTime = 0;
 
-            // Transition to MainMenu after sword/flame animation completes
-            setTimeout(() => this.stateManager.changeState('mainMenu'), 600);
+            // Transition to MainMenu after full 7-second animation completes
+            setTimeout(() => this.stateManager.changeState('mainMenu'), 7000);
         }
     }
     
@@ -142,191 +142,260 @@ export class StartScreen {
     }
 
     renderTransitionEffect(ctx) {
-        const progress = Math.min(1, this.transitionTime / 0.6);
         const canvas = this.stateManager.canvas;
+        const totalDuration = 7; // Total transition time - 7 seconds
+        const progress = Math.min(1, this.transitionTime / totalDuration);
 
         if (progress < 0.01) return;
 
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2 - 50;
 
-        // Aggressive faster sword movement - swords meet at 40% instead of 70%
-        const leftSwordProgress = Math.min(1, progress / 0.4) * 1.2; // Accelerates and overshoots slightly
-        const rightSwordProgress = Math.min(1, progress / 0.4) * 1.2;
-        
-        // Calculate swing motion with more aggressive angles
-        const leftSwingAngle = -Math.PI / 4 + (leftSwordProgress * 0.4); // Swings from -45° to -25°
-        const rightSwingAngle = Math.PI / 4 - (rightSwordProgress * 0.4); // Swings from 45° to 25°
-        
-        // Draw detailed medieval swords crossing with aggressive swing
-        ctx.globalAlpha = Math.min(1, progress * 1.8);
-        
-        // Left sword coming from left with swing (now pointing upward)
-        const leftSwordX = centerX - 250 + (leftSwordProgress * 250);
-        ctx.save();
-        ctx.translate(leftSwordX, centerY);
-        ctx.rotate(leftSwingAngle);
-        this.drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.4);
-        ctx.restore();
-
-        // Right sword coming from right with swing (now pointing upward)
-        const rightSwordX = centerX + 250 - (rightSwordProgress * 250);
-        ctx.save();
-        ctx.translate(rightSwordX, centerY);
-        ctx.rotate(rightSwingAngle);
-        this.drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.4);
-        ctx.restore();
-
-        // Clash flash and impact effect at peak collision (happens earlier now)
-        if (progress > 0.35) {
-            const flashProgress = Math.min(1, (progress - 0.35) / 0.25);
-            const flashOpacity = (1 - flashProgress) * 0.8;
+        // PHASE 1: Sword clash (0 - 2 seconds)
+        const swordDuration = 2 / totalDuration; // 2 seconds out of 7
+        if (progress < swordDuration) {
+            const swordProgress = progress / swordDuration;
             
-            // Bright white flash at clash point
-            ctx.globalAlpha = flashOpacity * 0.7;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 100 * flashProgress, 0, Math.PI * 2);
-            ctx.fill();
+            // Sword movement - swords meet at 40% of sword phase
+            const leftSwordProgress = Math.min(1, swordProgress / 0.4) * 1.2;
+            const rightSwordProgress = Math.min(1, swordProgress / 0.4) * 1.2;
             
-            // Secondary blue/white flash ring
-            ctx.globalAlpha = flashOpacity * 0.5;
-            ctx.strokeStyle = '#87ceeb';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 120 * flashProgress, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Golden light bursts
-            ctx.globalAlpha = flashOpacity * 0.6;
-            ctx.fillStyle = '#ffd700';
-            for (let i = 0; i < 16; i++) {
-                const angle = (i / 16) * Math.PI * 2;
-                const distance = 100 + flashProgress * 120;
-                const bx = centerX + Math.cos(angle) * distance;
-                const by = centerY + Math.sin(angle) * distance;
-                ctx.fillRect(bx - 4, by - 4, 8, 8);
-            }
-        }
-
-        // Explosive smoke effects from bottom of screen
-        ctx.globalAlpha = Math.min(1, (progress > 0.4 ? 1 : 0));
-        const smokeStartY = canvas.height;
-        const smokeExplosionStrength = Math.min(1, (progress - 0.4) / 0.4);
-        
-        // Smoke circles blasting outward from bottom center
-        for (let circleIdx = 0; circleIdx < Math.floor(smokeExplosionStrength * 25); circleIdx++) {
-            const angle = (circleIdx / 25) * Math.PI * 2;
-            const distance = 50 + smokeExplosionStrength * 350;
-            const smokeX = centerX + Math.cos(angle) * distance;
-            const smokeY = smokeStartY - Math.abs(Math.sin(angle)) * smokeExplosionStrength * canvas.height * 0.6;
+            // Calculate swing motion
+            const leftSwingAngle = -Math.PI / 4 + (leftSwordProgress * 0.4);
+            const rightSwingAngle = Math.PI / 4 - (rightSwordProgress * 0.4);
             
-            const smokeSize = 40 + Math.random() * 60;
-            const smokeOpacity = 0.6 - (smokeExplosionStrength * 0.3);
+            // Draw swords
+            ctx.globalAlpha = Math.min(1, swordProgress * 2);
             
-            this.drawSmokeCloud(ctx, smokeX, smokeY, smokeSize, smokeOpacity);
-        }
+            // Left sword
+            const leftSwordX = centerX - 250 + (leftSwordProgress * 250);
+            ctx.save();
+            ctx.translate(leftSwordX, centerY);
+            ctx.rotate(leftSwingAngle);
+            this.drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.4);
+            ctx.restore();
 
-        // Dense smoke layer rising from bottom
-        ctx.globalAlpha = Math.min(1, smokeExplosionStrength * 0.8);
-        for (let x = -100; x < canvas.width + 100; x += 40) {
-            for (let smokeIdx = 0; smokeIdx < 3; smokeIdx++) {
-                const offsetX = x + Math.sin(progress * 8 + smokeIdx) * 40;
-                const offsetY = smokeStartY - (smokeExplosionStrength * canvas.height * 0.5) - (smokeIdx * 60);
-                const smokeSize = 80 + Math.random() * 40;
+            // Right sword
+            const rightSwordX = centerX + 250 - (rightSwordProgress * 250);
+            ctx.save();
+            ctx.translate(rightSwordX, centerY);
+            ctx.rotate(rightSwingAngle);
+            this.drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.4);
+            ctx.restore();
+
+            // Subtle clash flash at sword meeting point
+            if (swordProgress > 0.35) {
+                const flashProgress = Math.min(1, (swordProgress - 0.35) / 0.15);
+                const flashOpacity = (1 - flashProgress) * 0.3;
                 
-                this.drawSmokeCloud(ctx, offsetX, offsetY, smokeSize, 0.5 - smokeIdx * 0.1);
-            }
-        }
-
-        // Shockwave circles expanding outward
-        if (progress > 0.4) {
-            ctx.globalAlpha = Math.min(1, (1 - (progress - 0.4) * 2) * 0.6);
-            ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
-            ctx.lineWidth = 3;
-            
-            const shockProgress = (progress - 0.4) / 0.6;
-            for (let i = 1; i <= 3; i++) {
-                const radius = 150 + (shockProgress * 300) - (i * 80);
-                if (radius > 0) {
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-            }
-        }
-
-        // Sword clash spark particles - more aggressive
-        if (progress > 0.35) {
-            ctx.globalAlpha = Math.min(1, (1 - progress) * 1.5);
-            const sparkCount = Math.floor((progress - 0.35) * 60);
-            for (let i = 0; i < sparkCount; i++) {
-                const angle = (i / sparkCount) * Math.PI * 2;
-                const distance = 80 + (progress - 0.35) * 350;
-                const sparkX = centerX + Math.cos(angle) * distance;
-                const sparkY = centerY + Math.sin(angle) * distance;
-                const sparkSize = 2 + Math.random() * 5;
-                
-                ctx.fillStyle = `rgba(255, ${200 + Math.floor(Math.random() * 55)}, 0, 1)`;
+                ctx.globalAlpha = flashOpacity * 0.3;
+                ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
+                ctx.arc(centerX, centerY, 80 * flashProgress, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // Screen fade with flash
-        ctx.globalAlpha = Math.min(1, progress);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // PHASE 2: Smoke appearance and fade (2 - 7 seconds)
+        const smokeStartTime = swordDuration; // 2 seconds / 7
+        const smokeDuration = (5 / totalDuration); // 5 seconds of smoke effect
         
-        // Final screen flash/pop
-        if (progress > 0.85) {
-            const popProgress = (progress - 0.85) / 0.15;
-            ctx.globalAlpha = (1 - popProgress) * 0.4;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (progress >= smokeStartTime && progress < (smokeStartTime + smokeDuration)) {
+            const smokePhaseProgress = (progress - smokeStartTime) / smokeDuration;
+            
+            // Render buttons ONLY after 1 second into smoke (1 second into 5 second phase = 0.2)
+            // Draw them FIRST so smoke appears on top
+            const buttonRenderStartTime = 1 / 5; // 0.2
+            if (smokePhaseProgress >= buttonRenderStartTime) {
+                ctx.globalAlpha = 1;
+                this.renderMenuButtons(ctx);
+            }
+            
+            // NOW render dense natural smoke clouds covering entire bottom half
+            // This will be drawn ON TOP of the buttons
+            ctx.globalAlpha = 1;
+            
+            // Create a dense, natural-looking smoke screen with many overlapping clouds
+            const cloudCount = 40; // Many clouds for full coverage
+            for (let i = 0; i < cloudCount; i++) {
+                // Distribute clouds across entire bottom half with variation
+                const col = i % 8;
+                const row = Math.floor(i / 8);
+                
+                // Grid-based placement with smooth variation for natural look
+                const baseX = (col + 0.5) * (canvas.width / 8) + Math.sin(i * 0.5) * 60;
+                const baseY = (canvas.height * 0.4) + (row * (canvas.height * 0.15)) + Math.cos(i * 0.3) * 50;
+                
+                const cloudSize = 90 + Math.sin(i * 0.7) * 40;
+                
+                // Smoke fills quickly (over first part of phase), then fades
+                let cloudOpacity = 0.4;
+                if (smokePhaseProgress < 0.2) {
+                    // Filling phase - clouds appear
+                    cloudOpacity = 0.4 * (smokePhaseProgress / 0.2);
+                } else {
+                    // After 1 second into smoke (which is 0.2 of 5 second smoke phase)
+                    // Start fading if past the 1-second mark
+                    const fadeStartInPhase = 0.2; // 1 second into 5 second phase
+                    if (smokePhaseProgress > fadeStartInPhase) {
+                        const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
+                        cloudOpacity = 0.4 * (1 - fadeProgress);
+                    } else {
+                        cloudOpacity = 0.4; // Full opacity until fade starts
+                    }
+                }
+                
+                this.drawHazySmokeCloud(ctx, baseX, baseY, cloudSize, cloudOpacity, i);
+            }
+
+            // Additional larger background clouds for complete coverage
+            for (let y = canvas.height * 0.35; y < canvas.height; y += 80) {
+                for (let x = 0; x < canvas.width; x += 120) {
+                    const cloudSize = 120 + Math.sin(x * 0.01) * 40;
+                    
+                    let cloudOpacity = 0.3;
+                    if (smokePhaseProgress < 0.2) {
+                        cloudOpacity = 0.3 * (smokePhaseProgress / 0.2);
+                    } else {
+                        const fadeStartInPhase = 0.2;
+                        if (smokePhaseProgress > fadeStartInPhase) {
+                            const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
+                            cloudOpacity = 0.3 * (1 - fadeProgress);
+                        } else {
+                            cloudOpacity = 0.3;
+                        }
+                    }
+                    
+                    if (cloudOpacity > 0) {
+                        this.drawHazySmokeCloud(ctx, x, y, cloudSize, cloudOpacity, x + y);
+                    }
+                }
+            }
         }
-        
+
+        // Continue showing buttons after transition completes (opacity set to 1 in renderMenuButtons)
+        if (progress >= (smokeStartTime + smokeDuration)) {
+            this.renderMenuButtons(ctx);
+        }
+
         ctx.globalAlpha = 1;
     }
 
-    drawSmokeCloud(ctx, x, y, size, opacity) {
+    drawHazySmokeCloud(ctx, x, y, size, opacity, seed) {
+        if (opacity <= 0) return;
+        
         ctx.globalAlpha = opacity;
         
-        // Multiple circles to create cloud effect
+        // Soft hazy smoke - more subtle colors for silky smooth appearance
         const colors = [
-            'rgba(150, 150, 150, 0.6)',
-            'rgba(180, 180, 180, 0.4)',
-            'rgba(120, 120, 120, 0.3)'
+            'rgba(130, 130, 130, 0.5)',
+            'rgba(145, 145, 145, 0.4)',
+            'rgba(155, 155, 155, 0.35)',
+            'rgba(140, 140, 140, 0.3)'
         ];
         
-        // Main cloud body
+        // Main spherical cloud body - smooth and round
         ctx.fillStyle = colors[0];
         ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.arc(x, y, size * 0.95, 0, Math.PI * 2);
         ctx.fill();
 
-        // Left bulge
+        // Smooth overlapping bulges for natural spherical appearance
+        ctx.fillStyle = colors[1];
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            // Smooth sine wave for consistent bulge sizes - no flickering
+            const bulgeVariation = Math.sin(seed * 0.3 + angle) * 0.08;
+            const bx = x + Math.cos(angle) * size * 0.65;
+            const by = y + Math.sin(angle) * size * 0.55;
+            const bulgeSize = size * (0.55 + bulgeVariation);
+            ctx.beginPath();
+            ctx.arc(bx, by, bulgeSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Smoother top formation - more spherical, less horizontal
+        ctx.fillStyle = colors[2];
+        // Left top curve
+        ctx.beginPath();
+        ctx.arc(x - size * 0.35, y - size * 0.45, size * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+        // Center top
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+        // Right top curve
+        ctx.beginPath();
+        ctx.arc(x + size * 0.35, y - size * 0.45, size * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle smooth wisps for natural atmospheric effect
+        ctx.globalAlpha = opacity * 0.15;
+        ctx.fillStyle = colors[3];
+        for (let i = 0; i < 3; i++) {
+            // Use sine for smooth continuous variation instead of random
+            const wispX = x + Math.cos(seed * 0.2 + i) * size * 0.4;
+            const wispY = y + Math.sin(seed * 0.2 + i) * size * 0.35;
+            const wispSize = size * (0.25 + Math.cos(seed * 0.4 + i * 0.5) * 0.08);
+            ctx.beginPath();
+            ctx.arc(wispX, wispY, wispSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    drawDetailedSmokeCloud(ctx, x, y, size, opacity, seed) {
+        if (opacity <= 0) return;
+        
+        ctx.globalAlpha = opacity;
+        
+        // Subtle smoke colors
+        const colors = [
+            'rgba(160, 160, 160, 0.5)',
+            'rgba(180, 180, 180, 0.4)',
+            'rgba(140, 140, 140, 0.3)',
+            'rgba(170, 170, 170, 0.25)'
+        ];
+        
+        // Main cloud body - soft and diffuse
+        const variance = Math.sin(seed * 0.7) * 0.15;
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.arc(x, y, size * (0.85 + variance), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left bulge - gentle
         ctx.fillStyle = colors[1];
         ctx.beginPath();
-        ctx.arc(x - size * 0.4, y - size * 0.2, size * 0.6, 0, Math.PI * 2);
+        ctx.arc(x - size * 0.45, y - size * 0.1, size * 0.65, 0, Math.PI * 2);
         ctx.fill();
 
-        // Right bulge
+        // Right bulge - gentle
         ctx.beginPath();
-        ctx.arc(x + size * 0.4, y - size * 0.2, size * 0.6, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.45, y - size * 0.1, size * 0.65, 0, Math.PI * 2);
         ctx.fill();
 
-        // Top bulge
+        // Top bulge - softer
         ctx.fillStyle = colors[2];
         ctx.beginPath();
         ctx.arc(x, y - size * 0.5, size * 0.7, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bottom bulge
+        // Bottom bulge - light
+        ctx.fillStyle = colors[3];
         ctx.beginPath();
-        ctx.arc(x, y + size * 0.3, size * 0.5, 0, Math.PI * 2);
+        ctx.arc(x, y + size * 0.3, size * 0.55, 0, Math.PI * 2);
         ctx.fill();
+
+        // Very subtle wisps for natural flow
+        ctx.globalAlpha = opacity * 0.3;
+        ctx.fillStyle = colors[1];
+        for (let i = 0; i < 2; i++) {
+            const wispX = x + (Math.cos(seed + i) * size * 0.35);
+            const wispY = y + (Math.sin(seed + i) * size * 0.25);
+            ctx.beginPath();
+            ctx.arc(wispX, wispY, size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawMedievalSword(ctx, x, y, primaryColor, accentColor, scale = 1) {
@@ -432,7 +501,7 @@ export class StartScreen {
                 this.particleSystem.render(ctx);
             }
 
-            // Render stylized title
+            // Render stylized title (ALWAYS visible, even during transition)
             this.renderStylizedTitle(ctx, canvas.width / 2, canvas.height / 2 - 50, this.titleOpacity);
 
             // Subtitle (Defend the Realm)
@@ -444,7 +513,7 @@ export class StartScreen {
             ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
 
             // Continue message
-            if (this.showContinue) {
+            if (this.showContinue && !this.transitionActive) {
                 const flickerAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
                 ctx.globalAlpha = flickerAlpha;
                 ctx.font = '20px serif';
@@ -456,7 +525,7 @@ export class StartScreen {
 
             ctx.globalAlpha = 1;
 
-            // Render transition effect
+            // Render transition effect (smoke on top of everything except title)
             if (this.transitionActive) {
                 this.renderTransitionEffect(ctx);
             }
@@ -470,5 +539,70 @@ export class StartScreen {
             ctx.textAlign = 'center';
             ctx.fillText('StartScreen Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
+    }
+
+    renderMenuButtons(ctx) {
+        const canvas = this.stateManager.canvas;
+        const buttonWidth = 220;
+        const buttonHeight = 50;
+        const buttonGap = 15;
+        const startY = canvas.height / 2 + 80;
+
+        const buttons = ['NEW GAME', 'LOAD GAME', 'OPTIONS', 'QUIT GAME'];
+
+        // During transition, buttons are behind smoke but fully opaque
+        // After transition, they stay visible
+        ctx.globalAlpha = 1;
+        for (let i = 0; i < buttons.length; i++) {
+            const buttonY = startY + (i * (buttonHeight + buttonGap));
+            const buttonX = canvas.width / 2 - buttonWidth / 2;
+
+            this.renderControlButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, buttons[i], false);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    renderControlButton(ctx, x, y, width, height, text, isHovered) {
+        // Button background gradient
+        const bgGradient = ctx.createLinearGradient(x, y, x, y + height);
+        bgGradient.addColorStop(0, '#44301c');
+        bgGradient.addColorStop(1, '#261200');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(x, y, width, height);
+
+        // Button border - outset style
+        ctx.strokeStyle = isHovered ? '#ffd700' : '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+
+        // Top highlight line for beveled effect
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + width, y);
+        ctx.stroke();
+
+        // Inset shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + width, y + height);
+        ctx.stroke();
+
+        // Button text
+        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.font = 'bold 20px Trebuchet MS, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Text shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText(text, x + width / 2 + 1, y + height / 2 + 1);
+        
+        // Main text
+        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.fillText(text, x + width / 2, y + height / 2);
     }
 }
