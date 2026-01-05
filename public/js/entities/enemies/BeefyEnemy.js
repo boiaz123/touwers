@@ -1,8 +1,20 @@
 import { BaseEnemy } from './BaseEnemy.js';
 
 export class BeefyEnemy extends BaseEnemy {
-    constructor(path, health_multiplier = 1.0, speed = 60) {
-        super(path, 150 * health_multiplier, speed);
+    static BASE_STATS = {
+        health: 150,
+        speed: 60,
+        armour: 5,
+        magicResistance: 2
+    };
+
+    constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
+        const baseStats = BeefyEnemy.BASE_STATS;
+        const actualSpeed = speed !== null ? speed : baseStats.speed;
+        const actualArmour = armour !== null ? armour : baseStats.armour;
+        const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
+        
+        super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.tunicColor = this.getRandomTunicColor();
         this.sizeMultiplier = 1.2;
         

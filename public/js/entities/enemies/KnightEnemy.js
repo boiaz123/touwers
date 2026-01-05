@@ -1,8 +1,20 @@
 import { BaseEnemy } from './BaseEnemy.js';
 
 export class KnightEnemy extends BaseEnemy {
-    constructor(path, health_multiplier = 1.0, speed = 40) {
-        super(path, 160 * health_multiplier, speed);
+    static BASE_STATS = {
+        health: 160,
+        speed: 40,
+        armour: 8,
+        magicResistance: 3
+    };
+
+    constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
+        const baseStats = KnightEnemy.BASE_STATS;
+        const actualSpeed = speed !== null ? speed : baseStats.speed;
+        const actualArmour = armour !== null ? armour : baseStats.armour;
+        const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
+        
+        super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.armorColor = '#4A5568';
         this.sizeMultiplier = 1.15;
         

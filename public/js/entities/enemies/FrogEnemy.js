@@ -3,9 +3,21 @@ import { BaseEnemy } from './BaseEnemy.js';
 export class FrogEnemy extends BaseEnemy {
     // Static color cache to avoid recalculation
     static colorCache = new Map();
+
+    static BASE_STATS = {
+        health: 85,
+        speed: 55,
+        armour: 2,
+        magicResistance: 1
+    };
     
-    constructor(path, health_multiplier = 1.0, speed = 55) {
-        super(path, 85 * health_multiplier, speed);
+    constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
+        const baseStats = FrogEnemy.BASE_STATS;
+        const actualSpeed = speed !== null ? speed : baseStats.speed;
+        const actualArmour = armour !== null ? armour : baseStats.armour;
+        const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
+        
+        super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.skinColor = this.getRandomSkinColor();
         this.sizeMultiplier = 1.0;
         

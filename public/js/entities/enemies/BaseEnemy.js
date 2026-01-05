@@ -1,11 +1,13 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
 
 export class BaseEnemy {
-    constructor(path, health, speed = 50) {
+    constructor(path, health, speed, armour, magicResistance) {
         this.path = path;
         this.health = health;
         this.maxHealth = health;
         this.speed = speed;
+        this.armour = armour;
+        this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
         this.currentPathIndex = 0;

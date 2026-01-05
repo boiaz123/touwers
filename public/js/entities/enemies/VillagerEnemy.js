@@ -3,9 +3,21 @@ import { BaseEnemy } from './BaseEnemy.js';
 export class VillagerEnemy extends BaseEnemy {
     // Static counter to alternate weapon types across spawns
     static weaponSpawnCounter = 0;
+
+    static BASE_STATS = {
+        health: 100,
+        speed: 50,
+        armour: 0,
+        magicResistance: 0
+    };
     
-    constructor(path, health_multiplier = 1.0, speed = 50) {
-        super(path, 100 * health_multiplier, speed);
+    constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
+        const baseStats = VillagerEnemy.BASE_STATS;
+        const actualSpeed = speed !== null ? speed : baseStats.speed;
+        const actualArmour = armour !== null ? armour : baseStats.armour;
+        const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
+        
+        super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.tunicColor = this.getRandomTunicColor();
         // Alternate weapon type: even spawns get torch, odd get pitchfork
         this.weaponType = (VillagerEnemy.weaponSpawnCounter % 2) === 0 ? 'torch' : 'pitchfork';

@@ -16,43 +16,35 @@ export class EnemyRegistry {
     static #registry = {
         'basic': { 
             class: BasicEnemy, 
-            defaultHealth: 100, 
-            defaultSpeed: 50 
+            ...BasicEnemy.BASE_STATS
         },
         'beefyenemy': { 
             class: BeefyEnemy, 
-            defaultHealth: 150, 
-            defaultSpeed: 60 
+            ...BeefyEnemy.BASE_STATS
         },
         'knight': { 
             class: KnightEnemy, 
-            defaultHealth: 160, 
-            defaultSpeed: 40 
+            ...KnightEnemy.BASE_STATS
         },
         'shieldknight': { 
             class: ShieldKnightEnemy, 
-            defaultHealth: 180, 
-            defaultSpeed: 35 
+            ...ShieldKnightEnemy.BASE_STATS
         },
         'mage': { 
             class: MageEnemy, 
-            defaultHealth: 110, 
-            defaultSpeed: 45 
+            ...MageEnemy.BASE_STATS
         },
         'villager': { 
             class: VillagerEnemy, 
-            defaultHealth: 80, 
-            defaultSpeed: 50 
+            ...VillagerEnemy.BASE_STATS
         },
         'archer': { 
             class: ArcherEnemy, 
-            defaultHealth: 90, 
-            defaultSpeed: 50 
+            ...ArcherEnemy.BASE_STATS
         },
         'frog': { 
             class: FrogEnemy, 
-            defaultHealth: 85, 
-            defaultSpeed: 55 
+            ...FrogEnemy.BASE_STATS
         }
     };
 
@@ -89,7 +81,7 @@ export class EnemyRegistry {
      */
     static getDefaultHealth(type) {
         const enemyType = this.#registry[type];
-        return enemyType ? enemyType.defaultHealth : null;
+        return enemyType ? enemyType.health : null;
     }
 
     /**
@@ -99,7 +91,27 @@ export class EnemyRegistry {
      */
     static getDefaultSpeed(type) {
         const enemyType = this.#registry[type];
-        return enemyType ? enemyType.defaultSpeed : null;
+        return enemyType ? enemyType.speed : null;
+    }
+
+    /**
+     * Get the default armour of an enemy type
+     * @param {string} type - Enemy type key
+     * @returns {number|null} - Default armour or null if not found
+     */
+    static getDefaultArmour(type) {
+        const enemyType = this.#registry[type];
+        return enemyType ? enemyType.armour : null;
+    }
+
+    /**
+     * Get the default magic resistance of an enemy type
+     * @param {string} type - Enemy type key
+     * @returns {number|null} - Default magic resistance or null if not found
+     */
+    static getDefaultMagicResistance(type) {
+        const enemyType = this.#registry[type];
+        return enemyType ? enemyType.magicResistance : null;
     }
 
     /**
@@ -108,9 +120,11 @@ export class EnemyRegistry {
      * @param {Array} path - The path for the enemy to follow
      * @param {number} healthMultiplier - Health multiplier (optional)
      * @param {number} speed - Speed override (optional)
+     * @param {number} armour - Armour override (optional)
+     * @param {number} magicResistance - Magic resistance override (optional)
      * @returns {Object|null} - Enemy instance or null if type not found
      */
-    static createEnemy(type, path, healthMultiplier, speed) {
+    static createEnemy(type, path, healthMultiplier, speed, armour = null, magicResistance = null) {
         const enemyType = this.#registry[type];
         if (!enemyType) {
             console.warn(`Unknown enemy type: ${type}`);
@@ -118,7 +132,7 @@ export class EnemyRegistry {
         }
 
         const EnemyClass = enemyType.class;
-        const enemy = new EnemyClass(path, healthMultiplier, speed);
+        const enemy = new EnemyClass(path, healthMultiplier, speed, armour, magicResistance);
         enemy.type = type; // Store the type for serialization
         return enemy;
     }
