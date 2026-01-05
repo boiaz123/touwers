@@ -1412,12 +1412,14 @@ export class GameplayState {
             
             guardPostTowers = this.cachedGuardPosts;
             
-            for (let i = 0; i < guardPostTowers.length; i++) {
-                const tower = guardPostTowers[i];
-                if (tower.defender && !tower.defender.isDead()) {
-                    // Maintain defender position on the path
-                    tower.defender.x = tower.defenderSpawnX;
-                    tower.defender.y = tower.defenderSpawnY;
+            if (guardPostTowers && guardPostTowers.length > 0) {
+                for (let i = 0; i < guardPostTowers.length; i++) {
+                    const tower = guardPostTowers[i];
+                    if (tower.defender && !tower.defender.isDead()) {
+                        // Maintain defender position on the path
+                        tower.defender.x = tower.defenderSpawnX;
+                        tower.defender.y = tower.defenderSpawnY;
+                    }
                 }
             }
         }
@@ -1437,7 +1439,7 @@ export class GameplayState {
             }
             this.guardPostDefenderCache = [];
             
-            if (guardPostTowers) {
+            if (guardPostTowers && guardPostTowers.length > 0) {
                 guardPostTowers.forEach(tower => {
                     const defender = tower.getDefender();
                     if (defender) {
@@ -1478,7 +1480,7 @@ export class GameplayState {
         }
         
         // Update guard posts and their defenders
-        if (guardPostTowers) {
+        if (guardPostTowers && this.enemyManager && this.enemyManager.enemies) {
             for (let i = 0; i < guardPostTowers.length; i++) {
                 guardPostTowers[i].update(deltaTime, this.enemyManager.enemies, this.gameState);
             }
@@ -1492,6 +1494,12 @@ export class GameplayState {
         
         // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
         let hadGoldFromEnemies = false;
+        
+        // Only process if enemyManager is initialized
+        if (!this.enemyManager || !this.enemyManager.enemies) {
+            return;
+        }
+        
         const enemies = this.enemyManager.enemies;
         
         for (let i = 0; i < enemies.length; i++) {

@@ -184,21 +184,6 @@ export class EnemyManager {
     }
     
     render(ctx) {
-        // Debug: render path if no enemies to show
-        if (this.enemies.length === 0 && this.path.length > 0) {
-            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            this.path.forEach((point, index) => {
-                if (index === 0) {
-                    ctx.moveTo(point.x, point.y);
-                } else {
-                    ctx.lineTo(point.x, point.y);
-                }
-            });
-            ctx.stroke();
-        }
-        
         // OPTIMIZATION: Consolidate rendering into single loop
         // Render all enemies and their splatters in one pass
         for (let i = 0; i < this.enemies.length; i++) {
