@@ -17,14 +17,12 @@ export class MainMenu {
             { label: 'QUIT GAME', action: 'quitGame', hovered: false }
         ];
 
-        this.buttonWidth = 200;
+        this.buttonWidth = 220;
         this.buttonHeight = 50;
-        this.buttonGap = 20;
-
+        this.buttonGap = 15;
     }
 
     enter() {
-
         // Hide game UI
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -83,8 +81,7 @@ export class MainMenu {
     getButtonPosition(index) {
         const canvas = this.stateManager.canvas;
         const totalHeight = this.buttons.length * this.buttonHeight + (this.buttons.length - 1) * this.buttonGap;
-        // Position buttons underneath the title with proper spacing
-        const startY = canvas.height / 2 + 80; // 80px below title
+        const startY = canvas.height / 2 + 100; // Position below title
 
         return {
             x: canvas.width / 2 - this.buttonWidth / 2,
@@ -116,7 +113,6 @@ export class MainMenu {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
 
-
                 switch (button.action) {
                     case 'newGame':
                         this.stateManager.startNewGame();
@@ -147,22 +143,57 @@ export class MainMenu {
                 console.error('Error closing application:', error);
             }
         } else {
-            // Fallback for development environment - just close silently
+            // Fallback for development environment
             console.log('Closing application...');
             window.close();
         }
     }
 
+    renderStylizedTitle(ctx, x, y, opacity) {
+        ctx.globalAlpha = opacity;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const fontSize = 120;
+        ctx.font = `bold italic ${fontSize}px serif`;
+
+        // Deep shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText('TOUWERS', x + 4, y + 4);
+
+        // Main golden text with gradient
+        const gradient = ctx.createLinearGradient(x - 200, y - 60, x + 200, y + 60);
+        gradient.addColorStop(0, '#ffd700');
+        gradient.addColorStop(0.5, '#ffed4e');
+        gradient.addColorStop(1, '#d4af37');
+        ctx.fillStyle = gradient;
+        ctx.fillText('TOUWERS', x, y);
+
+        // Stroke for depth
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 3;
+        ctx.strokeText('TOUWERS', x, y);
+
+        // Top highlight edge
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeText('TOUWERS', x, y);
+
+        ctx.globalAlpha = 1;
+    }
+
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title is immediately visible at full opacity (no fade-in)
-        this.titleOpacity = 1;
+        // Title fades in quickly
+        if (this.animationTime > 0.2) {
+            this.titleOpacity = Math.min(1, (this.animationTime - 0.2) / 0.4);
+        }
 
-        // Buttons fade in and slide up from underneath
-        if (this.animationTime > 0.3) {
+        // Buttons fade in after title
+        if (this.animationTime > 0.8) {
             this.showButtons = true;
-            this.buttonsOpacity = Math.min(1, (this.animationTime - 0.3) / 0.6);
+            this.buttonsOpacity = Math.min(1, (this.animationTime - 0.8) / 0.5);
         }
 
         // Update shared particle system
@@ -193,18 +224,8 @@ export class MainMenu {
                 this.particleSystem.render(ctx);
             }
 
-            // Title - positioned at SAME height as StartScreen (middle of canvas)
-            ctx.globalAlpha = this.titleOpacity;
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 80px serif';
-            ctx.fillStyle = '#000';
-            ctx.fillText('TOUWERS', canvas.width / 2 + 3, canvas.height / 2 - 50 + 3);
-
-            ctx.fillStyle = '#d4af37';
-            ctx.strokeStyle = '#8b7355';
-            ctx.lineWidth = 2;
-            ctx.fillText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
-            ctx.strokeText('TOUWERS', canvas.width / 2, canvas.height / 2 - 50);
+            // Render stylized title - positioned at same height as StartScreen
+            this.renderStylizedTitle(ctx, canvas.width / 2, canvas.height / 2 - 50, this.titleOpacity);
 
             // Buttons
             if (this.showButtons) {
@@ -212,52 +233,11 @@ export class MainMenu {
 
                 this.buttons.forEach((button, index) => {
                     const pos = this.getButtonPosition(index);
-
-                    // Medieval stone button background with gradient
-                    const gradient = ctx.createLinearGradient(pos.y, pos.y + pos.height, 0, 0);
-                    if (button.hovered) {
-                        gradient.addColorStop(0, '#8b7355');
-                        gradient.addColorStop(0.5, '#a89968');
-                        gradient.addColorStop(1, '#9a8960');
-                    } else {
-                        gradient.addColorStop(0, '#5a4a3a');
-                        gradient.addColorStop(0.5, '#7a6a5a');
-                        gradient.addColorStop(1, '#6a5a4a');
-                    }
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
-
-                    // Inner shadow for depth
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                    ctx.fillRect(pos.x, pos.y, pos.width, 3);
-                    ctx.fillRect(pos.x, pos.y + pos.height - 3, pos.width, 3);
-
-                    // Golden border for medieval look
-                    ctx.strokeStyle = button.hovered ? '#ffd700' : '#d4af37';
-                    ctx.lineWidth = button.hovered ? 3 : 2;
-                    ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
-
-                    // Secondary decorative border (darker)
-                    ctx.strokeStyle = button.hovered ? '#8b7355' : '#3a2a1f';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(pos.x + 1, pos.y + 1, pos.width - 2, pos.height - 2);
-
-                    // Button text with shadow for medieval effect
-                    ctx.font = 'bold 18px serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-
-                    // Shadow text
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillText(button.label, pos.x + pos.width / 2 + 1, pos.y + pos.height / 2 + 1);
-
-                    // Main text with gold color
-                    ctx.fillStyle = button.hovered ? '#ffe700' : '#d4af37';
-                    ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
+                    this.renderControlButton(ctx, button, pos);
                 });
-            }
 
-            ctx.globalAlpha = 1;
+                ctx.globalAlpha = 1;
+            }
 
         } catch (error) {
             console.error('MainMenu render error:', error);
@@ -267,6 +247,68 @@ export class MainMenu {
             ctx.font = '20px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('MainMenu Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
+        }
+    }
+
+    renderControlButton(ctx, button, pos) {
+        const isHovered = button.hovered;
+        
+        // Background gradient
+        if (isHovered) {
+            const bgGrad = ctx.createLinearGradient(0, pos.y, 0, pos.y + pos.height);
+            bgGrad.addColorStop(0, 'rgba(88, 68, 48, 0.9)');
+            bgGrad.addColorStop(0.5, 'rgba(68, 48, 28, 0.9)');
+            bgGrad.addColorStop(1, 'rgba(58, 38, 18, 0.9)');
+            ctx.fillStyle = bgGrad;
+        } else {
+            const bgGrad = ctx.createLinearGradient(0, pos.y, 0, pos.y + pos.height);
+            bgGrad.addColorStop(0, 'rgba(68, 48, 28, 0.85)');
+            bgGrad.addColorStop(0.5, 'rgba(48, 28, 8, 0.85)');
+            bgGrad.addColorStop(1, 'rgba(38, 18, 0, 0.85)');
+            ctx.fillStyle = bgGrad;
+        }
+        
+        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+
+        // Border - outset style
+        ctx.strokeStyle = isHovered ? '#a67c3a' : '#7a6038';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+
+        // Top highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pos.x + 1, pos.y + 1);
+        ctx.lineTo(pos.x + pos.width - 1, pos.y + 1);
+        ctx.stroke();
+
+        // Inset shadow effect
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(pos.x + 1, pos.y + pos.height - 1);
+        ctx.lineTo(pos.x + pos.width - 1, pos.y + pos.height - 1);
+        ctx.stroke();
+
+        // Button text
+        ctx.font = 'bold 20px Trebuchet MS, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Text shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText(button.label, pos.x + pos.width / 2 + 1, pos.y + pos.height / 2 + 1);
+
+        // Main text
+        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
+
+        // Glow effect on hover
+        if (isHovered) {
+            ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
         }
     }
 }
