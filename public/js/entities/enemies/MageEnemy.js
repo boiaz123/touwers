@@ -105,8 +105,8 @@ export class MageEnemy extends BaseEnemy {
         this.y += (dy / distance) * moveDistance;
     }
     
-    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
-        super.takeDamage(amount, ignoreArmor, damageType, followTarget);
+    takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
+        super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
     }
     
     isDead() {

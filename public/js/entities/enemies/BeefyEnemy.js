@@ -355,12 +355,12 @@ export class BeefyEnemy extends BaseEnemy {
         }
     }
     
-    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
+    takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         // Track last damage time for health bar rendering optimization
         this.lastDamageTime = performance.now();
         
         // Call parent method
-        return super.takeDamage(amount, ignoreArmor, damageType, followTarget);
+        return super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
     }
     
     darkenColor(color, factor) {

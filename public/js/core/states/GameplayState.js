@@ -852,7 +852,7 @@ export class GameplayState {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
                         const damage = spell.damage * (1 - dist / spell.radius * 0.5);
-                        enemy.takeDamage(damage, false, 'arcane');
+                        enemy.takeDamage(damage, 0, 'arcane');
                     }
                 });
                 this.createSpellEffect('arcaneBlast', x, y, spell);
@@ -880,7 +880,7 @@ export class GameplayState {
                             if (!enemy.isDead()) {
                                 const dist = Math.hypot(enemy.x - x, enemy.y - y);
                                 if (dist <= 80) {
-                                    enemy.takeDamage(spell.damage, false, 'fire');
+                                    enemy.takeDamage(spell.damage, 0, 'fire');
                                     enemy.burnTimer = spell.burnDuration;
                                     enemy.burnDamage = spell.burnDamage;
                                 }
@@ -898,7 +898,7 @@ export class GameplayState {
                 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
-                        enemy.takeDamage(spell.damage * Math.pow(0.8, index), false, 'electricity');
+                        enemy.takeDamage(spell.damage * Math.pow(0.8, index), 0, 'electricity');
                     }, index * 100);
                 });
                 this.createSpellEffect('chainLightning', x, y, spell, targets);
@@ -1562,7 +1562,7 @@ export class GameplayState {
                 
                 if (enemy.burnTickTimer <= 0) {
                     const burnDamage = enemy.burnDamage || 2;
-                    enemy.takeDamage(burnDamage, false, 'fire', true);
+                    enemy.takeDamage(burnDamage, 0, 'fire', true);
                     enemy.burnTickTimer = 0.5; // Tick every 0.5 seconds
                 }
                 

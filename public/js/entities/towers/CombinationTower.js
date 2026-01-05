@@ -117,7 +117,7 @@ export class CombinationTower extends Tower {
                 if (dist <= chainRange) {
                     // Reduced damage for chained targets
                     const chainDamage = Math.floor(damage * 0.5);
-                    enemy.takeDamage(chainDamage, false, damageType);
+                    enemy.takeDamage(chainDamage, 0, damageType);
                 }
             }
         });
@@ -135,7 +135,7 @@ export class CombinationTower extends Tower {
                 switch(this.selectedSpell) {
                     case 'steam':
                         finalDamage += spell.damageBonus;
-                        this.target.takeDamage(finalDamage, false, 'fire');
+                        this.target.takeDamage(finalDamage, 0, 'fire');
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -154,7 +154,7 @@ export class CombinationTower extends Tower {
                     case 'magma':
                         finalDamage += spell.damageBonus;
                         const piercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(piercingDamage, true, 'earth');
+                        this.target.takeDamage(piercingDamage, 100, 'earth'); // 100 = full armor piercing
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -165,7 +165,7 @@ export class CombinationTower extends Tower {
                         break;
                         
                     case 'tempest':
-                        this.target.takeDamage(finalDamage, false, 'water');
+                        this.target.takeDamage(finalDamage, 0, 'water');
                         // Slow effect
                         const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
                         if (this.target.speed > 20) {
@@ -177,7 +177,7 @@ export class CombinationTower extends Tower {
                         
                     case 'meteor':
                         const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(meteorPiercingDamage, true, 'earth');
+                        this.target.takeDamage(meteorPiercingDamage, 100, 'earth'); // 100 = full armor piercing
                         // Chain to nearby enemies (splash damage)
                         this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
                         break;
@@ -187,7 +187,7 @@ export class CombinationTower extends Tower {
                 this.createCombinationEffect();
             } else {
                 // Default arcane blast with no spell selected
-                this.target.takeDamage(finalDamage, false, 'water');
+                this.target.takeDamage(finalDamage, 0, 'water');
                 // Create basic arcane effect
                 this.createBasicArcaneEffect();
             }

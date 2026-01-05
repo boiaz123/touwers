@@ -259,17 +259,19 @@ export class BaseEnemy {
         return 0;
     }
     
-    takeDamage(amount, ignoreArmor = false, damageType = 'physical', followTarget = false) {
+    takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         let finalDamage = amount;
         
-        // Apply armor reduction for physical damage types (unless armor is ignored)
-        if (!ignoreArmor && damageType === 'physical' && this.armour > 0) {
+        // Apply armor reduction for physical damage types
+        if (damageType === 'physical' && this.armour > 0) {
+            // Armor pierce percentage reduces the effective armor (0-100%)
+            // armorPiercingPercent = 0 means no piercing, 100 means completely ignore armor
+            const piercePercent = Math.max(0, Math.min(100, armorPiercingPercent)) / 100;
+            const effectiveArmor = this.armour * (1 - piercePercent);
+            
             // Armor reduces damage by a percentage: each armor point = 1% damage reduction (max 80% reduction)
-            const armorReductionPercent = Math.min(0.8, this.armour * 0.01);
+            const armorReductionPercent = Math.min(0.8, effectiveArmor * 0.01);
             finalDamage = amount * (1 - armorReductionPercent);
-        } else if (damageType === 'physical' && this.armour > 0) {
-            // ignoreArmor is true, so completely bypass armor reduction
-            finalDamage = amount;
         }
         
         // Ensure minimum 1 damage gets through
@@ -280,6 +282,12 @@ export class BaseEnemy {
         // Create a hit splatter effect with the final calculated damage
         const splatter = new HitSplatter(this.x, this.y - 20, finalDamage, damageType, followTarget ? this : null);
         this.hitSplatters.push(splatter);
+        
+        // Apply earth damage armor reduction effect
+        if (damageType === 'earth' && this.armour > 0) {
+            // Earth damage reduces armor by 3 points per hit
+            this.armour = Math.max(0, this.armour - 3);
+        }
     }
     
     isDead() {

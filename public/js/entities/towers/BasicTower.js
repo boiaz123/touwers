@@ -66,7 +66,7 @@ export class BasicTower extends Tower {
     
     shoot() {
         if (this.target) {
-            this.target.takeDamage(this.damage, false, 'physical');
+            this.target.takeDamage(this.damage, 0, 'physical');
             
             const availableDefenders = this.defenders
                 .map((def, index) => ({ def, index }))

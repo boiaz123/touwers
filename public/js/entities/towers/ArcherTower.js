@@ -55,10 +55,9 @@ export class ArcherTower extends Tower {
     
     shoot() {
         if (this.target) {
-            // Calculate effective armor to ignore based on upgrade level
-            // Armor pierce reduces the enemy's effective armor by a percentage
-            const ignoreArmor = this.armorPiercingPercent > 0; // Use armor piercing if we have any
-            this.target.takeDamage(this.damage, ignoreArmor, 'physical');
+            // Pass armor piercing percentage to takeDamage
+            // armorPiercingPercent is already stored as a percentage (5, 10, 15, etc.)
+            this.target.takeDamage(this.damage, this.armorPiercingPercent, 'physical');
             
             // Select an archer to shoot
             const shooter = this.archers[Math.floor(Math.random() * this.archers.length)];

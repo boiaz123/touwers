@@ -165,7 +165,7 @@ export class PoisonArcherTower extends Tower {
             state.elapsedSinceTick += deltaTime;
             if (state.elapsedSinceTick >= 1.0) {
                 const poisonDamage = state.baseDamage + towerForgeBonus;
-                enemy.takeDamage(poisonDamage, false, 'poison', true);
+                enemy.takeDamage(poisonDamage, 0, 'poison', true);
                 state.elapsedSinceTick -= 1.0; // Reset for next tick
             }
         }
