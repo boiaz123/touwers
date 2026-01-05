@@ -38,6 +38,9 @@ export class GameStateManager {
         }
         
         try {
+            // Store previous state name before exiting
+            this.previousState = this.currentStateName;
+            
             // Exit current state
             if (this.currentStateName && this.states[this.currentStateName]) {
                 if (this.states[this.currentStateName].exit) {

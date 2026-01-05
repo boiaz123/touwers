@@ -1,5 +1,4 @@
 import { GameStateManager } from '../core/states/GameStateManager.js';
-import { MainMenu } from '../core/states/MainMenu.js';
 import { LoadGame } from '../core/states/LoadGame.js';
 import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
@@ -97,9 +96,6 @@ export class Game {
     initializeStates() {
         
         try {
-            const mainMenu = new MainMenu(this.stateManager);
-            this.stateManager.addState('mainMenu', mainMenu);
-
             const loadGame = new LoadGame(this.stateManager);
             this.stateManager.addState('loadGame', loadGame);
 

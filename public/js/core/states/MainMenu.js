@@ -8,6 +8,8 @@ export class MainMenu {
         this.titleOpacity = 0;
         this.buttonsOpacity = 0;
         this.particleSystem = null;
+        this.skipFadeIn = false;
+        this.previousState = null;
 
         // Button configuration
         this.buttons = [
@@ -34,11 +36,23 @@ export class MainMenu {
             sidebar.style.display = 'none';
         }
 
+        // Check if we're transitioning from StartScreen
+        // If so, skip fade-in animations and start with full opacity
+        this.skipFadeIn = this.stateManager.previousState === 'startScreen';
+        
         // Reset animation state
         this.animationTime = 0;
         this.showButtons = false;
-        this.titleOpacity = 0;
-        this.buttonsOpacity = 0;
+        
+        // If skipping fade-in (coming from StartScreen transition), start with full opacity
+        if (this.skipFadeIn) {
+            this.titleOpacity = 1;
+            this.buttonsOpacity = 1;
+            this.showButtons = true;
+        } else {
+            this.titleOpacity = 0;
+            this.buttonsOpacity = 0;
+        }
 
         // Get or initialize shared particle system
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0) {
@@ -185,15 +199,18 @@ export class MainMenu {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title fades in quickly
-        if (this.animationTime > 0.2) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.2) / 0.4);
-        }
+        // Skip fade-in animations if coming from StartScreen transition
+        if (!this.skipFadeIn) {
+            // Title fades in quickly
+            if (this.animationTime > 0.2) {
+                this.titleOpacity = Math.min(1, (this.animationTime - 0.2) / 0.4);
+            }
 
-        // Buttons fade in after title
-        if (this.animationTime > 0.8) {
-            this.showButtons = true;
-            this.buttonsOpacity = Math.min(1, (this.animationTime - 0.8) / 0.5);
+            // Buttons fade in after title
+            if (this.animationTime > 0.8) {
+                this.showButtons = true;
+                this.buttonsOpacity = Math.min(1, (this.animationTime - 0.8) / 0.5);
+            }
         }
 
         // Update shared particle system

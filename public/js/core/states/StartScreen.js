@@ -11,6 +11,18 @@ export class StartScreen {
         this.transitionActive = false;
         this.transitionTime = 0;
         this.particleSystem = null;
+        
+        // Menu buttons
+        this.buttons = [
+            { label: 'NEW GAME', action: 'newGame', hovered: false },
+            { label: 'LOAD GAME', action: 'loadGame', hovered: false },
+            { label: 'OPTIONS', action: 'options', hovered: false },
+            { label: 'QUIT GAME', action: 'quitGame', hovered: false }
+        ];
+        this.buttonWidth = 220;
+        this.buttonHeight = 50;
+        this.buttonGap = 15;
+        this.mouseMoveHandler = null;
     }
     
     enter() {
@@ -55,26 +67,109 @@ export class StartScreen {
 
     setupClickListener() {
         this.clickHandler = (e) => {
-            if (this.transitionActive) return;
-            this.handleClick();
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.handleClick(x, y);
+        };
+        this.mouseMoveHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.handleMouseMove(x, y);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
     }
 
     removeClickListener() {
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
+        if (this.mouseMoveHandler) {
+            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
     }
 
-    handleClick() {
-        if (this.showContinue || this.animationTime > 1) {
-            // Start transition effect
+    getButtonPosition(index) {
+        const canvas = this.stateManager.canvas;
+        const startY = canvas.height / 2 + 80;
+        return {
+            x: canvas.width / 2 - this.buttonWidth / 2,
+            y: startY + index * (this.buttonHeight + this.buttonGap),
+            width: this.buttonWidth,
+            height: this.buttonHeight
+        };
+    }
+
+    handleMouseMove(x, y) {
+        // Only handle mouse when transition is complete and buttons are visible
+        if (!this.transitionActive && this.transitionTime === 0) {
+            this.buttons.forEach((button, index) => {
+                const pos = this.getButtonPosition(index);
+                button.hovered = x >= pos.x && x <= pos.x + pos.width && 
+                                 y >= pos.y && y <= pos.y + pos.height;
+            });
+        }
+    }
+
+    handleClick(x, y) {
+        // Before transition: if showing continue message AND transition hasn't started, start transition
+        if (!this.transitionActive && this.showContinue && this.animationTime > 1 && this.transitionTime === 0) {
             this.transitionActive = true;
             this.transitionTime = 0;
+            return;
+        }
 
-            // Transition to MainMenu after full 7-second animation completes
-            setTimeout(() => this.stateManager.changeState('mainMenu'), 7000);
+        // While animating: don't handle clicks
+        if (this.transitionActive) {
+            return;
+        }
+
+        // After transition completes (transitionTime >= 3): handle button clicks
+        if (this.transitionTime >= 3) {
+            for (let i = 0; i < this.buttons.length; i++) {
+                const button = this.buttons[i];
+                const pos = this.getButtonPosition(i);
+                
+                if (x >= pos.x && x <= pos.x + pos.width && 
+                    y >= pos.y && y <= pos.y + pos.height) {
+                    this.handleButtonAction(button.action);
+                    return;
+                }
+            }
+        }
+    }
+
+    handleButtonAction(action) {
+        switch (action) {
+            case 'newGame':
+                this.stateManager.startNewGame();
+                break;
+            case 'loadGame':
+                this.stateManager.changeState('loadGame');
+                break;
+            case 'options':
+                this.stateManager.previousState = 'start';
+                this.stateManager.changeState('options');
+                break;
+            case 'quitGame':
+                this.quitGame();
+                break;
+        }
+    }
+
+    async quitGame() {
+        try {
+            if (window.__TAURI__) {
+                const { invoke } = window.__TAURI__.core;
+                await invoke('close_app');
+            } else {
+                console.log('Closing application...');
+                window.close();
+            }
+        } catch (error) {
+            console.error('Error closing application:', error);
         }
     }
     
@@ -100,6 +195,11 @@ export class StartScreen {
         // Update transition
         if (this.transitionActive) {
             this.transitionTime += deltaTime;
+            // After 3-second transition completes, transition time stays at 3 seconds (final state)
+            if (this.transitionTime >= 3) {
+                this.transitionTime = 3;
+                this.transitionActive = false; // Animation complete, allow button clicks
+            }
         }
         
         // Update shared particle system
@@ -143,7 +243,7 @@ export class StartScreen {
 
     renderTransitionEffect(ctx) {
         const canvas = this.stateManager.canvas;
-        const totalDuration = 7; // Total transition time - 7 seconds
+        const totalDuration = 3; // Total transition time - 3 seconds
         const progress = Math.min(1, this.transitionTime / totalDuration);
 
         if (progress < 0.01) return;
@@ -151,8 +251,8 @@ export class StartScreen {
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2 - 50;
 
-        // PHASE 1: Sword clash (0 - 2 seconds)
-        const swordDuration = 2 / totalDuration; // 2 seconds out of 7
+        // PHASE 1: Sword clash (0 - 1 second)
+        const swordDuration = 1 / totalDuration; // 1 second out of 3
         if (progress < swordDuration) {
             const swordProgress = progress / swordDuration;
             
@@ -196,16 +296,16 @@ export class StartScreen {
             }
         }
 
-        // PHASE 2: Smoke appearance and fade (2 - 7 seconds)
-        const smokeStartTime = swordDuration; // 2 seconds / 7
-        const smokeDuration = (5 / totalDuration); // 5 seconds of smoke effect
+        // PHASE 2: Smoke appearance and fade (1 - 3 seconds)
+        const smokeStartTime = swordDuration; // 1 second / 3
+        const smokeDuration = (2 / totalDuration); // 2 seconds of smoke effect
         
         if (progress >= smokeStartTime && progress < (smokeStartTime + smokeDuration)) {
             const smokePhaseProgress = (progress - smokeStartTime) / smokeDuration;
             
-            // Render buttons ONLY after 1 second into smoke (1 second into 5 second phase = 0.2)
+            // Render buttons ONLY after 0.1 second into smoke (0.1 seconds into 2 second phase = 0.05)
             // Draw them FIRST so smoke appears on top
-            const buttonRenderStartTime = 1 / 5; // 0.2
+            const buttonRenderStartTime = 0.1 / 2; // 0.05
             if (smokePhaseProgress >= buttonRenderStartTime) {
                 ctx.globalAlpha = 1;
                 this.renderMenuButtons(ctx);
@@ -230,13 +330,13 @@ export class StartScreen {
                 
                 // Smoke fills quickly (over first part of phase), then fades
                 let cloudOpacity = 0.4;
-                if (smokePhaseProgress < 0.2) {
-                    // Filling phase - clouds appear
-                    cloudOpacity = 0.4 * (smokePhaseProgress / 0.2);
+                if (smokePhaseProgress < 0.05) {
+                    // Filling phase - clouds appear (first 0.1 second)
+                    cloudOpacity = 0.4 * (smokePhaseProgress / 0.05);
                 } else {
-                    // After 1 second into smoke (which is 0.2 of 5 second smoke phase)
-                    // Start fading if past the 1-second mark
-                    const fadeStartInPhase = 0.2; // 1 second into 5 second phase
+                    // After 0.1 second into smoke (which is 0.05 of 2 second smoke phase)
+                    // Start fading if past the 0.1-second mark
+                    const fadeStartInPhase = 0.05; // 0.1 second into 2 second phase
                     if (smokePhaseProgress > fadeStartInPhase) {
                         const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
                         cloudOpacity = 0.4 * (1 - fadeProgress);
@@ -254,10 +354,10 @@ export class StartScreen {
                     const cloudSize = 120 + Math.sin(x * 0.01) * 40;
                     
                     let cloudOpacity = 0.3;
-                    if (smokePhaseProgress < 0.2) {
-                        cloudOpacity = 0.3 * (smokePhaseProgress / 0.2);
+                    if (smokePhaseProgress < 0.05) {
+                        cloudOpacity = 0.3 * (smokePhaseProgress / 0.05);
                     } else {
-                        const fadeStartInPhase = 0.2;
+                        const fadeStartInPhase = 0.05;
                         if (smokePhaseProgress > fadeStartInPhase) {
                             const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
                             cloudOpacity = 0.3 * (1 - fadeProgress);
@@ -512,7 +612,7 @@ export class StartScreen {
             ctx.fillStyle = '#c9a876';
             ctx.fillText('Defend the Realm', canvas.width / 2, canvas.height / 2 + 20);
 
-            // Continue message
+            // Continue message - only show before transition starts
             if (this.showContinue && !this.transitionActive) {
                 const flickerAlpha = this.continueOpacity * (0.5 + 0.5 * Math.sin(this.animationTime * 3));
                 ctx.globalAlpha = flickerAlpha;
@@ -530,6 +630,11 @@ export class StartScreen {
                 this.renderTransitionEffect(ctx);
             }
             
+            // After transition completes, show menu buttons
+            if (this.transitionTime >= 3) {
+                this.renderMenuButtons(ctx);
+            }
+            
         } catch (error) {
             console.error('StartScreen render error:', error);
             ctx.fillStyle = '#1a0f0a';
@@ -543,21 +648,13 @@ export class StartScreen {
 
     renderMenuButtons(ctx) {
         const canvas = this.stateManager.canvas;
-        const buttonWidth = 220;
-        const buttonHeight = 50;
-        const buttonGap = 15;
-        const startY = canvas.height / 2 + 80;
 
-        const buttons = ['NEW GAME', 'LOAD GAME', 'OPTIONS', 'QUIT GAME'];
-
-        // During transition, buttons are behind smoke but fully opaque
-        // After transition, they stay visible
+        // Render all buttons
         ctx.globalAlpha = 1;
-        for (let i = 0; i < buttons.length; i++) {
-            const buttonY = startY + (i * (buttonHeight + buttonGap));
-            const buttonX = canvas.width / 2 - buttonWidth / 2;
-
-            this.renderControlButton(ctx, buttonX, buttonY, buttonWidth, buttonHeight, buttons[i], false);
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            const pos = this.getButtonPosition(i);
+            this.renderControlButton(ctx, pos.x, pos.y, pos.width, pos.height, button.label, button.hovered);
         }
         ctx.globalAlpha = 1;
     }
