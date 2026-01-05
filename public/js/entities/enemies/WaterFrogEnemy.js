@@ -6,7 +6,7 @@ export class WaterFrogEnemy extends BaseEnemy {
 
     static BASE_STATS = {
         health: 340,
-        speed: 55,
+        speed: 25,
         armour: 2,
         magicResistance: 0.5
     };
@@ -21,7 +21,7 @@ export class WaterFrogEnemy extends BaseEnemy {
         this.skinColor = '#4A90E2'; // Water blue
         this.elementalType = 'water';
         this.vulnerableTo = 'earth'; // Only takes earth damage
-        this.sizeMultiplier = 4.0; // 4x bigger
+        this.sizeMultiplier = 3.2; // 80% of 4x bigger
         
         this.attackDamage = 10;
         this.attackSpeed = 1.0;
@@ -29,8 +29,13 @@ export class WaterFrogEnemy extends BaseEnemy {
         this.magicParticles = [];
         this.particleSpawnCounter = 0;
         this.jumpAnimationTimer = 0;
-        this.jumpAnimationDuration = 0.4;
-        this.jumpHeight = 20;
+        this.jumpAnimationDuration = 0.8; // Longer jump airtime
+        this.jumpHeight = 40; // Higher jump
+        this.jumpCycleTimer = 0;
+        this.jumpCycleDuration = 2.0; // Total time between jumps including rest
+        
+        // Leg animation for natural movement
+        this.legAnimationTimer = 0;
         
         // Cache for color variations to avoid recalculation
         this.cachedLightenColor = null;
@@ -40,16 +45,20 @@ export class WaterFrogEnemy extends BaseEnemy {
     }
     
     update(deltaTime) {
-        super.update(deltaTime);
+        // DO NOT call super.update() - we handle movement ourselves with jump mechanics
         
-        // Reduce particle spawn frequency - spawn every 0.3s instead of 0.15s
+        // Update base animations and cooldowns
+        this.animationTime += deltaTime;
+        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+        
+        // Particle effects
         this.particleSpawnCounter += deltaTime;
         if (this.particleSpawnCounter > 0.3) {
             this.spawnMagicParticle();
             this.particleSpawnCounter = 0;
         }
         
-        // Update magic particles - inline to avoid function call overhead
+        // Update magic particles
         let i = this.magicParticles.length;
         while (i--) {
             const particle = this.magicParticles[i];
@@ -62,29 +71,39 @@ export class WaterFrogEnemy extends BaseEnemy {
             }
         }
         
-        // Update jump animation timer
-        this.jumpAnimationTimer += deltaTime;
-        if (this.jumpAnimationTimer >= this.jumpAnimationDuration) {
-            this.jumpAnimationTimer = 0;
+        // Update jump cycle timer for animation and movement synchronization
+        this.jumpCycleTimer += deltaTime;
+        if (this.jumpCycleTimer >= this.jumpCycleDuration) {
+            this.jumpCycleTimer = 0;
         }
         
+        // Jump animation tracks the arc (0 to jumpAnimationDuration)
+        if (this.jumpCycleTimer < this.jumpAnimationDuration) {
+            this.jumpAnimationTimer = this.jumpCycleTimer;
+        } else {
+            this.jumpAnimationTimer = this.jumpAnimationDuration;
+        }
+        
+        // Check if reached end
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
+            this.isAttackingCastle = true;
             return;
         }
         
         const target = this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
+            this.isAttackingCastle = true;
             return;
         }
         
+        // Check if reached waypoint
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.hypot(dx, dy);
-        
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
         
         if (distance < reachThreshold) {
@@ -94,9 +113,13 @@ export class WaterFrogEnemy extends BaseEnemy {
             return;
         }
         
-        const moveDistance = this.speed * deltaTime;
-        this.x += (dx / distance) * moveDistance;
-        this.y += (dy / distance) * moveDistance;
+        // JUMP-BASED MOVEMENT: Only move during jump phase
+        if (this.jumpCycleTimer < this.jumpAnimationDuration) {
+            const moveDistance = this.speed * deltaTime;
+            this.x += (dx / distance) * moveDistance;
+            this.y += (dy / distance) * moveDistance;
+        }
+        // Rest phase: frog stays still on current spot
     }
     
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
@@ -278,156 +301,178 @@ export class WaterFrogEnemy extends BaseEnemy {
         
         ctx.translate(this.x, this.y - jumpArc);
         
-        // Cache colors for this render - only calculate once per frame
+        // Cache colors for this render
         if (!this.cachedLightenColor) {
             this.cachedLightenColor = WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten');
             this.cachedDarkenColor = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken');
             this.cachedDarken2Color = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_body');
         }
         
-        // --- FROG BODY ---
+        // --- BACK LEGS (DRAW FIRST) ---
+        this.drawBattleLeg(ctx, -baseSize * 0.35, baseSize * 0.5, baseSize, false, true);
+        this.drawBattleLeg(ctx, baseSize * 0.35, baseSize * 0.5, baseSize, true, true);
         
-        // Back legs (lower) - more prominent and frog-like
-        this.drawFrogBackLeg(ctx, -baseSize * 0.4, baseSize * 0.4, baseSize, false);
-        this.drawFrogBackLeg(ctx, baseSize * 0.4, baseSize * 0.4, baseSize, true);
-        
-        // Main body (rounded, more compact)
-        const bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
-        bodyGradient.addColorStop(0, WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten'));
-        bodyGradient.addColorStop(0.6, this.skinColor);
-        bodyGradient.addColorStop(1, this.cachedDarken2Color);
-        
-        ctx.fillStyle = bodyGradient;
+        // --- LOWER ROBE/BODY ---
+        // Robe skirt (wider, more wizardly)
+        ctx.fillStyle = '#1a2a3a';
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.65, baseSize * 0.45, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = this.cachedDarken2Color;
+        // Robe outline
+        ctx.strokeStyle = '#0a1a2a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.65, baseSize * 0.45, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Robe detail lines (vertical folds)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        for (let i = -2; i <= 2; i++) {
+            const x = i * baseSize * 0.18;
+            ctx.beginPath();
+            ctx.moveTo(x, baseSize * 0.08);
+            ctx.quadraticCurveTo(x + baseSize * 0.08, baseSize * 0.3, x + baseSize * 0.05, baseSize * 0.65);
+            ctx.stroke();
+        }
+        
+        // --- MAIN BODY/CHEST ---
+        const bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.1, baseSize * 0.4, baseSize * 0.2);
+        bodyGrad.addColorStop(0, '#2a4a6a');
+        bodyGrad.addColorStop(0.5, '#1a2a4a');
+        bodyGrad.addColorStop(1, '#0a1a2a');
+        
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.05, baseSize * 0.52, baseSize * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#0a1a2a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.05, baseSize * 0.52, baseSize * 0.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Chest plate (armor - water colored)
+        ctx.fillStyle = '#2a7aaa';
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.38, baseSize * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#0a4a7a';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.38, baseSize * 0.32, 0, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Belly (lighter color)
-        ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten_body');
+        // Armor shine/highlight
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.2)';
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.15, baseSize * 0.38, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(-baseSize * 0.1, -baseSize * 0.05, baseSize * 0.15, baseSize * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Front legs (upper)
-        this.drawFrogFrontLeg(ctx, -baseSize * 0.28, -baseSize * 0.12, baseSize, false);
-        this.drawFrogFrontLeg(ctx, baseSize * 0.28, -baseSize * 0.12, baseSize, true);
+        // --- FRONT ARMS/HANDS ---
+        this.drawBattleArm(ctx, -baseSize * 0.3, -baseSize * 0.1, baseSize, false);
+        this.drawBattleArm(ctx, baseSize * 0.3, -baseSize * 0.1, baseSize, true);
         
         // --- HEAD ---
-        
-        // Head base - more frog-like, wider
         ctx.fillStyle = this.skinColor;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.45, baseSize * 0.48, baseSize * 0.45, 0, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.strokeStyle = this.cachedDarken2Color;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.3;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.45, baseSize * 0.48, baseSize * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
         
-        // --- EYES (LARGE BULGING, FROG-LIKE) ---
-        
-        // Left eye socket
-        ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
+        // Head markings/spots
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.15, -baseSize * 0.65, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.15, -baseSize * 0.65, baseSize * 0.12, 0, Math.PI * 2);
         ctx.fill();
         
-        // Left eye white
+        // --- EYES ---
+        // Left eye
+        ctx.fillStyle = '#0a1a2a';
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.2, -baseSize * 0.6, baseSize * 0.17, 0, Math.PI * 2);
+        ctx.fill();
+        
         ctx.fillStyle = '#FFFACD';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.22, -baseSize * 0.58, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.2, -baseSize * 0.6, baseSize * 0.12, 0, Math.PI * 2);
         ctx.fill();
         
-        // Left iris
-        ctx.fillStyle = '#1E90FF';
+        ctx.fillStyle = '#00ccff';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.22, -baseSize * 0.56, baseSize * 0.09, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.2, -baseSize * 0.58, baseSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
         
-        // Left pupil and shine
         ctx.fillStyle = '#000';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.18, -baseSize * 0.59, baseSize * 0.06, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.16, -baseSize * 0.61, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        // Eye shine - aquatic
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.16, -baseSize * 0.62, baseSize * 0.025, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.14, -baseSize * 0.64, baseSize * 0.03, 0, Math.PI * 2);
         ctx.fill();
         
-        // Right eye socket
-        ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
+        // Right eye
+        ctx.fillStyle = '#0a1a2a';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.2, -baseSize * 0.6, baseSize * 0.17, 0, Math.PI * 2);
         ctx.fill();
         
-        // Right eye white
         ctx.fillStyle = '#FFFACD';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.22, -baseSize * 0.58, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.2, -baseSize * 0.6, baseSize * 0.12, 0, Math.PI * 2);
         ctx.fill();
         
-        // Right iris
-        ctx.fillStyle = '#1E90FF';
+        ctx.fillStyle = '#00ccff';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.22, -baseSize * 0.56, baseSize * 0.09, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.2, -baseSize * 0.58, baseSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
         
-        // Right pupil and shine
         ctx.fillStyle = '#000';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.18, -baseSize * 0.59, baseSize * 0.06, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.16, -baseSize * 0.61, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.16, -baseSize * 0.62, baseSize * 0.025, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.14, -baseSize * 0.64, baseSize * 0.03, 0, Math.PI * 2);
         ctx.fill();
         
         // --- MOUTH ---
-        
-        // Wide frog mouth
-        ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_mouth');
+        ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.25, baseSize * 0.22, 0, Math.PI);
+        ctx.arc(0, -baseSize * 0.28, baseSize * 0.2, 0, Math.PI);
         ctx.stroke();
         
-        // Mouth line detail
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = 0.8;
+        // Mouth expression
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.2)';
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.2, -baseSize * 0.25);
-        ctx.lineTo(baseSize * 0.2, -baseSize * 0.25);
-        ctx.stroke();
-        
-        // Nostril details
-        ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 0.28, baseSize * 0.2, 0, Math.PI);
         ctx.fill();
         
-        // --- WIZARD HAT ---
+        // --- WIZARD HAT (ENHANCED) ---
+        this.drawBattleMageHat(ctx, baseSize);
         
-        this.drawWizardHat(ctx, baseSize);
-        
-        // --- RENDER MAGIC PARTICLES ---
+        // --- RENDER MAGIC PARTICLES (WATER) ---
         
         const particleColors = [
-            'rgba(74, 144, 226, ',
-            'rgba(100, 200, 255, ',
-            'rgba(30, 144, 255, '
+            'rgba(42, 122, 170, ',
+            'rgba(100, 180, 220, ',
+            'rgba(150, 220, 255, '
         ];
         
         for (let i = 0; i < this.magicParticles.length; i++) {
@@ -463,162 +508,213 @@ export class WaterFrogEnemy extends BaseEnemy {
         }
     }
     
-    drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight) {
-        // Back leg - powerful folded jumping position
-        const thighLength = baseSize * 0.42;
-        const legLength = baseSize * 0.48;
+    drawBattleLeg(ctx, hipX, hipY, baseSize, isRight, isBackLeg) {
+        const side = isRight ? 1 : -1;
+        const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
         
-        // Thigh (upper part, thick and muscular)
-        const thighAngle = isRight ? -Math.PI / 2.8 : -Math.PI + Math.PI / 2.8;
-        const kneeX = hipX + Math.cos(thighAngle) * thighLength;
-        const kneeY = hipY + Math.sin(thighAngle) * thighLength;
+        // Leg compression/extension
+        let compression = 0;
+        if (jumpPhase < 0.5) {
+            compression = (0.5 - jumpPhase) * 2;
+        } else {
+            compression = (jumpPhase - 0.5) * 2 * -1;
+        }
         
-        // Calf/foot (lower part, folded)
-        const calfAngle = thighAngle + (isRight ? -0.4 : 0.4);
-        const footX = kneeX + Math.cos(calfAngle) * legLength;
-        const footY = kneeY + Math.sin(calfAngle) * legLength;
-        
-        // Shadow for depth
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = baseSize * 0.2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(hipX + 1, hipY + 1);
-        ctx.lineTo(kneeX + 1, kneeY + 1);
-        ctx.lineTo(footX + 1, footY + 1);
-        ctx.stroke();
-        
-        // Draw leg - thicker for muscular appearance
-        ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
-        ctx.lineWidth = baseSize * 0.2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(hipX, hipY);
-        ctx.lineTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
-        
-        // Foot pads - webbed appearance
-        ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
-        ctx.beginPath();
-        ctx.ellipse(footX, footY, baseSize * 0.16, baseSize * 0.18, calfAngle, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Toe details - webbing
-        ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
-        ctx.lineWidth = 0.8;
-        for (let i = -1; i <= 1; i++) {
-            const toeAngle = calfAngle + (i * 0.3);
-            const toeX = footX + Math.cos(toeAngle) * baseSize * 0.1;
-            const toeY = footY + Math.sin(toeAngle) * baseSize * 0.12;
+        if (isBackLeg) {
+            // Back legs - powerful
+            const thighLength = baseSize * 0.5;
+            const calfLength = baseSize * 0.55;
+            
+            const baseThighAngle = side > 0 ? -Math.PI / 2.2 : -Math.PI + Math.PI / 2.2;
+            const thighBend = compression * 0.4;
+            const thighAngle = baseThighAngle - thighBend * side;
+            
+            const kneeX = hipX + Math.cos(thighAngle) * thighLength;
+            const kneeY = hipY + Math.sin(thighAngle) * thighLength;
+            
+            const calfBend = compression * 0.5;
+            const calfAngle = thighAngle - calfBend * side;
+            
+            const footX = kneeX + Math.cos(calfAngle) * calfLength;
+            const footY = kneeY + Math.sin(calfAngle) * calfLength;
+            
+            // Draw shadow
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.lineWidth = baseSize * 0.25;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.beginPath();
-            ctx.moveTo(footX, footY);
-            ctx.lineTo(toeX, toeY);
+            ctx.moveTo(hipX + 1, hipY + 1);
+            ctx.lineTo(kneeX + 1, kneeY + 1);
+            ctx.lineTo(footX + 1, footY + 1);
             ctx.stroke();
+            
+            // Main leg
+            ctx.strokeStyle = this.skinColor;
+            ctx.lineWidth = baseSize * 0.25;
+            ctx.beginPath();
+            ctx.moveTo(hipX, hipY);
+            ctx.lineTo(kneeX, kneeY);
+            ctx.lineTo(footX, footY);
+            ctx.stroke();
+            
+            // Muscle definition
+            ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(hipX, hipY);
+            ctx.lineTo(kneeX, kneeY);
+            ctx.lineTo(footX, footY);
+            ctx.stroke();
+            
+            // Foot pad
+            ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
+            ctx.beginPath();
+            ctx.ellipse(footX, footY, baseSize * 0.22, baseSize * 0.24, calfAngle + 0.1 * side, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Toe lines
+            ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
+            ctx.lineWidth = 1.2;
+            for (let t = -1; t <= 1; t++) {
+                const toeAngle = calfAngle + (t * 0.35);
+                const toeX = footX + Math.cos(toeAngle) * baseSize * 0.13;
+                const toeY = footY + Math.sin(toeAngle) * baseSize * 0.16;
+                ctx.beginPath();
+                ctx.moveTo(footX, footY);
+                ctx.lineTo(toeX, toeY);
+                ctx.stroke();
+            }
         }
     }
     
-    drawFrogFrontLeg(ctx, hipX, hipY, baseSize, isRight) {
-        // Front leg - shorter, more relaxed
-        const upperLegLength = baseSize * 0.22;
-        const lowerLegLength = baseSize * 0.24;
+    drawBattleArm(ctx, shoulderX, shoulderY, baseSize, isRight) {
+        const side = isRight ? 1 : -1;
+        const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
         
-        // Upper leg angle (slightly out and forward)
-        const upperAngle = isRight ? Math.PI / 5 : 4 * Math.PI / 5;
-        const elbowX = hipX + Math.cos(upperAngle) * upperLegLength;
-        const elbowY = hipY + Math.sin(upperAngle) * upperLegLength;
+        let armLift = 0;
+        if (jumpPhase < 0.6) {
+            armLift = jumpPhase / 0.6;
+        } else {
+            armLift = (1 - jumpPhase) / 0.4;
+        }
         
-        // Lower leg angle (pointing forward/down)
-        const lowerAngle = Math.PI / 2.2 + (isRight ? 0.15 : -0.15);
-        const handX = elbowX + Math.cos(lowerAngle) * lowerLegLength;
-        const handY = elbowY + Math.sin(lowerAngle) * lowerLegLength;
+        const upperLength = baseSize * 0.32;
+        const lowerLength = baseSize * 0.3;
         
-        // Shadow for depth
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-        ctx.lineWidth = baseSize * 0.15;
+        const baseUpperAngle = side > 0 ? Math.PI / 5 : 4.2 * Math.PI / 5;
+        const upperAngle = baseUpperAngle + armLift * 0.3 * side;
+        
+        const elbowX = shoulderX + Math.cos(upperAngle) * upperLength;
+        const elbowY = shoulderY + Math.sin(upperAngle) * upperLength;
+        
+        const baseLowerAngle = Math.PI / 2 + (side > 0 ? 0.25 : -0.25);
+        const lowerAngle = baseLowerAngle + armLift * 0.2 * side;
+        
+        const handX = elbowX + Math.cos(lowerAngle) * lowerLength;
+        const handY = elbowY + Math.sin(lowerAngle) * lowerLength;
+        
+        // Shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.lineWidth = baseSize * 0.18;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.moveTo(hipX + 0.8, hipY + 0.8);
-        ctx.lineTo(elbowX + 0.8, elbowY + 0.8);
-        ctx.lineTo(handX + 0.8, handY + 0.8);
+        ctx.moveTo(shoulderX + 1, shoulderY + 1);
+        ctx.lineTo(elbowX + 1, elbowY + 1);
+        ctx.lineTo(handX + 1, handY + 1);
         ctx.stroke();
         
-        // Draw leg
-        ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
-        ctx.lineWidth = baseSize * 0.15;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        // Arm
+        ctx.strokeStyle = this.skinColor;
+        ctx.lineWidth = baseSize * 0.18;
         ctx.beginPath();
-        ctx.moveTo(hipX, hipY);
+        ctx.moveTo(shoulderX, shoulderY);
         ctx.lineTo(elbowX, elbowY);
         ctx.lineTo(handX, handY);
         ctx.stroke();
         
-        // Hand pads
+        // Arm detail
+        ctx.strokeStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(elbowX, elbowY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+        
+        // Hand
         ctx.fillStyle = WaterFrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
         ctx.beginPath();
-        ctx.ellipse(handX, handY, baseSize * 0.11, baseSize * 0.13, lowerAngle, 0, Math.PI * 2);
+        ctx.ellipse(handX, handY, baseSize * 0.14, baseSize * 0.16, lowerAngle, 0, Math.PI * 2);
         ctx.fill();
     }
     
-    drawWizardHat(ctx, baseSize) {
-        // Hat body - large pointy cone - Water colored
-        const hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
-        hatGradient.addColorStop(0, '#4A90E2');
-        hatGradient.addColorStop(0.6, '#003DA5');
-        hatGradient.addColorStop(1, '#001A52');
+    drawBattleMageHat(ctx, baseSize) {
+        // Hat cone body - Water colored
+        const hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.6);
+        hatGradient.addColorStop(0, '#0080c0');
+        hatGradient.addColorStop(0.5, '#005080');
+        hatGradient.addColorStop(1, '#002040');
         
         ctx.fillStyle = hatGradient;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.32, -baseSize * 0.72);
-        ctx.lineTo(baseSize * 0.32, -baseSize * 0.72);
-        ctx.lineTo(baseSize * 0.08, -baseSize * 1.42);
+        ctx.moveTo(-baseSize * 0.33, -baseSize * 0.75);
+        ctx.lineTo(baseSize * 0.33, -baseSize * 0.75);
+        ctx.lineTo(baseSize * 0.1, -baseSize * 1.6);
         ctx.closePath();
         ctx.fill();
         
         // Hat outline
-        ctx.strokeStyle = '#001A52';
+        ctx.strokeStyle = '#001040';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.33, -baseSize * 0.75);
+        ctx.lineTo(baseSize * 0.1, -baseSize * 1.6);
+        ctx.lineTo(baseSize * 0.33, -baseSize * 0.75);
+        ctx.stroke();
+        
+        // Hat brim
+        ctx.fillStyle = '#1a2a3a';
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.78, baseSize * 0.4, baseSize * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#0a1a2a';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.32, -baseSize * 0.72);
-        ctx.lineTo(baseSize * 0.08, -baseSize * 1.42);
-        ctx.lineTo(baseSize * 0.32, -baseSize * 0.72);
+        ctx.ellipse(0, -baseSize * 0.78, baseSize * 0.4, baseSize * 0.12, 0, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Hat brim - gold band
-        ctx.fillStyle = '#D4AF37';
-        ctx.fillRect(-baseSize * 0.35, -baseSize * 0.78, baseSize * 0.7, baseSize * 0.12);
+        // Magic waves on hat
+        ctx.fillStyle = '#00FFFF';
+        const starSize = baseSize * 0.12;
+        for (let i = 0; i < 3; i++) {
+            const angle = (i * Math.PI * 2 / 3) - Math.PI / 2;
+            const x = Math.cos(angle) * baseSize * 0.18;
+            const y = -baseSize * 0.5 + Math.sin(angle) * baseSize * 0.1;
+            ctx.font = `bold ${starSize}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('✦', x, y);
+        }
         
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.35, -baseSize * 0.78);
-        ctx.lineTo(baseSize * 0.35, -baseSize * 0.78);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.35, -baseSize * 0.66);
-        ctx.lineTo(baseSize * 0.35, -baseSize * 0.66);
-        ctx.stroke();
-        
-        // Hat tip - glowing star
-        const tipGlow = ctx.createRadialGradient(baseSize * 0.08, -baseSize * 1.44, 0, baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2);
-        tipGlow.addColorStop(0, 'rgba(255, 215, 0, 0.7)');
-        tipGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        // Glowing tip (cyan/water)
+        const tipGlow = ctx.createRadialGradient(baseSize * 0.1, -baseSize * 1.58, 0, baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25);
+        tipGlow.addColorStop(0, 'rgba(0, 200, 255, 0.8)');
+        tipGlow.addColorStop(0.5, 'rgba(0, 200, 255, 0.3)');
+        tipGlow.addColorStop(1, 'rgba(0, 200, 255, 0)');
         
         ctx.fillStyle = tipGlow;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25, 0, Math.PI * 2);
         ctx.fill();
         
-        // Star at tip
-        ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
-        ctx.font = `bold ${baseSize * 0.2}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('★', baseSize * 0.08, -baseSize * 1.44);
+        // Tip spark (water)
+        ctx.fillStyle = '#00CCFF';
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.1, -baseSize * 1.6, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     lightenColor(color, factor) {
