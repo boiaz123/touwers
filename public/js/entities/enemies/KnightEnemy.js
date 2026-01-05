@@ -5,7 +5,7 @@ export class KnightEnemy extends BaseEnemy {
         health: 160,
         speed: 40,
         armour: 8,
-        magicResistance: 3
+        magicResistance: -0.2
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {

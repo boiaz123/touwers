@@ -274,6 +274,16 @@ export class BaseEnemy {
             finalDamage = amount * (1 - armorReductionPercent);
         }
         
+        // Apply magic resistance for magic damage types
+        if (damageType === 'magic') {
+            // Magic resistance can be positive (reduces damage) or negative (increases damage)
+            // Positive resistance = damage reduced by that percentage
+            // Negative resistance = damage increased (e.g., -0.2 = 20% more damage)
+            // Example: 0.5 resistance = 50% reduction, -0.2 resistance = 20% increase
+            const resistanceMultiplier = 1 - this.magicResistance;
+            finalDamage = amount * resistanceMultiplier;
+        }
+        
         // Ensure minimum 1 damage gets through
         finalDamage = Math.max(1, finalDamage);
         

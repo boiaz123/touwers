@@ -8,7 +8,7 @@ export class FrogEnemy extends BaseEnemy {
         health: 85,
         speed: 55,
         armour: 2,
-        magicResistance: 1
+        magicResistance: 0.5
     };
     
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {

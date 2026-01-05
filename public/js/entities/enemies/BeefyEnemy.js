@@ -5,7 +5,7 @@ export class BeefyEnemy extends BaseEnemy {
         health: 150,
         speed: 60,
         armour: 5,
-        magicResistance: 2
+        magicResistance: 0
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {

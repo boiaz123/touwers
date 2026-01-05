@@ -135,7 +135,7 @@ export class CombinationTower extends Tower {
                 switch(this.selectedSpell) {
                     case 'steam':
                         finalDamage += spell.damageBonus;
-                        this.target.takeDamage(finalDamage, 0, 'fire');
+                        this.target.takeDamage(finalDamage, 0, 'magic');
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -154,7 +154,7 @@ export class CombinationTower extends Tower {
                     case 'magma':
                         finalDamage += spell.damageBonus;
                         const piercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(piercingDamage, 100, 'earth'); // 100 = full armor piercing
+                        this.target.takeDamage(piercingDamage, 100, 'magic'); // Magic damage with armor piercing
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -165,21 +165,21 @@ export class CombinationTower extends Tower {
                         break;
                         
                     case 'tempest':
-                        this.target.takeDamage(finalDamage, 0, 'water');
+                        this.target.takeDamage(finalDamage, 0, 'magic');
                         // Slow effect
                         const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
                         if (this.target.speed > 20) {
                             this.target.speed *= slowEffect;
                         }
                         // Chain to nearby enemies
-                        this.chainToNearbyEnemies(this.target, finalDamage, 'water');
+                        this.chainToNearbyEnemies(this.target, finalDamage, 'magic');
                         break;
                         
                     case 'meteor':
                         const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(meteorPiercingDamage, 100, 'earth'); // 100 = full armor piercing
+                        this.target.takeDamage(meteorPiercingDamage, 100, 'magic'); // Magic damage with armor piercing
                         // Chain to nearby enemies (splash damage)
-                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
+                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'magic');
                         break;
                 }
                 
@@ -187,7 +187,7 @@ export class CombinationTower extends Tower {
                 this.createCombinationEffect();
             } else {
                 // Default arcane blast with no spell selected
-                this.target.takeDamage(finalDamage, 0, 'water');
+                this.target.takeDamage(finalDamage, 0, 'magic');
                 // Create basic arcane effect
                 this.createBasicArcaneEffect();
             }

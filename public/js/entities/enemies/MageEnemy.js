@@ -5,7 +5,7 @@ export class MageEnemy extends BaseEnemy {
         health: 110,
         speed: 45,
         armour: 1,
-        magicResistance: 8
+        magicResistance: 0.5
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {

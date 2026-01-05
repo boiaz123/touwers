@@ -104,7 +104,7 @@ export class MagicTower extends Tower {
             switch(this.selectedElement) {
                 case 'fire':
                     finalDamage += this.elementalBonuses.fire.damageBonus;
-                    this.target.takeDamage(finalDamage, 0, 'fire');
+                    this.target.takeDamage(finalDamage, 0, 'magic');
                     // Apply burn effect
                     if (this.target.burnTimer) {
                         this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -115,7 +115,7 @@ export class MagicTower extends Tower {
                     break;
                     
                 case 'water':
-                    this.target.takeDamage(finalDamage, 0, 'water');
+                    this.target.takeDamage(finalDamage, 0, 'magic');
                     // Apply enhanced slow effect
                     const baseSlowEffect = 0.7;
                     const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.water.slowBonus);
@@ -127,7 +127,7 @@ export class MagicTower extends Tower {
                     break;
                     
                 case 'air':
-                    this.target.takeDamage(finalDamage, 0, 'air');
+                    this.target.takeDamage(finalDamage, 0, 'magic');
                     // Chain lightning to nearby enemies
                     this.chainLightning(this.target);
                     break;
@@ -135,7 +135,7 @@ export class MagicTower extends Tower {
                 case 'earth':
                     // Armor piercing: 100% ignores armor completely, and reduces enemy armor
                     const piercingDamage = finalDamage + this.elementalBonuses.earth.armorPiercing;
-                    this.target.takeDamage(piercingDamage, 100, 'earth'); // 100 = full armor piercing
+                    this.target.takeDamage(piercingDamage, 100, 'magic'); // Magic damage with armor piercing
                     break;
             }
             
@@ -169,7 +169,7 @@ export class MagicTower extends Tower {
                                 
                                 // Deal damage to chained enemy
                                 let chainDamage = Math.floor(this.damage * 0.6); // 60% damage
-                                enemy.takeDamage(chainDamage, 0, 'air');
+                                enemy.takeDamage(chainDamage, 0, 'magic');
                             }
                         }
                     });
