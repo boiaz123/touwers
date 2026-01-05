@@ -3,6 +3,7 @@ import { LoadGame } from '../core/states/LoadGame.js';
 import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { StartScreen } from '../core/states/StartScreen.js';
+import { MainMenu } from '../core/states/MainMenu.js';
 import { CampaignMenu } from '../core/states/CampaignMenu.js';
 import { Campaign1 } from '../entities/campaigns/Campaign1.js';
 import { Campaign5 } from '../entities/campaigns/Campaign5.js';
@@ -107,6 +108,9 @@ export class Game {
             
             const startScreen = new StartScreen(this.stateManager);
             this.stateManager.addState('start', startScreen);
+            
+            const mainMenu = new MainMenu(this.stateManager);
+            this.stateManager.addState('mainMenu', mainMenu);
             
             const settlementHub = new SettlementHub(this.stateManager);
             this.stateManager.addState('settlementHub', settlementHub);

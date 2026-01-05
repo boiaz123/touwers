@@ -453,50 +453,74 @@ export class SettlementHub {
         const sunX = canvas.width * 0.75;
         const sunY = canvas.height * 0.15;
         const sunRadius = 50;
+        
+        // Create dynamic flickering effect using animation time
+        const flicker = Math.sin(this.animationTime * 3) * 0.15 + 0.85; // Flicker between 0.7 and 1.0
 
-        // Sun glow - multi-layer outer aura
-        const glowGradient1 = ctx.createRadialGradient(sunX, sunY, sunRadius, sunX, sunY, sunRadius * 3);
-        glowGradient1.addColorStop(0, 'rgba(255, 200, 100, 0.3)');
-        glowGradient1.addColorStop(0.4, 'rgba(255, 180, 80, 0.15)');
-        glowGradient1.addColorStop(1, 'rgba(255, 150, 0, 0)');
-        ctx.fillStyle = glowGradient1;
-        ctx.fillRect(sunX - sunRadius * 3.2, sunY - sunRadius * 3.2, sunRadius * 6.4, sunRadius * 6.4);
+        // Outer glow - very soft, far reaching
+        const outerGlow = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.5, sunX, sunY, sunRadius * 4);
+        outerGlow.addColorStop(0, 'rgba(255, 100, 0, 0.2)');
+        outerGlow.addColorStop(0.5, 'rgba(255, 150, 0, 0.08)');
+        outerGlow.addColorStop(1, 'rgba(255, 200, 0, 0)');
+        ctx.fillStyle = outerGlow;
+        ctx.fillRect(sunX - sunRadius * 4.2, sunY - sunRadius * 4.2, sunRadius * 8.4, sunRadius * 8.4);
 
-        // Medium glow layer
-        const glowGradient2 = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.8, sunX, sunY, sunRadius * 2);
-        glowGradient2.addColorStop(0, 'rgba(255, 220, 120, 0.4)');
-        glowGradient2.addColorStop(1, 'rgba(255, 180, 80, 0)');
-        ctx.fillStyle = glowGradient2;
-        ctx.fillRect(sunX - sunRadius * 2.2, sunY - sunRadius * 2.2, sunRadius * 4.4, sunRadius * 4.4);
+        // Mid glow - corona effect
+        const coronaGlow = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.8, sunX, sunY, sunRadius * 2.8);
+        coronaGlow.addColorStop(0, `rgba(255, 180, 80, ${0.4 * flicker})`);
+        coronaGlow.addColorStop(0.6, 'rgba(255, 120, 0, 0.2)');
+        coronaGlow.addColorStop(1, 'rgba(255, 80, 0, 0)');
+        ctx.fillStyle = coronaGlow;
+        ctx.fillRect(sunX - sunRadius * 3, sunY - sunRadius * 3, sunRadius * 6, sunRadius * 6);
 
-        // Sun core - bright yellow gradient
-        const sunGradient = ctx.createRadialGradient(sunX - 12, sunY - 12, 8, sunX, sunY, sunRadius);
-        sunGradient.addColorStop(0, '#fffacd');    // Light yellow
-        sunGradient.addColorStop(0.3, '#ffeb3b');  // Bright yellow
-        sunGradient.addColorStop(0.6, '#ffd700');  // Gold
-        sunGradient.addColorStop(1, '#ff8c00');    // Dark orange
+        // Sun core with radial gradient for depth
+        const sunGradient = ctx.createRadialGradient(sunX - 15, sunY - 15, 5, sunX, sunY, sunRadius);
+        sunGradient.addColorStop(0, '#ffff99');     // Very light yellow center
+        sunGradient.addColorStop(0.25, '#ffff00');  // Bright yellow
+        sunGradient.addColorStop(0.5, '#ffcc00');   // Golden yellow
+        sunGradient.addColorStop(0.75, '#ff9900');  // Orange
+        sunGradient.addColorStop(1, '#ff5500');     // Deep orange-red rim
         ctx.fillStyle = sunGradient;
         ctx.beginPath();
         ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Sun rim - darker orange edge
-        ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
-        ctx.stroke();
+        // Flame-like corona rays emanating from sun
+        ctx.strokeStyle = `rgba(255, 100, 0, ${0.5 * flicker})`;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2 + this.animationTime * 0.3;
+            const rayLength = sunRadius * (1.8 + Math.sin(this.animationTime * 2 + i) * 0.3);
+            const x1 = sunX + Math.cos(angle) * sunRadius * 0.9;
+            const y1 = sunY + Math.sin(angle) * sunRadius * 0.9;
+            const x2 = sunX + Math.cos(angle) * rayLength;
+            const y2 = sunY + Math.sin(angle) * rayLength;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
 
-        // Primary shine highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        // Inner bright corona (flame effect)
+        const innerCorona = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.6, sunX, sunY, sunRadius * 1.5);
+        innerCorona.addColorStop(0, `rgba(255, 200, 100, ${0.3 * flicker})`);
+        innerCorona.addColorStop(0.7, 'rgba(255, 150, 50, 0.1)');
+        innerCorona.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        ctx.fillStyle = innerCorona;
         ctx.beginPath();
-        ctx.arc(sunX - 18, sunY - 18, sunRadius * 0.35, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, sunRadius * 1.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Secondary shine highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        // Bright core shine
+        ctx.fillStyle = `rgba(255, 255, 150, ${0.6 * flicker})`;
         ctx.beginPath();
-        ctx.arc(sunX - 25, sunY - 10, sunRadius * 0.15, 0, Math.PI * 2);
+        ctx.arc(sunX - 18, sunY - 18, sunRadius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Secondary shine (dimmer)
+        ctx.fillStyle = 'rgba(255, 255, 200, 0.3)';
+        ctx.beginPath();
+        ctx.arc(sunX - 28, sunY - 8, sunRadius * 0.2, 0, Math.PI * 2);
         ctx.fill();
     }
 

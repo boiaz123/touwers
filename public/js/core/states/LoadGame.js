@@ -122,7 +122,10 @@ export class LoadGame {
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
 
-            this.stateManager.changeState('mainMenu');
+            // Navigate back to the state that opened this LoadGame
+            // Use stateManager.previousState which is set during state transition
+            const targetState = this.stateManager.previousState || 'mainMenu';
+            this.stateManager.changeState(targetState);
             return;
         }
 
