@@ -778,22 +778,42 @@ export class UIManager {
         this.lastGoldValue = currentGold;
         this.lastGemValues = { ...currentGems };
 
-        // Re-render the active menu based on its type
-        if (this.activeMenuType === 'superweapon' && this.activeMenuData.building) {
-            this.showSuperWeaponMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'academy' && this.activeMenuData.academy) {
-            this.showAcademyUpgradeMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'forge' && this.activeMenuData.forge) {
-            this.showForgeUpgradeMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'magic-tower' && this.activeMenuData.tower) {
-            this.showMagicTowerElementMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'combination-tower' && this.activeMenuData.tower) {
-            this.showCombinationTowerMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'guard-post' && this.activeMenuData.tower) {
-            this.showGuardPostMenu(this.activeMenuData);
-        } else if (this.activeMenuType === 'castle' && this.activeMenuData.castle) {
-            this.showCastleUpgradeMenu(this.activeMenuData);
-        }
+        // OPTIMIZATION: Only update button states, don't recreate entire menu
+        // This prevents DOM flickering while still keeping buttons up-to-date
+        this.updateMenuButtonStates();
+    }
+
+    /**
+     * Update only the button affordability in the active menu
+     * without recreating the entire menu (prevents flickering)
+     */
+    updateMenuButtonStates() {
+        const upgradeButtons = document.querySelectorAll('.panel-upgrade-btn');
+        if (!upgradeButtons.length) return;
+
+        const currentGold = this.gameState.gold;
+        const currentGems = this.towerManager.getGemStocks();
+
+        upgradeButtons.forEach(btn => {
+            const costText = btn.parentElement?.querySelector('.upgrade-cost-display');
+            if (!costText) return;
+
+            const costMatch = costText.textContent.match(/\$(\d+)/);
+            if (!costMatch) return;
+
+            const cost = parseInt(costMatch[1]);
+            const canAfford = currentGold >= cost;
+
+            // Update button disabled state
+            if (btn.disabled && !btn.textContent.includes('MAX') && canAfford) {
+                btn.disabled = false;
+                costText.classList.add('affordable');
+                costText.classList.remove('affordable');  // Toggle to trigger any CSS changes
+            } else if (!btn.disabled && !canAfford && !btn.textContent.includes('MAX')) {
+                btn.disabled = true;
+                costText.classList.remove('affordable');
+            }
+        });
     }
 
     // ============ UPGRADE MENUS ============

@@ -14,6 +14,13 @@ export class TowerManager {
         
         // Track occupied grid positions by towers only
         this.occupiedPositions = new Set();
+        
+        // Performance optimization: Cache building references
+        this.cachedForges = null;
+        this.cachedAcademies = null;
+        this.cachedTrainingGrounds = null;
+        this.cachedLabs = null;
+        this.lastBuildingCount = 0;
     }
     
     placeTower(type, x, y, gridX, gridY) {
@@ -272,23 +279,42 @@ export class TowerManager {
     }
     
     update(deltaTime, enemies) {
-        // Check if any forge upgrades have changed
-        const forges = this.buildingManager.buildings.filter(building => 
-            building.constructor.name === 'TowerForge'
-        );
+        // OPTIMIZATION: Cache building references instead of filtering every frame
+        if (!this.cachedForges || !this.cachedAcademies || !this.cachedTrainingGrounds) {
+            this.cachedForges = this.buildingManager.buildings.filter(building => 
+                building.constructor.name === 'TowerForge'
+            );
+            this.cachedAcademies = this.buildingManager.buildings.filter(building =>
+                building.constructor.name === 'MagicAcademy'
+            );
+            this.cachedTrainingGrounds = this.buildingManager.buildings.filter(building => 
+                building.constructor.name === 'TrainingGrounds'
+            );
+            this.cachedLabs = this.buildingManager.buildings.filter(building =>
+                building.constructor.name === 'SuperWeaponLab'
+            );
+        }
         
-        // Check if any academy upgrades have changed  
-        const academies = this.buildingManager.buildings.filter(building =>
-            building.constructor.name === 'MagicAcademy'
-        );
+        // Check if building count changed (indicates new buildings may have been added)
+        const currentBuildingCount = this.buildingManager.buildings.length;
+        if (this.lastBuildingCount !== currentBuildingCount) {
+            this.lastBuildingCount = currentBuildingCount;
+            // Rebuild cache on next update
+            this.cachedForges = null;
+            this.cachedAcademies = null;
+            this.cachedTrainingGrounds = null;
+            this.cachedLabs = null;
+            return; // Skip update this frame to rebuild cache next frame
+        }
         
         let upgradesChanged = false;
-        forges.forEach(forge => {
+        for (let i = 0; i < this.cachedForges.length; i++) {
+            const forge = this.cachedForges[i];
             if (forge.upgradesChanged) {
                 upgradesChanged = true;
                 forge.upgradesChanged = false; // Reset flag
             }
-        });
+        }
         
         // If upgrades changed, recalculate all tower stats
         if (upgradesChanged) {
@@ -298,7 +324,9 @@ export class TowerManager {
         // Apply building upgrades to towers
         const upgrades = this.buildingManager.towerUpgrades;
         
-        this.towers.forEach(tower => {
+        for (let i = 0; i < this.towers.length; i++) {
+            const tower = this.towers[i];
+            
             // Store original values if not already stored
             if (!tower.originalDamage) {
                 tower.originalDamage = tower.damage;
@@ -322,15 +350,13 @@ export class TowerManager {
             
             // Get poison damage bonus for Poison Archer Towers
             let poisonBonus = 0;
-            if (tower.constructor.name === 'PoisonArcherTower') {
-                forges.forEach(forge => {
-                    const multipliers = forge.getUpgradeMultipliers();
-                    poisonBonus = multipliers.poisonDamageBonus || 0;
-                });
+            if (tower.constructor.name === 'PoisonArcherTower' && this.cachedForges.length > 0) {
+                const multipliers = this.cachedForges[0].getUpgradeMultipliers();
+                poisonBonus = multipliers.poisonDamageBonus || 0;
             }
             
             tower.update(deltaTime, enemies, poisonBonus);
-        });
+        }
         
         // Update building manager
         this.buildingManager.update(deltaTime);
@@ -338,33 +364,22 @@ export class TowerManager {
     
     applyAcademyUpgrades(tower) {
         if (tower.constructor.name === 'MagicTower') {
-            // Get elemental bonuses from academies
-            const academies = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'MagicAcademy'
-            );
-            
-            if (academies.length > 0) {
-                const elementalBonuses = academies[0].getElementalBonuses();
+            // Use cached academies
+            if (this.cachedAcademies && this.cachedAcademies.length > 0) {
+                const elementalBonuses = this.cachedAcademies[0].getElementalBonuses();
                 tower.applyElementalBonuses(elementalBonuses);
             }
         }
         
         // New: Apply combination spell bonuses to Combination Towers
         if (tower.constructor.name === 'CombinationTower') {
-            const academies = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'MagicAcademy'
-            );
-            const labs = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'SuperWeaponLab'
-            );
-            
-            if (academies.length > 0) {
-                const academy = academies[0];
+            if (this.cachedAcademies && this.cachedAcademies.length > 0) {
+                const academy = this.cachedAcademies[0];
                 
                 // Get combination spells from SuperWeaponLab if it exists, otherwise from academy (legacy)
                 let combinationSpells = [];
-                if (labs.length > 0) {
-                    const lab = labs[0];
+                if (this.cachedLabs && this.cachedLabs.length > 0) {
+                    const lab = this.cachedLabs[0];
                     tower.superweaponLab = lab; // Store reference for accessing spell power
                     combinationSpells = lab.combinationSpells || [];
                 } else {
@@ -384,7 +399,8 @@ export class TowerManager {
                 };
                 
                 // Apply bonuses based on combination spell upgrade levels
-                combinationSpells.forEach(spell => {
+                for (let i = 0; i < combinationSpells.length; i++) {
+                    const spell = combinationSpells[i];
                     if (spell.upgradeLevel > 0) {
                         const upgradeBonus = spell.upgradeLevel; // Each upgrade level = +1 bonus
                         
@@ -407,7 +423,7 @@ export class TowerManager {
                                 break;
                         }
                     }
-                });
+                }
                 
                 // Also apply elemental upgrades from academy
                 const elementalBonuses = academy.getElementalBonuses();
@@ -439,6 +455,12 @@ export class TowerManager {
     
     // New: Get gem stocks for UI display
     getGemStocks() {
+        // Use cached academies if available
+        if (this.cachedAcademies && this.cachedAcademies.length > 0) {
+            return this.cachedAcademies[0].gems;
+        }
+        
+        // Fallback if no cache
         const academies = this.buildingManager.buildings.filter(building =>
             building.constructor.name === 'MagicAcademy'
         );
@@ -447,7 +469,7 @@ export class TowerManager {
             return academies[0].gems;
         }
         
-        return { fire: 0, water: 0, air: 0, earth: 0 };
+        return { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
     }
     
     recalculateAllTowerStats() {
@@ -463,55 +485,49 @@ export class TowerManager {
     }
     
     applyForgeUpgrades(tower) {
-        // Get all forge upgrade multipliers
-        const forges = this.buildingManager.buildings.filter(building => 
-            building.constructor.name === 'TowerForge'
-        );
+        // Use cached forge references
+        if (!this.cachedForges || this.cachedForges.length === 0) return;
         
-        forges.forEach(forge => {
-            const multipliers = forge.getUpgradeMultipliers();
-            const towerType = tower.constructor.name;
-            
-            // Apply forge upgrades as additive bonuses on top of original damage
-            switch (towerType) {
-                case 'BasicTower':
-                    if (multipliers.basicDamageBonus > 0) {
-                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.basicDamageBonus;
-                    }
-                    break;
-                    
-                case 'BarricadeTower':
-                    if (multipliers.barricadeDamageBonus > 0) {
-                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.barricadeDamageBonus;
-                    }
-                    break;
-                    
-                case 'ArcherTower':
-                    if (multipliers.archerDamageBonus > 0) {
-                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.archerDamageBonus;
-                    }
-                    break;
-                    
-                case 'PoisonArcherTower':
-                    if (multipliers.poisonDamageBonus > 0) {
-                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.poisonDamageBonus;
-                    }
-                    break;
-                    
-                case 'CannonTower':
-                    if (multipliers.cannonDamageBonus > 0) {
-                        tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
-                    }
-                    break;
-            }
-        });
+        const multipliers = this.cachedForges[0].getUpgradeMultipliers();
+        const towerType = tower.constructor.name;
+        
+        // Apply forge upgrades as additive bonuses on top of original damage
+        switch (towerType) {
+            case 'BasicTower':
+                if (multipliers.basicDamageBonus > 0) {
+                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.basicDamageBonus;
+                }
+                break;
+                
+            case 'BarricadeTower':
+                if (multipliers.barricadeDamageBonus > 0) {
+                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.barricadeDamageBonus;
+                }
+                break;
+                
+            case 'ArcherTower':
+                if (multipliers.archerDamageBonus > 0) {
+                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.archerDamageBonus;
+                }
+                break;
+                
+            case 'PoisonArcherTower':
+                if (multipliers.poisonDamageBonus > 0) {
+                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.poisonDamageBonus;
+                }
+                break;
+                
+            case 'CannonTower':
+                if (multipliers.cannonDamageBonus > 0) {
+                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
+                }
+                break;
+        }
     }
     
     applyTrainingGroundsUpgrades(tower) {
-        // Get all Training Grounds buildings
-        const trainingGrounds = this.buildingManager.buildings.filter(building => 
-            building.constructor.name === 'TrainingGrounds'
-        );
+        // Use cached Training Grounds buildings
+        if (!this.cachedTrainingGrounds || this.cachedTrainingGrounds.length === 0) return;
         
         const towerType = tower.constructor.name;
         let towerTypeKey = null;
@@ -538,13 +554,14 @@ export class TowerManager {
         }
         
         // Apply Training Grounds range upgrades
-        trainingGrounds.forEach(grounds => {
+        for (let i = 0; i < this.cachedTrainingGrounds.length; i++) {
+            const grounds = this.cachedTrainingGrounds[i];
             const upgrade = grounds.rangeUpgrades[towerTypeKey];
             if (upgrade && upgrade.level > 0) {
                 // Apply range bonus: each level adds 'effect' pixels to range
                 tower.range = tower.originalRange + (upgrade.level * upgrade.effect);
             }
-        });
+        }
     }
     
     handleClick(x, y, resolutionManager) {

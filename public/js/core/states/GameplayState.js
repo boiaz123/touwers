@@ -49,6 +49,13 @@ export class GameplayState {
         this.justPlacedTower = false;
         this.justPlacedBuilding = false;
         
+        // Performance optimization: Cache guard posts and defenders to avoid expensive loops
+        this.cachedGuardPosts = null;
+        this.lastTowerCount = 0;
+        this.lastGuardPostTowerCount = 0;
+        this.defendersCacheNeedsUpdate = true;
+        this.guardPostDefenderCache = null;
+        
     }
 
     setGameSpeed(speed) {
@@ -1387,45 +1394,73 @@ export class GameplayState {
         
         // Update guard post defender positions BEFORE checking enemy engagement
         // This ensures they're at the correct waypoint location for distance checks
+        let guardPostTowers = null;
         if (this.towerManager && this.towerManager.towers) {
-            this.towerManager.towers.forEach(tower => {
-                if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+            // OPTIMIZATION: Only rebuild guard post cache when tower count changes
+            const currentTowerCount = this.towerManager.towers.length;
+            if (this.lastGuardPostTowerCount !== currentTowerCount) {
+                this.cachedGuardPosts = this.towerManager.towers.filter(t => t.type === 'guard-post');
+                this.lastGuardPostTowerCount = currentTowerCount;
+            }
+            
+            guardPostTowers = this.cachedGuardPosts;
+            
+            for (let i = 0; i < guardPostTowers.length; i++) {
+                const tower = guardPostTowers[i];
+                if (tower.defender && !tower.defender.isDead()) {
                     // Maintain defender position on the path
                     tower.defender.x = tower.defenderSpawnX;
                     tower.defender.y = tower.defenderSpawnY;
                 }
-            });
+            }
         }
         
-        // FIRST: Register path defenders and waypoints on enemies
-        // This allows enemies to know where to stop and engage path defenders
-        if (this.enemyManager && this.enemyManager.enemies && this.towerManager) {
-            this.enemyManager.enemies.forEach((enemy) => {
-                // Register guard post defenders and their waypoints
-                if (this.towerManager.towers) {
-                    for (let tower of this.towerManager.towers) {
-                        if (tower.type === 'guard-post') {
-                            const defender = tower.getDefender();
-                            if (defender) {
-                                // Add defender to the enemy's list of available path defenders
-                                if (!enemy.pathDefenders) {
-                                    enemy.pathDefenders = [];
-                                }
-                                if (!enemy.pathDefenders.find(d => d === defender)) {
-                                    enemy.pathDefenders.push(defender);
-                                }
-                                
-                                // Register the exact waypoint where this defender is stationed
-                                // Enemies will use this to know where to stop and engage
-                                const waypoint = tower.getDefenderWaypoint();
-                                if (waypoint && !enemy.defenderWaypoint) {
-                                    enemy.defenderWaypoint = waypoint;
-                                }
-                            }
-                        }
+        // OPTIMIZATION: Register path defenders only once per enemy, not every frame
+        // Only do this if we don't have defenders cached, or tower count changed
+        const currentTowerCount = this.towerManager?.towers?.length || 0;
+        if (this.lastTowerCount !== currentTowerCount) {
+            this.lastTowerCount = currentTowerCount;
+            this.defendersCacheNeedsUpdate = true;
+        }
+        
+        if (this.defendersCacheNeedsUpdate && this.enemyManager && this.enemyManager.enemies && this.towerManager) {
+            // Cache guard post defenders once
+            if (!this.guardPostDefenderCache) {
+                this.guardPostDefenderCache = [];
+            }
+            this.guardPostDefenderCache = [];
+            
+            if (guardPostTowers) {
+                guardPostTowers.forEach(tower => {
+                    const defender = tower.getDefender();
+                    if (defender) {
+                        this.guardPostDefenderCache.push({
+                            defender: defender,
+                            waypoint: tower.getDefenderWaypoint(),
+                            tower: tower
+                        });
                     }
+                });
+            }
+            
+            // Register defenders on all enemies once
+            this.enemyManager.enemies.forEach((enemy) => {
+                if (!enemy.pathDefenders) {
+                    enemy.pathDefenders = [];
+                }
+                // Only add if not already added
+                this.guardPostDefenderCache.forEach(cache => {
+                    if (!enemy.pathDefenders.includes(cache.defender)) {
+                        enemy.pathDefenders.push(cache.defender);
+                    }
+                });
+                
+                if (!enemy.defenderWaypoint && this.guardPostDefenderCache.length > 0) {
+                    enemy.defenderWaypoint = this.guardPostDefenderCache[0].waypoint;
                 }
             });
+            
+            this.defendersCacheNeedsUpdate = false;
         }
         
         // UPDATE DEFENDERS FIRST
@@ -1436,12 +1471,10 @@ export class GameplayState {
         }
         
         // Update guard posts and their defenders
-        if (this.towerManager && this.towerManager.towers) {
-            this.towerManager.towers.forEach(tower => {
-                if (tower.type === 'guard-post') {
-                    tower.update(deltaTime, this.enemyManager.enemies, this.gameState);
-                }
-            });
+        if (guardPostTowers) {
+            for (let i = 0; i < guardPostTowers.length; i++) {
+                guardPostTowers[i].update(deltaTime, this.enemyManager.enemies, this.gameState);
+            }
         }
         
         // THEN update enemy positions
@@ -1450,16 +1483,27 @@ export class GameplayState {
             if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
         }
         
+        // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
+        let hadGoldFromEnemies = false;
+        const enemies = this.enemyManager.enemies;
         
-        // Clean up dead path defenders
-        // When all defenders at a waypoint are dead, enemies can resume moving
-        this.enemyManager.enemies.forEach(enemy => {
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            
+            // Clean up dead path defenders
             if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
                 // Remove dead defenders from the enemy's list
-                enemy.pathDefenders = enemy.pathDefenders.filter(d => !d.isDead());
+                let aliveCount = 0;
+                for (let j = enemy.pathDefenders.length - 1; j >= 0; j--) {
+                    if (enemy.pathDefenders[j].isDead()) {
+                        enemy.pathDefenders.splice(j, 1);
+                    } else {
+                        aliveCount++;
+                    }
+                }
                 
                 // If all path defenders are dead, allow enemy to resume
-                if (enemy.pathDefenders.length === 0) {
+                if (aliveCount === 0) {
                     if (enemy.isAttackingDefender) {
                         // Defender died - reset combat state
                         enemy.isAttackingDefender = false;
@@ -1470,10 +1514,8 @@ export class GameplayState {
                     enemy.defenderWaypoint = null;
                 }
             }
-        });
-        
-        // Update freeze timers and handle combat
-        this.enemyManager.enemies.forEach(enemy => {
+            
+            // Update freeze timers
             if (enemy.freezeTimer > 0) {
                 enemy.freezeTimer -= deltaTime;
                 if (enemy.freezeTimer <= 0 && enemy.originalSpeed) {
@@ -1488,7 +1530,7 @@ export class GameplayState {
                 
                 if (enemy.burnTickTimer <= 0) {
                     const burnDamage = enemy.burnDamage || 2;
-                    enemy.takeDamage(burnDamage, false, 'fire', true); // true = follow target
+                    enemy.takeDamage(burnDamage, false, 'fire', true);
                     enemy.burnTickTimer = 0.5; // Tick every 0.5 seconds
                 }
                 
@@ -1520,7 +1562,7 @@ export class GameplayState {
                         enemy.defenderTarget = targetDefender;
                         enemy.isAttackingCastle = false;
                         enemy.attackDefender(targetDefender, deltaTime);
-                        return;
+                        continue;
                     }
                 }
                 
@@ -1538,7 +1580,7 @@ export class GameplayState {
                     enemy.attackCastle(this.level.castle, deltaTime);
                 }
             }
-        });
+        }
         
         // Check if castle is destroyed
         if (this.level.castle && this.level.castle.isDestroyed()) {
@@ -1546,9 +1588,11 @@ export class GameplayState {
             return;
         }
         
+        // Only update UI if gold actually changed
         const goldFromEnemies = this.enemyManager.removeDeadEnemies();
         if (goldFromEnemies > 0) {
             this.gameState.gold += goldFromEnemies;
+            // Only update UI when gold changes, not every time
             this.uiManager.updateUI();
             this.uiManager.updateButtonStates();
         }
@@ -1557,7 +1601,6 @@ export class GameplayState {
         if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
             this.waveInProgress = false;
             this.waveCompleted = true;
-            
             
             setTimeout(() => {
                 this.gameState.wave++;

@@ -122,28 +122,37 @@ export class EnemyManager {
         }
         
         // Update all enemies (this no longer updates their splatters internally)
-        this.enemies.forEach(enemy => enemy.update(deltaTime));
+        for (let i = 0; i < this.enemies.length; i++) {
+            this.enemies[i].update(deltaTime);
+        }
         
-        // IMPORTANT: Update ALL splatters (both from live enemies and dead enemies) in ONE place
-        // This prevents double-updating and ensures consistent lifecycle management
-        
-        // Update splatters from live enemies
-        this.enemies.forEach(enemy => {
+        // OPTIMIZATION: Consolidate splatter updates into single loop
+        // This prevents multiple forEach passes over enemies
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
             if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                enemy.hitSplatters.forEach(splatter => splatter.update(deltaTime));
+                let j = enemy.hitSplatters.length - 1;
+                while (j >= 0) {
+                    const splatter = enemy.hitSplatters[j];
+                    splatter.update(deltaTime);
+                    if (!splatter.isAlive()) {
+                        enemy.hitSplatters.splice(j, 1);
+                    }
+                    j--;
+                }
             }
-        });
+        }
         
         // Update orphaned splatters from dead enemies
-        this.orphanedSplatters.forEach(splatter => splatter.update(deltaTime));
-        
-        // Filter out dead splatters from both lists
-        this.enemies.forEach(enemy => {
-            if (enemy.hitSplatters) {
-                enemy.hitSplatters = enemy.hitSplatters.filter(splatter => splatter.isAlive());
+        let j = this.orphanedSplatters.length - 1;
+        while (j >= 0) {
+            const splatter = this.orphanedSplatters[j];
+            splatter.update(deltaTime);
+            if (!splatter.isAlive()) {
+                this.orphanedSplatters.splice(j, 1);
             }
-        });
-        this.orphanedSplatters = this.orphanedSplatters.filter(splatter => splatter.isAlive());
+            j--;
+        }
     }
     
     checkReachedEnd() {
@@ -190,18 +199,24 @@ export class EnemyManager {
             ctx.stroke();
         }
         
-        // Render all enemies
-        this.enemies.forEach(enemy => enemy.render(ctx));
-        
-        // Render splatters from live enemies
-        this.enemies.forEach(enemy => {
+        // OPTIMIZATION: Consolidate rendering into single loop
+        // Render all enemies and their splatters in one pass
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            enemy.render(ctx);
+            
+            // Render splatters from this enemy
             if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                enemy.hitSplatters.forEach(splatter => splatter.render(ctx));
+                for (let j = 0; j < enemy.hitSplatters.length; j++) {
+                    enemy.hitSplatters[j].render(ctx);
+                }
             }
-        });
+        }
         
         // Render orphaned splatters from dead enemies
         // These will continue to display and fade until their life reaches 0
-        this.orphanedSplatters.forEach(splatter => splatter.render(ctx));
+        for (let i = 0; i < this.orphanedSplatters.length; i++) {
+            this.orphanedSplatters[i].render(ctx);
+        }
     }
 }

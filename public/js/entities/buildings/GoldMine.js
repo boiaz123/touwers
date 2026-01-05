@@ -46,6 +46,11 @@ export class GoldMine extends Building {
         this.staticBackgroundCanvas = null;
         this.staticBackgroundCacheSize = null;
         
+        // PERF: Cache mine count to avoid recomputing every frame
+        this.cachedMineCount = 1;
+        this.mineCountCheckTimer = 0;
+        this.MINE_COUNT_CHECK_INTERVAL = 1.0; // Check every 1 second
+        
         // Natural environment elements within the mine area
         this.trees = [];
         this.environmentRocks = [];
@@ -274,6 +279,19 @@ export class GoldMine extends Building {
     update(deltaTime) {
         super.update(deltaTime);
         
+        // PERF: Update mine count cache periodically (every 1 second) instead of every frame
+        this.mineCountCheckTimer -= deltaTime;
+        if (this.mineCountCheckTimer <= 0) {
+            if (this.buildingManager) {
+                this.cachedMineCount = this.buildingManager.buildings.filter(
+                    b => b.constructor.name === 'GoldMine'
+                ).length;
+            } else {
+                this.cachedMineCount = 1;
+            }
+            this.mineCountCheckTimer = this.MINE_COUNT_CHECK_INTERVAL;
+        }
+        
         // Only produce if not ready
         if (!this.goldReady) {
             this.currentProduction += deltaTime;
@@ -302,13 +320,8 @@ export class GoldMine extends Building {
             this.cartDirection = 1;
         }
         
-        // Count how many GoldMines exist for aggressive performance optimization
-        let mineCount = 1;
-        if (this.buildingManager) {
-            mineCount = this.buildingManager.buildings.filter(
-                b => b.constructor.name === 'GoldMine'
-            ).length;
-        }
+        // PERF: Use cached mine count instead of filtering every frame
+        const mineCount = this.cachedMineCount;
         
         // Update workers
         this.workers.forEach(worker => {
@@ -320,10 +333,11 @@ export class GoldMine extends Building {
                 worker.pickaxeRaised = 1;
                 worker.miningCooldown = 2 + Math.random() * 2;
                 
-                // OPTIMIZATION: Particle generation scales dramatically with mine count
-                // 1 mine: 50% chance (normal), 2 mines: 70% skip, 3+ mines: 90% skip
-                let skipParticle = mineCount === 1 ? 0.5 : (mineCount === 2 ? 0.7 : 0.9);
-                if (Math.random() > skipParticle) {
+                // PERF OPTIMIZATION: Particle generation scales dramatically with mine count
+                // Only generate particles with probability based on mine count to maintain frame rate
+                // 1 mine: 50% chance, 2 mines: 25% chance, 3+ mines: 10% chance
+                let particleChance = 0.5 / Math.max(1, mineCount - 0.5);
+                if (Math.random() < particleChance) {
                     // Create dust particles when mining
                     this.smokePuffs.push({
                         x: this.x + worker.x + (Math.random() - 0.5) * 8,
@@ -342,10 +356,10 @@ export class GoldMine extends Building {
         // Generate ambient dust from cave
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0 && !this.goldReady) { // Use goldReady instead of isReady
-            // OPTIMIZATION: Ambient dust heavily reduced with multiple mines
-            // 1 mine: 30% skip, 2 mines: 80% skip, 3+ mines: 95% skip
-            let skipAmbient = mineCount === 1 ? 0.3 : (mineCount === 2 ? 0.8 : 0.95);
-            if (Math.random() > skipAmbient) {
+            // PERF OPTIMIZATION: Ambient dust heavily reduced with multiple mines
+            // 1 mine: 30% chance, 2 mines: 15% chance, 3+ mines: 5% chance
+            let ambientChance = 0.3 / Math.max(1, mineCount * 0.7);
+            if (Math.random() < ambientChance) {
                 this.smokePuffs.push({
                     x: this.x - 20 + Math.random() * 15, // From cave entrance
                     y: this.y - 10 + Math.random() * 10,
@@ -360,7 +374,7 @@ export class GoldMine extends Building {
             this.nextSmokeTime = 2.0 + Math.random() * 2.0;
         }
         
-        // Update smoke/dust
+        // PERF: Update smoke/dust - filter is efficient
         this.smokePuffs = this.smokePuffs.filter(smoke => {
             smoke.x += smoke.vx * deltaTime;
             smoke.y += smoke.vy * deltaTime;
@@ -412,15 +426,17 @@ export class GoldMine extends Building {
         // New: If in gem mode, collect gems and return the gem object
         if (this.gemMode) {
             const gemsCollected = this.collectGems(); // Return gems object instead of gold amount
-            console.log('[GoldMine] Collected gems:', gemsCollected, 'gemMode:', this.gemMode);
             return gemsCollected;
         } else {
             // Original gold collection logic
             const income = Math.floor(this.getBaseIncome() * (this.incomeMultiplier || 1));
             
-            // Create collection sparks - reduced for performance
+            // PERF: Reduce spark count based on how many mines exist
+            // 1 mine: 5 sparks, 2 mines: 3 sparks, 3+ mines: 1 spark
+            const sparkCount = Math.max(1, Math.ceil(5 / this.cachedMineCount));
+            
             this.sparks = [];
-            for (let i = 0; i < 5; i++) { // Reduced from 8 to 5
+            for (let i = 0; i < sparkCount; i++) {
                 this.sparks.push({
                     x: this.x + (Math.random() - 0.5) * 30,
                     y: this.y + (Math.random() - 0.5) * 30,
@@ -562,20 +578,20 @@ export class GoldMine extends Building {
     // ============ OPTIMIZED RENDERING METHODS ============
     
     renderStaticEnvironment(ctx, size) {
-        // OPTIMIZATION: Skip rendering decorative trees/rocks if many mines exist (perf hit)
-        // Check if we're in "high mine count" mode by counting nearby buildings
-        const shouldSimplify = this.shouldSimplifyRendering();
+        // PERF: Skip rendering decorative trees/rocks if many mines exist
+        // Trees are expensive to render - skip them when multiple mines present
+        const shouldSimplify = this.cachedMineCount > 2;
         
         // Render trees only if not simplifying (trees are expensive)
         if (!shouldSimplify) {
             this.renderTrees(ctx);
         }
         
-        // Render debris (simplified)
+        // Render debris (simplified or full)
         if (!shouldSimplify) {
             this.renderDebris(ctx);
         } else {
-            // Simplified debris - just basic shapes
+            // Simplified debris - just basic shapes (much faster)
             this.excavatedDebris.forEach(debris => {
                 ctx.fillStyle = debris.color;
                 ctx.beginPath();
@@ -608,22 +624,15 @@ export class GoldMine extends Building {
         this.renderCaveEntrance(ctx, size);
     }
     
-    shouldSimplifyRendering(ctx) {
-        // Try to get mine count from the rendering context
-        if (!ctx || !ctx.buildingManager) {
-            return false;
-        }
-        
-        // Count how many GoldMines exist
-        const mineCount = ctx.buildingManager.buildings.filter(
-            b => b.constructor.name === 'GoldMine'
-        ).length;
-        
-        // Simplify if more than 2 mines exist (aggressive optimization)
-        return mineCount > 2;
-    }
+    // PERF: Removed shouldSimplifyRendering method - now using cached mine count directly
     
     renderTrees(ctx) {
+        // PERF: Skip individual tree rendering if too many mines exist
+        // This avoids thousands of draw calls
+        if (this.cachedMineCount > 3) {
+            return; // Skip trees entirely when > 3 mines
+        }
+        
         this.trees.forEach((tree, index) => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
@@ -751,6 +760,18 @@ export class GoldMine extends Building {
     }
     
     renderDebris(ctx) {
+        // PERF: Only render debris if not too many mines (avoid context state changes)
+        if (this.cachedMineCount > 3) {
+            // Ultra-simplified debris when many mines
+            this.excavatedDebris.forEach(debris => {
+                ctx.fillStyle = debris.color;
+                ctx.beginPath();
+                ctx.ellipse(this.x + debris.x, this.y + debris.y, debris.size * 0.9, debris.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            return;
+        }
+        
         this.excavatedDebris.forEach(debris => {
             ctx.save();
             ctx.translate(this.x + debris.x, this.y + debris.y);
@@ -1088,13 +1109,14 @@ export class GoldMine extends Building {
     }
     
     onClick() {
-        // If ready, collect - otherwise show menu
+        // If ready, collect immediately without opening menu
         if (this.goldReady === true) {
             const collected = this.collectGold();
-            return collected; // number or gem object
+            // Return collection result directly - prevents menu opening in GameplayState
+            return collected; // number (gold) or gem object
         }
         
-        // Show menu when not ready
+        // Show menu only when not ready (for viewing details, toggling modes, etc.)
         this.isSelected = true;
         return {
             type: 'goldmine_menu',
