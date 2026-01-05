@@ -249,10 +249,10 @@ export class StartScreen {
         if (progress < 0.01) return;
 
         const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2 - 50;
+        const centerY = canvas.height / 2 + 80; // Moved down below "Defend the Realm" text
 
-        // PHASE 1: Sword clash (0 - 1 second)
-        const swordDuration = 1 / totalDuration; // 1 second out of 3
+        // PHASE 1: Sword clash (0 - 0.7 seconds)
+        const swordDuration = 0.7 / totalDuration; // 0.7 seconds out of 3
         if (progress < swordDuration) {
             const swordProgress = progress / swordDuration;
             
@@ -296,16 +296,15 @@ export class StartScreen {
             }
         }
 
-        // PHASE 2: Smoke appearance and fade (1 - 3 seconds)
-        const smokeStartTime = swordDuration; // 1 second / 3
-        const smokeDuration = (2 / totalDuration); // 2 seconds of smoke effect
+        // PHASE 2: Smoke appearance and fade (0.7 - 2 seconds)
+        const smokeStartTime = swordDuration; // 0.7 seconds / 3
+        const smokeDuration = (1.3 / totalDuration); // 1.3 seconds of smoke effect
         
         if (progress >= smokeStartTime && progress < (smokeStartTime + smokeDuration)) {
             const smokePhaseProgress = (progress - smokeStartTime) / smokeDuration;
             
-            // Render buttons ONLY after 0.1 second into smoke (0.1 seconds into 2 second phase = 0.05)
-            // Draw them FIRST so smoke appears on top
-            const buttonRenderStartTime = 0.1 / 2; // 0.05
+            // Render buttons right away as smoke appears
+            const buttonRenderStartTime = 0.05 / 1.3; // 0.05 seconds into 1.3 second phase
             if (smokePhaseProgress >= buttonRenderStartTime) {
                 ctx.globalAlpha = 1;
                 this.renderMenuButtons(ctx);
@@ -316,58 +315,60 @@ export class StartScreen {
             ctx.globalAlpha = 1;
             
             // Create a dense, natural-looking smoke screen with many overlapping clouds
-            const cloudCount = 40; // Many clouds for full coverage
+            const cloudCount = 50; // Many clouds for full coverage
             for (let i = 0; i < cloudCount; i++) {
                 // Distribute clouds across entire bottom half with variation
-                const col = i % 8;
-                const row = Math.floor(i / 8);
+                const col = i % 10;
+                const row = Math.floor(i / 10);
                 
                 // Grid-based placement with smooth variation for natural look
-                const baseX = (col + 0.5) * (canvas.width / 8) + Math.sin(i * 0.5) * 60;
-                const baseY = (canvas.height * 0.4) + (row * (canvas.height * 0.15)) + Math.cos(i * 0.3) * 50;
+                const baseX = (col + 0.5) * (canvas.width / 10) + Math.sin(i * 0.3) * 40;
+                const baseY = (canvas.height * 0.45) + (row * (canvas.height * 0.18)) + Math.cos(i * 0.2) * 35;
                 
-                const cloudSize = 90 + Math.sin(i * 0.7) * 40;
+                // More consistent cloud sizes for natural look
+                const cloudSize = 100 + Math.sin(i * 0.5) * 25;
                 
-                // Smoke fills quickly (over first part of phase), then fades
-                let cloudOpacity = 0.4;
-                if (smokePhaseProgress < 0.05) {
-                    // Filling phase - clouds appear (first 0.1 second)
-                    cloudOpacity = 0.4 * (smokePhaseProgress / 0.05);
+                // Smoke appears quickly (0.1 second), then fades gradually
+                let cloudOpacity = 0.45;
+                const fillDuration = 0.1 / 1.3; // 0.1 seconds into smoke phase
+                const fadeDuration = 1.0 / 1.3; // 1.0 second gradual fade
+                const fadeStartInPhase = fillDuration; // Fade starts right after fill
+                
+                if (smokePhaseProgress < fillDuration) {
+                    // Filling phase - clouds appear quickly (first 0.1 second)
+                    cloudOpacity = 0.45 * (smokePhaseProgress / fillDuration);
+                } else if (smokePhaseProgress > fadeStartInPhase) {
+                    // Fading phase - smooth gradual fade out
+                    const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / fadeDuration;
+                    cloudOpacity = 0.45 * Math.max(0, 1 - fadeProgress);
                 } else {
-                    // After 0.1 second into smoke (which is 0.05 of 2 second smoke phase)
-                    // Start fading if past the 0.1-second mark
-                    const fadeStartInPhase = 0.05; // 0.1 second into 2 second phase
-                    if (smokePhaseProgress > fadeStartInPhase) {
-                        const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
-                        cloudOpacity = 0.4 * (1 - fadeProgress);
-                    } else {
-                        cloudOpacity = 0.4; // Full opacity until fade starts
-                    }
+                    cloudOpacity = 0.45; // Full opacity between fill and fade (minimal)
                 }
                 
-                this.drawHazySmokeCloud(ctx, baseX, baseY, cloudSize, cloudOpacity, i);
+                this.drawSilkySmokeCloud(ctx, baseX, baseY, cloudSize, cloudOpacity, i);
             }
 
-            // Additional larger background clouds for complete coverage
-            for (let y = canvas.height * 0.35; y < canvas.height; y += 80) {
-                for (let x = 0; x < canvas.width; x += 120) {
-                    const cloudSize = 120 + Math.sin(x * 0.01) * 40;
+            // Additional larger background clouds for complete coverage and depth
+            for (let y = canvas.height * 0.4; y < canvas.height; y += 100) {
+                for (let x = 0; x < canvas.width; x += 150) {
+                    const cloudSize = 130 + Math.sin(x * 0.008) * 35;
                     
-                    let cloudOpacity = 0.3;
-                    if (smokePhaseProgress < 0.05) {
-                        cloudOpacity = 0.3 * (smokePhaseProgress / 0.05);
+                    let cloudOpacity = 0.35;
+                    const fillDuration = 0.1 / 1.3;
+                    const fadeDuration = 1.0 / 1.3;
+                    const fadeStartInPhase = fillDuration;
+                    
+                    if (smokePhaseProgress < fillDuration) {
+                        cloudOpacity = 0.35 * (smokePhaseProgress / fillDuration);
+                    } else if (smokePhaseProgress > fadeStartInPhase) {
+                        const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / fadeDuration;
+                        cloudOpacity = 0.35 * Math.max(0, 1 - fadeProgress);
                     } else {
-                        const fadeStartInPhase = 0.05;
-                        if (smokePhaseProgress > fadeStartInPhase) {
-                            const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / (1 - fadeStartInPhase);
-                            cloudOpacity = 0.3 * (1 - fadeProgress);
-                        } else {
-                            cloudOpacity = 0.3;
-                        }
+                        cloudOpacity = 0.35;
                     }
                     
                     if (cloudOpacity > 0) {
-                        this.drawHazySmokeCloud(ctx, x, y, cloudSize, cloudOpacity, x + y);
+                        this.drawSilkySmokeCloud(ctx, x, y, cloudSize, cloudOpacity, x + y);
                     }
                 }
             }
@@ -379,6 +380,95 @@ export class StartScreen {
         }
 
         ctx.globalAlpha = 1;
+    }
+
+    drawSilkySmokeCloud(ctx, x, y, size, opacity, seed) {
+        if (opacity <= 0) return;
+        
+        ctx.globalAlpha = opacity;
+        
+        // Very subtle, natural smoke colors - no harsh grays
+        const colors = [
+            'rgba(165, 165, 165, 0.6)',  // Main body - lighter and more opaque
+            'rgba(175, 175, 175, 0.5)',  // Secondary
+            'rgba(150, 150, 150, 0.4)',  // Transition
+            'rgba(155, 155, 155, 0.3)'   // Wisps
+        ];
+        
+        // Main spherical cloud body - soft and billowing
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.98, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Multiple smooth, natural bulges for fluffy appearance
+        ctx.fillStyle = colors[1];
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            // Smooth sine wave for consistent bulge sizes - no flickering
+            const bulgeVariation = Math.sin(seed * 0.4 + angle) * 0.12 + Math.cos(seed * 0.2 + angle) * 0.08;
+            const radius = size * (0.68 + bulgeVariation);
+            const bx = x + Math.cos(angle) * radius;
+            const by = y + Math.sin(angle) * radius;
+            const bulgeSize = size * (0.58 + bulgeVariation * 0.5);
+            ctx.beginPath();
+            ctx.arc(bx, by, bulgeSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Top billowing formation - three peaks for natural mushroom look
+        ctx.fillStyle = colors[2];
+        // Left top
+        ctx.beginPath();
+        ctx.arc(x - size * 0.4, y - size * 0.5, size * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        // Center top - tallest
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.65, size * 0.82, 0, Math.PI * 2);
+        ctx.fill();
+        // Right top
+        ctx.beginPath();
+        ctx.arc(x + size * 0.4, y - size * 0.5, size * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Additional soft filler spheres for silky smooth transition
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + (seed * 0.1);
+            const fillX = x + Math.cos(angle) * size * 0.3;
+            const fillY = y + Math.sin(angle) * size * 0.25;
+            const fillSize = size * (0.4 + Math.sin(seed * 0.3 + i) * 0.1);
+            ctx.beginPath();
+            ctx.arc(fillX, fillY, fillSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Wispy, feathered edges for soft silky appearance
+        ctx.globalAlpha = opacity * 0.2;
+        ctx.fillStyle = colors[3];
+        for (let i = 0; i < 8; i++) {
+            // Smooth continuous variation - no random flickering
+            const wispAngle = (i / 8) * Math.PI * 2;
+            const wispDistance = size * (0.5 + Math.sin(seed * 0.3 + wispAngle) * 0.2);
+            const wispX = x + Math.cos(wispAngle) * wispDistance;
+            const wispY = y + Math.sin(wispAngle) * wispDistance;
+            const wispSize = size * (0.3 + Math.cos(seed * 0.4 + i * 0.6) * 0.1);
+            ctx.beginPath();
+            ctx.arc(wispX, wispY, wispSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Very subtle outer wisps for softness
+        ctx.globalAlpha = opacity * 0.08;
+        for (let i = 0; i < 6; i++) {
+            const outerAngle = (i / 6) * Math.PI * 2 + (seed * 0.2);
+            const outerDistance = size * (0.8 + Math.sin(seed * 0.25 + i) * 0.3);
+            const outerX = x + Math.cos(outerAngle) * outerDistance;
+            const outerY = y + Math.sin(outerAngle) * outerDistance;
+            const outerSize = size * (0.25 + Math.cos(seed * 0.5 + i) * 0.08);
+            ctx.beginPath();
+            ctx.arc(outerX, outerY, outerSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     drawHazySmokeCloud(ctx, x, y, size, opacity, seed) {
