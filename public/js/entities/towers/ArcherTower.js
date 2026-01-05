@@ -372,14 +372,6 @@ export class ArcherTower extends Tower {
             ctx.restore();
         });
         
-        // Range indicator
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-        }
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

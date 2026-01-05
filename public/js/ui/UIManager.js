@@ -313,6 +313,14 @@ export class UIManager {
             return;
         }
         
+        // Deselect all towers and buildings when starting placement
+        if (this.towerManager) {
+            this.towerManager.towers.forEach(tower => tower.isSelected = false);
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.deselect) building.deselect();
+            });
+        }
+        
         // Update selection
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -342,6 +350,14 @@ export class UIManager {
         // Check if player can afford this building
         if (!this.gameState.canAfford(cost)) {
             return;
+        }
+        
+        // Deselect all towers and buildings when starting placement
+        if (this.towerManager) {
+            this.towerManager.towers.forEach(tower => tower.isSelected = false);
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.deselect) building.deselect();
+            });
         }
         
         // Update selection
@@ -1765,6 +1781,10 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('basic-tower-panel');
         
+        // Set active menu type to keep towers selected
+        this.activeMenuType = 'tower-stats';
+        this.activeMenuData = towerData;
+        
         // Generic tower stats menu for any tower type
         
         const tower = towerData.tower;
@@ -1822,6 +1842,10 @@ export class UIManager {
     showBasicTowerStatsMenu(towerData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('basic-tower-panel');
+        
+        // Set active menu type to keep towers selected
+        this.activeMenuType = 'basic-tower-stats';
+        this.activeMenuData = towerData;
         
         // Basic tower stats menu - using panel-based system
         

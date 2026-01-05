@@ -508,31 +508,8 @@ export class MagicTower extends Tower {
         ctx.textAlign = 'center';
         const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨' };
         
-        // Add selection glow effect
-        if (this.isSelected) {
-            ctx.shadowColor = '#FFD700';
-            ctx.shadowBlur = 10;
-            
-            // Selection ring
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-        
-        if (this.isSelected) {
-            ctx.shadowBlur = 0;
-        }
-
-        // Range indicator
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(138, 43, 226, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-        }
+        ctx.fillText(elementIcons[this.selectedElement] || '✨', this.x, this.y + 2);
+        ctx.shadowBlur = 0;
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

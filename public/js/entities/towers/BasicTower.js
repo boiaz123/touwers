@@ -396,17 +396,6 @@ export class BasicTower extends Tower {
             ctx.restore();
         });
         
-        // Range indicator only when tower is selected AND showRange is enabled
-        if (this.isSelected && this.showRange) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);
     }

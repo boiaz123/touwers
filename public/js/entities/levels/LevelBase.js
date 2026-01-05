@@ -483,6 +483,83 @@ export class LevelBase {
         const screenY = (gridY + size / 2) * this.cellSize;
         return { screenX, screenY };
     }
+
+    /**
+     * Get the effective attack range for a tower type with current upgrades
+     * Takes into account Training Grounds range upgrades
+     * @param {string} towerType - Tower type key (e.g., 'archer', 'cannon')
+     * @param {TowerManager} towerManager - TowerManager instance for accessing upgrades
+     * @returns {number} - Effective tower range in pixels
+     */
+    getEffectiveTowerRange(towerType, towerManager) {
+        // Start with base range
+        let effectiveRange = this.getBaseTowerRange(towerType);
+
+        if (!towerManager || !towerManager.buildingManager) {
+            return effectiveRange;
+        }
+
+        // Check for Training Grounds upgrades
+        const trainingGrounds = towerManager.buildingManager.buildings.find(b => 
+            b.constructor.name === 'TrainingGrounds'
+        );
+
+        if (!trainingGrounds || !trainingGrounds.rangeUpgrades) {
+            return effectiveRange;
+        }
+
+        // Map tower type to training grounds upgrade key
+        let upgradeKey = null;
+        switch (towerType) {
+            case 'archer':
+                upgradeKey = 'archerTower';
+                break;
+            case 'barricade':
+                upgradeKey = 'barricadeTower';
+                break;
+            case 'basic':
+                upgradeKey = 'basicTower';
+                break;
+            case 'poison':
+                upgradeKey = 'poisonArcherTower';
+                break;
+            case 'cannon':
+                upgradeKey = 'cannonTower';
+                break;
+            case 'guard-post':
+                upgradeKey = 'guardPostTower';
+                break;
+            default:
+                return effectiveRange;
+        }
+
+        // Apply training grounds upgrades
+        const upgrade = trainingGrounds.rangeUpgrades[upgradeKey];
+        if (upgrade && upgrade.level > 0) {
+            effectiveRange = this.getBaseTowerRange(towerType) + (upgrade.level * upgrade.effect);
+        }
+
+        return effectiveRange;
+    }
+
+    /**
+     * Get base tower range without any upgrades
+     * @param {string} towerType - Tower type key
+     * @returns {number} - Base tower range in pixels
+     */
+    getBaseTowerRange(towerType) {
+        const baseRanges = {
+            'basic': 120,
+            'cannon': 120,
+            'archer': 140,
+            'magic': 110,
+            'barricade': 100,
+            'poison': 130,
+            'combination': 110,
+            'guard-post': 120
+        };
+        return baseRanges[towerType] || 120;
+    }
     
     isValidGridPosition(gridX, gridY) {
         // Use ResolutionManager if available
@@ -1577,6 +1654,28 @@ export class LevelBase {
                 ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
+                
+                // Show radius for tower previews (not buildings)
+                if (!isBuilding && this.previewTowerType) {
+                    const towerRange = this.getEffectiveTowerRange(this.previewTowerType, this.previewTowerManager);
+                    if (towerRange > 0) {
+                        // Draw radius circle
+                        ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, towerRange, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        // Draw dashed circle for better visibility
+                        ctx.strokeStyle = 'rgba(100, 200, 100, 0.3)';
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([5, 5]);
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, towerRange, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
             }
         }
         
@@ -1676,6 +1775,28 @@ export class LevelBase {
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Show radius for guard-post
+        if (this.previewTowerType === 'guard-post') {
+            const towerRange = this.getEffectiveTowerRange('guard-post', this.previewTowerManager);
+            if (towerRange > 0) {
+                // Draw radius circle
+                ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(x, y, towerRange, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw dashed circle for better visibility
+                ctx.strokeStyle = 'rgba(100, 200, 100, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(x, y, towerRange, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
 
         // Draw an indicator line from click point to path if not on path
         if (!isOnPath && nearestPoint) {

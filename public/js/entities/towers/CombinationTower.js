@@ -755,27 +755,7 @@ export class CombinationTower extends Tower {
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
             const spellIcons = { steam: '💨', magma: '🌋', tempest: '⛈️', meteor: '☄️' };
-            
-            if (this.isSelected) {
-                ctx.shadowColor = '#FFD700';
-                ctx.shadowBlur = 10;
-                
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, towerSize/2 + 5, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-            }
-        }
-        
-        // Range indicator
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(138, 43, 226, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.fillText(spellIcons[this.selectedSpell] || '⚡', this.x, this.y + 2);
         }
         
         // Render attack radius circle if selected

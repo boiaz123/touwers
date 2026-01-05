@@ -458,17 +458,6 @@ export class PoisonArcherTower extends Tower {
     }
     
     renderIndicators(ctx) {
-        // Range indicator (subtle)
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(34, 139, 34, 0.1)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        
         // Tower center marker
         ctx.fillStyle = 'rgba(101, 67, 33, 0.3)';
         ctx.beginPath();

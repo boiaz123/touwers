@@ -780,6 +780,14 @@ export class GameplayState {
         this.stateManager.canvas.style.cursor = 'crosshair';
         console.log('GameplayState: Activated spell targeting for spell:', spellId);
         
+        // Deselect all towers and buildings during spell targeting
+        if (this.towerManager) {
+            this.towerManager.towers.forEach(tower => tower.isSelected = false);
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.deselect) building.deselect();
+            });
+        }
+        
         // Add temporary click handler for spell targeting
         this.spellTargetHandler = (e) => {
             console.log('GameplayState: Spell target clicked at:', e.clientX, e.clientY);
@@ -1490,6 +1498,15 @@ export class GameplayState {
         if (this.enemyManager) {
             this.enemyManager.update(deltaTime);
             if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
+        }
+        
+        // Deselect all towers and buildings during normal gameplay (no menu open)
+        // This ensures the radius only shows when a tower is selected via clicking
+        if (this.towerManager && !this.uiManager.activeMenuType) {
+            this.towerManager.towers.forEach(tower => tower.isSelected = false);
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.deselect) building.deselect();
+            });
         }
         
         // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
