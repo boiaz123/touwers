@@ -13,6 +13,9 @@ export class GoldMine extends Building {
         // Building manager reference for performance optimization
         this.buildingManager = null;
         
+        // Flag to prevent menu from reopening immediately after collection
+        this.collectionJustHappened = false;
+        
         // New: Gem mining mode
         this.gemMode = false;
         this.gemMiningUnlocked = false;
@@ -578,27 +581,11 @@ export class GoldMine extends Building {
     // ============ OPTIMIZED RENDERING METHODS ============
     
     renderStaticEnvironment(ctx, size) {
-        // PERF: Skip rendering decorative trees/rocks if many mines exist
-        // Trees are expensive to render - skip them when multiple mines present
-        const shouldSimplify = this.cachedMineCount > 2;
+        // Always render trees and environment for consistent visuals
+        this.renderTrees(ctx);
         
-        // Render trees only if not simplifying (trees are expensive)
-        if (!shouldSimplify) {
-            this.renderTrees(ctx);
-        }
-        
-        // Render debris (simplified or full)
-        if (!shouldSimplify) {
-            this.renderDebris(ctx);
-        } else {
-            // Simplified debris - just basic shapes (much faster)
-            this.excavatedDebris.forEach(debris => {
-                ctx.fillStyle = debris.color;
-                ctx.beginPath();
-                ctx.ellipse(this.x + debris.x, this.y + debris.y, debris.size * 0.8, debris.size * 0.6, 0, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
+        // Always render debris
+        this.renderDebris(ctx);
         
         // Bushes - always render (lightweight)
         this.bushes.forEach(bush => {
@@ -627,12 +614,6 @@ export class GoldMine extends Building {
     // PERF: Removed shouldSimplifyRendering method - now using cached mine count directly
     
     renderTrees(ctx) {
-        // PERF: Skip individual tree rendering if too many mines exist
-        // This avoids thousands of draw calls
-        if (this.cachedMineCount > 3) {
-            return; // Skip trees entirely when > 3 mines
-        }
-        
         this.trees.forEach((tree, index) => {
             ctx.save();
             ctx.translate(this.x + tree.x, this.y + tree.y);
@@ -1109,14 +1090,27 @@ export class GoldMine extends Building {
     }
     
     onClick() {
-        // If ready, collect immediately without opening menu
+        // CRITICAL: NEVER show menu when goldmine is ready
+        // When ready: ONLY collect, return collection result (gold or gems)
+        // When NOT ready: ONLY show menu for status/mode switching
+        
         if (this.goldReady === true) {
+            // Mine is ready - ONLY perform collection, NO menu EVER
             const collected = this.collectGold();
-            // Return collection result directly - prevents menu opening in GameplayState
-            return collected; // number (gold) or gem object
+            
+            // Mark that we just collected so menu cannot open on this same click
+            this.collectionJustHappened = true;
+            setTimeout(() => {
+                this.collectionJustHappened = false;
+            }, 100);
+            
+            // Return the collection result (number for gold, object for gems)
+            // This tells GameplayState to add gold/gems, NOT to open a menu
+            return collected;
         }
         
-        // Show menu only when not ready (for viewing details, toggling modes, etc.)
+        // Mine is NOT ready - show menu so player can check production status and switch modes
+        // This is the ONLY case where we return a menu object
         this.isSelected = true;
         return {
             type: 'goldmine_menu',

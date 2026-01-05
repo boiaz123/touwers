@@ -1162,14 +1162,21 @@ export class GameplayState {
                 this.uiManager.showTrainingGroundsMenu(clickResult);
                 return;
             } else if (clickResult.type === 'goldmine_menu') {
-                this.uiManager.showGoldMineMenu(clickResult);
+                // Only show goldmine menu if mine is NOT ready
+                // If mine is ready, clicking should ONLY collect (handled elsewhere)
+                if (clickResult.goldMine && clickResult.goldMine.goldReady !== true) {
+                    this.uiManager.showGoldMineMenu(clickResult);
+                }
                 return;
             } else if (typeof clickResult === 'number') {
+                // Gold collection - close any open goldmine menu
+                this.uiManager.closeAllPanels();
                 this.gameState.gold += clickResult;
                 this.uiManager.updateUI();
                 return;
             } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
-                // Gem collection from gold mine
+                // Gem collection from gold mine - close any open goldmine menu
+                this.uiManager.closeAllPanels();
                 const academies = this.towerManager.buildingManager.buildings.filter(b => 
                     b.constructor.name === 'MagicAcademy'
                 );

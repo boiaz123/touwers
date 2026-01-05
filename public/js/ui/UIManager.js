@@ -2557,6 +2557,20 @@ export class UIManager {
     }
 
     showGoldMineMenu(goldMineData) {
+        const goldMine = goldMineData.goldMine;
+        
+        // CRITICAL: Never show menu if goldmine is ready - only collection should happen
+        if (goldMine && goldMine.goldReady === true) {
+            // Don't open menu, don't set active menu tracking
+            return;
+        }
+        
+        // CRITICAL: Never show menu if collection just happened - prevent reopening on same click
+        if (goldMine && goldMine.collectionJustHappened === true) {
+            // Don't open menu after collection
+            return;
+        }
+        
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('goldmine-panel');
         
@@ -2569,8 +2583,6 @@ export class UIManager {
             console.error('UIManager: Gold Mine panel not found');
             return;
         }
-        
-        const goldMine = goldMineData.goldMine;
         const incomeInfo = goldMine.getBaseIncome();
         const modeIcon = goldMine.gemMode ? '💎' : '💰';
         const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
