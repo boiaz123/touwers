@@ -484,24 +484,6 @@ export class CannonTower extends Tower {
             ctx.fill();
         });
         
-        // Range indicator
-        if (this.target) {
-            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            // Show splash damage radius at target
-            ctx.strokeStyle = 'rgba(255, 100, 0, 0.3)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(this.target.x, this.target.y, this.splashRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-        
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);
     }

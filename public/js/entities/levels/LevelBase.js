@@ -1776,28 +1776,6 @@ export class LevelBase {
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Show radius for guard-post
-        if (this.previewTowerType === 'guard-post') {
-            const towerRange = this.getEffectiveTowerRange('guard-post', this.previewTowerManager);
-            if (towerRange > 0) {
-                // Draw radius circle
-                ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(x, y, towerRange, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Draw dashed circle for better visibility
-                ctx.strokeStyle = 'rgba(100, 200, 100, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.arc(x, y, towerRange, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-        }
-
         // Draw an indicator line from click point to path if not on path
         if (!isOnPath && nearestPoint) {
             ctx.strokeStyle = isOnPath ? 'rgba(0, 255, 0, 0.6)' : 'rgba(255, 0, 0, 0.6)';
