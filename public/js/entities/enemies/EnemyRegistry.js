@@ -6,6 +6,10 @@ import { VillagerEnemy } from './VillagerEnemy.js';
 import { KnightEnemy } from './KnightEnemy.js';
 import { ShieldKnightEnemy } from './ShieldKnightEnemy.js';
 import { FrogEnemy } from './FrogEnemy.js';
+import { EarthFrogEnemy } from './EarthFrogEnemy.js';
+import { WaterFrogEnemy } from './WaterFrogEnemy.js';
+import { FireFrogEnemy } from './FireFrogEnemy.js';
+import { AirFrogEnemy } from './AirFrogEnemy.js';
 
 /**
  * EnemyRegistry - Centralized registry for all enemy types
@@ -45,6 +49,22 @@ export class EnemyRegistry {
         'frog': { 
             class: FrogEnemy, 
             ...FrogEnemy.BASE_STATS
+        },
+        'earthfrog': { 
+            class: EarthFrogEnemy, 
+            ...EarthFrogEnemy.BASE_STATS
+        },
+        'waterfrog': { 
+            class: WaterFrogEnemy, 
+            ...WaterFrogEnemy.BASE_STATS
+        },
+        'firefrog': { 
+            class: FireFrogEnemy, 
+            ...FireFrogEnemy.BASE_STATS
+        },
+        'airfrog': { 
+            class: AirFrogEnemy, 
+            ...AirFrogEnemy.BASE_STATS
         }
     };
 
