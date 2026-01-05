@@ -21,58 +21,19 @@ export class SettlementBuildingVisuals {
         const buildingType = this.building.constructor.name;
 
         switch (buildingType) {
-            case 'GoldMine':
-                this.renderGoldMineSettlement(ctx, size);
-                break;
             case 'TowerForge':
                 this.renderTowerForgeSettlement(ctx, size);
                 break;
             case 'MagicAcademy':
                 this.renderMagicAcademySettlement(ctx, size);
                 break;
+            case 'Castle':
+                this.renderCastleSettlement(ctx, size);
+                break;
             default:
                 // For other buildings, use their default rendering
                 this.building.render(ctx, size);
         }
-    }
-
-    /**
-     * Gold Mine settlement rendering
-     * Shows the mine visuals WITHOUT:
-     * - Toggle icon (gem/gold switch)
-     * - Production status display
-     * - Ready indicator
-     * 
-     * This allows customization of settlement appearance independently
-     */
-    renderGoldMineSettlement(ctx, size) {
-        // Save original ready states so we can restore them
-        const originalGoldReady = this.building.goldReady;
-
-        // Temporarily hide the ready/icon for settlement rendering
-        this.building.goldReady = false;
-
-        // Render all the visual components EXCEPT the game-specific UI
-        this.building.renderExcavatedGround(ctx, size);
-        this.building.renderStaticEnvironment(ctx, size);
-        this.building.renderMineTrack(ctx, size);
-        this.building.renderWorkers(ctx, size);
-
-        // Render gold piles if any exist (visual only, not functional)
-        if (this.building.goldPiles && this.building.goldPiles.length > 0) {
-            this.building.renderGoldPiles(ctx, size);
-        }
-
-        this.building.renderDustClouds(ctx);
-
-        // NOTE: NOT rendering:
-        // - renderProductionStatus() - game mechanic UI
-        // - renderToggleIcon() - game mechanic UI
-        // - renderFloatingTexts() - game mechanic UI
-        // - renderFlashEffect() - game mechanic effect
-
-        // Restore original state for in-game use
-        this.building.goldReady = originalGoldReady;
     }
 
     /**
@@ -90,5 +51,36 @@ export class SettlementBuildingVisuals {
     renderMagicAcademySettlement(ctx, size) {
         this.building.render(ctx, size);
     }
+
+    /**
+     * Castle settlement rendering
+     * Renders the castle without the health bar (settlement-specific UI)
+     */
+    renderCastleSettlement(ctx, size) {
+        // Render castle structure without health bar
+        ctx.save();
+        ctx.translate(this.building.x, this.building.y);
+        
+        // Draw damage flash if active
+        if (this.building.damageFlashTimer > 0) {
+            const flashIntensity = this.building.damageFlashTimer / this.building.damageFlashDuration;
+            ctx.fillStyle = `rgba(255, 100, 100, ${flashIntensity * 0.5})`;
+            ctx.fillRect(-this.building.wallWidth/2 - 50, -this.building.wallHeight/2 - 50, this.building.wallWidth + 100, this.building.wallHeight + 100);
+        }
+        
+        // Draw all castle components
+        this.building.drawMainWall(ctx);
+        this.building.drawTower(ctx, -this.building.wallWidth/2 - this.building.towerWidth/2, 'left');
+        this.building.drawTower(ctx, this.building.wallWidth/2 + this.building.towerWidth/2, 'right');
+        this.building.drawCastleBase(ctx);
+        this.building.drawGate(ctx);
+        this.building.drawCrenellations(ctx);
+        this.building.drawFlags(ctx);
+        
+        ctx.restore();
+        
+        // NOTE: NOT rendering drawHealthBar() - this is settlement-specific, no game UI
+    }
 }
+
 

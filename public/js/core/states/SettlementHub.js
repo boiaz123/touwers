@@ -2,7 +2,7 @@ import { SaveSystem } from '../SaveSystem.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
 import { MagicAcademy } from '../../entities/buildings/MagicAcademy.js';
-import { GoldMine } from '../../entities/buildings/GoldMine.js';
+import { Castle } from '../../entities/buildings/Castle.js';
 import { GuardPost } from '../../entities/towers/GuardPost.js';
 import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
 
@@ -25,14 +25,14 @@ export class SettlementHub {
         this.buildings = [
             { id: 'trainingGrounds', name: 'Training Grounds', action: 'levelSelect', x: 0, y: 0, width: 80, height: 60, hovered: false },
             { id: 'towerForge', name: 'Tower Forge', action: 'upgrades', x: 0, y: 0, width: 80, height: 60, hovered: false },
-            { id: 'magicAcademy', name: 'Magic Academy', action: 'options', x: 0, y: 0, width: 80, height: 60, hovered: false },
+            { id: 'magicAcademy', name: 'Magic Academy', action: 'enemyLogs', x: 0, y: 0, width: 80, height: 60, hovered: false },
         ];
 
         // UI state
         this.activePopup = null;
         this.upgradesPopup = null;
         this.optionsPopup = null;
-        this.statsPopup = null;
+        this.arcaneKnowledgePopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -95,14 +95,14 @@ export class SettlementHub {
                 building: new MagicAcademy(centerX - 130, centerY - 55, 1, 0),
                 scale: 29,
                 clickable: true,
-                action: 'options'
+                action: 'arcaneKnowledge'
             },
-            // Gold Mine - positioned to the right side of settlement
+            // Castle - positioned to the right side of settlement (clickable)
             {
-                building: new GoldMine(centerX + 700, centerY - 80, 1, 1),
+                building: new Castle(centerX + 700, centerY - 80, 0, 0),
                 scale: 29,
                 clickable: true,
-                action: 'stats'
+                action: 'options'
             },
 
             // === GUARD POST QUARTERS (BARRACKS) ===
@@ -222,8 +222,8 @@ export class SettlementHub {
             this.upgradesPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.updateHoverState(x, y);
-        } else if (this.activePopup === 'stats' && this.statsPopup) {
-            this.statsPopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
+            this.arcaneKnowledgePopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             let isHoveringBuilding = false;
@@ -268,8 +268,8 @@ export class SettlementHub {
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.handleClick(x, y);
             return;
-        } else if (this.activePopup === 'stats' && this.statsPopup) {
-            this.statsPopup.handleClick(x, y);
+        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
+            this.arcaneKnowledgePopup.handleClick(x, y);
             return;
         }
 
@@ -320,12 +320,12 @@ export class SettlementHub {
                 this.optionsPopup = new SettlementOptionsMenu(this.stateManager, this);
             }
             this.optionsPopup.open();
-        } else if (buildingItem.action === 'stats') {
-            this.activePopup = 'stats';
-            if (!this.statsPopup) {
-                this.statsPopup = new StatsPanel(this.stateManager, this);
+        } else if (buildingItem.action === 'arcaneKnowledge') {
+            this.activePopup = 'arcaneKnowledge';
+            if (!this.arcaneKnowledgePopup) {
+                this.arcaneKnowledgePopup = new ArcaneKnowledgeMenu(this.stateManager, this);
             }
-            this.statsPopup.open();
+            this.arcaneKnowledgePopup.open();
         }
     }
 
@@ -347,8 +347,8 @@ export class SettlementHub {
             this.upgradesPopup.update(deltaTime);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.update(deltaTime);
-        } else if (this.activePopup === 'stats' && this.statsPopup) {
-            this.statsPopup.update(deltaTime);
+        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
+            this.arcaneKnowledgePopup.update(deltaTime);
         }
 
         // Update settlement buildings for animations
@@ -393,8 +393,8 @@ export class SettlementHub {
                 this.upgradesPopup.render(ctx);
             } else if (this.activePopup === 'options' && this.optionsPopup) {
                 this.optionsPopup.render(ctx);
-            } else if (this.activePopup === 'stats' && this.statsPopup) {
-                this.statsPopup.render(ctx);
+            } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
+                this.arcaneKnowledgePopup.render(ctx);
             }
 
             ctx.globalAlpha = 1;
@@ -454,43 +454,43 @@ export class SettlementHub {
         const sunY = canvas.height * 0.15;
         const sunRadius = 50;
         
-        // Create dynamic flickering effect using animation time
-        const flicker = Math.sin(this.animationTime * 3) * 0.15 + 0.85; // Flicker between 0.7 and 1.0
+        // Create subtle, slow pulsing effect using animation time
+        const flicker = Math.sin(this.animationTime * 0.5) * 0.1 + 0.9; // Subtle pulsing between 0.8 and 1.0
 
         // Outer glow - very soft, far reaching
         const outerGlow = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.5, sunX, sunY, sunRadius * 4);
-        outerGlow.addColorStop(0, 'rgba(255, 100, 0, 0.2)');
-        outerGlow.addColorStop(0.5, 'rgba(255, 150, 0, 0.08)');
-        outerGlow.addColorStop(1, 'rgba(255, 200, 0, 0)');
+        outerGlow.addColorStop(0, 'rgba(255, 180, 80, 0.15)');
+        outerGlow.addColorStop(0.5, 'rgba(255, 160, 60, 0.06)');
+        outerGlow.addColorStop(1, 'rgba(255, 140, 40, 0)');
         ctx.fillStyle = outerGlow;
         ctx.fillRect(sunX - sunRadius * 4.2, sunY - sunRadius * 4.2, sunRadius * 8.4, sunRadius * 8.4);
 
-        // Mid glow - corona effect
+        // Mid glow - corona effect (much slower, more natural)
         const coronaGlow = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.8, sunX, sunY, sunRadius * 2.8);
-        coronaGlow.addColorStop(0, `rgba(255, 180, 80, ${0.4 * flicker})`);
-        coronaGlow.addColorStop(0.6, 'rgba(255, 120, 0, 0.2)');
-        coronaGlow.addColorStop(1, 'rgba(255, 80, 0, 0)');
+        coronaGlow.addColorStop(0, `rgba(255, 200, 120, ${0.25 * flicker})`);
+        coronaGlow.addColorStop(0.6, 'rgba(255, 160, 80, 0.12)');
+        coronaGlow.addColorStop(1, 'rgba(255, 120, 60, 0)');
         ctx.fillStyle = coronaGlow;
         ctx.fillRect(sunX - sunRadius * 3, sunY - sunRadius * 3, sunRadius * 6, sunRadius * 6);
 
-        // Sun core with radial gradient for depth
+        // Sun core with radial gradient for depth - warmer golden tones
         const sunGradient = ctx.createRadialGradient(sunX - 15, sunY - 15, 5, sunX, sunY, sunRadius);
-        sunGradient.addColorStop(0, '#ffff99');     // Very light yellow center
-        sunGradient.addColorStop(0.25, '#ffff00');  // Bright yellow
-        sunGradient.addColorStop(0.5, '#ffcc00');   // Golden yellow
-        sunGradient.addColorStop(0.75, '#ff9900');  // Orange
-        sunGradient.addColorStop(1, '#ff5500');     // Deep orange-red rim
+        sunGradient.addColorStop(0, '#fffccc');     // Very light creamy yellow center
+        sunGradient.addColorStop(0.25, '#fffa00');  // Bright yellow
+        sunGradient.addColorStop(0.5, '#ffd700');   // Golden
+        sunGradient.addColorStop(0.75, '#ffb700');  // Golden-orange
+        sunGradient.addColorStop(1, '#ff9500');     // Warm orange rim
         ctx.fillStyle = sunGradient;
         ctx.beginPath();
         ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Flame-like corona rays emanating from sun
-        ctx.strokeStyle = `rgba(255, 100, 0, ${0.5 * flicker})`;
+        // Slow, gentle corona rays emanating from sun
+        ctx.strokeStyle = `rgba(255, 160, 80, ${0.25 * flicker})`;
         ctx.lineWidth = 2;
         for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2 + this.animationTime * 0.3;
-            const rayLength = sunRadius * (1.8 + Math.sin(this.animationTime * 2 + i) * 0.3);
+            const angle = (i / 8) * Math.PI * 2 + this.animationTime * 0.05; // Much slower: 0.05 instead of 0.3
+            const rayLength = sunRadius * (1.6 + Math.sin(this.animationTime * 0.3 + i) * 0.2); // Slower: 0.3 instead of 2
             const x1 = sunX + Math.cos(angle) * sunRadius * 0.9;
             const y1 = sunY + Math.sin(angle) * sunRadius * 0.9;
             const x2 = sunX + Math.cos(angle) * rayLength;
@@ -501,26 +501,14 @@ export class SettlementHub {
             ctx.stroke();
         }
 
-        // Inner bright corona (flame effect)
-        const innerCorona = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.6, sunX, sunY, sunRadius * 1.5);
-        innerCorona.addColorStop(0, `rgba(255, 200, 100, ${0.3 * flicker})`);
-        innerCorona.addColorStop(0.7, 'rgba(255, 150, 50, 0.1)');
-        innerCorona.addColorStop(1, 'rgba(255, 100, 0, 0)');
-        ctx.fillStyle = innerCorona;
+        // Subtle outer corona (gentle halo effect)
+        const outerCorona = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.7, sunX, sunY, sunRadius * 2.2);
+        outerCorona.addColorStop(0, `rgba(255, 200, 140, ${0.15 * flicker})`);
+        outerCorona.addColorStop(0.5, 'rgba(255, 180, 120, 0.08)');
+        outerCorona.addColorStop(1, 'rgba(255, 160, 100, 0)');
+        ctx.fillStyle = outerCorona;
         ctx.beginPath();
-        ctx.arc(sunX, sunY, sunRadius * 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Bright core shine
-        ctx.fillStyle = `rgba(255, 255, 150, ${0.6 * flicker})`;
-        ctx.beginPath();
-        ctx.arc(sunX - 18, sunY - 18, sunRadius * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Secondary shine (dimmer)
-        ctx.fillStyle = 'rgba(255, 255, 200, 0.3)';
-        ctx.beginPath();
-        ctx.arc(sunX - 28, sunY - 8, sunRadius * 0.2, 0, Math.PI * 2);
+        ctx.arc(sunX, sunY, sunRadius * 2.2, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1427,9 +1415,9 @@ export class SettlementHub {
         // Render all actual building instances with settlement-specific visuals
         const headers = {
             'TrainingGrounds': 'Campaign',
-            'MagicAcademy': 'Options',
+            'MagicAcademy': 'Arcane Knowledge',
             'TowerForge': 'Upgrades',
-            'GoldMine': 'Stats'
+            'Castle': 'Options'
         };
 
         this.settlementBuildings.forEach(item => {
@@ -3253,6 +3241,17 @@ class SettlementOptionsMenu {
         const canvas = this.stateManager.canvas;
         const menuX = canvas.width / 2 - 150;
         const menuY = canvas.height / 2 - 150;
+        const menuWidth = 300;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+
+        // Check close button first
+        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
+            this.close();
+            return;
+        }
 
         this.buttons.forEach((button, index) => {
             const buttonX = menuX + 30;
@@ -3327,6 +3326,24 @@ class SettlementOptionsMenu {
             ctx.textBaseline = 'middle';
             ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
         });
+
+        // Red X close button at top right
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        
+        // Draw X
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
+        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
+        ctx.stroke();
 
         ctx.globalAlpha = 1;
     }
@@ -3462,3 +3479,371 @@ class StatsPanel {
         ctx.globalAlpha = 1;
     }
 }
+
+/**
+ * Castle Options Menu
+ * Allows player to interact with castle defenses and options
+ */
+class CastleOptionsMenu {
+    constructor(stateManager, settlementHub) {
+        this.stateManager = stateManager;
+        this.settlementHub = settlementHub;
+        this.isOpen = false;
+        this.animationProgress = 0;
+        this.buttons = [
+            { label: 'DEFENSES', action: 'defenses', hovered: false },
+            { label: 'STATISTICS', action: 'statistics', hovered: false },
+            { label: 'FORTIFY', action: 'fortify', hovered: false },
+            { label: 'CLOSE', action: 'close', hovered: false },
+        ];
+        this.buttonWidth = 200;
+        this.buttonHeight = 50;
+    }
+
+    open() {
+        this.isOpen = true;
+        this.animationProgress = 0;
+    }
+
+    close() {
+        this.isOpen = false;
+        this.settlementHub.closePopup();
+    }
+
+    update(deltaTime) {
+        if (this.isOpen && this.animationProgress < 1) {
+            this.animationProgress += deltaTime * 2;
+        }
+    }
+
+    updateHoverState(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+
+        this.buttons.forEach((button, index) => {
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 60 + index * 70;
+            button.hovered = x >= buttonX && x <= buttonX + this.buttonWidth &&
+                           y >= buttonY && y <= buttonY + this.buttonHeight;
+        });
+
+        this.stateManager.canvas.style.cursor =
+            this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+    }
+
+    handleClick(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 60 + i * 70;
+
+            if (x >= buttonX && x <= buttonX + this.buttonWidth &&
+                y >= buttonY && y <= buttonY + this.buttonHeight) {
+                this.handleButtonAction(button.action);
+                return;
+            }
+        }
+    }
+
+    handleButtonAction(action) {
+        switch (action) {
+            case 'defenses':
+                // TODO: Implement castle defenses menu
+                break;
+            case 'statistics':
+                // TODO: Implement castle statistics
+                break;
+            case 'fortify':
+                // TODO: Implement fortification menu
+                break;
+            case 'close':
+                this.close();
+                break;
+        }
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+        const menuWidth = 300;
+        const menuHeight = 320;
+
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Menu background
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Menu border
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Menu title
+        ctx.font = 'bold 20px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('CASTLE', menuX + menuWidth / 2, menuY + 20);
+
+        // Render buttons in StartScreen style
+        this.buttons.forEach((button, index) => {
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 60 + index * 70;
+
+            // Button background gradient
+            const bgGradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + this.buttonHeight);
+            bgGradient.addColorStop(0, '#44301c');
+            bgGradient.addColorStop(1, '#261200');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
+
+            // Button border - outset style
+            ctx.strokeStyle = button.hovered ? '#ffd700' : '#8b7355';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
+
+            // Top highlight line for beveled effect
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(buttonX, buttonY);
+            ctx.lineTo(buttonX + this.buttonWidth, buttonY);
+            ctx.stroke();
+
+            // Inset shadow
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(buttonX, buttonY + this.buttonHeight);
+            ctx.lineTo(buttonX + this.buttonWidth, buttonY + this.buttonHeight);
+            ctx.stroke();
+
+            // Button text
+            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
+            ctx.font = 'bold 18px Trebuchet MS, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Text shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText(button.label, buttonX + this.buttonWidth / 2 + 1, buttonY + this.buttonHeight / 2 + 1);
+            
+            // Main text
+            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
+            ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
+        });
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+/**
+ * Arcane Knowledge Menu
+ * Placeholder menu for tracking magical knowledge, enemy encounters and statistics
+ */
+class ArcaneKnowledgeMenu {
+    constructor(stateManager, settlementHub) {
+        this.stateManager = stateManager;
+        this.settlementHub = settlementHub;
+        this.isOpen = false;
+        this.animationProgress = 0;
+        this.buttons = [
+            { label: 'CAMPAIGN JOURNAL', action: 'journal', hovered: false },
+            { label: 'MONSTER JOURNAL', action: 'monsters', hovered: false },
+            { label: 'STATISTICS', action: 'stats', hovered: false },
+        ];
+        this.buttonWidth = 200;
+        this.buttonHeight = 50;
+    }
+
+    open() {
+        this.isOpen = true;
+        this.animationProgress = 0;
+    }
+
+    close() {
+        this.isOpen = false;
+        this.settlementHub.closePopup();
+    }
+
+    update(deltaTime) {
+        if (this.isOpen && this.animationProgress < 1) {
+            this.animationProgress += deltaTime * 2;
+        }
+    }
+
+    updateHoverState(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+        const menuWidth = 300;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+
+        // Check close button
+        this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+                                 y >= closeButtonY && y <= closeButtonY + closeButtonSize;
+
+        this.buttons.forEach((button, index) => {
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 70 + index * 70;
+            button.hovered = x >= buttonX && x <= buttonX + this.buttonWidth &&
+                           y >= buttonY && y <= buttonY + this.buttonHeight;
+        });
+
+        this.stateManager.canvas.style.cursor =
+            (this.buttons.some(b => b.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
+    }
+
+    handleClick(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+        const menuWidth = 300;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+
+        // Check close button first
+        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
+            this.close();
+            return;
+        }
+
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 70 + i * 70;
+
+            if (x >= buttonX && x <= buttonX + this.buttonWidth &&
+                y >= buttonY && y <= buttonY + this.buttonHeight) {
+                this.handleButtonAction(button.action);
+                return;
+            }
+        }
+    }
+
+    handleButtonAction(action) {
+        switch (action) {
+            case 'journal':
+                // TODO: Implement campaign journal
+                break;
+            case 'monsters':
+                // TODO: Implement monster journal
+                break;
+            case 'stats':
+                // TODO: Implement magic statistics
+                break;
+        }
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 150;
+        const menuY = canvas.height / 2 - 150;
+        const menuWidth = 300;
+        const menuHeight = 340;
+
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Menu background
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Menu border
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Menu title
+        ctx.font = 'bold 20px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('ARCANE KNOWLEDGE', menuX + menuWidth / 2, menuY + 20);
+
+        // Render buttons in StartScreen style
+        this.buttons.forEach((button, index) => {
+            const buttonX = menuX + 30;
+            const buttonY = menuY + 70 + index * 70;
+
+            // Button background gradient
+            const bgGradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + this.buttonHeight);
+            bgGradient.addColorStop(0, '#44301c');
+            bgGradient.addColorStop(1, '#261200');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
+
+            // Button border - outset style
+            ctx.strokeStyle = button.hovered ? '#ffd700' : '#8b7355';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
+
+            // Top highlight line for beveled effect
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(buttonX, buttonY);
+            ctx.lineTo(buttonX + this.buttonWidth, buttonY);
+            ctx.stroke();
+
+            // Inset shadow
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(buttonX, buttonY + this.buttonHeight);
+            ctx.lineTo(buttonX + this.buttonWidth, buttonY + this.buttonHeight);
+            ctx.stroke();
+
+            // Button text
+            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
+            ctx.font = 'bold 16px Trebuchet MS, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Text shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText(button.label, buttonX + this.buttonWidth / 2 + 1, buttonY + this.buttonHeight / 2 + 1);
+            
+            // Main text
+            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
+            ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
+        });
+
+        // Red X close button at top right
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        
+        // Draw X
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
+        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
+        ctx.stroke();
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+
+
