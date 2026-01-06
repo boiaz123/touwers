@@ -103,8 +103,8 @@ export class StartScreen {
     }
 
     handleMouseMove(x, y) {
-        // Only handle mouse when transition is complete and buttons are visible
-        if (!this.transitionActive && this.transitionTime === 0) {
+        // Handle mouse hover whenever buttons are visible (after continue message appears)
+        if (this.showContinue) {
             this.buttons.forEach((button, index) => {
                 const pos = this.getButtonPosition(index);
                 button.hovered = x >= pos.x && x <= pos.x + pos.width && 

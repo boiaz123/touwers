@@ -1,4 +1,5 @@
 import { SaveSystem } from '../SaveSystem.js';
+import { ParticleSystem } from '../ParticleSystem.js';
 
 /**
  * SaveSlotSelection State
@@ -18,6 +19,13 @@ export class SaveSlotSelection {
         this.slotButtonWidth = 300;
         this.slotButtonHeight = 80;
         this.slotButtonGap = 40;
+        this.particleSystem = null;
+        
+        // Warning dialog state
+        this.showWarning = false;
+        this.warningSlotNumber = null;
+        this.warningConfirmHovered = false;
+        this.warningCancelHovered = false;
     }
 
     enter() {
@@ -41,6 +49,17 @@ export class SaveSlotSelection {
         // Reset hover states
         this.backButtonHovered = false;
         this.hoveredSlot = -1;
+        
+        // Reset warning dialog
+        this.showWarning = false;
+        this.warningSlotNumber = null;
+        this.warningConfirmHovered = false;
+        this.warningCancelHovered = false;
+        
+        // Get or initialize shared particle system
+        if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
+            this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        }
         
         // Play menu theme music
         if (this.stateManager.audioManager) {
@@ -109,6 +128,32 @@ export class SaveSlotSelection {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
 
+        // If warning dialog is showing, handle warning button hovers
+        if (this.showWarning) {
+            const canvas = this.stateManager.canvas;
+            const panelWidth = 500;
+            const panelHeight = 250;
+            const panelX = (canvas.width - panelWidth) / 2;
+            const panelY = (canvas.height - panelHeight) / 2;
+            
+            // Confirm button
+            const confirmButtonX = panelX + panelWidth / 2 - 110;
+            const confirmButtonY = panelY + panelHeight - 80;
+            const buttonWidth = 100;
+            const buttonHeight = 40;
+            this.warningConfirmHovered = x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
+                                        y >= confirmButtonY && y <= confirmButtonY + buttonHeight;
+            
+            // Cancel button
+            const cancelButtonX = panelX + panelWidth / 2 + 10;
+            this.warningCancelHovered = x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
+                                       y >= cancelButtonY && y <= cancelButtonY + buttonHeight;
+            
+            this.stateManager.canvas.style.cursor = 
+                (this.warningConfirmHovered || this.warningCancelHovered) ? 'pointer' : 'default';
+            return;
+        }
+
         const buttonPos = this.getBackButtonPosition();
         this.backButtonHovered = x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
                                y >= buttonPos.y && y <= buttonPos.y + buttonPos.height;
@@ -128,6 +173,49 @@ export class SaveSlotSelection {
     }
 
     handleClick(x, y) {
+        // If warning dialog is showing, handle warning button clicks
+        if (this.showWarning) {
+            const canvas = this.stateManager.canvas;
+            const panelWidth = 500;
+            const panelHeight = 250;
+            const panelX = (canvas.width - panelWidth) / 2;
+            const panelY = (canvas.height - panelHeight) / 2;
+            
+            // Confirm button
+            const confirmButtonX = panelX + panelWidth / 2 - 110;
+            const confirmButtonY = panelY + panelHeight - 80;
+            const buttonWidth = 100;
+            const buttonHeight = 40;
+            
+            if (x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
+                y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
+                // Create new game in this slot (overwrite existing save)
+                const newGameData = SaveSystem.createNewGameState();
+                SaveSystem.saveGame(this.warningSlotNumber, newGameData);
+
+                // Set as current slot
+                this.stateManager.currentSaveSlot = this.warningSlotNumber;
+                this.stateManager.currentSaveData = newGameData;
+
+                // Go to settlement hub
+                this.stateManager.changeState('settlementHub');
+                return;
+            }
+            
+            // Cancel button
+            const cancelButtonX = panelX + panelWidth / 2 + 10;
+            if (x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
+                y >= cancelButtonY && y <= cancelButtonY + buttonHeight) {
+                // Close warning dialog
+                this.showWarning = false;
+                this.warningSlotNumber = null;
+                this.warningConfirmHovered = false;
+                this.warningCancelHovered = false;
+                return;
+            }
+            return;
+        }
+
         const buttonPos = this.getBackButtonPosition();
 
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
@@ -144,16 +232,24 @@ export class SaveSlotSelection {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
 
-                // Create new game in this slot
-                const newGameData = SaveSystem.createNewGameState();
-                SaveSystem.saveGame(slotNum, newGameData);
+                // Check if slot is already taken
+                const existingSave = SaveSystem.getSave(slotNum);
+                if (existingSave) {
+                    // Show warning dialog
+                    this.showWarning = true;
+                    this.warningSlotNumber = slotNum;
+                } else {
+                    // Create new game in empty slot
+                    const newGameData = SaveSystem.createNewGameState();
+                    SaveSystem.saveGame(slotNum, newGameData);
 
-                // Set as current slot
-                this.stateManager.currentSaveSlot = slotNum;
-                this.stateManager.currentSaveData = newGameData;
+                    // Set as current slot
+                    this.stateManager.currentSaveSlot = slotNum;
+                    this.stateManager.currentSaveData = newGameData;
 
-                // Go to settlement hub
-                this.stateManager.changeState('settlementHub');
+                    // Go to settlement hub
+                    this.stateManager.changeState('settlementHub');
+                }
             }
         });
     }
@@ -192,6 +288,17 @@ export class SaveSlotSelection {
             gradient.addColorStop(1, '#1a0f0a');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Render particles from shared system
+            if (this.particleSystem) {
+                this.particleSystem.render(ctx);
+            }
+            
+            // Semi-transparent panel overlay for menu content
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
 
             // Back button
             const buttonPos = this.getBackButtonPosition();
@@ -229,6 +336,11 @@ export class SaveSlotSelection {
                 this.slots.forEach((slotNum, index) => {
                     this.renderSaveSlot(ctx, slotNum, index);
                 });
+            }
+            
+            // Warning dialog for overwriting save
+            if (this.showWarning) {
+                this.renderWarningDialog(ctx);
             }
 
             ctx.globalAlpha = 1;
@@ -298,5 +410,85 @@ export class SaveSlotSelection {
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
+    }
+
+    renderWarningDialog(ctx) {
+        const canvas = this.stateManager.canvas;
+        const panelWidth = 500;
+        const panelHeight = 250;
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
+        // Semi-transparent background overlay
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        
+        // Panel background
+        ctx.fillStyle = '#3a2f26';
+        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Panel border
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Title
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#ffe700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Overwrite Save?', canvas.width / 2, panelY + 30);
+        
+        // Message
+        ctx.font = '16px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.fillText('This save slot already contains a game.', canvas.width / 2, panelY + 80);
+        ctx.fillText('Do you want to overwrite it?', canvas.width / 2, panelY + 110);
+        
+        // Confirm button
+        const confirmButtonX = panelX + panelWidth / 2 - 110;
+        const confirmButtonY = panelY + panelHeight - 80;
+        const buttonWidth = 100;
+        const buttonHeight = 40;
+        
+        if (this.warningConfirmHovered) {
+            ctx.fillStyle = '#ffe700';
+        } else {
+            ctx.fillStyle = '#d4af37';
+        }
+        ctx.fillRect(confirmButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.strokeStyle = this.warningConfirmHovered ? '#ffff00' : '#a67c52';
+        ctx.lineWidth = this.warningConfirmHovered ? 2 : 1;
+        ctx.strokeRect(confirmButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.font = 'bold 14px serif';
+        ctx.fillStyle = '#1a0f05';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('YES', confirmButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
+        
+        // Cancel button
+        const cancelButtonX = panelX + panelWidth / 2 + 10;
+        
+        if (this.warningCancelHovered) {
+            ctx.fillStyle = '#ffe700';
+        } else {
+            ctx.fillStyle = '#d4af37';
+        }
+        ctx.fillRect(cancelButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.strokeStyle = this.warningCancelHovered ? '#ffff00' : '#a67c52';
+        ctx.lineWidth = this.warningCancelHovered ? 2 : 1;
+        ctx.strokeRect(cancelButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.font = 'bold 14px serif';
+        ctx.fillStyle = '#1a0f05';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('NO', cancelButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
     }
 }

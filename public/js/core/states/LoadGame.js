@@ -1,4 +1,5 @@
 import { SaveSystem } from '../SaveSystem.js';
+import { ParticleSystem } from '../ParticleSystem.js';
 
 export class LoadGame {
     constructor(stateManager) {
@@ -13,7 +14,7 @@ export class LoadGame {
         this.slotButtonWidth = 300;
         this.slotButtonHeight = 80;
         this.slotButtonGap = 40;
-
+        this.particleSystem = null;
     }
 
     enter() {
@@ -36,6 +37,11 @@ export class LoadGame {
         this.contentOpacity = 0;
         this.backButtonHovered = false;
         this.hoveredSlot = -1;
+        
+        // Get or initialize shared particle system
+        if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
+            this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
+        }
         
         // Play menu theme music
         if (this.stateManager.audioManager) {
@@ -201,6 +207,17 @@ export class LoadGame {
             gradient.addColorStop(1, '#1a0f0a');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Render particles from shared system
+            if (this.particleSystem) {
+                this.particleSystem.render(ctx);
+            }
+            
+            // Semi-transparent panel overlay for menu content
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
 
             // Back button
             const buttonPos = this.getBackButtonPosition();

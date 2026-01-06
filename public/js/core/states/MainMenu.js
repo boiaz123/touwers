@@ -38,7 +38,11 @@ export class MainMenu {
 
         // Check if we're transitioning from StartScreen
         // If so, skip fade-in animations and start with full opacity
-        this.skipFadeIn = this.stateManager.previousState === 'startScreen';
+        // Also skip fade-in when returning from other menus (previousState is options, loadGame, etc)
+        this.skipFadeIn = this.stateManager.previousState === 'startScreen' || 
+                          this.stateManager.previousState === 'options' ||
+                          this.stateManager.previousState === 'loadGame' ||
+                          this.stateManager.previousState === 'saveSlotSelection';
         
         // Reset animation state
         this.animationTime = 0;
@@ -49,7 +53,7 @@ export class MainMenu {
             button.hovered = false;
         });
         
-        // If skipping fade-in (coming from StartScreen transition), start with full opacity
+        // If skipping fade-in (coming from StartScreen transition or other menus), start with full opacity
         if (this.skipFadeIn) {
             this.titleOpacity = 1;
             this.buttonsOpacity = 1;
