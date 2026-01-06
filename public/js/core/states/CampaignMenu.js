@@ -6,22 +6,26 @@ export class CampaignMenu {
         this.campaigns = [];
         this.selectedCampaignId = null;
         this.hoveredCampaignId = null;
+        this.hoveredStartButton = false;
         
         // Info panel state
         this.infoPanelOpen = false;
         this.infoPanelOpacity = 0;
         this.infoPanelAnimSpeed = 0.08;
         
-        // Grid configuration
-        this.gridConfig = {
-            cols: 2,
-            rows: 3,
-            slotWidth: 280,
-            slotHeight: 200,
-            paddingX: 80,
-            paddingY: 120,
-            gapX: 80,
-            gapY: 60
+        // Layout configuration - 2-column grid on left, info panel on right (full height)
+        this.layout = {
+            leftPadding: 40,
+            topPadding: 140,
+            rightPadding: 40,
+            bottomPadding: 40,
+            campaignTileWidth: 320,
+            campaignTileHeight: 160,
+            campaignGapX: 25,
+            campaignGapY: 20,
+            campaignCols: 2,
+            infoPanelRightMargin: 40,
+            infoPanelTopMargin: 140
         };
         
         // Exit button
@@ -89,36 +93,55 @@ export class CampaignMenu {
     }
     
     getCampaignSlotPosition(index) {
-        const { cols, slotWidth, slotHeight, paddingX, paddingY, gapX, gapY } = this.gridConfig;
-        const row = Math.floor(index / cols);
-        const col = index % cols;
+        const { leftPadding, topPadding, campaignTileWidth, campaignTileHeight, campaignGapX, campaignGapY, campaignCols } = this.layout;
+        
+        const row = Math.floor(index / campaignCols);
+        const col = index % campaignCols;
         
         return {
-            x: paddingX + col * (slotWidth + gapX),
-            y: paddingY + row * (slotHeight + gapY),
-            width: slotWidth,
-            height: slotHeight
-        };
-    }
-    
-    getExitButtonBounds() {
-        return {
-            x: this.stateManager.canvas.width - 120,
-            y: 20,
-            width: 100,
-            height: 40
+            x: leftPadding + col * (campaignTileWidth + campaignGapX),
+            y: topPadding + row * (campaignTileHeight + campaignGapY),
+            width: campaignTileWidth,
+            height: campaignTileHeight
         };
     }
     
     getInfoPanelBounds() {
         const canvas = this.stateManager.canvas;
-        const panelWidth = 450;
-        const panelHeight = 500;
+        const { leftPadding, topPadding, infoPanelRightMargin, bottomPadding, campaignTileWidth, campaignGapX, campaignCols } = this.layout;
+        
+        // Info panel starts after campaigns on the left
+        const panelX = leftPadding + campaignCols * campaignTileWidth + (campaignCols - 1) * campaignGapX + 60;
+        const panelWidth = canvas.width - panelX - infoPanelRightMargin;
+        const panelHeight = canvas.height - topPadding - bottomPadding; // Full height with margins
+        
         return {
-            x: canvas.width - panelWidth - 40,
-            y: 120,
+            x: panelX,
+            y: topPadding,
             width: panelWidth,
             height: panelHeight
+        };
+    }
+    
+    getStartButtonBounds() {
+        const panel = this.getInfoPanelBounds();
+        const buttonHeight = 50;
+        const buttonWidth = panel.width - 40;
+        
+        return {
+            x: panel.x + 20,
+            y: panel.y + panel.height - buttonHeight - 20,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+    }
+    
+    getExitButtonBounds() {
+        return {
+            x: this.stateManager.canvas.width - 140,
+            y: 30,
+            width: 110,
+            height: 44
         };
     }
     
@@ -132,12 +155,24 @@ export class CampaignMenu {
         
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
+        this.hoveredStartButton = false;
         
         // Check exit button
         const exitBtn = this.getExitButtonBounds();
         if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
             y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
             this.hoveredExitButton = true;
+        }
+        
+        // Check start button
+        const startBtn = this.getStartButtonBounds();
+        if (this.selectedCampaignId && 
+            x >= startBtn.x && x <= startBtn.x + startBtn.width &&
+            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
+            const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
+            if (selectedCampaign && !selectedCampaign.locked) {
+                this.hoveredStartButton = true;
+            }
         }
         
         // Check campaign slots
@@ -150,7 +185,9 @@ export class CampaignMenu {
         });
         
         this.stateManager.canvas.style.cursor = 
-            (this.hoveredCampaignId || this.hoveredExitButton) ? 'pointer' : 'default';
+            (this.hoveredCampaignId && !CampaignRegistry.getCampaign(this.hoveredCampaignId)?.locked) || 
+            this.hoveredExitButton || 
+            this.hoveredStartButton ? 'pointer' : 'default';
     }
     
     handleClick(x, y) {
@@ -162,25 +199,29 @@ export class CampaignMenu {
             return;
         }
         
+        // Check start button
+        const startBtn = this.getStartButtonBounds();
+        if (this.selectedCampaignId && 
+            x >= startBtn.x && x <= startBtn.x + startBtn.width &&
+            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
+            const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
+            if (selectedCampaign && !selectedCampaign.locked && selectedCampaign.class) {
+                const campaignState = new selectedCampaign.class(this.stateManager);
+                this.stateManager.addState('levelSelect', campaignState);
+                this.stateManager.changeState('levelSelect');
+            }
+            return;
+        }
+        
         // Check campaign clicks
         this.campaigns.forEach((campaign, index) => {
             const pos = this.getCampaignSlotPosition(index);
             if (x >= pos.x && x <= pos.x + pos.width &&
-                y >= pos.y && y <= pos.y + pos.height) {
-                // Click selects campaign or enters if already selected
-                if (this.selectedCampaignId === campaign.id && !campaign.locked) {
-                    // Enter campaign - create the campaign state dynamically
-                    const CampaignClass = campaign.class;
-                    if (CampaignClass) {
-                        const campaignState = new CampaignClass(this.stateManager);
-                        this.stateManager.addState('levelSelect', campaignState);
-                        this.stateManager.changeState('levelSelect');
-                    }
-                } else {
-                    // Select campaign to show info panel
-                    this.selectedCampaignId = campaign.id;
-                    this.infoPanelOpen = true;
-                }
+                y >= pos.y && y <= pos.y + pos.height &&
+                !campaign.locked) {
+                // Select campaign to show info panel
+                this.selectedCampaignId = campaign.id;
+                this.infoPanelOpen = true;
             }
         });
     }
@@ -199,13 +240,14 @@ export class CampaignMenu {
         this.renderBackground(ctx, canvas);
         
         // Title
-        ctx.font = 'bold 48px serif';
+        ctx.font = 'bold 52px serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#d4af37';
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
-        ctx.fillText('CAMPAIGNS', canvas.width / 2, 70);
-        ctx.strokeText('CAMPAIGNS', canvas.width / 2, 70);
+        ctx.textBaseline = 'top';
+        ctx.fillText('CAMPAIGNS', canvas.width / 2, 50);
+        ctx.strokeText('CAMPAIGNS', canvas.width / 2, 50);
         
         // Render campaign slots
         this.campaigns.forEach((campaign, index) => {
@@ -255,23 +297,27 @@ export class CampaignMenu {
         let bgColor = '#1a0f05';
         let borderColor = '#664422';
         let borderWidth = 2;
+        let shadowOpacity = 0.4;
         
         if (isLocked) {
             bgColor = '#0f0f0f';
             borderColor = '#333';
             borderWidth = 1;
+            shadowOpacity = 0.2;
         } else if (isSelected) {
             bgColor = '#3a2a1a';
-            borderColor = '#d4af37';
+            borderColor = '#ffd700';
             borderWidth = 3;
+            shadowOpacity = 0.6;
         } else if (isHovered) {
             bgColor = '#2a1a0a';
-            borderColor = '#a88555';
+            borderColor = '#d4af37';
             borderWidth = 2.5;
+            shadowOpacity = 0.5;
         }
         
         // Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
         ctx.fillRect(pos.x + 4, pos.y + 4, pos.width, pos.height);
         
         // Card background
@@ -295,14 +341,15 @@ export class CampaignMenu {
             ctx.font = 'bold 36px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#666';
-            ctx.fillText('🔒', pos.x + pos.width / 2, pos.y + pos.height / 2 - 20);
+            ctx.fillStyle = '#555';
+            ctx.fillText('🔒', pos.x + pos.width / 2, pos.y + pos.height / 2 - 30);
             
-            ctx.font = '14px serif';
-            ctx.fillStyle = '#888';
-            ctx.fillText('LOCKED', pos.x + pos.width / 2, pos.y + pos.height / 2 + 30);
+            ctx.font = '16px serif';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('Locked', pos.x + pos.width / 2, pos.y + pos.height / 2 + 20);
         } else {
-            // Campaign icon
+            // Campaign icon and name
             ctx.font = '32px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
@@ -311,8 +358,8 @@ export class CampaignMenu {
             // Campaign name
             ctx.font = 'bold 16px serif';
             ctx.fillStyle = isSelected ? '#ffd700' : '#d4af37';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(campaign.name, pos.x + pos.width / 2, pos.y + 65);
+            ctx.textBaseline = 'top';
+            ctx.fillText(campaign.name, pos.x + pos.width / 2, pos.y + 55);
             
             // Difficulty
             ctx.font = '12px serif';
@@ -321,13 +368,14 @@ export class CampaignMenu {
                             campaign.difficulty === 'Advanced' ? '#F44336' : 
                             campaign.difficulty === 'Expert' ? '#9C27B0' : '#E91E63';
             ctx.fillStyle = diffColor;
-            ctx.fillText(`● ${campaign.difficulty}`, pos.x + pos.width / 2, pos.y + 85);
+            ctx.textAlign = 'center';
+            ctx.fillText(`● ${campaign.difficulty}`, pos.x + pos.width / 2, pos.y + 75);
             
             // Progress bar
             const barWidth = pos.width - 30;
-            const barHeight = 8;
+            const barHeight = 10;
             const barX = pos.x + 15;
-            const barY = pos.y + pos.height - 45;
+            const barY = pos.y + pos.height - 35;
             
             // Background
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -344,66 +392,100 @@ export class CampaignMenu {
             ctx.strokeRect(barX, barY, barWidth, barHeight);
             
             // Progress text
-            ctx.font = '10px serif';
-            ctx.fillStyle = '#c9a876';
+            ctx.font = 'bold 11px serif';
+            ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(`${Math.floor(campaign.progress)}%`, pos.x + pos.width / 2, barY + 12);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${Math.floor(campaign.progress)}%`, barX + barWidth / 2, barY + barHeight / 2);
         }
     }
     
     renderInfoPanel(ctx, campaign, opacity) {
         const panel = this.getInfoPanelBounds();
+        const startBtn = this.getStartButtonBounds();
         
         // Save context alpha
         const globalAlpha = ctx.globalAlpha;
         ctx.globalAlpha = opacity;
         
-        // Background panel with border
-        ctx.fillStyle = 'rgba(26, 15, 5, 0.95)';
+        // Background panel with gradient
+        const gradient = ctx.createLinearGradient(0, panel.y, 0, panel.y + panel.height);
+        gradient.addColorStop(0, 'rgba(26, 15, 5, 0.98)');
+        gradient.addColorStop(1, 'rgba(15, 10, 5, 0.98)');
+        ctx.fillStyle = gradient;
         ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
         
+        // Outer border
         ctx.strokeStyle = '#d4af37';
         ctx.lineWidth = 2;
         ctx.strokeRect(panel.x, panel.y, panel.width, panel.height);
         
         // Inner decorative border
-        ctx.strokeStyle = '#8b7355';
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
         ctx.lineWidth = 1;
         ctx.strokeRect(panel.x + 2, panel.y + 2, panel.width - 4, panel.height - 4);
         
-        const contentX = panel.x + 20;
-        const contentY = panel.y + 20;
-        const contentWidth = panel.width - 40;
+        const contentX = panel.x + 25;
+        const contentY = panel.y + 25;
+        const contentWidth = panel.width - 50;
+        const maxContentY = startBtn.y - 20; // Leave space for start button
         
         let currentY = contentY;
         
-        // Campaign icon and name
-        ctx.font = '24px serif';
-        ctx.textAlign = 'center';
+        // Campaign icon and name header
+        ctx.font = 'bold 24px serif';
+        ctx.textAlign = 'left';
         ctx.fillStyle = '#d4af37';
-        ctx.fillText(campaign.icon, panel.x + panel.width / 2, currentY);
-        currentY += 40;
+        ctx.textBaseline = 'top';
+        ctx.fillText(campaign.icon, contentX, currentY);
         
-        // Campaign title
-        ctx.font = 'bold 18px serif';
+        ctx.font = 'bold 22px serif';
         ctx.fillStyle = '#ffd700';
-        ctx.textAlign = 'center';
-        ctx.fillText(campaign.name, panel.x + panel.width / 2, currentY);
-        currentY += 35;
+        ctx.fillText(campaign.name, contentX + 45, currentY + 2);
+        currentY += 50;
         
-        // Difficulty
+        // Difficulty and progress on same line
         ctx.font = '12px serif';
         const diffColor = campaign.difficulty === 'Beginner' ? '#4CAF50' : 
                         campaign.difficulty === 'Intermediate' ? '#FFC107' : 
                         campaign.difficulty === 'Advanced' ? '#F44336' : 
                         campaign.difficulty === 'Expert' ? '#9C27B0' : '#E91E63';
         ctx.fillStyle = diffColor;
-        ctx.fillText(`Difficulty: ${campaign.difficulty}`, panel.x + panel.width / 2, currentY);
+        const diffText = `Difficulty: ${campaign.difficulty}`;
+        ctx.fillText(diffText, contentX, currentY);
+        
+        // Progress bar below difficulty
+        currentY += 25;
+        const barWidth = contentWidth;
+        const barHeight = 10;
+        const barX = contentX;
+        const barY = currentY;
+        
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        // Progress
+        const progressColor = campaign.progress >= 100 ? '#4CAF50' : '#d4af37';
+        ctx.fillStyle = progressColor;
+        ctx.fillRect(barX, barY, barWidth * (campaign.progress / 100), barHeight);
+        
+        // Border
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+        
+        // Progress text
+        ctx.font = 'bold 11px serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${Math.floor(campaign.progress)}% Complete`, barX + barWidth / 2, barY + barHeight / 2);
         currentY += 25;
         
         // Separator line
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+        currentY += 10;
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(contentX, currentY);
@@ -412,6 +494,13 @@ export class CampaignMenu {
         currentY += 15;
         
         // Story/Description
+        ctx.font = '12px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Story', contentX, currentY);
+        currentY += 18;
+        
         ctx.font = '11px serif';
         ctx.fillStyle = '#c9a876';
         ctx.textAlign = 'left';
@@ -434,11 +523,17 @@ export class CampaignMenu {
             }
         });
         if (line) ctx.fillText(line, contentX, lineY);
+        lineY += 18;
         
-        lineY += 25;
+        if (lineY >= maxContentY - 80) {
+            // Skip section if not enough space
+            ctx.globalAlpha = globalAlpha;
+            this.renderStartButton(ctx, campaign);
+            return;
+        }
         
         // Separator line
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(contentX, lineY);
@@ -447,36 +542,94 @@ export class CampaignMenu {
         lineY += 15;
         
         // Rewards section
-        ctx.font = 'bold 13px serif';
+        ctx.font = 'bold 12px serif';
         ctx.fillStyle = '#ffd700';
         ctx.textAlign = 'left';
-        ctx.fillText('Rewards:', contentX, lineY);
-        lineY += 20;
+        ctx.textBaseline = 'top';
+        ctx.fillText('Rewards', contentX, lineY);
+        lineY += 18;
         
         ctx.font = '11px serif';
         ctx.fillStyle = '#c9a876';
-        ctx.fillText(`Gold: ${campaign.rewards.gold}`, contentX, lineY);
-        lineY += 16;
+        ctx.fillText(`Gold: ${campaign.rewards.gold}`, contentX + 15, lineY);
+        lineY += 14;
         
-        ctx.fillText(`Experience: ${campaign.rewards.experience}`, contentX, lineY);
-        lineY += 16;
+        ctx.fillText(`Experience: ${campaign.rewards.experience}`, contentX + 15, lineY);
+        lineY += 14;
         
-        ctx.fillStyle = '#a8ff5e';
-        campaign.rewards.unlocks.forEach(unlock => {
-            ctx.fillText(`✦ ${unlock}`, contentX + 10, lineY);
-            lineY += 16;
-        });
-        
-        // Enter button hint if not locked
-        if (!campaign.locked && this.selectedCampaignId === campaign.id) {
-            ctx.font = '10px serif';
-            ctx.fillStyle = 'rgba(212, 175, 55, 0.6)';
-            ctx.textAlign = 'center';
-            ctx.fillText('Click again to enter campaign', panel.x + panel.width / 2, panel.y + panel.height - 15);
+        if (campaign.rewards.unlocks.length > 0) {
+            ctx.fillStyle = '#a8ff5e';
+            campaign.rewards.unlocks.forEach(unlock => {
+                ctx.fillText(`✦ ${unlock}`, contentX + 15, lineY);
+                lineY += 14;
+            });
         }
         
         // Restore context alpha
         ctx.globalAlpha = globalAlpha;
+        
+        // Render start button at the bottom
+        this.renderStartButton(ctx, campaign);
+    }
+    
+    renderStartButton(ctx, campaign) {
+        const btn = this.getStartButtonBounds();
+        const isHovered = this.hoveredStartButton;
+        const isLocked = campaign.locked;
+        
+        if (isLocked) {
+            // Disabled state
+            const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
+            gradient.addColorStop(0, '#3a3a3a');
+            gradient.addColorStop(0.5, '#4a4a4a');
+            gradient.addColorStop(1, '#3a3a3a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+            
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+            
+            ctx.font = 'bold 16px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#666';
+            ctx.fillText('LOCKED', btn.x + btn.width / 2, btn.y + btn.height / 2);
+        } else {
+            // Enabled state
+            const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
+            if (isHovered) {
+                gradient.addColorStop(0, '#d4af37');
+                gradient.addColorStop(0.5, '#e8c547');
+                gradient.addColorStop(1, '#d4af37');
+            } else {
+                gradient.addColorStop(0, '#8b7355');
+                gradient.addColorStop(0.5, '#a89968');
+                gradient.addColorStop(1, '#9a8960');
+            }
+            ctx.fillStyle = gradient;
+            ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+            
+            // Inner shadow
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(btn.x, btn.y, btn.width, 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(btn.x, btn.y + btn.height - 3, btn.width, 3);
+            
+            // Border
+            ctx.strokeStyle = isHovered ? '#ffe700' : '#d4af37';
+            ctx.lineWidth = isHovered ? 2.5 : 2;
+            ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+            
+            // Text
+            ctx.font = 'bold 18px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillText('START CAMPAIGN', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+            ctx.fillStyle = isHovered ? '#000000' : '#1a0f05';
+            ctx.fillText('START CAMPAIGN', btn.x + btn.width / 2, btn.y + btn.height / 2);
+        }
     }
     
     renderExitButton(ctx) {
