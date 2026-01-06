@@ -252,34 +252,52 @@ export class LoadGame {
         const pos = this.getSlotPosition(index);
         const saveInfo = SaveSystem.getSaveInfo(slotNum);
         const isHovered = this.hoveredSlot === slotNum;
+        const adjustedY = isHovered ? pos.y - 3 : pos.y;  // Move up when hovered
 
         // Slot background
-        ctx.fillStyle = isHovered ? '#3a2a1a' : '#1a0f05';
-        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+        if (isHovered) {
+            ctx.fillStyle = '#4a3a2a';
+        } else {
+            ctx.fillStyle = '#1a0f05';
+        }
+        ctx.fillRect(pos.x, adjustedY, pos.width, pos.height);
 
-        // Slot border
-        ctx.strokeStyle = isHovered ? '#d4af37' : '#664422';
+        // Slot border with glow on hover
+        if (isHovered) {
+            ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+        
+        ctx.strokeStyle = isHovered ? '#ffe700' : '#664422';
         ctx.lineWidth = isHovered ? 3 : 2;
-        ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+        ctx.strokeRect(pos.x, adjustedY, pos.width, pos.height);
 
         // Slot content
         ctx.textAlign = 'left';
-        ctx.fillStyle = isHovered ? '#d4af37' : '#c9a876';
+        ctx.fillStyle = isHovered ? '#ffe700' : '#c9a876';
         ctx.font = 'bold 18px serif';
-        ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, pos.y + 30);
+        ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
 
         if (saveInfo.isEmpty) {
             ctx.font = '14px serif';
             ctx.fillStyle = '#666';
-            ctx.fillText(saveInfo.displayText, pos.x + 20, pos.y + 55);
+            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 55);
         } else {
             ctx.font = '16px serif';
-            ctx.fillStyle = '#d4af37';
-            ctx.fillText(saveInfo.displayText, pos.x + 20, pos.y + 50);
+            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 50);
 
             ctx.font = '12px serif';
             ctx.fillStyle = '#999';
-            ctx.fillText(saveInfo.dateString, pos.x + 20, pos.y + 65);
+            ctx.fillText(saveInfo.dateString, pos.x + 20, adjustedY + 65);
         }
+
+        // Reset shadow properties
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
     }
 }

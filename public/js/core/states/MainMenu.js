@@ -287,43 +287,61 @@ export class MainMenu {
 
     renderControlButton(ctx, button, pos) {
         const isHovered = button.hovered;
+        const adjustedY = isHovered ? pos.y - 3 : pos.y;  // Move up when hovered
         
         // Background gradient
         if (isHovered) {
-            const bgGrad = ctx.createLinearGradient(0, pos.y, 0, pos.y + pos.height);
-            bgGrad.addColorStop(0, 'rgba(88, 68, 48, 0.9)');
-            bgGrad.addColorStop(0.5, 'rgba(68, 48, 28, 0.9)');
-            bgGrad.addColorStop(1, 'rgba(58, 38, 18, 0.9)');
+            const bgGrad = ctx.createLinearGradient(0, adjustedY, 0, adjustedY + pos.height);
+            bgGrad.addColorStop(0, 'rgba(90, 74, 63, 0.98)');
+            bgGrad.addColorStop(0.5, 'rgba(74, 58, 47, 0.98)');
+            bgGrad.addColorStop(1, 'rgba(64, 48, 37, 0.98)');
             ctx.fillStyle = bgGrad;
         } else {
-            const bgGrad = ctx.createLinearGradient(0, pos.y, 0, pos.y + pos.height);
+            const bgGrad = ctx.createLinearGradient(0, adjustedY, 0, adjustedY + pos.height);
             bgGrad.addColorStop(0, 'rgba(68, 48, 28, 0.85)');
             bgGrad.addColorStop(0.5, 'rgba(48, 28, 8, 0.85)');
             bgGrad.addColorStop(1, 'rgba(38, 18, 0, 0.85)');
             ctx.fillStyle = bgGrad;
         }
         
-        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+        ctx.fillRect(pos.x, adjustedY, pos.width, pos.height);
 
-        // Border - outset style
-        ctx.strokeStyle = isHovered ? '#a67c3a' : '#7a6038';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+        // Border - outset style with glow on hover
+        if (isHovered) {
+            ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+        
+        ctx.strokeStyle = isHovered ? '#ffe700' : '#7a6038';
+        ctx.lineWidth = isHovered ? 3 : 2;
+        ctx.strokeRect(pos.x, adjustedY, pos.width, pos.height);
 
         // Top highlight
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(pos.x + 1, pos.y + 1);
-        ctx.lineTo(pos.x + pos.width - 1, pos.y + 1);
+        ctx.moveTo(pos.x + 1, adjustedY + 1);
+        ctx.lineTo(pos.x + pos.width - 1, adjustedY + 1);
         ctx.stroke();
 
         // Inset shadow effect
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.strokeStyle = isHovered ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
-        ctx.moveTo(pos.x + 1, pos.y + pos.height - 1);
-        ctx.lineTo(pos.x + pos.width - 1, pos.y + pos.height - 1);
+        ctx.moveTo(pos.x + 1, adjustedY + pos.height - 1);
+        ctx.lineTo(pos.x + pos.width - 1, adjustedY + pos.height - 1);
         ctx.stroke();
+
+        // Shine effect on hover
+        if (isHovered) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pos.x + 1, adjustedY + 1);
+            ctx.lineTo(pos.x + pos.width - 1, adjustedY + 1);
+            ctx.stroke();
+        }
 
         // Button text
         ctx.font = 'bold 20px Trebuchet MS, serif';
@@ -332,11 +350,11 @@ export class MainMenu {
         
         // Text shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillText(button.label, pos.x + pos.width / 2 + 1, pos.y + pos.height / 2 + 1);
+        ctx.fillText(button.label, pos.x + pos.width / 2 + 1, adjustedY + pos.height / 2 + 1);
 
         // Main text
-        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
-        ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
+        ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+        ctx.fillText(button.label, pos.x + pos.width / 2, adjustedY + pos.height / 2);
 
         // CRITICAL: Reset shadow properties to prevent persistent glow effects
         ctx.shadowColor = 'rgba(0, 0, 0, 0)';
