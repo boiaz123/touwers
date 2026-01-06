@@ -44,6 +44,11 @@ export class MainMenu {
         this.animationTime = 0;
         this.showButtons = false;
         
+        // Reset all button hover states when entering
+        this.buttons.forEach(button => {
+            button.hovered = false;
+        });
+        
         // If skipping fade-in (coming from StartScreen transition), start with full opacity
         if (this.skipFadeIn) {
             this.titleOpacity = 1;
@@ -75,8 +80,11 @@ export class MainMenu {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Account for CSS scaling
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -107,8 +115,11 @@ export class MainMenu {
 
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Account for CSS scaling
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         this.buttons.forEach((button, index) => {
             const pos = this.getButtonPosition(index);
@@ -229,6 +240,13 @@ export class MainMenu {
                 return;
             }
 
+            // Reset canvas shadow properties to prevent persistent glow effects
+            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.globalAlpha = 1;
+
             // Background
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#1a0f0a');
@@ -320,12 +338,10 @@ export class MainMenu {
         ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
         ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
 
-        // Glow effect on hover
-        if (isHovered) {
-            ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-        }
+        // CRITICAL: Reset shadow properties to prevent persistent glow effects
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
     }
 }

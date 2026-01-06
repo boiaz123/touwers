@@ -57,6 +57,19 @@ export class SettlementHub {
         this.contentOpacity = 0;
         this.activePopup = null;
         
+        // Reset all popup hover states
+        if (this.upgradesPopup) {
+            this.upgradesPopup.buttons = this.upgradesPopup.buttons.map(b => ({ ...b, hovered: false }));
+        }
+        if (this.optionsPopup) {
+            this.optionsPopup.buttons = this.optionsPopup.buttons.map(b => ({ ...b, hovered: false }));
+            this.optionsPopup.closeButtonHovered = false;
+        }
+        if (this.arcaneKnowledgePopup) {
+            this.arcaneKnowledgePopup.buttons = this.arcaneKnowledgePopup.buttons.map(b => ({ ...b, hovered: false }));
+            this.arcaneKnowledgePopup.closeButtonHovered = false;
+        }
+        
         // Play menu theme music
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.playMusic('menu-theme');
@@ -214,8 +227,11 @@ export class SettlementHub {
 
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Account for CSS scaling
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         // If popup is active, update its hover state
         if (this.activePopup === 'upgrades' && this.upgradesPopup) {
@@ -372,6 +388,13 @@ export class SettlementHub {
                 ctx.fillRect(0, 0, 800, 600);
                 return;
             }
+
+            // Reset canvas shadow properties to prevent persistent glow effects
+            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.globalAlpha = 1;
 
             // Background with depth
             this.renderBackground(ctx, canvas);

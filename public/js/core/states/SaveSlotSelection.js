@@ -37,6 +37,8 @@ export class SaveSlotSelection {
         this.showContent = false;
         this.titleOpacity = 0;
         this.contentOpacity = 0;
+        
+        // Reset hover states
         this.backButtonHovered = false;
         this.hoveredSlot = -1;
         
@@ -56,8 +58,11 @@ export class SaveSlotSelection {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Account for CSS scaling
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -98,8 +103,11 @@ export class SaveSlotSelection {
 
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Account for CSS scaling
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         const buttonPos = this.getBackButtonPosition();
         this.backButtonHovered = x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
@@ -170,6 +178,13 @@ export class SaveSlotSelection {
                 ctx.fillRect(0, 0, 800, 600);
                 return;
             }
+
+            // Reset canvas shadow properties to prevent persistent glow effects
+            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.globalAlpha = 1;
 
             // Background
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);

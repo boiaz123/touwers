@@ -43,6 +43,10 @@ export class CampaignMenu {
         // Load campaigns
         this.campaigns = CampaignRegistry.getCampaignsOrdered();
         
+        // Reset hover states
+        this.hoveredCampaignId = null;
+        this.hoveredExitButton = false;
+        
         // Select first campaign by default
         this.selectedCampaignId = this.campaigns.length > 0 ? this.campaigns[0].id : null;
         this.infoPanelOpen = false;
@@ -64,8 +68,11 @@ export class CampaignMenu {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Account for CSS scaling
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -117,8 +124,11 @@ export class CampaignMenu {
     
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // Account for CSS scaling
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
         
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
@@ -177,6 +187,13 @@ export class CampaignMenu {
     
     render(ctx) {
         const canvas = this.stateManager.canvas;
+        
+        // Reset canvas shadow properties to prevent persistent glow effects
+        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.globalAlpha = 1;
         
         // Background
         this.renderBackground(ctx, canvas);
