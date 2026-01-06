@@ -141,6 +141,11 @@ export class MainMenu {
 
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
+                
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
 
                 switch (button.action) {
                     case 'newGame':

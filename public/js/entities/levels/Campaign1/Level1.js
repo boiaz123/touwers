@@ -446,7 +446,7 @@ export class Level1 extends LevelBase {
             enemyHealth_multiplier: 0.8, 
             enemySpeed: 35, 
             spawnInterval: 7, 
-            pattern: ['earthfrog', 'waterfrog', 'firefrog', 'airfrog'] 
+            pattern: ['basic'] 
         }
         // Wave 2
         , { 

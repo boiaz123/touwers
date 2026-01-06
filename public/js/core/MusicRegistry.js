@@ -59,7 +59,7 @@ export class MusicRegistry {
  * Add new music tracks here following this pattern
  */
 export function initializeMusicRegistry() {
-    // Menu theme - loops in main menu, campaign menu, settlement hub, level selection
+    // Menu theme - plays in main menu, campaign menu (after campaign selected), level selection
     MusicRegistry.registerMusic(
         'menu-theme',
         'assets/audio/music/TouwersTheme.mp3',
@@ -70,57 +70,56 @@ export function initializeMusicRegistry() {
         }
     );
     
-    // Gameplay tracks for different levels
+    // Settlement theme songs - multiple songs, one chosen randomly and looped
     MusicRegistry.registerMusic(
-        'level-1-theme',
-        'assets/audio/music/level-1-theme.mp3',
+        'settlement-theme-1',
+        'assets/audio/music/SettlementSongs/Settlement_Theme1.mp3',
         {
             loop: true,
-            category: 'gameplay',
+            category: 'settlement',
             volume: 0.7
         }
     );
     
     MusicRegistry.registerMusic(
-        'level-2-theme',
-        'assets/audio/music/level-2-theme.mp3',
+        'settlement-theme-3',
+        'assets/audio/music/SettlementSongs/Settlement_Theme3.mp3',
         {
             loop: true,
-            category: 'gameplay',
+            category: 'settlement',
             volume: 0.7
+        }
+    );
+    
+    // Campaign/Battle tracks - desert track for all campaign levels for now
+    MusicRegistry.registerMusic(
+        'campaign-desert',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign',
+            volume: 0.7
+        }
+    );
+    
+    // Victory and Defeat tunes - play on results screen
+    MusicRegistry.registerMusic(
+        'victory-tune',
+        'assets/audio/music/CampaignSongs/Victory_Tune.mp3',
+        {
+            loop: false,
+            category: 'results',
+            volume: 0.8
         }
     );
     
     MusicRegistry.registerMusic(
-        'level-3-theme',
-        'assets/audio/music/level-3-theme.mp3',
+        'defeat-tune',
+        'assets/audio/music/CampaignSongs/Defeat_Tune.mp3',
         {
-            loop: true,
-            category: 'gameplay',
-            volume: 0.7
+            loop: false,
+            category: 'results',
+            volume: 0.8
         }
     );
-    
-    MusicRegistry.registerMusic(
-        'level-4-theme',
-        'assets/audio/music/level-4-theme.mp3',
-        {
-            loop: true,
-            category: 'gameplay',
-            volume: 0.7
-        }
-    );
-    
-    MusicRegistry.registerMusic(
-        'level-5-theme',
-        'assets/audio/music/level-5-theme.mp3',
-        {
-            loop: true,
-            category: 'gameplay',
-            volume: 0.7
-        }
-    );
-    
-    // Add more tracks as needed
-    // Example: MusicRegistry.registerMusic('boss-theme', 'assets/audio/music/boss-theme.mp3', { loop: true, category: 'gameplay' });
 }

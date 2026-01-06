@@ -101,6 +101,10 @@ export class UIManager {
         // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.selectTower(e.currentTarget);
             });
             
@@ -117,6 +121,10 @@ export class UIManager {
         // Building button listeners
         document.querySelectorAll('.building-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.selectBuilding(e.currentTarget);
             });
             
@@ -137,6 +145,10 @@ export class UIManager {
         if (speedCircles.length > 0) {
             speedCircles.forEach(circle => {
                 circle.addEventListener('click', (e) => {
+                    // Play button click SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('button-click');
+                    }
                     const speed = parseFloat(e.target.dataset.speed);
                     this.gameplayState.setGameSpeed(speed);
                     this.updateSpeedCircles(speed);
@@ -166,36 +178,60 @@ export class UIManager {
 
         if (speedPauseBtn) {
             speedPauseBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.togglePauseGame();
             });
         }
 
         if (menuBtn) {
             menuBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.openPauseMenu();
             });
         }
 
         if (resumeBtn) {
             resumeBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.closePauseMenu();
             });
         }
 
         if (restartBtn) {
             restartBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.restartLevel();
             });
         }
 
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.saveGame();
             });
         }
 
         if (exitBtn) {
             exitBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.exitToMenu();
             });
         }
@@ -203,6 +239,10 @@ export class UIManager {
         // Close modal when clicking overlay
         if (pauseMenuOverlay) {
             pauseMenuOverlay.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 this.closePauseMenu();
             });
         }
@@ -838,6 +878,11 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('forge-panel');
         
+        // Play tower forge SFX
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playSFX('tower-forge');
+        }
+        
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'forge';
         this.activeMenuData = forgeData;
@@ -999,6 +1044,11 @@ export class UIManager {
                 if (isForgeLevel) {
                     // Handle forge level upgrade
                     if (forgeData.forge.purchaseForgeUpgrade(this.gameState)) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        
                         // Notify unlock system of forge upgrade
                         unlockSystem.onForgeUpgraded(forgeData.forge.getForgeLevel());
                         this.updateUI();
@@ -1015,6 +1065,11 @@ export class UIManager {
                 } else {
                     // Handle tower upgrades
                     if (forgeData.forge.purchaseUpgrade(upgradeId, this.gameState)) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        
                         // Special handling for reinforce_wall upgrade - apply to castle
                         if (upgradeId === 'reinforce_wall' && forgeData.castle) {
                             const healthBonus = 50; // From TowerForge.upgrades['reinforce_wall'].effect
@@ -1363,6 +1418,11 @@ export class UIManager {
                 
                 if (upgradeId === 'academy_upgrade') {
                     if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        
                         const newLevel = academyData.academy.academyLevel;
                         if (newLevel === 3) {
                             this.towerManager.getUnlockSystem().onAcademyLevelThree();
@@ -1378,6 +1438,11 @@ export class UIManager {
                 } else if (upgradeId.startsWith('unlock_')) {
                     const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
                     if (result && result.success) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        
                         this.towerManager.getUnlockSystem().onCombinationSpellUnlocked(result.spellId);
                         this.updateUI();
                         this.updateUIAvailability();
@@ -1389,6 +1454,11 @@ export class UIManager {
                     }
                 } else {
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        
                         this.updateUI();
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
@@ -1760,6 +1830,10 @@ export class UIManager {
             btn.addEventListener('click', () => {
                 const level = parseInt(btn.getAttribute('data-level')) || 1;
                 if (tower.hireDefender(gameState, level)) {
+                    // Play hiring defender SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('hiring-defender');
+                    }
                     this.updateUI();
                     // Refresh menu
                     this.showGuardPostMenu(towerData);
@@ -2372,6 +2446,11 @@ export class UIManager {
             btn.addEventListener('click', (e) => {
                 const upgradeId = btn.dataset.castleUpgrade;
                 if (castle.purchaseUpgrade(upgradeId, this.gameState)) {
+                    // Play upgrade SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
+                    }
+                    
                     this.updateUI();
                     this.updateButtonStates();
                     // Refresh the menu to show updated state
@@ -2387,6 +2466,11 @@ export class UIManager {
                 btn.addEventListener('click', (e) => {
                     const level = parseInt(btn.dataset.defenderLevel);
                     if (castle.hireDefender(level, this.gameState)) {
+                        // Play hiring defender SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('hiring-defender');
+                        }
+                        
                         this.updateUI();
                         this.updateButtonStates();
                         this.closePanelWithAnimation('castle-panel');
@@ -2546,10 +2630,20 @@ export class UIManager {
                     success = trainingData.trainingGrounds.purchaseTrainingLevelUpgrade(this.gameState);
                     // Notify unlock system of training grounds upgrade
                     if (success) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
                         unlockSystem.onTrainingGroundsUpgraded(trainingData.trainingGrounds.trainingLevel);
                     }
                 } else if (towerType) {
                     success = trainingData.trainingGrounds.purchaseRangeUpgrade(towerType, this.gameState);
+                    if (success) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                    }
                 }
                 
                 if (success) {

@@ -56,9 +56,16 @@ export class CampaignMenu {
         this.infoPanelOpen = false;
         this.infoPanelOpacity = 0;
         
-        // Play menu theme music
+        // Keep playing settlement music if it's currently playing (coming from settlement hub)
+        // Only play menu theme if not already playing settlement music
         if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playMusic('menu-theme');
+            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
+            const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
+            if (!settlementTracks.includes(currentTrack)) {
+                // No settlement music playing, use menu theme
+                this.stateManager.audioManager.playMusic('menu-theme');
+            }
+            // Otherwise keep settlement song playing
         }
         
         this.setupMouseListeners();
@@ -89,6 +96,21 @@ export class CampaignMenu {
         }
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
+        }
+    }
+
+    /**
+     * Handle campaign selection and start
+     */
+    startCampaign() {
+        if (this.selectedCampaignId) {
+            // Play open campaign SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('open-campaign');
+            }
+            // Transition to campaign gameplay will happen next
+            this.stateManager.selectedCampaignId = this.selectedCampaignId;
+            this.stateManager.changeState('game');
         }
     }
     
@@ -195,6 +217,10 @@ export class CampaignMenu {
         const exitBtn = this.getExitButtonBounds();
         if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
             y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.stateManager.changeState('settlementHub');
             return;
         }
@@ -206,6 +232,10 @@ export class CampaignMenu {
             y >= startBtn.y && y <= startBtn.y + startBtn.height) {
             const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
             if (selectedCampaign && !selectedCampaign.locked && selectedCampaign.class) {
+                // Play open campaign SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('open-campaign');
+                }
                 const campaignState = new selectedCampaign.class(this.stateManager);
                 this.stateManager.addState('levelSelect', campaignState);
                 this.stateManager.changeState('levelSelect');
@@ -219,6 +249,10 @@ export class CampaignMenu {
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height &&
                 !campaign.locked) {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
                 // Select campaign to show info panel
                 this.selectedCampaignId = campaign.id;
                 this.infoPanelOpen = true;

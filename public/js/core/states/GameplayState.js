@@ -219,6 +219,9 @@ export class GameplayState {
         const enhancedPath = this.level.buildEnhancedPathWithGuardPosts(this.towerManager.towers);
         this.enemyManager.updatePath(enhancedPath);
         
+        // Set audio manager reference for sound effects
+        this.enemyManager.audioManager = this.stateManager.audioManager;
+        
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
         
@@ -669,22 +672,22 @@ export class GameplayState {
      * Maps level IDs to their corresponding music tracks
      */
     getAudioTrackForLevel(levelId) {
-        // Map level IDs to music track names
-        const levelMusicMap = {
-            'level-1': 'level-1-theme',
-            'level-2': 'level-2-theme',
-            'level-3': 'level-3-theme',
-            'level-4': 'level-4-theme',
-            'level-5': 'level-5-theme',
-            'campaign-1-level-1': 'level-1-theme',
-            'campaign-1-level-2': 'level-2-theme',
-            'campaign-1-level-3': 'level-3-theme',
-            'campaign-1-level-4': 'level-4-theme',
-            'campaign-1-level-5': 'level-5-theme',
-            'sandbox': 'level-1-theme' // Default to level 1 music for sandbox
+        // Use campaign/desert battle music for all campaign levels for now
+        // As more campaign-specific tracks are added, expand this mapping
+        const campaignMusicMap = {
+            'campaign-1-level-1': 'campaign-desert',
+            'campaign-1-level-2': 'campaign-desert',
+            'campaign-1-level-3': 'campaign-desert',
+            'campaign-1-level-4': 'campaign-desert',
+            'campaign-1-level-5': 'campaign-desert',
+            'campaign-5-level-1': 'campaign-desert',
+            'campaign-5-level-2': 'campaign-desert',
+            'campaign-5-level-3': 'campaign-desert',
+            'campaign-5-level-4': 'campaign-desert',
+            'campaign-5-level-5': 'campaign-desert',
         };
         
-        return levelMusicMap[levelId] || 'level-1-theme'; // Fallback to level 1 theme
+        return campaignMusicMap[levelId] || 'campaign-desert'; // Default to desert music
     }
 
     exit() {

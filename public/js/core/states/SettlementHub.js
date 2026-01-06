@@ -70,9 +70,9 @@ export class SettlementHub {
             this.arcaneKnowledgePopup.closeButtonHovered = false;
         }
         
-        // Play menu theme music
+        // Play settlement theme music - pick random settlement song and loop it
         if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playMusic('menu-theme');
+            this.stateManager.audioManager.playRandomSettlementTheme();
         }
         
         // Create settlement building instances positioned WITHIN the settlement boundary

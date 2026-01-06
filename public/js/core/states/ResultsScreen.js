@@ -41,11 +41,21 @@ export class ResultsScreen {
                 { label: 'NEXT LEVEL', action: 'nextLevel' },
                 { label: 'LEVEL SELECT', action: 'levelSelect' }
             ];
+            // Stop level music and play victory tune
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.stopMusic();
+                this.stateManager.audioManager.playSFX('victory-tune');
+            }
         } else {
             this.buttons = [
                 { label: 'RETRY', action: 'retry' },
                 { label: 'LEVEL SELECT', action: 'levelSelect' }
             ];
+            // Stop level music and play defeat tune
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.stopMusic();
+                this.stateManager.audioManager.playSFX('defeat-tune');
+            }
         }
     }
 
@@ -54,6 +64,12 @@ export class ResultsScreen {
      */
     execute(action) {
         this.isShowing = false;
+        
+        // Stop victory/defeat tune and return to settlement music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.stopMusic();
+            this.stateManager.audioManager.playRandomSettlementTheme();
+        }
         
         switch (action) {
             case 'nextLevel':

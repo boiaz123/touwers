@@ -127,6 +127,10 @@ export class LoadGame {
 
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
 
             // Navigate back to the state that opened this LoadGame
             // Use stateManager.previousState which is set during state transition
@@ -141,6 +145,11 @@ export class LoadGame {
 
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
+                
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
 
                 const saveData = SaveSystem.getSave(slotNum);
 

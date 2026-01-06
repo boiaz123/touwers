@@ -58,10 +58,10 @@ export class SFXRegistry {
  * Add new sound effects here following this pattern
  */
 export function initializeSFXRegistry() {
-    // UI sounds
+    // UI/Menu sounds
     SFXRegistry.registerSFX(
         'button-click',
-        'assets/audio/sfx/button-click.mp3',
+        'assets/audio/sfx/MenuSounds/ButtonClick.mp3',
         {
             category: 'ui',
             volume: 0.6
@@ -69,51 +69,49 @@ export function initializeSFXRegistry() {
     );
     
     SFXRegistry.registerSFX(
-        'menu-open',
-        'assets/audio/sfx/menu-open.mp3',
+        'open-campaign',
+        'assets/audio/sfx/MenuSounds/OpenCampaign.mp3',
         {
             category: 'ui',
-            volume: 0.5
+            volume: 0.7
         }
     );
     
-    // Tower/Combat sounds
+    // Building/Defender sounds
     SFXRegistry.registerSFX(
-        'tower-place',
-        'assets/audio/sfx/tower-place.mp3',
+        'hiring-defender',
+        'assets/audio/sfx/BuildingSounds/HiringDefender.mp3',
         {
-            category: 'sfx',
+            category: 'building',
             volume: 0.6
         }
     );
     
     SFXRegistry.registerSFX(
-        'tower-shoot',
-        'assets/audio/sfx/tower-shoot.mp3',
+        'tower-forge',
+        'assets/audio/sfx/BuildingSounds/TowerForge.mp3',
         {
-            category: 'sfx',
-            volume: 0.5
-        }
-    );
-    
-    SFXRegistry.registerSFX(
-        'enemy-hit',
-        'assets/audio/sfx/enemy-hit.mp3',
-        {
-            category: 'impact',
-            volume: 0.5
-        }
-    );
-    
-    SFXRegistry.registerSFX(
-        'enemy-death',
-        'assets/audio/sfx/enemy-death.mp3',
-        {
-            category: 'impact',
+            category: 'building',
             volume: 0.6
         }
     );
     
-    // Add more sound effects as needed
-    // Example: SFXRegistry.registerSFX('powerup', 'assets/audio/sfx/powerup.mp3', { category: 'sfx', volume: 0.7 });
+    // Gameplay sounds
+    SFXRegistry.registerSFX(
+        'wave-start',
+        'assets/audio/sfx/LevelSounds/WaveStart.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.7
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'upgrade',
+        'assets/audio/sfx/LevelSounds/Upgrade.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.6
+        }
+    );
 }

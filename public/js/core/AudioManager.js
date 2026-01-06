@@ -245,6 +245,47 @@ export class AudioManager {
     }
     
     /**
+     * Play a random settlement theme track
+     * Chooses randomly from settlement songs and keeps it stored for looping
+     * @returns {string} Name of the selected track
+     */
+    playRandomSettlementTheme() {
+        const settlementTracks = Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === 'settlement')
+            .map(([name, _]) => name);
+        
+        if (settlementTracks.length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return null;
+        }
+        
+        // Pick a random settlement track
+        const randomTrack = settlementTracks[Math.floor(Math.random() * settlementTracks.length)];
+        this.playMusic(randomTrack);
+        return randomTrack;
+    }
+    
+    /**
+     * Get all settlement theme tracks
+     * @returns {Array} Array of settlement track names
+     */
+    getSettlementTracks() {
+        return Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === 'settlement')
+            .map(([name, _]) => name);
+    }
+    
+    /**
+     * Get all campaign tracks
+     * @returns {Array} Array of campaign track names
+     */
+    getCampaignTracks() {
+        return Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === 'campaign')
+            .map(([name, _]) => name);
+    }
+
+    /**
      * Set music volume (0.0 - 1.0)
      */
     setMusicVolume(volume) {

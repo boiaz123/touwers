@@ -18,6 +18,11 @@ export class EnemyManager {
         // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer, 1 frog
         this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer', 'frog'];
         
+        // Audio manager reference (will be set by GameplayState)
+        this.audioManager = null;
+        
+        // Track whether wave start SFX has been played for current wave
+        this.waveStartSFXPlayed = false;
     }
     
     updatePath(newPath) {
@@ -29,6 +34,12 @@ export class EnemyManager {
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnInterval = spawnInterval;
+        this.waveStartSFXPlayed = false; // Reset flag for new wave
+        
+        // Play wave start SFX
+        if (this.audioManager) {
+            this.audioManager.playSFX('wave-start');
+        }
         
         for (let i = 0; i < count; i++) {
             this.spawnQueue.push({
@@ -44,6 +55,12 @@ export class EnemyManager {
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnInterval = spawnInterval;
+        this.waveStartSFXPlayed = false; // Reset flag for new wave
+        
+        // Play wave start SFX
+        if (this.audioManager) {
+            this.audioManager.playSFX('wave-start');
+        }
         
         for (let i = 0; i < count; i++) {
             const enemyType = pattern[i % pattern.length];
