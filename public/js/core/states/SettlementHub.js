@@ -1449,7 +1449,7 @@ export class SettlementHub {
         const headers = {
             'TrainingGrounds': 'Campaign',
             'MagicAcademy': 'Arcane Knowledge',
-            'TowerForge': 'Upgrades',
+            'TowerForge': 'Upgrades & Marketplace',
             'Castle': 'Manage Settlement'
         };
 
@@ -1477,16 +1477,32 @@ export class SettlementHub {
                         const headerX = item.building.x;
                         const headerY = item.building.y - 120;
                         
-                        // Header text shadow
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                        ctx.font = 'bold 24px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillText(headerText, headerX + 1, headerY + 1);
-                        
-                        // Header text
-                        ctx.fillStyle = '#FFD700';
-                        ctx.fillText(headerText, headerX, headerY);
+                        // Special handling for TowerForge with line break
+                        if (buildingType === 'TowerForge') {
+                            // Header text shadow
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                            ctx.font = 'bold 22px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText('UPGRADES &', headerX + 1, headerY - 15 + 1);
+                            ctx.fillText('MARKETPLACE', headerX + 1, headerY + 15 + 1);
+                            
+                            // Header text
+                            ctx.fillStyle = '#FFD700';
+                            ctx.fillText('UPGRADES &', headerX, headerY - 15);
+                            ctx.fillText('MARKETPLACE', headerX, headerY + 15);
+                        } else {
+                            // Header text shadow
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                            ctx.font = 'bold 24px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(headerText, headerX + 1, headerY + 1);
+                            
+                            // Header text
+                            ctx.fillStyle = '#FFD700';
+                            ctx.fillText(headerText, headerX, headerY);
+                        }
                     }
                 }
                 
@@ -3095,20 +3111,62 @@ class UpgradesMenu {
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
-        this.upgradesList = [
-            { name: 'Faster Projectiles', description: 'Increase projectile speed by 20%', unlocked: false },
-            { name: 'Enhanced Range', description: 'Tower range increased by 15%', unlocked: false },
-            { name: 'Piercing Shots', description: 'Projectiles pierce through 1 enemy', unlocked: false },
-            { name: 'Elemental Towers', description: 'Unlock element-based towers', unlocked: false },
-            { name: 'Explosive Barrels', description: 'Place explosive traps', unlocked: false },
-        ];
+        this.activeTab = 'buy'; // 'buy', 'sell', 'upgrade'
+        this.currentPage = 0;
+        this.playerGold = 5000; // Placeholder gold amount
+        
+        // Buy tab - 6 pages with 6 items each
+        this.buyItems = [];
+        for (let page = 0; page < 6; page++) {
+            for (let i = 0; i < 6; i++) {
+                this.buyItems.push({
+                    id: `buy_${page * 6 + i}`,
+                    name: `Item ${page * 6 + i + 1}`,
+                    price: 100 + (page * 6 + i) * 50,
+                    hovered: false
+                });
+            }
+        }
+        
+        // Sell tab - placeholder inventory items
+        this.inventoryItems = [];
+        for (let i = 0; i < 8; i++) {
+            this.inventoryItems.push({
+                id: `inv_${i}`,
+                name: `Inventory Item ${i + 1}`,
+                sellPrice: 50 + i * 25,
+                hovered: false
+            });
+        }
+        
+        // Upgrade tab - 2 pages with 6 upgrades each
+        this.upgradeItems = [];
+        for (let page = 0; page < 2; page++) {
+            for (let i = 0; i < 6; i++) {
+                this.upgradeItems.push({
+                    id: `upg_${page * 6 + i}`,
+                    name: `Upgrade ${page * 6 + i + 1}`,
+                    cost: 200 + (page * 6 + i) * 100,
+                    hovered: false
+                });
+            }
+        }
+        
         this.closeButtonHovered = false;
-        this.selectedUpgrade = -1;
+        this.leftArrowHovered = false;
+        this.rightArrowHovered = false;
+        this.tabButtons = [
+            { label: 'BUY', action: 'buy', hovered: false },
+            { label: 'SELL', action: 'sell', hovered: false },
+            { label: 'UPGRADE', action: 'upgrade', hovered: false }
+        ];
     }
 
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
+        this.activeTab = 'buy';
+        this.currentPage = 0;
     }
 
     close() {
@@ -3122,99 +3180,499 @@ class UpgradesMenu {
         }
     }
 
+    getMaxPages() {
+        if (this.activeTab === 'buy') {
+            return 6; // 6 pages of 6 items each
+        } else if (this.activeTab === 'sell') {
+            return Math.ceil(this.inventoryItems.length / 6);
+        } else if (this.activeTab === 'upgrade') {
+            return 2; // 2 pages of 6 upgrades each
+        }
+        return 1;
+    }
+
+    getItemsForCurrentPage() {
+        const itemsPerPage = 6;
+        const startIdx = this.currentPage * itemsPerPage;
+        
+        if (this.activeTab === 'buy') {
+            return this.buyItems.slice(startIdx, startIdx + itemsPerPage);
+        } else if (this.activeTab === 'sell') {
+            return this.inventoryItems.slice(startIdx, startIdx + itemsPerPage);
+        } else if (this.activeTab === 'upgrade') {
+            return this.upgradeItems.slice(startIdx, startIdx + itemsPerPage);
+        }
+        return [];
+    }
+
     updateHoverState(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 250;
-        const menuY = canvas.height / 2 - 200;
-        const menuWidth = 500;
-        const menuHeight = 400;
-
+        const baseWidth = canvas.width - 120;
+        const baseHeight = canvas.height - 80;
+        const panelWidth = baseWidth * 0.6;
+        const panelHeight = baseHeight * 0.6;
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
+        const tabY = panelY + 42;
+        const tabHeight = 32;
+        const tabWidth = (panelWidth - 40) / 3;
+        const tabGap = 0;
+        
+        // Check tab buttons
+        this.tabButtons.forEach((tab, index) => {
+            const tabX = panelX + 20 + index * (tabWidth + tabGap);
+            tab.hovered = x >= tabX && x <= tabX + tabWidth && y >= tabY && y <= tabY + tabHeight;
+        });
+        
         // Check close button
-        const closeX = menuX + menuWidth - 40;
-        const closeY = menuY + 15;
-        this.closeButtonHovered = x >= closeX && x <= closeX + 30 &&
-                                 y >= closeY && y <= closeY + 30;
-
-        this.stateManager.canvas.style.cursor = this.closeButtonHovered ? 'pointer' : 'default';
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 12;
+        this.closeButtonHovered = x >= closeX && x <= closeX + 25 && y >= closeY && y <= closeY + 25;
+        
+        // Check arrow buttons
+        const arrowY = panelY + panelHeight - 45;
+        const arrowSize = 25;
+        const leftArrowX = panelX + 20;
+        const rightArrowX = panelX + panelWidth - 45;
+        this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize;
+        this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize;
+        
+        // Check item buttons (for sell and upgrade tabs)
+        const contentY = panelY + 78;
+        const contentHeight = panelHeight - 140;
+        const itemsGridStartX = panelX + 14;
+        const itemsGridStartY = contentY + 4;
+        const itemWidth = (panelWidth - 28) / 3;
+        const itemHeight = (contentHeight - 8) / 2;
+        const itemGap = 8;
+        
+        const items = this.getItemsForCurrentPage();
+        items.forEach((item, index) => {
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
+            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            item.hovered = x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight;
+        });
+        
+        this.stateManager.canvas.style.cursor = 
+            (this.tabButtons.some(t => t.hovered) || this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || items.some(i => i.hovered))
+            ? 'pointer' : 'default';
     }
 
     handleClick(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 250;
-        const menuY = canvas.height / 2 - 200;
-        const menuWidth = 500;
-
+        const baseWidth = canvas.width - 120;
+        const baseHeight = canvas.height - 80;
+        const panelWidth = baseWidth * 0.6;
+        const panelHeight = baseHeight * 0.6;
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
         // Check close button
-        const closeX = menuX + menuWidth - 40;
-        const closeY = menuY + 15;
-        if (x >= closeX && x <= closeX + 30 && y >= closeY && y <= closeY + 30) {
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 12;
+        if (x >= closeX && x <= closeX + 25 && y >= closeY && y <= closeY + 25) {
             this.close();
+            return;
+        }
+        
+        // Check tab buttons
+        const tabY = panelY + 42;
+        const tabHeight = 32;
+        const tabWidth = (panelWidth - 40) / 3;
+        const tabGap = 0;
+        
+        this.tabButtons.forEach((tab, index) => {
+            const tabX = panelX + 20 + index * (tabWidth + tabGap);
+            if (x >= tabX && x <= tabX + tabWidth && y >= tabY && y <= tabY + tabHeight) {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.activeTab = tab.action;
+                this.currentPage = 0;
+            }
+        });
+        
+        // Check arrow buttons
+        const arrowY = panelY + panelHeight - 45;
+        const arrowSize = 25;
+        const leftArrowX = panelX + 20;
+        const rightArrowX = panelX + panelWidth - 45;
+        const maxPages = this.getMaxPages();
+        
+        if (x >= leftArrowX && x <= leftArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize) {
+            if (this.currentPage > 0) {
+                this.currentPage--;
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+            }
+            return;
+        }
+        
+        if (x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize) {
+            if (this.currentPage < maxPages - 1) {
+                this.currentPage++;
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+            }
+            return;
+        }
+        
+        // Check item buttons
+        const contentY = panelY + 78;
+        const contentHeight = panelHeight - 140;
+        const itemsGridStartX = panelX + 14;
+        const itemsGridStartY = contentY + 4;
+        const itemWidth = (panelWidth - 28) / 3;
+        const itemHeight = (contentHeight - 8) / 2;
+        const itemGap = 8;
+        
+        const items = this.getItemsForCurrentPage();
+        items.forEach((item, index) => {
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
+            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.handleItemAction(item);
+            }
+        });
+    }
+
+    handleItemAction(item) {
+        if (this.activeTab === 'buy') {
+            console.log('Buying item:', item.name, 'for', item.price, 'gold');
+            // TODO: Implement buy logic
+        } else if (this.activeTab === 'sell') {
+            console.log('Selling item:', item.name, 'for', item.sellPrice, 'gold');
+            // TODO: Implement sell logic
+        } else if (this.activeTab === 'upgrade') {
+            console.log('Upgrading:', item.name, 'for', item.cost, 'gold');
+            // TODO: Implement upgrade logic
         }
     }
 
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 250;
-        const menuY = canvas.height / 2 - 200;
-        const menuWidth = 500;
-        const menuHeight = 400;
-
+        const baseWidth = canvas.width - 120;
+        const baseHeight = canvas.height - 80;
+        const panelWidth = baseWidth * 0.6;
+        const panelHeight = baseHeight * 0.6;
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
         // Fade background
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
-
-        // Popup background
+        
+        // Panel background
         ctx.globalAlpha = Math.min(1, this.animationProgress);
         ctx.fillStyle = '#2a1a0f';
-        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-
-        // Border
-        ctx.strokeStyle = '#d4af37';
+        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Panel border
+        ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 3;
-        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Panel title - inside at top
+        ctx.font = 'bold 18px serif';
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('UPGRADES & MARKETPLACE', panelX + panelWidth / 2, panelY + 12);
+        
+        // Gold display in top left
+        this.renderGoldDisplay(ctx, panelX + 20, panelY + 10);
+        
+        // Close button
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 12;
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeX, closeY, 25, 25);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeX, closeY, 25, 25);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('×', closeX + 12.5, closeY + 12.5);
+        
+        // Tabs
+        const tabY = panelY + 42;
+        const tabHeight = 32;
+        const tabWidth = (panelWidth - 40) / 3;
+        const tabGap = 0;
+        
+        this.tabButtons.forEach((tab, index) => {
+            const tabX = panelX + 20 + index * (tabWidth + tabGap);
+            const isActive = tab.action === this.activeTab;
+            
+            // Tab button with beveled edge effect
+            // Background
+            ctx.fillStyle = isActive ? '#6b5a47' : '#3a2a1a';
+            ctx.fillRect(tabX, tabY, tabWidth, tabHeight);
+            
+            // Top highlight for active tab
+            if (isActive) {
+                ctx.fillStyle = '#8b7a67';
+                ctx.fillRect(tabX, tabY, tabWidth, 2);
+                ctx.fillStyle = '#7b6a57';
+                ctx.fillRect(tabX, tabY + 2, tabWidth, 1);
+            }
+            
+            // Bottom shadow
+            ctx.fillStyle = '#1a0a00';
+            ctx.fillRect(tabX, tabY + tabHeight - 2, tabWidth, 2);
+            
+            // Left shadow
+            ctx.fillStyle = '#1a0a00';
+            ctx.fillRect(tabX, tabY, 1, tabHeight);
+            
+            // Border
+            ctx.strokeStyle = isActive ? '#ffd700' : '#5a4a3a';
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.strokeRect(tabX, tabY, tabWidth, tabHeight);
+            
+            // Tab text
+            ctx.font = isActive ? 'bold 13px Arial' : '13px Arial';
+            ctx.fillStyle = isActive ? '#ffd700' : '#b89968';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tab.label, tabX + tabWidth / 2, tabY + tabHeight / 2);
+        });
+        
+        // Content area based on active tab - expanded to fill space
+        const contentY = panelY + 78;
+        const contentHeight = panelHeight - 140;
+        
+        this.renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight);
+        
+        // Pagination controls
+        const maxPages = this.getMaxPages();
+        if (maxPages > 1) {
+            this.renderPaginationControls(ctx, panelX, panelY + panelHeight - 50, panelWidth);
+        }
+        
+        ctx.globalAlpha = 1;
+    }
 
-        // Title
-        ctx.font = 'bold 24px serif';
+    renderGoldDisplay(ctx, x, y) {
+        // Draw treasure chest with half-opened lid
+        const chestWidth = 35;
+        const chestHeight = 25;
+        
+        // Chest body - main brown color
+        ctx.fillStyle = '#8b6f47';
+        ctx.fillRect(x, y + 8, chestWidth, chestHeight - 8);
+        
+        // Chest front face - darker for 3D effect
+        ctx.fillStyle = '#6b5a47';
+        ctx.fillRect(x, y + 8, chestWidth, 3);
+        
+        // Chest sides shadow
+        ctx.fillStyle = '#4a3a2a';
+        ctx.fillRect(x - 2, y + 8, 2, chestHeight - 8);
+        ctx.fillRect(x + chestWidth, y + 8, 2, chestHeight - 8);
+        
+        // Chest bottom rim
+        ctx.fillStyle = '#5a4a37';
+        ctx.fillRect(x, y + chestHeight, chestWidth, 2);
+        
+        // Metal bands on chest
+        ctx.fillStyle = '#d4af37';
+        ctx.fillRect(x - 2, y + 12, chestWidth + 4, 2);
+        ctx.fillRect(x - 2, y + 20, chestWidth + 4, 1);
+        
+        // Chest lid - half open
+        const lidWidth = chestWidth;
+        const lidHeight = 8;
+        const lidAngle = Math.PI / 6; // 30 degrees open
+        
+        ctx.save();
+        ctx.translate(x, y + 8);
+        ctx.rotate(-lidAngle);
+        
+        // Lid body
+        ctx.fillStyle = '#8b6f47';
+        ctx.fillRect(0, -lidHeight, lidWidth, lidHeight);
+        
+        // Lid front edge highlight
+        ctx.fillStyle = '#a68f67';
+        ctx.fillRect(0, -lidHeight, lidWidth, 2);
+        
+        // Lid metal hinge
+        ctx.fillStyle = '#c4af37';
+        ctx.fillRect(0, -2, 4, 4);
+        ctx.fillRect(lidWidth - 4, -2, 4, 4);
+        
+        ctx.restore();
+        
+        // Gold coins visible inside chest
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.ellipse(x + chestWidth * 0.25, y + 15, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffed4e';
+        ctx.beginPath();
+        ctx.ellipse(x + chestWidth * 0.5, y + 18, 3, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.ellipse(x + chestWidth * 0.75, y + 16, 3.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Spilled gold coins around chest
+        ctx.fillStyle = '#ffed4e';
+        ctx.beginPath();
+        ctx.ellipse(x + chestWidth + 6, y + 18, 2.5, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.ellipse(x + chestWidth + 10, y + 20, 2, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Gold amount text next to chest
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.playerGold + ' Gold', x + chestWidth + 18, y + 14);
+    }
+
+    renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight) {
+        const items = this.getItemsForCurrentPage();
+        const itemWidth = (panelWidth - 28) / 3;
+        const itemHeight = (contentHeight - 8) / 2;
+        const itemGap = 8;
+        const itemsGridStartX = panelX + 14;
+        const itemsGridStartY = contentY + 4;
+        
+        items.forEach((item, index) => {
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
+            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            
+            this.renderItemTile(ctx, itemX, itemY, itemWidth, itemHeight, item);
+        });
+    }
+
+    renderItemTile(ctx, x, y, width, height, item) {
+        // Background
+        ctx.fillStyle = item.hovered ? '#6b5a47' : '#3a2a1a';
+        ctx.fillRect(x, y, width, height);
+        
+        // Top highlight
+        ctx.fillStyle = item.hovered ? '#8b7a67' : '#4a3a2a';
+        ctx.fillRect(x, y, width, 2);
+        
+        // Border
+        ctx.strokeStyle = item.hovered ? '#ffd700' : '#5a4a3a';
+        ctx.lineWidth = item.hovered ? 3 : 2;
+        ctx.strokeRect(x, y, width, height);
+        
+        // Item name
+        ctx.font = 'bold 13px Arial';
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
-        ctx.fillText('TOWER UPGRADES', canvas.width / 2, menuY + 40);
-
-        // Close button
-        ctx.fillStyle = this.closeButtonHovered ? '#ff6b6b' : '#8b0000';
-        ctx.fillRect(menuX + menuWidth - 40, menuY + 15, 30, 30);
-        ctx.strokeStyle = '#d4af37';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(menuX + menuWidth - 40, menuY + 15, 30, 30);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('×', menuX + menuWidth - 25, menuY + 34);
-
-        // Upgrades list
-        ctx.font = '14px serif';
-        ctx.textAlign = 'left';
-        let yOffset = menuY + 70;
+        ctx.textBaseline = 'top';
+        ctx.fillText(item.name, x + width / 2, y + 8);
         
-        this.upgradesList.forEach((upgrade, index) => {
-            ctx.fillStyle = '#c9a876';
-            ctx.fillText(`• ${upgrade.name}`, menuX + 20, yOffset);
-            
-            ctx.font = '12px serif';
-            ctx.fillStyle = '#999';
-            ctx.fillText(upgrade.description, menuX + 30, yOffset + 18);
-            
-            ctx.font = '14px serif';
-            ctx.fillStyle = upgrade.unlocked ? '#FFD700' : '#666';
-            ctx.textAlign = 'right';
-            ctx.fillText(upgrade.unlocked ? '[UNLOCKED]' : '[LOCKED]', menuX + menuWidth - 20, yOffset);
-            
-            ctx.textAlign = 'left';
-            yOffset += 50;
-        });
+        // Price or cost
+        const priceLabel = this.activeTab === 'sell' ? 'Sell: ' : this.activeTab === 'upgrade' ? 'Cost: ' : 'Price: ';
+        const priceValue = this.activeTab === 'sell' ? item.sellPrice : this.activeTab === 'upgrade' ? item.cost : item.price;
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(priceLabel + priceValue + 'g', x + width / 2, y + height / 2 - 10);
+        
+        // Action button
+        const buttonWidth = width - 14;
+        const buttonHeight = 22;
+        const buttonX = x + 7;
+        const buttonY = y + height - 30;
+        
+        // Button beveled effect
+        ctx.fillStyle = item.hovered ? '#8b6f47' : '#5a4a3a';
+        ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Top highlight
+        ctx.fillStyle = item.hovered ? '#9b7f57' : '#6a5a4a';
+        ctx.fillRect(buttonX, buttonY, buttonWidth, 1);
+        
+        ctx.strokeStyle = item.hovered ? '#ffd700' : '#8b7355';
+        ctx.lineWidth = item.hovered ? 2 : 1;
+        ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        const actionText = this.activeTab === 'sell' ? 'SELL' : this.activeTab === 'upgrade' ? 'UPGRADE' : 'BUY';
+        ctx.font = 'bold 11px Arial';
+        ctx.fillStyle = item.hovered ? '#ffd700' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(actionText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+    }
 
-        ctx.globalAlpha = 1;
+    renderPaginationControls(ctx, panelX, y, panelWidth) {
+        const arrowSize = 25;
+        const leftArrowX = panelX + 20;
+        const rightArrowX = panelX + panelWidth - 45;
+        const maxPages = this.getMaxPages();
+        
+        // Left arrow with beveled effect
+        ctx.fillStyle = this.leftArrowHovered ? '#8b6f47' : '#5a4a3a';
+        ctx.fillRect(leftArrowX, y, arrowSize, arrowSize);
+        
+        // Top highlight
+        ctx.fillStyle = this.leftArrowHovered ? '#9b7f57' : '#6a5a4a';
+        ctx.fillRect(leftArrowX, y, arrowSize, 1);
+        
+        ctx.strokeStyle = this.leftArrowHovered ? '#ffd700' : '#5a4a3a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(leftArrowX, y, arrowSize, arrowSize);
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('◀', leftArrowX + arrowSize / 2, y + arrowSize / 2);
+        
+        // Right arrow
+        ctx.fillStyle = this.rightArrowHovered ? '#8b6f47' : '#5a4a3a';
+        ctx.fillRect(rightArrowX, y, arrowSize, arrowSize);
+        
+        // Top highlight
+        ctx.fillStyle = this.rightArrowHovered ? '#9b7f57' : '#6a5a4a';
+        ctx.fillRect(rightArrowX, y, arrowSize, 1);
+        
+        ctx.strokeStyle = this.rightArrowHovered ? '#ffd700' : '#5a4a3a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rightArrowX, y, arrowSize, arrowSize);
+        
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('▶', rightArrowX + arrowSize / 2, y + arrowSize / 2);
+        
+        // Page indicator
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Page ${this.currentPage + 1} / ${maxPages}`, ctx.canvas.width / 2, y + arrowSize / 2);
     }
 }
 
@@ -3531,6 +3989,7 @@ class ManageSettlementMenu {
             { label: 'OPTIONS', action: 'options', hovered: false },
             { label: 'QUIT SETTLEMENT', action: 'quitSettlement', hovered: false },
             { label: 'QUIT TOUWERS', action: 'quitTouwers', hovered: false },
+            { label: 'CLOSE', action: 'close', hovered: false },
         ];
         this.buttonWidth = 220;
         this.buttonHeight = 48;
@@ -3711,6 +4170,9 @@ class ManageSettlementMenu {
                 break;
             case 'quitTouwers':
                 this.activeWarningDialog = 'quitTouwers';
+                break;
+            case 'close':
+                this.close();
                 break;
         }
     }
