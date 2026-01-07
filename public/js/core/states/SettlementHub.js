@@ -215,8 +215,11 @@ export class SettlementHub {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Account for CSS scaling - same as handleMouseMove
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -3773,15 +3776,15 @@ class ManageSettlementMenu {
         // Check if running in Tauri
         if (window.__TAURI__) {
             try {
+                // Use the custom Tauri command to close the app
                 const { invoke } = window.__TAURI__.core;
                 await invoke('close_app');
             } catch (error) {
                 console.error('Error closing application:', error);
-                // Fallback if Tauri fails
-                window.close();
             }
         } else {
-            // Fallback for development
+            // Fallback for development environment
+            console.log('Closing application...');
             window.close();
         }
     }
