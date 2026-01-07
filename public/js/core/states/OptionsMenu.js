@@ -230,6 +230,10 @@ export class OptionsMenu {
         const backPos = this.getBackButtonPosition();
         if (x >= backPos.x && x <= backPos.x + backPos.width &&
             y >= backPos.y && y <= backPos.y + backPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             const previousState = this.stateManager.previousState || 'mainMenu';
             this.stateManager.changeState(previousState);
             return;
@@ -249,14 +253,26 @@ export class OptionsMenu {
         const highPos = { x: graphicsStartX + (graphicsButtonWidth + graphicsGap) * 2, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
         
         if (x >= lowPos.x && x <= lowPos.x + lowPos.width && y >= lowPos.y && y <= lowPos.y + lowPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.graphicsQuality = 'low';
             return;
         }
         if (x >= mediumPos.x && x <= mediumPos.x + mediumPos.width && y >= mediumPos.y && y <= mediumPos.y + mediumPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.graphicsQuality = 'medium';
             return;
         }
         if (x >= highPos.x && x <= highPos.x + highPos.width && y >= highPos.y && y <= highPos.y + highPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.graphicsQuality = 'high';
             return;
         }
@@ -267,6 +283,10 @@ export class OptionsMenu {
         const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
+            // Play button click SFX
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             // TODO: Open Game Producer page when implemented
             console.log('Visit Game Producer page - coming soon!');
             return;
