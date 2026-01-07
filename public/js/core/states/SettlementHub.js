@@ -340,7 +340,7 @@ export class SettlementHub {
         } else if (buildingItem.action === 'options') {
             this.activePopup = 'options';
             if (!this.optionsPopup) {
-                this.optionsPopup = new SettlementOptionsMenu(this.stateManager, this);
+                this.optionsPopup = new ManageSettlementMenu(this.stateManager, this);
             }
             this.optionsPopup.open();
         } else if (buildingItem.action === 'arcaneKnowledge') {
@@ -1447,7 +1447,7 @@ export class SettlementHub {
             'TrainingGrounds': 'Campaign',
             'MagicAcademy': 'Arcane Knowledge',
             'TowerForge': 'Upgrades',
-            'Castle': 'Options'
+            'Castle': 'Manage Settlement'
         };
 
         this.settlementBuildings.forEach(item => {
@@ -3511,32 +3511,39 @@ class StatsPanel {
 }
 
 /**
- * Castle Options Menu
- * Allows player to interact with castle defenses and options
+ * Manage Settlement Menu
+ * Allows player to save, load, manage options, and quit
  */
-class CastleOptionsMenu {
+class ManageSettlementMenu {
     constructor(stateManager, settlementHub) {
         this.stateManager = stateManager;
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
+        this.activeWarningDialog = null; // 'quitSettlement', 'quitTouwers', or null
+        
         this.buttons = [
-            { label: 'DEFENSES', action: 'defenses', hovered: false },
-            { label: 'STATISTICS', action: 'statistics', hovered: false },
-            { label: 'FORTIFY', action: 'fortify', hovered: false },
-            { label: 'CLOSE', action: 'close', hovered: false },
+            { label: 'SAVE SETTLEMENT', action: 'save', hovered: false },
+            { label: 'LOAD SETTLEMENT', action: 'load', hovered: false },
+            { label: 'OPTIONS', action: 'options', hovered: false },
+            { label: 'QUIT SETTLEMENT', action: 'quitSettlement', hovered: false },
+            { label: 'QUIT TOUWERS', action: 'quitTouwers', hovered: false },
         ];
-        this.buttonWidth = 200;
-        this.buttonHeight = 50;
+        this.buttonWidth = 220;
+        this.buttonHeight = 48;
+        this.buttonMarginTop = 40;
+        this.buttonGap = 12;
     }
 
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
+        this.activeWarningDialog = null; // Clear any existing warning dialog state
     }
 
     close() {
         this.isOpen = false;
+        this.activeWarningDialog = null;
         this.settlementHub.closePopup();
     }
 
@@ -3548,12 +3555,21 @@ class CastleOptionsMenu {
 
     updateHoverState(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
+        
+        if (this.activeWarningDialog) {
+            this.updateWarningDialogHoverState(x, y);
+            return;
+        }
+        
+        const menuPadding = 30;
+        const menuWidth = this.buttonWidth + menuPadding * 2;
+        const menuHeight = this.buttons.length * (this.buttonHeight + this.buttonGap) + this.buttonMarginTop + menuPadding * 2;
+        const menuX = canvas.width / 2 - menuWidth / 2;
+        const menuY = canvas.height / 2 - menuHeight / 2;
 
         this.buttons.forEach((button, index) => {
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 60 + index * 70;
+            const buttonX = menuX + menuPadding;
+            const buttonY = menuY + this.buttonMarginTop + index * (this.buttonHeight + this.buttonGap);
             button.hovered = x >= buttonX && x <= buttonX + this.buttonWidth &&
                            y >= buttonY && y <= buttonY + this.buttonHeight;
         });
@@ -3562,87 +3578,304 @@ class CastleOptionsMenu {
             this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
     }
 
+    updateWarningDialogHoverState(x, y) {
+        const canvas = this.stateManager.canvas;
+        const dialogWidth = 480;
+        const dialogHeight = 220;
+        const dialogX = canvas.width / 2 - dialogWidth / 2;
+        const dialogY = canvas.height / 2 - dialogHeight / 2;
+        const buttonWidth = 130;
+        const buttonHeight = 45;
+        const buttonGap = 15;
+        
+        // Button positions in warning dialog
+        const totalButtonWidth = buttonWidth * 3 + buttonGap * 2;
+        const buttonsStartX = dialogX + (dialogWidth - totalButtonWidth) / 2;
+        
+        const cancelX = buttonsStartX;
+        const cancelY = dialogY + 130;
+        
+        const saveQuitX = buttonsStartX + buttonWidth + buttonGap;
+        const saveQuitY = dialogY + 130;
+        
+        const quitX = buttonsStartX + (buttonWidth + buttonGap) * 2;
+        const quitY = dialogY + 130;
+        
+        const cancelHovered = x >= cancelX && x <= cancelX + buttonWidth && y >= cancelY && y <= cancelY + buttonHeight;
+        const saveQuitHovered = x >= saveQuitX && x <= saveQuitX + buttonWidth && y >= saveQuitY && y <= saveQuitY + buttonHeight;
+        const quitHovered = x >= quitX && x <= quitX + buttonWidth && y >= quitY && y <= quitY + buttonHeight;
+        
+        this.warningCancelHovered = cancelHovered;
+        this.warningSaveQuitHovered = saveQuitHovered;
+        this.warningQuitHovered = quitHovered;
+        
+        this.stateManager.canvas.style.cursor = (cancelHovered || saveQuitHovered || quitHovered) ? 'pointer' : 'default';
+    }
+
     handleClick(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
+        
+        if (this.activeWarningDialog) {
+            this.handleWarningDialogClick(x, y);
+            return;
+        }
+        
+        const menuPadding = 30;
+        const menuWidth = this.buttonWidth + menuPadding * 2;
+        const menuHeight = this.buttons.length * (this.buttonHeight + this.buttonGap) + this.buttonMarginTop + menuPadding * 2;
+        const menuX = canvas.width / 2 - menuWidth / 2;
+        const menuY = canvas.height / 2 - menuHeight / 2;
 
         for (let i = 0; i < this.buttons.length; i++) {
             const button = this.buttons[i];
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 60 + i * 70;
+            const buttonX = menuX + menuPadding;
+            const buttonY = menuY + this.buttonMarginTop + i * (this.buttonHeight + this.buttonGap);
 
             if (x >= buttonX && x <= buttonX + this.buttonWidth &&
                 y >= buttonY && y <= buttonY + this.buttonHeight) {
+                
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                
                 this.handleButtonAction(button.action);
                 return;
             }
         }
     }
 
+    handleWarningDialogClick(x, y) {
+        const canvas = this.stateManager.canvas;
+        const dialogWidth = 480;
+        const dialogHeight = 220;
+        const dialogX = canvas.width / 2 - dialogWidth / 2;
+        const dialogY = canvas.height / 2 - dialogHeight / 2;
+        const buttonWidth = 130;
+        const buttonHeight = 45;
+        const buttonGap = 15;
+        
+        // Button positions
+        const totalButtonWidth = buttonWidth * 3 + buttonGap * 2;
+        const buttonsStartX = dialogX + (dialogWidth - totalButtonWidth) / 2;
+        
+        const cancelX = buttonsStartX;
+        const cancelY = dialogY + 130;
+        
+        const saveQuitX = buttonsStartX + buttonWidth + buttonGap;
+        const saveQuitY = dialogY + 130;
+        
+        const quitX = buttonsStartX + (buttonWidth + buttonGap) * 2;
+        const quitY = dialogY + 130;
+        
+        // Play button click
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playSFX('button-click');
+        }
+        
+        // Check Cancel button
+        if (x >= cancelX && x <= cancelX + buttonWidth && y >= cancelY && y <= cancelY + buttonHeight) {
+            this.activeWarningDialog = null;
+            return;
+        }
+        
+        // Check Save & Quit button
+        if (x >= saveQuitX && x <= saveQuitX + buttonWidth && y >= saveQuitY && y <= saveQuitY + buttonHeight) {
+            this.executeWarningAction('saveAndQuit');
+            return;
+        }
+        
+        // Check Quit button
+        if (x >= quitX && x <= quitX + buttonWidth && y >= quitY && y <= quitY + buttonHeight) {
+            this.executeWarningAction('quit');
+            return;
+        }
+    }
+
     handleButtonAction(action) {
         switch (action) {
-            case 'defenses':
-                // TODO: Implement castle defenses menu
+            case 'save':
+                this.saveSettlement();
                 break;
-            case 'statistics':
-                // TODO: Implement castle statistics
+            case 'load':
+                this.loadSettlement();
                 break;
-            case 'fortify':
-                // TODO: Implement fortification menu
+            case 'options':
+                this.openOptions();
                 break;
-            case 'close':
-                this.close();
+            case 'quitSettlement':
+                this.activeWarningDialog = 'quitSettlement';
                 break;
+            case 'quitTouwers':
+                this.activeWarningDialog = 'quitTouwers';
+                break;
+        }
+    }
+
+    saveSettlement() {
+        // Save the current game state
+        if (this.stateManager.saveSystem) {
+            // Save to the current slot (we need to track which slot was used)
+            const currentSlot = SaveSystem.getCurrentSlot ? SaveSystem.getCurrentSlot() : 1;
+            SaveSystem.saveGame(currentSlot);
+        }
+        
+        // Close the menu
+        this.close();
+    }
+
+    loadSettlement() {
+        // Close menu and transition to load screen
+        this.close();
+        
+        // Set previous state so options menu knows to return here
+        this.stateManager.previousState = 'settlementHub';
+        this.stateManager.changeState('loadGame');
+    }
+
+    openOptions() {
+        // Close this menu and open options
+        this.close();
+        
+        // Set previous state so options menu knows to return to settlement hub
+        this.stateManager.previousState = 'settlementHub';
+        this.stateManager.changeState('options');
+    }
+
+    executeWarningAction(action) {
+        switch (action) {
+            case 'quit':
+                if (this.activeWarningDialog === 'quitSettlement') {
+                    this.quitSettlement();
+                } else if (this.activeWarningDialog === 'quitTouwers') {
+                    this.quitTouwers(); // Will execute async in background
+                }
+                break;
+            case 'saveAndQuit':
+                if (this.stateManager.saveSystem) {
+                    const currentSlot = SaveSystem.getCurrentSlot ? SaveSystem.getCurrentSlot() : 1;
+                    SaveSystem.saveGame(currentSlot);
+                }
+                if (this.activeWarningDialog === 'quitSettlement') {
+                    this.quitSettlement();
+                } else if (this.activeWarningDialog === 'quitTouwers') {
+                    this.quitTouwers(); // Will execute async in background
+                }
+                break;
+        }
+    }
+
+    quitSettlement() {
+        this.stateManager.changeState('mainMenu');
+    }
+
+    async quitTouwers() {
+        // Check if running in Tauri
+        if (window.__TAURI__) {
+            try {
+                const { invoke } = window.__TAURI__.core;
+                await invoke('close_app');
+            } catch (error) {
+                console.error('Error closing application:', error);
+                // Fallback if Tauri fails
+                window.close();
+            }
+        } else {
+            // Fallback for development
+            window.close();
         }
     }
 
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
-        const menuWidth = 300;
-        const menuHeight = 320;
+        
+        // Menu dimensions
+        const menuPadding = 30;
+        const menuWidth = this.buttonWidth + menuPadding * 2;
+        const menuHeight = this.buttons.length * (this.buttonHeight + this.buttonGap) + this.buttonMarginTop + menuPadding * 2;
+        const menuX = canvas.width / 2 - menuWidth / 2;
+        const menuY = canvas.height / 2 - menuHeight / 2;
 
         // Semi-transparent overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Menu background
+        // Menu background with border
         ctx.fillStyle = '#2a1a0f';
         ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
 
         // Menu border
         ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
 
+        // Decorative corner accents
+        const accentSize = 15;
+        const accentColor = '#d4af37';
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 2;
+        
+        // Top-left
+        ctx.beginPath();
+        ctx.moveTo(menuX, menuY + accentSize);
+        ctx.lineTo(menuX, menuY);
+        ctx.lineTo(menuX + accentSize, menuY);
+        ctx.stroke();
+        
+        // Top-right
+        ctx.beginPath();
+        ctx.moveTo(menuX + menuWidth - accentSize, menuY);
+        ctx.lineTo(menuX + menuWidth, menuY);
+        ctx.lineTo(menuX + menuWidth, menuY + accentSize);
+        ctx.stroke();
+        
+        // Bottom-left
+        ctx.beginPath();
+        ctx.moveTo(menuX, menuY + menuHeight - accentSize);
+        ctx.lineTo(menuX, menuY + menuHeight);
+        ctx.lineTo(menuX + accentSize, menuY + menuHeight);
+        ctx.stroke();
+        
+        // Bottom-right
+        ctx.beginPath();
+        ctx.moveTo(menuX + menuWidth - accentSize, menuY + menuHeight);
+        ctx.lineTo(menuX + menuWidth, menuY + menuHeight);
+        ctx.lineTo(menuX + menuWidth, menuY + menuHeight - accentSize);
+        ctx.stroke();
+
         // Menu title
-        ctx.font = 'bold 20px serif';
+        ctx.font = 'bold 22px serif';
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('CASTLE', menuX + menuWidth / 2, menuY + 20);
+        
+        // Title shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText('MANAGE SETTLEMENT', menuX + menuWidth / 2 + 1, menuY + 12 + 1);
+        
+        // Title
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText('MANAGE SETTLEMENT', menuX + menuWidth / 2, menuY + 12);
 
-        // Render buttons in StartScreen style
+        // Render buttons
         this.buttons.forEach((button, index) => {
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 60 + index * 70;
+            const buttonX = menuX + menuPadding;
+            const buttonY = menuY + this.buttonMarginTop + index * (this.buttonHeight + this.buttonGap);
 
             // Button background gradient
             const bgGradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + this.buttonHeight);
-            bgGradient.addColorStop(0, '#44301c');
-            bgGradient.addColorStop(1, '#261200');
+            bgGradient.addColorStop(0, button.hovered ? '#5a4030' : '#44301c');
+            bgGradient.addColorStop(1, button.hovered ? '#3a2410' : '#261200');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
 
-            // Button border - outset style
+            // Button border - highlight when hovered
             ctx.strokeStyle = button.hovered ? '#ffd700' : '#8b7355';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = button.hovered ? 3 : 2;
             ctx.strokeRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
 
             // Top highlight line for beveled effect
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.strokeStyle = button.hovered ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(buttonX, buttonY);
@@ -3658,8 +3891,7 @@ class CastleOptionsMenu {
             ctx.stroke();
 
             // Button text
-            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
-            ctx.font = 'bold 18px Trebuchet MS, sans-serif';
+            ctx.font = 'bold 15px Trebuchet MS, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             
@@ -3672,7 +3904,118 @@ class CastleOptionsMenu {
             ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
         });
 
+        // Render warning dialog if active
+        if (this.activeWarningDialog) {
+            this.renderWarningDialog(ctx);
+        }
+
         ctx.globalAlpha = 1;
+    }
+
+    renderWarningDialog(ctx) {
+        const canvas = this.stateManager.canvas;
+        const dialogWidth = 480;
+        const dialogHeight = 220;
+        const dialogX = canvas.width / 2 - dialogWidth / 2;
+        const dialogY = canvas.height / 2 - dialogHeight / 2;
+        const buttonWidth = 130;
+        const buttonHeight = 45;
+        const buttonGap = 15;
+
+        // Semi-transparent background (darker)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        ctx.fillRect(dialogX, dialogY, dialogWidth, dialogHeight);
+
+        // Dialog border
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(dialogX, dialogY, dialogWidth, dialogHeight);
+
+        // Dialog title
+        const titleText = this.activeWarningDialog === 'quitSettlement' 
+            ? 'QUIT SETTLEMENT?' 
+            : 'QUIT TOUWERS?';
+        
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        
+        // Title shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText(titleText, dialogX + dialogWidth / 2 + 1, dialogY + 18 + 1);
+        
+        // Title
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(titleText, dialogX + dialogWidth / 2, dialogY + 18);
+
+        // Warning message
+        const messageText = this.activeWarningDialog === 'quitSettlement'
+            ? 'Return to main menu?'
+            : 'Close the game?';
+        
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(messageText, dialogX + dialogWidth / 2, dialogY + 65);
+
+        // Buttons in warning dialog - centered row
+        const totalButtonWidth = buttonWidth * 3 + buttonGap * 2;
+        const buttonsStartX = dialogX + (dialogWidth - totalButtonWidth) / 2;
+        
+        const cancelX = buttonsStartX;
+        const cancelY = dialogY + 130;
+        
+        const saveQuitX = buttonsStartX + buttonWidth + buttonGap;
+        const saveQuitY = dialogY + 130;
+        
+        const quitX = buttonsStartX + (buttonWidth + buttonGap) * 2;
+        const quitY = dialogY + 130;
+
+        // Helper function to render warning dialog buttons
+        const renderWarningButton = (x, y, label, hovered) => {
+            // Button background
+            const bgGradient = ctx.createLinearGradient(x, y, x, y + buttonHeight);
+            bgGradient.addColorStop(0, hovered ? '#5a4030' : '#44301c');
+            bgGradient.addColorStop(1, hovered ? '#3a2410' : '#261200');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(x, y, buttonWidth, buttonHeight);
+
+            // Border
+            ctx.strokeStyle = hovered ? '#ffd700' : '#8b7355';
+            ctx.lineWidth = hovered ? 3 : 2;
+            ctx.strokeRect(x, y, buttonWidth, buttonHeight);
+
+            // Top highlight
+            ctx.strokeStyle = hovered ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + buttonWidth, y);
+            ctx.stroke();
+
+            // Inset shadow
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y + buttonHeight);
+            ctx.lineTo(x + buttonWidth, y + buttonHeight);
+            ctx.stroke();
+
+            // Text
+            ctx.font = 'bold 13px Trebuchet MS, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText(label, x + buttonWidth / 2 + 1, y + buttonHeight / 2 + 1);
+            ctx.fillStyle = hovered ? '#ffd700' : '#d4af37';
+            ctx.fillText(label, x + buttonWidth / 2, y + buttonHeight / 2);
+        };
+
+        renderWarningButton(cancelX, cancelY, 'CANCEL', this.warningCancelHovered);
+        renderWarningButton(saveQuitX, saveQuitY, 'SAVE & QUIT', this.warningSaveQuitHovered);
+        renderWarningButton(quitX, quitY, 'QUIT', this.warningQuitHovered);
     }
 }
 

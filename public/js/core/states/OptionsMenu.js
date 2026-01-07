@@ -56,9 +56,15 @@ export class OptionsMenu {
             this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
         }
         
-        // Play menu theme music
+        // Play menu theme music, but preserve settlement music if coming from settlementHub
         if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playMusic('menu-theme');
+            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
+            const settlementTracks = this.stateManager.audioManager.getSettlementTracks ? this.stateManager.audioManager.getSettlementTracks() : [];
+            
+            // Only change music if we're not coming from settlement hub
+            if (this.stateManager.previousState !== 'settlementHub' || !settlementTracks.includes(currentTrack)) {
+                this.stateManager.audioManager.playMusic('menu-theme');
+            }
         }
 
         this.setupMouseListeners();
