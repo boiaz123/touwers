@@ -44,6 +44,17 @@ export class CampaignBase {
         
         this.hoveredExitButton = false;
         
+        // Campaign screen should play settlement music (same as campaign menu)
+        if (this.stateManager.audioManager) {
+            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
+            const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
+            
+            // If settlement music is not already playing, start a new one
+            if (!settlementTracks.includes(currentTrack)) {
+                this.stateManager.audioManager.playRandomSettlementTheme();
+            }
+        }
+        
         this.setupMouseListeners();
     }
     

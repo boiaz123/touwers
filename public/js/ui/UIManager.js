@@ -2664,11 +2664,12 @@ export class UIManager {
                 if (success) {
                     this.updateUI();
                     this.updateUIAvailability();
-                    // Refresh the menu
+                    // Refresh the menu without playing the training ground SFX again
                     this.showTrainingGroundsUpgradeMenu({
                         trainingGrounds: trainingData.trainingGrounds,
                         upgrades: trainingData.trainingGrounds.getRangeUpgradeOptions(),
-                        trainingUpgrade: trainingData.trainingGrounds.getTrainingLevelUpgradeOption()
+                        trainingUpgrade: trainingData.trainingGrounds.getTrainingLevelUpgradeOption(),
+                        skipSFX: true
                     });
                 }
             }, { once: true });
