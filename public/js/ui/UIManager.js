@@ -878,8 +878,8 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('forge-panel');
         
-        // Play tower forge SFX
-        if (this.stateManager.audioManager) {
+        // Play tower forge SFX only if not a menu refresh from an upgrade (skipSFX flag)
+        if (this.stateManager.audioManager && !forgeData.skipSFX) {
             this.stateManager.audioManager.playSFX('tower-forge');
         }
         
@@ -1054,12 +1054,13 @@ export class UIManager {
                         this.updateUI();
                         this.updateUIAvailability();
                         
-                        // Refresh the panel
+                        // Refresh the panel (with skipSFX flag to prevent building sound from playing)
                         this.showForgeUpgradeMenu({
                             type: 'forge_menu',
                             forge: forgeData.forge,
                             upgrades: forgeData.forge.getUpgradeOptions(),
-                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption()
+                            forgeUpgrade: forgeData.forge.getForgeUpgradeOption(),
+                            skipSFX: true
                         });
                     }
                 } else {
@@ -1079,13 +1080,14 @@ export class UIManager {
                         
                         this.updateUI();
                         
-                        // Refresh the panel
+                        // Refresh the panel (with skipSFX flag to prevent building sound from playing)
                         this.showForgeUpgradeMenu({
                             type: 'forge_menu',
                             forge: forgeData.forge,
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption(),
-                            castle: forgeData.castle
+                            castle: forgeData.castle,
+                            skipSFX: true
                         });
                     }
                 }
@@ -2254,6 +2256,10 @@ export class UIManager {
             
             if (btn.dataset.upgrade === 'lab_upgrade') {
                 if (menuData.building.purchaseLabUpgrade(this.gameState)) {
+                    // Play upgrade SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
+                    }
                     this.updateUI();
                     this.showSuperWeaponMenu(menuData);
                 }
@@ -2261,6 +2267,10 @@ export class UIManager {
                 const spellId = btn.dataset.mainSpell;
                 const diamondCost = 1;
                 if (menuData.building.upgradeMainSpell(spellId, diamondCost)) {
+                    // Play upgrade SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
+                    }
                     this.updateUI();
                     this.showSuperWeaponMenu(menuData);
                 }
@@ -2484,6 +2494,11 @@ export class UIManager {
     showTrainingGroundsUpgradeMenu(trainingData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('training-panel');
+        
+        // Play training ground SFX only if not a menu refresh from an upgrade (skipSFX flag)
+        if (this.stateManager.audioManager && !trainingData.skipSFX) {
+            this.stateManager.audioManager.playSFX('training-ground');
+        }
         
         const panel = document.getElementById('training-panel');
         if (!panel) {

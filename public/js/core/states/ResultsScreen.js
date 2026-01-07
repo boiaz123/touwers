@@ -65,14 +65,24 @@ export class ResultsScreen {
     execute(action) {
         this.isShowing = false;
         
-        // Stop victory/defeat tune and return to settlement music
+        // Stop victory/defeat tune immediately
         if (this.stateManager.audioManager) {
+            // Stop the SFX tune
+            if (this.stateManager.audioManager.currentSFXTune) {
+                this.stateManager.audioManager.currentSFXTune.pause();
+                this.stateManager.audioManager.currentSFXTune.currentTime = 0;
+                this.stateManager.audioManager.currentSFXTune = null;
+            }
+            // Also stop main music just in case
             this.stateManager.audioManager.stopMusic();
-            this.stateManager.audioManager.playRandomSettlementTheme();
         }
         
         switch (action) {
             case 'nextLevel':
+                // Play settlement music and then go to level select
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playRandomSettlementTheme();
+                }
                 // Increment level for next level selection
                 this.stateManager.selectedLevelInfo = {
                     level: this.resultData.level + 1
@@ -84,6 +94,10 @@ export class ResultsScreen {
                 this.stateManager.changeState('game');
                 break;
             case 'levelSelect':
+                // Play settlement music and then go to level select
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playRandomSettlementTheme();
+                }
                 this.stateManager.changeState('levelSelect');
                 break;
         }

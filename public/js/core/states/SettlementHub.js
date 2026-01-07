@@ -71,8 +71,15 @@ export class SettlementHub {
         }
         
         // Play settlement theme music - pick random settlement song and loop it
+        // BUT: If settlement music is already playing, keep it (don't restart)
         if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playRandomSettlementTheme();
+            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
+            const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
+            
+            // If settlement music is not already playing, start a new one
+            if (!settlementTracks.includes(currentTrack)) {
+                this.stateManager.audioManager.playRandomSettlementTheme();
+            }
         }
         
         // Create settlement building instances positioned WITHIN the settlement boundary

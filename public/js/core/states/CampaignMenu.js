@@ -56,16 +56,17 @@ export class CampaignMenu {
         this.infoPanelOpen = false;
         this.infoPanelOpacity = 0;
         
-        // Keep playing settlement music if it's currently playing (coming from settlement hub)
-        // Only play menu theme if not already playing settlement music
+        // Campaign menu should ONLY play settlement music, never the main theme
+        // This keeps the settlement song playing throughout settlement-related menus
         if (this.stateManager.audioManager) {
             const currentTrack = this.stateManager.audioManager.getCurrentTrack();
             const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
+            
+            // If settlement music is already playing, keep it
+            // If not, start settlement music (should rarely happen but failsafe)
             if (!settlementTracks.includes(currentTrack)) {
-                // No settlement music playing, use menu theme
-                this.stateManager.audioManager.playMusic('menu-theme');
+                this.stateManager.audioManager.playRandomSettlementTheme();
             }
-            // Otherwise keep settlement song playing
         }
         
         this.setupMouseListeners();

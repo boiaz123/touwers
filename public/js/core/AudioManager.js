@@ -7,6 +7,7 @@ export class AudioManager {
         // Audio elements
         this.musicElement = null;
         this.soundElements = {};
+        this.currentSFXTune = null; // Track currently playing SFX tunes like victory/defeat
         
         // State tracking
         this.currentMusicTrack = null;
@@ -222,6 +223,13 @@ export class AudioManager {
         const finalVolume = volume !== null ? volume : this.sfxVolume;
         
         try {
+            // Stop previous tune if playing a new one
+            if ((sfxName === 'victory-tune' || sfxName === 'defeat-tune') && this.currentSFXTune) {
+                this.currentSFXTune.pause();
+                this.currentSFXTune.currentTime = 0;
+                this.currentSFXTune = null;
+            }
+            
             // Create new audio element for sound effect (allows multiple simultaneous plays)
             const sfxElement = new Audio();
             sfxElement.src = sfxData.path;
@@ -230,10 +238,18 @@ export class AudioManager {
                 console.warn('AudioManager: Could not play SFX:', err);
             });
             
+            // Track victory/defeat tunes so we can stop them
+            if (sfxName === 'victory-tune' || sfxName === 'defeat-tune') {
+                this.currentSFXTune = sfxElement;
+            }
+            
             // Clean up after playing
             sfxElement.addEventListener('ended', () => {
                 sfxElement.pause();
                 sfxElement.currentTime = 0;
+                if (this.currentSFXTune === sfxElement) {
+                    this.currentSFXTune = null;
+                }
             }, { once: true });
             
             // console.log(`AudioManager: Playing SFX '${sfxName}'`);

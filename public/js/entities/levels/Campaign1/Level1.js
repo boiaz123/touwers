@@ -445,7 +445,7 @@ export class Level1 extends LevelBase {
             enemyCount: 15, 
             enemyHealth_multiplier: 0.8, 
             enemySpeed: 35, 
-            spawnInterval: 7, 
+            spawnInterval: 2.0, 
             pattern: ['basic'] 
         }
         // Wave 2

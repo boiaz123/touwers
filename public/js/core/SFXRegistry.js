@@ -96,6 +96,15 @@ export function initializeSFXRegistry() {
         }
     );
     
+    SFXRegistry.registerSFX(
+        'training-ground',
+        'assets/audio/sfx/BuildingSounds/TrainingGround.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
     // Gameplay sounds
     SFXRegistry.registerSFX(
         'wave-start',

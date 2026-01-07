@@ -691,6 +691,11 @@ export class GameplayState {
     }
 
     exit() {
+        // Stop level music before exiting
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.stopMusic();
+        }
+        
         // Clean up event listeners when leaving game state
         this.removeEventListeners();
         if (this.uiManager) {
@@ -1100,6 +1105,15 @@ export class GameplayState {
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, 4);
+                    
+                    // Play building placement SFX
+                    if (this.stateManager.audioManager) {
+                        if (this.selectedBuildingType === 'forge') {
+                            this.stateManager.audioManager.playSFX('tower-forge');
+                        } else if (this.selectedBuildingType === 'training') {
+                            this.stateManager.audioManager.playSFX('training-ground');
+                        }
+                    }
                     
                     // Store reference to SuperWeaponLab if it was just built
                     if (this.selectedBuildingType === 'superweapon') {
