@@ -80,7 +80,17 @@ export function initializeMusicRegistry() {
             volume: 0.7
         }
     );
-    
+
+    MusicRegistry.registerMusic(
+        'settlement-theme-2',
+        'assets/audio/music/SettlementSongs/Settlement_Theme2.mp3',
+        {
+            loop: true,
+            category: 'settlement',
+            volume: 0.7
+        }
+    );
+
     MusicRegistry.registerMusic(
         'settlement-theme-3',
         'assets/audio/music/SettlementSongs/Settlement_Theme3.mp3',
