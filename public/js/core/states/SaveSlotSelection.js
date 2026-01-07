@@ -189,10 +189,6 @@ export class SaveSlotSelection {
             
             if (x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
                 y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
-                // Play button click SFX
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('button-click');
-                }
                 // Create new game in this slot (overwrite existing save)
                 const newGameData = SaveSystem.createNewGameState();
                 SaveSystem.saveGame(this.warningSlotNumber, newGameData);
@@ -210,10 +206,6 @@ export class SaveSlotSelection {
             const cancelButtonX = panelX + panelWidth / 2 + 10;
             if (x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
                 y >= cancelButtonY && y <= cancelButtonY + buttonHeight) {
-                // Play button click SFX
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('button-click');
-                }
                 // Close warning dialog
                 this.showWarning = false;
                 this.warningSlotNumber = null;
@@ -228,10 +220,7 @@ export class SaveSlotSelection {
 
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
-            // Play button click SFX
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.playSFX('button-click');
-            }
+
             this.stateManager.changeState('mainMenu');
             return;
         }
@@ -242,10 +231,7 @@ export class SaveSlotSelection {
 
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
-                // Play button click SFX
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('button-click');
-                }
+
                 // Check if slot is already taken
                 const existingSave = SaveSystem.getSave(slotNum);
                 if (existingSave) {

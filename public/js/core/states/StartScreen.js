@@ -11,8 +11,18 @@ export class StartScreen {
         this.transitionActive = false;
         this.transitionTime = 0;
         this.particleSystem = null;
-        this.hasTransitionedToMainMenu = false;
-        this.mainMenuReady = false;
+        
+        // Menu buttons
+        this.buttons = [
+            { label: 'NEW GAME', action: 'newGame', hovered: false },
+            { label: 'LOAD GAME', action: 'loadGame', hovered: false },
+            { label: 'OPTIONS', action: 'options', hovered: false },
+            { label: 'QUIT GAME', action: 'quitGame', hovered: false }
+        ];
+        this.buttonWidth = 220;
+        this.buttonHeight = 50;
+        this.buttonGap = 15;
+        this.mouseMoveHandler = null;
     }
     
     enter() {
@@ -28,15 +38,31 @@ export class StartScreen {
             sidebar.style.display = 'none';
         }
         
-        // Reset animation state
-        this.animationTime = 0;
-        this.showContinue = false;
-        this.titleOpacity = 0;
-        this.subtitleOpacity = 0;
-        this.continueOpacity = 0;
-        this.transitionActive = false;
-        this.transitionTime = 0;
-        this.hasTransitionedToMainMenu = false;
+        // Check if we're returning from options or loadGame menus
+        // If so, skip to the post-transition button menu state
+        const returningFromMenu = this.stateManager.previousState === 'options' || 
+                                  this.stateManager.previousState === 'loadGame' ||
+                                  this.stateManager.previousState === 'saveSlotSelection';
+        
+        if (returningFromMenu) {
+            // Skip to post-transition state (buttons visible)
+            this.animationTime = 0;
+            this.showContinue = false;
+            this.titleOpacity = 1;
+            this.subtitleOpacity = 1;
+            this.continueOpacity = 0;
+            this.transitionActive = false;
+            this.transitionTime = 3;  // Jump to post-transition state
+        } else {
+            // Normal reset for initial entry
+            this.animationTime = 0;
+            this.showContinue = false;
+            this.titleOpacity = 0;
+            this.subtitleOpacity = 0;
+            this.continueOpacity = 0;
+            this.transitionActive = false;
+            this.transitionTime = 0;
+        }
         
         // Get or initialize shared particle system
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
@@ -48,7 +74,7 @@ export class StartScreen {
             this.stateManager.audioManager.playMusic('menu-theme');
         }
 
-        // Setup click listener for transition trigger
+        // Setup click listener
         this.setupClickListener();
     }
 
@@ -59,21 +85,60 @@ export class StartScreen {
     setupClickListener() {
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            // Account for CSS scaling
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
+        this.mouseMoveHandler = (e) => {
+            const rect = this.stateManager.canvas.getBoundingClientRect();
+            // Account for CSS scaling
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            this.handleMouseMove(x, y);
+        };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
     }
 
     removeClickListener() {
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
+        if (this.mouseMoveHandler) {
+            this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+        }
+    }
+
+    getButtonPosition(index) {
+        const canvas = this.stateManager.canvas;
+        const startY = canvas.height / 2 + 80;
+        return {
+            x: canvas.width / 2 - this.buttonWidth / 2,
+            y: startY + index * (this.buttonHeight + this.buttonGap),
+            width: this.buttonWidth,
+            height: this.buttonHeight
+        };
     }
 
     handleMouseMove(x, y) {
-        // Not needed - no buttons in StartScreen anymore
+        // Handle mouse hover only after transition completes
+        if (this.transitionTime >= 3) {
+            this.buttons.forEach((button, index) => {
+                const pos = this.getButtonPosition(index);
+                button.hovered = x >= pos.x && x <= pos.x + pos.width && 
+                                 y >= pos.y && y <= pos.y + pos.height;
+            });
+
+            this.stateManager.canvas.style.cursor = 
+                this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+        } else {
+            this.stateManager.canvas.style.cursor = 'default';
+        }
     }
 
     handleClick(x, y) {
@@ -87,6 +152,56 @@ export class StartScreen {
         // While animating: don't handle clicks
         if (this.transitionActive) {
             return;
+        }
+
+        // After transition completes (transitionTime >= 3): handle button clicks
+        if (this.transitionTime >= 3) {
+            for (let i = 0; i < this.buttons.length; i++) {
+                const button = this.buttons[i];
+                const pos = this.getButtonPosition(i);
+                
+                if (x >= pos.x && x <= pos.x + pos.width && 
+                    y >= pos.y && y <= pos.y + pos.height) {
+                    // Play button click SFX
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('button-click');
+                    }
+                    this.handleButtonAction(button.action);
+                    return;
+                }
+            }
+        }
+    }
+
+    handleButtonAction(action) {
+        switch (action) {
+            case 'newGame':
+                this.stateManager.startNewGame();
+                break;
+            case 'loadGame':
+                this.stateManager.changeState('loadGame');
+                break;
+            case 'options':
+                this.stateManager.previousState = 'startScreen';
+                this.stateManager.changeState('options');
+                break;
+            case 'quitGame':
+                this.quitGame();
+                break;
+        }
+    }
+
+    async quitGame() {
+        try {
+            if (window.__TAURI__) {
+                const { invoke } = window.__TAURI__.core;
+                await invoke('close_app');
+            } else {
+                console.log('Closing application...');
+                window.close();
+            }
+        } catch (error) {
+            console.error('Error closing application:', error);
         }
     }
     
@@ -112,42 +227,10 @@ export class StartScreen {
         // Update transition
         if (this.transitionActive) {
             this.transitionTime += deltaTime;
-            
-            // 0.1 seconds AFTER smoke appears (smoke starts at ~0.7s, so initialize at ~0.8s)
-            if (this.transitionTime >= 0.8 && !this.mainMenuReady) {
-                this.mainMenuReady = true;
-                // Get MainMenu state and update it
-                const mainMenu = this.stateManager.states['mainMenu'];
-                if (mainMenu) {
-                    // Set previousState so MainMenu skips fade-in animation
-                    this.stateManager.previousState = 'startScreen';
-                    mainMenu.enter();
-                }
-            }
-            
-            // Update MainMenu while it's rendering behind the smoke
-            if (this.mainMenuReady) {
-                const mainMenu = this.stateManager.states['mainMenu'];
-                if (mainMenu && mainMenu.update) {
-                    mainMenu.update(deltaTime);
-                }
-            }
-            
-            // After smoke fully fades (around 2 seconds): transition to MainMenu
-            // The smoke duration is 1.3 seconds starting at 0.7 seconds into 3-second transition
-            // So smoke clears at 0.7 + 1.3 = 2 seconds
-            if (this.transitionTime >= 2 && !this.hasTransitionedToMainMenu) {
-                this.hasTransitionedToMainMenu = true;
-                // Don't call changeState with enter() - MainMenu is already initialized
-                // Just switch the state reference so MainMenu takes over
-                this.stateManager.currentState = this.stateManager.states['mainMenu'];
-                this.stateManager.currentStateName = 'mainMenu';
-                // Setup MainMenu's mouse listeners for interaction
-                const mainMenu = this.stateManager.states['mainMenu'];
-                if (mainMenu && mainMenu.setupMouseListeners) {
-                    mainMenu.setupMouseListeners();
-                }
-                return;
+            // After 3-second transition completes, transition time stays at 3 seconds (final state)
+            if (this.transitionTime >= 3) {
+                this.transitionTime = 3;
+                this.transitionActive = false; // Animation complete, allow button clicks
             }
         }
         
@@ -252,8 +335,15 @@ export class StartScreen {
         if (progress >= smokeStartTime && progress < (smokeStartTime + smokeDuration)) {
             const smokePhaseProgress = (progress - smokeStartTime) / smokeDuration;
             
-            // Render dense natural smoke clouds covering entire bottom half
-            // This will be drawn ON TOP of MainMenu (which is rendering behind this smoke)
+            // Render buttons right away as smoke appears
+            const buttonRenderStartTime = 0.05 / 1.3; // 0.05 seconds into 1.3 second phase
+            if (smokePhaseProgress >= buttonRenderStartTime) {
+                ctx.globalAlpha = 1;
+                this.renderMenuButtons(ctx);
+            }
+            
+            // NOW render dense natural smoke clouds covering entire bottom half
+            // This will be drawn ON TOP of the buttons
             ctx.globalAlpha = 1;
             
             // Create a dense, natural-looking smoke screen with many overlapping clouds
@@ -314,6 +404,11 @@ export class StartScreen {
                     }
                 }
             }
+        }
+
+        // Continue showing buttons after transition completes (opacity set to 1 in renderMenuButtons)
+        if (progress >= (smokeStartTime + smokeDuration)) {
+            this.renderMenuButtons(ctx);
         }
 
         ctx.globalAlpha = 1;
@@ -628,14 +723,6 @@ export class StartScreen {
                 this.particleSystem.render(ctx);
             }
 
-            // During transition, render MainMenu behind the smoke
-            if (this.transitionActive && this.mainMenuReady) {
-                const mainMenu = this.stateManager.states['mainMenu'];
-                if (mainMenu && mainMenu.render) {
-                    mainMenu.render(ctx);
-                }
-            }
-
             // Render stylized title (ALWAYS visible, even during transition)
             this.renderStylizedTitle(ctx, canvas.width / 2, canvas.height / 2 - 50, this.titleOpacity);
 
@@ -665,6 +752,11 @@ export class StartScreen {
                 this.renderTransitionEffect(ctx);
             }
             
+            // After transition completes, show menu buttons
+            if (this.transitionTime >= 3) {
+                this.renderMenuButtons(ctx);
+            }
+            
         } catch (error) {
             console.error('StartScreen render error:', error);
             ctx.fillStyle = '#1a0f0a';
@@ -674,5 +766,62 @@ export class StartScreen {
             ctx.textAlign = 'center';
             ctx.fillText('StartScreen Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
+    }
+
+    renderMenuButtons(ctx) {
+        const canvas = this.stateManager.canvas;
+
+        // Render all buttons
+        ctx.globalAlpha = 1;
+        for (let i = 0; i < this.buttons.length; i++) {
+            const button = this.buttons[i];
+            const pos = this.getButtonPosition(i);
+            this.renderControlButton(ctx, pos.x, pos.y, pos.width, pos.height, button.label, button.hovered);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    renderControlButton(ctx, x, y, width, height, text, isHovered) {
+        // Button background gradient
+        const bgGradient = ctx.createLinearGradient(x, y, x, y + height);
+        bgGradient.addColorStop(0, '#44301c');
+        bgGradient.addColorStop(1, '#261200');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(x, y, width, height);
+
+        // Button border - outset style
+        ctx.strokeStyle = isHovered ? '#ffd700' : '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+
+        // Top highlight line for beveled effect
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + width, y);
+        ctx.stroke();
+
+        // Inset shadow
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x + width, y + height);
+        ctx.stroke();
+
+        // Button text
+        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.font = 'bold 20px Trebuchet MS, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Text shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillText(text, x + width / 2 + 1, y + height / 2 + 1);
+        
+        // Main text
+        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
+        ctx.fillText(text, x + width / 2, y + height / 2);
     }
 }
