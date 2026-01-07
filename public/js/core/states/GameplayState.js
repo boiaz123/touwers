@@ -221,6 +221,9 @@ export class GameplayState {
         
         // Set audio manager reference for sound effects
         this.enemyManager.audioManager = this.stateManager.audioManager;
+        this.towerManager.audioManager = this.stateManager.audioManager;
+        // Ensure all existing towers have audio manager (for loaded games)
+        this.towerManager.ensureAudioManagerForAllTowers();
         
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
@@ -230,10 +233,10 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         
-        // Play level-specific music
-        const levelMusicTrack = this.getAudioTrackForLevel(levelInfo.id);
-        if (this.stateManager.audioManager && levelMusicTrack) {
-            this.stateManager.audioManager.playMusic(levelMusicTrack);
+        // Play level-specific music with category-based looping
+        if (this.stateManager.audioManager) {
+            // Use music category for random track selection and looping
+            this.stateManager.audioManager.playMusicCategory('campaign');
         }
         
         // Restore mid-game state if applicable
@@ -672,22 +675,22 @@ export class GameplayState {
      * Maps level IDs to their corresponding music tracks
      */
     getAudioTrackForLevel(levelId) {
-        // Use campaign/desert battle music for all campaign levels for now
-        // As more campaign-specific tracks are added, expand this mapping
+        // Define available music tracks for each campaign
         const campaignMusicMap = {
-            'campaign-1-level-1': 'campaign-desert',
-            'campaign-1-level-2': 'campaign-desert',
-            'campaign-1-level-3': 'campaign-desert',
-            'campaign-1-level-4': 'campaign-desert',
-            'campaign-1-level-5': 'campaign-desert',
-            'campaign-5-level-1': 'campaign-desert',
-            'campaign-5-level-2': 'campaign-desert',
-            'campaign-5-level-3': 'campaign-desert',
-            'campaign-5-level-4': 'campaign-desert',
-            'campaign-5-level-5': 'campaign-desert',
+            'campaign-1': ['campaign-desert', 'campaign-song-1'],
+            'campaign-5': ['campaign-desert'],
         };
         
-        return campaignMusicMap[levelId] || 'campaign-desert'; // Default to desert music
+        // Extract campaign ID from level ID (e.g., 'campaign-1-level-1' -> 'campaign-1')
+        const campaignMatch = levelId.match(/^campaign-\d+/);
+        const campaignId = campaignMatch ? campaignMatch[0] : 'campaign-1';
+        
+        // Get available tracks for this campaign
+        const availableTracks = campaignMusicMap[campaignId] || ['campaign-desert'];
+        
+        // Select a random track from available options
+        const randomTrack = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+        return randomTrack;
     }
 
     exit() {

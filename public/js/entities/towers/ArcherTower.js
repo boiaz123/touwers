@@ -59,6 +59,11 @@ export class ArcherTower extends Tower {
             // armorPiercingPercent is already stored as a percentage (5, 10, 15, etc.)
             this.target.takeDamage(this.damage, this.armorPiercingPercent, 'physical');
             
+            // Play arrow sound
+            if (this.audioManager) {
+                this.audioManager.playSFX('arrow');
+            }
+            
             // Select an archer to shoot
             const shooter = this.archers[Math.floor(Math.random() * this.archers.length)];
             shooter.drawback = 1;

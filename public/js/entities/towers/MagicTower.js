@@ -100,6 +100,11 @@ export class MagicTower extends Tower {
         if (this.target) {
             let finalDamage = this.damage;
             
+            // Play magic tower sound
+            if (this.audioManager) {
+                this.audioManager.playSFX('magic-tower');
+            }
+            
             // Apply elemental effects based on selected element - CORRECTED
             switch(this.selectedElement) {
                 case 'fire':

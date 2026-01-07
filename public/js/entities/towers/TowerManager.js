@@ -7,6 +7,7 @@ export class TowerManager {
         this.gameState = gameState;
         this.level = level;
         this.towers = [];
+        this.audioManager = null; // Will be set by GameplayState
         
         // Initialize unlock system and building manager
         this.unlockSystem = new UnlockSystem();
@@ -49,6 +50,12 @@ export class TowerManager {
             if (this.gameState.spend(towerType.cost)) {
                 const GuardPost = towerType.class;
                 const tower = new GuardPost(pathPoint.x, pathPoint.y, 1);
+                
+                // Assign audio manager to tower for sound effects
+                if (this.audioManager) {
+                    tower.audioManager = this.audioManager;
+                }
+                
                 // Set the path on the guard post so it can place defenders on actual path waypoints
                 if (this.level && this.level.path) {
                     tower.setPath(this.level.path);
@@ -69,14 +76,41 @@ export class TowerManager {
         
         if (this.gameState.spend(towerType.cost)) {
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
+            
+            // Assign audio manager to tower for sound effects
+            if (this.audioManager) {
+                tower.audioManager = this.audioManager;
+            }
+            
             this.towers.push(tower);
             
             // Mark the 2x2 area as occupied by this tower
             this.markTowerPosition(gridX, gridY);
             
+            // Play tower build sound
+            this.playTowerBuildSound(type);
+            
             return true;
         }
         return false;
+    }
+    
+    /**
+     * Play the build sound for a specific tower type
+     */
+    playTowerBuildSound(type) {
+        if (!this.audioManager) return;
+        
+        const soundMap = {
+            'archer': 'arrow',
+            'magic': 'magic-tower',
+            'combination': 'combination-tower'
+        };
+        
+        const soundName = soundMap[type];
+        if (soundName) {
+            this.audioManager.playSFX(soundName);
+        }
     }
     
     /**
@@ -731,6 +765,20 @@ export class TowerManager {
         
         // Render all buildings
         this.buildingManager.render(ctx);
+    }
+    
+    /**
+     * Ensure all towers have a reference to the audio manager
+     * Called by GameplayState when setting audioManager
+     */
+    ensureAudioManagerForAllTowers() {
+        if (!this.audioManager) return;
+        
+        this.towers.forEach(tower => {
+            if (!tower.audioManager) {
+                tower.audioManager = this.audioManager;
+            }
+        });
     }
     
     getTowerInfo(type) {

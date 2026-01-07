@@ -14,6 +14,11 @@ export class AudioManager {
         this.isMusicPlaying = false;
         this.isMuted = false;
         
+        // Music playlist support
+        this.currentMusicCategory = null; // For random track selection from category
+        this.musicPlaylistMode = false; // If true, plays random tracks from category
+        this.boundMusicEndedHandler = null; // Store bound listener for proper removal
+        
         // Volume settings (0.0 - 1.0)
         this.musicVolume = 0.7;
         this.sfxVolume = 0.8;
@@ -98,6 +103,20 @@ export class AudioManager {
         this.musicElement.src = trackData.path;
         this.musicElement.loop = trackData.loop !== false; // Default to true
         
+        // Remove previous ended event listener if one exists
+        if (this.boundMusicEndedHandler) {
+            this.musicElement.removeEventListener('ended', this.boundMusicEndedHandler);
+            this.boundMusicEndedHandler = null;
+        }
+        
+        // If playlist mode is active, handle track ending to play next random track
+        if (this.musicPlaylistMode && this.currentMusicCategory) {
+            this.musicElement.loop = false; // Don't use built-in looping
+            // Create a bound handler so we can remove it later
+            this.boundMusicEndedHandler = () => this.playNextRandomTrackFromCategory();
+            this.musicElement.addEventListener('ended', this.boundMusicEndedHandler);
+        }
+        
         // Play with optional fade
         if (fadeIn) {
             this.musicElement.volume = 0;
@@ -118,11 +137,79 @@ export class AudioManager {
     }
     
     /**
+     * Start playing music from a specific category with random track selection
+     * When a track ends, a new random track from the category will be selected
+     * @param {string} category - The music category to play from (e.g., 'campaign')
+     */
+    playMusicCategory(category) {
+        // Get all tracks in this category
+        const tracks = Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === category)
+            .map(([name, _]) => name);
+        
+        if (tracks.length === 0) {
+            console.warn(`AudioManager: No music tracks found for category '${category}'`);
+            return false;
+        }
+        
+        console.log(`AudioManager: Available tracks for category '${category}':`, tracks);
+        
+        // Set up category looping mode
+        this.musicPlaylistMode = true;
+        this.currentMusicCategory = category;
+        
+        // Pick and play a random track
+        const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        console.log(`AudioManager: Selected random track from '${category}':`, randomTrack);
+        return this.playMusic(randomTrack);
+    }
+    
+    /**
+     * Play next random track from current category
+     * Called automatically when current track ends in playlist mode
+     */
+    playNextRandomTrackFromCategory() {
+        if (!this.musicPlaylistMode || !this.currentMusicCategory) {
+            console.warn('AudioManager: Not in playlist mode or no category set');
+            return;
+        }
+        
+        // Get all tracks in this category
+        const tracks = Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === this.currentMusicCategory)
+            .map(([name, _]) => name);
+        
+        if (tracks.length === 0) {
+            console.warn(`AudioManager: No music tracks found for category '${this.currentMusicCategory}'`);
+            this.musicPlaylistMode = false;
+            return;
+        }
+        
+        console.log(`AudioManager: Current track ended, playing next from '${this.currentMusicCategory}'`);
+        console.log(`AudioManager: Available tracks:`, tracks);
+        
+        // Pick a random track (could be the same one, but that's okay for variety)
+        const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        console.log(`AudioManager: Selected next random track:`, randomTrack);
+        this.playMusic(randomTrack);
+    }
+    
+    /**
      * Stop background music
      * @param {boolean} fadeOut - Whether to fade out (optional)
      */
     stopMusic(fadeOut = false) {
         if (!this.musicElement) return;
+        
+        // Stop playlist mode
+        this.musicPlaylistMode = false;
+        this.currentMusicCategory = null;
+        
+        // Remove ended event listener if it exists
+        if (this.boundMusicEndedHandler) {
+            this.musicElement.removeEventListener('ended', this.boundMusicEndedHandler);
+            this.boundMusicEndedHandler = null;
+        }
         
         if (fadeOut) {
             this.fadeOutMusic(500, () => {

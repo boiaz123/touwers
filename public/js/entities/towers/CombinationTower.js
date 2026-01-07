@@ -127,6 +127,11 @@ export class CombinationTower extends Tower {
         if (this.target) {
             let finalDamage = this.damage;
             
+            // Play combination tower sound
+            if (this.audioManager) {
+                this.audioManager.playSFX('combination-tower');
+            }
+            
             // If a spell is selected, use combination effects, otherwise do basic attack
             if (this.selectedSpell) {
                 const spell = this.combinationBonuses[this.selectedSpell];

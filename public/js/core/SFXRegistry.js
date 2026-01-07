@@ -123,4 +123,42 @@ export function initializeSFXRegistry() {
             volume: 0.6
         }
     );
+    
+    // Tower attack sounds
+    SFXRegistry.registerSFX(
+        'arrow',
+        'assets/audio/sfx/TowerSounds/Arrow.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'magic-tower',
+        'assets/audio/sfx/TowerSounds/MagicTower.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'combination-tower',
+        'assets/audio/sfx/TowerSounds/CombinationTower.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+    
+    // Menu/Animation sounds
+    SFXRegistry.registerSFX(
+        'sword-smoke',
+        'assets/audio/sfx/MenuSounds/SwordSmoke.mp3',
+        {
+            category: 'ui',
+            volume: 0.7
+        }
+    );
 }

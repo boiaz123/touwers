@@ -11,6 +11,7 @@ export class StartScreen {
         this.transitionActive = false;
         this.transitionTime = 0;
         this.particleSystem = null;
+        this.swordSoundPlayed = false; // Track if sword sound has been played
         
         // Menu buttons
         this.buttons = [
@@ -53,6 +54,7 @@ export class StartScreen {
             this.continueOpacity = 0;
             this.transitionActive = false;
             this.transitionTime = 3;  // Jump to post-transition state
+            this.swordSoundPlayed = false;
         } else {
             // Normal reset for initial entry
             this.animationTime = 0;
@@ -62,6 +64,7 @@ export class StartScreen {
             this.continueOpacity = 0;
             this.transitionActive = false;
             this.transitionTime = 0;
+            this.swordSoundPlayed = false;
         }
         
         // Get or initialize shared particle system
@@ -146,6 +149,7 @@ export class StartScreen {
         if (!this.transitionActive && this.showContinue && this.animationTime > 1 && this.transitionTime === 0) {
             this.transitionActive = true;
             this.transitionTime = 0;
+            this.swordSoundPlayed = false; // Reset sound flag when starting new transition
             return;
         }
 
@@ -227,6 +231,17 @@ export class StartScreen {
         // Update transition
         if (this.transitionActive) {
             this.transitionTime += deltaTime;
+            
+            // Play sword sound at 0.3 of sword phase (0.21 seconds into transition)
+            const swordDuration = 0.7; // 0.7 seconds
+            const swordSoundTime = swordDuration * 0.3; // 0.3 of sword phase
+            if (!this.swordSoundPlayed && this.transitionTime >= swordSoundTime && this.transitionTime < swordSoundTime + deltaTime) {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('sword-smoke');
+                }
+                this.swordSoundPlayed = true;
+            }
+            
             // After 3-second transition completes, transition time stays at 3 seconds (final state)
             if (this.transitionTime >= 3) {
                 this.transitionTime = 3;
