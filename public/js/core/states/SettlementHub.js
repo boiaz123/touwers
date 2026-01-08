@@ -3127,7 +3127,8 @@ class UpgradesMenu {
         this.animationProgress = 0;
         this.activeTab = 'buy'; // 'buy', 'sell', 'upgrade'
         this.currentPage = 0;
-        this.playerGold = 5000; // Placeholder gold amount
+        // Get player gold from stateManager (persistent between levels)
+        this.playerGold = stateManager.playerGold || 0;
         
         // Buy tab - 6 pages with 6 items each
         this.buyItems = [];
@@ -3142,16 +3143,8 @@ class UpgradesMenu {
             }
         }
         
-        // Sell tab - placeholder inventory items
-        this.inventoryItems = [];
-        for (let i = 0; i < 8; i++) {
-            this.inventoryItems.push({
-                id: `inv_${i}`,
-                name: `Inventory Item ${i + 1}`,
-                sellPrice: 50 + i * 25,
-                hovered: false
-            });
-        }
+        // Sell tab - build from actual loot inventory
+        this.inventoryItems = this.buildInventoryItems();
         
         // Upgrade tab - 2 pages with 6 upgrades each
         this.upgradeItems = [];
@@ -3176,11 +3169,67 @@ class UpgradesMenu {
         ];
     }
 
+    buildInventoryItems() {
+        const items = [];
+        const inventory = this.stateManager.playerInventory || [];
+        
+        // Create items from inventory
+        for (const inventoryItem of inventory) {
+            const lootInfo = this.getLootInfo(inventoryItem.lootId);
+            items.push({
+                id: inventoryItem.lootId,
+                name: lootInfo.name,
+                sellPrice: lootInfo.sellValue,
+                lootId: inventoryItem.lootId,
+                count: inventoryItem.count || 1,
+                hovered: false
+            });
+        }
+        
+        return items;
+    }
+
+    getLootInfo(lootId) {
+        const lootData = {
+            'iron-sword': { name: 'Iron Sword', sellValue: 50 },
+            'steel-sword': { name: 'Steel Sword', sellValue: 100 },
+            'longsword': { name: 'Longsword', sellValue: 200 },
+            'enchanted-blade': { name: 'Enchanted Blade', sellValue: 400 },
+            'iron-axe': { name: 'Iron Axe', sellValue: 60 },
+            'battle-axe': { name: 'Battle Axe', sellValue: 120 },
+            'great-axe': { name: 'Great Axe', sellValue: 220 },
+            'warhammer': { name: 'Warhammer', sellValue: 210 },
+            'wooden-bow': { name: 'Wooden Bow', sellValue: 40 },
+            'longbow': { name: 'Longbow', sellValue: 110 },
+            'elven-bow': { name: 'Elven Bow', sellValue: 190 },
+            'leather-helm': { name: 'Leather Helm', sellValue: 45 },
+            'iron-helm': { name: 'Iron Helm', sellValue: 95 },
+            'dragon-helm': { name: 'Dragon Helm', sellValue: 380 },
+            'leather-chest': { name: 'Leather Chest Plate', sellValue: 70 },
+            'iron-chest': { name: 'Iron Chest Plate', sellValue: 140 },
+            'mithril-chest': { name: 'Mithril Chest Plate', sellValue: 280 },
+            'gauntlets': { name: 'Iron Gauntlets', sellValue: 85 },
+            'steel-boots': { name: 'Steel Boots', sellValue: 75 },
+            'gold-ring': { name: 'Gold Ring', sellValue: 250 },
+            'ruby-amulet': { name: 'Ruby Amulet', sellValue: 350 },
+            'crystal-orb': { name: 'Crystal Orb', sellValue: 360 },
+            'ancient-coin': { name: 'Ancient Coin', sellValue: 130 },
+            'gem-cluster': { name: 'Gem Cluster', sellValue: 270 }
+        };
+        return lootData[lootId] || { name: 'Unknown Item', sellValue: 0 };
+    }
+
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
         this.activeTab = 'buy';
         this.currentPage = 0;
+        
+        // Refresh player gold from stateManager (in case it changed)
+        this.playerGold = this.stateManager.playerGold || 0;
+        
+        // Refresh inventory items from stateManager
+        this.inventoryItems = this.buildInventoryItems();
     }
 
     close() {
@@ -3365,8 +3414,27 @@ class UpgradesMenu {
             console.log('Buying item:', item.name, 'for', item.price, 'gold');
             // TODO: Implement buy logic
         } else if (this.activeTab === 'sell') {
-            console.log('Selling item:', item.name, 'for', item.sellPrice, 'gold');
-            // TODO: Implement sell logic
+            // Sell the loot item
+            this.playerGold += item.sellPrice;
+            this.stateManager.playerGold = this.playerGold;
+            
+            // Remove from inventory
+            const inventoryIndex = this.stateManager.playerInventory.findIndex(
+                inv => inv.lootId === item.lootId
+            );
+            
+            if (inventoryIndex !== -1) {
+                this.stateManager.playerInventory[inventoryIndex].count -= 1;
+                if (this.stateManager.playerInventory[inventoryIndex].count <= 0) {
+                    this.stateManager.playerInventory.splice(inventoryIndex, 1);
+                }
+            }
+            
+            // Rebuild inventory items to reflect the change
+            this.inventoryItems = this.buildInventoryItems();
+            this.currentPage = 0;
+            
+            console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
         } else if (this.activeTab === 'upgrade') {
             console.log('Upgrading:', item.name, 'for', item.cost, 'gold');
             // TODO: Implement upgrade logic

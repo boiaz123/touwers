@@ -12,6 +12,10 @@ export class GameStateManager {
         this.currentMidGameState = null;
         this.previousState = null;
         
+        // Player progression - persistent across levels
+        this.playerGold = 0; // Gold earned from selling loot in marketplace
+        this.playerInventory = []; // Array of loot items { lootId, count }
+        
         // SaveSystem reference (will be set during game initialization)
         this.SaveSystem = null;
         

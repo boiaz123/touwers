@@ -15,6 +15,7 @@ export class ShieldKnightEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
+        this.lootDropChance = 0.04; // 45% chance to drop loot (has shield!)
         this.armorColor = this.getRandomArmorColor();
         this.sizeMultiplier = 1.05;
         

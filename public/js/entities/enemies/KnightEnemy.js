@@ -15,6 +15,7 @@ export class KnightEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
+        this.lootDropChance = 0.1; // 40% chance to drop loot (heavily armored)
         this.armorColor = '#4A5568';
         this.sizeMultiplier = 1.15;
         

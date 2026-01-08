@@ -10,6 +10,7 @@ export class BaseEnemy {
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
+        this.lootDropChance = 0.03; // Base 25% chance to drop loot on death (0-1)
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
@@ -367,9 +368,55 @@ export class BaseEnemy {
         }
         return color;
     }
+
+    /**
+     * Check if this enemy should drop loot
+     * Returns true if loot should be dropped
+     */
+    shouldDropLoot() {
+        return Math.random() < this.lootDropChance;
+    }
+
+    /**
+     * Get random loot ID for this enemy
+     * Can be overridden by subclasses for different loot tables
+     */
+    getDroppedLoot() {
+        // Common loot items
+        const commonLoot = [
+            'iron-sword', 'iron-axe', 'wooden-bow', 'leather-helm', 
+            'leather-chest', 'gauntlets', 'steel-boots', 'ancient-coin'
+        ];
+        // Uncommon loot items (30% chance)
+        const uncommonLoot = [
+            'steel-sword', 'battle-axe', 'longbow', 'iron-helm', 
+            'iron-chest', 'steel-boots', 'ancient-coin'
+        ];
+        // Rare loot items (5% chance)
+        const rareLoot = [
+            'longsword', 'great-axe', 'elven-bow', 'dragon-helm', 
+            'mithril-chest', 'gold-ring', 'gem-cluster'
+        ];
+        // Epic loot items (1% chance)
+        const epicLoot = [
+            'enchanted-blade', 'dragon-helm', 'ruby-amulet', 'crystal-orb'
+        ];
+
+        const rand = Math.random();
+        if (rand < 0.01) {
+            return epicLoot[Math.floor(Math.random() * epicLoot.length)];
+        } else if (rand < 0.06) {
+            return rareLoot[Math.floor(Math.random() * rareLoot.length)];
+        } else if (rand < 0.36) {
+            return uncommonLoot[Math.floor(Math.random() * uncommonLoot.length)];
+        } else {
+            return commonLoot[Math.floor(Math.random() * commonLoot.length)];
+        }
+    }
     
     render(ctx) {
         // Override in subclasses
         throw new Error('render() must be implemented by subclass');
     }
 }
+

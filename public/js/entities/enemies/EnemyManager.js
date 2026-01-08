@@ -186,9 +186,22 @@ export class EnemyManager {
     
     removeDeadEnemies() {
         let totalGold = 0;
+        const lootDrops = []; // Array of { x, y, lootId }
+        
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
+                
+                // Check for loot drops
+                if (enemy.shouldDropLoot()) {
+                    const lootId = enemy.getDroppedLoot();
+                    lootDrops.push({
+                        x: enemy.x,
+                        y: enemy.y,
+                        lootId: lootId
+                    });
+                }
+                
                 // Preserve splatters from dead enemies so they continue to animate and fade
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     this.orphanedSplatters.push(...enemy.hitSplatters);
@@ -197,7 +210,8 @@ export class EnemyManager {
             }
             return true;
         });
-        return totalGold;
+        
+        return { totalGold, lootDrops };
     }
     
     render(ctx) {

@@ -71,6 +71,10 @@ export class Game {
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             
+            // Initialize player progression system (persistent gold and inventory)
+            this.stateManager.playerGold = 0; // Start with 0 gold - must earn from loot sales
+            this.stateManager.playerInventory = []; // Start with no inventory items
+            
             // Initialize game loop timing
             this.lastTime = 0;
             this.isInitialized = false;

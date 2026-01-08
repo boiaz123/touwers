@@ -1,6 +1,6 @@
 /**
  * ResultsScreen - In-game modal for displaying level completion or game over results
- * Displays statistics and offers navigation options
+ * Displays statistics, loot, and offers navigation options
  */
 export class ResultsScreen {
     constructor(stateManager) {
@@ -12,10 +12,11 @@ export class ResultsScreen {
         this.selectedButtonIndex = 0;
         this.buttons = [];
         this.isShowing = false;
+        this.acquiredLoot = []; // Array of loot IDs acquired
 
         // Layout constants
-        this.modalWidth = 600;
-        this.modalHeight = 500;
+        this.modalWidth = 700;
+        this.modalHeight = 600;
         this.padding = 30;
         this.buttonWidth = 180;
         this.buttonHeight = 50;
@@ -26,10 +27,12 @@ export class ResultsScreen {
      * Show the results screen with specific data
      * @param {string} type - 'levelComplete' or 'gameOver'
      * @param {object} data - Game result data
+     * @param {array} acquiredLoot - Array of loot IDs acquired (optional)
      */
-    show(type, data) {
+    show(type, data, acquiredLoot = []) {
         this.resultType = type;
         this.resultData = data;
+        this.acquiredLoot = acquiredLoot;
         this.animationTime = 0;
         this.opacity = 0;
         this.isShowing = true;
@@ -77,6 +80,9 @@ export class ResultsScreen {
             this.stateManager.audioManager.stopMusic();
         }
         
+        // Transfer acquired loot to player inventory before leaving level
+        this.transferLootToInventory();
+        
         switch (action) {
             case 'nextLevel':
                 // Play settlement music and then go to level select
@@ -100,6 +106,38 @@ export class ResultsScreen {
                 }
                 this.stateManager.changeState('levelSelect');
                 break;
+        }
+    }
+
+    /**
+     * Transfer acquired loot from the level to player's inventory
+     */
+    transferLootToInventory() {
+        if (!this.acquiredLoot || this.acquiredLoot.length === 0) {
+            return; // No loot to transfer
+        }
+
+        // Initialize inventory if not present
+        if (!this.stateManager.playerInventory) {
+            this.stateManager.playerInventory = [];
+        }
+
+        // Add each loot item to inventory, combining duplicates
+        for (const lootId of this.acquiredLoot) {
+            const existingItem = this.stateManager.playerInventory.find(
+                item => item.lootId === lootId
+            );
+
+            if (existingItem) {
+                // Item already in inventory, increment count
+                existingItem.count = (existingItem.count || 1) + 1;
+            } else {
+                // New item, add to inventory
+                this.stateManager.playerInventory.push({
+                    lootId: lootId,
+                    count: 1
+                });
+            }
         }
     }
 
@@ -151,6 +189,39 @@ export class ResultsScreen {
             width: this.buttonWidth,
             height: this.buttonHeight
         };
+    }
+
+    /**
+     * Get loot information by ID
+     */
+    getLootInfo(lootId) {
+        const lootData = {
+            'iron-sword': { name: 'Iron Sword', type: 'sword' },
+            'steel-sword': { name: 'Steel Sword', type: 'sword' },
+            'longsword': { name: 'Longsword', type: 'sword' },
+            'enchanted-blade': { name: 'Enchanted Blade', type: 'sword' },
+            'iron-axe': { name: 'Iron Axe', type: 'weapon' },
+            'battle-axe': { name: 'Battle Axe', type: 'weapon' },
+            'great-axe': { name: 'Great Axe', type: 'weapon' },
+            'warhammer': { name: 'Warhammer', type: 'weapon' },
+            'wooden-bow': { name: 'Wooden Bow', type: 'weapon' },
+            'longbow': { name: 'Longbow', type: 'weapon' },
+            'elven-bow': { name: 'Elven Bow', type: 'weapon' },
+            'leather-helm': { name: 'Leather Helm', type: 'armor' },
+            'iron-helm': { name: 'Iron Helm', type: 'armor' },
+            'dragon-helm': { name: 'Dragon Helm', type: 'armor' },
+            'leather-chest': { name: 'Leather Chest Plate', type: 'armor' },
+            'iron-chest': { name: 'Iron Chest Plate', type: 'armor' },
+            'mithril-chest': { name: 'Mithril Chest Plate', type: 'armor' },
+            'gauntlets': { name: 'Iron Gauntlets', type: 'armor' },
+            'steel-boots': { name: 'Steel Boots', type: 'armor' },
+            'gold-ring': { name: 'Gold Ring', type: 'treasure' },
+            'ruby-amulet': { name: 'Ruby Amulet', type: 'treasure' },
+            'crystal-orb': { name: 'Crystal Orb', type: 'treasure' },
+            'ancient-coin': { name: 'Ancient Coin', type: 'treasure' },
+            'gem-cluster': { name: 'Gem Cluster', type: 'treasure' }
+        };
+        return lootData[lootId] || { name: 'Unknown Item', type: 'unknown' };
     }
 
     /**
@@ -212,14 +283,14 @@ export class ResultsScreen {
         }
 
         // Stats section
-        const statsY = titleY + 60;
-        ctx.font = '18px serif';
+        const statsY = titleY + 50;
+        ctx.font = '16px serif';
         ctx.textAlign = 'left';
         ctx.fillStyle = '#c9a876';
 
         if (this.resultData) {
             const statsX = modalX + this.padding;
-            const lineHeight = 28;
+            const lineHeight = 24;
             let currentY = statsY;
 
             // Display different stats based on result type
@@ -237,6 +308,39 @@ export class ResultsScreen {
                 ctx.fillText(`Wave Reached: ${this.resultData.wave}`, statsX, currentY);
                 currentY += lineHeight;
                 ctx.fillText(`Gold Earned: ${this.resultData.gold}`, statsX, currentY);
+            }
+
+            // Loot section if any loot was acquired
+            if (this.acquiredLoot && this.acquiredLoot.length > 0) {
+                currentY += lineHeight + 10;
+                ctx.font = 'bold 16px serif';
+                ctx.fillStyle = '#ffd700';
+                ctx.fillText('LOOT ACQUIRED:', statsX, currentY);
+                
+                currentY += lineHeight;
+                ctx.font = '14px serif';
+                ctx.fillStyle = '#c9a876';
+                
+                // Display loot in a grid (2 columns)
+                const lootX = statsX;
+                const lootColumnX2 = statsX + 300;
+                let lootIndex = 0;
+                let lootLineY = currentY;
+                
+                for (const lootId of this.acquiredLoot) {
+                    const loot = this.getLootInfo(lootId);
+                    if (loot) {
+                        const displayText = `• ${loot.name}`;
+                        const xPos = lootIndex % 2 === 0 ? lootX : lootColumnX2;
+                        
+                        if (lootIndex % 2 === 0 && lootIndex > 0) {
+                            lootLineY += lineHeight - 4;
+                        }
+                        
+                        ctx.fillText(displayText, xPos, lootLineY);
+                        lootIndex++;
+                    }
+                }
             }
         }
 

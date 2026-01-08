@@ -15,6 +15,7 @@ export class BeefyEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
+        this.lootDropChance = 0.05; // 35% chance to drop loot (higher than basic)
         this.tunicColor = this.getRandomTunicColor();
         this.sizeMultiplier = 1.2;
         

@@ -9,6 +9,7 @@ import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
 import { PerformanceMonitor } from '../PerformanceMonitor.js';
 import { ResultsScreen } from './ResultsScreen.js';
+import { LootManager } from '../../entities/loot/LootManager.js';
 
 export class GameplayState {
     constructor(stateManager) {
@@ -17,6 +18,7 @@ export class GameplayState {
         this.level = null;
         this.towerManager = null;
         this.enemyManager = null;
+        this.lootManager = new LootManager();
         this.uiManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
@@ -201,6 +203,9 @@ export class GameplayState {
         
         // Create new enemy manager with the properly initialized path
         this.enemyManager = new EnemyManager(this.level.path);
+        
+        // Reset loot manager for new level
+        this.lootManager = new LootManager();
         
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
@@ -1154,6 +1159,13 @@ export class GameplayState {
             return;
         }
         
+        // Check if player clicked on a loot bag FIRST (highest priority UI interaction)
+        const clickedLoot = this.lootManager.getLootAtPosition(x, y);
+        if (clickedLoot) {
+            this.lootManager.collectLoot(clickedLoot);
+            return; // Don't proceed to other interactions
+        }
+        
         // Only show menus if not in placement mode
         const clickResult = this.towerManager.handleClick(x, y, this.level.resolutionManager);
         
@@ -1392,7 +1404,7 @@ export class GameplayState {
             wavesCompleted: this.maxWavesForLevel,
             health: this.gameState.health,
             gold: this.gameState.gold
-        });
+        }, this.lootManager.getCollectedLoot());
     }
     
     update(deltaTime) {
@@ -1520,6 +1532,11 @@ export class GameplayState {
             if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
         }
         
+        // Update loot bags
+        if (this.lootManager) {
+            this.lootManager.update(deltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
+        }
+        
         // Deselect all towers and buildings during normal gameplay (no menu open)
         // This ensures the radius only shows when a tower is selected via clicking
         if (this.towerManager && !this.uiManager.activeMenuType) {
@@ -1640,8 +1657,16 @@ export class GameplayState {
             return;
         }
         
-        // Only update UI if gold actually changed
-        const goldFromEnemies = this.enemyManager.removeDeadEnemies();
+        // Remove dead enemies and handle loot drops
+        const deathResult = this.enemyManager.removeDeadEnemies();
+        const goldFromEnemies = deathResult.totalGold;
+        const lootDrops = deathResult.lootDrops || [];
+        
+        // Spawn loot bags on the ground
+        for (const lootDrop of lootDrops) {
+            this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId);
+        }
+        
         if (goldFromEnemies > 0) {
             this.gameState.gold += goldFromEnemies;
             // Only update UI when gold changes, not every time
@@ -1696,6 +1721,9 @@ export class GameplayState {
         this.level.render(ctx);
         this.towerManager.render(ctx);
         this.enemyManager.render(ctx);
+        
+        // Render loot bags
+        this.lootManager.render(ctx);
         
         // Render castle on top of buildings/towers to ensure it appears in front
         // This prevents buildings placed "behind" the castle from appearing on top of it
