@@ -22,7 +22,7 @@ export class ResultsScreen {
             "This defeat is but a lesson. Learn it well.",
             "Regroup. Refocus. Rise stronger than before.",
             "The path to legend runs through valleys of failure.",
-            "Your enemies celebrate now—make them regret it later.",
+            "Your enemies celebrate now, make them regret it later.",
             "Defeat tests your resolve. Prove you have it.",
             "The realm needs a leader who rises after falling."
         ];
@@ -32,8 +32,8 @@ export class ResultsScreen {
         this.animationPhase = 'victory'; // victory, countup, loot, buttons
         this.phaseTime = 0;
         this.phaseDuration = {
-            victory: 3.0,    // Sword clash VICTORY animation - 3 seconds
-            countup: 4.0,    // Slower score counting
+            victory: 2.0,    // Sword clash VICTORY animation - 3 seconds
+            countup: 3.0,    // Slower score counting
             loot: 4.0,       // Slower loot reveal
             buttons: 0.5
         };

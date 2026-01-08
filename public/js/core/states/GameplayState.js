@@ -48,6 +48,9 @@ export class GameplayState {
         // NEW: Pause system
         this.isPaused = false;
         
+        // Track real time for results screen (independent of game speed)
+        this.lastRealTime = 0;
+        
         // Performance Monitor
         this.performanceMonitor = new PerformanceMonitor();
         this.performanceMonitor.enable(); // Enable by default to show FPS
@@ -76,6 +79,19 @@ export class GameplayState {
             return 0;
         }
         return deltaTime * this.gameSpeed;
+    }
+
+    getRealDeltaTime(adjustedDeltaTime) {
+        // Reverse the game speed adjustment to get real deltaTime
+        // This is used for results screen and other UI that should run in real time
+        if (this.isPaused) {
+            // If paused, use the adjusted time (which would be 0) 
+            // but we still want results screen to update
+            // So we estimate based on last adjustment
+            return adjustedDeltaTime > 0 ? adjustedDeltaTime / this.gameSpeed : 0.016;
+        }
+        // Reverse the speed multiplier to get real time
+        return adjustedDeltaTime / this.gameSpeed;
     }
 
     togglePause() {
@@ -1421,9 +1437,10 @@ export class GameplayState {
     }
     
     update(deltaTime) {
-        // Update results screen if showing
+        // Update results screen if showing (using real time, not game-speed-adjusted time)
         if (this.resultsScreen && this.resultsScreen.isShowing) {
-            this.resultsScreen.update(deltaTime);
+            const realDeltaTime = this.getRealDeltaTime(deltaTime);
+            this.resultsScreen.update(realDeltaTime);
             return; // Don't update game state while results are showing
         }
         
