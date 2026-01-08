@@ -13,9 +13,13 @@ export class LootManager {
 
     /**
      * Spawn a loot bag at the given position
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {string} lootId - ID of the loot item
+     * @param {boolean} isRare - Whether this is a rare legendary loot drop
      */
-    spawnLoot(x, y, lootId) {
-        const bag = new LootBag(x, y, lootId);
+    spawnLoot(x, y, lootId, isRare = false) {
+        const bag = new LootBag(x, y, lootId, isRare);
         this.lootBags.push(bag);
         return bag;
     }

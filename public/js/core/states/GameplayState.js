@@ -28,6 +28,11 @@ export class GameplayState {
         this.waveCompleted = false;
         this.superWeaponLab = null;
         
+        // Statistics tracking for results screen
+        this.enemiesDefeated = 0;
+        this.goldEarnedThisLevel = 0;
+        this.startingGold = 100;
+        
         // Results screen for level completion / game over
         this.resultsScreen = new ResultsScreen(stateManager);
         
@@ -155,6 +160,11 @@ export class GameplayState {
             this.currentLevel = levelInfo.id;
             this.levelType = levelInfo.type || 'campaign';
             this.levelName = levelInfo.name || 'Unknown Level';
+            
+            // Track starting gold for results screen
+            this.startingGold = this.gameState.gold;
+            this.goldEarnedThisLevel = 0;
+            this.enemiesDefeated = 0;
             
             // Configure level-specific settings
             this.isSandbox = (this.levelType === 'sandbox');
@@ -1403,7 +1413,10 @@ export class GameplayState {
             level: this.currentLevel,
             wavesCompleted: this.maxWavesForLevel,
             health: this.gameState.health,
-            gold: this.gameState.gold
+            gold: this.gameState.gold,
+            enemiesSlain: this.enemiesDefeated,
+            goldEarned: this.goldEarnedThisLevel,
+            currentGold: this.gameState.gold
         }, this.lootManager.getCollectedLoot());
     }
     
@@ -1662,9 +1675,13 @@ export class GameplayState {
         const goldFromEnemies = deathResult.totalGold;
         const lootDrops = deathResult.lootDrops || [];
         
+        // Track enemies defeated and gold earned
+        this.enemiesDefeated += lootDrops.length; // Count enemies that dropped loot
+        this.goldEarnedThisLevel += goldFromEnemies;
+        
         // Spawn loot bags on the ground
         for (const lootDrop of lootDrops) {
-            this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId);
+            this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
         }
         
         if (goldFromEnemies > 0) {
@@ -1710,7 +1727,10 @@ export class GameplayState {
         this.resultsScreen.show('gameOver', {
             level: this.currentLevel,
             wave: this.gameState.wave,
-            gold: this.gameState.gold
+            gold: this.gameState.gold,
+            enemiesSlain: this.enemiesDefeated,
+            goldEarned: this.goldEarnedThisLevel,
+            currentGold: this.gameState.gold
         });
     }
     

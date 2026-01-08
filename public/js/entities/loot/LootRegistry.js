@@ -10,28 +10,40 @@ export class LootRegistry {
             type: 'sword',
             rarity: 'common',
             sellValue: 50,
-            description: 'A sturdy iron blade'
+            description: 'A sturdy iron blade',
+            emblem: '⚔'
         },
         'steel-sword': {
             name: 'Steel Sword',
             type: 'sword',
             rarity: 'uncommon',
             sellValue: 100,
-            description: 'A well-crafted steel sword'
+            description: 'A well-crafted steel sword',
+            emblem: '⚔'
         },
         'longsword': {
             name: 'Longsword',
             type: 'sword',
             rarity: 'rare',
             sellValue: 200,
-            description: 'A mighty longsword'
+            description: 'A mighty longsword',
+            emblem: '⚔'
         },
         'enchanted-blade': {
             name: 'Enchanted Blade',
             type: 'sword',
             rarity: 'epic',
             sellValue: 400,
-            description: 'A magically enhanced sword'
+            description: 'A magically enhanced sword',
+            emblem: '✨'
+        },
+        'excalibur': {
+            name: 'Excalibur',
+            type: 'sword',
+            rarity: 'legendary',
+            sellValue: 750,
+            description: 'The legendary blade of kings',
+            emblem: '👑'
         },
         
         // Axes & Blunt Weapons
@@ -40,28 +52,32 @@ export class LootRegistry {
             type: 'weapon',
             rarity: 'common',
             sellValue: 60,
-            description: 'A heavy iron axe'
+            description: 'A heavy iron axe',
+            emblem: '🪓'
         },
         'battle-axe': {
             name: 'Battle Axe',
             type: 'weapon',
             rarity: 'uncommon',
             sellValue: 120,
-            description: 'A warrior\'s battle axe'
+            description: 'A warrior\'s battle axe',
+            emblem: '🪓'
         },
         'great-axe': {
             name: 'Great Axe',
             type: 'weapon',
             rarity: 'rare',
             sellValue: 220,
-            description: 'A massive two-handed axe'
+            description: 'A massive two-handed axe',
+            emblem: '🪓'
         },
         'warhammer': {
             name: 'Warhammer',
             type: 'weapon',
             rarity: 'rare',
             sellValue: 210,
-            description: 'A devastating warhammer'
+            description: 'A devastating warhammer',
+            emblem: '🔨'
         },
         
         // Bows & Ranged
@@ -70,21 +86,24 @@ export class LootRegistry {
             type: 'weapon',
             rarity: 'common',
             sellValue: 40,
-            description: 'A simple wooden bow'
+            description: 'A simple wooden bow',
+            emblem: '🏹'
         },
         'longbow': {
             name: 'Longbow',
             type: 'weapon',
             rarity: 'uncommon',
             sellValue: 110,
-            description: 'A powerful longbow'
+            description: 'A powerful longbow',
+            emblem: '🏹'
         },
         'elven-bow': {
             name: 'Elven Bow',
             type: 'weapon',
             rarity: 'rare',
             sellValue: 190,
-            description: 'Crafted by master elves'
+            description: 'Crafted by master elves',
+            emblem: '🏹'
         },
         
         // Armor Pieces
@@ -93,56 +112,64 @@ export class LootRegistry {
             type: 'armor',
             rarity: 'common',
             sellValue: 45,
-            description: 'A leather-bound helmet'
+            description: 'A leather-bound helmet',
+            emblem: '🪖'
         },
         'iron-helm': {
             name: 'Iron Helm',
             type: 'armor',
             rarity: 'uncommon',
             sellValue: 95,
-            description: 'A sturdy iron helmet'
+            description: 'A sturdy iron helmet',
+            emblem: '🪖'
         },
         'dragon-helm': {
             name: 'Dragon Helm',
             type: 'armor',
             rarity: 'epic',
             sellValue: 380,
-            description: 'Forged from dragon scales'
+            description: 'Forged from dragon scales',
+            emblem: '🐉'
         },
         'leather-chest': {
             name: 'Leather Chest Plate',
             type: 'armor',
             rarity: 'common',
             sellValue: 70,
-            description: 'Leather body armor'
+            description: 'Leather body armor',
+            emblem: '🛡'
         },
         'iron-chest': {
             name: 'Iron Chest Plate',
             type: 'armor',
             rarity: 'uncommon',
             sellValue: 140,
-            description: 'Iron plate body armor'
+            description: 'Iron plate body armor',
+            emblem: '🛡'
         },
         'mithril-chest': {
             name: 'Mithril Chest Plate',
             type: 'armor',
             rarity: 'rare',
             sellValue: 280,
-            description: 'Legendary mithril plate'
+            description: 'Legendary mithril plate',
+            emblem: '⚡'
         },
         'gauntlets': {
             name: 'Iron Gauntlets',
             type: 'armor',
             rarity: 'uncommon',
             sellValue: 85,
-            description: 'Iron hand protection'
+            description: 'Iron hand protection',
+            emblem: '👊'
         },
         'steel-boots': {
             name: 'Steel Boots',
             type: 'armor',
             rarity: 'uncommon',
             sellValue: 75,
-            description: 'Reinforced steel footwear'
+            description: 'Reinforced steel footwear',
+            emblem: '👢'
         },
         
         // Special Items & Treasures
@@ -151,35 +178,90 @@ export class LootRegistry {
             type: 'treasure',
             rarity: 'rare',
             sellValue: 250,
-            description: 'A precious gold ring'
+            description: 'A precious gold ring',
+            emblem: '💍'
         },
         'ruby-amulet': {
             name: 'Ruby Amulet',
             type: 'treasure',
             rarity: 'epic',
             sellValue: 350,
-            description: 'An amulet set with rubies'
+            description: 'An amulet set with rubies',
+            emblem: '💎'
         },
         'crystal-orb': {
             name: 'Crystal Orb',
             type: 'treasure',
             rarity: 'epic',
             sellValue: 360,
-            description: 'A magical crystal orb'
+            description: 'A magical crystal orb',
+            emblem: '🔮'
         },
         'ancient-coin': {
             name: 'Ancient Coin',
             type: 'treasure',
             rarity: 'uncommon',
             sellValue: 130,
-            description: 'A coin from ages past'
+            description: 'A coin from ages past',
+            emblem: '🪙'
         },
         'gem-cluster': {
             name: 'Gem Cluster',
             type: 'treasure',
             rarity: 'rare',
             sellValue: 270,
-            description: 'A cluster of precious gems'
+            description: 'A cluster of precious gems',
+            emblem: '💎'
+        },
+
+        // Legendary Rare Loot Items
+        'dragon-scales': {
+            name: 'Dragon Scales',
+            type: 'treasure',
+            rarity: 'legendary',
+            sellValue: 800,
+            description: 'Scales from an ancient dragon',
+            emblem: '🐉'
+        },
+        'phoenix-tear': {
+            name: 'Phoenix Tear',
+            type: 'treasure',
+            rarity: 'legendary',
+            sellValue: 900,
+            description: 'A tear from a mythical phoenix',
+            emblem: '🔥'
+        },
+        'cursed-ring': {
+            name: 'Cursed Ring',
+            type: 'treasure',
+            rarity: 'legendary',
+            sellValue: 850,
+            description: 'A ring cursed with dark magic',
+            emblem: '⚫'
+        },
+        'void-gem': {
+            name: 'Void Gem',
+            type: 'treasure',
+            rarity: 'legendary',
+            sellValue: 920,
+            description: 'A gem from the void itself',
+            emblem: '🌑'
+        },
+        'shadow-cloak': {
+            name: 'Shadow Cloak',
+            type: 'armor',
+            rarity: 'legendary',
+            sellValue: 1000,
+            description: 'A cloak woven from pure shadow',
+            emblem: '👻'
+        },
+        'holy-relic': {
+            name: 'Holy Relic',
+            type: 'treasure',
+            rarity: 'legendary',
+            sellValue: 1100,
+            description: 'An ancient relic blessed by gods',
+            emblem: '✨'
         }
     };
 

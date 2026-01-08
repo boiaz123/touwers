@@ -1,106 +1,143 @@
+import { LootRegistry } from '../../entities/loot/LootRegistry.js';
+
 /**
- * ResultsScreen - In-game modal for displaying level completion or game over results
- * Displays statistics, loot, and offers navigation options
+ * ResultsScreen - In-game modal for displaying level completion with animations
+ * Features: Count-up stats, sequential loot reveal, dopamine-driven animations
  */
 export class ResultsScreen {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.animationTime = 0;
-        this.opacity = 0;
+        this.isShowing = false;
         this.resultType = null; // 'levelComplete' or 'gameOver'
         this.resultData = null;
-        this.selectedButtonIndex = 0;
-        this.buttons = [];
-        this.isShowing = false;
         this.acquiredLoot = []; // Array of loot IDs acquired
 
+        // Animation phases
+        this.animationPhase = 'intro'; // intro, countup, loot, buttons
+        this.phaseTime = 0;
+        this.phaseDuration = {
+            intro: 0.5,
+            countup: 2.5,
+            loot: 2.5,
+            buttons: 0.5
+        };
+        
         // Layout constants
-        this.modalWidth = 700;
-        this.modalHeight = 600;
-        this.padding = 30;
-        this.buttonWidth = 180;
-        this.buttonHeight = 50;
-        this.buttonGap = 30;
+        this.modalWidth = 800;
+        this.modalHeight = 700;
+        this.padding = 40;
+        this.buttonWidth = 200;
+        this.buttonHeight = 60;
+        this.buttonGap = 40;
+
+        // Stats for animation
+        this.stats = {
+            enemiesSlain: 0,
+            goldEarned: 0,
+            goldRemaining: 0,
+            displayEnemiesSlain: 0,
+            displayGoldEarned: 0,
+            displayGoldRemaining: 0
+        };
+
+        // Loot animation state
+        this.lootAnimationIndex = 0;
+        this.lootDisplayItems = []; // { lootId, x, y, animationTime }
+
+        // Button state
+        this.buttons = [];
+        this.selectedButtonIndex = 0;
+        this.showButtons = false;
+
+        // Particle effects
+        this.particles = [];
     }
 
     /**
      * Show the results screen with specific data
-     * @param {string} type - 'levelComplete' or 'gameOver'
-     * @param {object} data - Game result data
-     * @param {array} acquiredLoot - Array of loot IDs acquired (optional)
      */
     show(type, data, acquiredLoot = []) {
         this.resultType = type;
         this.resultData = data;
         this.acquiredLoot = acquiredLoot;
-        this.animationTime = 0;
-        this.opacity = 0;
         this.isShowing = true;
+        this.animationPhase = 'intro';
+        this.phaseTime = 0;
+        this.showButtons = false;
+        this.lootAnimationIndex = 0;
+        this.particles = [];
         this.selectedButtonIndex = 0;
 
-        // Setup buttons based on result type
+        // Extract stats from result data
+        this.stats = {
+            enemiesSlain: data.enemiesSlain || 0,
+            goldEarned: data.goldEarned || 0,
+            goldRemaining: data.currentGold || 0,
+            displayEnemiesSlain: 0,
+            displayGoldEarned: 0,
+            displayGoldRemaining: 0
+        };
+
+        // Setup buttons
         if (type === 'levelComplete') {
             this.buttons = [
-                { label: 'NEXT LEVEL', action: 'nextLevel' },
-                { label: 'LEVEL SELECT', action: 'levelSelect' }
+                { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
+                { label: 'NEXT LEVEL', action: 'nextLevel' }
             ];
-            // Stop level music and play victory tune
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.stopMusic();
-                this.stateManager.audioManager.playSFX('victory-tune');
-            }
         } else {
             this.buttons = [
                 { label: 'RETRY', action: 'retry' },
                 { label: 'LEVEL SELECT', action: 'levelSelect' }
             ];
-            // Stop level music and play defeat tune
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.stopMusic();
-                this.stateManager.audioManager.playSFX('defeat-tune');
-            }
+        }
+
+        // Play victory music
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.stopMusic();
+            this.stateManager.audioManager.playSFX('victory-tune');
         }
     }
 
     /**
-     * Hide the results screen and execute the selected action
+     * Hide the results screen and execute action
      */
     execute(action) {
         this.isShowing = false;
         
-        // Stop victory/defeat tune immediately
+        // Stop music
         if (this.stateManager.audioManager) {
-            // Stop the SFX tune
             if (this.stateManager.audioManager.currentSFXTune) {
                 this.stateManager.audioManager.currentSFXTune.pause();
                 this.stateManager.audioManager.currentSFXTune.currentTime = 0;
                 this.stateManager.audioManager.currentSFXTune = null;
             }
-            // Also stop main music just in case
             this.stateManager.audioManager.stopMusic();
         }
         
-        // Transfer acquired loot to player inventory before leaving level
+        // Transfer loot to inventory
         this.transferLootToInventory();
         
+        // Execute action
         switch (action) {
-            case 'nextLevel':
-                // Play settlement music and then go to level select
+            case 'settlement':
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
-                // Increment level for next level selection
+                this.stateManager.changeState('settlementHub');
+                break;
+            case 'nextLevel':
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playRandomSettlementTheme();
+                }
                 this.stateManager.selectedLevelInfo = {
                     level: this.resultData.level + 1
                 };
                 this.stateManager.changeState('levelSelect');
                 break;
             case 'retry':
-                // Retry current level - don't increment
                 this.stateManager.changeState('game');
                 break;
             case 'levelSelect':
-                // Play settlement music and then go to level select
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
@@ -110,29 +147,25 @@ export class ResultsScreen {
     }
 
     /**
-     * Transfer acquired loot from the level to player's inventory
+     * Transfer loot to inventory
      */
     transferLootToInventory() {
         if (!this.acquiredLoot || this.acquiredLoot.length === 0) {
-            return; // No loot to transfer
+            return;
         }
 
-        // Initialize inventory if not present
         if (!this.stateManager.playerInventory) {
             this.stateManager.playerInventory = [];
         }
 
-        // Add each loot item to inventory, combining duplicates
         for (const lootId of this.acquiredLoot) {
             const existingItem = this.stateManager.playerInventory.find(
                 item => item.lootId === lootId
             );
 
             if (existingItem) {
-                // Item already in inventory, increment count
                 existingItem.count = (existingItem.count || 1) + 1;
             } else {
-                // New item, add to inventory
                 this.stateManager.playerInventory.push({
                     lootId: lootId,
                     count: 1
@@ -142,11 +175,121 @@ export class ResultsScreen {
     }
 
     /**
-     * Handle keyboard navigation (if needed)
+     * Update animations
+     */
+    update(deltaTime) {
+        if (!this.isShowing) return;
+
+        this.phaseTime += deltaTime;
+
+        // Handle phase transitions
+        if (this.animationPhase === 'intro' && this.phaseTime >= this.phaseDuration.intro) {
+            this.animationPhase = 'countup';
+            this.phaseTime = 0;
+        } else if (this.animationPhase === 'countup' && this.phaseTime >= this.phaseDuration.countup) {
+            this.animationPhase = 'loot';
+            this.phaseTime = 0;
+            this.lootAnimationIndex = 0;
+        } else if (this.animationPhase === 'loot' && this.phaseTime >= this.phaseDuration.loot) {
+            this.animationPhase = 'buttons';
+            this.phaseTime = 0;
+            this.showButtons = true;
+        }
+
+        // Update count-up animations
+        if (this.animationPhase === 'countup') {
+            const progress = this.phaseTime / this.phaseDuration.countup;
+            this.stats.displayEnemiesSlain = Math.floor(this.stats.enemiesSlain * progress);
+            this.stats.displayGoldEarned = Math.floor(this.stats.goldEarned * progress);
+            this.stats.displayGoldRemaining = Math.floor(this.stats.goldRemaining * progress);
+        } else if (this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
+            this.stats.displayEnemiesSlain = this.stats.enemiesSlain;
+            this.stats.displayGoldEarned = this.stats.goldEarned;
+            this.stats.displayGoldRemaining = this.stats.goldRemaining;
+        }
+
+        // Update loot animations
+        if (this.animationPhase === 'loot') {
+            const itemsPerSecond = 4;
+            const expectedIndex = Math.floor(this.phaseTime * itemsPerSecond);
+            
+            while (this.lootAnimationIndex < expectedIndex && this.lootAnimationIndex < this.acquiredLoot.length) {
+                this.spawnLootAnimation(this.lootAnimationIndex);
+                this.lootAnimationIndex++;
+            }
+        }
+
+        // Update particle effects
+        this.particles = this.particles.filter(p => {
+            p.life -= deltaTime;
+            return p.life > 0;
+        });
+
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx * deltaTime;
+            p.y += p.vy * deltaTime;
+            p.vy += p.gravity * deltaTime;
+        }
+    }
+
+    /**
+     * Spawn loot reveal animation
+     */
+    spawnLootAnimation(index) {
+        const lootId = this.acquiredLoot[index];
+        if (!lootId) return;
+
+        // Play collect sound
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playSFX('coin-collect');
+        }
+
+        // Create particles
+        const canvas = this.stateManager.canvas;
+        const modalX = (canvas.width - this.modalWidth) / 2;
+        const baseY = (canvas.height - this.modalHeight) / 2 + 200;
+        const centerX = modalX + this.modalWidth / 2;
+        
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            this.particles.push({
+                x: centerX,
+                y: baseY,
+                vx: Math.cos(angle) * 200,
+                vy: Math.sin(angle) * 200,
+                gravity: 300,
+                life: 0.5,
+                maxLife: 0.5,
+                color: this.getRarityColor(lootId)
+            });
+        }
+    }
+
+    /**
+     * Get rarity color for loot
+     */
+    getRarityColor(lootId) {
+        const lootInfo = LootRegistry.getLootType(lootId);
+        if (!lootInfo) return '#FFD700';
+
+        const rarity = lootInfo.rarity;
+        const colors = {
+            'common': '#C9A961',
+            'uncommon': '#4FC3F7',
+            'rare': '#AB47BC',
+            'epic': '#FF6F00',
+            'legendary': '#FFD700'
+        };
+        return colors[rarity] || '#FFD700';
+    }
+
+    /**
+     * Handle keyboard input
      */
     handleKeyPress(key) {
-        if (!this.isShowing) return;
-        
+        if (!this.isShowing || !this.showButtons) return;
+
         if (key === 'ArrowLeft') {
             this.selectedButtonIndex = Math.max(0, this.selectedButtonIndex - 1);
         } else if (key === 'ArrowRight') {
@@ -157,10 +300,10 @@ export class ResultsScreen {
     }
 
     /**
-     * Handle click on results modal
+     * Handle click on modal
      */
     handleClick(x, y) {
-        if (!this.isShowing || this.opacity < 0.8) return;
+        if (!this.isShowing || !this.showButtons) return;
 
         this.buttons.forEach((button, index) => {
             const pos = this.getButtonPosition(index);
@@ -172,13 +315,13 @@ export class ResultsScreen {
     }
 
     /**
-     * Calculate button position
+     * Get button position
      */
     getButtonPosition(index) {
         const canvas = this.stateManager.canvas;
         const modalX = (canvas.width - this.modalWidth) / 2;
         const modalY = (canvas.height - this.modalHeight) / 2;
-        
+
         const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
         const buttonsStartX = modalX + (this.modalWidth - totalButtonWidth) / 2;
         const buttonsY = modalY + this.modalHeight - this.padding - this.buttonHeight;
@@ -192,191 +335,237 @@ export class ResultsScreen {
     }
 
     /**
-     * Get loot information by ID
-     */
-    getLootInfo(lootId) {
-        const lootData = {
-            'iron-sword': { name: 'Iron Sword', type: 'sword' },
-            'steel-sword': { name: 'Steel Sword', type: 'sword' },
-            'longsword': { name: 'Longsword', type: 'sword' },
-            'enchanted-blade': { name: 'Enchanted Blade', type: 'sword' },
-            'iron-axe': { name: 'Iron Axe', type: 'weapon' },
-            'battle-axe': { name: 'Battle Axe', type: 'weapon' },
-            'great-axe': { name: 'Great Axe', type: 'weapon' },
-            'warhammer': { name: 'Warhammer', type: 'weapon' },
-            'wooden-bow': { name: 'Wooden Bow', type: 'weapon' },
-            'longbow': { name: 'Longbow', type: 'weapon' },
-            'elven-bow': { name: 'Elven Bow', type: 'weapon' },
-            'leather-helm': { name: 'Leather Helm', type: 'armor' },
-            'iron-helm': { name: 'Iron Helm', type: 'armor' },
-            'dragon-helm': { name: 'Dragon Helm', type: 'armor' },
-            'leather-chest': { name: 'Leather Chest Plate', type: 'armor' },
-            'iron-chest': { name: 'Iron Chest Plate', type: 'armor' },
-            'mithril-chest': { name: 'Mithril Chest Plate', type: 'armor' },
-            'gauntlets': { name: 'Iron Gauntlets', type: 'armor' },
-            'steel-boots': { name: 'Steel Boots', type: 'armor' },
-            'gold-ring': { name: 'Gold Ring', type: 'treasure' },
-            'ruby-amulet': { name: 'Ruby Amulet', type: 'treasure' },
-            'crystal-orb': { name: 'Crystal Orb', type: 'treasure' },
-            'ancient-coin': { name: 'Ancient Coin', type: 'treasure' },
-            'gem-cluster': { name: 'Gem Cluster', type: 'treasure' }
-        };
-        return lootData[lootId] || { name: 'Unknown Item', type: 'unknown' };
-    }
-
-    /**
-     * Update animation
-     */
-    update(deltaTime) {
-        if (!this.isShowing) return;
-
-        this.animationTime += deltaTime;
-        // Fade in over 0.3 seconds
-        this.opacity = Math.min(1, this.animationTime / 0.3);
-    }
-
-    /**
-     * Render the results modal
+     * Render the results screen
      */
     render(ctx) {
-        if (!this.isShowing || this.opacity === 0) return;
+        if (!this.isShowing) return;
 
         const canvas = this.stateManager.canvas;
         const modalX = (canvas.width - this.modalWidth) / 2;
         const modalY = (canvas.height - this.modalHeight) / 2;
 
-        // Semi-transparent background overlay
-        ctx.globalAlpha = this.opacity * 0.7;
-        ctx.fillStyle = '#000000';
+        // Draw semi-transparent background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Modal background with border
-        ctx.globalAlpha = this.opacity;
-        
-        // Gradient background
-        const gradient = ctx.createLinearGradient(modalX, modalY, modalX, modalY + this.modalHeight);
-        gradient.addColorStop(0, '#2a2015');
-        gradient.addColorStop(1, '#1a1010');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(modalX, modalY, this.modalWidth, this.modalHeight);
-
-        // Golden border
-        ctx.strokeStyle = '#d4af37';
+        // Draw modal background
+        ctx.fillStyle = '#2A2A2A';
+        ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 3;
+        ctx.fillRect(modalX, modalY, this.modalWidth, this.modalHeight);
         ctx.strokeRect(modalX, modalY, this.modalWidth, this.modalHeight);
 
-        // Inner border decoration
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(modalX + 2, modalY + 2, this.modalWidth - 4, this.modalHeight - 4);
-
-        // Title
-        ctx.fillStyle = '#d4af37';
-        ctx.font = 'bold 32px serif';
-        ctx.textAlign = 'center';
-        const titleY = modalY + this.padding + 30;
+        // Draw content based on phase
+        const introProgress = Math.min(this.phaseTime / this.phaseDuration.intro, 1);
         
-        if (this.resultType === 'levelComplete') {
-            ctx.fillText('VICTORY!', canvas.width / 2, titleY);
+        if (this.animationPhase === 'intro') {
+            this.renderIntroAnimation(ctx, modalX, modalY, introProgress);
         } else {
-            ctx.fillText('GAME OVER', canvas.width / 2, titleY);
+            this.renderTitle(ctx, modalX, modalY);
+            this.renderStats(ctx, modalX, modalY);
+            
+            if (this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
+                this.renderLoot(ctx, modalX, modalY);
+            }
+            
+            if (this.showButtons) {
+                this.renderButtons(ctx, modalX, modalY);
+            }
         }
 
-        // Stats section
-        const statsY = titleY + 50;
-        ctx.font = '16px serif';
+        // Draw particles
+        this.renderParticles(ctx);
+    }
+
+    /**
+     * Render intro animation (title zoom in)
+     */
+    renderIntroAnimation(ctx, modalX, modalY, progress) {
+        ctx.save();
+        ctx.translate(
+            modalX + this.modalWidth / 2,
+            modalY + this.modalHeight / 2
+        );
+
+        const scale = 0.5 + progress * 0.5;
+        const alpha = progress;
+
+        ctx.globalAlpha = alpha;
+        ctx.scale(scale, scale);
+
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('LEVEL COMPLETE!', 0, 0);
+
+        ctx.restore();
+    }
+
+    /**
+     * Render title
+     */
+    renderTitle(ctx, modalX, modalY) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(
+            this.resultType === 'levelComplete' ? 'LEVEL COMPLETE!' : 'MISSION FAILED',
+            modalX + this.modalWidth / 2,
+            modalY + this.padding
+        );
+    }
+
+    /**
+     * Render statistics with count-up animations
+     */
+    renderStats(ctx, modalX, modalY) {
+        const startY = modalY + this.padding + 60;
+        const lineHeight = 50;
+        const leftX = modalX + this.padding + 50;
+        const rightX = modalX + this.modalWidth / 2 + 50;
+
+        ctx.font = '18px Arial';
+        ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
-        ctx.fillStyle = '#c9a876';
 
-        if (this.resultData) {
-            const statsX = modalX + this.padding;
-            const lineHeight = 24;
-            let currentY = statsY;
+        // Enemies slain
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Enemies Slain:', leftX, startY);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(this.stats.displayEnemiesSlain.toString(), leftX + 200, startY);
 
-            // Display different stats based on result type
-            if (this.resultType === 'levelComplete') {
-                ctx.fillText(`Level: ${this.resultData.level}`, statsX, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Waves Completed: ${this.resultData.wavesCompleted}`, statsX, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Health Remaining: ${this.resultData.health}`, statsX, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Gold Earned: ${this.resultData.gold}`, statsX, currentY);
-            } else {
-                ctx.fillText(`Level: ${this.resultData.level}`, statsX, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Wave Reached: ${this.resultData.wave}`, statsX, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Gold Earned: ${this.resultData.gold}`, statsX, currentY);
+        // Gold earned
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Gold Earned:', rightX, startY);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(this.stats.displayGoldEarned.toString(), rightX + 150, startY);
+
+        // Gold remaining
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Gold Remaining:', leftX, startY + lineHeight);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(this.stats.displayGoldRemaining.toString(), leftX + 200, startY + lineHeight);
+
+        // Score (calculated from stats)
+        const score = Math.floor(
+            (this.stats.displayEnemiesSlain * 10) +
+            (this.stats.displayGoldEarned * 0.5)
+        );
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('Score:', rightX, startY + lineHeight);
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 24px Arial';
+        ctx.fillText(score.toString(), rightX + 150, startY + lineHeight);
+    }
+
+    /**
+     * Render loot items sequentially
+     */
+    renderLoot(ctx, modalX, modalY) {
+        const startY = modalY + this.padding + 180;
+        const itemsPerRow = 4;
+        const itemWidth = 160;
+        const itemHeight = 100;
+        const itemGap = 10;
+        const containerX = modalX + (this.modalWidth - (itemsPerRow * itemWidth + (itemsPerRow - 1) * itemGap)) / 2;
+
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let i = 0; i < this.acquiredLoot.length && i < 8; i++) {
+            const lootId = this.acquiredLoot[i];
+            const lootInfo = LootRegistry.getLootType(lootId);
+            if (!lootInfo) continue;
+
+            const row = Math.floor(i / itemsPerRow);
+            const col = i % itemsPerRow;
+            const itemX = containerX + col * (itemWidth + itemGap);
+            const itemY = startY + row * (itemHeight + itemGap);
+
+            // Draw loot tile
+            const rarityColor = this.getRarityColor(lootId);
+            ctx.fillStyle = rarityColor;
+            ctx.globalAlpha = 0.2;
+            ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
+            ctx.globalAlpha = 1;
+
+            ctx.strokeStyle = rarityColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(itemX, itemY, itemWidth, itemHeight);
+
+            // Draw emblem
+            ctx.fillStyle = rarityColor;
+            ctx.font = 'bold 32px Arial';
+            ctx.fillText(lootInfo.emblem || '?', itemX + itemWidth / 2, itemY + 20);
+
+            // Draw name
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '12px Arial';
+            const words = lootInfo.name.split(' ');
+            const textY = itemY + 45;
+            for (let j = 0; j < words.length; j++) {
+                ctx.fillText(words[j], itemX + itemWidth / 2, textY + j * 15);
             }
 
-            // Loot section if any loot was acquired
-            if (this.acquiredLoot && this.acquiredLoot.length > 0) {
-                currentY += lineHeight + 10;
-                ctx.font = 'bold 16px serif';
-                ctx.fillStyle = '#ffd700';
-                ctx.fillText('LOOT ACQUIRED:', statsX, currentY);
-                
-                currentY += lineHeight;
-                ctx.font = '14px serif';
-                ctx.fillStyle = '#c9a876';
-                
-                // Display loot in a grid (2 columns)
-                const lootX = statsX;
-                const lootColumnX2 = statsX + 300;
-                let lootIndex = 0;
-                let lootLineY = currentY;
-                
-                for (const lootId of this.acquiredLoot) {
-                    const loot = this.getLootInfo(lootId);
-                    if (loot) {
-                        const displayText = `• ${loot.name}`;
-                        const xPos = lootIndex % 2 === 0 ? lootX : lootColumnX2;
-                        
-                        if (lootIndex % 2 === 0 && lootIndex > 0) {
-                            lootLineY += lineHeight - 4;
-                        }
-                        
-                        ctx.fillText(displayText, xPos, lootLineY);
-                        lootIndex++;
-                    }
-                }
-            }
+            // Draw value
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`${lootInfo.sellValue}g`, itemX + itemWidth / 2, itemY + itemHeight - 12);
         }
+    }
 
-        // Buttons
-        ctx.globalAlpha = this.opacity;
+    /**
+     * Render buttons (appear after animations)
+     */
+    renderButtons(ctx, modalX, modalY) {
+        const buttonY = modalY + this.modalHeight - this.padding - this.buttonHeight;
+        const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
+        const startX = modalX + (this.modalWidth - totalButtonWidth) / 2;
+
         this.buttons.forEach((button, index) => {
-            const pos = this.getButtonPosition(index);
-            const isSelected = index === this.selectedButtonIndex;
-
+            const x = startX + index * (this.buttonWidth + this.buttonGap);
+            
             // Button background
-            const buttonGradient = ctx.createLinearGradient(pos.y, pos.y + pos.height, 0, 0);
-            if (isSelected) {
-                buttonGradient.addColorStop(0, '#8b7355');
-                buttonGradient.addColorStop(0.5, '#a89968');
-                buttonGradient.addColorStop(1, '#9a8960');
-            } else {
-                buttonGradient.addColorStop(0, '#5a4a3a');
-                buttonGradient.addColorStop(0.5, '#7a6a5a');
-                buttonGradient.addColorStop(1, '#6a5a4a');
-            }
-            ctx.fillStyle = buttonGradient;
-            ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
+            const isSelected = index === this.selectedButtonIndex;
+            ctx.fillStyle = isSelected ? '#FFD700' : '#4A4A4A';
+            ctx.fillRect(x, buttonY, this.buttonWidth, this.buttonHeight);
 
             // Button border
-            ctx.strokeStyle = isSelected ? '#ffd700' : '#d4af37';
+            ctx.strokeStyle = isSelected ? '#FFFFFF' : '#FFD700';
             ctx.lineWidth = isSelected ? 3 : 2;
-            ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
+            ctx.strokeRect(x, buttonY, this.buttonWidth, this.buttonHeight);
 
             // Button text
-            ctx.font = 'bold 16px serif';
+            ctx.fillStyle = isSelected ? '#000000' : '#FFD700';
+            ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = isSelected ? '#ffe700' : '#d4af37';
-            ctx.fillText(button.label, pos.x + pos.width / 2, pos.y + pos.height / 2);
+            ctx.fillText(button.label, x + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
         });
+    }
 
+    /**
+     * Render particle effects
+     */
+    renderParticles(ctx) {
+        ctx.globalAlpha = 1;
+        for (const p of this.particles) {
+            const alpha = p.life / p.maxLife;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.globalAlpha = 1;
     }
 }

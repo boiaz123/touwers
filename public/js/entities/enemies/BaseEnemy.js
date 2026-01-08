@@ -10,7 +10,8 @@ export class BaseEnemy {
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
-        this.lootDropChance = 0.03; // Base 25% chance to drop loot on death (0-1)
+        this.lootDropChance = 0.02; // 2% chance to drop normal loot on death (0-1)
+        this.rareLootDropChance = 0.005; // 0.5% chance to drop rare loot on death (0-1)
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
@@ -371,14 +372,21 @@ export class BaseEnemy {
 
     /**
      * Check if this enemy should drop loot
-     * Returns true if loot should be dropped
+     * Returns true if normal loot should be dropped
      */
     shouldDropLoot() {
         return Math.random() < this.lootDropChance;
     }
 
     /**
-     * Get random loot ID for this enemy
+     * Returns true if rare loot should be dropped (separate from normal loot)
+     */
+    shouldDropRareLoot() {
+        return Math.random() < this.rareLootDropChance;
+    }
+
+    /**
+     * Get random normal loot ID for this enemy
      * Can be overridden by subclasses for different loot tables
      */
     getDroppedLoot() {
@@ -412,6 +420,18 @@ export class BaseEnemy {
         } else {
             return commonLoot[Math.floor(Math.random() * commonLoot.length)];
         }
+    }
+
+    /**
+     * Get random rare loot ID - separate tier from normal drops
+     * Returns high-value legendary items
+     */
+    getDroppedRareLoot() {
+        const rareLoot = [
+            'excalibur', 'dragon-scales', 'phoenix-tear', 'cursed-ring',
+            'void-gem', 'shadow-cloak', 'holy-relic'
+        ];
+        return rareLoot[Math.floor(Math.random() * rareLoot.length)];
     }
     
     render(ctx) {

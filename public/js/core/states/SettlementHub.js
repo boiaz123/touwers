@@ -3180,6 +3180,8 @@ class UpgradesMenu {
                 id: inventoryItem.lootId,
                 name: lootInfo.name,
                 sellPrice: lootInfo.sellValue,
+                emblem: lootInfo.emblem,
+                rarity: lootInfo.rarity,
                 lootId: inventoryItem.lootId,
                 count: inventoryItem.count || 1,
                 hovered: false
@@ -3662,17 +3664,38 @@ class UpgradesMenu {
         ctx.fillStyle = item.hovered ? '#8b7a67' : '#4a3a2a';
         ctx.fillRect(x, y, width, 2);
         
-        // Border
-        ctx.strokeStyle = item.hovered ? '#ffd700' : '#5a4a3a';
+        // Border (color by rarity if sell tab)
+        let borderColor = item.hovered ? '#ffd700' : '#5a4a3a';
+        if (this.activeTab === 'sell' && item.rarity) {
+            const rarityColors = {
+                'common': '#C9A961',
+                'uncommon': '#4FC3F7',
+                'rare': '#AB47BC',
+                'epic': '#FF6F00',
+                'legendary': '#FFD700'
+            };
+            borderColor = item.hovered ? rarityColors[item.rarity] : '#5a4a3a';
+        }
+        ctx.strokeStyle = borderColor;
         ctx.lineWidth = item.hovered ? 3 : 2;
         ctx.strokeRect(x, y, width, height);
+        
+        // Emblem (for sell tab items)
+        if (this.activeTab === 'sell' && item.emblem) {
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = borderColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(item.emblem, x + width / 2, y + 8);
+        }
         
         // Item name
         ctx.font = 'bold 13px Arial';
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(item.name, x + width / 2, y + 8);
+        const nameY = this.activeTab === 'sell' && item.emblem ? y + 35 : y + 8;
+        ctx.fillText(item.name, x + width / 2, nameY);
         
         // Price or cost
         const priceLabel = this.activeTab === 'sell' ? 'Sell: ' : this.activeTab === 'upgrade' ? 'Cost: ' : 'Price: ';
@@ -3680,6 +3703,13 @@ class UpgradesMenu {
         ctx.font = 'bold 12px Arial';
         ctx.fillStyle = '#ffd700';
         ctx.fillText(priceLabel + priceValue + 'g', x + width / 2, y + height / 2 - 10);
+        
+        // Count (for sell tab)
+        if (this.activeTab === 'sell' && item.count > 1) {
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#b89968';
+            ctx.fillText('Count: ' + item.count, x + width / 2, y + height / 2 + 5);
+        }
         
         // Action button
         const buttonWidth = width - 14;

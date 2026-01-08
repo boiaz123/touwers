@@ -186,19 +186,30 @@ export class EnemyManager {
     
     removeDeadEnemies() {
         let totalGold = 0;
-        const lootDrops = []; // Array of { x, y, lootId }
+        const lootDrops = []; // Array of { x, y, lootId, isRare }
         
         this.enemies = this.enemies.filter(enemy => {
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
                 
-                // Check for loot drops
-                if (enemy.shouldDropLoot()) {
+                // Check for rare legendary loot drops first (very rare)
+                if (enemy.shouldDropRareLoot && enemy.shouldDropRareLoot()) {
+                    const lootId = enemy.getDroppedRareLoot();
+                    lootDrops.push({
+                        x: enemy.x,
+                        y: enemy.y,
+                        lootId: lootId,
+                        isRare: true
+                    });
+                } 
+                // Then check for normal loot drops
+                else if (enemy.shouldDropLoot()) {
                     const lootId = enemy.getDroppedLoot();
                     lootDrops.push({
                         x: enemy.x,
                         y: enemy.y,
-                        lootId: lootId
+                        lootId: lootId,
+                        isRare: false
                     });
                 }
                 

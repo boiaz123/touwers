@@ -3,10 +3,11 @@
  * Can be clicked by the player to collect loot
  */
 export class LootBag {
-    constructor(x, y, lootId) {
+    constructor(x, y, lootId, isRare = false) {
         this.x = x;
         this.y = y;
         this.lootId = lootId;
+        this.isRare = isRare;
         
         // Physics
         this.vx = (Math.random() - 0.5) * 200; // Random horizontal velocity
@@ -18,13 +19,18 @@ export class LootBag {
         // Animation
         this.animationTime = 0;
         this.bobAmount = 0; // For gentle bobbing on ground
+        this.bobSpeed = 2; // Speed of bobbing animation
         this.collectAnimationTime = 0;
         this.isCollecting = false;
         
+        // Rare loot specific
+        this.rareGlowAmount = 0;
+        this.rarePulseTime = 0;
+        
         // Size and collision
-        this.width = 24;
-        this.height = 24;
-        this.radius = 12;
+        this.width = 28;
+        this.height = 32;
+        this.radius = 14;
         
         // Lifetime
         this.lifetime = 120; // Seconds the bag stays on ground (0 = infinite)
@@ -144,46 +150,114 @@ export class LootBag {
     }
 
     renderBag(ctx, x, y) {
-        // Draw bag shape (simple rectangle with slight rotation effect)
-        const angle = Math.sin(this.animationTime * 3) * 0.1;
-
+        const sackColor = this.isRare ? '#6B3BA8' : '#D4A574'; // Purple for rare, tan for normal
+        const tieColor = this.isRare ? '#A855F7' : '#8B6914'; // Bright purple for rare, dark gold for normal
+        const outlineColor = this.isRare ? '#9D4EDD' : '#B8860B'; // Dark purple for rare, gold for normal
+        
         ctx.save();
         ctx.translate(x, y);
+        
+        // Subtle rotation for character
+        const angle = Math.sin(this.animationTime * 2) * 0.05;
         ctx.rotate(angle);
 
-        // Bag body (brown/tan color)
-        ctx.fillStyle = '#C9A961';
-        ctx.fillRect(-this.radius, -this.radius, this.width, this.height);
-
-        // Bag outline
-        ctx.strokeStyle = '#8B6F47';
+        // Main sack body - rounded rectangle for pouch
+        const sackWidth = this.width;
+        const sackHeight = this.height * 0.8;
+        const cornerRadius = 3;
+        
+        // Draw sack body with rounded corners
+        ctx.fillStyle = sackColor;
+        ctx.strokeStyle = outlineColor;
         ctx.lineWidth = 2;
-        ctx.strokeRect(-this.radius, -this.radius, this.width, this.height);
-
-        // Bag tie/closure
-        ctx.fillStyle = '#5D4E37';
-        ctx.fillRect(-this.radius + 4, -this.radius - 3, this.width - 8, 4);
-
-        // Sparkle/glow effect
-        const sparkle = Math.max(0, Math.sin(this.animationTime * 4) * 0.5 + 0.5);
-        ctx.globalAlpha = sparkle;
-        ctx.fillStyle = '#FFD700';
+        
         ctx.beginPath();
-        ctx.arc(0, -this.radius / 2, 3, 0, Math.PI * 2);
+        ctx.moveTo(-sackWidth/2 + cornerRadius, -sackHeight/2);
+        ctx.lineTo(sackWidth/2 - cornerRadius, -sackHeight/2);
+        ctx.quadraticCurveTo(sackWidth/2, -sackHeight/2, sackWidth/2, -sackHeight/2 + cornerRadius);
+        ctx.lineTo(sackWidth/2, sackHeight/2 - cornerRadius);
+        ctx.quadraticCurveTo(sackWidth/2, sackHeight/2, sackWidth/2 - cornerRadius, sackHeight/2);
+        ctx.lineTo(-sackWidth/2 + cornerRadius, sackHeight/2);
+        ctx.quadraticCurveTo(-sackWidth/2, sackHeight/2, -sackWidth/2, sackHeight/2 - cornerRadius);
+        ctx.lineTo(-sackWidth/2, -sackHeight/2 + cornerRadius);
+        ctx.quadraticCurveTo(-sackWidth/2, -sackHeight/2, -sackWidth/2 + cornerRadius, -sackHeight/2);
+        ctx.closePath();
         ctx.fill();
-        ctx.globalAlpha = 1;
-
+        ctx.stroke();
+        
+        // Draw rope tie at top of sack
+        ctx.strokeStyle = tieColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-sackWidth/3, -sackHeight/2 - 2);
+        ctx.quadraticCurveTo(0, -sackHeight/2 - 6, sackWidth/3, -sackHeight/2 - 2);
+        ctx.stroke();
+        
+        // Rope knots
+        ctx.fillStyle = tieColor;
+        ctx.beginPath();
+        ctx.arc(-sackWidth/3, -sackHeight/2 - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(sackWidth/3, -sackHeight/2 - 2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Shine/highlight on sack
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(-sackWidth/4, -sackHeight/3, sackWidth/5, sackHeight/4, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Rare loot glow effect
+        if (this.isRare) {
+            const glowIntensity = 0.35 + Math.sin(Date.now() / 300) * 0.25;
+            ctx.fillStyle = `rgba(168, 85, 247, ${glowIntensity * 0.7})`;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, this.width * 0.55, this.height * 0.55, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Outer aura
+            ctx.strokeStyle = `rgba(168, 85, 247, ${glowIntensity * 0.4})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, this.width * 0.7, this.height * 0.7, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Sparkle effect
+        const sparkleCount = this.isRare ? 3 : 2;
+        for (let i = 0; i < sparkleCount; i++) {
+            const angle = (this.animationTime * 2.5 + (i / sparkleCount) * Math.PI * 2);
+            const distance = this.width * 0.5;
+            const sparkleX = Math.cos(angle) * distance;
+            const sparkleY = Math.sin(angle) * distance;
+            
+            const sparkleSize = 1.2 + Math.sin(this.animationTime * 5) * 0.6;
+            ctx.fillStyle = this.isRare ? 'rgba(168, 85, 247, 0.9)' : 'rgba(218, 165, 32, 0.9)';
+            ctx.beginPath();
+            ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Twinkle effect - small stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.arc(sparkleX, sparkleY - 1, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         ctx.restore();
 
         // Draw floating text if just dropped
         if (this.animationTime < 0.5) {
             const floatOffset = (1 - this.animationTime / 0.5) * 20;
             ctx.save();
-            ctx.translate(x, y - 30 - floatOffset);
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px Arial';
+            ctx.translate(x, y - 35 - floatOffset);
+            ctx.fillStyle = this.isRare ? '#A855F7' : '#FFD700';
+            ctx.font = 'bold 13px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('Loot!', 0, 0);
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(this.isRare ? 'Rare Loot!' : 'Loot!', 0, 0);
             ctx.restore();
         }
     }
