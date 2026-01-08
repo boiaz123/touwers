@@ -101,7 +101,10 @@ export class AudioManager {
         
         // Set up new track
         this.musicElement.src = trackData.path;
-        this.musicElement.loop = trackData.loop !== false; // Default to true
+        this.musicElement.load(); // Force load the new track
+        
+        // Set loop property from track data
+        let shouldLoop = trackData.loop !== false; // Default to true
         
         // Remove previous ended event listener if one exists
         if (this.boundMusicEndedHandler) {
@@ -111,23 +114,41 @@ export class AudioManager {
         
         // If playlist mode is active, handle track ending to play next random track
         if (this.musicPlaylistMode && this.currentMusicCategory) {
-            this.musicElement.loop = false; // Don't use built-in looping
+            shouldLoop = false; // Don't use built-in looping in playlist mode
             // Create a bound handler so we can remove it later
-            this.boundMusicEndedHandler = () => this.playNextRandomTrackFromCategory();
+            this.boundMusicEndedHandler = () => {
+                console.log('AudioManager: Track ended event fired');
+                this.playNextRandomTrackFromCategory();
+            };
             this.musicElement.addEventListener('ended', this.boundMusicEndedHandler);
+            console.log(`AudioManager: Attached ended listener for playlist mode on track: ${trackName}`);
         }
         
-        // Play with optional fade
-        if (fadeIn) {
-            this.musicElement.volume = 0;
-            this.musicElement.play().catch(err => {
-                console.warn('AudioManager: Could not play music:', err);
-            });
-            this.fadeInMusic(this.musicVolume, 1000);
+        // Apply the loop setting
+        this.musicElement.loop = shouldLoop;
+        
+        // Wait for canplaythrough before playing to ensure track is ready
+        const playAudio = () => {
+            this.musicElement.removeEventListener('canplaythrough', playAudio);
+            // Play with optional fade
+            if (fadeIn) {
+                this.musicElement.volume = 0;
+                this.musicElement.play().catch(err => {
+                    console.warn('AudioManager: Could not play music:', err);
+                });
+                this.fadeInMusic(this.musicVolume, 1000);
+            } else {
+                this.musicElement.play().catch(err => {
+                    console.warn('AudioManager: Could not play music:', err);
+                });
+            }
+        };
+        
+        // If already ready, play immediately; otherwise wait for ready
+        if (this.musicElement.readyState >= 2) {
+            playAudio();
         } else {
-            this.musicElement.play().catch(err => {
-                console.warn('AudioManager: Could not play music:', err);
-            });
+            this.musicElement.addEventListener('canplaythrough', playAudio, { once: true });
         }
         
         this.isMusicPlaying = true;
@@ -188,8 +209,18 @@ export class AudioManager {
         console.log(`AudioManager: Current track ended, playing next from '${this.currentMusicCategory}'`);
         console.log(`AudioManager: Available tracks:`, tracks);
         
-        // Pick a random track (could be the same one, but that's okay for variety)
-        const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+        // Filter out the currently playing track to ensure we play a different one
+        const differentTracks = tracks.filter(track => track !== this.currentMusicTrack);
+        
+        if (differentTracks.length === 0) {
+            console.log('AudioManager: Only one track in category, will replay it');
+            // If only one track exists, replay it
+            this.playMusic(tracks[0]);
+            return;
+        }
+        
+        // Pick a random track from the remaining options
+        const randomTrack = differentTracks[Math.floor(Math.random() * differentTracks.length)];
         console.log(`AudioManager: Selected next random track:`, randomTrack);
         this.playMusic(randomTrack);
     }
