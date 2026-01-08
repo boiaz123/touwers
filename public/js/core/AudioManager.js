@@ -420,6 +420,40 @@ export class AudioManager {
     }
 
     /**
+     * Play next settlement theme track
+     * Cycles to the next settlement track or wraps around to first
+     */
+    playNextSettlementTheme() {
+        const settlementTracks = this.getSettlementTracks();
+        if (settlementTracks.length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return;
+        }
+
+        // Find current track index
+        const currentIndex = settlementTracks.indexOf(this.currentMusicTrack);
+        const nextIndex = (currentIndex + 1) % settlementTracks.length;
+        this.playMusic(settlementTracks[nextIndex]);
+    }
+
+    /**
+     * Play previous settlement theme track
+     * Cycles to the previous settlement track or wraps around to last
+     */
+    playPreviousSettlementTheme() {
+        const settlementTracks = this.getSettlementTracks();
+        if (settlementTracks.length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return;
+        }
+
+        // Find current track index
+        const currentIndex = settlementTracks.indexOf(this.currentMusicTrack);
+        const prevIndex = (currentIndex - 1 + settlementTracks.length) % settlementTracks.length;
+        this.playMusic(settlementTracks[prevIndex]);
+    }
+
+    /**
      * Set music volume (0.0 - 1.0)
      */
     setMusicVolume(volume) {

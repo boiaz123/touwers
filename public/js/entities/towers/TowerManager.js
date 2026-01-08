@@ -24,6 +24,10 @@ export class TowerManager {
         this.lastBuildingCount = 0;
     }
     
+    setStateManager(stateManager) {
+        this.buildingManager.stateManager = stateManager;
+    }
+    
     placeTower(type, x, y, gridX, gridY) {
         // Check if tower type is unlocked
         if (!this.unlockSystem.canBuildTower(type)) {

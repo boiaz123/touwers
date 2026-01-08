@@ -564,4 +564,67 @@ export class SaveSystem {
         }
         return completedLevels;
     }
-}
+
+    /**
+     * Save campaign progress (settlement data: gold, inventory, upgrades)
+     * This is campaign-wide data, not level-specific
+     */
+    static saveCampaignProgress(playerGold, playerInventory, upgradeSystem) {
+        const campaignProgressKey = 'touwers_campaign_progress';
+        
+        const progress = {
+            playerGold: playerGold || 0,
+            playerInventory: playerInventory || [],
+            upgrades: upgradeSystem ? upgradeSystem.serialize() : { purchasedUpgrades: [] },
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            localStorage.setItem(campaignProgressKey, JSON.stringify(progress));
+            return true;
+        } catch (error) {
+            console.error('SaveSystem: Failed to save campaign progress:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Load campaign progress (settlement data)
+     */
+    static loadCampaignProgress() {
+        const campaignProgressKey = 'touwers_campaign_progress';
+        const data = localStorage.getItem(campaignProgressKey);
+        
+        if (!data) {
+            return {
+                playerGold: 0,
+                playerInventory: [],
+                upgrades: { purchasedUpgrades: [] }
+            };
+        }
+
+        try {
+            return JSON.parse(data);
+        } catch (error) {
+            console.error('SaveSystem: Failed to parse campaign progress:', error);
+            return {
+                playerGold: 0,
+                playerInventory: [],
+                upgrades: { purchasedUpgrades: [] }
+            };
+        }
+    }
+
+    /**
+     * Clear campaign progress (used for new game)
+     */
+    static clearCampaignProgress() {
+        const campaignProgressKey = 'touwers_campaign_progress';
+        try {
+            localStorage.removeItem(campaignProgressKey);
+            return true;
+        } catch (error) {
+            console.error('SaveSystem: Failed to clear campaign progress:', error);
+            return false;
+        }
+    }}

@@ -15,6 +15,7 @@ export class GameStateManager {
         // Player progression - persistent across levels
         this.playerGold = 0; // Gold earned from selling loot in marketplace
         this.playerInventory = []; // Array of loot items { lootId, count }
+        this.upgradeSystem = null; // Upgrade system for marketplace purchases
         
         // SaveSystem reference (will be set during game initialization)
         this.SaveSystem = null;

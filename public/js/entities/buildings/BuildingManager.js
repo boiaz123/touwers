@@ -6,6 +6,7 @@ export class BuildingManager {
         this.level = level;
         this.buildings = [];
         this.occupiedPositions = new Set();
+        this.stateManager = null; // Will be set by TowerManager
         
         // Building effects tracking
         this.goldPerSecond = 0;
@@ -32,6 +33,14 @@ export class BuildingManager {
             return false;
         }
         
+        // Check if building requires an upgrade
+        if (buildingType.requiresUpgrade) {
+            const upgradeSystem = this.stateManager?.upgradeSystem;
+            if (!upgradeSystem || !upgradeSystem.hasUpgrade(buildingType.requiresUpgrade)) {
+                console.warn(`BuildingManager: Building '${type}' requires upgrade '${buildingType.requiresUpgrade}'`);
+                return false;
+            }
+        }
         
         // Check if the 4x4 position is available
         if (this.isBuildingPositionOccupied(gridX, gridY, buildingType.size)) {

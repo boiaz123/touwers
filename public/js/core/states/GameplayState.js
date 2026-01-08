@@ -177,6 +177,12 @@ export class GameplayState {
             this.levelType = levelInfo.type || 'campaign';
             this.levelName = levelInfo.name || 'Unknown Level';
             
+            // Apply upgrade bonuses to starting gold
+            if (this.stateManager.upgradeSystem) {
+                const goldBonus = this.stateManager.upgradeSystem.getStartingGoldBonus();
+                this.gameState.gold += goldBonus;
+            }
+            
             // Track starting gold for results screen
             this.startingGold = this.gameState.gold;
             this.goldEarnedThisLevel = 0;
@@ -235,6 +241,7 @@ export class GameplayState {
         
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
+        this.towerManager.setStateManager(this.stateManager);
         
         // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
         if (this.isSandbox) {

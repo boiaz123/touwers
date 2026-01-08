@@ -6,6 +6,8 @@ import { MagicAcademy } from '../../entities/buildings/MagicAcademy.js';
 import { Castle } from '../../entities/buildings/Castle.js';
 import { GuardPost } from '../../entities/towers/GuardPost.js';
 import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
+import { UpgradeSystem } from '../UpgradeSystem.js';
+import { UpgradeRegistry } from '../UpgradeRegistry.js';
 
 /**
  * SettlementHub State
@@ -65,6 +67,24 @@ export class SettlementHub {
         this.fadeInOpacity = 0; // Fade-in overlay starts transparent
         this.isFirstRender = true; // Force pre-render on next render
         this.activePopup = null;
+        
+        // Load campaign progress (gold, inventory, upgrades) from persistent storage
+        // BUT: Only load inventory if it's empty (preserve loot from just-completed level)
+        const campaignProgress = SaveSystem.loadCampaignProgress();
+        this.stateManager.playerGold = campaignProgress.playerGold || 0;
+        
+        // Only load inventory from storage if we don't already have loot from current session
+        if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
+            this.stateManager.playerInventory = campaignProgress.playerInventory || [];
+        }
+        
+        // Initialize upgrade system if not already done
+        if (!this.stateManager.upgradeSystem) {
+            this.stateManager.upgradeSystem = new UpgradeSystem();
+            if (campaignProgress.upgrades) {
+                this.stateManager.upgradeSystem.restoreFromSave(campaignProgress.upgrades);
+            }
+        }
         
         // Reset all popup hover states
         if (this.upgradesPopup) {
@@ -217,6 +237,13 @@ export class SettlementHub {
     }
 
     exit() {
+        // Save campaign progress before exiting
+        SaveSystem.saveCampaignProgress(
+            this.stateManager.playerGold,
+            this.stateManager.playerInventory,
+            this.stateManager.upgradeSystem
+        );
+        
         this.removeMouseListeners();
     }
 
@@ -3147,18 +3174,8 @@ class UpgradesMenu {
         // Sell tab - build from actual loot inventory
         this.inventoryItems = this.buildInventoryItems();
         
-        // Upgrade tab - 2 pages with 6 upgrades each
-        this.upgradeItems = [];
-        for (let page = 0; page < 2; page++) {
-            for (let i = 0; i < 6; i++) {
-                this.upgradeItems.push({
-                    id: `upg_${page * 6 + i}`,
-                    name: `Upgrade ${page * 6 + i + 1}`,
-                    cost: 200 + (page * 6 + i) * 100,
-                    hovered: false
-                });
-            }
-        }
+        // Upgrade tab - populate from UpgradeRegistry
+        this.upgradeItems = this.buildUpgradeItems();
         
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
@@ -3168,6 +3185,96 @@ class UpgradesMenu {
             { label: 'SELL', action: 'sell', hovered: false },
             { label: 'UPGRADE', action: 'upgrade', hovered: false }
         ];
+    }
+
+    buildUpgradeItems() {
+        // Get references from stateManager or create defaults
+        const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
+        
+        // Import UpgradeRegistry via stateManager (should be set during init)
+        // For now, build a basic structure that will be updated when needed
+        const items = [];
+        
+        // Hardcode the 6 upgrades for now (they'll be defined in the UI/rendering logic)
+        const upgradeData = [
+            {
+                id: 'training-gear',
+                name: 'Training Gear',
+                description: 'Unlocks the ability to build Training Grounds in levels',
+                cost: 500,
+                icon: '⚔️',
+                category: 'building'
+            },
+            {
+                id: 'musical-equipment',
+                name: 'Musical Equipment',
+                description: 'Adds a music player to the UI for settling ambiance',
+                cost: 300,
+                icon: '🎵',
+                category: 'ui'
+            },
+            {
+                id: 'wooden-chest',
+                name: 'Wooden Chest',
+                description: 'Increase starting gold by 100',
+                cost: 250,
+                icon: '📦',
+                category: 'gold'
+            },
+            {
+                id: 'golden-chest',
+                name: 'Golden Chest',
+                description: 'Increase starting gold by another 100',
+                cost: 400,
+                icon: '🪙',
+                category: 'gold',
+                prerequisite: 'wooden-chest'
+            },
+            {
+                id: 'platinum-chest',
+                name: 'Platinum Chest',
+                description: 'Increase starting gold by another 100',
+                cost: 600,
+                icon: '💎',
+                category: 'gold',
+                prerequisite: 'golden-chest'
+            },
+            {
+                id: 'diamond-pickaxe',
+                name: 'Diamond Pickaxe',
+                description: 'Increase gem mining chance in gold mines',
+                cost: 800,
+                icon: '⛏️',
+                category: 'mining'
+            }
+        ];
+        
+        for (const upgrade of upgradeData) {
+            const isPurchased = upgradeSystem.hasUpgrade(upgrade.id);
+            let canPurchase = !isPurchased;
+            let prerequisiteMsg = null;
+            
+            // Check prerequisites
+            if (upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
+                canPurchase = false;
+                prerequisiteMsg = `Requires: ${upgradeData.find(u => u.id === upgrade.prerequisite)?.name}`;
+            }
+            
+            items.push({
+                id: upgrade.id,
+                name: upgrade.name,
+                description: upgrade.description,
+                cost: upgrade.cost,
+                icon: upgrade.icon,
+                category: upgrade.category,
+                hovered: false,
+                isPurchased: isPurchased,
+                canPurchase: canPurchase,
+                prerequisiteMsg: prerequisiteMsg
+            });
+        }
+        
+        return items;
     }
 
     buildInventoryItems() {
@@ -3444,8 +3551,38 @@ class UpgradesMenu {
             
             console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
         } else if (this.activeTab === 'upgrade') {
-            console.log('Upgrading:', item.name, 'for', item.cost, 'gold');
-            // TODO: Implement upgrade logic
+            // Handle upgrade purchase
+            if (item.isPurchased) {
+                console.log('Upgrade already purchased:', item.name);
+                return;
+            }
+            
+            if (!item.canPurchase) {
+                if (item.prerequisiteMsg) {
+                    console.log('Cannot purchase upgrade. ' + item.prerequisiteMsg);
+                }
+                return;
+            }
+            
+            if (this.playerGold < item.cost) {
+                console.log('Not enough gold to purchase:', item.name, '. Need:', item.cost, 'Have:', this.playerGold);
+                return;
+            }
+            
+            // Purchase the upgrade
+            this.playerGold -= item.cost;
+            this.stateManager.playerGold = this.playerGold;
+            this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
+            
+            // Rebuild upgrade items to reflect purchase
+            this.upgradeItems = this.buildUpgradeItems();
+            this.currentPage = 0;
+            
+            console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
+            
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('purchase-success');
+            }
         }
     }
 

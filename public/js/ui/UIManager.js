@@ -1,4 +1,5 @@
 import { SaveSystem } from '../core/SaveSystem.js';
+import { MusicPlayer } from './MusicPlayer.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -18,6 +19,18 @@ export class UIManager {
         this.lastGemValues = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         this.menuRefreshInterval = 0.1; // Refresh every 100ms to check resource changes
         this.menuRefreshTimer = 0;
+        
+        // Music player - created if Musical Equipment upgrade is purchased
+        this.musicPlayer = null;
+        this.initializeMusicPlayerIfUnlocked();
+    }
+
+    initializeMusicPlayerIfUnlocked() {
+        // Check if player has purchased the Musical Equipment upgrade
+        const upgradeSystem = this.stateManager?.upgradeSystem;
+        if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
+            this.musicPlayer = new MusicPlayer(this);
+        }
     }
 
     // ============ BUTTON STATE MANAGEMENT ============
