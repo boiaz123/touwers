@@ -1,4 +1,5 @@
 import { SaveSystem } from '../SaveSystem.js';
+import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
 import { MagicAcademy } from '../../entities/buildings/MagicAcademy.js';
@@ -3173,9 +3174,15 @@ class UpgradesMenu {
         const items = [];
         const inventory = this.stateManager.playerInventory || [];
         
+        console.log('Building inventory items from playerInventory:', inventory);
+        
         // Create items from inventory
         for (const inventoryItem of inventory) {
             const lootInfo = this.getLootInfo(inventoryItem.lootId);
+            if (!lootInfo) {
+                console.warn('Could not find loot info for lootId:', inventoryItem.lootId);
+                continue;
+            }
             items.push({
                 id: inventoryItem.lootId,
                 name: lootInfo.name,
@@ -3188,37 +3195,31 @@ class UpgradesMenu {
             });
         }
         
+        console.log('Built inventory items:', items);
         return items;
     }
 
     getLootInfo(lootId) {
-        const lootData = {
-            'iron-sword': { name: 'Iron Sword', sellValue: 50 },
-            'steel-sword': { name: 'Steel Sword', sellValue: 100 },
-            'longsword': { name: 'Longsword', sellValue: 200 },
-            'enchanted-blade': { name: 'Enchanted Blade', sellValue: 400 },
-            'iron-axe': { name: 'Iron Axe', sellValue: 60 },
-            'battle-axe': { name: 'Battle Axe', sellValue: 120 },
-            'great-axe': { name: 'Great Axe', sellValue: 220 },
-            'warhammer': { name: 'Warhammer', sellValue: 210 },
-            'wooden-bow': { name: 'Wooden Bow', sellValue: 40 },
-            'longbow': { name: 'Longbow', sellValue: 110 },
-            'elven-bow': { name: 'Elven Bow', sellValue: 190 },
-            'leather-helm': { name: 'Leather Helm', sellValue: 45 },
-            'iron-helm': { name: 'Iron Helm', sellValue: 95 },
-            'dragon-helm': { name: 'Dragon Helm', sellValue: 380 },
-            'leather-chest': { name: 'Leather Chest Plate', sellValue: 70 },
-            'iron-chest': { name: 'Iron Chest Plate', sellValue: 140 },
-            'mithril-chest': { name: 'Mithril Chest Plate', sellValue: 280 },
-            'gauntlets': { name: 'Iron Gauntlets', sellValue: 85 },
-            'steel-boots': { name: 'Steel Boots', sellValue: 75 },
-            'gold-ring': { name: 'Gold Ring', sellValue: 250 },
-            'ruby-amulet': { name: 'Ruby Amulet', sellValue: 350 },
-            'crystal-orb': { name: 'Crystal Orb', sellValue: 360 },
-            'ancient-coin': { name: 'Ancient Coin', sellValue: 130 },
-            'gem-cluster': { name: 'Gem Cluster', sellValue: 270 }
+        // Use LootRegistry for authoritative loot data
+        const lootInfo = LootRegistry.getLootType(lootId);
+        if (lootInfo) {
+            console.log('Found loot in registry for', lootId, ':', lootInfo.name);
+            return {
+                name: lootInfo.name,
+                sellValue: lootInfo.sellValue,
+                emblem: lootInfo.emblem,
+                rarity: lootInfo.rarity
+            };
+        }
+        
+        // Fallback for any items not in registry
+        console.warn('Loot not found in registry:', lootId);
+        return { 
+            name: 'Unknown Item', 
+            sellValue: 0,
+            emblem: '?',
+            rarity: 'common'
         };
-        return lootData[lootId] || { name: 'Unknown Item', sellValue: 0 };
     }
 
     open() {
@@ -3357,6 +3358,11 @@ class UpgradesMenu {
                 }
                 this.activeTab = tab.action;
                 this.currentPage = 0;
+                
+                // Refresh inventory items when switching to sell tab
+                if (tab.action === 'sell') {
+                    this.inventoryItems = this.buildInventoryItems();
+                }
             }
         });
         
@@ -3444,6 +3450,8 @@ class UpgradesMenu {
     }
 
     render(ctx) {
+        if (!this.isOpen) return;
+        
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 120;
         const baseHeight = canvas.height - 80;
@@ -3679,6 +3687,15 @@ class UpgradesMenu {
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = item.hovered ? 3 : 2;
         ctx.strokeRect(x, y, width, height);
+        
+        // Extra glow for legendary items
+        if (this.activeTab === 'sell' && item.rarity === 'legendary') {
+            ctx.strokeStyle = '#FFD700';
+            ctx.globalAlpha = 0.3;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 3, y - 3, width + 6, height + 6);
+            ctx.globalAlpha = 1;
+        }
         
         // Emblem (for sell tab items)
         if (this.activeTab === 'sell' && item.emblem) {

@@ -3,6 +3,7 @@ import { LevelRegistry } from '../levels/LevelRegistry.js';
 // Import test levels from Campaign5 folder
 import { SandboxLevel } from '../levels/Campaign5/SandboxLevel.js';
 import { Level6 } from '../levels/Campaign5/Level2.js';
+import { Level8 } from '../levels/Campaign5/Level8.js';
 
 /**
  * Campaign5: Level Testing Campaign
@@ -47,7 +48,7 @@ export class Campaign5 extends CampaignBase {
         // Each SandboxLevel instance uses the same static metadata (Sandbox Mode, Endless)
         registerLevel('sandbox-test-1', SandboxLevel);
         registerLevel('spiraling-into-control', Level6);
-        registerLevel('sandbox-test-3', SandboxLevel);
+        registerLevel('My Level', Level8);
         registerLevel('sandbox-test-4', SandboxLevel);
         registerLevel('sandbox-test-5', SandboxLevel);
         registerLevel('sandbox-test-6', SandboxLevel);
