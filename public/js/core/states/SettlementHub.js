@@ -15,8 +15,10 @@ export class SettlementHub {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.animationTime = 0;
-        this.showContent = false;
-        this.contentOpacity = 0;
+        this.showContent = true; // Show immediately, no initial delay
+        this.contentOpacity = 1; // Fully opaque from the start
+        this.fadeInOpacity = 0; // For optional fade-in overlay
+        this.enableFadeInOverlay = true; // Professional fade-in effect overlay
         
         // Create actual building instances positioned INSIDE the settlement
         this.settlementBuildings = [];
@@ -37,6 +39,10 @@ export class SettlementHub {
         
         // Animation state
         this.buildingAnimations = {};
+        
+        // Pre-rendered scene for instant loading
+        this.preRenderedScene = null;
+        this.isFirstRender = true;
     }
 
     enter() {
@@ -51,10 +57,12 @@ export class SettlementHub {
             sidebar.style.display = 'none';
         }
 
-        // Reset animation
+        // Reset animation - content is shown immediately
         this.animationTime = 0;
-        this.showContent = false;
-        this.contentOpacity = 0;
+        this.showContent = true;
+        this.contentOpacity = 1;
+        this.fadeInOpacity = 0; // Fade-in overlay starts transparent
+        this.isFirstRender = true; // Force pre-render on next render
         this.activePopup = null;
         
         // Reset all popup hover states
@@ -362,10 +370,9 @@ export class SettlementHub {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Show content after a brief delay
-        if (this.animationTime > 0.3) {
-            this.showContent = true;
-            this.contentOpacity = Math.min(1, (this.animationTime - 0.3) / 0.5);
+        // Fade-in overlay effect (professional 0.6 second fade)
+        if (this.enableFadeInOverlay && this.fadeInOpacity < 1) {
+            this.fadeInOpacity = Math.min(1, this.animationTime / 0.6);
         }
 
         // Update active popup
@@ -428,6 +435,13 @@ export class SettlementHub {
                 this.optionsPopup.render(ctx);
             } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
                 this.arcaneKnowledgePopup.render(ctx);
+            }
+
+            // Professional fade-in overlay effect (soft, from dark to transparent)
+            if (this.enableFadeInOverlay && this.fadeInOpacity < 1) {
+                const fadeOpacity = (1 - this.fadeInOpacity) * 0.6; // Fade from 60% dark to transparent
+                ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
 
             ctx.globalAlpha = 1;
