@@ -13,6 +13,21 @@ export class ResultsScreen {
         this.resultData = null;
         this.acquiredLoot = []; // Array of loot IDs acquired
 
+        // Defeat screen motivational quotes
+        this.defeatQuotes = [
+            "A general who retreats fights another day.",
+            "Victory is not measured by a single battle, but by the will to continue.",
+            "The strongest generals are forged in the fires of defeat.",
+            "Every great empire faced setbacks before reaching glory.",
+            "This defeat is but a lesson. Learn it well.",
+            "Regroup. Refocus. Rise stronger than before.",
+            "The path to legend runs through valleys of failure.",
+            "Your enemies celebrate now—make them regret it later.",
+            "Defeat tests your resolve. Prove you have it.",
+            "The realm needs a leader who rises after falling."
+        ];
+        this.selectedDefeatQuote = '';
+
         // Animation phases
         this.animationPhase = 'victory'; // victory, countup, loot, buttons
         this.phaseTime = 0;
@@ -62,12 +77,31 @@ export class ResultsScreen {
         this.resultData = data;
         this.acquiredLoot = acquiredLoot;
         this.isShowing = true;
-        this.animationPhase = 'victory';  // Start with victory animation
         this.phaseTime = 0;
         this.lootAnimationTime = 0; // Reset cumulative loot animation time
         this.lootAnimationIndex = 0;
         this.particles = [];
         this.selectedButtonIndex = 0;
+
+        // For gameOver, skip victory animation and go straight to defeat screen
+        if (type === 'gameOver') {
+            this.animationPhase = 'defeat';
+            // Select a random defeat quote
+            this.selectedDefeatQuote = this.defeatQuotes[Math.floor(Math.random() * this.defeatQuotes.length)];
+            // Play defeat music immediately
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.stopMusic();
+                this.stateManager.audioManager.playSFX('defeat-tune');
+            }
+        } else {
+            // For levelComplete, start with victory animation
+            this.animationPhase = 'victory';
+            // Play victory tune immediately at the start of the animation
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.stopMusic();
+                this.stateManager.audioManager.playSFX('victory-tune');
+            }
+        }
 
         // Extract stats from result data
         this.stats = {
@@ -95,16 +129,10 @@ export class ResultsScreen {
         } else {
             this.buttons = [
                 { label: 'RETRY', action: 'retry' },
-                { label: 'LEVEL SELECT', action: 'levelSelect' }
+                { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
             ];
         }
         console.log('ResultsScreen.show() - Buttons set:', this.buttons);
-
-        // Play victory music
-        if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.stopMusic();
-            this.stateManager.audioManager.playSFX('victory-tune');
-        }
     }
 
     /**
@@ -200,8 +228,9 @@ export class ResultsScreen {
 
         this.phaseTime += deltaTime;
 
-        // Handle phase transitions
+        // Handle phase transitions for victory screen
         if (this.animationPhase === 'victory' && this.phaseTime >= this.phaseDuration.victory) {
+            // Victory animation complete - move to countup
             this.animationPhase = 'countup';
             this.phaseTime = 0;
             console.log('Phase transition: victory -> countup');
@@ -344,8 +373,8 @@ export class ResultsScreen {
     handleClick(x, y) {
         if (!this.isShowing) return;
         
-        // Only allow button clicks during buttons phase (not during loot animation)
-        if (this.animationPhase !== 'buttons') return;
+        // Allow button clicks during buttons phase (normal results) or defeat phase
+        if (this.animationPhase !== 'buttons' && this.animationPhase !== 'defeat') return;
 
         console.log('handleClick - checking buttons, current phase:', this.animationPhase, 'buttons count:', this.buttons.length);
         this.buttons.forEach((button, index) => {
@@ -364,12 +393,23 @@ export class ResultsScreen {
      */
     getButtonPosition(index) {
         const canvas = this.stateManager.canvas;
-        const modalX = (canvas.width - this.modalWidth) / 2;
-        const modalY = (canvas.height - this.modalHeight) / 2;
-
-        const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-        const buttonsStartX = modalX + (this.modalWidth - totalButtonWidth) / 2;
-        const buttonsY = modalY + this.modalHeight - this.padding - this.buttonHeight;
+        const isDefeatScreen = this.animationPhase === 'defeat';
+        
+        let buttonsStartX, buttonsY;
+        
+        if (isDefeatScreen) {
+            // Center buttons on defeat screen
+            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
+            buttonsStartX = (canvas.width - totalButtonWidth) / 2;
+            buttonsY = canvas.height / 2 + 200;
+        } else {
+            // Normal results screen button positioning
+            const modalX = (canvas.width - this.modalWidth) / 2;
+            const modalY = (canvas.height - this.modalHeight) / 2;
+            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
+            buttonsStartX = modalX + (this.modalWidth - totalButtonWidth) / 2;
+            buttonsY = modalY + this.modalHeight - this.padding - this.buttonHeight;
+        }
 
         return {
             x: buttonsStartX + index * (this.buttonWidth + this.buttonGap),
@@ -389,11 +429,17 @@ export class ResultsScreen {
         const modalX = (canvas.width - this.modalWidth) / 2;
         const modalY = (canvas.height - this.modalHeight) / 2;
 
-        // Draw content based on phase
-        if (this.animationPhase === 'victory') {
+        // Draw defeat screen (no animations, just buttons and quote)
+        if (this.animationPhase === 'defeat') {
+            this.renderDefeatScreen(ctx, canvas);
+        }
+        // Draw victory animation
+        else if (this.animationPhase === 'victory') {
             // Victory animation takes over the whole screen
             this.renderVictoryAnimation(ctx, canvas);
-        } else {
+        }
+        // Draw results screen (stats and loot)
+        else {
             // Draw semi-transparent background
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -426,28 +472,28 @@ export class ResultsScreen {
 
     /**
      * Render victory animation - sword clash with VICTORY text bursting out
-     * Professional styled with game color scheme (gold, dark tones)
+     * Uses the exact sword clash animation from StartScreen for consistency
      */
     renderVictoryAnimation(ctx, canvas) {
         const progress = this.phaseTime / this.phaseDuration.victory;
         
-        // Animation phases: 0-0.4 = sword clash, 0.4-1.0 = victory burst
-        const clashPhase = Math.min(progress / 0.4, 1.0);
-        const victoryPhase = Math.max((progress - 0.4) / 0.6, 0);
+        // Animation phases: 0-0.45 = sword clash, 0.45-1.0 = victory text burst
+        const clashPhase = Math.min(progress / 0.45, 1.0);
+        const victoryPhase = Math.max((progress - 0.45) / 0.55, 0);
         
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
         
         // Draw dark background overlay for contrast
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
         
-        // === SWORD CLASH PHASE (0-0.4) ===
+        // === SWORD CLASH PHASE (0-0.45) ===
         if (clashPhase < 1.0) {
             this.renderSwordClash(ctx, clashPhase);
         }
         
-        // === VICTORY BURST PHASE (0.4-1.0) ===
+        // === VICTORY BURST PHASE (0.45-1.0) ===
         if (victoryPhase > 0) {
             this.renderVictoryBurst(ctx, victoryPhase);
         }
@@ -456,147 +502,300 @@ export class ResultsScreen {
     }
 
     /**
-     * Render two swords clashing into each other
+     * Render two swords clashing - using the exact medieval sword animation from StartScreen
      */
     renderSwordClash(ctx, progress) {
-        const swordLength = 200;
-        const swordWidth = 20;
-        const clashX = 0;
-        const clashY = 0;
+        // Matching the StartScreen animation timing
+        const swordDuration = 0.7;
+        const swordProgress = Math.min(progress / swordDuration, 1);
         
-        // Ease-out for sword movement
-        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        // Sword movement - swords meet at 40% of sword phase
+        const leftSwordProgress = Math.min(swordProgress / 0.4, 1.2);
+        const rightSwordProgress = Math.min(swordProgress / 0.4, 1.2);
         
-        // Left sword moves from left to center, rotating
-        const leftSwordX = -swordLength * (1 - easeProgress);
-        const leftAngle = easeProgress * Math.PI / 6; // Rotate up to 30 degrees
+        // Calculate swing motion
+        const leftSwingAngle = -Math.PI / 4 + (leftSwordProgress * 0.4);
+        const rightSwingAngle = Math.PI / 4 - (rightSwordProgress * 0.4);
         
-        // Right sword moves from right to center, rotating opposite
-        const rightSwordX = swordLength * (1 - easeProgress);
-        const rightAngle = -easeProgress * Math.PI / 6; // Rotate opposite direction
+        // Draw swords
+        ctx.globalAlpha = Math.min(1, swordProgress * 2);
         
-        // Draw left sword
+        // Left sword
+        const leftSwordX = -250 + (leftSwordProgress * 250);
         ctx.save();
         ctx.translate(leftSwordX, 0);
-        ctx.rotate(leftAngle);
-        this.drawSword(ctx, 0, 0, swordLength, swordWidth, '#C9A961', true);
+        ctx.rotate(leftSwingAngle);
+        this.drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.4);
         ctx.restore();
-        
-        // Draw right sword
+
+        // Right sword
+        const rightSwordX = 250 - (rightSwordProgress * 250);
         ctx.save();
         ctx.translate(rightSwordX, 0);
-        ctx.rotate(rightAngle);
-        this.drawSword(ctx, 0, 0, swordLength, swordWidth, '#C9A961', false);
+        ctx.rotate(rightSwingAngle);
+        this.drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.4);
         ctx.restore();
-        
-        // Clash flash effect
-        if (progress > 0.7) {
-            const flashAlpha = Math.max(0, (1 - progress) / 0.3) * 0.6;
-            ctx.fillStyle = `rgba(255, 215, 0, ${flashAlpha})`;
-            ctx.beginPath();
-            ctx.arc(0, 0, 150, 0, Math.PI * 2);
-            ctx.fill();
+
+        // Subtle clash flash at sword meeting point (matching StartScreen)
+        if (swordProgress > 0.35) {
+            const flashProgress = Math.min(1, (swordProgress - 0.35) / 0.15);
+            const flashOpacity = (1 - flashProgress) * 0.3;
             
-            // Radiant lines from clash point
-            const lineCount = 8;
-            for (let i = 0; i < lineCount; i++) {
-                const angle = (i / lineCount) * Math.PI * 2;
-                const distance = 50 + progress * 100;
-                ctx.strokeStyle = `rgba(255, 215, 0, ${flashAlpha})`;
-                ctx.lineWidth = 2;
+            ctx.globalAlpha = flashOpacity * 0.3;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 80 * flashProgress, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.globalAlpha = 1;
+    }
+
+    /**
+     * Draw a medieval sword with proper detail
+     */
+    drawMedievalSword(ctx, x, y, primaryColor, accentColor, scale = 1) {
+        const bladeLength = 150 * scale;
+        const bladeWidth = 18 * scale;
+        const guardWidth = 60 * scale;
+        const guardHeight = 10 * scale;
+        const handleLength = 40 * scale;
+        const pommelRadius = 10 * scale;
+
+        // Blade pointing UPWARD (negative Y)
+        ctx.fillStyle = primaryColor;
+        // Main blade body
+        ctx.beginPath();
+        ctx.moveTo(x - bladeWidth / 2, y); // Bottom left
+        ctx.lineTo(x + bladeWidth / 2, y); // Bottom right
+        ctx.lineTo(x + bladeWidth / 3, y - bladeLength * 0.7); // Right edge towards tip
+        ctx.lineTo(x, y - bladeLength); // Tip (pointy)
+        ctx.lineTo(x - bladeWidth / 3, y - bladeLength * 0.7); // Left edge towards tip
+        ctx.closePath();
+        ctx.fill();
+        
+        // Blade shine (down the middle)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(x - bladeWidth / 5, y);
+        ctx.lineTo(x + bladeWidth / 5, y);
+        ctx.lineTo(x + bladeWidth / 8, y - bladeLength * 0.6);
+        ctx.lineTo(x, y - bladeLength + 5);
+        ctx.lineTo(x - bladeWidth / 8, y - bladeLength * 0.6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cross guard (perpendicular to blade)
+        ctx.fillStyle = accentColor;
+        ctx.fillRect(x - guardWidth / 2, y + 2, guardWidth, guardHeight);
+
+        // Guard decorative circles
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 2.5 * scale;
+        ctx.beginPath();
+        ctx.arc(x - guardWidth / 3, y + guardHeight / 2, 5 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + guardWidth / 3, y + guardHeight / 2, 5 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Handle below guard
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(x - bladeWidth / 2.5, y + guardHeight + 2, bladeWidth * 0.8, handleLength);
+
+        // Handle grip lines
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x - bladeWidth / 2.5, y + guardHeight + 2 + (i * 7));
+            ctx.lineTo(x + bladeWidth / 2.5, y + guardHeight + 2 + (i * 7));
+            ctx.stroke();
+        }
+
+        // Pommel at bottom
+        ctx.fillStyle = accentColor;
+        ctx.beginPath();
+        ctx.arc(x, y + guardHeight + handleLength + 5, pommelRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Pommel highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.arc(x - 3, y + guardHeight + handleLength + 5 - 3, pommelRadius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Blade edge definition
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + bladeWidth / 2, y);
+        ctx.lineTo(x + bladeWidth / 3, y - bladeLength * 0.7);
+        ctx.lineTo(x, y - bladeLength);
+        ctx.stroke();
+    }
+
+    /**
+     * Render VICTORY text bursting out from sword clash with dopamine-inducing pop effect
+     */
+    renderVictoryBurst(ctx, progress) {
+        // Pop-in flash effect: quick scale with dopamine flash
+        const popDuration = 0.15; // 150ms pop-in effect
+        const popProgress = Math.min(progress / popDuration, 1);
+        
+        // Quick bounce/pop-in using cubic ease-out
+        const popScale = Math.pow(popProgress, 0.5) * (1 + (1 - popProgress) * 0.3);
+        
+        // After pop, smooth scale expansion
+        const expandProgress = Math.max(0, (progress - popDuration) / (1 - popDuration));
+        const expandScale = 1 + expandProgress * 0.3;
+        
+        // Combine pop and expand
+        const baseScale = popProgress < 1 ? popScale : expandScale;
+        const alpha = Math.min(progress * 2.5, 1);
+        
+        // === DOPAMINE FLASH EFFECT ===
+        // Bright white flash on initial pop (0-0.1s)
+        if (popProgress < 0.7) {
+            const flashAlpha = (1 - popProgress) * 0.5;
+            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, 300 * popScale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Radiant glow burst
+        if (popProgress < 1) {
+            const burstAlpha = (1 - popProgress) * 0.4;
+            ctx.strokeStyle = `rgba(255, 215, 0, ${burstAlpha})`;
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const distance = 150 + popProgress * 100;
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
                 ctx.lineTo(Math.cos(angle) * distance, Math.sin(angle) * distance);
                 ctx.stroke();
             }
         }
-    }
-
-    /**
-     * Draw a single sword
-     */
-    drawSword(ctx, x, y, length, width, color, isLeft) {
-        // Sword blade
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        const tipX = x + (isLeft ? length : -length);
-        const tipY = y;
-        ctx.moveTo(x, y - width / 2);
-        ctx.lineTo(tipX, tipY - 5);
-        ctx.lineTo(tipX, tipY + 5);
-        ctx.lineTo(x, y + width / 2);
-        ctx.fill();
-        
-        // Sword edge highlight
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x, y - width / 2);
-        ctx.lineTo(tipX, tipY - 5);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        
-        // Sword handle
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - width, y - width / 2, width, width);
-        
-        // Handle guard
-        ctx.fillStyle = '#C9A961';
-        ctx.fillRect(x - width - 15, y - width / 2 - 8, width + 30, width + 16);
-    }
-
-    /**
-     * Render VICTORY text bursting out from sword clash
-     */
-    renderVictoryBurst(ctx, progress) {
-        // Ease out for smooth expansion
-        const easeProgress = 1 - Math.pow(1 - progress, 2);
-        
-        // Scale grows from small to large
-        const scale = 0.3 + easeProgress * 0.7;
-        const alpha = Math.min(progress * 2, 1); // Fade in quickly
         
         // Draw VICTORY text
         ctx.save();
-        ctx.scale(scale, scale);
+        ctx.scale(baseScale, baseScale);
         ctx.globalAlpha = alpha;
         
-        // Text glow layers (darker gold for professionalism)
-        ctx.font = 'bold 140px "Arial Black", sans-serif';
+        // Medieval-themed font with strong presence
+        ctx.font = 'bold 160px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // Golden glow
-        for (let i = 20; i > 0; i--) {
-            ctx.fillStyle = `rgba(201, 169, 97, ${(0.3 / 20) * i})`;
+        // Deep golden glow layers (creating depth and professionalism)
+        ctx.globalAlpha = alpha * 0.4;
+        for (let i = 30; i > 0; i -= 3) {
+            const glossAlpha = (30 - i) / 30 * 0.3;
+            ctx.fillStyle = `rgba(201, 169, 97, ${glossAlpha})`;
             ctx.lineWidth = i;
-            ctx.strokeText('VICTORY!', 0, 0);
+            ctx.strokeText('VICTORY!!', 0, 0);
         }
         
-        // Main gold text
-        ctx.fillStyle = '#D4AF37';
-        ctx.fillText('VICTORY!', 0, 0);
+        // Primary brilliant gold text
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('VICTORY!!', 0, 0);
         
-        // Shimmer effect around text
-        const shimmerCount = 16;
+        // Secondary outline for more definition
+        ctx.strokeStyle = '#C9A961';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = alpha * 0.7;
+        ctx.strokeText('VICTORY!!', 0, 0);
+        
+        // Shimmer particles around text
+        ctx.globalAlpha = alpha;
+        const shimmerCount = 20;
         for (let i = 0; i < shimmerCount; i++) {
-            const angle = (i / shimmerCount) * Math.PI * 2;
-            const distance = 180 + Math.sin(progress * Math.PI + angle) * 40;
+            const angle = (i / shimmerCount) * Math.PI * 2 + progress * Math.PI;
+            const baseDistance = 200;
+            const distance = baseDistance + Math.sin(progress * Math.PI * 3 + angle) * 50;
             const sx = Math.cos(angle) * distance;
             const sy = Math.sin(angle) * distance;
             
-            // Alternate colors for shimmer
-            const isWarm = i % 2 === 0;
-            const shimmerColor = isWarm ? '#FFD700' : '#C9A961';
+            // Cycling shimmer colors (gold, white, bronze)
+            const shimmerVariant = i % 3;
+            let shimmerColor;
+            if (shimmerVariant === 0) {
+                shimmerColor = '#FFD700';
+            } else if (shimmerVariant === 1) {
+                shimmerColor = '#FFFFFF';
+            } else {
+                shimmerColor = '#C9A961';
+            }
+            
             ctx.fillStyle = shimmerColor;
-            ctx.globalAlpha = alpha * (1 - Math.abs(Math.sin(progress * Math.PI + angle)));
+            ctx.globalAlpha = alpha * Math.max(0, Math.sin(progress * Math.PI + angle)) * 0.8;
             ctx.beginPath();
-            ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+            ctx.arc(sx, sy, 6, 0, Math.PI * 2);
             ctx.fill();
         }
         
         ctx.restore();
+    }
+
+    /**
+     * Render defeat screen with motivational quote
+     */
+    renderDefeatScreen(ctx, canvas) {
+        // Draw dark background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Draw defeat title
+        ctx.fillStyle = '#8B0000'; // Dark red
+        ctx.font = 'bold 80px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('DEFEAT', centerX, centerY - 150);
+
+        // Draw motivational quote
+        ctx.fillStyle = '#C9A961'; // Gold
+        ctx.font = 'italic 28px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Word wrap the quote if needed
+        const maxWidth = canvas.width - 200;
+        const words = this.selectedDefeatQuote.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (const word of words) {
+            const testLine = currentLine + (currentLine ? ' ' : '') + word;
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        const lineHeight = 40;
+        const totalHeight = (lines.length - 1) * lineHeight;
+        let yPos = centerY - 20 - totalHeight / 2;
+
+        for (const line of lines) {
+            ctx.fillText(line, centerX, yPos);
+            yPos += lineHeight;
+        }
+
+        // Draw buttons
+        this.renderButtons(ctx, 0, 0);
     }
 
     /**
@@ -809,9 +1008,23 @@ export class ResultsScreen {
      * Render buttons (appear after animations)
      */
     renderButtons(ctx, modalX, modalY) {
-        const buttonY = modalY + this.modalHeight - this.padding - this.buttonHeight;
-        const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-        const startX = modalX + (this.modalWidth - totalButtonWidth) / 2;
+        // Determine button positioning based on whether we're on defeat or results screen
+        const isDefeatScreen = this.animationPhase === 'defeat';
+        const canvas = this.stateManager.canvas;
+        
+        let buttonY, startX;
+        
+        if (isDefeatScreen) {
+            // Center buttons on the defeat screen
+            buttonY = canvas.height / 2 + 200;
+            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
+            startX = (canvas.width - totalButtonWidth) / 2;
+        } else {
+            // Normal results screen button positioning
+            buttonY = modalY + this.modalHeight - this.padding - this.buttonHeight;
+            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
+            startX = modalX + (this.modalWidth - totalButtonWidth) / 2;
+        }
 
         console.log('renderButtons - button count:', this.buttons.length, 'positions:');
         this.buttons.forEach((button, index) => {
