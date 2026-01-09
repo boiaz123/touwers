@@ -12,7 +12,6 @@ import { SettlementHub } from '../core/states/SettlementHub.js';
 import { SaveSystem } from '../core/SaveSystem.js';
 import { ResolutionManager } from '../core/ResolutionManager.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
-import { ResolutionSelector } from '../ui/ResolutionSelector.js';
 import { CampaignRegistry } from './CampaignRegistry.js';
 import { LevelRegistry } from '../entities/levels/LevelRegistry.js';
 import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
@@ -78,9 +77,6 @@ export class Game {
             // Initialize game loop timing
             this.lastTime = 0;
             this.isInitialized = false;
-            
-            // Create resolution selector
-            this.resolutionSelector = new ResolutionSelector(this);
             
             // Setup event listeners early
             this.setupEventListeners();
@@ -236,41 +232,7 @@ export class Game {
         }
     }
     
-    /**
-     * Apply a new resolution and re-initialize game if needed
-     */
-    applyResolution(width, height) {
-        try {
-            
-            // Update canvas dimensions
-            this.canvas.width = width;
-            this.canvas.height = height;
-            
-            // Recreate resolution manager with new dimensions
-            this.resolutionManager = new ResolutionManager(width, height);
-            this.canvas.resolutionManager = this.resolutionManager;
-            this.ctx.resolutionManager = this.resolutionManager;
-            if (this.stateManager) {
-                this.stateManager.resolutionManager = this.resolutionManager;
-            }
-            
-            // Trigger resize on current state if available
-            if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.resize) {
-                this.stateManager.currentState.resize();
-            }
-        } catch (error) {
-            console.error('Game: Error applying resolution:', error);
-        }
-    }
-    
-    /**
-     * Show the resolution selector dialog
-     */
-    showResolutionSelector() {
-        if (this.resolutionSelector) {
-            this.resolutionSelector.show();
-        }
-    }
+
     
     startGameLoop() {
         requestAnimationFrame((time) => this.gameLoop(time));

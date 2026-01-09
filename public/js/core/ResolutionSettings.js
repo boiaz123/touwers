@@ -3,14 +3,8 @@
  * Manages fullscreen and resolution selection
  */
 export class ResolutionSettings {
-    // Available resolutions
-    static RESOLUTIONS = {
-        '1280x720': { width: 1280, height: 720, label: '720p' },
-        '1920x1080': { width: 1920, height: 1080, label: '1080p (Recommended)' },
-        '2560x1440': { width: 2560, height: 1440, label: '1440p (QHD)' },
-        '3840x2160': { width: 3840, height: 2160, label: '2160p (4K)' }
-    };
-
+    // Fixed resolution - game always runs at 1920x1080
+    static FIXED_RESOLUTION = { width: 1920, height: 1080 };
     static DEFAULT_RESOLUTION = '1920x1080';
 
     /**
@@ -37,10 +31,10 @@ export class ResolutionSettings {
     }
 
     /**
-     * Get resolution dimensions
+     * Get resolution dimensions - always returns fixed 1920x1080
      */
     static getResolution(key) {
-        return this.RESOLUTIONS[key] || this.RESOLUTIONS[this.DEFAULT_RESOLUTION];
+        return this.FIXED_RESOLUTION;
     }
 
     /**

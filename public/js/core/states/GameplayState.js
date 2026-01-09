@@ -761,16 +761,6 @@ export class GameplayState {
             this.uiManager.setupUIEventListeners();
         }
         
-        // Setup resolution button
-        const resolutionBtn = document.getElementById('resolution-btn');
-        if (resolutionBtn) {
-            resolutionBtn.addEventListener('click', () => {
-                if (this.stateManager && this.stateManager.game && this.stateManager.game.showResolutionSelector) {
-                    this.stateManager.game.showResolutionSelector();
-                }
-            });
-        }
-        
         // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
