@@ -68,22 +68,34 @@ export class SettlementHub {
         this.isFirstRender = true; // Force pre-render on next render
         this.activePopup = null;
         
-        // Load campaign progress (gold, inventory, upgrades) from persistent storage
-        // Load from the current save slot to ensure isolation between save games
-        // BUT: Only load inventory if it's empty (preserve loot from just-completed level)
-        const campaignProgress = SaveSystem.loadCampaignProgress(this.stateManager.currentSaveSlot);
-        this.stateManager.playerGold = campaignProgress.playerGold || 0;
+        // Load settlement data from the current save slot
+        // This includes gold, inventory, upgrades, and unlock progression
+        const currentSaveData = SaveSystem.getSave(this.stateManager.currentSaveSlot);
         
-        // Only load inventory from storage if we don't already have loot from current session
-        if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
-            this.stateManager.playerInventory = campaignProgress.playerInventory || [];
-        }
-        
-        // Initialize upgrade system if not already done
-        if (!this.stateManager.upgradeSystem) {
-            this.stateManager.upgradeSystem = new UpgradeSystem();
-            if (campaignProgress.upgrades) {
-                this.stateManager.upgradeSystem.restoreFromSave(campaignProgress.upgrades);
+        if (currentSaveData) {
+            // Initialize player gold from the save data
+            this.stateManager.playerGold = currentSaveData.playerGold || 0;
+            
+            // Only load inventory from storage if we don't already have loot from current session
+            if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
+                this.stateManager.playerInventory = currentSaveData.playerInventory || [];
+            }
+            
+            // Initialize upgrade system if not already done
+            if (!this.stateManager.upgradeSystem) {
+                this.stateManager.upgradeSystem = new UpgradeSystem();
+                if (currentSaveData.upgrades) {
+                    this.stateManager.upgradeSystem.restoreFromSave(currentSaveData.upgrades);
+                }
+            }
+        } else {
+            // No save data found, initialize with defaults
+            this.stateManager.playerGold = 0;
+            if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
+                this.stateManager.playerInventory = [];
+            }
+            if (!this.stateManager.upgradeSystem) {
+                this.stateManager.upgradeSystem = new UpgradeSystem();
             }
         }
         

@@ -9,7 +9,6 @@ export class GameStateManager {
         // Save system properties
         this.currentSaveSlot = null;
         this.currentSaveData = null;
-        this.currentMidGameState = null;
         this.previousState = null;
         
         // Player progression - persistent across levels

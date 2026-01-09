@@ -191,7 +191,7 @@ export class SaveSlotSelection {
                 y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
                 // Create new game in this slot (overwrite existing save)
                 const newGameData = SaveSystem.createNewGameState();
-                SaveSystem.saveGame(this.warningSlotNumber, newGameData);
+                SaveSystem.saveSettlementData(this.warningSlotNumber, newGameData);
 
                 // Set as current slot
                 this.stateManager.currentSaveSlot = this.warningSlotNumber;
@@ -205,7 +205,7 @@ export class SaveSlotSelection {
             // Cancel button
             const cancelButtonX = panelX + panelWidth / 2 + 10;
             if (x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
-                y >= cancelButtonY && y <= cancelButtonY + buttonHeight) {
+                y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
                 // Close warning dialog
                 this.showWarning = false;
                 this.warningSlotNumber = null;
@@ -241,7 +241,7 @@ export class SaveSlotSelection {
                 } else {
                     // Create new game in empty slot
                     const newGameData = SaveSystem.createNewGameState();
-                    SaveSystem.saveGame(slotNum, newGameData);
+                    SaveSystem.saveSettlementData(slotNum, newGameData);
 
                     // Set as current slot
                     this.stateManager.currentSaveSlot = slotNum;

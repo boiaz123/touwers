@@ -166,24 +166,10 @@ export class LoadGame {
                     this.stateManager.currentSaveSlot = slotNum;
                     this.stateManager.currentSaveData = saveData;
                     
-                    // Check if this save has mid-game state (in-progress level)
-                    if (saveData.isMidGameSave && saveData.midGameState) {
-                        console.log('LoadGame: Found mid-game save, restoring from progress');
-                        console.log('LoadGame: midGameState:', saveData.midGameState);
-                        
-                        // Resume from mid-game
-                        this.stateManager.currentMidGameState = saveData.midGameState;
-                        this.stateManager.selectedLevelInfo = {
-                            id: saveData.currentLevel,
-                            name: saveData.levelName,
-                            type: saveData.levelType
-                        };
-                        this.stateManager.changeState('game');
-                    } else {
-                        console.log('LoadGame: Simple save found, going to settlement hub');
-                        // Load settlement hub to choose options
-                        this.stateManager.changeState('settlementHub');
-                    }
+                    // All saves are now settlement-only (no mid-game saves)
+                    // Always go to settlement hub to continue playing
+                    console.log('LoadGame: Loading save from slot', slotNum, ' - going to settlement hub');
+                    this.stateManager.changeState('settlementHub');
                 } else {
                     console.log('LoadGame: No save data found for slot', slotNum);
                 }

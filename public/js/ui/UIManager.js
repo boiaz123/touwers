@@ -3109,11 +3109,8 @@ export class UIManager {
                 return;
             }
             
-            // Perform a full mid-game save with complete state
-            const buildingManager = this.towerManager?.buildingManager;
-            const unlockSystem = this.towerManager?.unlockSystem;
-            
             // Prepare unlock system state for saving
+            const unlockSystem = this.towerManager?.unlockSystem;
             const unlockState = {
                 forgeLevel: unlockSystem?.forgeLevel || 0,
                 hasForge: unlockSystem?.hasForge || false,
@@ -3132,35 +3129,17 @@ export class UIManager {
                 unlockedCombinationSpells: unlockSystem?.unlockedCombinationSpells ? Array.from(unlockSystem.unlockedCombinationSpells) : []
             };
             
-            // Debug: Log castle state before saving
-            console.log('UIManager.saveGame: this.level exists:', !!this.level);
-            console.log('UIManager.saveGame: this.level.castle exists:', !!this.level?.castle);
-            if (this.level?.castle) {
-                console.log('UIManager.saveGame: Castle health:', this.level.castle.health, 'maxHealth:', this.level.castle.maxHealth);
-                console.log('UIManager.saveGame: Castle defender:', this.level.castle.defender);
-            }
-            
-            SaveSystem.saveGame(
+            // Save only settlement data - NOT mid-game level state
+            SaveSystem.saveSettlementData(
                 this.stateManager.currentSaveSlot,
                 {
-                    currentLevel: this.gameplayState.currentLevel,
-                    levelType: this.gameplayState.levelType,
-                    levelName: this.gameplayState.levelName,
-                    // Save game state with wave tracking
-                    gameState: {
-                        ...this.gameState,
-                        waveInProgress: this.gameplayState.waveInProgress,
-                        waveCompleted: this.gameplayState.waveCompleted
-                    },
-                    towerManager: this.towerManager,
-                    enemyManager: this.gameplayState.enemyManager,
-                    buildingManager: buildingManager,
-                    level: this.level,
-                    unlockSystem: unlockState,
-                    unlockedTowers: unlockState.unlockedTowers,
-                    unlockedBuildings: unlockState.unlockedBuildings,
+                    playerGold: this.gameState.gold || 0,
+                    playerInventory: this.stateManager.playerInventory || [],
+                    upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                    lastPlayedLevel: this.gameplayState.currentLevel,
                     unlockedLevels: this.stateManager.currentSaveData?.unlockedLevels || [],
-                    completedLevels: this.stateManager.currentSaveData?.completedLevels || []
+                    completedLevels: this.stateManager.currentSaveData?.completedLevels || [],
+                    unlockSystem: unlockState
                 }
             );
             
@@ -3169,8 +3148,6 @@ export class UIManager {
             if (saveBtn) {
                 const originalText = saveBtn.textContent;
                 saveBtn.textContent = 'Game Saved!';
-                // Don't disable the button - keep it functional
-                // Just change the text temporarily
                 
                 setTimeout(() => {
                     const currentBtn = document.getElementById('save-btn');
