@@ -69,8 +69,9 @@ export class SettlementHub {
         this.activePopup = null;
         
         // Load campaign progress (gold, inventory, upgrades) from persistent storage
+        // Load from the current save slot to ensure isolation between save games
         // BUT: Only load inventory if it's empty (preserve loot from just-completed level)
-        const campaignProgress = SaveSystem.loadCampaignProgress();
+        const campaignProgress = SaveSystem.loadCampaignProgress(this.stateManager.currentSaveSlot);
         this.stateManager.playerGold = campaignProgress.playerGold || 0;
         
         // Only load inventory from storage if we don't already have loot from current session
@@ -237,11 +238,12 @@ export class SettlementHub {
     }
 
     exit() {
-        // Save campaign progress before exiting
+        // Save campaign progress before exiting (with current save slot)
         SaveSystem.saveCampaignProgress(
             this.stateManager.playerGold,
             this.stateManager.playerInventory,
-            this.stateManager.upgradeSystem
+            this.stateManager.upgradeSystem,
+            this.stateManager.currentSaveSlot
         );
         
         this.removeMouseListeners();

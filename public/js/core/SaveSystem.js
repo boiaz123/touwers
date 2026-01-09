@@ -568,9 +568,15 @@ export class SaveSystem {
     /**
      * Save campaign progress (settlement data: gold, inventory, upgrades)
      * This is campaign-wide data, not level-specific
+     * Now scoped to specific save slot instead of global
      */
-    static saveCampaignProgress(playerGold, playerInventory, upgradeSystem) {
-        const campaignProgressKey = 'touwers_campaign_progress';
+    static saveCampaignProgress(playerGold, playerInventory, upgradeSystem, slotNumber = null) {
+        // Determine which slot to save to
+        if (slotNumber === null) {
+            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
+        }
+        
+        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
         
         const progress = {
             playerGold: playerGold || 0,
@@ -581,6 +587,7 @@ export class SaveSystem {
 
         try {
             localStorage.setItem(campaignProgressKey, JSON.stringify(progress));
+            console.log('SaveSystem: Saved campaign progress to slot', slotNumber);
             return true;
         } catch (error) {
             console.error('SaveSystem: Failed to save campaign progress:', error);
@@ -590,12 +597,19 @@ export class SaveSystem {
 
     /**
      * Load campaign progress (settlement data)
+     * Now loads from the specific save slot instead of global
      */
-    static loadCampaignProgress() {
-        const campaignProgressKey = 'touwers_campaign_progress';
+    static loadCampaignProgress(slotNumber = null) {
+        // Determine which slot to load from
+        if (slotNumber === null) {
+            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
+        }
+        
+        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
         const data = localStorage.getItem(campaignProgressKey);
         
         if (!data) {
+            console.log('SaveSystem: No campaign progress found for slot', slotNumber, '- returning defaults');
             return {
                 playerGold: 0,
                 playerInventory: [],
@@ -604,7 +618,9 @@ export class SaveSystem {
         }
 
         try {
-            return JSON.parse(data);
+            const parsed = JSON.parse(data);
+            console.log('SaveSystem: Loaded campaign progress for slot', slotNumber);
+            return parsed;
         } catch (error) {
             console.error('SaveSystem: Failed to parse campaign progress:', error);
             return {
@@ -617,14 +633,36 @@ export class SaveSystem {
 
     /**
      * Clear campaign progress (used for new game)
+     * Now clears only for specific save slot
      */
-    static clearCampaignProgress() {
-        const campaignProgressKey = 'touwers_campaign_progress';
+    static clearCampaignProgress(slotNumber = null) {
+        if (slotNumber === null) {
+            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
+        }
+        
+        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
         try {
             localStorage.removeItem(campaignProgressKey);
+            console.log('SaveSystem: Cleared campaign progress for slot', slotNumber);
             return true;
         } catch (error) {
             console.error('SaveSystem: Failed to clear campaign progress:', error);
             return false;
         }
-    }}
+    }
+
+    /**
+     * Get the current save slot number
+     * Used for determining which slot's campaign progress to use
+     */
+    static getCurrentSlot() {
+        // Check if there's a slot number stored in the game state manager
+        // This should be set when entering from SaveSlotSelection or LoadGame
+        if (window.gameStateManager && window.gameStateManager.currentSaveSlot) {
+            return window.gameStateManager.currentSaveSlot;
+        }
+        
+        // Default to slot 1 if not set
+        return 1;
+    }
+}

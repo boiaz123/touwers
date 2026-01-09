@@ -120,6 +120,28 @@ export function initializeMusicRegistry() {
             category: 'campaign',
             volume: 0.7
         }
+
+    );
+
+        MusicRegistry.registerMusic(
+        'campaign-song-2',
+        'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song2.mp3',
+        {
+            loop: true,
+            category: 'campaign',
+            volume: 0.7
+        }
+
+    );
+    
+        MusicRegistry.registerMusic(
+        'campaign-song-3',
+        'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song3.mp3',
+        {
+            loop: true,
+            category: 'campaign',
+            volume: 0.7
+        }
     );
     
     // Victory and Defeat tunes - play on results screen
