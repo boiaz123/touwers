@@ -176,8 +176,8 @@ export class UIManager {
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         const resumeBtn = document.getElementById('resume-btn');
         const restartBtn = document.getElementById('restart-btn');
-        const saveBtn = document.getElementById('save-btn');
-        const exitBtn = document.getElementById('exit-btn');
+        const quitBtn = document.getElementById('quit-btn');
+        const optionsBtn = document.getElementById('options-btn');
         const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
 
         // Reset pause button to show pause icon (game is not paused on entry)
@@ -229,23 +229,23 @@ export class UIManager {
             });
         }
 
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
+        if (quitBtn) {
+            quitBtn.addEventListener('click', () => {
                 // Play button click SFX
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                this.saveGame();
+                this.quitLevel();
             });
         }
 
-        if (exitBtn) {
-            exitBtn.addEventListener('click', () => {
+        if (optionsBtn) {
+            optionsBtn.addEventListener('click', () => {
                 // Play button click SFX
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                this.exitToMenu();
+                this.openInGameOptions();
             });
         }
 
@@ -259,6 +259,9 @@ export class UIManager {
                 this.closePauseMenu();
             });
         }
+
+        // Setup in-game options panel
+        this.setupInGameOptions();
 
         // Initial button state update
         this.updateButtonStates();
@@ -291,19 +294,29 @@ export class UIManager {
             restartBtn.replaceWith(restartBtn.cloneNode(true));
         }
         
-        const saveBtn = document.getElementById('save-btn');
-        if (saveBtn) {
-            saveBtn.replaceWith(saveBtn.cloneNode(true));
+        const quitBtn = document.getElementById('quit-btn');
+        if (quitBtn) {
+            quitBtn.replaceWith(quitBtn.cloneNode(true));
         }
         
-        const exitBtn = document.getElementById('exit-btn');
-        if (exitBtn) {
-            exitBtn.replaceWith(exitBtn.cloneNode(true));
+        const optionsBtn = document.getElementById('options-btn');
+        if (optionsBtn) {
+            optionsBtn.replaceWith(optionsBtn.cloneNode(true));
         }
         
         const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
         if (pauseMenuOverlay) {
             pauseMenuOverlay.replaceWith(pauseMenuOverlay.cloneNode(true));
+        }
+
+        const ingameOptionsOverlay = document.getElementById('ingame-options-overlay');
+        if (ingameOptionsOverlay) {
+            ingameOptionsOverlay.replaceWith(ingameOptionsOverlay.cloneNode(true));
+        }
+
+        const ingameOptionsBackBtn = document.getElementById('ingame-options-back-btn');
+        if (ingameOptionsBackBtn) {
+            ingameOptionsBackBtn.replaceWith(ingameOptionsBackBtn.cloneNode(true));
         }
     }
 
@@ -2982,9 +2995,27 @@ export class UIManager {
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         if (pauseMenuModal) {
             pauseMenuModal.classList.remove('show');
-            // Keep game paused when closing menu - only close the menu
-            // Game remains in paused state
-            
+        }
+        
+        // Close options menu if open
+        const ingameOptionsModal = document.getElementById('ingame-options-modal');
+        if (ingameOptionsModal) {
+            ingameOptionsModal.classList.remove('show');
+        }
+        
+        // Resume the game at 1x speed
+        this.gameplayState.setPaused(false);
+        this.gameplayState.setGameSpeed(1.0);
+        this.updateSpeedCircles(1);
+        
+        // Update pause button to show pause icon (game is now playing)
+        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        if (speedPauseBtn) {
+            const icon = speedPauseBtn.querySelector('.pause-play-icon');
+            if (icon) {
+                icon.textContent = '⏸';
+                speedPauseBtn.title = 'Pause Game';
+            }
         }
     }
 
@@ -3125,5 +3156,149 @@ export class UIManager {
             // Change to level select state
             this.stateManager.changeState('levelSelect');
         }, 100);
+    }
+
+    quitLevel() {
+        // Close menu first
+        this.closePauseMenu();
+        
+        // Unpause the game before quitting
+        this.gameplayState.setPaused(false);
+        
+        // Small delay to ensure menu closes visually
+        setTimeout(() => {
+            // Change to settlement state
+            this.stateManager.changeState('settlementHub');
+        }, 100);
+    }
+
+    openInGameOptions() {
+        const ingameOptionsModal = document.getElementById('ingame-options-modal');
+        if (ingameOptionsModal) {
+            ingameOptionsModal.classList.add('show');
+            // Populate the options panel content
+            this.populateInGameOptionsPanel();
+        }
+    }
+
+    closeInGameOptions() {
+        const ingameOptionsModal = document.getElementById('ingame-options-modal');
+        if (ingameOptionsModal) {
+            ingameOptionsModal.classList.remove('show');
+        }
+    }
+
+    setupInGameOptions() {
+        const ingameOptionsBackBtn = document.getElementById('ingame-options-back-btn');
+        const ingameOptionsOverlay = document.getElementById('ingame-options-overlay');
+        
+        if (ingameOptionsBackBtn) {
+            ingameOptionsBackBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.closeInGameOptions();
+            });
+        }
+
+        if (ingameOptionsOverlay) {
+            ingameOptionsOverlay.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.closeInGameOptions();
+            });
+        }
+    }
+
+    populateInGameOptionsPanel() {
+        const content = document.getElementById('ingame-options-content');
+        if (!content) return;
+
+        // Clear existing content
+        content.innerHTML = '';
+
+        // Create volume controls and other options
+        const optionsHTML = `
+            <div style="color: var(--primary-gold-light); font-family: Arial, sans-serif;">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Music Volume</label>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="range" id="music-volume-slider" min="0" max="100" value="70" style="flex: 1; cursor: pointer;">
+                        <span id="music-volume-display" style="width: 50px; text-align: right;">70%</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">SFX Volume</label>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <input type="range" id="sfx-volume-slider" min="0" max="100" value="100" style="flex: 1; cursor: pointer;">
+                        <span id="sfx-volume-display" style="width: 50px; text-align: right;">100%</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Graphics Quality</label>
+                    <div style="display: flex; gap: 0.8rem;">
+                        <button id="graphics-low-btn" class="graphics-option-btn" data-quality="low" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">Low</button>
+                        <button id="graphics-med-btn" class="graphics-option-btn" data-quality="medium" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">Medium</button>
+                        <button id="graphics-high-btn" class="graphics-option-btn" data-quality="high" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">High</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        content.innerHTML = optionsHTML;
+
+        // Setup slider handlers
+        const musicSlider = document.getElementById('music-volume-slider');
+        const sfxSlider = document.getElementById('sfx-volume-slider');
+        const musicDisplay = document.getElementById('music-volume-display');
+        const sfxDisplay = document.getElementById('sfx-volume-display');
+
+        if (musicSlider) {
+            musicSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                musicDisplay.textContent = value + '%';
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.setMusicVolume(value / 100);
+                }
+            });
+        }
+
+        if (sfxSlider) {
+            sfxSlider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                sfxDisplay.textContent = value + '%';
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.setSFXVolume(value / 100);
+                }
+            });
+        }
+
+        // Setup graphics quality buttons
+        const graphicsButtons = document.querySelectorAll('.graphics-option-btn');
+        graphicsButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                const quality = btn.getAttribute('data-quality');
+                // Placeholder for graphics quality setting
+                console.log('Graphics quality set to:', quality);
+            });
+
+            btn.addEventListener('mouseenter', () => {
+                btn.style.background = 'linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%)';
+                btn.style.borderColor = '#ffe700';
+                btn.style.color = '#ffe700';
+                btn.style.boxShadow = '0 0 20px rgba(212, 175, 55, 0.5)';
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                btn.style.background = 'rgba(74, 58, 47, 0.95)';
+                btn.style.borderColor = '#d4af37';
+                btn.style.color = 'var(--primary-gold-light)';
+                btn.style.boxShadow = 'none';
+            });
+        });
     }
 }

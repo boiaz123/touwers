@@ -2095,6 +2095,8 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 /* All pause menu buttons use the same medieval stone style */
 .resume-btn,
 .restart-btn,
+.quit-btn,
+.options-btn,
 .save-btn,
 .exit-btn {
     background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
@@ -2104,6 +2106,8 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 
 .resume-btn:hover:not(:disabled),
 .restart-btn:hover:not(:disabled),
+.quit-btn:hover:not(:disabled),
+.options-btn:hover:not(:disabled),
 .save-btn:hover:not(:disabled),
 .exit-btn:hover:not(:disabled) {
     background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
@@ -2111,5 +2115,34 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     color: #ffe700 !important;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -1px 2px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.5) !important;
     transform: translateY(-3px) !important;
+}
+
+/* In-game options modal uses same styling as pause menu */
+#ingame-options-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+#ingame-options-modal.show {
+    display: flex !important;
+}
+
+#ingame-options-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(3px);
+    z-index: -1;
+    animation: fadeIn 0.3s ease;
 }
 
