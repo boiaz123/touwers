@@ -454,6 +454,50 @@ export class AudioManager {
     }
 
     /**
+     * Get all playable music tracks (settlement + campaign, excluding menu and results)
+     * @returns {Array} Array of playable track names
+     */
+    getPlayableTracks() {
+        return Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === 'settlement' || data.category === 'campaign')
+            .map(([name, _]) => name);
+    }
+
+    /**
+     * Play next playable track (settlement or campaign)
+     * Cycles to the next track or wraps around to first
+     */
+    playNextTrack() {
+        const playableTracks = this.getPlayableTracks();
+        if (playableTracks.length === 0) {
+            console.warn('AudioManager: No playable tracks found');
+            return;
+        }
+
+        // Find current track index
+        const currentIndex = playableTracks.indexOf(this.currentMusicTrack);
+        const nextIndex = (currentIndex + 1) % playableTracks.length;
+        this.playMusic(playableTracks[nextIndex]);
+    }
+
+    /**
+     * Play previous playable track (settlement or campaign)
+     * Cycles to the previous track or wraps around to last
+     */
+    playPreviousTrack() {
+        const playableTracks = this.getPlayableTracks();
+        if (playableTracks.length === 0) {
+            console.warn('AudioManager: No playable tracks found');
+            return;
+        }
+
+        // Find current track index
+        const currentIndex = playableTracks.indexOf(this.currentMusicTrack);
+        const prevIndex = (currentIndex - 1 + playableTracks.length) % playableTracks.length;
+        this.playMusic(playableTracks[prevIndex]);
+    }
+
+    /**
      * Set music volume (0.0 - 1.0)
      */
     setMusicVolume(volume) {

@@ -108,13 +108,13 @@ export class MusicPlayer {
 
     previousTrack() {
         if (!this.audioManager) return;
-        this.audioManager.playPreviousSettlementTheme();
+        this.audioManager.playPreviousTrack();
         this.updateTrackName();
     }
 
     nextTrack() {
         if (!this.audioManager) return;
-        this.audioManager.playNextSettlementTheme();
+        this.audioManager.playNextTrack();
         this.updateTrackName();
     }
 
