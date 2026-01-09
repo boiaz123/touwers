@@ -179,6 +179,42 @@
         </div>
     </div>
 
+    <!-- Quit Level Warning Modal -->
+    <div id="quit-warning-modal" class="pause-menu-modal">
+        <div class="pause-menu-overlay" id="quit-warning-overlay"></div>
+        <div class="pause-menu-content">
+            <div class="pause-menu-header">
+                <div class="pause-menu-title">⚠ Warning</div>
+            </div>
+            <div style="color: var(--primary-gold-light); text-align: center; margin-bottom: 2rem; position: relative; z-index: 1;">
+                <p>Current level progress will be lost if you continue.</p>
+                <p>Are you sure?</p>
+            </div>
+            <div class="pause-menu-buttons">
+                <button id="quit-confirm-btn" class="pause-menu-btn quit-btn">Quit</button>
+                <button id="quit-cancel-btn" class="pause-menu-btn resume-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restart Level Warning Modal -->
+    <div id="restart-warning-modal" class="pause-menu-modal">
+        <div class="pause-menu-overlay" id="restart-warning-overlay"></div>
+        <div class="pause-menu-content">
+            <div class="pause-menu-header">
+                <div class="pause-menu-title">⚠ Warning</div>
+            </div>
+            <div style="color: var(--primary-gold-light); text-align: center; margin-bottom: 2rem; position: relative; z-index: 1;">
+                <p>Current level progress will be lost if you continue.</p>
+                <p>Are you sure?</p>
+            </div>
+            <div class="pause-menu-buttons">
+                <button id="restart-confirm-btn" class="pause-menu-btn restart-btn">Restart</button>
+                <button id="restart-cancel-btn" class="pause-menu-btn resume-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Speed Controls - Bottom Left Corner -->
     <div id="speed-controls-bottom">
         <div id="speed-controls-group">

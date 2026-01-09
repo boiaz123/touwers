@@ -318,6 +318,36 @@ export class UIManager {
         if (ingameOptionsBackBtn) {
             ingameOptionsBackBtn.replaceWith(ingameOptionsBackBtn.cloneNode(true));
         }
+
+        const quitConfirmBtn = document.getElementById('quit-confirm-btn');
+        if (quitConfirmBtn) {
+            quitConfirmBtn.replaceWith(quitConfirmBtn.cloneNode(true));
+        }
+
+        const quitCancelBtn = document.getElementById('quit-cancel-btn');
+        if (quitCancelBtn) {
+            quitCancelBtn.replaceWith(quitCancelBtn.cloneNode(true));
+        }
+
+        const quitWarningOverlay = document.getElementById('quit-warning-overlay');
+        if (quitWarningOverlay) {
+            quitWarningOverlay.replaceWith(quitWarningOverlay.cloneNode(true));
+        }
+
+        const restartConfirmBtn = document.getElementById('restart-confirm-btn');
+        if (restartConfirmBtn) {
+            restartConfirmBtn.replaceWith(restartConfirmBtn.cloneNode(true));
+        }
+
+        const restartCancelBtn = document.getElementById('restart-cancel-btn');
+        if (restartCancelBtn) {
+            restartCancelBtn.replaceWith(restartCancelBtn.cloneNode(true));
+        }
+
+        const restartWarningOverlay = document.getElementById('restart-warning-overlay');
+        if (restartWarningOverlay) {
+            restartWarningOverlay.replaceWith(restartWarningOverlay.cloneNode(true));
+        }
     }
 
     // ============ SPEED CONTROLS ============
@@ -3020,8 +3050,21 @@ export class UIManager {
     }
 
     restartLevel() {
+        // Show restart warning modal instead of restarting directly
+        const restartWarningModal = document.getElementById('restart-warning-modal');
+        if (restartWarningModal) {
+            restartWarningModal.classList.add('show');
+        }
+    }
+
+    confirmRestartLevel() {
+        // Close warning modal
+        const restartWarningModal = document.getElementById('restart-warning-modal');
+        if (restartWarningModal) {
+            restartWarningModal.classList.remove('show');
+        }
         
-        // Close menu first
+        // Close pause menu
         this.closePauseMenu();
         
         // Unpause the game before restarting
@@ -3034,6 +3077,14 @@ export class UIManager {
             // Change to game state which properly resets the game state
             this.stateManager.changeState('game');
         }, 100);
+    }
+
+    cancelRestartLevel() {
+        // Close warning modal
+        const restartWarningModal = document.getElementById('restart-warning-modal');
+        if (restartWarningModal) {
+            restartWarningModal.classList.remove('show');
+        }
     }
 
     saveGame() {
@@ -3159,7 +3210,21 @@ export class UIManager {
     }
 
     quitLevel() {
-        // Close menu first
+        // Show quit warning modal instead of quitting directly
+        const quitWarningModal = document.getElementById('quit-warning-modal');
+        if (quitWarningModal) {
+            quitWarningModal.classList.add('show');
+        }
+    }
+
+    confirmQuitLevel() {
+        // Close warning modal
+        const quitWarningModal = document.getElementById('quit-warning-modal');
+        if (quitWarningModal) {
+            quitWarningModal.classList.remove('show');
+        }
+        
+        // Close pause menu
         this.closePauseMenu();
         
         // Unpause the game before quitting
@@ -3170,6 +3235,14 @@ export class UIManager {
             // Change to settlement state
             this.stateManager.changeState('settlementHub');
         }, 100);
+    }
+
+    cancelQuitLevel() {
+        // Close warning modal
+        const quitWarningModal = document.getElementById('quit-warning-modal');
+        if (quitWarningModal) {
+            quitWarningModal.classList.remove('show');
+        }
     }
 
     openInGameOptions() {
@@ -3207,6 +3280,70 @@ export class UIManager {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.closeInGameOptions();
+            });
+        }
+
+        // Setup quit warning modal listeners
+        const quitConfirmBtn = document.getElementById('quit-confirm-btn');
+        const quitCancelBtn = document.getElementById('quit-cancel-btn');
+        const quitWarningOverlay = document.getElementById('quit-warning-overlay');
+
+        if (quitConfirmBtn) {
+            quitConfirmBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.confirmQuitLevel();
+            });
+        }
+
+        if (quitCancelBtn) {
+            quitCancelBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelQuitLevel();
+            });
+        }
+
+        if (quitWarningOverlay) {
+            quitWarningOverlay.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelQuitLevel();
+            });
+        }
+
+        // Setup restart warning modal listeners
+        const restartConfirmBtn = document.getElementById('restart-confirm-btn');
+        const restartCancelBtn = document.getElementById('restart-cancel-btn');
+        const restartWarningOverlay = document.getElementById('restart-warning-overlay');
+
+        if (restartConfirmBtn) {
+            restartConfirmBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.confirmRestartLevel();
+            });
+        }
+
+        if (restartCancelBtn) {
+            restartCancelBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelRestartLevel();
+            });
+        }
+
+        if (restartWarningOverlay) {
+            restartWarningOverlay.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelRestartLevel();
             });
         }
     }

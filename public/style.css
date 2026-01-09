@@ -2146,3 +2146,61 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     animation: fadeIn 0.3s ease;
 }
 
+/* Quit Warning Modal */
+#quit-warning-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1002;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+#quit-warning-modal.show {
+    display: flex !important;
+}
+
+#quit-warning-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(3px);
+    z-index: -1;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Restart Warning Modal */
+#restart-warning-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1002;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+#restart-warning-modal.show {
+    display: flex !important;
+}
+
+#restart-warning-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(3px);
+    z-index: -1;
+    animation: fadeIn 0.3s ease;
+}
+
