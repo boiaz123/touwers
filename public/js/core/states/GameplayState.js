@@ -214,6 +214,7 @@ export class GameplayState {
         // Now that level is initialized, set maxWavesForLevel from level.maxWaves
         if (!this.isSandbox) {
             this.maxWavesForLevel = this.level?.maxWaves || 10;
+            console.log('GameplayState: Level maxWaves property:', this.level?.maxWaves);
             console.log('GameplayState: Level has', this.maxWavesForLevel, 'waves');
         }
         
@@ -956,9 +957,11 @@ export class GameplayState {
     }
     
     startWave() {
-        // For campaign levels, check if we've exceeded the level's wave count
+        console.log('startWave() called for wave', this.gameState.wave, '(maxWaves:', this.maxWavesForLevel, ')');
+        
+        // Check if we've exceeded max waves for campaign levels
         if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
-            console.log('GameplayState: Wave', this.gameState.wave, 'exceeds maxWaves', this.maxWavesForLevel);
+            console.log('Wave', this.gameState.wave, 'exceeds maxWaves', this.maxWavesForLevel, '- completing level');
             this.completeLevel();
             return;
         }
@@ -999,8 +1002,10 @@ export class GameplayState {
     }
     
     completeLevel() {
+        console.log('completeLevel() called');
         if (this.isSandbox) {
             // Sandbox mode doesn't end, just continue
+            console.log('Sandbox mode - not completing');
             return;
         }
 
@@ -1023,7 +1028,7 @@ export class GameplayState {
             
             // Save to current slot if available
             if (this.stateManager.currentSaveSlot) {
-                SaveSystem.saveGame(this.stateManager.currentSaveSlot, saveData);
+                SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, saveData);
             }
         }
 
