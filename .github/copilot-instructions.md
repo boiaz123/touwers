@@ -5,13 +5,9 @@ When adding new code, follow the established architecture and patterns closely. 
 
 Don't create summary documents or any .md files other than this one.
 
-Make sure you run background and check powershell commands in a different powershell window than the one that runs Touwers. Because you keep putting commands in the active terminal window and that breaks Touwers, dont type messages and waits etc, just check the background console and logging.
+You do not have to test anything functionally, I will do that. Your job is to deliver code that fits the architecture and coding style. Make sure to check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app, do NOT deliver code with syntax errors.
 
-You always keep overwriting the npm start terminal screen with sleep-commands, which makes it impossible to see logs and errors. Dont do that, use a different terminal window for testing powershell commands.
-
-You always write a wait and sleep command for the npm start terminal, which breaks Touwers. Dont do that, just wait without telling the terminal you are waiting.
-
-Make sure you check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app, do NOT deliver code with syntax errors.
+When referencing files, use the full relative path from the project root, e.g. `public/js/entities/towers/CannonTower.js`.
 
 
 ## Project Overview

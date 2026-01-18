@@ -170,6 +170,19 @@ export class UIManager {
         } else {
         }
 
+        // ============ WAVE COUNTDOWN BUTTON ============
+        const waveCountdownBtn = document.getElementById('wave-countdown-btn');
+        if (waveCountdownBtn) {
+            waveCountdownBtn.addEventListener('click', () => {
+                // Play button click SFX
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                // Skip the cooldown and start the next wave immediately
+                this.gameplayState.skipWaveCooldown();
+            });
+        }
+
         // ============ PAUSE AND MENU BUTTONS ============
         const speedPauseBtn = document.getElementById('speed-pause-btn');
         const menuBtn = document.getElementById('menu-btn');
@@ -844,6 +857,28 @@ export class UIManager {
 
     updateSpeedCircles(speed) {
         this.setGameSpeedButtonState(speed);
+    }
+
+    updateWaveCooldownDisplay() {
+        const container = document.getElementById('wave-countdown-container');
+        const btn = document.getElementById('wave-countdown-btn');
+        const textEl = document.getElementById('wave-countdown-text');
+        const timerEl = document.getElementById('wave-countdown-timer');
+        
+        if (!container || !btn || !textEl || !timerEl) {
+            return; // Elements don't exist yet
+        }
+        
+        if (this.gameplayState.isInWaveCooldown) {
+            // Show countdown timer
+            container.classList.add('visible');
+            const seconds = Math.ceil(this.gameplayState.waveCooldownTimer);
+            textEl.textContent = 'Next Wave';
+            timerEl.textContent = `${seconds}s`;
+        } else {
+            // Hide the container during active waves or when not in cooldown
+            container.classList.remove('visible');
+        }
     }
 
     /**

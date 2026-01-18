@@ -4,7 +4,7 @@ export class EnemyManager {
     constructor(path) {
         this.path = path;
         this.enemies = [];
-        this.spawning = true;
+        this.spawning = false;
         this.spawnQueue = [];
         this.spawnTimer = 0;
         this.spawnInterval = 1.2; // Increased from 0.8 for more spacing
@@ -13,7 +13,7 @@ export class EnemyManager {
         this.orphanedSplatters = [];
         
         // Continuous spawn mode: alternates between enemy types
-        this.continuousMode = true;
+        this.continuousMode = false;
         this.spawnPatternIndex = 0;
         // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer, 1 frog
         this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer', 'frog'];

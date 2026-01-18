@@ -28,6 +28,12 @@ export class GameplayState {
         this.waveCompleted = false;
         this.superWeaponLab = null;
         
+        // Wave cooldown system
+        this.waveCooldownTimer = 30; // 30 seconds at start, 15 between waves
+        this.waveCooldownDuration = 30; // Initial cooldown duration
+        this.isInWaveCooldown = true; // Start in cooldown
+        this.maxWavesForLevel = 10;
+        
         // Statistics tracking for results screen
         this.enemiesDefeated = 0;
         this.goldEarnedThisLevel = 0;
@@ -50,6 +56,10 @@ export class GameplayState {
         
         // Track real time for results screen (independent of game speed)
         this.lastRealTime = 0;
+        
+        // Track real timestamp for wave cooldown (independent of game speed)
+        // This will be initialized when a level starts, not when the game boots
+        this.lastRealTimestamp = 0;
         
         // Performance Monitor
         this.performanceMonitor = new PerformanceMonitor();
@@ -187,6 +197,11 @@ export class GameplayState {
         this.waveInProgress = false;
         this.waveCompleted = false;
         
+        // Reset wave cooldown system - start with 30 second initial cooldown
+        this.waveCooldownTimer = 30;
+        this.waveCooldownDuration = 30;
+        this.isInWaveCooldown = true;
+        
         // Ensure UI is visible
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -263,8 +278,11 @@ export class GameplayState {
             this.stateManager.audioManager.playMusicCategory('campaign');
         }
         
-        // Always start a fresh wave - no mid-game restoration
-        this.startWave();
+        // Wave system starts in cooldown mode - don't call startWave() here
+        // The wave cooldown will trigger the first wave after 30 seconds
+        
+        // Reset real time tracking for wave cooldown
+        this.lastRealTimestamp = performance.now() / 1000;
     }
     
     initializeSandboxGems() {
@@ -1015,6 +1033,15 @@ export class GameplayState {
         this.uiManager.updateUI();
     }
     
+    skipWaveCooldown() {
+        // Allow player to skip waiting and start next wave immediately
+        if (this.isInWaveCooldown) {
+            this.isInWaveCooldown = false;
+            this.waveCooldownTimer = 0;
+            this.startWave();
+        }
+    }
+    
     completeLevel() {
         console.log('completeLevel() called');
         if (this.isSandbox) {
@@ -1066,9 +1093,35 @@ export class GameplayState {
             return; // Don't update game state while results are showing
         }
         
+        // Get the adjusted delta time for game mechanics
+        const adjustedDeltaTime = this.getAdjustedDeltaTime(deltaTime);
+        
+        // Update wave cooldown timer with REAL time (not adjusted by game speed)
+        // Calculate real elapsed time since last frame using performance.now()
+        const currentRealTimestamp = performance.now() / 1000; // Convert to seconds
+        
+        // Only update the cooldown if we have a valid previous timestamp
+        // This prevents counting before a level starts
+        if (this.lastRealTimestamp > 0) {
+            const realDeltaTime = currentRealTimestamp - this.lastRealTimestamp;
+            
+            // Update cooldown based on real time only
+            if (this.isInWaveCooldown) {
+                this.waveCooldownTimer -= realDeltaTime;
+                if (this.waveCooldownTimer <= 0) {
+                    this.isInWaveCooldown = false;
+                    this.waveCooldownTimer = 0;
+                    this.startWave();
+                }
+            }
+        }
+        
+        // Always update the timestamp for the next frame
+        this.lastRealTimestamp = currentRealTimestamp;
+        
         // Process pending damage (delayed spell effects)
         this.pendingDamage = this.pendingDamage.filter(damage => {
-            damage.time -= deltaTime;
+            damage.time -= adjustedDeltaTime;
             if (damage.time <= 0) {
                 damage.callback();
                 return false; // Remove from pending list
@@ -1078,7 +1131,7 @@ export class GameplayState {
         
         // Update castle first so it's ready for defender positioning
         if (this.level.castle) {
-            this.level.castle.update(deltaTime);
+            this.level.castle.update(adjustedDeltaTime);
             this.level.castle.checkDefenderDeath();
         }
         
@@ -1174,19 +1227,19 @@ export class GameplayState {
         // Update guard posts and their defenders
         if (guardPostTowers && this.enemyManager && this.enemyManager.enemies) {
             for (let i = 0; i < guardPostTowers.length; i++) {
-                guardPostTowers[i].update(deltaTime, this.enemyManager.enemies, this.gameState);
+                guardPostTowers[i].update(adjustedDeltaTime, this.enemyManager.enemies, this.gameState);
             }
         }
         
         // THEN update enemy positions
         if (this.enemyManager) {
-            this.enemyManager.update(deltaTime);
-            if (this.towerManager) this.towerManager.update(deltaTime, this.enemyManager.enemies);
+            this.enemyManager.update(adjustedDeltaTime);
+            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
         }
         
         // Update loot bags
         if (this.lootManager) {
-            this.lootManager.update(deltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
+            this.lootManager.update(adjustedDeltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
         }
         
         // Deselect all towers and buildings during normal gameplay (no menu open)
@@ -1262,7 +1315,7 @@ export class GameplayState {
             
             // Handle damage to defenders and castle
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
-                enemy.attackDefender(enemy.defenderTarget, deltaTime);
+                enemy.attackDefender(enemy.defenderTarget, adjustedDeltaTime);
             } else if (enemy.reachedEnd) {
                 // Enemy has reached end of path - either at a path defender waypoint or castle
                 let targetDefender = null;
@@ -1282,7 +1335,7 @@ export class GameplayState {
                         enemy.isAttackingDefender = true;
                         enemy.defenderTarget = targetDefender;
                         enemy.isAttackingCastle = false;
-                        enemy.attackDefender(targetDefender, deltaTime);
+                        enemy.attackDefender(targetDefender, adjustedDeltaTime);
                         continue;
                     }
                 }
@@ -1293,12 +1346,12 @@ export class GameplayState {
                     enemy.isAttackingDefender = true;
                     enemy.defenderTarget = targetDefender;
                     enemy.isAttackingCastle = false;
-                    enemy.attackDefender(targetDefender, deltaTime);
+                    enemy.attackDefender(targetDefender, adjustedDeltaTime);
                 } else if (this.level.castle) {
                     // No defenders available, attack castle directly
                     enemy.isAttackingCastle = true;
                     enemy.isAttackingDefender = false;
-                    enemy.attackCastle(this.level.castle, deltaTime);
+                    enemy.attackCastle(this.level.castle, adjustedDeltaTime);
                 }
             }
         }
@@ -1335,25 +1388,35 @@ export class GameplayState {
             this.waveInProgress = false;
             this.waveCompleted = true;
             
-            setTimeout(() => {
+            // Check if this was the last wave
+            if (this.gameState.wave >= this.maxWavesForLevel) {
+                // Final wave completed - level is finished
+                this.completeLevel();
+            } else {
+                // Enter cooldown between waves (15 seconds)
+                this.isInWaveCooldown = true;
+                this.waveCooldownTimer = 15;
+                this.waveCooldownDuration = 15;
                 this.gameState.wave++;
-                this.startWave();
-            }, 2000);
+            }
         }
         
         // Update spell UI - only updates displays, doesn't recreate every frame
         this.uiManager.updateSpellUI();
         
+        // Update wave countdown display
+        this.uiManager.updateWaveCooldownDisplay();
+        
         // Update active menu if one is open (for real-time resource availability)
-        this.uiManager.updateActiveMenuIfNeeded(deltaTime);
+        this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
         
         // Update spell effects
         this.spellEffects = this.spellEffects.filter(effect => {
-            effect.life -= deltaTime;
+            effect.life -= adjustedDeltaTime;
             if (effect.x !== undefined && effect.vx !== undefined) {
-                effect.x += effect.vx * deltaTime;
-                effect.y += effect.vy * deltaTime;
-                effect.vy += 100 * deltaTime; // gravity
+                effect.x += effect.vx * adjustedDeltaTime;
+                effect.y += effect.vy * adjustedDeltaTime;
+                effect.vy += 100 * adjustedDeltaTime; // gravity
             }
             return effect.life > 0;
         });
