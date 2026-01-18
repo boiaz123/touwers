@@ -304,6 +304,11 @@ export class GoldMine extends Building {
                 this.currentProduction = 0;
                 this.flashOpacity = 1; // Trigger one-time flash
                 
+                // Play ready sound - try to get audio manager from state manager
+                if (this.buildingManager && this.buildingManager.stateManager && this.buildingManager.stateManager.audioManager) {
+                    this.buildingManager.stateManager.audioManager.playSFX('minegoldready');
+                }
+                
                 // Pre-select gem type when production completes
                 if (this.gemMode && this.gemMiningUnlocked) {
                     const gemTypes = ['fire', 'water', 'air', 'earth'];

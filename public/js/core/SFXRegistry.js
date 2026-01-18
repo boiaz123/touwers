@@ -105,6 +105,52 @@ export function initializeSFXRegistry() {
         }
     );
     
+    // Building menu sounds
+    SFXRegistry.registerSFX(
+        'castle-select',
+        'assets/audio/sfx/BuildingSounds/CastleSelect.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'academy',
+        'assets/audio/sfx/BuildingSounds/Academy.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'superweaponlab',
+        'assets/audio/sfx/BuildingSounds/SuperWeaponLab.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'minegoldclick',
+        'assets/audio/sfx/BuildingSounds/MineGoldClick.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
+    SFXRegistry.registerSFX(
+        'minegoldready',
+        'assets/audio/sfx/BuildingSounds/MineGoldReady.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+    
     // Gameplay sounds
     SFXRegistry.registerSFX(
         'wave-start',

@@ -110,8 +110,18 @@ export function initializeMusicRegistry() {
             category: 'campaign',
             volume: 0.7
         }
+
     );
-    
+    MusicRegistry.registerMusic(
+        'campaign-desert',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign',
+            volume: 0.7
+        }
+    );
+
     MusicRegistry.registerMusic(
         'campaign-song-1',
         'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song1.mp3',

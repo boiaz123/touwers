@@ -934,8 +934,8 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('forge-panel');
         
-        // Play tower forge SFX only if not a menu refresh from an upgrade (skipSFX flag)
-        if (this.stateManager.audioManager && !forgeData.skipSFX) {
+        // Play tower forge SFX only if not a menu refresh from an upgrade (skipSFX flag) and menu type is changing
+        if (this.stateManager.audioManager && !forgeData.skipSFX && this.activeMenuType !== 'forge') {
             this.stateManager.audioManager.playSFX('tower-forge');
         }
         
@@ -1309,6 +1309,11 @@ export class UIManager {
     showAcademyUpgradeMenu(academyData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('academy-panel');
+        
+        // Play academy SFX only if menu type is changing
+        if (this.stateManager.audioManager && this.activeMenuType !== 'academy') {
+            this.stateManager.audioManager.playSFX('academy');
+        }
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'academy';
@@ -2043,6 +2048,11 @@ export class UIManager {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('superweapon-panel');
         
+        // Play superweapon SFX only if menu type is changing
+        if (this.stateManager.audioManager && this.activeMenuType !== 'superweapon') {
+            this.stateManager.audioManager.playSFX('superweaponlab');
+        }
+        
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'superweapon';
         this.activeMenuData = menuData;
@@ -2370,6 +2380,11 @@ export class UIManager {
     showCastleUpgradeMenu(castleData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('castle-panel');
+        
+        // Play castle SFX only if menu type is changing
+        if (this.stateManager.audioManager && this.activeMenuType !== 'castle') {
+            this.stateManager.audioManager.playSFX('castle-select');
+        }
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'castle';
@@ -2765,6 +2780,11 @@ export class UIManager {
         
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('goldmine-panel');
+        
+        // Play goldmine SFX only if menu type is changing
+        if (this.stateManager.audioManager && this.activeMenuType !== 'goldmine') {
+            this.stateManager.audioManager.playSFX('minegoldclick');
+        }
         
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'goldmine';

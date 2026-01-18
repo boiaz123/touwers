@@ -750,6 +750,12 @@ export class GameplayState {
                             this.stateManager.audioManager.playSFX('tower-forge');
                         } else if (this.selectedBuildingType === 'training') {
                             this.stateManager.audioManager.playSFX('training-ground');
+                        } else if (this.selectedBuildingType === 'academy') {
+                            this.stateManager.audioManager.playSFX('academy');
+                        } else if (this.selectedBuildingType === 'superweapon') {
+                            this.stateManager.audioManager.playSFX('superweaponlab');
+                        } else if (this.selectedBuildingType === 'mine') {
+                            this.stateManager.audioManager.playSFX('minegoldclick');
                         }
                     }
                     
@@ -840,6 +846,9 @@ export class GameplayState {
                 return;
             } else if (typeof clickResult === 'number') {
                 // Gold collection - close any open goldmine menu
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('minegoldclick');
+                }
                 this.uiManager.closeAllPanels();
                 this.gameState.gold += clickResult;
                 this.uiManager.updateUI();
