@@ -1,22 +1,12 @@
 // Tauri main file - minimal setup for static file serving
-use tauri::Manager;
 
 #[tauri::command]
-fn close_app(app: tauri::AppHandle) {
-    // Close all windows gracefully
-    for window in app.webview_windows().values() {
-        let _ = window.close();
-    }
-    
-    // Try graceful exit
-    app.exit(0);
-    
-    // If graceful exit doesn't work (returns/doesn't actually exit),
-    // this code will execute and force a hard abort
-    std::thread::sleep(std::time::Duration::from_millis(200));
-    
-    // At this point, if the process is still running, force termination
-    std::process::abort();
+fn close_app(_app: tauri::AppHandle) {
+    // Spawn a thread to exit after a small delay to allow window cleanup
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        std::process::exit(0);
+    });
 }
 
 fn main() {

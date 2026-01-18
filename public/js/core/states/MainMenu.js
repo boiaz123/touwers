@@ -1,5 +1,14 @@
 import { ParticleSystem } from '../ParticleSystem.js';
 
+// Import Tauri invoke for app control
+let invoke = null;
+if (typeof window !== 'undefined') {
+    // Try to get invoke from Tauri API - will be null if not in Tauri
+    if (window.__TAURI_INTERNALS__?.invoke) {
+        invoke = window.__TAURI_INTERNALS__.invoke;
+    }
+}
+
 export class MainMenu {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -179,31 +188,24 @@ export class MainMenu {
             // Give a brief moment for cleanup to propagate
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            if (window.__TAURI__) {
-                console.log('MainMenu: Invoking Tauri close_app');
-                const { invoke } = window.__TAURI__.core;
-                const result = await invoke('close_app');
-                console.log('MainMenu: close_app invoked, result:', result);
+            // Check if invoke is available
+            if (invoke) {
+                console.log('MainMenu: invoke function available, calling close_app');
+                try {
+                    const result = await invoke('close_app');
+                    console.log('MainMenu: invoke returned: ' + JSON.stringify(result));
+                } catch (invokeError) {
+                    console.log('MainMenu: invoke failed: ' + invokeError.message);
+                    throw invokeError;
+                }
             } else {
-                // Non-Tauri (browser) - just close the window
-                console.log('MainMenu: Closing via window.close()');
+                console.log('MainMenu: invoke not available, cannot close app via Tauri');
+                // Fallback - attempt window.close() even though it will likely fail
                 window.close();
             }
         } catch (error) {
-            console.error('MainMenu: Error closing application:', error);
-            // Force close as fallback
-            if (window.__TAURI__) {
-                try {
-                    console.log('MainMenu: Attempting fallback Tauri close');
-                    const { invoke } = window.__TAURI__.core;
-                    await invoke('close_app');
-                } catch (fallbackError) {
-                    console.error('MainMenu: Fallback close also failed:', fallbackError);
-                    window.close();
-                }
-            } else {
-                window.close();
-            }
+            const errMsg = 'MainMenu: Error - ' + error.message;
+            console.error(errMsg, error);
         }
     }
 

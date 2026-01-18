@@ -9,6 +9,15 @@ import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
 import { UpgradeSystem } from '../UpgradeSystem.js';
 import { UpgradeRegistry } from '../UpgradeRegistry.js';
 
+// Import Tauri invoke for app control
+let invoke = null;
+if (typeof window !== 'undefined') {
+    // Try to get invoke from Tauri API - will be null if not in Tauri
+    if (window.__TAURI_INTERNALS__?.invoke) {
+        invoke = window.__TAURI_INTERNALS__.invoke;
+    }
+}
+
 /**
  * SettlementHub State
  * Main hub screen displayed after save slot selection or loading a game
@@ -4527,31 +4536,24 @@ class ManageSettlementMenu {
             // Give a brief moment for cleanup to propagate
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            if (window.__TAURI__) {
-                console.log('SettlementHub: Invoking Tauri close_app');
-                const { invoke } = window.__TAURI__.core;
-                const result = await invoke('close_app');
-                console.log('SettlementHub: close_app invoked, result:', result);
+            // Check if invoke is available
+            if (invoke) {
+                console.log('SettlementHub: invoke function available, calling close_app');
+                try {
+                    const result = await invoke('close_app');
+                    console.log('SettlementHub: invoke returned: ' + JSON.stringify(result));
+                } catch (invokeError) {
+                    console.log('SettlementHub: invoke failed: ' + invokeError.message);
+                    throw invokeError;
+                }
             } else {
-                // Non-Tauri (browser) - just close the window
-                console.log('SettlementHub: Closing via window.close()');
+                console.log('SettlementHub: invoke not available, cannot close app via Tauri');
+                // Fallback - attempt window.close() even though it will likely fail
                 window.close();
             }
         } catch (error) {
-            console.error('SettlementHub: Error closing application:', error);
-            // Force close as fallback
-            if (window.__TAURI__) {
-                try {
-                    console.log('SettlementHub: Attempting fallback Tauri close');
-                    const { invoke } = window.__TAURI__.core;
-                    await invoke('close_app');
-                } catch (fallbackError) {
-                    console.error('SettlementHub: Fallback close also failed:', fallbackError);
-                    window.close();
-                }
-            } else {
-                window.close();
-            }
+            const errMsg = 'SettlementHub: Error - ' + error.message;
+            console.error(errMsg, error);
         }
     }
 
