@@ -1,5 +1,14 @@
 import { ParticleSystem } from '../ParticleSystem.js';
 
+// Import Tauri invoke for app control
+let invoke = null;
+if (typeof window !== 'undefined') {
+    // Try to get invoke from Tauri API - will be null if not in Tauri
+    if (window.__TAURI_INTERNALS__?.invoke) {
+        invoke = window.__TAURI_INTERNALS__.invoke;
+    }
+}
+
 export class StartScreen {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -197,15 +206,61 @@ export class StartScreen {
 
     async quitGame() {
         try {
-            if (window.__TAURI__) {
-                const { invoke } = window.__TAURI__.core;
-                await invoke('close_app');
+            // Helper to log both to console and localStorage
+            const log = (msg) => {
+                console.log(msg);
+                // Also store in localStorage as backup
+                try {
+                    let logs = localStorage.getItem('touwers_quit_logs') || '';
+                    const timestamp = new Date().toISOString();
+                    logs += `[${timestamp}] ${msg}\n`;
+                    localStorage.setItem('touwers_quit_logs', logs);
+                } catch (e) {
+                    // localStorage might fail
+                }
+            };
+            
+            log('StartScreen: quitGame called');
+            
+            // Trigger game shutdown cleanup first
+            if (this.stateManager && this.stateManager.game && this.stateManager.game.shutdown) {
+                log('StartScreen: Calling game.shutdown()');
+                this.stateManager.game.shutdown();
+                log('StartScreen: game.shutdown() completed');
+            }
+            
+            // Give a brief moment for cleanup to propagate
+            await new Promise(resolve => setTimeout(resolve, 100));
+            log('StartScreen: Cleanup delay complete');
+            
+            // Check if invoke is available
+            if (invoke) {
+                log('StartScreen: invoke function available, calling close_app');
+                try {
+                    const result = await invoke('close_app');
+                    log('StartScreen: invoke returned: ' + JSON.stringify(result));
+                } catch (invokeError) {
+                    log('StartScreen: invoke failed: ' + invokeError.message);
+                    throw invokeError;
+                }
             } else {
-                console.log('Closing application...');
+                log('StartScreen: invoke not available, cannot close app via Tauri');
+                // Fallback - attempt window.close() even though it will likely fail
                 window.close();
             }
         } catch (error) {
-            console.error('Error closing application:', error);
+            const errMsg = 'StartScreen: Error - ' + error.message;
+            console.error(errMsg, error);
+            
+            try {
+                let logs = localStorage.getItem('touwers_quit_logs') || '';
+                const timestamp = new Date().toISOString();
+                logs += `[${timestamp}] ${errMsg}\n`;
+                logs += `[${timestamp}] Stack: ${error.stack}\n`;
+                localStorage.setItem('touwers_quit_logs', logs);
+            } catch (e) {
+                // localStorage might fail
+            }
         }
     }
     

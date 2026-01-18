@@ -29,6 +29,9 @@ export class Game {
                 throw new Error('Canvas element not found');
             }
             
+            // Track shutdown state to prevent double-shutdown and continued game loops
+            this.isShuttingDown = false;
+            this.animationFrameId = null;
             
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
@@ -80,6 +83,9 @@ export class Game {
             
             // Setup event listeners early
             this.setupEventListeners();
+            
+            // Setup shutdown handler for graceful cleanup
+            this.setupShutdownHandlers();
             
             // Add states with comprehensive error handling
             this.initializeStates();
@@ -232,10 +238,78 @@ export class Game {
         }
     }
     
+    setupShutdownHandlers() {
+        // Note: beforeunload doesn't fire in Tauri apps the same way
+        // Main shutdown is triggered from quitGame() in StartScreen
+        window.addEventListener('beforeunload', (e) => {
+            this.shutdown();
+        });
+    }
+    
+    /**
+     * Gracefully shutdown the game engine
+     * - Stops game loop
+     * - Cleans up all managers
+     * - Cancels animation frames
+     * This ensures no resources continue after app close is initiated
+     */
+    shutdown() {
+        if (this.isShuttingDown) return;
+        this.isShuttingDown = true;
+        
+        // console.log('Game: Initiating graceful shutdown...');
+        
+        // Cancel animation frame loop immediately
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+        
+        // Exit current state if any
+        if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.exit) {
+            try {
+                this.stateManager.currentState.exit();
+            } catch (error) {
+                console.error('Game: Error exiting current state during shutdown:', error);
+            }
+        }
+        
+        // Stop all audio
+        if (this.audioManager) {
+            try {
+                this.audioManager.stopMusic();
+                // Stop all sound effects
+                if (this.audioManager.soundElements) {
+                    Object.values(this.audioManager.soundElements).forEach(audio => {
+                        if (audio && typeof audio.pause === 'function') {
+                            audio.pause();
+                            audio.currentTime = 0;
+                        }
+                    });
+                }
+                if (this.audioManager.musicElement) {
+                    this.audioManager.musicElement.pause();
+                    this.audioManager.musicElement.currentTime = 0;
+                }
+            } catch (error) {
+                console.error('Game: Error stopping audio during shutdown:', error);
+            }
+        }
+        
+        // Clear canvas to black
+        try {
+            this.ctx.fillStyle = '#000000';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        } catch (error) {
+            console.error('Game: Error clearing canvas during shutdown:', error);
+        }
+        
+        // console.log('Game: Shutdown complete');
+    }
 
     
     startGameLoop() {
-        requestAnimationFrame((time) => this.gameLoop(time));
+        this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
     }
     
     showError(message) {
@@ -256,9 +330,14 @@ export class Game {
     }
     
     gameLoop(currentTime) {
+        // Prevent game loop from continuing after shutdown
+        if (this.isShuttingDown) {
+            return;
+        }
+        
         try {
             if (!this.isInitialized) {
-                requestAnimationFrame((time) => this.gameLoop(time));
+                this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
                 return;
             }
             
@@ -294,7 +373,10 @@ export class Game {
             this.showError('Game loop error: ' + error.message);
         }
         
-        requestAnimationFrame((time) => this.gameLoop(time));
+        // Store animation frame ID to allow cancellation during shutdown
+        if (!this.isShuttingDown) {
+            this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
+        }
     }
 }
 

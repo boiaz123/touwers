@@ -167,19 +167,43 @@ export class MainMenu {
     }
 
     async quitGame() {
-        // Check if running in Tauri
-        if (window.__TAURI__) {
-            try {
-                // Use the custom Tauri command to close the app
-                const { invoke } = window.__TAURI__.core;
-                await invoke('close_app');
-            } catch (error) {
-                console.error('Error closing application:', error);
+        try {
+            console.log('MainMenu: quitGame called');
+            
+            // Trigger game shutdown cleanup first
+            if (this.stateManager && this.stateManager.game && this.stateManager.game.shutdown) {
+                console.log('MainMenu: Calling game.shutdown()');
+                this.stateManager.game.shutdown();
             }
-        } else {
-            // Fallback for development environment
-            console.log('Closing application...');
-            window.close();
+            
+            // Give a brief moment for cleanup to propagate
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            if (window.__TAURI__) {
+                console.log('MainMenu: Invoking Tauri close_app');
+                const { invoke } = window.__TAURI__.core;
+                const result = await invoke('close_app');
+                console.log('MainMenu: close_app invoked, result:', result);
+            } else {
+                // Non-Tauri (browser) - just close the window
+                console.log('MainMenu: Closing via window.close()');
+                window.close();
+            }
+        } catch (error) {
+            console.error('MainMenu: Error closing application:', error);
+            // Force close as fallback
+            if (window.__TAURI__) {
+                try {
+                    console.log('MainMenu: Attempting fallback Tauri close');
+                    const { invoke } = window.__TAURI__.core;
+                    await invoke('close_app');
+                } catch (fallbackError) {
+                    console.error('MainMenu: Fallback close also failed:', fallbackError);
+                    window.close();
+                }
+            } else {
+                window.close();
+            }
         }
     }
 
