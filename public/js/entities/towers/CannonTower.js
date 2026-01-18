@@ -93,6 +93,11 @@ export class CannonTower extends Tower {
             const initialSpeed = distance > 0 ? Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle)) : initialSpeedEstimate;
             const flightTime = distance > 0 ? distance / (initialSpeed * Math.cos(launchAngle)) : flightTimeEstimate;
             
+            // Play launch sound
+            if (this.audioManager) {
+                this.audioManager.playSFX('trebuchet-launch');
+            }
+            
             this.fireballs.push({
                 x: this.x,
                 y: this.y - 25,
@@ -109,6 +114,11 @@ export class CannonTower extends Tower {
     }
     
     explode(x, y, enemies) {
+        // Play impact sound
+        if (this.audioManager) {
+            this.audioManager.playSFX('trebuchet-impact');
+        }
+        
         this.explosions.push({
             x: x,
             y: y,

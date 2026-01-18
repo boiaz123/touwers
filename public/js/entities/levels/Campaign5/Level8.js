@@ -56,7 +56,7 @@ export class Level8 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 10, 
+            enemyCount: 100, 
             enemyHealth_multiplier: 0.1, 
             enemySpeed: 35, 
             spawnInterval: 2.5, 

@@ -9,6 +9,7 @@ export class LootManager {
     constructor() {
         this.lootBags = [];
         this.collectedLoot = []; // Array of loot IDs collected during this level
+        this.audioManager = null; // Will be set by GameplayState
     }
 
     /**
@@ -21,6 +22,13 @@ export class LootManager {
     spawnLoot(x, y, lootId, isRare = false) {
         const bag = new LootBag(x, y, lootId, isRare);
         this.lootBags.push(bag);
+        
+        // Play drop sound
+        if (this.audioManager) {
+            const dropSound = isRare ? 'rare-loot-drop' : 'loot-drop';
+            this.audioManager.playSFX(dropSound);
+        }
+        
         return bag;
     }
 
@@ -51,6 +59,13 @@ export class LootManager {
     collectLoot(lootBag) {
         lootBag.collect();
         this.collectedLoot.push(lootBag.lootId);
+        
+        // Play collection sound
+        if (this.audioManager) {
+            const collectSound = lootBag.isRare ? 'rare-loot-collect' : 'loot-collect';
+            this.audioManager.playSFX(collectSound);
+        }
+        
         return lootBag.lootId;
     }
 

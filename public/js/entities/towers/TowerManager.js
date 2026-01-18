@@ -103,17 +103,50 @@ export class TowerManager {
      * Play the build sound for a specific tower type
      */
     playTowerBuildSound(type) {
-        if (!this.audioManager) return;
+        if (!this.audioManager) {
+            console.warn('TowerManager: audioManager not available for build sound');
+            return;
+        }
         
         const soundMap = {
+            'basic': 'basic-tower',
+            'barricade': 'barricade-tower',
             'archer': 'arrow',
             'magic': 'magic-tower',
-            'combination': 'combination-tower'
+            'combination': 'combination-tower',
+            'poison': 'poison-tower',
+            'cannon': 'trebuchet-launch'
         };
         
         const soundName = soundMap[type];
         if (soundName) {
+            console.log(`TowerManager: Playing build sound '${soundName}' for tower type '${type}'`);
             this.audioManager.playSFX(soundName);
+        }
+    }
+    
+    /**
+     * Play sound when a tower is selected (clicked)
+     */
+    playTowerSelectSound(tower) {
+        if (!this.audioManager) return;
+        
+        const soundMap = {
+            'BasicTower': 'basic-tower',
+            'BarricadeTower': 'barricade-tower',
+            'ArcherTower': 'arrow',
+            'MagicTower': 'magic-tower',
+            'CombinationTower': 'combination-tower',
+            'PoisonArcherTower': 'poison-tower',
+            'CannonTower': 'trebuchet-launch'
+        };
+        
+        const soundName = soundMap[tower.constructor.name];
+        if (soundName) {
+            console.log(`TowerManager: Playing selection sound '${soundName}' for ${tower.constructor.name}`);
+            this.audioManager.playSFX(soundName);
+        } else {
+            console.warn(`TowerManager: No sound mapped for tower type ${tower.constructor.name}`);
         }
     }
     
@@ -629,6 +662,7 @@ export class TowerManager {
                 
                 if (x >= guardPostLeft && x <= guardPostRight && y >= guardPostTop && y <= guardPostBottom) {
                     tower.isSelected = true;
+                    this.playTowerSelectSound(tower);
                     // Get training grounds to pass defender max level info
                     const trainingGrounds = this.buildingManager.buildings.find(b => b.constructor.name === 'TrainingGrounds');
                     const hireOptions = tower.getDefenderHiringOptions(trainingGrounds);
@@ -652,6 +686,7 @@ export class TowerManager {
                 if (x >= towerLeftEdge && x < towerRightEdge && y >= towerTopEdge && y < towerBottomEdge) {
                     if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
+                        this.playTowerSelectSound(tower);
                         return {
                             type: 'magic_tower_menu',
                             tower: tower,
@@ -666,6 +701,7 @@ export class TowerManager {
                     } else if (tower.constructor.name === 'CombinationTower') {
                         // New: Handle combination tower spell selection
                         tower.isSelected = true;
+                        this.playTowerSelectSound(tower);
                         return {
                             type: 'combination_tower_menu',
                             tower: tower,
@@ -681,6 +717,7 @@ export class TowerManager {
                         // Show stats menu for all other tower types
                         if (!this.gameState || !this.gameState.isPlacingTower) {
                             tower.isSelected = true;
+                            this.playTowerSelectSound(tower);
                             return {
                                 type: 'tower_stats',
                                 tower: tower,

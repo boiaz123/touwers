@@ -207,4 +207,87 @@ export function initializeSFXRegistry() {
             volume: 0.7
         }
     );
+
+    // Loot sounds
+    SFXRegistry.registerSFX(
+        'loot-drop',
+        'assets/audio/sfx/LevelSounds/LootDrop.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'loot-collect',
+        'assets/audio/sfx/LevelSounds/LootCollect.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'rare-loot-drop',
+        'assets/audio/sfx/LevelSounds/RareLootDrop.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.7
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'rare-loot-collect',
+        'assets/audio/sfx/LevelSounds/RareLootCollect.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.7
+        }
+    );
+
+    // Tower attack and placement sounds
+    SFXRegistry.registerSFX(
+        'basic-tower',
+        'assets/audio/sfx/TowerSounds/BasicTouwer.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'barricade-tower',
+        'assets/audio/sfx/TowerSounds/BarricadeTouwer.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'poison-tower',
+        'assets/audio/sfx/TowerSounds/PoisonTouwer.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'trebuchet-launch',
+        'assets/audio/sfx/TowerSounds/TrebuchetTouwer.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'trebuchet-impact',
+        'assets/audio/sfx/TowerSounds/TrebuchetImpact.mp3',
+        {
+            category: 'tower',
+            volume: 0.6
+        }
+    );
 }

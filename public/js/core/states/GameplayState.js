@@ -245,6 +245,7 @@ export class GameplayState {
         // Set audio manager reference for sound effects
         this.enemyManager.audioManager = this.stateManager.audioManager;
         this.towerManager.audioManager = this.stateManager.audioManager;
+        this.lootManager.audioManager = this.stateManager.audioManager;
         // Ensure all existing towers have audio manager (for loaded games)
         this.towerManager.ensureAudioManagerForAllTowers();
         

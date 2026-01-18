@@ -193,6 +193,11 @@ export class PoisonArcherTower extends Tower {
         
         this.drawback = 1;
         
+        // Play attack sound
+        if (this.audioManager) {
+            this.audioManager.playSFX('poison-tower');
+        }
+        
         // Predict where the target will be
         const arrowSpeed = 350;
         const predicted = this.predictEnemyPosition(this.target, arrowSpeed);

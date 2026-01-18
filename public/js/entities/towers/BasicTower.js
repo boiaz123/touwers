@@ -68,6 +68,14 @@ export class BasicTower extends Tower {
         if (this.target) {
             this.target.takeDamage(this.damage, 0, 'physical');
             
+            // Play attack sound
+            if (this.audioManager) {
+                console.log('BasicTower: Playing basic-tower attack sound');
+                this.audioManager.playSFX('basic-tower');
+            } else {
+                console.warn('BasicTower: audioManager not available for sound');
+            }
+            
             const availableDefenders = this.defenders
                 .map((def, index) => ({ def, index }))
                 .filter(({ def }) => def.throwCooldown === 0);
