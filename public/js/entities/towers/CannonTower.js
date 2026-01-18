@@ -6,6 +6,7 @@ export class CannonTower extends Tower {
         this.range = 120;
         this.damage = 40;
         this.splashRadius = 35;
+        this.originalSplashRadius = 35; // Store original for upgrades
         this.fireRate = 0.4;
         
         this.trebuchetAngle = 0;
@@ -249,10 +250,9 @@ export class CannonTower extends Tower {
             ctx.stroke();
         }
         
-        // Trebuchet mechanism
+        // Trebuchet mechanism - translate to base, rotate around pivot
         ctx.save();
         ctx.translate(this.x, platformY);
-        ctx.rotate(this.trebuchetAngle);
         
         // Trebuchet base (more robust A-frame)
         ctx.strokeStyle = '#654321';
@@ -277,7 +277,7 @@ export class CannonTower extends Tower {
         ctx.lineTo(20, -4);
         ctx.stroke();
         
-        // Pivot point (large axle)
+        // Pivot point at correct location (large axle) - this is where we'll rotate around
         ctx.fillStyle = '#2F2F2F';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
@@ -286,18 +286,23 @@ export class CannonTower extends Tower {
         ctx.fill();
         ctx.stroke();
         
+        // Now translate to pivot and rotate the arm
+        ctx.translate(0, -15);
+        ctx.rotate(this.trebuchetAngle);
+        
         // Trebuchet arm (longer and more realistic)
+        // Angles are relative to pivot now
         const armLength = platformWidth * 0.6;
         const shortArmLength = armLength * 0.3;
         const armAngle = -Math.PI/2.5 + this.armPosition * Math.PI/1.5;
         
         // Long arm (throwing end)
         const longArmEndX = Math.cos(armAngle) * armLength;
-        const longArmEndY = Math.sin(armAngle) * armLength - 15;
+        const longArmEndY = Math.sin(armAngle) * armLength;
         
         // Short arm (counterweight end)
         const shortArmEndX = -Math.cos(armAngle) * shortArmLength;
-        const shortArmEndY = -Math.sin(armAngle) * shortArmLength - 15;
+        const shortArmEndY = -Math.sin(armAngle) * shortArmLength;
         
         // Arm shaft
         ctx.strokeStyle = '#654321';

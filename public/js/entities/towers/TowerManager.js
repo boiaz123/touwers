@@ -619,6 +619,9 @@ export class TowerManager {
                 if (multipliers.cannonDamageBonus > 0) {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
                 }
+                if (multipliers.cannonRadiusBonus > 0) {
+                    tower.splashRadius = (tower.originalSplashRadius || 35) + multipliers.cannonRadiusBonus;
+                }
                 break;
         }
     }

@@ -2447,10 +2447,15 @@ export class UIManager {
             </div>
         `;
         
-        // Add castle upgrade options (fortification only, available at forge level 5+)
-        const castleUpgrades = castle.getUpgradeOptions().filter(u => u.id === 'fortification');
+        // Add castle upgrade options
+        let castleUpgrades = castle.getUpgradeOptions().filter(u => u.id === 'fortification');
         
-        if (forgeLevel >= 5 && castleUpgrades.length > 0) {
+        // Add reinforcement upgrade if forge level is 5+
+        if (forgeLevel >= 5) {
+            castleUpgrades = castleUpgrades.concat(castle.getUpgradeOptions().filter(u => u.id === 'reinforce_wall'));
+        }
+        
+        if (castleUpgrades.length > 0) {
             contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Castle Upgrades</div>`;
             
             castleUpgrades.forEach(upgrade => {

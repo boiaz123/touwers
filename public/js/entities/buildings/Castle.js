@@ -53,6 +53,8 @@ export class Castle {
         this.maxFortificationLevel = 5;
         this.catapultLevel = 0;
         this.maxCatapultLevel = 3;
+        this.reinforcementLevel = 0; // Unlocked at TowerForge level 5
+        this.maxReinforcementLevel = 5;
         
         // Defender system
         this.defender = null; // Currently active defender
@@ -624,7 +626,7 @@ export class Castle {
     }
     
     getUpgradeOptions() {
-        return [
+        const options = [
             {
                 id: 'fortification',
                 name: 'Fortification',
@@ -644,8 +646,19 @@ export class Castle {
                 cost: this.calculateCatapultCost(),
                 icon: '🎯',
                 currentEffect: this.catapultLevel > 0 ? `Level ${this.catapultLevel} Active` : 'Inactive'
+            },
+            {
+                id: 'reinforce_wall',
+                name: 'Castle Reinforcement',
+                description: `Increase Castle max health by 50 per level`,
+                level: this.reinforcementLevel,
+                maxLevel: this.maxReinforcementLevel,
+                cost: this.calculateReinforcementCost(),
+                icon: '🏰',
+                currentEffect: `Bonus Health: ${50 * this.reinforcementLevel}`
             }
         ];
+        return options;
     }
     
     calculateFortificationCost() {
@@ -658,11 +671,18 @@ export class Castle {
         return Math.floor(600 * Math.pow(1.5, this.catapultLevel));
     }
     
+    calculateReinforcementCost() {
+        if (this.reinforcementLevel >= this.maxReinforcementLevel) return null;
+        return Math.floor(500 * Math.pow(1.5, this.reinforcementLevel));
+    }
+    
     purchaseUpgrade(upgradeId, gameState) {
         if (upgradeId === 'fortification') {
             return this.purchaseFortification(gameState);
         } else if (upgradeId === 'catapult') {
             return this.purchaseCatapult(gameState);
+        } else if (upgradeId === 'reinforce_wall') {
+            return this.purchaseReinforcement(gameState);
         }
         return false;
     }
@@ -691,6 +711,21 @@ export class Castle {
         
         gameState.gold -= cost;
         this.catapultLevel++;
+        
+        return true;
+    }
+    
+    purchaseReinforcement(gameState) {
+        const cost = this.calculateReinforcementCost();
+        
+        if (!cost || gameState.gold < cost || this.reinforcementLevel >= this.maxReinforcementLevel) {
+            return false;
+        }
+        
+        gameState.gold -= cost;
+        this.reinforcementLevel++;
+        this.maxHealth += 50;
+        this.health = this.maxHealth;
         
         return true;
     }

@@ -40,18 +40,14 @@ export class TowerForge extends Building {
             // Basic towers - always available at forge level 1
             'basic': { level: 0, baseCost: 80, effect: 8 },
             'barricade_effectiveness': { level: 0, baseCost: 150, effect: { capacity: 1.8, duration: 1.0 } }, // Capacity: 4→13, Duration: 4s→9s
-            'archer': { level: 0, baseCost: 90, effect: 8 },
-            'archer_armor_pierce': { level: 0, baseCost: 120, effect: 5 }, // 5% per level
+            'archer': { level: 0, baseCost: 100, damageEffect: 8, pierceEffect: 5 },
             
             // Poison upgrades - available at forge level 2+
             // Damage upgrades: +1, +2, +2, +3, +5 (cumulative: 1, 3, 5, 8, 13)
             'poison': { level: 0, baseCost: 100, effect: [1, 2, 2, 3, 5] },
             
             // Cannon upgrades - available at forge level 3+
-            'cannon': { level: 0, baseCost: 120, effect: 10 },
-            
-            // Castle reinforcements - available at forge level 5+
-            'reinforce_wall': { level: 0, baseCost: 150, effect: 50 }
+            'cannon': { level: 0, baseCost: 120, damageEffect: 10, radiusEffect: 5 }
         };
     }
     
@@ -1059,28 +1055,16 @@ export class TowerForge extends Building {
             icon: '🛡️'
         });
         
-        // Archer Tower - available from forge level 1
+        // Archer Tower - available from forge level 1 (damage + armor piercing combined)
         options.push({
             id: 'archer',
             name: 'Archer Tower Upgrade',
-            description: `Increase Archer Tower damage by ${this.upgrades.archer.effect} per level`,
+            description: `+${this.upgrades.archer.damageEffect} damage & +${this.upgrades.archer.pierceEffect}% armor pierce per level`,
             level: this.upgrades.archer.level,
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.archer.baseCost,
             cost: this.calculateUpgradeCost('archer'),
             icon: '🏹'
-        });
-        
-        // Archer Tower Armor Pierce - available from forge level 1
-        options.push({
-            id: 'archer_armor_pierce',
-            name: 'Archer Armor Pierce Upgrade',
-            description: `Increase Archer Tower armor pierce by ${this.upgrades.archer_armor_pierce.effect}% per level`,
-            level: this.upgrades.archer_armor_pierce.level,
-            maxLevel: this.forgeLevel, // Capped at forge level
-            baseCost: this.upgrades.archer_armor_pierce.baseCost,
-            cost: this.calculateUpgradeCost('archer_armor_pierce'),
-            icon: '💢'
         });
         
         // Poison Archer Tower - available from forge level 2+
@@ -1102,26 +1086,12 @@ export class TowerForge extends Building {
             options.push({
                 id: 'cannon',
                 name: 'Cannon Tower Upgrade',
-                description: `Increase Cannon Tower damage by ${this.upgrades.cannon.effect} per level`,
+                description: `+${this.upgrades.cannon.damageEffect} damage & +${this.upgrades.cannon.radiusEffect} blast radius per level`,
                 level: this.upgrades.cannon.level,
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.cannon.baseCost,
                 cost: this.calculateUpgradeCost('cannon'),
                 icon: '💥'
-            });
-        }
-        
-        // Castle Reinforcements - available from forge level 5+
-        if (this.forgeLevel >= 5) {
-            options.push({
-                id: 'reinforce_wall',
-                name: 'Castle Reinforcement',
-                description: `Increase Castle max health by ${this.upgrades.reinforce_wall.effect} per level`,
-                level: this.upgrades.reinforce_wall.level,
-                maxLevel: this.forgeLevel, // Capped at forge level
-                baseCost: this.upgrades.reinforce_wall.baseCost,
-                cost: this.calculateUpgradeCost('reinforce_wall'),
-                icon: '🏰'
             });
         }
         
@@ -1232,10 +1202,11 @@ export class TowerForge extends Building {
             basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
             barricadeCapacityBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.capacity,
             barricadeDurationBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.duration,
-            archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.effect,
-            archerArmorPierceBonus: this.upgrades.archer_armor_pierce.level * this.upgrades.archer_armor_pierce.effect,
+            archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.damageEffect,
+            archerArmorPierceBonus: this.upgrades.archer.level * this.upgrades.archer.pierceEffect,
             poisonDamageBonus: poisonDamageBonus,
-            cannonDamageBonus: this.upgrades.cannon.level * this.upgrades.cannon.effect
+            cannonDamageBonus: this.upgrades.cannon.level * this.upgrades.cannon.damageEffect,
+            cannonRadiusBonus: this.upgrades.cannon.level * this.upgrades.cannon.radiusEffect
         };
     }
     
