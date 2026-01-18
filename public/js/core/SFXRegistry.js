@@ -290,4 +290,41 @@ export function initializeSFXRegistry() {
             volume: 0.6
         }
     );
+
+    // Spell sounds
+    SFXRegistry.registerSFX(
+        'arcane-blast',
+        'assets/audio/sfx/BuildingSounds/ArcaneBlast.mp3',
+        {
+            category: 'spell',
+            volume: 0.7
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'chain-lightning',
+        'assets/audio/sfx/BuildingSounds/ChainLightning.mp3',
+        {
+            category: 'spell',
+            volume: 0.7
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'frost-nova',
+        'assets/audio/sfx/BuildingSounds/FrostNova.mp3',
+        {
+            category: 'spell',
+            volume: 0.7
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'meteor-strike',
+        'assets/audio/sfx/BuildingSounds/MeteorStrike.mp3',
+        {
+            category: 'spell',
+            volume: 0.7
+        }
+    );
 }

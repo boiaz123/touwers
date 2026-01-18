@@ -495,6 +495,7 @@ export class GameplayState {
         // Apply spell effects to enemies
         switch(spellId) {
             case 'arcaneBlast':
+                this.stateManager.audioManager.playSFX('arcane-blast');
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
@@ -506,6 +507,7 @@ export class GameplayState {
                 break;
                 
             case 'frostNova':
+                this.stateManager.audioManager.playSFX('frost-nova');
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
@@ -518,6 +520,7 @@ export class GameplayState {
                 break;
                 
             case 'meteorStrike':
+                this.stateManager.audioManager.playSFX('meteor-strike');
                 // Queue delayed damage for meteor to be applied during update loop
                 this.pendingDamage.push({
                     time: 0.5, // Delay of 0.5 seconds
@@ -539,6 +542,7 @@ export class GameplayState {
                 break;
                 
             case 'chainLightning':
+                this.stateManager.audioManager.playSFX('chain-lightning');
                 let targets = [...this.enemyManager.enemies]
                     .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))
                     .slice(0, spell.chainCount);
