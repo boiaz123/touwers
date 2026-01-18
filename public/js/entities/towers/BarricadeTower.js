@@ -4,7 +4,7 @@ export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 120;
-        this.fireRate = 0.15;
+        this.fireRate = 0.1; // Higher base fire rate for multiple simultaneous slow zones
         
         this.defenders = [
             { angle: 0, pushAnimation: 0, hasBarrel: true },
@@ -13,7 +13,12 @@ export class BarricadeTower extends Tower {
         this.rollingBarrels = [];
         this.slowZones = [];
         
+        // Rubble cloud mechanics
+        this.maxEnemiesSlowed = 4; // Base capacity: max 4 enemies per slow zone
+        this.slowDuration = 4.0; // Base duration: 4 seconds
+        
         this.originalRange = this.range;
+        this.originalFireRate = this.fireRate;
     }
     
     update(deltaTime, enemies) {
@@ -30,7 +35,7 @@ export class BarricadeTower extends Tower {
             }
         });
         
-        if (this.target && this.cooldown === 0) {
+        if (this.target && this.cooldown <= 0) {
             this.rollBarrel();
             this.cooldown = 1 / this.fireRate;
         }
@@ -42,7 +47,7 @@ export class BarricadeTower extends Tower {
             barrel.life -= deltaTime;
             
             const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
-            if (barrel.life <= 0 || distanceToTarget < 15) {
+            if (barrel.life <= 0 || distanceToTarget < 20) {
                 this.createSmokeZone(barrel.targetX, barrel.targetY);
                 return false;
             }
@@ -53,6 +58,8 @@ export class BarricadeTower extends Tower {
             zone.life -= deltaTime;
             zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
+            // Determine which enemies to slow (up to max capacity)
+            const enemiesInRange = [];
             enemies.forEach(enemy => {
                 if (!enemy.hasOwnProperty('originalSpeed')) {
                     enemy.originalSpeed = enemy.speed;
@@ -60,10 +67,27 @@ export class BarricadeTower extends Tower {
                 
                 const distance = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
                 if (distance <= zone.radius) {
+                    enemiesInRange.push({ enemy, distance });
+                }
+            });
+            
+            // Sort by distance (closest first) and take only up to maxEnemiesSlowed
+            enemiesInRange.sort((a, b) => a.distance - b.distance);
+            const enemiesSlowed = new Set(enemiesInRange.slice(0, zone.maxEnemiesSlowed).map(e => e.enemy));
+            
+            // Apply slow to enemies that should be slowed and restore others
+            enemies.forEach(enemy => {
+                if (!enemy.hasOwnProperty('originalSpeed')) {
+                    enemy.originalSpeed = enemy.speed;
+                }
+                
+                if (enemiesSlowed.has(enemy)) {
+                    // Apply slow effect
                     const targetSpeed = enemy.originalSpeed * 0.25;
                     const slowRate = 1 - Math.pow(0.05, deltaTime);
                     enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
                 } else {
+                    // Restore speed if not being slowed
                     if (enemy.speed < enemy.originalSpeed) {
                         const restoreRate = 1 - Math.pow(0.3, deltaTime);
                         enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
@@ -92,10 +116,17 @@ export class BarricadeTower extends Tower {
                 defender.pushAnimation = 1;
                 defender.hasBarrel = false;
                 
-                const dx = this.target.x - this.x;
-                const dy = this.target.y - this.y;
+                // Aim at the target's current position
+                const targetX = this.target.x;
+                const targetY = this.target.y;
+                
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
                 const distance = Math.hypot(dx, dy);
                 const rollSpeed = 150;
+                
+                // Barrel travels exactly to the target position
+                const barrelLife = distance / rollSpeed;
                 
                 this.rollingBarrels.push({
                     x: this.x + Math.cos(defender.angle) * 25,
@@ -104,9 +135,9 @@ export class BarricadeTower extends Tower {
                     vy: (dy / distance) * rollSpeed,
                     rotation: 0,
                     rotationSpeed: 6,
-                    life: distance / rollSpeed + 0.5,
-                    targetX: this.target.x,
-                    targetY: this.target.y,
+                    life: barrelLife,
+                    targetX: targetX,
+                    targetY: targetY,
                     size: 8
                 });
                 
@@ -130,9 +161,10 @@ export class BarricadeTower extends Tower {
             x: x,
             y: y,
             radius: 40,
-            life: 8.0,
-            maxLife: 8.0,
-            smokeIntensity: 0
+            life: this.slowDuration,
+            maxLife: this.slowDuration,
+            smokeIntensity: 0,
+            maxEnemiesSlowed: this.maxEnemiesSlowed
         });
     }
 
@@ -592,13 +624,13 @@ export class BarricadeTower extends Tower {
     
     static getInfo() {
         return {
-            name: 'Watch Tower',
-            description: 'Defenders roll barrels to create smoke screens that slow enemies.',
+            name: 'Barricade Tower',
+            description: 'Defenders roll barrels to create rubble clouds that slow enemies. Multiple clouds can exist simultaneously.',
             damage: 'None',
-            range: '120',
-            fireRate: '0.4/sec',
+            range: '120 px',
+            fireRate: '0.2',
             cost: 90,
-            icon: '🛢️'
+            icon: '🛡️'
         };
     }
 }

@@ -18,10 +18,9 @@ export class TrainingGrounds extends Building {
         this.maxGuardPosts = 0; // 1 at level 4, stays at 1 at level 5 (no additional posts)
         
         // Range upgrades for manned towers - each tower has 5 levels
-        // Towers: ArcherTower, BarricadeTower, BasicTower, PoisonArcherTower, CannonTower
+        // Towers: ArcherTower, BasicTower, PoisonArcherTower, CannonTower
         this.rangeUpgrades = {
             archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
-            barricadeTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             basicTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             poisonArcherTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             cannonTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 }
@@ -31,7 +30,8 @@ export class TrainingGrounds extends Building {
             damageTraining: { level: 0, maxLevel: 5, baseCost: 100, effect: 5 },
             speedTraining: { level: 0, maxLevel: 5, baseCost: 120, effect: 1.05 },
             accuracyTraining: { level: 0, maxLevel: 5, baseCost: 110, effect: 0.95 },
-            staminaTraining: { level: 0, maxLevel: 5, baseCost: 130, effect: 1.1 }
+            staminaTraining: { level: 0, maxLevel: 5, baseCost: 130, effect: 1.1 },
+            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 } // Fire rate: 0.2 → 0.7 at level 5
         };
         
         this.trainingParticles = [];
@@ -1070,7 +1070,8 @@ export class TrainingGrounds extends Building {
         return {
             type: 'training_menu',
             trainingGrounds: this,
-            upgrades: this.getRangeUpgradeOptions(),
+            rangeUpgrades: this.getRangeUpgradeOptions(),
+            towerUpgrades: this.getUpgradeOptions(),
             trainingUpgrade: this.getTrainingLevelUpgradeOption()
         };
     }
@@ -1085,7 +1086,6 @@ export class TrainingGrounds extends Building {
         // Manned tower types for range upgrades
         const towerTypes = [
             { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
-            { id: 'barricadeTower', name: 'Barricade Tower', icon: '🛡️' },
             { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
             { id: 'poisonArcherTower', name: 'Poison Archer Tower', icon: '☠️' },
             { id: 'cannonTower', name: 'Cannon Tower', icon: '🔫' }
@@ -1371,6 +1371,15 @@ export class TrainingGrounds extends Building {
                 maxLevel: this.upgrades.staminaTraining.maxLevel,
                 cost: this.calculateUpgradeCost('staminaTraining'),
                 icon: '❤️'
+            },
+            {
+                id: 'barricadeFireRate',
+                name: 'Barricade Fire Rate Training',
+                description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
+                level: this.upgrades.barricadeFireRate.level,
+                maxLevel: this.upgrades.barricadeFireRate.maxLevel,
+                cost: this.calculateUpgradeCost('barricadeFireRate'),
+                icon: '⚡'
             }
         ];
     }

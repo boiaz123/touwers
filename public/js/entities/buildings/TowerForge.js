@@ -39,7 +39,7 @@ export class TowerForge extends Building {
         this.upgrades = {
             // Basic towers - always available at forge level 1
             'basic': { level: 0, baseCost: 80, effect: 8 },
-            'barricade': { level: 0, baseCost: 80, effect: 8 },
+            'barricade_effectiveness': { level: 0, baseCost: 150, effect: { capacity: 1.8, duration: 1.0 } }, // Capacity: 4→13, Duration: 4s→9s
             'archer': { level: 0, baseCost: 90, effect: 8 },
             'archer_armor_pierce': { level: 0, baseCost: 120, effect: 5 }, // 5% per level
             
@@ -1046,14 +1046,15 @@ export class TowerForge extends Building {
         });
         
         // Barricade Tower - available from forge level 1
+        // Barricade Effectiveness - increases both capacity and duration
         options.push({
-            id: 'barricade',
-            name: 'Barricade Tower Upgrade',
-            description: `Increase Barricade Tower damage by ${this.upgrades.barricade.effect} per level`,
-            level: this.upgrades.barricade.level,
-            maxLevel: this.forgeLevel, // Capped at forge level
-            baseCost: this.upgrades.barricade.baseCost,
-            cost: this.calculateUpgradeCost('barricade'),
+            id: 'barricade_effectiveness',
+            name: 'Barricade Tower - Rubble Effectiveness',
+            description: `Increases enemies slowed per rubble and slow duration`,
+            level: this.upgrades.barricade_effectiveness.level,
+            maxLevel: 5, // Always allow up to 5 levels
+            baseCost: this.upgrades.barricade_effectiveness.baseCost,
+            cost: this.calculateUpgradeCost('barricade_effectiveness'),
             icon: '🛡️'
         });
         
@@ -1220,7 +1221,8 @@ export class TowerForge extends Building {
     getUpgradeMultipliers() {
         return {
             basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
-            barricadeDamageBonus: this.upgrades.barricade.level * this.upgrades.barricade.effect,
+            barricadeCapacityBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.capacity,
+            barricadeDurationBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.duration,
             archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.effect,
             archerArmorPierceBonus: this.upgrades.archer_armor_pierce.level * this.upgrades.archer_armor_pierce.effect,
             poisonDamageBonus: this.upgrades.poison.level * this.upgrades.poison.effect,

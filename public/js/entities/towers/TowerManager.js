@@ -571,8 +571,11 @@ export class TowerManager {
                 break;
                 
             case 'BarricadeTower':
-                if (multipliers.barricadeDamageBonus > 0) {
-                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.barricadeDamageBonus;
+                if (multipliers.barricadeCapacityBonus > 0) {
+                    tower.maxEnemiesSlowed = 4 + multipliers.barricadeCapacityBonus;
+                }
+                if (multipliers.barricadeDurationBonus > 0) {
+                    tower.slowDuration = 4.0 + multipliers.barricadeDurationBonus;
                 }
                 break;
                 
@@ -625,7 +628,7 @@ export class TowerManager {
                 towerTypeKey = 'cannonTower';
                 break;
             default:
-                return; // No range upgrades for this tower type
+                return; // No upgrades for this tower type
         }
         
         // Apply Training Grounds range upgrades
@@ -635,6 +638,11 @@ export class TowerManager {
             if (upgrade && upgrade.level > 0) {
                 // Apply range bonus: each level adds 'effect' pixels to range
                 tower.range = tower.originalRange + (upgrade.level * upgrade.effect);
+            }
+            
+            // Apply Barricade Tower fire rate upgrade if present
+            if (towerType === 'BarricadeTower' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
+                tower.fireRate = tower.originalFireRate + (grounds.upgrades.barricadeFireRate.level * grounds.upgrades.barricadeFireRate.effect);
             }
         }
     }
@@ -829,6 +837,27 @@ export class TowerManager {
         const info = towerClass.getInfo();
         // Add unlock status
         info.unlocked = this.unlockSystem.canBuildTower(type);
+        
+        // For Barricade Tower, add upgrade information
+        if (type === 'barricade' && this.cachedForges && this.cachedForges.length > 0) {
+            const forgeMultipliers = this.cachedForges[0].getUpgradeMultipliers();
+            const maxEnemies = 4 + forgeMultipliers.barricadeCapacityBonus;
+            const duration = 4.0 + forgeMultipliers.barricadeDurationBonus;
+            
+            // Get fire rate from TrainingGrounds if available
+            let fireRate = 0.2;
+            if (this.cachedTrainingGrounds && this.cachedTrainingGrounds.length > 0) {
+                const trainingUpgrade = this.cachedTrainingGrounds[0].upgrades.barricadeFireRate;
+                if (trainingUpgrade) {
+                    fireRate = 0.2 + (trainingUpgrade.level * trainingUpgrade.effect);
+                }
+            }
+            
+            // Update the display info with upgraded stats
+            info.fireRate = fireRate.toFixed(1);
+            info.upgradeInfo = `📊 With upgrades: Slows ${Math.round(maxEnemies)} enemies for ${duration.toFixed(1)}s at ${fireRate.toFixed(1)}/sec`;
+        }
+        
         return info;
     }
     

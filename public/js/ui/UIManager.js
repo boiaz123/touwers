@@ -488,9 +488,10 @@ export class UIManager {
             <div class="info-stats">
                 <div><span>Damage:</span> <span>${info.damage}</span></div>
                 <div><span>Range:</span> <span>${info.range}</span></div>
-                <div><span>Rate:</span> <span>${info.fireRate}</span></div>
+                <div><span>Speed:</span> <span>${info.fireRate}</span></div>
             </div>
             <div class="info-description">${info.description}</div>
+            ${info.upgradeInfo ? `<div class="info-upgrade" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 215, 0, 0.3); color: #FFD700; font-size: 0.85rem;">${info.upgradeInfo}</div>` : ''}
         `;
         
         document.body.appendChild(menu);
@@ -1011,19 +1012,39 @@ export class UIManager {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 
-                // Current effect display
+                // Calculate what the stats WILL BE after upgrade
                 let currentEffect = '';
-                const totalBonus = upgrade.level * (upgrade.baseCost || 0);
-                if (upgrade.id === 'basic' || upgrade.id === 'barricade' || upgrade.id === 'archer') {
-                    currentEffect = `Damage: +${upgrade.level * 8}`;
+                let nextLevelEffect = '';
+                let buttonText = '';
+                
+                if (upgrade.id === 'basic' || upgrade.id === 'archer') {
+                    currentEffect = `Current Damage: +${upgrade.level * 8}`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 8}`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 8})`;
+                } else if (upgrade.id === 'barricade_effectiveness') {
+                    const currentCapacity = 4 + Math.round(upgrade.level * 1.8);
+                    const nextCapacity = 4 + Math.round((upgrade.level + 1) * 1.8);
+                    const currentDuration = (4 + upgrade.level * 1.0).toFixed(1);
+                    const nextDuration = (4 + (upgrade.level + 1) * 1.0).toFixed(1);
+                    currentEffect = `Currently: ${currentCapacity} enemies for ${currentDuration}s`;
+                    nextLevelEffect = `After Upgrade: ${nextCapacity} enemies for ${nextDuration}s`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
                 } else if (upgrade.id === 'archer_armor_pierce') {
-                    currentEffect = `Armor Pierce: +${upgrade.level * 5}%`;
+                    currentEffect = `Current Armor Pierce: +${upgrade.level * 5}%`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}%`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5}%)`;
                 } else if (upgrade.id === 'poison') {
-                    currentEffect = `Poison: +${upgrade.level * 5}`;
+                    currentEffect = `Current Poison: +${upgrade.level * 5}`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5})`;
                 } else if (upgrade.id === 'cannon') {
-                    currentEffect = `Damage: +${upgrade.level * 10}`;
+                    currentEffect = `Current Damage: +${upgrade.level * 10}`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 10}`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 10})`;
                 } else if (upgrade.id === 'reinforce_wall') {
-                    currentEffect = `Health: +${upgrade.level * 50}`;
+                    currentEffect = `Current Health: +${upgrade.level * 50}`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 50}`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 50})`;
                 }
                 
                 contentHTML += `
@@ -1040,6 +1061,7 @@ export class UIManager {
                                     </div>
                                 </div>
                                 ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
+                                ${nextLevelEffect && !isMaxed ? `<div style="font-size: 0.8rem; color: #FFD700; margin-top: 0.2rem;">${nextLevelEffect}</div>` : ''}
                             </div>
                         </div>
                         <div class="upgrade-action-row">
@@ -1049,7 +1071,7 @@ export class UIManager {
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                                ${buttonText}
                             </button>
                         </div>
                     </div>
@@ -1931,9 +1953,9 @@ export class UIManager {
         
         const stats = {
             name: towerInfo.name,
-            damage: tower.damage,
-            range: tower.range,
-            fireRate: tower.fireRate,
+            damage: towerInfo.damage || tower.damage,
+            range: towerInfo.range || tower.range,
+            fireRate: towerInfo.fireRate || tower.fireRate,
             description: towerInfo.description,
             cost: towerInfo.cost,
             icon: towerInfo.icon || '🏰'
@@ -1954,7 +1976,7 @@ export class UIManager {
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
                 <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
                 <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${typeof stats.fireRate === 'number' ? stats.fireRate.toFixed(1) : stats.fireRate}</span></div>
             </div>
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
@@ -2619,10 +2641,10 @@ export class UIManager {
         }
         
         // Add range upgrades section
-        if (trainingData.upgrades && trainingData.upgrades.length > 0) {
+        if (trainingData.rangeUpgrades && trainingData.rangeUpgrades.length > 0) {
             contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Manned Tower Range Training</div>`;
             
-            trainingData.upgrades.forEach(upgrade => {
+            trainingData.rangeUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 const isUnlocked = upgrade.isUnlocked;
@@ -2664,6 +2686,83 @@ export class UIManager {
                                     data-tower-type="${upgrade.towerType}"
                                     ${isDisabled ? 'disabled' : ''}>
                                 ${isMaxed ? 'MAX' : isUnlocked ? 'Train Range' : 'LOCKED'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            contentHTML += `</div>`;
+        }
+        
+        // Add tower-specific upgrades section
+        if (trainingData.towerUpgrades && trainingData.towerUpgrades.length > 0) {
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Tower Combat Training</div>`;
+            
+            trainingData.towerUpgrades.forEach(upgrade => {
+                const isMaxed = upgrade.level >= upgrade.maxLevel;
+                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                
+                // Calculate what the stats WILL BE after upgrade
+                let currentEffect = '';
+                let nextLevelEffect = '';
+                let buttonText = '';
+                
+                if (upgrade.id === 'damageTraining') {
+                    currentEffect = `Current bonus: +${upgrade.level * 5}`;
+                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                } else if (upgrade.id === 'speedTraining') {
+                    const currentBonus = ((upgrade.level * 1.05 - 1) * 100).toFixed(0);
+                    const nextBonus = (((upgrade.level + 1) * 1.05 - 1) * 100).toFixed(0);
+                    currentEffect = `Current fire rate: +${currentBonus}%`;
+                    nextLevelEffect = `After Upgrade: +${nextBonus}%`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                } else if (upgrade.id === 'accuracyTraining') {
+                    const currentReduction = ((1 - upgrade.level * 0.95) * 100).toFixed(0);
+                    const nextReduction = ((1 - (upgrade.level + 1) * 0.95) * 100).toFixed(0);
+                    currentEffect = `Current reload time: -${currentReduction}%`;
+                    nextLevelEffect = `After Upgrade: -${nextReduction}%`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                } else if (upgrade.id === 'staminaTraining') {
+                    const currentBonus = ((upgrade.level * 1.1 - 1) * 100).toFixed(0);
+                    const nextBonus = (((upgrade.level + 1) * 1.1 - 1) * 100).toFixed(0);
+                    currentEffect = `Current durability: +${currentBonus}%`;
+                    nextLevelEffect = `After Upgrade: +${nextBonus}%`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                } else if (upgrade.id === 'barricadeFireRate') {
+                    const currentFireRate = (0.2 + upgrade.level * 0.1).toFixed(1);
+                    const nextFireRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
+                    currentEffect = `Current fire rate: ${currentFireRate}/sec`;
+                    nextLevelEffect = `After Upgrade: ${nextFireRate}/sec`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                }
+                
+                contentHTML += `
+                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="upgrade-header-row">
+                            <div class="upgrade-icon-section">${upgrade.icon}</div>
+                            <div class="upgrade-info-section">
+                                <div class="upgrade-name">${upgrade.name}</div>
+                                <div class="upgrade-description">${upgrade.description}</div>
+                                <div class="upgrade-level-display">
+                                    Level: ${upgrade.level}/${upgrade.maxLevel}
+                                    <div class="upgrade-level-bar">
+                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                                    </div>
+                                </div>
+                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
+                                ${nextLevelEffect && !isMaxed ? `<div style="font-size: 0.8rem; color: #FFD700; margin-top: 0.2rem;">${nextLevelEffect}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="upgrade-action-row">
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
+                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                            </div>
+                            <button class="upgrade-button panel-upgrade-btn" 
+                                    data-upgrade="${upgrade.id}" 
+                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
+                                ${buttonText}
                             </button>
                         </div>
                     </div>
@@ -2723,7 +2822,17 @@ export class UIManager {
                         unlockSystem.onTrainingGroundsUpgraded(trainingData.trainingGrounds.trainingLevel);
                     }
                 } else if (towerType) {
+                    // Range upgrade for specific tower type
                     success = trainingData.trainingGrounds.purchaseRangeUpgrade(towerType, this.gameState);
+                    if (success) {
+                        // Play upgrade SFX
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                    }
+                } else if (upgradeId) {
+                    // Tower-specific upgrade (e.g., barricadeFireRate)
+                    success = trainingData.trainingGrounds.purchaseUpgrade(upgradeId, this.gameState);
                     if (success) {
                         // Play upgrade SFX
                         if (this.stateManager.audioManager) {
@@ -2738,7 +2847,8 @@ export class UIManager {
                     // Refresh the menu without playing the training ground SFX again
                     this.showTrainingGroundsUpgradeMenu({
                         trainingGrounds: trainingData.trainingGrounds,
-                        upgrades: trainingData.trainingGrounds.getRangeUpgradeOptions(),
+                        rangeUpgrades: trainingData.trainingGrounds.getRangeUpgradeOptions(),
+                        towerUpgrades: trainingData.trainingGrounds.getUpgradeOptions(),
                         trainingUpgrade: trainingData.trainingGrounds.getTrainingLevelUpgradeOption(),
                         skipSFX: true
                     });
