@@ -150,9 +150,10 @@ export class LootBag {
     }
 
     renderBag(ctx, x, y) {
-        const sackColor = this.isRare ? '#6B3BA8' : '#D4A574'; // Purple for rare, tan for normal
-        const tieColor = this.isRare ? '#A855F7' : '#8B6914'; // Bright purple for rare, dark gold for normal
-        const outlineColor = this.isRare ? '#9D4EDD' : '#B8860B'; // Dark purple for rare, gold for normal
+        const sackColor = this.isRare ? '#5C4A78' : '#C4934F'; // Deep purple for rare, leather brown for normal
+        const sackDarkColor = this.isRare ? '#3D2E55' : '#8B6F47'; // Darker shade for fabric
+        const cordColor = this.isRare ? '#8B5CF6' : '#8B6914'; // Bright purple for rare, gold for normal
+        const glowColor = this.isRare ? '#C4B5FD' : '#FFD700'; // Lavender glow for rare, golden glow for normal
         
         ctx.save();
         ctx.translate(x, y);
@@ -161,87 +162,144 @@ export class LootBag {
         const angle = Math.sin(this.animationTime * 2) * 0.05;
         ctx.rotate(angle);
 
-        // Main sack body - rounded rectangle for pouch
-        const sackWidth = this.width;
-        const sackHeight = this.height * 0.8;
-        const cornerRadius = 3;
+        // Draw glow effect behind the sack
+        const glowIntensity = this.isRare ? 
+            0.4 + Math.sin(Date.now() / 300) * 0.25 : 
+            0.3 + Math.sin(Date.now() / 400) * 0.2;
         
-        // Draw sack body with rounded corners
+        // Create radial gradient for glow
+        if (ctx.createRadialGradient) {
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width * 0.8);
+            if (this.isRare) {
+                gradient.addColorStop(0, `rgba(196, 181, 253, ${glowIntensity * 0.5})`);
+                gradient.addColorStop(1, `rgba(196, 181, 253, 0)`);
+            } else {
+                gradient.addColorStop(0, `rgba(255, 215, 0, ${glowIntensity * 0.4})`);
+                gradient.addColorStop(1, `rgba(255, 215, 0, 0)`);
+            }
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.ellipse(0, 1, this.width * 0.9, this.height * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Main satchel body - wide and flat like a proper satchel/pouch
+        const satchelWidth = this.width * 1.2;
+        const satchelHeight = this.height * 0.55;
+        
+        // Draw main satchel body
         ctx.fillStyle = sackColor;
-        ctx.strokeStyle = outlineColor;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = sackDarkColor;
+        ctx.lineWidth = 1.5;
         
         ctx.beginPath();
-        ctx.moveTo(-sackWidth/2 + cornerRadius, -sackHeight/2);
-        ctx.lineTo(sackWidth/2 - cornerRadius, -sackHeight/2);
-        ctx.quadraticCurveTo(sackWidth/2, -sackHeight/2, sackWidth/2, -sackHeight/2 + cornerRadius);
-        ctx.lineTo(sackWidth/2, sackHeight/2 - cornerRadius);
-        ctx.quadraticCurveTo(sackWidth/2, sackHeight/2, sackWidth/2 - cornerRadius, sackHeight/2);
-        ctx.lineTo(-sackWidth/2 + cornerRadius, sackHeight/2);
-        ctx.quadraticCurveTo(-sackWidth/2, sackHeight/2, -sackWidth/2, sackHeight/2 - cornerRadius);
-        ctx.lineTo(-sackWidth/2, -sackHeight/2 + cornerRadius);
-        ctx.quadraticCurveTo(-sackWidth/2, -sackHeight/2, -sackWidth/2 + cornerRadius, -sackHeight/2);
+        // Top left curve (folded flap edge)
+        ctx.moveTo(-satchelWidth/2, -satchelHeight/2.5);
+        ctx.quadraticCurveTo(-satchelWidth/2.5, -satchelHeight/3, -satchelWidth/2.8, -satchelHeight/2.8);
+        // Top edge with gentle curve
+        ctx.lineTo(satchelWidth/2.8, -satchelHeight/2.8);
+        ctx.quadraticCurveTo(satchelWidth/2.5, -satchelHeight/3, satchelWidth/2, -satchelHeight/2.5);
+        // Right side - gentle curve
+        ctx.quadraticCurveTo(satchelWidth/2 + 1.5, 0, satchelWidth/2, satchelHeight/2.2);
+        // Bottom edge - rounded
+        ctx.quadraticCurveTo(0, satchelHeight/2.5, -satchelWidth/2, satchelHeight/2.2);
+        // Left side - gentle curve
+        ctx.quadraticCurveTo(-satchelWidth/2 - 1.5, 0, -satchelWidth/2, -satchelHeight/2.5);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         
-        // Draw rope tie at top of sack
-        ctx.strokeStyle = tieColor;
-        ctx.lineWidth = 2.5;
+        // Add fabric wrinkles/texture for authenticity
+        ctx.strokeStyle = sackDarkColor;
+        ctx.lineWidth = 0.8;
+        ctx.globalAlpha = 0.3;
+        
+        // Center wrinkle
         ctx.beginPath();
-        ctx.moveTo(-sackWidth/3, -sackHeight/2 - 2);
-        ctx.quadraticCurveTo(0, -sackHeight/2 - 6, sackWidth/3, -sackHeight/2 - 2);
+        ctx.moveTo(0, -satchelHeight/3);
+        ctx.quadraticCurveTo(0, 0, 0, satchelHeight/2.5);
         ctx.stroke();
         
-        // Rope knots
-        ctx.fillStyle = tieColor;
+        // Left wrinkle
         ctx.beginPath();
-        ctx.arc(-sackWidth/3, -sackHeight/2 - 2, 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-satchelWidth/3.5, -satchelHeight/2.2);
+        ctx.quadraticCurveTo(-satchelWidth/4, satchelHeight/3, -satchelWidth/3, satchelHeight/2.2);
+        ctx.stroke();
+        
+        // Right wrinkle
         ctx.beginPath();
-        ctx.arc(sackWidth/3, -sackHeight/2 - 2, 2, 0, Math.PI * 2);
+        ctx.moveTo(satchelWidth/3.5, -satchelHeight/2.2);
+        ctx.quadraticCurveTo(satchelWidth/4, satchelHeight/3, satchelWidth/3, satchelHeight/2.2);
+        ctx.stroke();
+        
+        ctx.globalAlpha = 1;
+        
+        // Draw drawstring rope - thick medieval cord at the cinch
+        ctx.strokeStyle = cordColor;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Main drawstring cinch in the middle
+        ctx.beginPath();
+        ctx.moveTo(-satchelWidth/2.8, -satchelHeight/2.8);
+        ctx.quadraticCurveTo(-satchelWidth/4, -satchelHeight/2.2, 0, -satchelHeight/2.2);
+        ctx.quadraticCurveTo(satchelWidth/4, -satchelHeight/2.2, satchelWidth/2.8, -satchelHeight/2.8);
+        ctx.stroke();
+        
+        // Drawstring knot/bow at center top
+        ctx.strokeStyle = cordColor;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(0, -satchelHeight/2.3 - 2, 2, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Left rope tail
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-2, -satchelHeight/2.3 - 2);
+        ctx.quadraticCurveTo(-3.5, -satchelHeight/2.3 - 6, -2.5, -satchelHeight/2.3 - 7);
+        ctx.stroke();
+        
+        // Right rope tail
+        ctx.beginPath();
+        ctx.moveTo(2, -satchelHeight/2.3 - 2);
+        ctx.quadraticCurveTo(3.5, -satchelHeight/2.3 - 6, 2.5, -satchelHeight/2.3 - 7);
+        ctx.stroke();
+        
+        // Highlight on satchel for depth
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(-satchelWidth/3.5, -satchelHeight/3.5, satchelWidth/4.5, satchelHeight/3, -0.25, 0, Math.PI * 2);
         ctx.fill();
         
-        // Shine/highlight on sack
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        // Bottom shadow for depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.ellipse(-sackWidth/4, -sackHeight/3, sackWidth/5, sackHeight/4, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(0, satchelHeight/2.3, satchelWidth/2.5, satchelHeight/4.5, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Rare loot glow effect
-        if (this.isRare) {
-            const glowIntensity = 0.35 + Math.sin(Date.now() / 300) * 0.25;
-            ctx.fillStyle = `rgba(168, 85, 247, ${glowIntensity * 0.7})`;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, this.width * 0.55, this.height * 0.55, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Outer aura
-            ctx.strokeStyle = `rgba(168, 85, 247, ${glowIntensity * 0.4})`;
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, this.width * 0.7, this.height * 0.7, 0, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-        
-        // Sparkle effect
-        const sparkleCount = this.isRare ? 3 : 2;
+        // Sparkle/twinkle effects
+        const sparkleCount = this.isRare ? 4 : 2;
         for (let i = 0; i < sparkleCount; i++) {
             const angle = (this.animationTime * 2.5 + (i / sparkleCount) * Math.PI * 2);
-            const distance = this.width * 0.5;
+            const distance = this.width * 0.65;
             const sparkleX = Math.cos(angle) * distance;
             const sparkleY = Math.sin(angle) * distance;
             
-            const sparkleSize = 1.2 + Math.sin(this.animationTime * 5) * 0.6;
-            ctx.fillStyle = this.isRare ? 'rgba(168, 85, 247, 0.9)' : 'rgba(218, 165, 32, 0.9)';
+            const sparkleSize = 1 + Math.sin(this.animationTime * 6 + i) * 0.5;
+            ctx.fillStyle = this.isRare ? 
+                `rgba(196, 181, 253, ${0.8 + Math.sin(this.animationTime * 4 + i) * 0.2})` :
+                `rgba(255, 215, 0, ${0.8 + Math.sin(this.animationTime * 4 + i) * 0.2})`;
+            
             ctx.beginPath();
             ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
             ctx.fill();
             
-            // Twinkle effect - small stars
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            // Star twinkle
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
             ctx.beginPath();
-            ctx.arc(sparkleX, sparkleY - 1, 0.5, 0, Math.PI * 2);
+            ctx.arc(sparkleX + 0.5, sparkleY - 0.5, 0.4, 0, Math.PI * 2);
             ctx.fill();
         }
         
@@ -252,7 +310,7 @@ export class LootBag {
             const floatOffset = (1 - this.animationTime / 0.5) * 20;
             ctx.save();
             ctx.translate(x, y - 35 - floatOffset);
-            ctx.fillStyle = this.isRare ? '#A855F7' : '#FFD700';
+            ctx.fillStyle = this.isRare ? '#C4B5FD' : '#FFD700';
             ctx.font = 'bold 13px Arial';
             ctx.textAlign = 'center';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
