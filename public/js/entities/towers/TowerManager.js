@@ -405,6 +405,14 @@ export class TowerManager {
                 tower.originalFireRate = tower.fireRate;
             }
             
+            // Store barricade-specific original values if not already stored
+            if (tower.constructor.name === 'BarricadeTower') {
+                if (!tower.originalSlowDuration && tower.hasOwnProperty('slowDuration')) {
+                    tower.originalSlowDuration = tower.slowDuration;
+                    tower.originalMaxEnemiesSlowed = tower.maxEnemiesSlowed;
+                }
+            }
+            
             // Apply base building upgrades
             tower.damage = tower.originalDamage * upgrades.damage;
             tower.range = tower.originalRange * upgrades.range;
@@ -552,6 +560,16 @@ export class TowerManager {
                 tower.range = tower.originalRange;
                 tower.fireRate = tower.originalFireRate;
             }
+            
+            // Reset barricade-specific stats
+            if (tower.constructor.name === 'BarricadeTower') {
+                if (tower.originalSlowDuration) {
+                    tower.slowDuration = tower.originalSlowDuration;
+                }
+                if (tower.originalMaxEnemiesSlowed) {
+                    tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed;
+                }
+            }
         });
     }
     
@@ -571,11 +589,13 @@ export class TowerManager {
                 break;
                 
             case 'BarricadeTower':
+                // Apply capacity upgrades using original base value
                 if (multipliers.barricadeCapacityBonus > 0) {
-                    tower.maxEnemiesSlowed = 4 + multipliers.barricadeCapacityBonus;
+                    tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed + multipliers.barricadeCapacityBonus;
                 }
+                // Apply duration upgrades using original base value
                 if (multipliers.barricadeDurationBonus > 0) {
-                    tower.slowDuration = 4.0 + multipliers.barricadeDurationBonus;
+                    tower.slowDuration = tower.originalSlowDuration + multipliers.barricadeDurationBonus;
                 }
                 break;
                 
@@ -643,6 +663,11 @@ export class TowerManager {
             // Apply Barricade Tower fire rate upgrade if present
             if (towerType === 'BarricadeTower' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
                 tower.fireRate = tower.originalFireRate + (grounds.upgrades.barricadeFireRate.level * grounds.upgrades.barricadeFireRate.effect);
+            }
+            
+            // Apply Poison Archer Tower fire rate upgrade if present
+            if (towerType === 'PoisonArcherTower' && grounds.upgrades.poisonArcherTowerFireRate && grounds.upgrades.poisonArcherTowerFireRate.level > 0) {
+                tower.fireRate = tower.originalFireRate + (grounds.upgrades.poisonArcherTowerFireRate.level * grounds.upgrades.poisonArcherTowerFireRate.effect);
             }
         }
     }

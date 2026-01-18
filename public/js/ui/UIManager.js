@@ -2697,7 +2697,7 @@ export class UIManager {
         
         // Add tower-specific upgrades section
         if (trainingData.towerUpgrades && trainingData.towerUpgrades.length > 0) {
-            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Tower Combat Training</div>`;
+            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Tower Fire Rate Training</div>`;
             
             trainingData.towerUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
@@ -2708,31 +2708,15 @@ export class UIManager {
                 let nextLevelEffect = '';
                 let buttonText = '';
                 
-                if (upgrade.id === 'damageTraining') {
-                    currentEffect = `Current bonus: +${upgrade.level * 5}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
-                } else if (upgrade.id === 'speedTraining') {
-                    const currentBonus = ((upgrade.level * 1.05 - 1) * 100).toFixed(0);
-                    const nextBonus = (((upgrade.level + 1) * 1.05 - 1) * 100).toFixed(0);
-                    currentEffect = `Current fire rate: +${currentBonus}%`;
-                    nextLevelEffect = `After Upgrade: +${nextBonus}%`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
-                } else if (upgrade.id === 'accuracyTraining') {
-                    const currentReduction = ((1 - upgrade.level * 0.95) * 100).toFixed(0);
-                    const nextReduction = ((1 - (upgrade.level + 1) * 0.95) * 100).toFixed(0);
-                    currentEffect = `Current reload time: -${currentReduction}%`;
-                    nextLevelEffect = `After Upgrade: -${nextReduction}%`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
-                } else if (upgrade.id === 'staminaTraining') {
-                    const currentBonus = ((upgrade.level * 1.1 - 1) * 100).toFixed(0);
-                    const nextBonus = (((upgrade.level + 1) * 1.1 - 1) * 100).toFixed(0);
-                    currentEffect = `Current durability: +${currentBonus}%`;
-                    nextLevelEffect = `After Upgrade: +${nextBonus}%`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
-                } else if (upgrade.id === 'barricadeFireRate') {
+                if (upgrade.id === 'barricadeFireRate') {
                     const currentFireRate = (0.2 + upgrade.level * 0.1).toFixed(1);
                     const nextFireRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
+                    currentEffect = `Current fire rate: ${currentFireRate}/sec`;
+                    nextLevelEffect = `After Upgrade: ${nextFireRate}/sec`;
+                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                } else if (upgrade.id === 'poisonArcherTowerFireRate') {
+                    const currentFireRate = (0.8 + upgrade.level * 0.08).toFixed(2);
+                    const nextFireRate = (0.8 + (upgrade.level + 1) * 0.08).toFixed(2);
                     currentEffect = `Current fire rate: ${currentFireRate}/sec`;
                     nextLevelEffect = `After Upgrade: ${nextFireRate}/sec`;
                     buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;

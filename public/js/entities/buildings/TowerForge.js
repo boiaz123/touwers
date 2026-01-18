@@ -44,7 +44,8 @@ export class TowerForge extends Building {
             'archer_armor_pierce': { level: 0, baseCost: 120, effect: 5 }, // 5% per level
             
             // Poison upgrades - available at forge level 2+
-            'poison': { level: 0, baseCost: 100, effect: 5 },
+            // Damage upgrades: +1, +2, +2, +3, +5 (cumulative: 1, 3, 5, 8, 13)
+            'poison': { level: 0, baseCost: 100, effect: [1, 2, 2, 3, 5] },
             
             // Cannon upgrades - available at forge level 3+
             'cannon': { level: 0, baseCost: 120, effect: 10 },
@@ -1087,7 +1088,7 @@ export class TowerForge extends Building {
             options.push({
                 id: 'poison',
                 name: 'Poison Archer Tower Upgrade',
-                description: `Increase Poison Archer Tower damage by ${this.upgrades.poison.effect} per level`,
+                description: `Increase Poison Archer Tower base damage (cumulative: +1, +2, +2, +3, +5)`,
                 level: this.upgrades.poison.level,
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.poison.baseCost,
@@ -1219,13 +1220,21 @@ export class TowerForge extends Building {
     }
     
     getUpgradeMultipliers() {
+        // Calculate poison damage bonus - sum up all effect values up to current level
+        let poisonDamageBonus = 0;
+        if (this.upgrades.poison.level > 0 && Array.isArray(this.upgrades.poison.effect)) {
+            for (let i = 0; i < this.upgrades.poison.level; i++) {
+                poisonDamageBonus += this.upgrades.poison.effect[i];
+            }
+        }
+        
         return {
             basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
             barricadeCapacityBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.capacity,
             barricadeDurationBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.duration,
             archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.effect,
             archerArmorPierceBonus: this.upgrades.archer_armor_pierce.level * this.upgrades.archer_armor_pierce.effect,
-            poisonDamageBonus: this.upgrades.poison.level * this.upgrades.poison.effect,
+            poisonDamageBonus: poisonDamageBonus,
             cannonDamageBonus: this.upgrades.cannon.level * this.upgrades.cannon.effect
         };
     }

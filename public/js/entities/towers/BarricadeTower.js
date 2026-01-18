@@ -17,8 +17,11 @@ export class BarricadeTower extends Tower {
         this.maxEnemiesSlowed = 4; // Base capacity: max 4 enemies per slow zone
         this.slowDuration = 4.0; // Base duration: 4 seconds
         
+        // Store original values for upgrade calculations
         this.originalRange = this.range;
         this.originalFireRate = this.fireRate;
+        this.originalSlowDuration = this.slowDuration;
+        this.originalMaxEnemiesSlowed = this.maxEnemiesSlowed;
     }
     
     update(deltaTime, enemies) {

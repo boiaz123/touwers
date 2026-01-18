@@ -18,20 +18,17 @@ export class TrainingGrounds extends Building {
         this.maxGuardPosts = 0; // 1 at level 4, stays at 1 at level 5 (no additional posts)
         
         // Range upgrades for manned towers - each tower has 5 levels
-        // Towers: ArcherTower, BasicTower, PoisonArcherTower, CannonTower
+        // Towers: ArcherTower, BasicTower, CannonTower (PoisonArcherTower and BarricadeTower use fire rate instead)
         this.rangeUpgrades = {
             archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             basicTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
-            poisonArcherTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             cannonTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 }
         };
         
+        // Tower-specific fire rate upgrades
         this.upgrades = {
-            damageTraining: { level: 0, maxLevel: 5, baseCost: 100, effect: 5 },
-            speedTraining: { level: 0, maxLevel: 5, baseCost: 120, effect: 1.05 },
-            accuracyTraining: { level: 0, maxLevel: 5, baseCost: 110, effect: 0.95 },
-            staminaTraining: { level: 0, maxLevel: 5, baseCost: 130, effect: 1.1 },
-            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 } // Fire rate: 0.2 → 0.7 at level 5
+            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 }, // Fire rate: 0.2 → 0.7 at level 5
+            poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.08 } // Fire rate: 0.8 → 1.2 at level 5
         };
         
         this.trainingParticles = [];
@@ -1079,15 +1076,15 @@ export class TrainingGrounds extends Building {
     /**
      * Get available range upgrade options based on current training grounds level
      * Each training grounds level unlocks the next upgrade level for all towers
+     * Note: PoisonArcherTower and BarricadeTower use fire rate upgrades instead
      */
     getRangeUpgradeOptions() {
         const options = [];
         
-        // Manned tower types for range upgrades
+        // Manned tower types for range upgrades (excludes Poison Archer and Barricade)
         const towerTypes = [
             { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
             { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
-            { id: 'poisonArcherTower', name: 'Poison Archer Tower', icon: '☠️' },
             { id: 'cannonTower', name: 'Cannon Tower', icon: '🔫' }
         ];
         
@@ -1334,52 +1331,25 @@ export class TrainingGrounds extends Building {
     }
 
     getUpgradeOptions() {
-        // Return available upgrade options for the building
+        // Return available fire rate upgrade options for specific towers
         return [
             {
-                id: 'damageTraining',
-                name: 'Damage Training',
-                description: `Increase all tower damage by ${this.upgrades.damageTraining.effect} per level`,
-                level: this.upgrades.damageTraining.level,
-                maxLevel: this.upgrades.damageTraining.maxLevel,
-                cost: this.calculateUpgradeCost('damageTraining'),
-                icon: '⚔️'
-            },
-            {
-                id: 'speedTraining',
-                name: 'Speed Training',
-                description: `Increase tower fire rate by ${((this.upgrades.speedTraining.effect - 1) * 100).toFixed(0)}% per level`,
-                level: this.upgrades.speedTraining.level,
-                maxLevel: this.upgrades.speedTraining.maxLevel,
-                cost: this.calculateUpgradeCost('speedTraining'),
-                icon: '💨'
-            },
-            {
-                id: 'accuracyTraining',
-                name: 'Accuracy Training',
-                description: `Reduce tower reload time by ${((1 - this.upgrades.accuracyTraining.effect) * 100).toFixed(0)}% per level`,
-                level: this.upgrades.accuracyTraining.level,
-                maxLevel: this.upgrades.accuracyTraining.maxLevel,
-                cost: this.calculateUpgradeCost('accuracyTraining'),
-                icon: '🎯'
-            },
-            {
-                id: 'staminaTraining',
-                name: 'Stamina Training',
-                description: `Increase tower durability and health by ${((this.upgrades.staminaTraining.effect - 1) * 100).toFixed(0)}% per level`,
-                level: this.upgrades.staminaTraining.level,
-                maxLevel: this.upgrades.staminaTraining.maxLevel,
-                cost: this.calculateUpgradeCost('staminaTraining'),
-                icon: '❤️'
-            },
-            {
                 id: 'barricadeFireRate',
-                name: 'Barricade Fire Rate Training',
+                name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
                 level: this.upgrades.barricadeFireRate.level,
                 maxLevel: this.upgrades.barricadeFireRate.maxLevel,
                 cost: this.calculateUpgradeCost('barricadeFireRate'),
                 icon: '⚡'
+            },
+            {
+                id: 'poisonArcherTowerFireRate',
+                name: 'Poison Archer Tower Fire Rate Training',
+                description: `Increase Poison Archer Tower fire rate (0.8 → 1.2 per second at level 5)`,
+                level: this.upgrades.poisonArcherTowerFireRate.level,
+                maxLevel: this.upgrades.poisonArcherTowerFireRate.maxLevel,
+                cost: this.calculateUpgradeCost('poisonArcherTowerFireRate'),
+                icon: '☠️'
             }
         ];
     }
