@@ -163,17 +163,17 @@ export class PoisonArcherTower extends Tower {
             // Use timestamp-based ticking instead of decrementing timer
             // Avoids float arithmetic every frame - only check elapsed time
             state.elapsedSinceTick += deltaTime;
-            if (state.elapsedSinceTick >= 1.0) {
+            if (state.elapsedSinceTick >= 2.0) {
                 const poisonDamage = state.baseDamage + towerForgeBonus;
                 enemy.takeDamage(poisonDamage, 0, 'poison', true);
-                state.elapsedSinceTick -= 1.0; // Reset for next tick
+                state.elapsedSinceTick -= 2.0; // Reset for next tick
             }
         }
     }
     
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
-        const basePoisonDamage = 4;
-        const poisonDuration = 5.0;
+        const basePoisonDamage = 1;
+        const poisonDuration = 20.0;
         
         // Refresh poison if already applied, or create new poison effect
         if (this.poisonedEnemies.has(enemy)) {
