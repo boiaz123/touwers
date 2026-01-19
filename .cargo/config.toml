@@ -1,0 +1,23 @@
+# Cargo configuration for maximum performance and optimization
+
+[build]
+# Use multiple CPU cores for parallel compilation
+# Setting to a reasonable number (num_cpus - 1) to avoid overloading
+# Tauri build doesn't support 0, so we use 4 as default
+jobs = 4
+
+[profile.release]
+# Optimize for speed and efficiency
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+split-debuginfo = "packed"
+incremental = false
+
+[target.x86_64-pc-windows-msvc]
+# Windows-specific optimizations for main binary
+rustflags = [
+    "-C", "target-cpu=native",        # Optimize for host CPU
+]

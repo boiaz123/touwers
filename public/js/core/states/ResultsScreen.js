@@ -12,6 +12,11 @@ export class ResultsScreen {
         this.resultType = null; // 'levelComplete' or 'gameOver'
         this.resultData = null;
         this.acquiredLoot = []; // Array of loot IDs acquired
+        
+        // Delay before showing the screen (5 seconds to let animations/loot finish)
+        this.showDelay = 0;
+        this.showDelayTime = 0;
+        this.showDelayTimestamp = undefined;
 
         // Defeat screen motivational quotes
         this.defeatQuotes = [
@@ -72,16 +77,27 @@ export class ResultsScreen {
     /**
      * Show the results screen with specific data
      */
-    show(type, data, acquiredLoot = []) {
+    show(type, data, acquiredLoot = [], lootManager = null) {
         this.resultType = type;
         this.resultData = data;
         this.acquiredLoot = acquiredLoot;
-        this.isShowing = true;
+        this.lootManager = lootManager; // Store reference to get latest loot
+        this.isShowing = false; // Don't show yet - wait for delay
         this.phaseTime = 0;
         this.lootAnimationTime = 0; // Reset cumulative loot animation time
         this.lootAnimationIndex = 0;
         this.particles = [];
         this.selectedButtonIndex = 0;
+        
+        // Set delay before showing screen (3 seconds for level complete, 0 for game over)
+        if (type === 'levelComplete') {
+            this.showDelay = 3.0; // 3 seconds of real time
+            this.showDelayTime = 0;
+            this.showDelayTimestamp = undefined;
+        } else {
+            this.showDelay = 0;
+            this.isShowing = true; // Show immediately for game over
+        }
 
         // For gameOver, skip victory animation and go straight to defeat screen
         if (type === 'gameOver') {
@@ -94,13 +110,8 @@ export class ResultsScreen {
                 this.stateManager.audioManager.playSFX('defeat-tune');
             }
         } else {
-            // For levelComplete, start with victory animation
+            // For levelComplete, start with victory animation phase
             this.animationPhase = 'victory';
-            // Play victory tune immediately at the start of the animation
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.stopMusic();
-                this.stateManager.audioManager.playSFX('victory-tune');
-            }
         }
 
         // Extract stats from result data
@@ -114,10 +125,9 @@ export class ResultsScreen {
         };
 
         // Calculate loot phase duration based on number of items (1 item per second)
-        // Minimum 4 seconds, or longer if more items
+        // No minimum - duration matches exactly the number of items
         const itemsPerSecond = 1.0;
-        const minLootDuration = 4.0;
-        this.phaseDuration.loot = Math.max(minLootDuration, acquiredLoot.length / itemsPerSecond);
+        this.phaseDuration.loot = acquiredLoot.length / itemsPerSecond;
 
         // Setup buttons
         console.log('ResultsScreen.show() - Setting up buttons for type:', type);
@@ -224,6 +234,36 @@ export class ResultsScreen {
      * Update animations
      */
     update(deltaTime) {
+        // Handle delay before showing screen (for levelComplete only)
+        if (this.showDelay > 0 && !this.isShowing) {
+            // Use real time for the delay
+            const currentRealTimestamp = performance.now() / 1000; // Convert to seconds
+            if (this.showDelayTimestamp === undefined) {
+                this.showDelayTimestamp = currentRealTimestamp;
+            }
+            
+            const elapsedRealTime = currentRealTimestamp - this.showDelayTimestamp;
+            if (elapsedRealTime >= this.showDelay) {
+                // Delay complete - show the screen now
+                // Update acquired loot to include any collected during the delay
+                if (this.lootManager) {
+                    this.acquiredLoot = this.lootManager.getCollectedLoot();
+                }
+                
+                this.isShowing = true;
+                this.showDelay = 0;
+                
+                // For levelComplete, play victory tune at the start of the animation
+                if (this.resultType === 'levelComplete' && this.stateManager.audioManager) {
+                    this.stateManager.audioManager.stopMusic();
+                    this.stateManager.audioManager.playSFX('victory-tune');
+                }
+            } else {
+                // Still waiting - don't update screen yet
+                return;
+            }
+        }
+        
         if (!this.isShowing) return;
 
         this.phaseTime += deltaTime;
@@ -291,43 +331,15 @@ export class ResultsScreen {
     }
 
     /**
-     * Spawn loot reveal animation
+     * Spawn loot reveal animation (no splash particles - effects on tiles)
      */
     spawnLootAnimation(index, isLegendary = false) {
         const lootId = this.acquiredLoot[index];
         if (!lootId) return;
 
-        // Play collect sound
+        // Play collect sound - all loot uses the normal loot-collect sound
         if (this.stateManager.audioManager) {
-            if (isLegendary) {
-                this.stateManager.audioManager.playSFX('legendary-drop');
-            } else {
-                this.stateManager.audioManager.playSFX('coin-collect');
-            }
-        }
-
-        // Create particles - more for legendary
-        const canvas = this.stateManager.canvas;
-        const modalX = (canvas.width - this.modalWidth) / 2;
-        const baseY = (canvas.height - this.modalHeight) / 2 + 200;
-        const centerX = modalX + this.modalWidth / 2;
-        
-        const particleCount = isLegendary ? 12 : 6;
-        const lifetime = isLegendary ? 0.8 : 0.5;
-        const speed = isLegendary ? 280 : 200;
-        
-        for (let i = 0; i < particleCount; i++) {
-            const angle = (i / particleCount) * Math.PI * 2;
-            this.particles.push({
-                x: centerX,
-                y: baseY,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                gravity: 300,
-                life: lifetime,
-                maxLife: lifetime,
-                color: this.getRarityColor(lootId)
-            });
+            this.stateManager.audioManager.playSFX('loot-collect');
         }
     }
 
@@ -636,7 +648,7 @@ export class ResultsScreen {
     }
 
     /**
-     * Render VICTORY text bursting out from sword clash with dopamine-inducing pop effect
+     * Render VICTORY text bursting out from sword clash with medieval theming
      */
     renderVictoryBurst(ctx, progress) {
         // Pop-in flash effect: quick scale with dopamine flash
@@ -654,20 +666,20 @@ export class ResultsScreen {
         const baseScale = popProgress < 1 ? popScale : expandScale;
         const alpha = Math.min(progress * 2.5, 1);
         
-        // === DOPAMINE FLASH EFFECT ===
-        // Bright white flash on initial pop (0-0.1s)
+        // === MEDIEVAL FLASH EFFECT ===
+        // Golden/bronze flash on initial pop (0-0.1s)
         if (popProgress < 0.7) {
-            const flashAlpha = (1 - popProgress) * 0.5;
-            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+            const flashAlpha = (1 - popProgress) * 0.4;
+            ctx.fillStyle = `rgba(212, 175, 55, ${flashAlpha})`; // Medieval bronze/gold
             ctx.beginPath();
             ctx.arc(0, 0, 300 * popScale, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Radiant glow burst
+        // Radiant glow burst with medieval colors
         if (popProgress < 1) {
-            const burstAlpha = (1 - popProgress) * 0.4;
-            ctx.strokeStyle = `rgba(255, 215, 0, ${burstAlpha})`;
+            const burstAlpha = (1 - popProgress) * 0.3;
+            ctx.strokeStyle = `rgba(201, 169, 97, ${burstAlpha})`; // Muted gold
             ctx.lineWidth = 3;
             for (let i = 0; i < 12; i++) {
                 const angle = (i / 12) * Math.PI * 2;
@@ -689,55 +701,84 @@ export class ResultsScreen {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // Deep golden glow layers (creating depth and professionalism)
+        // Deep medieval glow layers (bronze/brown tones)
         ctx.globalAlpha = alpha * 0.4;
         for (let i = 30; i > 0; i -= 3) {
             const glossAlpha = (30 - i) / 30 * 0.3;
-            ctx.fillStyle = `rgba(201, 169, 97, ${glossAlpha})`;
+            ctx.fillStyle = `rgba(139, 115, 85, ${glossAlpha})`; // Deep brown shadow
             ctx.lineWidth = i;
             ctx.strokeText('VICTORY!!', 0, 0);
         }
         
-        // Primary brilliant gold text
+        // Primary text - golden with medieval sheen
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#FFD700';
+        ctx.fillStyle = '#C9A961'; // Medieval muted gold
         ctx.fillText('VICTORY!!', 0, 0);
         
-        // Secondary outline for more definition
-        ctx.strokeStyle = '#C9A961';
+        // Secondary outline for heraldic definition - darker bronze
+        ctx.strokeStyle = '#8B7355'; // Dark medieval brown
         ctx.lineWidth = 3;
-        ctx.globalAlpha = alpha * 0.7;
+        ctx.globalAlpha = alpha * 0.8;
         ctx.strokeText('VICTORY!!', 0, 0);
         
-        // Shimmer particles around text
+        // Add shine/highlight on top half of text (heraldic effect)
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.fillStyle = '#F5DEB3'; // Wheat/parchment color for shine
+        ctx.font = 'bold 160px Georgia, serif';
+        ctx.fillText('VICTORY!!', 0, -15);
+        
+        // Ornamental star burst around text (medieval heraldic stars)
         ctx.globalAlpha = alpha;
-        const shimmerCount = 20;
-        for (let i = 0; i < shimmerCount; i++) {
-            const angle = (i / shimmerCount) * Math.PI * 2 + progress * Math.PI;
-            const baseDistance = 200;
-            const distance = baseDistance + Math.sin(progress * Math.PI * 3 + angle) * 50;
+        const starCount = 16;
+        for (let i = 0; i < starCount; i++) {
+            const angle = (i / starCount) * Math.PI * 2 + progress * Math.PI * 2;
+            const baseDistance = 220;
+            const distance = baseDistance + Math.sin(progress * Math.PI * 3 + angle) * 40;
             const sx = Math.cos(angle) * distance;
             const sy = Math.sin(angle) * distance;
             
-            // Cycling shimmer colors (gold, white, bronze)
-            const shimmerVariant = i % 3;
-            let shimmerColor;
-            if (shimmerVariant === 0) {
-                shimmerColor = '#FFD700';
-            } else if (shimmerVariant === 1) {
-                shimmerColor = '#FFFFFF';
+            // Medieval star colors: gold and bronze
+            const starVariant = i % 2;
+            let starColor;
+            if (starVariant === 0) {
+                starColor = '#D4AF37'; // Bright gold
             } else {
-                shimmerColor = '#C9A961';
+                starColor = '#8B7355'; // Bronze
             }
             
-            ctx.fillStyle = shimmerColor;
-            ctx.globalAlpha = alpha * Math.max(0, Math.sin(progress * Math.PI + angle)) * 0.8;
-            ctx.beginPath();
-            ctx.arc(sx, sy, 6, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = starColor;
+            ctx.globalAlpha = alpha * Math.max(0, Math.sin(progress * Math.PI + angle)) * 0.7;
+            
+            // Draw small medieval stars
+            this.drawMedievalStar(ctx, sx, sy, 8);
         }
         
         ctx.restore();
+    }
+
+    /**
+     * Draw a small medieval star for heraldic effects
+     */
+    drawMedievalStar(ctx, x, y, size) {
+        const points = 5;
+        const innerRadius = size * 0.4;
+        const outerRadius = size;
+        
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (i * Math.PI) / points - Math.PI / 2;
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
     }
 
     /**
@@ -863,7 +904,7 @@ export class ResultsScreen {
     }
 
     /**
-     * Render loot items sequentially
+     * Render loot items sequentially with pagination support
      */
     renderLoot(ctx, modalX, modalY) {
         const startY = modalY + this.padding + 180;
@@ -888,6 +929,12 @@ export class ResultsScreen {
         let displayedCount = 0; // Count of items actually rendered on this page
         let globalCount = 0;    // Global count across all items
         
+        // Determine current page based on how many items have been revealed
+        const itemsRevealed = Math.floor(lootTime * itemsPerSecond);
+        // Cap the page at the actual number of pages that have content
+        const maxPages = Math.ceil(this.acquiredLoot.length / itemsPerPage);
+        const currentPage = Math.min(Math.floor(itemsRevealed / itemsPerPage), maxPages - 1);
+        
         for (let i = 0; i < this.acquiredLoot.length; i++) {
             const lootId = this.acquiredLoot[i];
             const lootInfo = LootRegistry.getLootType(lootId);
@@ -897,8 +944,8 @@ export class ResultsScreen {
             const pageNumber = Math.floor(globalCount / itemsPerPage);
             const pageItemIndex = globalCount % itemsPerPage;
             
-            // Only render items on page 0
-            if (pageNumber > 0) {
+            // Only render items on the current page
+            if (pageNumber !== currentPage) {
                 globalCount++;
                 continue;
             }
@@ -923,57 +970,60 @@ export class ResultsScreen {
 
             // Item should be rendered - calculate animation
             const timeSinceReveal = lootTime - itemRevealTime;
-            const popDuration = 0.35; // Pop animation duration
-            let popProgress = Math.min(timeSinceReveal / popDuration, 1);
+            const fadeDuration = 0.5; // Fade in over 0.5 seconds
+            let fadeProgress = Math.min(timeSinceReveal / fadeDuration, 1);
             
-            // Ease-out cubic for pop animation
-            popProgress = 1 - Math.pow(1 - popProgress, 3);
+            // Ease-out cubic for smooth fade-in
+            fadeProgress = 1 - Math.pow(1 - fadeProgress, 3);
 
-            // Calculate pop scale (0.3 to 1.0 for more dramatic effect)
-            const scale = 0.3 + popProgress * 0.7;
-            const alpha = Math.min(timeSinceReveal / 0.15, 1); // Fade in quickly
+            const alpha = fadeProgress;
+            const isRare = lootInfo && (lootInfo.rarity === 'rare' || lootInfo.rarity === 'epic' || lootInfo.rarity === 'legendary');
 
-            // Draw splash particles around the popping item
-            if (popProgress < 1) {
-                const splashParticleCount = 8;
-                for (let p = 0; p < splashParticleCount; p++) {
-                    const angle = (p / splashParticleCount) * Math.PI * 2;
-                    const distance = popProgress * 60; // Splash spreads outward
-                    const px = itemX + itemWidth / 2 + Math.cos(angle) * distance;
-                    const py = itemY + itemHeight / 2 + Math.sin(angle) * distance;
-                    
-                    const rarityColor = this.getRarityColor(lootId);
-                    ctx.fillStyle = rarityColor;
-                    ctx.globalAlpha = alpha * (1 - popProgress) * 0.6; // Fade out as animation progresses
-                    ctx.fillRect(px - 2, py - 2, 4, 4); // Small splash dots
-                }
-            }
-
-            // Save context for transform
+            // Save context for transform - don't scale to avoid overlapping
             ctx.save();
-            ctx.translate(itemX + itemWidth / 2, itemY + itemHeight / 2);
-            ctx.scale(scale, scale);
+            ctx.translate(itemX, itemY);
             ctx.globalAlpha = alpha;
-            ctx.translate(-(itemWidth / 2), -(itemHeight / 2));
 
             // Draw loot tile background
             const rarityColor = this.getRarityColor(lootId);
-            const isLegendary = lootInfo.rarity === 'legendary';
+            const isLegendary = lootInfo && lootInfo.rarity === 'legendary';
             
             ctx.fillStyle = rarityColor;
             ctx.globalAlpha = 0.2 * alpha;
             ctx.fillRect(0, 0, itemWidth, itemHeight);
             ctx.globalAlpha = alpha;
 
-            // Draw border
+            // Draw border with flashy glow effect during fade-in
             ctx.strokeStyle = rarityColor;
             ctx.lineWidth = 2;
             ctx.strokeRect(0, 0, itemWidth, itemHeight);
 
-            // Draw static golden glow for legendary items (no pulsating)
+            // Add colorful glow during entrance animation
+            if (fadeProgress < 1.0) {
+                // Pulsing outer glow during fade-in
+                const glowIntensity = Math.sin(fadeProgress * Math.PI) * 0.6;
+                ctx.strokeStyle = rarityColor;
+                ctx.globalAlpha = alpha * glowIntensity * 0.5;
+                ctx.lineWidth = 3 + glowIntensity * 4;
+                ctx.strokeRect(-2 - glowIntensity * 3, -2 - glowIntensity * 3, itemWidth + 4 + glowIntensity * 6, itemHeight + 4 + glowIntensity * 6);
+                ctx.globalAlpha = alpha;
+            }
+
+            // Special glow for rare items
+            if (isRare && fadeProgress < 1.0) {
+                // Extra shimmer effect for rare items
+                const shimmerPhase = fadeProgress * Math.PI * 2;
+                ctx.strokeStyle = rarityColor;
+                ctx.globalAlpha = alpha * Math.abs(Math.sin(shimmerPhase)) * 0.6;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-6, -6, itemWidth + 12, itemHeight + 12);
+                ctx.globalAlpha = alpha;
+            }
+
+            // Draw static golden glow for legendary items
             if (isLegendary) {
                 ctx.strokeStyle = '#FFD700';
-                ctx.globalAlpha = 0.4 * alpha; // Constant glow, not pulsating
+                ctx.globalAlpha = 0.4 * alpha;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(-4, -4, itemWidth + 8, itemHeight + 8);
                 ctx.globalAlpha = alpha;

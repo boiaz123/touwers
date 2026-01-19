@@ -42,6 +42,10 @@ export class GameplayState {
         // Results screen for level completion / game over
         this.resultsScreen = new ResultsScreen(stateManager);
         
+        // Level completion delay (5 seconds of real time before showing results)
+        this.levelCompletionDelay = 0;
+        this.levelCompletionTimestampStart = undefined;
+        
         // Spell effects
         this.spellEffects = [];
         
@@ -1082,15 +1086,22 @@ export class GameplayState {
             enemiesSlain: this.enemiesDefeated,
             goldEarned: this.goldEarnedThisLevel,
             currentGold: this.gameState.gold
-        }, this.lootManager.getCollectedLoot());
+        }, this.lootManager.getCollectedLoot(), this.lootManager);
     }
     
     update(deltaTime) {
-        // Update results screen if showing (using real time, not game-speed-adjusted time)
+        // Update results screen if showing (but not during delay - game continues normally)
         if (this.resultsScreen && this.resultsScreen.isShowing) {
             const realDeltaTime = this.getRealDeltaTime(deltaTime);
             this.resultsScreen.update(realDeltaTime);
-            return; // Don't update game state while results are showing
+            return; // Only stop game updates when screen is actually visible
+        }
+        
+        // Keep updating ResultsScreen during delay to count down (but don't skip game updates)
+        if (this.resultsScreen && this.resultsScreen.showDelay > 0) {
+            const realDeltaTime = this.getRealDeltaTime(deltaTime);
+            this.resultsScreen.update(realDeltaTime);
+            // Continue to normal game updates below - don't return!
         }
         
         // Get the adjusted delta time for game mechanics
@@ -1391,7 +1402,9 @@ export class GameplayState {
             // Check if this was the last wave
             if (this.gameState.wave >= this.maxWavesForLevel) {
                 // Final wave completed - level is finished
+                // Show results immediately - game will continue to render
                 this.completeLevel();
+                return; // Stop game updates but rendering continues
             } else {
                 // Enter cooldown between waves (15 seconds)
                 this.isInWaveCooldown = true;
