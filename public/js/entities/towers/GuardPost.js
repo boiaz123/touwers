@@ -71,7 +71,9 @@ export class GuardPost extends Tower {
                 segmentEnd.x, segmentEnd.y
             );
 
-            const distance = Math.hypot(nearestOnSegment.x - this.x, nearestOnSegment.y - this.y);
+            const dx = nearestOnSegment.x - this.x;
+            const dy = nearestOnSegment.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance < closestDistance) {
                 closestDistance = distance;
@@ -82,7 +84,9 @@ export class GuardPost extends Tower {
 
         // Also check the last waypoint
         const lastWaypoint = gamePath[gamePath.length - 1];
-        const distanceToLast = Math.hypot(lastWaypoint.x - this.x, lastWaypoint.y - this.y);
+        const dx2 = lastWaypoint.x - this.x;
+        const dy2 = lastWaypoint.y - this.y;
+        const distanceToLast = Math.sqrt(dx2 * dx2 + dy2 * dy2);
         if (distanceToLast < closestDistance) {
             closestPoint = { x: lastWaypoint.x, y: lastWaypoint.y };
             closestDistance = distanceToLast;

@@ -94,13 +94,17 @@ export class CombinationTower extends Tower {
     
     findTarget(enemies) {
         let closest = null;
-        let closestDist = this.range;
+        let closestDistSq = this.range * this.range;
+        const rangeSq = this.range * this.range;
         
         for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distSq = dx * dx + dy * dy;
+            
+            if (distSq <= rangeSq && distSq < closestDistSq) {
                 closest = enemy;
-                closestDist = dist;
+                closestDistSq = distSq;
             }
         }
         
@@ -108,13 +112,16 @@ export class CombinationTower extends Tower {
     }
     
     chainToNearbyEnemies(originalTarget, damage, damageType) {
-        const chainRange = 80;
+        const chainRangeSq = 80 * 80; // Chain range squared to avoid sqrt
         if (!this.enemies) return;
         
         this.enemies.forEach(enemy => {
             if (enemy !== originalTarget && !enemy.isDead()) {
-                const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
-                if (dist <= chainRange) {
+                const dx = enemy.x - originalTarget.x;
+                const dy = enemy.y - originalTarget.y;
+                const distSq = dx * dx + dy * dy;
+                
+                if (distSq <= chainRangeSq) {
                     // Reduced damage for chained targets
                     const chainDamage = Math.floor(damage * 0.5);
                     enemy.takeDamage(chainDamage, 0, damageType);
@@ -551,7 +558,10 @@ export class CombinationTower extends Tower {
     }
     
     isClickable(x, y, towerSize) {
-        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
+        const dx = this.x - x;
+        const dy = this.y - y;
+        const sizeRadiusSq = (towerSize / 2) * (towerSize / 2);
+        return (dx * dx + dy * dy) <= sizeRadiusSq;
     }
     
     applySpellBonuses(bonuses) {

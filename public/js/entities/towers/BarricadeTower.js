@@ -49,8 +49,10 @@ export class BarricadeTower extends Tower {
             barrel.rotation += barrel.rotationSpeed * deltaTime;
             barrel.life -= deltaTime;
             
-            const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
-            if (barrel.life <= 0 || distanceToTarget < 20) {
+            const dx = barrel.x - barrel.targetX;
+            const dy = barrel.y - barrel.targetY;
+            const distSq = dx * dx + dy * dy;
+            if (barrel.life <= 0 || distSq < 400) { // 20 * 20 = 400
                 this.createSmokeZone(barrel.targetX, barrel.targetY);
                 return false;
             }
@@ -68,8 +70,10 @@ export class BarricadeTower extends Tower {
                     enemy.originalSpeed = enemy.speed;
                 }
                 
-                const distance = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
-                if (distance <= zone.radius) {
+                const dx = enemy.x - zone.x;
+                const dy = enemy.y - zone.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq <= zone.radius * zone.radius) {
                     enemiesInRange.push({ enemy, distance });
                 }
             });
@@ -125,7 +129,7 @@ export class BarricadeTower extends Tower {
                 
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
-                const distance = Math.hypot(dx, dy);
+                const distance = Math.sqrt(dx * dx + dy * dy);
                 const rollSpeed = 150;
                 
                 // Barrel travels exactly to the target position
