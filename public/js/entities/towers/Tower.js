@@ -31,17 +31,13 @@ export class Tower {
     
     findTarget(enemies) {
         let closest = null;
-        let closestDistSq = this.range * this.range; // Compare squared distances to avoid sqrt
-        const rangeSq = this.range * this.range;
+        let closestDist = this.range;
         
         for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy; // Squared distance - avoid Math.hypot()
-            
-            if (distSq <= rangeSq && distSq < closestDistSq) {
+            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
-                closestDistSq = distSq;
+                closestDist = dist;
             }
         }
         
@@ -70,12 +66,10 @@ export class Tower {
         // Get approximate velocity from enemy movement
         const dx = (enemy.vx || 0);
         const dy = (enemy.vy || 0);
-        const enemySpeed = Math.sqrt(dx * dx + dy * dy);
+        const enemySpeed = Math.hypot(dx, dy);
         
         // Distance from tower to enemy
-        const dx2 = enemy.x - this.x;
-        const dy2 = enemy.y - this.y;
-        const distToEnemy = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        const distToEnemy = Math.hypot(enemy.x - this.x, enemy.y - this.y);
         
         // Time for projectile to reach
         const timeToReach = distToEnemy / Math.max(projectileSpeed, 1);

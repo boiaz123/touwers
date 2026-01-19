@@ -60,7 +60,7 @@ export class CannonTower extends Tower {
             
             if (fireball.life <= 0 || 
                 (fireball.life < fireball.maxLife * 0.5 && 
-                 ((fireball.x - fireball.targetX) * (fireball.x - fireball.targetX) + (fireball.y - fireball.targetY) * (fireball.y - fireball.targetY) < 400))) {
+                 Math.hypot(fireball.x - fireball.targetX, fireball.y - fireball.targetY) < 20)) {
                 this.explode(fireball.targetX, fireball.targetY, enemies);
                 return false;
             }
@@ -78,9 +78,7 @@ export class CannonTower extends Tower {
     shoot() {
         if (this.target) {
             // Estimate initial speed to predict trajectory time
-            const dx1 = this.target.x - this.x;
-            const dy1 = this.target.y - this.y;
-            const distEstimate = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+            const distEstimate = Math.hypot(this.target.x - this.x, this.target.y - this.y);
             const gravity = 250;
             const launchAngle = Math.PI / 6;
             const initialSpeedEstimate = Math.sqrt((distEstimate * gravity) / Math.sin(2 * launchAngle));
@@ -91,7 +89,7 @@ export class CannonTower extends Tower {
             
             const dx = predicted.x - this.x;
             const dy = predicted.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = Math.hypot(dx, dy);
             
             const initialSpeed = distance > 0 ? Math.sqrt((distance * gravity) / Math.sin(2 * launchAngle)) : initialSpeedEstimate;
             const flightTime = distance > 0 ? distance / (initialSpeed * Math.cos(launchAngle)) : flightTimeEstimate;
@@ -132,12 +130,8 @@ export class CannonTower extends Tower {
         });
         
         enemies.forEach(enemy => {
-            const dx = enemy.x - x;
-            const dy = enemy.y - y;
-            const distSq = dx * dx + dy * dy;
-            const splashRadiusSq = this.splashRadius * this.splashRadius;
-            if (distSq <= splashRadiusSq) {
-                const distance = Math.sqrt(distSq);
+            const distance = Math.hypot(enemy.x - x, enemy.y - y);
+            if (distance <= this.splashRadius) {
                 const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
                 const actualDamage = Math.floor(this.damage * damageFalloff);
                 enemy.takeDamage(actualDamage, 0, 'physical');

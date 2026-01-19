@@ -23,64 +23,6 @@ export class UIManager {
         // Music player - created if Musical Equipment upgrade is purchased
         this.musicPlayer = null;
         this.initializeMusicPlayerIfUnlocked();
-        
-        // OPTIMIZATION: Cache DOM elements to avoid constant querying
-        this.cachedElements = {
-            goldDisplay: null,
-            waveDisplay: null,
-            levelDisplay: null,
-            gemFireDisplay: null,
-            gemWaterDisplay: null,
-            gemAirDisplay: null,
-            gemEarthDisplay: null,
-            gemDiamondDisplay: null,
-            towerButtons: [],
-            buildingButtons: [],
-            spellButtonsList: null,
-            spellButtonsContainer: null,
-            waveCountdownContainer: null,
-            waveCountdownBtn: null,
-            waveCountdownText: null,
-            waveCountdownTimer: null
-        };
-        this.initializeCachedElements();
-        
-        // OPTIMIZATION: Track last UI values to avoid unnecessary DOM updates
-        this.lastUIState = {
-            gold: null,
-            wave: null,
-            gems: {}
-        };
-        
-        // OPTIMIZATION: UI update timer to batch updates
-        this.uiUpdateTimer = 0;
-        this.uiUpdateInterval = 0.05; // 50ms between UI updates
-        this.pendingUIUpdate = false;
-    }
-    
-    initializeCachedElements() {
-        this.cachedElements.goldDisplay = document.getElementById('gold');
-        this.cachedElements.waveDisplay = document.getElementById('wave');
-        this.cachedElements.levelDisplay = document.getElementById('level');
-        this.cachedElements.gemFireDisplay = document.getElementById('gems-fire');
-        this.cachedElements.gemWaterDisplay = document.getElementById('gems-water');
-        this.cachedElements.gemAirDisplay = document.getElementById('gems-air');
-        this.cachedElements.gemEarthDisplay = document.getElementById('gems-earth');
-        this.cachedElements.gemDiamondDisplay = document.getElementById('gems-diamond');
-        this.cachedElements.spellButtonsList = document.getElementById('spell-buttons-list');
-        this.cachedElements.spellButtonsContainer = document.getElementById('spell-buttons-container');
-        this.cachedElements.waveCountdownContainer = document.getElementById('wave-countdown-container');
-        this.cachedElements.waveCountdownBtn = document.getElementById('wave-countdown-btn');
-        this.cachedElements.waveCountdownText = document.getElementById('wave-countdown-text');
-        this.cachedElements.waveCountdownTimer = document.getElementById('wave-countdown-timer');
-        
-        // Cache button references (these change with DOM but we update them infrequently)
-        this.updateCachedButtons();
-    }
-    
-    updateCachedButtons() {
-        this.cachedElements.towerButtons = Array.from(document.querySelectorAll('.tower-btn'));
-        this.cachedElements.buildingButtons = Array.from(document.querySelectorAll('.building-btn'));
     }
 
     initializeMusicPlayerIfUnlocked() {
@@ -96,11 +38,10 @@ export class UIManager {
     /**
      * Update the enabled/disabled state of all tower and building buttons
      * based on unlock status, resource availability, and build limits
-     * Uses cached button references for better performance
      */
     updateButtonStates() {
-        // Update tower buttons using cached references
-        for (let btn of this.cachedElements.towerButtons) {
+        // Update tower buttons
+        document.querySelectorAll('.tower-btn').forEach(btn => {
             const towerType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -126,15 +67,19 @@ export class UIManager {
                     btn.disabled = false;
                 }
             }
-        }
+        });
 
-        // Update building buttons using cached references
-        for (let btn of this.cachedElements.buildingButtons) {
+        // Update building buttons
+        document.querySelectorAll('.building-btn').forEach(btn => {
             const buildingType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
             // Check if building is unlocked (separate from whether it can be built)
             const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
+            
+            // Debug superweapon button
+            if (buildingType === 'superweapon') {
+            }
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
@@ -155,7 +100,7 @@ export class UIManager {
                     btn.disabled = false;
                 }
             }
-        }
+        });
     }
 
     // ============ SETUP ============
@@ -684,7 +629,7 @@ export class UIManager {
     // ============ SPELL UI ============
 
     updateSpellUI() {
-        const spellButtonsList = this.cachedElements.spellButtonsList;
+        const spellButtonsList = document.getElementById('spell-buttons-list');
         
         if (!spellButtonsList) {
             return;
@@ -696,9 +641,7 @@ export class UIManager {
         );
         
         if (!superWeaponLab) {
-            if (spellButtonsList.innerHTML !== '') {
-                spellButtonsList.innerHTML = '';
-            }
+            spellButtonsList.innerHTML = '';
             return;
         }
         
@@ -706,7 +649,9 @@ export class UIManager {
         const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
         
         // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
+        // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
         if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
+            console.log('UIManager: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
             spellButtonsList.innerHTML = '';
             
             // Create a button for each unlocked spell
@@ -721,12 +666,17 @@ export class UIManager {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    console.log('UIManager: Spell button clicked:', spell.id, 'cooldown:', spell.currentCooldown);
                     // Prevent spell casting when game is paused
                     if (this.gameplayState.isPaused) {
+                        console.log('UIManager: Game is paused, spell blocked');
                         return;
                     }
                     if (spell.currentCooldown === 0) {
+                        console.log('UIManager: Activating spell targeting for:', spell.id);
                         this.gameplayState.activateSpellTargeting(spell.id);
+                    } else {
+                        console.log('UIManager: Spell is on cooldown:', spell.currentCooldown);
                     }
                 });
                 
@@ -737,93 +687,79 @@ export class UIManager {
             this.forceSpellUIRebuild = false;
         }
         
-        // Update button states (cooldown/ready) without recreating - ONLY update state when it changes
-        for (let spell of availableSpells) {
+        // Update button states (cooldown/ready) without recreating
+        availableSpells.forEach(spell => {
             const btn = spellButtonsList.querySelector(`[data-spell-id="${spell.id}"]`);
             if (btn) {
                 const isReady = spell.currentCooldown === 0;
-                const wasReady = !btn.classList.contains('cooling');
                 
-                // Only update if state changed
-                if (isReady !== wasReady) {
-                    btn.disabled = !isReady;
-                    
-                    if (isReady) {
-                        btn.classList.remove('cooling');
-                    } else {
-                        btn.classList.add('cooling');
-                    }
+                // Update disabled state
+                btn.disabled = !isReady;
+                
+                // Update class
+                if (isReady && btn.classList.contains('cooling')) {
+                    btn.classList.remove('cooling');
+                } else if (!isReady && !btn.classList.contains('cooling')) {
+                    btn.classList.add('cooling');
                 }
                 
                 // Update cooldown display
+                let cooldownDisplay = btn.querySelector('.spell-cooldown');
                 if (!isReady) {
-                    let cooldownDisplay = btn.querySelector('.spell-cooldown');
                     if (!cooldownDisplay) {
                         cooldownDisplay = document.createElement('div');
                         cooldownDisplay.className = 'spell-cooldown';
-                        cooldownDisplay.style.position = 'absolute';
-                        cooldownDisplay.style.fontSize = '0.7em';
-                        cooldownDisplay.style.fontWeight = 'bold';
                         btn.appendChild(cooldownDisplay);
                     }
                     cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
+                    cooldownDisplay.style.position = 'absolute';
+                    cooldownDisplay.style.fontSize = '0.7em';
+                    cooldownDisplay.style.fontWeight = 'bold';
                 } else {
-                    const cooldownDisplay = btn.querySelector('.spell-cooldown');
                     if (cooldownDisplay) {
                         cooldownDisplay.remove();
                     }
                 }
             }
-        }
+        });
     }
 
     // ============ UPDATE UI ============
 
     updateUI() {
-        const gold = Math.floor(this.gameplayState.gameState.gold);
+        document.getElementById('gold').textContent = Math.floor(this.gameplayState.gameState.gold);
         
-        // Only update if value changed
-        if (this.lastUIState.gold !== gold && this.cachedElements.goldDisplay) {
-            this.cachedElements.goldDisplay.textContent = gold;
-            this.lastUIState.gold = gold;
-        }
-        
-        const wave = this.gameplayState.gameState.wave;
-        let waveText;
+        // Show wave info differently for sandbox mode
         if (this.gameplayState.isSandbox) {
-            waveText = `${wave} (∞)`;
+            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave} (∞)`;
         } else {
+            // Use the actual number of waves from the level
             const maxWaves = this.gameplayState.maxWavesForLevel || this.level?.maxWaves || 10;
-            waveText = `${wave}/${maxWaves}`;
-        }
-        
-        if (this.lastUIState.wave !== waveText && this.cachedElements.waveDisplay) {
-            this.cachedElements.waveDisplay.textContent = waveText;
-            this.lastUIState.wave = waveText;
+            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave}/${maxWaves}`;
         }
         
         // Show level
-        if (this.cachedElements.levelDisplay) {
-            this.cachedElements.levelDisplay.textContent = this.level?.levelName || 'Unknown Level';
+        const levelElement = document.getElementById('level');
+        if (levelElement) {
+            levelElement.textContent = this.level?.levelName || 'Unknown Level';
         }
         
-        // Update gem display with caching
+        // Update gem display in top bar with new structure
         const gems = this.towerManager.getGemStocks();
-        const gemTypes = ['fire', 'water', 'air', 'earth', 'diamond'];
-        const gemElements = {
-            fire: this.cachedElements.gemFireDisplay,
-            water: this.cachedElements.gemWaterDisplay,
-            air: this.cachedElements.gemAirDisplay,
-            earth: this.cachedElements.gemEarthDisplay,
-            diamond: this.cachedElements.gemDiamondDisplay
-        };
+        const gemFireElement = document.getElementById('gems-fire');
+        const gemWaterElement = document.getElementById('gems-water');
+        const gemAirElement = document.getElementById('gems-air');
+        const gemEarthElement = document.getElementById('gems-earth');
+        const gemDiamondElement = document.getElementById('gems-diamond');
         
-        for (let gemType of gemTypes) {
-            const gemValue = gems[gemType] || 0;
-            if (this.lastUIState.gems[gemType] !== gemValue && gemElements[gemType]) {
-                gemElements[gemType].textContent = gemValue;
-                this.lastUIState.gems[gemType] = gemValue;
-            }
+        if (gemFireElement) gemFireElement.textContent = gems.fire || 0;
+        if (gemWaterElement) gemWaterElement.textContent = gems.water || 0;
+        if (gemAirElement) gemAirElement.textContent = gems.air || 0;
+        if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
+        if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
+        
+        // Debug logging for sandbox
+        if (this.gameplayState.isSandbox) {
         }
         
         this.updateUIAvailability();
@@ -832,8 +768,8 @@ export class UIManager {
     updateUIAvailability() {
         const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Update tower buttons - use cached references
-        for (let btn of this.cachedElements.towerButtons) {
+        // Update tower button states - show only when unlocked, disable based on resources
+        document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const isUnlocked = unlockSystem.unlockedTowers.has(type);
@@ -847,8 +783,7 @@ export class UIManager {
             } else {
                 btn.style.display = 'flex';
                 // Button is unlocked, now check if it can be built (not at limit) and affordable
-                const canAfford = this.gameState.canAfford(cost);
-                if (!canBuild || !canAfford) {
+                if (!canBuild || !this.gameState.canAfford(cost)) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
                 } else {
@@ -856,15 +791,19 @@ export class UIManager {
                     btn.disabled = false;
                 }
             }
-        }
+        });
         
-        // Update building buttons - use cached references
-        for (let btn of this.cachedElements.buildingButtons) {
+        // Update building button states - show when unlocked, disable based on limits and resources
+        document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
             // Check if building is unlocked (not if it can be built - that's different)
             const isUnlocked = unlockSystem.isBuildingUnlocked(type);
+            
+            // Debug superweapon button
+            if (type === 'superweapon') {
+            }
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
@@ -875,9 +814,8 @@ export class UIManager {
                 btn.style.display = 'flex';
                 // Building is unlocked, check if it can be built (at limit or affordable)
                 const canBuild = unlockSystem.canBuildBuilding(type);
-                const canAfford = this.gameState.canAfford(cost);
                 
-                if (!canBuild || !canAfford) {
+                if (!canBuild || !this.gameState.canAfford(cost)) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
                 } else {
@@ -885,10 +823,12 @@ export class UIManager {
                     btn.disabled = false;
                 }
             }
-        }
+        });
         
-        // Update spell buttons visibility
-        if (this.cachedElements.spellButtonsContainer) {
+        // Update spell buttons visibility - only show when spells are actually unlocked
+        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        
+        if (spellButtonsContainer) {
             const superWeaponLab = this.towerManager.buildingManager.buildings.find(
                 b => b.constructor.name === 'SuperWeaponLab'
             );
@@ -899,7 +839,7 @@ export class UIManager {
                 hasAvailableSpells = availableSpells && availableSpells.length > 0;
             }
             
-            this.cachedElements.spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
+            spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
         }
     }
 
@@ -920,20 +860,24 @@ export class UIManager {
     }
 
     updateWaveCooldownDisplay() {
-        if (!this.cachedElements.waveCountdownContainer || !this.cachedElements.waveCountdownBtn || 
-            !this.cachedElements.waveCountdownText || !this.cachedElements.waveCountdownTimer) {
+        const container = document.getElementById('wave-countdown-container');
+        const btn = document.getElementById('wave-countdown-btn');
+        const textEl = document.getElementById('wave-countdown-text');
+        const timerEl = document.getElementById('wave-countdown-timer');
+        
+        if (!container || !btn || !textEl || !timerEl) {
             return; // Elements don't exist yet
         }
         
         if (this.gameplayState.isInWaveCooldown) {
             // Show countdown timer
-            this.cachedElements.waveCountdownContainer.classList.add('visible');
+            container.classList.add('visible');
             const seconds = Math.ceil(this.gameplayState.waveCooldownTimer);
-            this.cachedElements.waveCountdownText.textContent = 'Next Wave';
-            this.cachedElements.waveCountdownTimer.textContent = `${seconds}s`;
+            textEl.textContent = 'Next Wave';
+            timerEl.textContent = `${seconds}s`;
         } else {
             // Hide the container during active waves or when not in cooldown
-            this.cachedElements.waveCountdownContainer.classList.remove('visible');
+            container.classList.remove('visible');
         }
     }
 

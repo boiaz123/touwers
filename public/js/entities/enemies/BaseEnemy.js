@@ -97,12 +97,16 @@ export class BaseEnemy {
         // PATH DEFENDER LOGIC: Check if we're at a waypoint where a path defender is stationed
         // If so, engage with the defender instead of continuing to the castle
         if (this.defenderWaypoint) {
-            const dx = this.defenderWaypoint.x - this.x;
-            const dy = this.defenderWaypoint.y - this.y;
-            const distSq = dx * dx + dy * dy; // Squared distance - avoid Math.hypot()
+            const distanceToWaypoint = Math.hypot(
+                this.defenderWaypoint.x - this.x,
+                this.defenderWaypoint.y - this.y
+            );
+            
+
             
             // If we've reached the defender waypoint, engage with available path defender
-            if (distSq < 2500) { // 50 * 50 = 2500
+            if (distanceToWaypoint < 50) {
+
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
                 // Will be attacked by defender in GameplayState combat handling
@@ -126,13 +130,11 @@ export class BaseEnemy {
         
         const dx = target.x - this.x;
         const dy = target.y - this.y;
-        const distSq = dx * dx + dy * dy;
-        const distance = Math.sqrt(distSq); // Only calculate actual distance if needed
+        const distance = Math.hypot(dx, dy);
         
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        const reachThresholdSq = reachThreshold * reachThreshold;
         
-        if (distSq < reachThresholdSq) {
+        if (distance < reachThreshold) {
             this.currentPathIndex++;
             // Apply lateral offset when reaching waypoint
             const nextTarget = this.path[this.currentPathIndex];
@@ -152,9 +154,9 @@ export class BaseEnemy {
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
         
-        // Apply path offset less frequently for better performance with many enemies
+        // Apply path offset more frequently for better spreading from start
         this.offsetUpdateCounter++;
-        if (this.offsetUpdateCounter >= 5) { // Reduced frequency: every 5 updates instead of 3
+        if (this.offsetUpdateCounter >= 2) {
             this.applyPathOffset();
             this.offsetUpdateCounter = 0;
         }
@@ -173,11 +175,9 @@ export class BaseEnemy {
         // Calculate direction vector along path
         const pathDx = nextPos.x - currentPos.x;
         const pathDy = nextPos.y - currentPos.y;
-        const pathLengthSq = pathDx * pathDx + pathDy * pathDy;
+        const pathLength = Math.hypot(pathDx, pathDy);
         
-        if (pathLengthSq === 0) return;
-        
-        const pathLength = Math.sqrt(pathLengthSq);
+        if (pathLength === 0) return;
         
         // Perpendicular vector (rotate 90 degrees)
         const perpX = -pathDy / pathLength;
@@ -186,32 +186,25 @@ export class BaseEnemy {
         // Calculate distance from path center (project position onto path segment)
         const toCurrentDx = this.x - currentPos.x;
         const toCurrentDy = this.y - currentPos.y;
-        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / pathLengthSq;
+        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / (pathLength * pathLength);
         const projX = currentPos.x + projectionLength * pathDx;
         const projY = currentPos.y + projectionLength * pathDy;
         
-        // Distance from enemy to path center line (squared distance to avoid sqrt)
-        const toProjDx = this.x - projX;
-        const toProjDy = this.y - projY;
-        const distFromPathSq = toProjDx * toProjDx + toProjDy * toProjDy;
+        // Distance from enemy to path center line
+        const distFromPath = Math.hypot(this.x - projX, this.y - projY);
         
         // Max allowed offset (path width is 60px total, so ±25px from center)
         const maxOffset = 25;
-        const maxOffsetSq = maxOffset * maxOffset;
-        
-        // Early exit if within bounds and not too far off center (reduce unnecessary calculations)
-        if (distFromPathSq < maxOffsetSq * 0.25) return; // If within 1/4 of max, don't adjust
         
         // If we're too far from path center, pull back toward it
-        if (distFromPathSq > maxOffsetSq) {
+        if (distFromPath > maxOffset) {
             // Calculate how much we're over the limit
-            const distFromPath = Math.sqrt(distFromPathSq);
             const excess = distFromPath - maxOffset;
             
             // Direction from enemy to path center
             const toCenterX = projX - this.x;
             const toCenterY = projY - this.y;
-            const toCenterLen = Math.sqrt(toCenterX * toCenterX + toCenterY * toCenterY);
+            const toCenterLen = Math.hypot(toCenterX, toCenterY);
             
             if (toCenterLen > 0) {
                 // Pull back toward center
@@ -222,7 +215,6 @@ export class BaseEnemy {
         } else {
             // We're within bounds, apply gentle spreading offset
             // Use the initial random offset, but scale it based on distance from center
-            const distFromPath = Math.sqrt(distFromPathSq);
             const spreadAmount = (this.pathOffsetAmount / 30) * (1 - (distFromPath / maxOffset) * 0.5);
             this.x += perpX * spreadAmount * 0.02;
             this.y += perpY * spreadAmount * 0.02;
@@ -241,12 +233,8 @@ export class BaseEnemy {
         }
         
         // Check if defender is in range - works for both castle defenders and guard post defenders
-        const dx = defender.x - this.x;
-        const dy = defender.y - this.y;
-        const distSq = dx * dx + dy * dy;
-        const attackRangeSq = (this.attackRange * 1.5) * (this.attackRange * 1.5); // Slightly larger range
-        
-        if (distSq < attackRangeSq) {
+        const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
+        if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
             this.isAttackingDefender = true;
             this.defenderTarget = defender;
             return true;

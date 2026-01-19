@@ -88,12 +88,11 @@ export class FrogEnemy extends BaseEnemy {
         
         const dx = target.x - this.x;
         const dy = target.y - this.y;
-        const distSq = dx * dx + dy * dy;
+        const distance = Math.hypot(dx, dy);
         
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        const reachThresholdSq = reachThreshold * reachThreshold;
         
-        if (distSq < reachThresholdSq) {
+        if (distance < reachThreshold) {
             this.currentPathIndex++;
             this.x = target.x;
             this.y = target.y;
@@ -101,7 +100,6 @@ export class FrogEnemy extends BaseEnemy {
         }
         
         const moveDistance = this.speed * deltaTime;
-        const distance = Math.sqrt(distSq);
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
     }
@@ -144,7 +142,7 @@ export class FrogEnemy extends BaseEnemy {
         
         const dx = nextPoint.x - currentPoint.x;
         const dy = nextPoint.y - currentPoint.y;
-        const segmentDistance = Math.sqrt(dx * dx + dy * dy);
+        const segmentDistance = Math.hypot(dx, dy);
         
         // Direction along path
         this.jumpDirection = Math.atan2(dy, dx);

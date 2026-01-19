@@ -186,9 +186,7 @@ export class TowerManager {
             const closestX = p1.x + t * dx;
             const closestY = p1.y + t * dy;
             
-            const dxDist = closestX - x;
-            const dyDist = closestY - y;
-            const distance = Math.sqrt(dxDist * dxDist + dyDist * dyDist);
+            const distance = Math.hypot(closestX - x, closestY - y);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestOnPath = { x: closestX, y: closestY };
@@ -200,9 +198,7 @@ export class TowerManager {
         
         // Also check the last waypoint
         const lastWaypoint = this.level.path[this.level.path.length - 1];
-        const dx2 = lastWaypoint.x - x;
-        const dy2 = lastWaypoint.y - y;
-        const distanceToLast = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        const distanceToLast = Math.hypot(lastWaypoint.x - x, lastWaypoint.y - y);
         if (distanceToLast < minDistance) {
             minDistance = distanceToLast;
             closestOnPath = { x: lastWaypoint.x, y: lastWaypoint.y };
@@ -219,7 +215,7 @@ export class TowerManager {
         if (closestSegment) {
             const dx = closestSegment.p2.x - closestSegment.p1.x;
             const dy = closestSegment.p2.y - closestSegment.p1.y;
-            const length = Math.sqrt(dx * dx + dy * dy);
+            const length = Math.hypot(dx, dy);
             
             // Get perpendicular direction (rotated 90 degrees)
             const perpX = -dy / length;
@@ -239,7 +235,7 @@ export class TowerManager {
             // For endpoints, offset in the direction of the click
             const toClickX = x - closestOnPath.x;
             const toClickY = y - closestOnPath.y;
-            const clickDistance = Math.sqrt(toClickX * toClickX + toClickY * toClickY);
+            const clickDistance = Math.hypot(toClickX, toClickY);
             
             if (clickDistance > 0) {
                 const offsetDistance = 25;

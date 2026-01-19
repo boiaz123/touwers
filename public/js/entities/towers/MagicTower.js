@@ -83,17 +83,13 @@ export class MagicTower extends Tower {
     
     findTarget(enemies) {
         let closest = null;
-        let closestDistSq = this.range * this.range;
-        const rangeSq = this.range * this.range;
+        let closestDist = this.range;
         
         for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            
-            if (distSq <= rangeSq && distSq < closestDistSq) {
+            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
-                closestDistSq = distSq;
+                closestDist = dist;
             }
         }
         
@@ -155,7 +151,6 @@ export class MagicTower extends Tower {
     
     chainLightning(originalTarget) {
         const chainRange = 50 + this.elementalBonuses.air.chainRange;
-        const chainRangeSq = chainRange * chainRange; // Squared range to avoid sqrt
         const chainTargets = [originalTarget];
         
         // Find nearby enemies for chain lightning
@@ -171,11 +166,8 @@ export class MagicTower extends Tower {
                 currentTargets.forEach(target => {
                     this.enemies.forEach(enemy => {
                         if (!visited.has(enemy) && !enemy.isDead()) {
-                            const dx = enemy.x - target.x;
-                            const dy = enemy.y - target.y;
-                            const distSq = dx * dx + dy * dy;
-                            
-                            if (distSq <= chainRangeSq) {
+                            const dist = Math.hypot(enemy.x - target.x, enemy.y - target.y);
+                            if (dist <= chainRange) {
                                 nextTargets.push(enemy);
                                 visited.add(enemy);
                                 chainTargets.push(enemy);
@@ -263,10 +255,7 @@ export class MagicTower extends Tower {
     }
     
     isClickable(x, y, towerSize) {
-        const dx = this.x - x;
-        const dy = this.y - y;
-        const sizeRadiusSq = (towerSize / 2) * (towerSize / 2);
-        return (dx * dx + dy * dy) <= sizeRadiusSq;
+        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
     }
     
     applyElementalBonuses(bonuses) {

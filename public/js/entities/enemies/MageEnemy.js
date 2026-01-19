@@ -89,12 +89,11 @@ export class MageEnemy extends BaseEnemy {
         
         const dx = target.x - this.x;
         const dy = target.y - this.y;
-        const distSq = dx * dx + dy * dy;
+        const distance = Math.hypot(dx, dy);
         
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        const reachThresholdSq = reachThreshold * reachThreshold;
         
-        if (distSq < reachThresholdSq) {
+        if (distance < reachThreshold) {
             this.currentPathIndex++;
             this.x = target.x;
             this.y = target.y;
@@ -102,7 +101,6 @@ export class MageEnemy extends BaseEnemy {
         }
         
         const moveDistance = this.speed * deltaTime;
-        const distance = Math.sqrt(distSq);
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
     }

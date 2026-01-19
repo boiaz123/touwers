@@ -118,19 +118,15 @@ export class PoisonArcherTower extends Tower {
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
             // Check if arrow hits target area (within 15px of target position)
-            const dxArrow = arrow.x - arrow.targetX;
-            const dyArrow = arrow.y - arrow.targetY;
-            if (arrow.life <= 0 || (dxArrow * dxArrow + dyArrow * dyArrow < 225)) { // 15 * 15 = 225
+            if (arrow.life <= 0 || Math.hypot(arrow.x - arrow.targetX, arrow.y - arrow.targetY) < 15) {
                 // Only poison the intended target - find closest enemy to impact point
                 let hitTarget = null;
-                let minDistSq = 400; // Only hit if very close (20 * 20 = 400)
+                let minDist = 20; // Only hit if very close
                 
                 for (const enemy of enemies) {
-                    const dxEnemy = enemy.x - arrow.x;
-                    const dyEnemy = enemy.y - arrow.y;
-                    const distSq = dxEnemy * dxEnemy + dyEnemy * dyEnemy;
-                    if (distSq < minDistSq) {
-                        minDistSq = distSq;
+                    const dist = Math.hypot(enemy.x - arrow.x, enemy.y - arrow.y);
+                    if (dist < minDist) {
+                        minDist = dist;
                         hitTarget = enemy;
                     }
                 }
@@ -212,7 +208,7 @@ export class PoisonArcherTower extends Tower {
         
         const dx = predicted.x - startX;
         const dy = predicted.y - startY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.hypot(dx, dy);
         const arcHeight = distance * 0.08;
         
         // Only create arrow if distance is reasonable (avoid zero-distance or invalid arrows)

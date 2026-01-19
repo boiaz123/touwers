@@ -76,13 +76,6 @@ export class GameplayState {
         this.defendersCacheNeedsUpdate = true;
         this.guardPostDefenderCache = null;
         
-        // OPTIMIZATION: Flag to track if UI update is needed
-        this.uiUpdateNeeded = false;
-        
-        // OPTIMIZATION: Timer to batch UI updates instead of every frame
-        this.uiUpdateTimer = 0;
-        this.uiUpdateInterval = 0.05; // Update UI every 50ms max (not every frame)
-        
     }
 
     setGameSpeed(speed) {
@@ -414,8 +407,10 @@ export class GameplayState {
     }
     
     removeEventListeners() {
-        // Remove only the specific handlers, don't clone all DOM elements!
-        // Cloning DOM elements is extremely expensive and causes reflows
+        // Clean up event listeners properly
+        document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
         
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
@@ -519,35 +514,26 @@ export class GameplayState {
         switch(spellId) {
             case 'arcaneBlast':
                 this.stateManager.audioManager.playSFX('arcane-blast');
-                const arcaneSpellRadiusSq = spell.radius * spell.radius;
-                for (let i = 0; i < this.enemyManager.enemies.length; i++) {
-                    const enemy = this.enemyManager.enemies[i];
-                    const dx = enemy.x - x;
-                    const dy = enemy.y - y;
-                    const distSq = dx * dx + dy * dy;
-                    if (distSq <= arcaneSpellRadiusSq) {
-                        const distance = Math.sqrt(distSq);
-                        const damage = spell.damage * (1 - distance / spell.radius * 0.5);
+                this.enemyManager.enemies.forEach(enemy => {
+                    const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                    if (dist <= spell.radius) {
+                        const damage = spell.damage * (1 - dist / spell.radius * 0.5);
                         enemy.takeDamage(damage, 0, 'magic');
                     }
-                }
+                });
                 this.createSpellEffect('arcaneBlast', x, y, spell);
                 break;
                 
             case 'frostNova':
                 this.stateManager.audioManager.playSFX('frost-nova');
-                const frostSpellRadiusSq = spell.radius * spell.radius;
-                for (let i = 0; i < this.enemyManager.enemies.length; i++) {
-                    const enemy = this.enemyManager.enemies[i];
-                    const dx = enemy.x - x;
-                    const dy = enemy.y - y;
-                    const distSq = dx * dx + dy * dy;
-                    if (distSq <= frostSpellRadiusSq) {
+                this.enemyManager.enemies.forEach(enemy => {
+                    const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                    if (dist <= spell.radius) {
                         enemy.freezeTimer = spell.freezeDuration;
                         enemy.originalSpeed = enemy.originalSpeed || enemy.speed;
                         enemy.speed = 0;
                     }
-                }
+                });
                 this.createSpellEffect('frostNova', x, y, spell);
                 break;
                 
@@ -558,20 +544,16 @@ export class GameplayState {
                     time: 0.5, // Delay of 0.5 seconds
                     callback: () => {
                         // Find alive enemies in the impact area
-                        const meteorRadiusSq = 80 * 80; // 80px radius
-                        for (let i = 0; i < this.enemyManager.enemies.length; i++) {
-                            const enemy = this.enemyManager.enemies[i];
+                        this.enemyManager.enemies.forEach(enemy => {
                             if (!enemy.isDead()) {
-                                const dx = enemy.x - x;
-                                const dy = enemy.y - y;
-                                const distSq = dx * dx + dy * dy;
-                                if (distSq <= meteorRadiusSq) {
+                                const dist = Math.hypot(enemy.x - x, enemy.y - y);
+                                if (dist <= 80) {
                                     enemy.takeDamage(spell.damage, 0, 'magic');
                                     enemy.burnTimer = spell.burnDuration;
                                     enemy.burnDamage = spell.burnDamage;
                                 }
                             }
-                        }
+                        });
                     }
                 });
                 this.createSpellEffect('meteorStrike', x, y, spell);
@@ -1137,15 +1119,15 @@ export class GameplayState {
         // Always update the timestamp for the next frame
         this.lastRealTimestamp = currentRealTimestamp;
         
-        // Process pending damage (delayed spell effects) - use index-based removal
-        for (let i = this.pendingDamage.length - 1; i >= 0; i--) {
-            const damage = this.pendingDamage[i];
+        // Process pending damage (delayed spell effects)
+        this.pendingDamage = this.pendingDamage.filter(damage => {
             damage.time -= adjustedDeltaTime;
             if (damage.time <= 0) {
                 damage.callback();
-                this.pendingDamage.splice(i, 1);
+                return false; // Remove from pending list
             }
-        }
+            return true;
+        });
         
         // Update castle first so it's ready for defender positioning
         if (this.level.castle) {
@@ -1216,27 +1198,21 @@ export class GameplayState {
             }
             
             // Register defenders on all enemies once
-            // Use a Set for O(1) lookup instead of array.includes() which is O(n)
-            const guardPostDefenderSet = new Set(this.guardPostDefenderCache.map(c => c.defender));
-            
-            for (let i = 0; i < this.enemyManager.enemies.length; i++) {
-                const enemy = this.enemyManager.enemies[i];
+            this.enemyManager.enemies.forEach((enemy) => {
                 if (!enemy.pathDefenders) {
                     enemy.pathDefenders = [];
-                } else if (enemy.pathDefenders.length > 0) {
-                    // Skip if already registered
-                    continue;
                 }
-                
-                // Build list of new defenders to add (avoid nested loops with includes())
-                for (let j = 0; j < this.guardPostDefenderCache.length; j++) {
-                    enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
-                }
+                // Only add if not already added
+                this.guardPostDefenderCache.forEach(cache => {
+                    if (!enemy.pathDefenders.includes(cache.defender)) {
+                        enemy.pathDefenders.push(cache.defender);
+                    }
+                });
                 
                 if (!enemy.defenderWaypoint && this.guardPostDefenderCache.length > 0) {
                     enemy.defenderWaypoint = this.guardPostDefenderCache[0].waypoint;
                 }
-            }
+            });
             
             this.defendersCacheNeedsUpdate = false;
         }
@@ -1264,6 +1240,15 @@ export class GameplayState {
         // Update loot bags
         if (this.lootManager) {
             this.lootManager.update(adjustedDeltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
+        }
+        
+        // Deselect all towers and buildings during normal gameplay (no menu open)
+        // This ensures the radius only shows when a tower is selected via clicking
+        if (this.towerManager && !this.uiManager.activeMenuType) {
+            this.towerManager.towers.forEach(tower => tower.isSelected = false);
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                if (building.deselect) building.deselect();
+            });
         }
         
         // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
@@ -1393,8 +1378,9 @@ export class GameplayState {
         
         if (goldFromEnemies > 0) {
             this.gameState.gold += goldFromEnemies;
-            // Flag that UI needs updating
-            this.uiUpdateNeeded = true;
+            // Only update UI when gold changes, not every time
+            this.uiManager.updateUI();
+            this.uiManager.updateButtonStates();
         }
         
         // Check if wave is completed
@@ -1412,42 +1398,28 @@ export class GameplayState {
                 this.waveCooldownTimer = 15;
                 this.waveCooldownDuration = 15;
                 this.gameState.wave++;
-                // Flag UI update when wave changes
-                this.uiUpdateNeeded = true;
             }
         }
         
-        // OPTIMIZATION: Batch UI updates - only update at intervals, not every frame
-        this.uiUpdateTimer += adjustedDeltaTime;
-        if (this.uiUpdateTimer >= this.uiUpdateInterval || this.uiUpdateNeeded) {
-            this.uiUpdateTimer = 0;
-            this.uiUpdateNeeded = false;
-            
-            // Update spell UI - only updates displays
-            this.uiManager.updateSpellUI();
-            
-            // Update wave countdown display
-            this.uiManager.updateWaveCooldownDisplay();
-            
-            // Update active menu if one is open (for real-time resource availability)
-            this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
-        }
+        // Update spell UI - only updates displays, doesn't recreate every frame
+        this.uiManager.updateSpellUI();
         
-        // Update spell effects - use index-based removal instead of filter for better performance
-        for (let i = this.spellEffects.length - 1; i >= 0; i--) {
-            const effect = this.spellEffects[i];
+        // Update wave countdown display
+        this.uiManager.updateWaveCooldownDisplay();
+        
+        // Update active menu if one is open (for real-time resource availability)
+        this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
+        
+        // Update spell effects
+        this.spellEffects = this.spellEffects.filter(effect => {
             effect.life -= adjustedDeltaTime;
             if (effect.x !== undefined && effect.vx !== undefined) {
                 effect.x += effect.vx * adjustedDeltaTime;
                 effect.y += effect.vy * adjustedDeltaTime;
                 effect.vy += 100 * adjustedDeltaTime; // gravity
             }
-            
-            // Remove dead effects
-            if (effect.life <= 0) {
-                this.spellEffects.splice(i, 1);
-            }
-        }
+            return effect.life > 0;
+        });
     }
     
     gameOver() {
@@ -1486,14 +1458,13 @@ export class GameplayState {
             this.level.castle.defender.render(ctx);
         }
         
-        // Render guard post defenders - use cached list if available
-        if (this.cachedGuardPosts && this.cachedGuardPosts.length > 0) {
-            for (let i = 0; i < this.cachedGuardPosts.length; i++) {
-                const tower = this.cachedGuardPosts[i];
-                if (tower.defender && !tower.defender.isDead()) {
+        // Render guard post defenders
+        if (this.towerManager && this.towerManager.towers) {
+            this.towerManager.towers.forEach(tower => {
+                if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     tower.defender.render(ctx);
                 }
-            }
+            });
         }
         
         this.renderSpellEffects(ctx);

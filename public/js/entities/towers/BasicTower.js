@@ -54,10 +54,8 @@ export class BasicTower extends Tower {
             rock.life -= deltaTime;
             
             if (rock.target && !rock.target.isDead()) {
-                const dx = rock.x - rock.target.x;
-                const dy = rock.y - rock.target.y;
-                const distSq = dx * dx + dy * dy;
-                if (distSq <= 225) { // 15 * 15 = 225
+                const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
+                if (dist <= 15) {
                     return false;
                 }
             }
@@ -98,7 +96,7 @@ export class BasicTower extends Tower {
                 
                 const dx = predicted.x - defenderX;
                 const dy = predicted.y - defenderY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                const distance = Math.hypot(dx, dy);
                 const arcHeight = distance * 0.15;
                 
                 this.rocks.push({

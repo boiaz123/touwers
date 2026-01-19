@@ -94,7 +94,7 @@ export class ArcherTower extends Tower {
             // Calculate arrow trajectory with arc to predicted position
             const dx = predicted.x - archerPos.x;
             const dy = predicted.y - archerPos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = Math.hypot(dx, dy);
             const arcHeight = distance * 0.1; // Slight arc for realism
             
             this.arrows.push({

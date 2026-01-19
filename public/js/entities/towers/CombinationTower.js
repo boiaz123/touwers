@@ -94,17 +94,13 @@ export class CombinationTower extends Tower {
     
     findTarget(enemies) {
         let closest = null;
-        let closestDistSq = this.range * this.range;
-        const rangeSq = this.range * this.range;
+        let closestDist = this.range;
         
         for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            
-            if (distSq <= rangeSq && distSq < closestDistSq) {
+            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
-                closestDistSq = distSq;
+                closestDist = dist;
             }
         }
         
@@ -112,16 +108,13 @@ export class CombinationTower extends Tower {
     }
     
     chainToNearbyEnemies(originalTarget, damage, damageType) {
-        const chainRangeSq = 80 * 80; // Chain range squared to avoid sqrt
+        const chainRange = 80;
         if (!this.enemies) return;
         
         this.enemies.forEach(enemy => {
             if (enemy !== originalTarget && !enemy.isDead()) {
-                const dx = enemy.x - originalTarget.x;
-                const dy = enemy.y - originalTarget.y;
-                const distSq = dx * dx + dy * dy;
-                
-                if (distSq <= chainRangeSq) {
+                const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
+                if (dist <= chainRange) {
                     // Reduced damage for chained targets
                     const chainDamage = Math.floor(damage * 0.5);
                     enemy.takeDamage(chainDamage, 0, damageType);
@@ -558,10 +551,7 @@ export class CombinationTower extends Tower {
     }
     
     isClickable(x, y, towerSize) {
-        const dx = this.x - x;
-        const dy = this.y - y;
-        const sizeRadiusSq = (towerSize / 2) * (towerSize / 2);
-        return (dx * dx + dy * dy) <= sizeRadiusSq;
+        return Math.hypot(this.x - x, this.y - y) <= towerSize/2;
     }
     
     applySpellBonuses(bonuses) {
