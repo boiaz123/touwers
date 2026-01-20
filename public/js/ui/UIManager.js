@@ -49,8 +49,8 @@ export class UIManager {
             let isUnlocked = this.towerManager.unlockSystem.unlockedTowers.has(towerType);
             let canBuild = this.towerManager.unlockSystem.canBuildTower(towerType);
             
-            // Check if this tower has a free placement available
-            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.checkFreePlacement(towerType, true);
+            // Check if this tower has a free placement available (without consuming it)
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(towerType, true);
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
@@ -88,8 +88,8 @@ export class UIManager {
             // Check if building is unlocked (separate from whether it can be built)
             const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
             
-            // Check if this building has a free placement available
-            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.checkFreePlacement(buildingType, false);
+            // Check if this building has a free placement available (without consuming it)
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(buildingType, false);
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
@@ -435,8 +435,9 @@ export class UIManager {
         const towerType = btn.dataset.type;
         const cost = parseInt(btn.dataset.cost);
         
-        // Check if player can afford this tower
-        if (!this.gameState.canAfford(cost)) {
+        // Check if player can afford this tower OR if it's free from marketplace
+        const isFree = this.gameplayState.hasFreePlacement(towerType, true);
+        if (!isFree && !this.gameState.canAfford(cost)) {
             return;
         }
         
@@ -474,8 +475,9 @@ export class UIManager {
         const buildingType = btn.dataset.type;
         const cost = parseInt(btn.dataset.cost);
         
-        // Check if player can afford this building
-        if (!this.gameState.canAfford(cost)) {
+        // Check if player can afford this building OR if it's free from marketplace
+        const isFree = this.gameplayState.hasFreePlacement(buildingType, false);
+        if (!isFree && !this.gameState.canAfford(cost)) {
             return;
         }
         
@@ -785,7 +787,7 @@ export class UIManager {
         if (this.gameplayState.isSandbox) {
         }
         
-        this.updateUIAvailability();
+        this.updateButtonStates();
     }
 
     updateUIAvailability() {
@@ -798,20 +800,32 @@ export class UIManager {
             const isUnlocked = unlockSystem.unlockedTowers.has(type);
             const canBuild = unlockSystem.canBuildTower(type);
             
+            // Check if this tower has a free placement available (without consuming it)
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(type, true);
+            
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
                 btn.style.display = 'none';
                 btn.classList.add('disabled');
                 btn.disabled = true;
+                btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
                 // Button is unlocked, now check if it can be built (not at limit) and affordable
-                if (!canBuild || !this.gameState.canAfford(cost)) {
+                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+                if (!canBuild || !canAfford) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
+                    btn.classList.remove('free-placement');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
+                    // Add free-placement class if this is a free build
+                    if (isFreeFromMarketplace) {
+                        btn.classList.add('free-placement');
+                    } else {
+                        btn.classList.remove('free-placement');
+                    }
                 }
             }
         });
@@ -824,6 +838,9 @@ export class UIManager {
             // Check if building is unlocked (not if it can be built - that's different)
             const isUnlocked = unlockSystem.isBuildingUnlocked(type);
             
+            // Check if this building has a free placement available (without consuming it)
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(type, false);
+            
             // Debug superweapon button
             if (type === 'superweapon') {
             }
@@ -833,17 +850,26 @@ export class UIManager {
                 btn.style.display = 'none';
                 btn.classList.add('disabled');
                 btn.disabled = true;
+                btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
                 // Building is unlocked, check if it can be built (at limit or affordable)
                 const canBuild = unlockSystem.canBuildBuilding(type);
+                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
                 
-                if (!canBuild || !this.gameState.canAfford(cost)) {
+                if (!canBuild || !canAfford) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
+                    btn.classList.remove('free-placement');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
+                    // Add free-placement class if this is a free build
+                    if (isFreeFromMarketplace) {
+                        btn.classList.add('free-placement');
+                    } else {
+                        btn.classList.remove('free-placement');
+                    }
                 }
             }
         });

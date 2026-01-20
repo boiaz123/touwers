@@ -199,7 +199,7 @@ export class SaveSystem {
             playerGold: 0,
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },
-            marketplace: { consumables: {} },
+            marketplace: { consumables: { 'magic-tower-flatpack': 1 } },
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
             completedLevels: [],

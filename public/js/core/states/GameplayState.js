@@ -148,6 +148,9 @@ export class GameplayState {
     
     async enter() {
         
+        // Set reference to this GameplayState in stateManager so other systems can access it
+        this.stateManager.gameplayState = this;
+        
         // Reset pause state when entering a new level
         this.isPaused = false;
         
@@ -279,6 +282,9 @@ export class GameplayState {
         // Ensure all existing towers have audio manager (for loaded games)
         this.towerManager.ensureAudioManagerForAllTowers();
         
+        // Apply consumable effects BEFORE UI initialization so buttons are unlocked from the start
+        this.applyConsumableEffects();
+        
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
         
@@ -305,9 +311,6 @@ export class GameplayState {
         
         // Reset real time tracking for wave cooldown
         this.lastRealTimestamp = performance.now() / 1000;
-        
-        // Apply consumable effects at level start (free buildings, tower flatpacks, etc.)
-        this.applyConsumableEffects();
     }
     
     applyConsumableEffects() {
@@ -316,7 +319,10 @@ export class GameplayState {
             this.stateManager.marketplaceSystem.resetForNewLevel();
         }
         
-        if (!this.stateManager.marketplaceSystem) return;
+        if (!this.stateManager.marketplaceSystem) {
+            console.warn('GameplayState: No marketplace system available');
+            return;
+        }
         
         const marketplace = this.stateManager.marketplaceSystem;
         
@@ -325,34 +331,63 @@ export class GameplayState {
         this.freeBuildingPlacements = {};
         this.freeTowerPlacements = {};
         
+        console.log('GameplayState: applyConsumableEffects - checking for consumables');
+        console.log('GameplayState: Marketplace consumables:', {
+            forge: marketplace.getConsumableCount('forge-materials'),
+            training: marketplace.getConsumableCount('training-materials'),
+            magic: marketplace.getConsumableCount('magic-tower-flatpack')
+        });
+        
         // Check if forge materials are available for free placement
         if (marketplace.hasFreePlacement('forge-materials')) {
             this.freeBuildingPlacements['forge'] = true;
-            console.log('Forge materials available - can place forge for free this level!');
+            // Unlock the forge building so the button appears
+            this.towerManager.unlockSystem.unlockedBuildings.add('forge');
+            console.log('✓ Forge materials available - forge unlocked and free placement enabled');
         }
         
         // Check if training materials are available for free placement
         if (marketplace.hasFreePlacement('training-materials')) {
             this.freeBuildingPlacements['training'] = true;
-            console.log('Training materials available - can place training grounds for free this level!');
+            // Unlock the training grounds building so the button appears
+            this.towerManager.unlockSystem.unlockedBuildings.add('training');
+            console.log('✓ Training materials available - training grounds unlocked and free placement enabled');
         }
         
         // Check if magic tower flatpack is available for free placement
         if (marketplace.hasFreePlacement('magic-tower-flatpack')) {
             this.freeTowerPlacements['magic'] = true;
-            console.log('Magic tower flatpack available - can place magic tower for free this level!');
+            // Unlock the magic tower so the button appears
+            this.towerManager.unlockSystem.unlockedTowers.add('magic');
+            console.log('✓ Magic tower flatpack available - magic tower unlocked and free placement enabled');
         }
+    }
+    
+    /**
+     * Check if a free placement is available WITHOUT consuming it
+     * Used by UI to display free-placement styling
+     */
+    hasFreePlacement(type, isTower = false) {
+        if (isTower && this.freeTowerPlacements && this.freeTowerPlacements[type]) {
+            return true;
+        }
+        if (!isTower && this.freeBuildingPlacements && this.freeBuildingPlacements[type]) {
+            return true;
+        }
+        return false;
     }
     
     checkFreePlacement(type, isTower = false) {
         // Called by TowerManager/BuildingManager to check if placement should be free
         // Consumables are already marked as used in resetForNewLevel(), so just check the flags
         if (isTower && this.freeTowerPlacements && this.freeTowerPlacements[type]) {
+            console.log(`GameplayState: Free tower placement used for '${type}'`);
             this.freeTowerPlacements[type] = false; // Mark as used this placement
             // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
             return true;
         }
         if (!isTower && this.freeBuildingPlacements && this.freeBuildingPlacements[type]) {
+            console.log(`GameplayState: Free building placement used for '${type}'`);
             this.freeBuildingPlacements[type] = false; // Mark as used this placement
             // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
             return true;
@@ -472,13 +507,18 @@ export class GameplayState {
     }
 
     exit() {
+        // Clear reference to GameplayState
+        this.stateManager.gameplayState = null;
+        
         // Restore settlement gold to stateManager before leaving
         if (this.settlementGoldBackup !== undefined) {
+            console.log(`GameplayState.exit: Restoring settlement gold from ${this.stateManager.playerGold} to ${this.settlementGoldBackup}`);
             this.stateManager.playerGold = this.settlementGoldBackup;
         }
         
         // Commit consumed marketplace items after level (regardless of completion or quit)
         if (this.stateManager.marketplaceSystem) {
+            console.log('GameplayState.exit: Committing used consumables');
             this.stateManager.marketplaceSystem.commitUsedConsumables();
         }
         

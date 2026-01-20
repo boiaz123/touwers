@@ -28,6 +28,9 @@ export class GameStateManager {
         // AudioManager reference (will be set during game initialization)
         this.audioManager = null;
         
+        // GameplayState reference (will be set when entering gameplay)
+        this.gameplayState = null;
+        
     }
     
     addState(name, state) {

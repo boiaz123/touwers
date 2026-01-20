@@ -25,12 +25,16 @@ export class TowerManager {
     }
     
     setStateManager(stateManager) {
+        this.stateManager = stateManager;
         this.buildingManager.stateManager = stateManager;
     }
     
     placeTower(type, x, y, gridX, gridY) {
-        // Check if tower type is unlocked
-        if (!this.unlockSystem.canBuildTower(type)) {
+        // Special exception: Allow Magic Tower from consumable flatpack even without academy unlock
+        const isFreeFromMarketplace = this.stateManager?.gameplayState?.hasFreePlacement(type, true) || false;
+        
+        // Check if tower type is unlocked (or has free placement exception)
+        if (!isFreeFromMarketplace && !this.unlockSystem.canBuildTower(type)) {
             return false;
         }
         
@@ -82,6 +86,9 @@ export class TowerManager {
         
         // Check if this is a free placement from marketplace
         const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
+        if (isFree) {
+            console.log(`TowerManager.placeTower: '${type}' is FREE from marketplace`);
+        }
         if (isFree || this.gameState.spend(towerType.cost)) {
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
             

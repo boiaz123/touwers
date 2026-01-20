@@ -7,62 +7,62 @@ export class MarketplaceRegistry {
     static #registry = {
         'forge-materials': {
             name: 'Forge Materials',
-            description: 'A collection of rare ores and enchanted metals gathered from distant mines. With these materials, you may construct a great Forge to empower your warriors. The spirits of craftsmanship smile upon you.',
+            description: 'Deep within the earth, legendary smiths once worked rare ores into instruments of power. Now their legacy awaits. These precious materials—mithril ingots, enchanted coal, and ancient blueprints—contain the essence of a master craftsman\'s knowledge. In the next battle, you may construct a Tower Forge at no cost. This forge will unlock powerful tower upgrades and enhance your entire arsenal, turning your warriors into an unstoppable force.',
             cost: 300,
             icon: '🔨',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Forge next level',
+            effect: 'Free Tower Forge - unlocks tower upgrades next level',
             requirements: []
         },
         'training-materials': {
             name: 'Training Materials',
-            description: 'Ancient scrolls and battle-worn armor of legendary warriors. These treasures inspire your troops and grant them the knowledge to fight with unmatched discipline. The realm\'s greatest champions were trained thus.',
+            description: 'The weathered scrolls speak of legendary warriors whose names echo through eternity—champions who pushed the boundaries of strength and skill. Their armor, still emanating residual power, crackles with ancient might. Carrying these relics into battle fills your troops with inspiration and untapped potential. In the next battle, you may construct Training Grounds at no cost. This sacred ground will unlock advanced tower techniques, granting your defenders enhanced range and devastating new abilities to defend your castle.',
             cost: 350,
             icon: '🎖️',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Training Grounds next level',
+            effect: 'Free Training Grounds - unlocks defender training next level',
             requirements: ['training-gear']
         },
         'rabbits-foot': {
             name: 'Rabbit\'s Foot',
-            description: 'A charm blessed by the woodland spirits, said to multiply the bounty of the hunt. Carry this talisman and fortune shall rain upon your endeavors. Common treasures shall flow like streams in springtime.',
+            description: 'The forest runs deep with magic old and true. Those who traverse its hidden groves sometimes catch glimpses of white rabbits—swift as starlight, blessed by nature itself. To claim their favor is to unlock prosperity beyond measure. This talisman, blessed by woodland spirits of abundance, doubles the wealth and treasure you discover in the next battle. Fallen enemies will yield twice the gold, gems, and relics, filling your coffers with untold riches.',
             cost: 200,
             icon: '🐾',
             category: 'loot',
             type: 'consumable',
-            effect: 'Double normal loot chance next round',
+            effect: 'Double loot and treasure rewards next level',
             requirements: []
         },
         'strange-talisman': {
             name: 'Strange Talisman',
-            description: 'An artifact of mysterious origins, adorned with runes of old magic. When wielded, it draws forth the realm\'s greatest treasures and manifests them twice-fold. The price of power is steep, yet the rewards are legendary.',
+            description: 'Found in the tomb of a forgotten sorcerer, this enigmatic artifact thrums with power that defies explanation. Its runes glow with ancient magic—a spell so potent that it seems to bend fate itself. When you carry it into battle, the very fabric of destiny shifts in your favor, drawing legendary treasures from the aether. In the next battle, all rare and legendary loot drops are doubled, multiplying your chances of acquiring the finest gems, artifacts, and enchanted relics the realm has to offer.',
             cost: 400,
             icon: '🔮',
             category: 'loot',
             type: 'consumable',
-            effect: 'Rare loot awarded twice next round',
+            effect: 'Rare and legendary loot doubled next level',
             requirements: []
         },
         'magic-tower-flatpack': {
             name: 'Magic Tower Flatpack',
-            description: 'A masterwork of arcane engineering from the great tower-smiths of old. This enchanted blueprint allows you to erect a tower of pure magic instantly. Such sorcery would normally require years of study.',
+            description: 'In ages past, the greatest arcane scholars of the realm created a marvel of magical engineering—a tower of pure elemental force, capable of channeling devastating spells against enemies. This enchanted blueprint, preserved for centuries, contains all the knowledge and materials needed to construct such a tower in mere moments. In the next battle, you may erect a Magic Tower at no cost. This powerful tower can be infused with different elemental forces (fire, water, earth, air) to deal specialized damage and adapt to any threat. No gold required—only the will to embrace ancient magic.',
             cost: 500,
             icon: '📦',
             category: 'tower',
             type: 'consumable',
-            effect: 'Free Magic Tower next level',
+            effect: 'Free Magic Tower with elemental selection next level',
             requirements: []
         },
         'frog-king-bane': {
             name: 'The Frog King\'s Bane',
-            description: 'A relic forged in ancient battles against the amphibian hordes. This cursed item draws upon forbidden magic to preserve your life. Should your castle fall, the curse activates and snatches you back from death\'s grasp. But beware—such dark magic comes with a price.',
+            description: 'In ages long forgotten, the great kingdoms of the forest—ancient groves and sacred glades—were ruled by a tyrannical Frog King who hoarded power for himself. The old spirits of wood and water, rivals to his dominion, bound their collective essence into this talisman as an act of defiance. Carrying it into battle grants you their protection. Should your castle be destroyed, you are protected by the ancient spirits of the forest—the very foes of the Frog King himself. They conjure a mystical barrier that snatches your life back from the brink of destruction, reviving your castle and allowing you to continue the fight. A boon from nature\'s oldest guardians.',
             cost: 800,
             icon: '👑',
             category: 'boon',
             type: 'boon',
-            effect: 'Castle revival on destruction',
+            effect: 'Revive castle once if destroyed - forest spirits protect you',
             requirements: []
         }
     };

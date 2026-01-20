@@ -4075,31 +4075,27 @@ class UpgradesMenu {
             ctx.globalAlpha = 1;
         }
         
-        // Icon or Emblem
-        if (this.activeTab === 'buy' && item.icon) {
-            // For buy items, show icon
-            ctx.font = 'bold 28px Arial';
+        // Determine icon size and name font based on tab
+        const isSellTab = this.activeTab === 'sell';
+        const iconSize = isSellTab ? 28 : 24;
+        const nameFontSize = isSellTab ? 12 : 11;
+        
+        // Icon
+        if (item.icon) {
+            ctx.font = `bold ${iconSize}px Arial`;
             ctx.fillStyle = isDisabled ? '#707070' : borderColor;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(item.icon, x + width / 2, y + 6);
-        } else if (this.activeTab === 'sell' && item.emblem) {
-            // For sell items, show emblem
-            ctx.font = 'bold 24px Arial';
-            ctx.fillStyle = borderColor;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(item.emblem, x + width / 2, y + 8);
         }
         
         // Item name
-        ctx.font = 'bold 12px Arial';
+        ctx.font = `bold ${nameFontSize}px Arial`;
         ctx.fillStyle = isDisabled ? '#8a8a8a' : '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const nameY = (this.activeTab === 'buy' && item.icon) || (this.activeTab === 'sell' && item.emblem) ? y + 35 : y + 8;
         
-        // Wrap long names
+        const nameY = y + (isSellTab ? 38 : 32);
         const maxCharsPerLine = 15;
         if (item.name.length > maxCharsPerLine) {
             const words = item.name.split(' ');
@@ -4119,20 +4115,58 @@ class UpgradesMenu {
             ctx.fillText(item.name, x + width / 2, nameY);
         }
         
-        // Description text - now larger and fills the tile (for buy tab items)
-        if (this.activeTab === 'buy' && item.description) {
-            ctx.font = '10px Arial';
+        // Description box section - bordered box with story text (for all tabs: buy, sell, upgrade)
+        if (item.description) {
+            // Calculate description section
+            const descBoxY = nameY + 24;
+            
+            // Wrap description text to calculate height
+            const charPerLine = Math.floor((width - 16) / 9);  // Doubled char per line since font is 2x larger
+            const lines = this.wrapText(item.description, charPerLine);
+            const lineHeight = 18;  // Doubled from 9 to match 16px font
+            const textPadding = 4;
+            
+            // Calculate dynamic box height based on actual text lines
+            const descBoxHeight = (lines.length * lineHeight) + (textPadding * 2);
+            
+            // Description box background
+            ctx.fillStyle = '#2a2010';
+            ctx.fillRect(x + 4, descBoxY, width - 8, descBoxHeight);
+            
+            // Description box border
+            ctx.strokeStyle = '#6a5a4a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + 4, descBoxY, width - 8, descBoxHeight);
+            
+            // Description text (16px, left-aligned, inside box) - doubled from 8px
+            ctx.font = '16px Arial';
             ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
-            ctx.textAlign = 'center';
+            ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             
-            // Wrap description text to fit in tile
-            const descStartY = nameY + 32;
-            const lines = this.wrapText(item.description, 16);
-            const maxLines = 3;
+            const textX = x + 8;
+            const textStartY = descBoxY + textPadding;
             
-            for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
-                ctx.fillText(lines[i], x + width / 2, descStartY + (i * 11));
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
+            }
+            
+            // Effects section - underneath description box
+            if (item.effect) {
+                const effectBoxY = descBoxY + descBoxHeight + 3;
+                
+                // Effect text (7px, smaller font, color #a89968)
+                ctx.font = '7px Arial';
+                ctx.fillStyle = '#a89968';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                const effectCharPerLine = Math.floor((width - 16) / 4);
+                const effectLines = this.wrapText(item.effect, effectCharPerLine);
+                
+                for (let i = 0; i < effectLines.length; i++) {
+                    ctx.fillText(effectLines[i], textX, effectBoxY + (i * 8));
+                }
             }
         }
         
@@ -4180,7 +4214,7 @@ class UpgradesMenu {
         } else if (this.activeTab === 'sell') {
             buttonText = 'SELL';
         } else if (this.activeTab === 'upgrade') {
-            buttonText = 'UPGRADE';
+            buttonText = item.cost + 'g';
         }
         
         ctx.font = 'bold 9px Arial';
