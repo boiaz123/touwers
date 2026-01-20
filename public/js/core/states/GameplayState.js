@@ -122,10 +122,11 @@ export class GameplayState {
      * Consolidated from GameState.js
      */
     createGameState() {
+        // CRITICAL: Always create a fresh, clean game state with default values
         const state = {
-            health: 20,
-            gold: 100,
-            wave: 1,
+            health: 20,  // Default castle health
+            gold: 100,   // Default starting gold (before upgrades)
+            wave: 1,     // ALWAYS start at wave 1
             canAfford: function(cost) {
                 return this.gold >= cost;
             },
@@ -149,6 +150,9 @@ export class GameplayState {
         
         // Reset pause state when entering a new level
         this.isPaused = false;
+        
+        // IMPORTANT: Save settlement gold before starting level (so it's not lost)
+        const settlementGoldBeforeLevel = this.stateManager.playerGold || 0;
         
         // Get level info from state manager
         const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign' };
@@ -182,10 +186,15 @@ export class GameplayState {
             this.gameState.gold += goldBonus;
         }
         
-        // Track starting gold for results screen
+        // Store settlement gold separately (it should be restored when returning)
+        this.settlementGoldBackup = settlementGoldBeforeLevel;
+        
+        // CRITICAL: Reset statistics tracking to ensure clean level state
         this.startingGold = this.gameState.gold;
         this.goldEarnedThisLevel = 0;
         this.enemiesDefeated = 0;
+        this.levelCompletionDelay = 0;
+        this.levelCompletionTimestampStart = undefined;
         
         // Configure level-specific settings
         this.isSandbox = (this.levelType === 'sandbox');
@@ -194,17 +203,19 @@ export class GameplayState {
             this.gameState.gold = 100000;
             this.maxWavesForLevel = Infinity;
         } else {
-            // Get maxWaves from level, will be set after level is created
-            this.maxWavesForLevel = this.level?.maxWaves || 10;
+            // Don't set maxWavesForLevel yet - wait until level is fully initialized
+            this.maxWavesForLevel = 10; // Safe default until level is loaded
         }
         
+        // CRITICAL: Reset all wave state to ensure fresh level start
         this.waveInProgress = false;
         this.waveCompleted = false;
-        
-        // Reset wave cooldown system - start with 30 second initial cooldown
-        this.waveCooldownTimer = 30;
-        this.waveCooldownDuration = 30;
-        this.isInWaveCooldown = true;
+        this.waveCooldownTimer = 30.0; // Always start at 30 seconds
+        this.waveCooldownDuration = 30.0; // Reset duration to 30 seconds
+        this.isInWaveCooldown = true; // Always start in cooldown
+        this.lastWaveCooldownTime = 0; // Track real time for wave cooldown
+        this.waveIndex = 0; // Reset wave index
+        this.gameState.wave = 1; // Ensure wave starts at 1
         
         // Ensure UI is visible
         const statsBar = document.getElementById('stats-bar');
@@ -276,6 +287,13 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         
+        // CRITICAL: Ensure wave countdown container is visible for new level
+        const waveCountdownContainer = document.getElementById('wave-countdown-container');
+        if (waveCountdownContainer) {
+            waveCountdownContainer.style.display = 'block'; // Reset display property
+            waveCountdownContainer.classList.remove('visible'); // Will be added by updateWaveCooldownDisplay
+        }
+        
         // Play level-specific music with category-based looping
         if (this.stateManager.audioManager) {
             // Use music category for random track selection and looping
@@ -287,6 +305,98 @@ export class GameplayState {
         
         // Reset real time tracking for wave cooldown
         this.lastRealTimestamp = performance.now() / 1000;
+        
+        // Apply consumable effects at level start (free buildings, tower flatpacks, etc.)
+        this.applyConsumableEffects();
+    }
+    
+    applyConsumableEffects() {
+        // Initialize marketplace system for this level
+        if (this.stateManager.marketplaceSystem) {
+            this.stateManager.marketplaceSystem.resetForNewLevel();
+        }
+        
+        if (!this.stateManager.marketplaceSystem) return;
+        
+        const marketplace = this.stateManager.marketplaceSystem;
+        
+        // Track free placements available this level
+        // These are marked available in resetForNewLevel()
+        this.freeBuildingPlacements = {};
+        this.freeTowerPlacements = {};
+        
+        // Check if forge materials are available for free placement
+        if (marketplace.hasFreePlacement('forge-materials')) {
+            this.freeBuildingPlacements['forge'] = true;
+            console.log('Forge materials available - can place forge for free this level!');
+        }
+        
+        // Check if training materials are available for free placement
+        if (marketplace.hasFreePlacement('training-materials')) {
+            this.freeBuildingPlacements['training'] = true;
+            console.log('Training materials available - can place training grounds for free this level!');
+        }
+        
+        // Check if magic tower flatpack is available for free placement
+        if (marketplace.hasFreePlacement('magic-tower-flatpack')) {
+            this.freeTowerPlacements['magic'] = true;
+            console.log('Magic tower flatpack available - can place magic tower for free this level!');
+        }
+    }
+    
+    checkFreePlacement(type, isTower = false) {
+        // Called by TowerManager/BuildingManager to check if placement should be free
+        // Consumables are already marked as used in resetForNewLevel(), so just check the flags
+        if (isTower && this.freeTowerPlacements && this.freeTowerPlacements[type]) {
+            this.freeTowerPlacements[type] = false; // Mark as used this placement
+            // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
+            return true;
+        }
+        if (!isTower && this.freeBuildingPlacements && this.freeBuildingPlacements[type]) {
+            this.freeBuildingPlacements[type] = false; // Mark as used this placement
+            // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
+            return true;
+        }
+        return false;
+    }
+    
+    applyLootMultipliers(lootDrops) {
+        // Apply loot multipliers from consumables
+        if (!this.stateManager.marketplaceSystem) {
+            return lootDrops;
+        }
+        
+        const marketplace = this.stateManager.marketplaceSystem;
+        const processedDrops = [];
+        let usedRabbitsFoot = false;
+        let usedTalisman = false;
+        
+        for (const lootDrop of lootDrops) {
+            if (lootDrop.isRare) {
+                // Rare loot - check for Strange Talisman (awards rare loot twice)
+                processedDrops.push(lootDrop);
+                if (marketplace.getConsumableCount('strange-talisman') > 0 && !usedTalisman) {
+                    processedDrops.push({ ...lootDrop }); // Duplicate rare loot
+                    usedTalisman = true;
+                    marketplace.useConsumable('strange-talisman');
+                    console.log('Strange Talisman activated! Rare loot awarded twice.');
+                }
+            } else {
+                // Normal loot - check for Rabbit's Foot (doubles chance of receiving loot)
+                processedDrops.push(lootDrop);
+                if (marketplace.getConsumableCount('rabbits-foot') > 0 && !usedRabbitsFoot) {
+                    // Rabbit's Foot has a 50% chance to duplicate each loot drop
+                    if (Math.random() < 0.5) {
+                        processedDrops.push({ ...lootDrop });
+                    }
+                    usedRabbitsFoot = true;
+                    marketplace.useConsumable('rabbits-foot');
+                    console.log('Rabbit\'s Foot activated! Normal loot chance doubled.');
+                }
+            }
+        }
+        
+        return processedDrops;
     }
     
     initializeSandboxGems() {
@@ -362,10 +472,24 @@ export class GameplayState {
     }
 
     exit() {
+        // Restore settlement gold to stateManager before leaving
+        if (this.settlementGoldBackup !== undefined) {
+            this.stateManager.playerGold = this.settlementGoldBackup;
+        }
+        
+        // Commit consumed marketplace items after level (regardless of completion or quit)
+        if (this.stateManager.marketplaceSystem) {
+            this.stateManager.marketplaceSystem.commitUsedConsumables();
+        }
+        
         // Stop level music before exiting
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.stopMusic();
         }
+        
+        // Clean up free placement flags
+        this.freeBuildingPlacements = {};
+        this.freeTowerPlacements = {};
         
         // Clean up event listeners when leaving game state
         this.removeEventListeners();
@@ -380,6 +504,36 @@ export class GameplayState {
         if (spellButtonsContainer) {
             spellButtonsContainer.style.display = 'none';
         }
+        
+        // Hide wave countdown container - CRITICAL: prevent it from persisting to settlement
+        const waveCountdownContainer = document.getElementById('wave-countdown-container');
+        if (waveCountdownContainer) {
+            waveCountdownContainer.classList.remove('visible');
+            // Clear inline style to let CSS default (display: none) take over
+            waveCountdownContainer.style.display = '';
+        }
+        
+        // Hide stats bar and sidebar
+        const statsBar = document.getElementById('stats-bar');
+        const sidebar = document.getElementById('tower-sidebar');
+        if (statsBar) statsBar.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+        
+        // CRITICAL: Clear all gameplay state variables to prevent carryover to next session
+        // This ensures a completely fresh state when entering a new level
+        this.gameState = null;
+        this.level = null;
+        this.towerManager = null;
+        this.enemyManager = null;
+        this.lootManager = new LootManager(); // Fresh loot manager
+        this.uiManager = null;
+        this.selectedTowerType = null;
+        this.selectedBuildingType = null;
+        this.spellEffects = [];
+        this.waveInProgress = false;
+        this.waveCompleted = false;
+        this.waveCooldownTimer = 30;
+        this.isInWaveCooldown = true;
     }
     
     setupEventListeners() {
@@ -967,27 +1121,26 @@ export class GameplayState {
             };
         }
         
-        // Get wave config from the level itself - MUST exist, no fallback waves
+        // Get wave config from the level itself
         if (this.level && typeof this.level.getWaveConfig === 'function') {
             const config = this.level.getWaveConfig(wave);
-            if (config) {
+            if (config && config.enemyCount && config.enemyCount > 0) {
                 return {
                     enemyCount: config.enemyCount,
-                    enemyHealth_multiplier: config.enemyHealth_multiplier,
-                    enemySpeed: config.enemySpeed,
-                    spawnInterval: config.spawnInterval,
+                    enemyHealth_multiplier: config.enemyHealth_multiplier || 1,
+                    enemySpeed: config.enemySpeed || 30,
+                    spawnInterval: config.spawnInterval || 1.0,
                     wavePattern: config.pattern
                 };
             }
         }
         
-        // No fallback - if we get here, something is wrong. Level exceeded maxWaves
-        console.error('GameplayState: No wave config found for wave', wave, '- level may have fewer waves than expected');
-        // Return empty config that won't spawn enemies
+        // Fallback: return a basic wave if level returns nothing or empty config
+        console.warn('GameplayState: No valid wave config for wave', wave, '- using default');
         return {
-            enemyCount: 0,
+            enemyCount: 10,
             enemyHealth_multiplier: 1,
-            enemySpeed: 0,
+            enemySpeed: 30,
             spawnInterval: 1.0
         };
     }
@@ -1011,26 +1164,31 @@ export class GameplayState {
         } else {
             // Campaign mode: traditional wave spawning
             const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
+            console.log('startWave: Got waveConfig:', waveConfig);
             
-            if (waveConfig.wavePattern) {
-                // Use custom pattern from level
-                this.enemyManager.spawnWaveWithPattern(
-                    this.gameState.wave,
-                    waveConfig.enemyCount,
-                    waveConfig.enemyHealth_multiplier,
-                    waveConfig.enemySpeed,
-                    waveConfig.spawnInterval,
-                    waveConfig.wavePattern
-                );
+            if (waveConfig && waveConfig.enemyCount > 0) {
+                if (waveConfig.wavePattern) {
+                    // Use custom pattern from level
+                    this.enemyManager.spawnWaveWithPattern(
+                        this.gameState.wave,
+                        waveConfig.enemyCount,
+                        waveConfig.enemyHealth_multiplier,
+                        waveConfig.enemySpeed,
+                        waveConfig.spawnInterval,
+                        waveConfig.wavePattern
+                    );
+                } else {
+                    // Use standard spawning
+                    this.enemyManager.spawnWave(
+                        this.gameState.wave, 
+                        waveConfig.enemyCount,
+                        waveConfig.enemyHealth_multiplier,
+                        waveConfig.enemySpeed,
+                        waveConfig.spawnInterval
+                    );
+                }
             } else {
-                // Use standard spawning
-                this.enemyManager.spawnWave(
-                    this.gameState.wave, 
-                    waveConfig.enemyCount,
-                    waveConfig.enemyHealth_multiplier,
-                    waveConfig.enemySpeed,
-                    waveConfig.spawnInterval
-                );
+                console.error('startWave: Invalid wave config - no enemies to spawn. Wave:', this.gameState.wave, 'Config:', waveConfig);
             }
         }
         
@@ -1057,6 +1215,19 @@ export class GameplayState {
         // Update save data with level completion (only level progress, not mid-game state)
         if (this.stateManager.currentSaveData) {
             const saveData = this.stateManager.currentSaveData;
+            
+            // CRITICAL: Update save data with current settlement state before saving
+            // This ensures gold and inventory earned during level are persisted
+            saveData.playerGold = this.stateManager.playerGold || 0;
+            saveData.playerInventory = this.stateManager.playerInventory || [];
+            
+            // Also save upgrades and marketplace system state
+            if (this.stateManager.upgradeSystem) {
+                saveData.upgrades = this.stateManager.upgradeSystem.serialize();
+            }
+            if (this.stateManager.marketplaceSystem) {
+                saveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+            }
             
             // Mark level as completed
             saveData.completedLevels = SaveSystem.markLevelCompleted(this.currentLevel, saveData.completedLevels);
@@ -1107,28 +1278,16 @@ export class GameplayState {
         // Get the adjusted delta time for game mechanics
         const adjustedDeltaTime = this.getAdjustedDeltaTime(deltaTime);
         
-        // Update wave cooldown timer with REAL time (not adjusted by game speed)
-        // Calculate real elapsed time since last frame using performance.now()
-        const currentRealTimestamp = performance.now() / 1000; // Convert to seconds
-        
-        // Only update the cooldown if we have a valid previous timestamp
-        // This prevents counting before a level starts
-        if (this.lastRealTimestamp > 0) {
-            const realDeltaTime = currentRealTimestamp - this.lastRealTimestamp;
-            
-            // Update cooldown based on real time only
-            if (this.isInWaveCooldown) {
-                this.waveCooldownTimer -= realDeltaTime;
-                if (this.waveCooldownTimer <= 0) {
-                    this.isInWaveCooldown = false;
-                    this.waveCooldownTimer = 0;
-                    this.startWave();
-                }
+        // Update wave cooldown timer with ADJUSTED time so it respects game speed
+        // Wave countdown should speed up/slow down with the game speed multiplier
+        if (this.isInWaveCooldown) {
+            this.waveCooldownTimer -= adjustedDeltaTime;
+            if (this.waveCooldownTimer <= 0) {
+                this.isInWaveCooldown = false;
+                this.waveCooldownTimer = 0;
+                this.startWave();
             }
         }
-        
-        // Always update the timestamp for the next frame
-        this.lastRealTimestamp = currentRealTimestamp;
         
         // Process pending damage (delayed spell effects)
         this.pendingDamage = this.pendingDamage.filter(damage => {
@@ -1369,8 +1528,18 @@ export class GameplayState {
         
         // Check if castle is destroyed
         if (this.level.castle && this.level.castle.isDestroyed()) {
-            this.gameOver();
-            return;
+            // Check if Frog King's Bane boon is active
+            if (this.stateManager.marketplaceSystem && this.stateManager.marketplaceSystem.hasFrogKingBane()) {
+                // Activate the boon - revive castle
+                this.stateManager.marketplaceSystem.useFrogKingBaneBoon();
+                this.level.castle.revive();
+                console.log('Frog King\'s Bane activated! Castle revived.');
+                // Continue the game
+            } else {
+                // No boon - game over
+                this.gameOver();
+                return;
+            }
         }
         
         // Remove dead enemies and handle loot drops
@@ -1382,8 +1551,11 @@ export class GameplayState {
         this.enemiesDefeated += lootDrops.length; // Count enemies that dropped loot
         this.goldEarnedThisLevel += goldFromEnemies;
         
+        // Apply loot multipliers from consumables
+        const processedLootDrops = this.applyLootMultipliers(lootDrops);
+        
         // Spawn loot bags on the ground
-        for (const lootDrop of lootDrops) {
+        for (const lootDrop of processedLootDrops) {
             this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
         }
         
@@ -1482,6 +1654,9 @@ export class GameplayState {
         
         this.renderSpellEffects(ctx);
         
+        // Render active boons
+        this.renderActiveBoons(ctx);
+        
         // Render performance monitor
         this.performanceMonitor.render(ctx, 10, 10);
         
@@ -1489,6 +1664,62 @@ export class GameplayState {
         if (this.resultsScreen && this.resultsScreen.isShowing) {
             this.resultsScreen.render(ctx);
         }
+    }
+    
+    renderActiveBoons(ctx) {
+        if (!this.stateManager.marketplaceSystem) return;
+        
+        const activeBoons = this.stateManager.marketplaceSystem.getActiveBoons();
+        if (activeBoons.length === 0) return;
+        
+        // Render boon indicator in top-right area of screen
+        const startX = ctx.canvas.width - 280;
+        const startY = 20;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.95;
+        
+        let yPos = startY;
+        for (const boonId of activeBoons) {
+            if (boonId === 'frog-king-bane') {
+                const boxWidth = 250;
+                const boxHeight = 40;
+                
+                // Animated glow effect
+                const glowIntensity = 0.3 + Math.sin((this.stateManager.gameState?.timeElapsed || 0) * 2) * 0.2;
+                ctx.shadowColor = '#FF8C00';
+                ctx.shadowBlur = 12 + glowIntensity * 8;
+                
+                // Border
+                ctx.strokeStyle = '#FF8C00';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, yPos, boxWidth, boxHeight);
+                
+                // Background
+                ctx.fillStyle = 'rgba(30, 15, 5, 0.95)';
+                ctx.fillRect(startX, yPos, boxWidth, boxHeight);
+                
+                // Icon
+                ctx.font = 'bold 18px Arial';
+                ctx.fillStyle = '#FF8C00';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('👑', startX + 8, yPos + 20);
+                
+                // Text
+                ctx.font = 'bold 11px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.fillText('The spirits of old', startX + 35, yPos + 8);
+                
+                ctx.font = '10px Arial';
+                ctx.fillStyle = '#FFA500';
+                ctx.fillText('will protect you!', startX + 35, yPos + 24);
+                
+                yPos += 50;
+            }
+        }
+        
+        ctx.restore();
     }
     
     renderSpellEffects(ctx) {

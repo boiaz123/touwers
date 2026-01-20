@@ -61,6 +61,7 @@ export class SaveSystem {
             playerGold: settlementData.playerGold || 0,
             playerInventory: settlementData.playerInventory || [],
             upgrades: settlementData.upgrades || { purchasedUpgrades: [] },
+            marketplace: settlementData.marketplace || { consumables: {} },
             // Campaign progression
             lastPlayedLevel: settlementData.lastPlayedLevel || 'level1',
             unlockedLevels: settlementData.unlockedLevels || ['level1'],
@@ -198,6 +199,7 @@ export class SaveSystem {
             playerGold: 0,
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },
+            marketplace: { consumables: {} },
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
             completedLevels: [],
@@ -327,7 +329,8 @@ export class SaveSystem {
             return {
                 playerGold: 0,
                 playerInventory: [],
-                upgrades: { purchasedUpgrades: [] }
+                upgrades: { purchasedUpgrades: [] },
+                marketplace: { consumables: {} }
             };
         }
     }

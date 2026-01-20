@@ -92,6 +92,11 @@ export class Castle {
         return this.health <= 0;
     }
     
+    revive() {
+        this.health = this.maxHealth;
+        this.damageFlashTimer = this.damageFlashDuration;
+    }
+    
     render(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);

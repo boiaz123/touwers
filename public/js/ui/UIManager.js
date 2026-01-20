@@ -49,22 +49,33 @@ export class UIManager {
             let isUnlocked = this.towerManager.unlockSystem.unlockedTowers.has(towerType);
             let canBuild = this.towerManager.unlockSystem.canBuildTower(towerType);
             
+            // Check if this tower has a free placement available
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.checkFreePlacement(towerType, true);
+            
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
                 btn.style.display = 'none';
                 btn.disabled = true;
+                btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
-                // Check if affordable
-                const canAfford = this.gameState.canAfford(cost);
+                // Check if affordable (or free from marketplace)
+                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
                 
                 // Determine if button should be disabled (limit or affordability)
                 if (!canAfford || !canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
+                    btn.classList.remove('free-placement');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
+                    // Add free-placement class if this is a free build
+                    if (isFreeFromMarketplace) {
+                        btn.classList.add('free-placement');
+                    } else {
+                        btn.classList.remove('free-placement');
+                    }
                 }
             }
         });
@@ -77,27 +88,34 @@ export class UIManager {
             // Check if building is unlocked (separate from whether it can be built)
             const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
             
-            // Debug superweapon button
-            if (buildingType === 'superweapon') {
-            }
+            // Check if this building has a free placement available
+            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.checkFreePlacement(buildingType, false);
             
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
                 btn.style.display = 'none';
                 btn.disabled = true;
+                btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
-                // Check if it can be built (not at limit) and affordable
+                // Check if it can be built (not at limit) and affordable (or free from marketplace)
                 const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
-                const canAfford = this.gameState.canAfford(cost);
+                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
                 
                 // Determine if button should be disabled
                 if (!canBuild || !canAfford) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
+                    btn.classList.remove('free-placement');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
+                    // Add free-placement class if this is a free build
+                    if (isFreeFromMarketplace) {
+                        btn.classList.add('free-placement');
+                    } else {
+                        btn.classList.remove('free-placement');
+                    }
                 }
             }
         });
@@ -727,6 +745,11 @@ export class UIManager {
     // ============ UPDATE UI ============
 
     updateUI() {
+        // CRITICAL: Only update UI if in gameplay state with valid game state
+        if (!this.gameplayState || !this.gameplayState.gameState) {
+            return; // Not in gameplay, don't update
+        }
+        
         document.getElementById('gold').textContent = Math.floor(this.gameplayState.gameState.gold);
         
         // Show wave info differently for sandbox mode
@@ -860,24 +883,36 @@ export class UIManager {
     }
 
     updateWaveCooldownDisplay() {
+        // CRITICAL: Don't update if not in gameplay state or if gameplayState is null
+        if (!this.gameplayState) {
+            // Hide the wave countdown if no gameplay state
+            const container = document.getElementById('wave-countdown-container');
+            if (container) {
+                container.classList.remove('visible');
+                container.style.display = ''; // Clear inline style to use CSS default
+            }
+            return;
+        }
+        
         const container = document.getElementById('wave-countdown-container');
-        const btn = document.getElementById('wave-countdown-btn');
         const textEl = document.getElementById('wave-countdown-text');
         const timerEl = document.getElementById('wave-countdown-timer');
         
-        if (!container || !btn || !textEl || !timerEl) {
+        if (!container || !textEl || !timerEl) {
             return; // Elements don't exist yet
         }
         
-        if (this.gameplayState.isInWaveCooldown) {
-            // Show countdown timer
+        if (this.gameplayState && this.gameplayState.isInWaveCooldown) {
+            // Show countdown timer - add visible class and clear inline styles
             container.classList.add('visible');
+            container.style.display = ''; // Clear inline style to use CSS
             const seconds = Math.ceil(this.gameplayState.waveCooldownTimer);
             textEl.textContent = 'Next Wave';
             timerEl.textContent = `${seconds}s`;
         } else {
             // Hide the container during active waves or when not in cooldown
             container.classList.remove('visible');
+            container.style.display = ''; // Clear inline style to use CSS default (none)
         }
     }
 

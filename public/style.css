@@ -574,6 +574,20 @@ body {
     box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Free placement - tower/building available at no cost */
+.tower-btn.free-placement, .building-btn.free-placement {
+    border-color: rgba(76, 175, 80, 0.9);
+    background: linear-gradient(145deg, rgba(45, 125, 45, 0.9) 0%, rgba(35, 85, 35, 0.9) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.tower-btn.free-placement:hover, .building-btn.free-placement:hover {
+    border-color: rgba(129, 230, 76, 0.9);
+    background: linear-gradient(145deg, rgba(55, 155, 55, 0.95) 0%, rgba(45, 125, 45, 0.95) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 12px rgba(129, 230, 76, 0.5);
+    transform: translateY(-2px);
+}
+
 /* Button icon image - fills entire button */
 .btn-icon-img {
     width: 100%;

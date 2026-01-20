@@ -57,7 +57,9 @@ export class BuildingManager {
             }
         }
         
-        if (this.gameState.spend(buildingType.cost)) {
+        // Check if this is a free placement from marketplace
+        const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, false) || false;
+        if (isFree || this.gameState.spend(buildingType.cost)) {
             // Deduct additional costs
             if (type === 'superweapon') {
                 const academy = this.buildings.find(b => b.constructor.name === 'MagicAcademy');

@@ -8,6 +8,8 @@ import { GuardPost } from '../../entities/towers/GuardPost.js';
 import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
 import { UpgradeSystem } from '../UpgradeSystem.js';
 import { UpgradeRegistry } from '../UpgradeRegistry.js';
+import { MarketplaceSystem } from '../MarketplaceSystem.js';
+import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -82,11 +84,16 @@ export class SettlementHub {
         const currentSaveData = SaveSystem.getSave(this.stateManager.currentSaveSlot);
         
         if (currentSaveData) {
-            // Initialize player gold from the save data
-            this.stateManager.playerGold = currentSaveData.playerGold || 0;
+            // Initialize player gold from save data, but not if we're returning from a level
+            // (in that case, the level exit() already restored the correct gold amount)
+            const returningFromLevel = this.stateManager.previousState === 'game';
+            if (!returningFromLevel) {
+                this.stateManager.playerGold = currentSaveData.playerGold || 0;
+            }
             
-            // Only load inventory from storage if we don't already have loot from current session
-            if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
+            // Load inventory from save, but only if not returning from a level
+            // When returning from level, keep the inventory we already have in memory
+            if (!returningFromLevel) {
                 this.stateManager.playerInventory = currentSaveData.playerInventory || [];
             }
             
@@ -95,6 +102,14 @@ export class SettlementHub {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
                 if (currentSaveData.upgrades) {
                     this.stateManager.upgradeSystem.restoreFromSave(currentSaveData.upgrades);
+                }
+            }
+            
+            // Initialize marketplace system if not already done
+            if (!this.stateManager.marketplaceSystem) {
+                this.stateManager.marketplaceSystem = new MarketplaceSystem();
+                if (currentSaveData.marketplace) {
+                    this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
                 }
             }
         } else {
@@ -106,17 +121,20 @@ export class SettlementHub {
             if (!this.stateManager.upgradeSystem) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
             }
+            if (!this.stateManager.marketplaceSystem) {
+                this.stateManager.marketplaceSystem = new MarketplaceSystem();
+            }
         }
         
         // Reset all popup hover states
-        if (this.upgradesPopup) {
-            this.upgradesPopup.buttons = this.upgradesPopup.buttons.map(b => ({ ...b, hovered: false }));
+        if (this.upgradesPopup && this.upgradesPopup.tabButtons) {
+            this.upgradesPopup.tabButtons = this.upgradesPopup.tabButtons.map(b => ({ ...b, hovered: false }));
         }
-        if (this.optionsPopup) {
+        if (this.optionsPopup && this.optionsPopup.buttons) {
             this.optionsPopup.buttons = this.optionsPopup.buttons.map(b => ({ ...b, hovered: false }));
             this.optionsPopup.closeButtonHovered = false;
         }
-        if (this.arcaneKnowledgePopup) {
+        if (this.arcaneKnowledgePopup && this.arcaneKnowledgePopup.buttons) {
             this.arcaneKnowledgePopup.buttons = this.arcaneKnowledgePopup.buttons.map(b => ({ ...b, hovered: false }));
             this.arcaneKnowledgePopup.closeButtonHovered = false;
         }
@@ -260,12 +278,25 @@ export class SettlementHub {
 
     exit() {
         // Save campaign progress before exiting (with current save slot)
+        const settleementData = {
+            playerGold: this.stateManager.playerGold,
+            playerInventory: this.stateManager.playerInventory,
+            upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+            marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} }
+        };
+        
         SaveSystem.saveCampaignProgress(
             this.stateManager.playerGold,
             this.stateManager.playerInventory,
             this.stateManager.upgradeSystem,
             this.stateManager.currentSaveSlot
         );
+        
+        // Also save to the main settlement data
+        SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, settleementData);
+        
+        // NOTE: commitUsedConsumables() is now called in GameplayState.exit()
+        // This ensures consumed items are removed immediately after a level completes or is quit
         
         this.removeMouseListeners();
     }
@@ -926,12 +957,71 @@ export class SettlementHub {
 
         // Render settlement buildings (on top of paths)
         this.renderSettlementBuildings(ctx, canvas);
+        
+        // Render active boons
+        this.renderActiveBoons(ctx, canvas);
 
         // Ground shadow under settlement
         ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
         ctx.beginPath();
         ctx.ellipse(centerX, centerY + 50, 340, 120, 0, 0, Math.PI * 2);
         ctx.fill();
+    }
+    
+    renderActiveBoons(ctx, canvas) {
+        if (!this.stateManager.marketplaceSystem) return;
+        
+        // Show boon status in settlement - only if boon is actually owned (active or not yet used)
+        const frogKingBaneCount = this.stateManager.marketplaceSystem.getConsumableCount('frog-king-bane') || 0;
+        if (frogKingBaneCount === 0) return;
+        
+        // Render boon status indicator in top-right corner
+        const startX = canvas.width - 280;
+        const startY = 60;
+        
+        ctx.save();
+        
+        // Draw glowing boon indicator
+        const boxWidth = 250;
+        const boxHeight = 50;
+        
+        // Glow effect
+        ctx.shadowColor = '#FF8C00';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = 'rgba(255, 140, 0, 0.2)';
+        ctx.fillRect(startX - 10, startY - 10, boxWidth + 20, boxHeight + 20);
+        
+        // Border
+        ctx.shadowColor = 'transparent';
+        ctx.strokeStyle = '#FF8C00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(startX, startY, boxWidth, boxHeight);
+        
+        // Background
+        ctx.fillStyle = 'rgba(30, 20, 10, 0.9)';
+        ctx.fillRect(startX, startY, boxWidth, boxHeight);
+        
+        // Icon
+        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#FF8C00';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👑', startX + 30, startY + 25);
+        
+        // Text - unified font and size
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('The Frog King\'s Bane', startX + 60, startY + 18);
+        
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = '#FFA500';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Active - Ready to save', startX + 60, startY + 32);
+        
+        ctx.restore();
     }
 
     createEllipseClipPath(ctx, x, y, radiusX, radiusY) {
@@ -3178,26 +3268,18 @@ class UpgradesMenu {
         this.animationProgress = 0;
         this.activeTab = 'buy'; // 'buy', 'sell', 'upgrade'
         this.currentPage = 0;
+        this.clickLock = false; // Prevent double-clicks on items
         // Get player gold from stateManager (persistent between levels)
         this.playerGold = stateManager.playerGold || 0;
         
-        // Buy tab - 6 pages with 6 items each
-        this.buyItems = [];
-        for (let page = 0; page < 6; page++) {
-            for (let i = 0; i < 6; i++) {
-                this.buyItems.push({
-                    id: `buy_${page * 6 + i}`,
-                    name: `Item ${page * 6 + i + 1}`,
-                    price: 100 + (page * 6 + i) * 50,
-                    hovered: false
-                });
-            }
+        // Initialize marketplace system if not already done
+        if (!this.stateManager.marketplaceSystem) {
+            this.stateManager.marketplaceSystem = new MarketplaceSystem();
         }
         
-        // Sell tab - build from actual loot inventory
-        this.inventoryItems = this.buildInventoryItems();
-        
-        // Upgrade tab - populate from UpgradeRegistry
+        // Build all tabs
+        this.buyItems = this.buildBuyItems();
+        this.sellItems = []; // Will be populated dynamically
         this.upgradeItems = this.buildUpgradeItems();
         
         this.closeButtonHovered = false;
@@ -3208,6 +3290,51 @@ class UpgradesMenu {
             { label: 'SELL', action: 'sell', hovered: false },
             { label: 'UPGRADE', action: 'upgrade', hovered: false }
         ];
+    }
+
+    buildBuyItems() {
+        const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
+        const marketplaceSystem = this.stateManager.marketplaceSystem || { hasUsedConsumable: () => false, isBoonActive: () => false, getConsumableCount: () => 0 };
+        
+        const items = [];
+        const allItems = MarketplaceRegistry.getAllItemIds();
+        
+        for (const itemId of allItems) {
+            const itemData = MarketplaceRegistry.getItem(itemId);
+            if (!itemData) continue;
+            
+            let canPurchase = MarketplaceRegistry.canPurchase(itemId, upgradeSystem, marketplaceSystem);
+            let requirementMsg = MarketplaceRegistry.getRequirementMessage(itemId, upgradeSystem, marketplaceSystem);
+            
+            // Special check: if it's a consumable and player already has it, mark as unavailable
+            if (itemData.type === 'consumable' && !requirementMsg && marketplaceSystem.getConsumableCount(itemId) > 0) {
+                canPurchase = false;
+                requirementMsg = 'Owned';
+            }
+            
+            // Special check: if it's the Frog King's Bane (boon type) and it's currently active, prevent purchase
+            // Only one boon can be active at a time
+            if (itemId === 'frog-king-bane' && marketplaceSystem.getConsumableCount('frog-king-bane') > 0) {
+                canPurchase = false;
+                requirementMsg = 'Active';
+            }
+            
+            items.push({
+                id: itemId,
+                name: itemData.name,
+                description: itemData.description,
+                cost: itemData.cost,
+                icon: itemData.icon,
+                category: itemData.category,
+                type: itemData.type,
+                effect: itemData.effect,
+                hovered: false,
+                canPurchase: canPurchase,
+                requirementMsg: requirementMsg
+            });
+        }
+        
+        return items;
     }
 
     buildUpgradeItems() {
@@ -3300,11 +3427,11 @@ class UpgradesMenu {
         return items;
     }
 
-    buildInventoryItems() {
+    buildSellItems() {
         const items = [];
         const inventory = this.stateManager.playerInventory || [];
         
-        console.log('Building inventory items from playerInventory:', inventory);
+        console.log('Building sell items from playerInventory:', inventory);
         
         // Create items from inventory
         for (const inventoryItem of inventory) {
@@ -3325,7 +3452,7 @@ class UpgradesMenu {
             });
         }
         
-        console.log('Built inventory items:', items);
+        console.log('Built sell items:', items);
         return items;
     }
 
@@ -3361,8 +3488,12 @@ class UpgradesMenu {
         // Refresh player gold from stateManager (in case it changed)
         this.playerGold = this.stateManager.playerGold || 0;
         
-        // Refresh inventory items from stateManager
-        this.inventoryItems = this.buildInventoryItems();
+        // Rebuild buy and upgrade items to reflect current state
+        this.buyItems = this.buildBuyItems();
+        this.upgradeItems = this.buildUpgradeItems();
+        
+        // Refresh sell items when opening
+        this.sellItems = this.buildSellItems();
     }
 
     close() {
@@ -3376,13 +3507,36 @@ class UpgradesMenu {
         }
     }
 
+    wrapText(text, maxCharsPerLine) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            if ((currentLine + word).length <= maxCharsPerLine) {
+                currentLine += (currentLine ? ' ' : '') + word;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                currentLine = word;
+            }
+        }
+        
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+
     getMaxPages() {
         if (this.activeTab === 'buy') {
-            return 6; // 6 pages of 6 items each
+            return Math.ceil(this.buyItems.length / 6); // Dynamic pages based on buy items
         } else if (this.activeTab === 'sell') {
-            return Math.ceil(this.inventoryItems.length / 6);
+            return Math.ceil(this.sellItems.length / 6);
         } else if (this.activeTab === 'upgrade') {
-            return 2; // 2 pages of 6 upgrades each
+            return Math.ceil(this.upgradeItems.length / 6); // Dynamic pages based on upgrade items
         }
         return 1;
     }
@@ -3394,7 +3548,7 @@ class UpgradesMenu {
         if (this.activeTab === 'buy') {
             return this.buyItems.slice(startIdx, startIdx + itemsPerPage);
         } else if (this.activeTab === 'sell') {
-            return this.inventoryItems.slice(startIdx, startIdx + itemsPerPage);
+            return this.sellItems.slice(startIdx, startIdx + itemsPerPage);
         } else if (this.activeTab === 'upgrade') {
             return this.upgradeItems.slice(startIdx, startIdx + itemsPerPage);
         }
@@ -3403,10 +3557,10 @@ class UpgradesMenu {
 
     updateHoverState(x, y) {
         const canvas = this.stateManager.canvas;
-        const baseWidth = canvas.width - 120;
-        const baseHeight = canvas.height - 80;
-        const panelWidth = baseWidth * 0.6;
-        const panelHeight = baseHeight * 0.6;
+        const baseWidth = canvas.width - 80;
+        const baseHeight = canvas.height - 60;
+        const panelWidth = Math.min(baseWidth * 0.85, 1200);
+        const panelHeight = Math.min(baseHeight * 0.85, 700);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
@@ -3437,18 +3591,26 @@ class UpgradesMenu {
         // Check item buttons (for sell and upgrade tabs)
         const contentY = panelY + 78;
         const contentHeight = panelHeight - 140;
-        const itemsGridStartX = panelX + 14;
-        const itemsGridStartY = contentY + 4;
-        const itemWidth = (panelWidth - 28) / 3;
-        const itemHeight = (contentHeight - 8) / 2;
-        const itemGap = 8;
+        
+        const horizontalPadding = 20;
+        const verticalPadding = 15;
+        const gridSpacing = 10;
+        
+        const availableWidth = panelWidth - (horizontalPadding * 2);
+        const availableHeight = contentHeight - (verticalPadding * 2);
+        
+        const itemWidth = (availableWidth - (gridSpacing * 2)) / 3;
+        const itemHeight = (availableHeight - gridSpacing) / 2;
+        
+        const itemsGridStartX = panelX + horizontalPadding;
+        const itemsGridStartY = contentY + verticalPadding;
         
         const items = this.getItemsForCurrentPage();
         items.forEach((item, index) => {
             const row = Math.floor(index / 3);
             const col = index % 3;
-            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
-            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            const itemX = itemsGridStartX + col * (itemWidth + gridSpacing);
+            const itemY = itemsGridStartY + row * (itemHeight + gridSpacing);
             item.hovered = x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight;
         });
         
@@ -3459,10 +3621,10 @@ class UpgradesMenu {
 
     handleClick(x, y) {
         const canvas = this.stateManager.canvas;
-        const baseWidth = canvas.width - 120;
-        const baseHeight = canvas.height - 80;
-        const panelWidth = baseWidth * 0.6;
-        const panelHeight = baseHeight * 0.6;
+        const baseWidth = canvas.width - 80;
+        const baseHeight = canvas.height - 60;
+        const panelWidth = Math.min(baseWidth * 0.85, 1200);
+        const panelHeight = Math.min(baseHeight * 0.85, 700);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
@@ -3489,9 +3651,9 @@ class UpgradesMenu {
                 this.activeTab = tab.action;
                 this.currentPage = 0;
                 
-                // Refresh inventory items when switching to sell tab
+                // Refresh sell items when switching to sell tab
                 if (tab.action === 'sell') {
-                    this.inventoryItems = this.buildInventoryItems();
+                    this.sellItems = this.buildSellItems();
                 }
             }
         });
@@ -3526,18 +3688,26 @@ class UpgradesMenu {
         // Check item buttons
         const contentY = panelY + 78;
         const contentHeight = panelHeight - 140;
-        const itemsGridStartX = panelX + 14;
-        const itemsGridStartY = contentY + 4;
-        const itemWidth = (panelWidth - 28) / 3;
-        const itemHeight = (contentHeight - 8) / 2;
-        const itemGap = 8;
+        
+        const horizontalPadding = 20;
+        const verticalPadding = 15;
+        const gridSpacing = 10;
+        
+        const availableWidth = panelWidth - (horizontalPadding * 2);
+        const availableHeight = contentHeight - (verticalPadding * 2);
+        
+        const itemWidth = (availableWidth - (gridSpacing * 2)) / 3;
+        const itemHeight = (availableHeight - gridSpacing) / 2;
+        
+        const itemsGridStartX = panelX + horizontalPadding;
+        const itemsGridStartY = contentY + verticalPadding;
         
         const items = this.getItemsForCurrentPage();
         items.forEach((item, index) => {
             const row = Math.floor(index / 3);
             const col = index % 3;
-            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
-            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            const itemX = itemsGridStartX + col * (itemWidth + gridSpacing);
+            const itemY = itemsGridStartY + row * (itemHeight + gridSpacing);
             if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
@@ -3548,9 +3718,43 @@ class UpgradesMenu {
     }
 
     handleItemAction(item) {
+        // Prevent rapid double-clicks
+        if (this.clickLock) {
+            return;
+        }
+        this.clickLock = true;
+        setTimeout(() => { this.clickLock = false; }, 100); // 100ms debounce
+        
         if (this.activeTab === 'buy') {
-            console.log('Buying item:', item.name, 'for', item.price, 'gold');
-            // TODO: Implement buy logic
+            // Handle marketplace item purchase
+            if (!item.canPurchase) {
+                if (item.requirementMsg) {
+                    console.log('Cannot purchase item. ' + item.requirementMsg);
+                }
+                return;
+            }
+            
+            if (this.playerGold < item.cost) {
+                console.log('Not enough gold to purchase:', item.name, '. Need:', item.cost, 'Have:', this.playerGold);
+                return;
+            }
+            
+            // Deduct gold
+            this.playerGold -= item.cost;
+            this.stateManager.playerGold = this.playerGold;
+            
+            // Add consumable to marketplace system
+            this.stateManager.marketplaceSystem.addConsumable(item.id, 1);
+            
+            // Rebuild buy items to reflect purchase restrictions and active status
+            this.buyItems = this.buildBuyItems();
+            this.currentPage = 0;
+            
+            console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
+            
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('purchase-success');
+            }
         } else if (this.activeTab === 'sell') {
             // Sell the loot item
             this.playerGold += item.sellPrice;
@@ -3568,8 +3772,8 @@ class UpgradesMenu {
                 }
             }
             
-            // Rebuild inventory items to reflect the change
-            this.inventoryItems = this.buildInventoryItems();
+            // Rebuild sell items to reflect the change
+            this.sellItems = this.buildSellItems();
             this.currentPage = 0;
             
             console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
@@ -3597,8 +3801,9 @@ class UpgradesMenu {
             this.stateManager.playerGold = this.playerGold;
             this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
             
-            // Rebuild upgrade items to reflect purchase
+            // Rebuild both upgrade items AND buy items (since upgrades may unlock marketplace items)
             this.upgradeItems = this.buildUpgradeItems();
+            this.buyItems = this.buildBuyItems();
             this.currentPage = 0;
             
             console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
@@ -3613,10 +3818,10 @@ class UpgradesMenu {
         if (!this.isOpen) return;
         
         const canvas = this.stateManager.canvas;
-        const baseWidth = canvas.width - 120;
-        const baseHeight = canvas.height - 80;
-        const panelWidth = baseWidth * 0.6;
-        const panelHeight = baseHeight * 0.6;
+        const baseWidth = canvas.width - 80;
+        const baseHeight = canvas.height - 60;
+        const panelWidth = Math.min(baseWidth * 0.85, 1200); // Use more screen space
+        const panelHeight = Math.min(baseHeight * 0.85, 700);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
@@ -3807,17 +4012,26 @@ class UpgradesMenu {
 
     renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight) {
         const items = this.getItemsForCurrentPage();
-        const itemWidth = (panelWidth - 28) / 3;
-        const itemHeight = (contentHeight - 8) / 2;
-        const itemGap = 8;
-        const itemsGridStartX = panelX + 14;
-        const itemsGridStartY = contentY + 4;
+        
+        // Better spacing calculations for 3-column layout
+        const horizontalPadding = 20;
+        const verticalPadding = 15;
+        const gridSpacing = 10;
+        
+        const availableWidth = panelWidth - (horizontalPadding * 2);
+        const availableHeight = contentHeight - (verticalPadding * 2);
+        
+        const itemWidth = (availableWidth - (gridSpacing * 2)) / 3;
+        const itemHeight = (availableHeight - gridSpacing) / 2;
+        
+        const itemsGridStartX = panelX + horizontalPadding;
+        const itemsGridStartY = contentY + verticalPadding;
         
         items.forEach((item, index) => {
             const row = Math.floor(index / 3);
             const col = index % 3;
-            const itemX = itemsGridStartX + col * (itemWidth + itemGap);
-            const itemY = itemsGridStartY + row * (itemHeight + itemGap);
+            const itemX = itemsGridStartX + col * (itemWidth + gridSpacing);
+            const itemY = itemsGridStartY + row * (itemHeight + gridSpacing);
             
             this.renderItemTile(ctx, itemX, itemY, itemWidth, itemHeight, item);
         });
@@ -3825,16 +4039,20 @@ class UpgradesMenu {
 
     renderItemTile(ctx, x, y, width, height, item) {
         // Background
-        ctx.fillStyle = item.hovered ? '#6b5a47' : '#3a2a1a';
+        const canBuy = this.activeTab === 'buy' && item.canPurchase;
+        const isDisabled = this.activeTab === 'buy' && !item.canPurchase;
+        ctx.fillStyle = item.hovered && !isDisabled ? '#6b5a47' : '#3a2a1a';
         ctx.fillRect(x, y, width, height);
         
         // Top highlight
-        ctx.fillStyle = item.hovered ? '#8b7a67' : '#4a3a2a';
+        ctx.fillStyle = item.hovered && !isDisabled ? '#8b7a67' : '#4a3a2a';
         ctx.fillRect(x, y, width, 2);
         
-        // Border (color by rarity if sell tab)
-        let borderColor = item.hovered ? '#ffd700' : '#5a4a3a';
-        if (this.activeTab === 'sell' && item.rarity) {
+        // Border (color by rarity if sell tab, disabled if can't buy)
+        let borderColor = item.hovered && !isDisabled ? '#ffd700' : '#5a4a3a';
+        if (isDisabled) {
+            borderColor = '#5a4a4a'; // Gray for disabled items
+        } else if (this.activeTab === 'sell' && item.rarity) {
             const rarityColors = {
                 'common': '#C9A961',
                 'uncommon': '#4FC3F7',
@@ -3845,7 +4063,7 @@ class UpgradesMenu {
             borderColor = item.hovered ? rarityColors[item.rarity] : '#5a4a3a';
         }
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = item.hovered ? 3 : 2;
+        ctx.lineWidth = item.hovered && !isDisabled ? 3 : 2;
         ctx.strokeRect(x, y, width, height);
         
         // Extra glow for legendary items
@@ -3857,8 +4075,16 @@ class UpgradesMenu {
             ctx.globalAlpha = 1;
         }
         
-        // Emblem (for sell tab items)
-        if (this.activeTab === 'sell' && item.emblem) {
+        // Icon or Emblem
+        if (this.activeTab === 'buy' && item.icon) {
+            // For buy items, show icon
+            ctx.font = 'bold 28px Arial';
+            ctx.fillStyle = isDisabled ? '#707070' : borderColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(item.icon, x + width / 2, y + 6);
+        } else if (this.activeTab === 'sell' && item.emblem) {
+            // For sell items, show emblem
             ctx.font = 'bold 24px Arial';
             ctx.fillStyle = borderColor;
             ctx.textAlign = 'center';
@@ -3867,51 +4093,101 @@ class UpgradesMenu {
         }
         
         // Item name
-        ctx.font = 'bold 13px Arial';
-        ctx.fillStyle = '#d4af37';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillStyle = isDisabled ? '#8a8a8a' : '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const nameY = this.activeTab === 'sell' && item.emblem ? y + 35 : y + 8;
-        ctx.fillText(item.name, x + width / 2, nameY);
+        const nameY = (this.activeTab === 'buy' && item.icon) || (this.activeTab === 'sell' && item.emblem) ? y + 35 : y + 8;
         
-        // Price or cost
-        const priceLabel = this.activeTab === 'sell' ? 'Sell: ' : this.activeTab === 'upgrade' ? 'Cost: ' : 'Price: ';
-        const priceValue = this.activeTab === 'sell' ? item.sellPrice : this.activeTab === 'upgrade' ? item.cost : item.price;
-        ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText(priceLabel + priceValue + 'g', x + width / 2, y + height / 2 - 10);
+        // Wrap long names
+        const maxCharsPerLine = 15;
+        if (item.name.length > maxCharsPerLine) {
+            const words = item.name.split(' ');
+            let line1 = '', line2 = '';
+            for (const word of words) {
+                if ((line1 + word).length <= maxCharsPerLine) {
+                    line1 += (line1 ? ' ' : '') + word;
+                } else {
+                    line2 += (line2 ? ' ' : '') + word;
+                }
+            }
+            ctx.fillText(line1, x + width / 2, nameY);
+            if (line2) {
+                ctx.fillText(line2, x + width / 2, nameY + 12);
+            }
+        } else {
+            ctx.fillText(item.name, x + width / 2, nameY);
+        }
+        
+        // Description text - now larger and fills the tile (for buy tab items)
+        if (this.activeTab === 'buy' && item.description) {
+            ctx.font = '10px Arial';
+            ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            // Wrap description text to fit in tile
+            const descStartY = nameY + 32;
+            const lines = this.wrapText(item.description, 16);
+            const maxLines = 3;
+            
+            for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
+                ctx.fillText(lines[i], x + width / 2, descStartY + (i * 11));
+            }
+        }
         
         // Count (for sell tab)
         if (this.activeTab === 'sell' && item.count > 1) {
-            ctx.font = '11px Arial';
+            ctx.font = '10px Arial';
             ctx.fillStyle = '#b89968';
-            ctx.fillText('Count: ' + item.count, x + width / 2, y + height / 2 + 5);
+            ctx.fillText('x' + item.count, x + width / 2, y + height / 2 + 8);
+        }
+        
+        // Disabled overlay and message
+        if (isDisabled && item.requirementMsg) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(x, y, width, height);
+            
+            ctx.font = '9px Arial';
+            ctx.fillStyle = '#ffaa00';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.requirementMsg, x + width / 2, y + height - 18);
         }
         
         // Action button
         const buttonWidth = width - 14;
-        const buttonHeight = 22;
+        const buttonHeight = 18;
         const buttonX = x + 7;
-        const buttonY = y + height - 30;
+        const buttonY = y + height - 26;
         
         // Button beveled effect
-        ctx.fillStyle = item.hovered ? '#8b6f47' : '#5a4a3a';
+        ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? '#8b6f47' : '#5a4a3a');
         ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
         // Top highlight
-        ctx.fillStyle = item.hovered ? '#9b7f57' : '#6a5a4a';
+        ctx.fillStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#9b7f57' : '#6a5a4a');
         ctx.fillRect(buttonX, buttonY, buttonWidth, 1);
         
-        ctx.strokeStyle = item.hovered ? '#ffd700' : '#8b7355';
-        ctx.lineWidth = item.hovered ? 2 : 1;
+        ctx.strokeStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#ffd700' : '#8b7355');
+        ctx.lineWidth = isDisabled ? 1 : (item.hovered ? 2 : 1);
         ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
-        const actionText = this.activeTab === 'sell' ? 'SELL' : this.activeTab === 'upgrade' ? 'UPGRADE' : 'BUY';
-        ctx.font = 'bold 11px Arial';
-        ctx.fillStyle = item.hovered ? '#ffd700' : '#d4af37';
+        // For buy tab, show price instead of "BUY" text
+        let buttonText = '';
+        if (this.activeTab === 'buy') {
+            buttonText = item.cost + 'g';
+        } else if (this.activeTab === 'sell') {
+            buttonText = 'SELL';
+        } else if (this.activeTab === 'upgrade') {
+            buttonText = 'UPGRADE';
+        }
+        
+        ctx.font = 'bold 9px Arial';
+        ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(actionText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+        ctx.fillText(buttonText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
     }
 
     renderPaginationControls(ctx, panelX, y, panelWidth) {

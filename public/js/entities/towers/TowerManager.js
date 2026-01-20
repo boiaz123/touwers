@@ -51,7 +51,9 @@ export class TowerManager {
             }
             
             // Use path point position instead of grid-based position
-            if (this.gameState.spend(towerType.cost)) {
+            // Check if this is a free placement from marketplace
+            const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
+            if (isFree || this.gameState.spend(towerType.cost)) {
                 const GuardPost = towerType.class;
                 const tower = new GuardPost(pathPoint.x, pathPoint.y, 1);
                 
@@ -78,7 +80,9 @@ export class TowerManager {
             return false;
         }
         
-        if (this.gameState.spend(towerType.cost)) {
+        // Check if this is a free placement from marketplace
+        const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
+        if (isFree || this.gameState.spend(towerType.cost)) {
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
             
             // Assign audio manager to tower for sound effects
