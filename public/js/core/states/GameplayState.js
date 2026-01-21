@@ -36,6 +36,7 @@ export class GameplayState {
         
         // Statistics tracking for results screen
         this.enemiesDefeated = 0;
+        this.totalEnemiesSpawned = 0; // Track total enemies spawned across all waves
         this.goldEarnedThisLevel = 0;
         this.startingGold = 100;
         
@@ -51,6 +52,10 @@ export class GameplayState {
         
         // Spell effects for visual rendering
         this.spellEffects = [];
+        
+        // Loot multiplier flags for this level
+        this.applyRabbitsFoot = false; // Rabbit's Foot: doubles normal loot chance
+        this.applyTalisman = false; // Strange Talisman: rare loot drops 2 items
         
         // NEW: Speed control (3 fixed speeds instead of cycling)
         this.gameSpeed = 1.0; // 1x, 2x, or 3x
@@ -196,6 +201,7 @@ export class GameplayState {
         this.startingGold = this.gameState.gold;
         this.goldEarnedThisLevel = 0;
         this.enemiesDefeated = 0;
+        this.totalEnemiesSpawned = 0; // Reset total enemies counter
         this.levelCompletionDelay = 0;
         this.levelCompletionTimestampStart = undefined;
         
@@ -277,6 +283,8 @@ export class GameplayState {
         
         // Set audio manager reference for sound effects
         this.enemyManager.audioManager = this.stateManager.audioManager;
+        // Set marketplace system reference for consumable checks on enemy spawn
+        this.enemyManager.marketplaceSystem = this.stateManager.marketplaceSystem;
         this.towerManager.audioManager = this.stateManager.audioManager;
         this.lootManager.audioManager = this.stateManager.audioManager;
         // Ensure all existing towers have audio manager (for loaded games)
@@ -357,9 +365,42 @@ export class GameplayState {
         // Check if magic tower flatpack is available for free placement
         if (marketplace.hasFreePlacement('magic-tower-flatpack')) {
             this.freeTowerPlacements['magic'] = true;
-            // NOTE: Do NOT unlock magic tower - it will be shown as available via free placement only
-            // It will only stay unlocked if academy is built (which adds it to unlockedTowers)
-            console.log('✓ Magic tower flatpack available - free placement enabled');
+            // Unlock the magic tower so the button appears (just like forge and training)
+            this.towerManager.unlockSystem.unlockedTowers.add('magic');
+            console.log('✓ Magic tower flatpack available - magic tower unlocked and free placement enabled');
+            // Consume the magic tower flatpack immediately (like forge and training)
+            marketplace.useConsumable('magic-tower-flatpack');
+        }
+        
+        // Apply loot multiplier effects to enemies
+        // Rabbit's Foot: doubles normal loot drop chance for this level
+        if (marketplace.hasFreePlacement('rabbits-foot')) {
+            console.log('✓ Rabbit\'s Foot active - doubling normal loot drop chance');
+            // Mark marketplace so enemies can check when they spawn
+            marketplace.rabbitFootActive = true;
+            // Also apply to already-spawned enemies
+            if (this.enemyManager && this.enemyManager.enemies) {
+                for (const enemy of this.enemyManager.enemies) {
+                    if (enemy.lootDropChance !== undefined) {
+                        enemy.lootDropChance *= 2; // Double the base loot chance
+                    }
+                }
+            }
+            // Mark for post-spawn modification too
+            this.applyRabbitsFoot = true;
+            // Consume the Rabbit's Foot now since we've applied the effect
+            marketplace.useConsumable('rabbits-foot');
+        } else {
+            this.applyRabbitsFoot = false;
+            marketplace.rabbitFootActive = false;
+        }
+        
+        // Strange Talisman: drops 2 rare items instead of 1
+        if (marketplace.hasFreePlacement('strange-talisman')) {
+            console.log('✓ Strange Talisman active - rare loot will drop 2 items');
+            this.applyTalisman = true;
+        } else {
+            this.applyTalisman = false;
         }
     }
     
@@ -383,6 +424,13 @@ export class GameplayState {
         if (isTower && this.freeTowerPlacements && this.freeTowerPlacements[type]) {
             console.log(`GameplayState: Free tower placement used for '${type}'`);
             this.freeTowerPlacements[type] = false; // Mark as used this placement
+            
+            // For magic tower: remove from unlockedTowers ONLY if academy hasn't built it
+            // This makes it disappear after flatpack is used, unless academy unlocked it permanently
+            if (type === 'magic' && !this.towerManager.unlockSystem.magicTowerUnlockedByAcademy) {
+                this.towerManager.unlockSystem.unlockedTowers.delete('magic');
+                console.log('  Magic tower free placement used - tower removed (academy not built)');
+            }
             // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
             return true;
         }
@@ -396,40 +444,49 @@ export class GameplayState {
     }
     
     applyLootMultipliers(lootDrops) {
-        // Apply loot multipliers from consumables
-        if (!this.stateManager.marketplaceSystem) {
-            return lootDrops;
-        }
+        // Apply loot multipliers from marketplace consumables
+        // Rabbit's Foot: doubled normal loot chance is handled by modifying enemy.lootDropChance at wave start
+        // Strange Talisman: when rare loot drops, 2 separate loot bags spawn with the same rare item
         
-        const marketplace = this.stateManager.marketplaceSystem;
         const processedDrops = [];
-        let usedRabbitsFoot = false;
-        let usedTalisman = false;
         
         for (const lootDrop of lootDrops) {
-            if (lootDrop.isRare) {
-                // Rare loot - check for Strange Talisman (awards rare loot twice)
-                processedDrops.push(lootDrop);
-                if (marketplace.getConsumableCount('strange-talisman') > 0 && !usedTalisman) {
-                    processedDrops.push({ ...lootDrop }); // Duplicate rare loot
-                    usedTalisman = true;
-                    marketplace.useConsumable('strange-talisman');
-                    console.log('Strange Talisman activated! Rare loot awarded twice.');
-                }
+            if (lootDrop.isRare && this.applyTalisman) {
+                // Strange Talisman active: rare loot drops 2 separate bags instead of 1
+                // Both bags contain the same rare item but spawn at different locations
+                // They will fly in different directions due to random velocity in LootBag
+                
+                // First bag at slightly offset position (left side)
+                processedDrops.push({ 
+                    ...lootDrop, 
+                    x: lootDrop.x - 15,  // Offset left
+                    y: lootDrop.y - 10   // Slightly up
+                });
+                
+                // Second bag at different offset position (right side)
+                processedDrops.push({ 
+                    ...lootDrop, 
+                    x: lootDrop.x + 15,  // Offset right
+                    y: lootDrop.y - 10   // Slightly up
+                });
+                
+                console.log('Strange Talisman effect: Rare loot dropped 2 separate bags');
             } else {
-                // Normal loot - check for Rabbit's Foot (doubles chance of receiving loot)
+                // Normal processing
                 processedDrops.push(lootDrop);
-                if (marketplace.getConsumableCount('rabbits-foot') > 0 && !usedRabbitsFoot) {
-                    // Rabbit's Foot has a 50% chance to duplicate each loot drop
-                    if (Math.random() < 0.5) {
-                        processedDrops.push({ ...lootDrop });
-                    }
-                    usedRabbitsFoot = true;
-                    marketplace.useConsumable('rabbits-foot');
-                    console.log('Rabbit\'s Foot activated! Normal loot chance doubled.');
-                }
             }
         }
+        
+        // Mark consumables as used (only once per level, not per item)
+        if (this.applyTalisman) {
+            if (this.stateManager.marketplaceSystem) {
+                this.stateManager.marketplaceSystem.useConsumable('strange-talisman');
+                console.log('Strange Talisman consumed');
+            }
+            this.applyTalisman = false;
+        }
+        
+        // NOTE: Rabbit's Foot is consumed in applyConsumableEffects after modifying enemy chances
         
         return processedDrops;
     }
@@ -1226,6 +1283,10 @@ export class GameplayState {
             console.log('startWave: Got waveConfig:', waveConfig);
             
             if (waveConfig && waveConfig.enemyCount > 0) {
+                // Track total enemies spawned across all waves
+                this.totalEnemiesSpawned += waveConfig.enemyCount;
+                console.log(`Wave ${this.gameState.wave}: Spawning ${waveConfig.enemyCount} enemies (total spawned: ${this.totalEnemiesSpawned})`);
+                
                 if (waveConfig.wavePattern) {
                     // Use custom pattern from level
                     this.enemyManager.spawnWaveWithPattern(
@@ -1320,7 +1381,7 @@ export class GameplayState {
             wavesCompleted: this.maxWavesForLevel,
             health: this.gameState.health,
             gold: this.gameState.gold,
-            enemiesSlain: this.enemiesDefeated,
+            enemiesSlain: this.totalEnemiesSpawned, // Use total enemies spawned (all killed to win)
             goldEarned: this.goldEarnedThisLevel,
             currentGold: this.gameState.gold
         }, this.lootManager.getCollectedLoot(), this.lootManager);
@@ -1613,8 +1674,7 @@ export class GameplayState {
         const goldFromEnemies = deathResult.totalGold;
         const lootDrops = deathResult.lootDrops || [];
         
-        // Track enemies defeated and gold earned
-        this.enemiesDefeated += lootDrops.length; // Count enemies that dropped loot
+        // Track gold earned (enemies defeated count is tracked via totalEnemiesSpawned)
         this.goldEarnedThisLevel += goldFromEnemies;
         
         // Apply loot multipliers from consumables

@@ -21,6 +21,9 @@ export class EnemyManager {
         // Audio manager reference (will be set by GameplayState)
         this.audioManager = null;
         
+        // Marketplace system reference (will be set by GameplayState) for checking consumables on spawn
+        this.marketplaceSystem = null;
+        
         // Track whether wave start SFX has been played for current wave
         this.waveStartSFXPlayed = false;
     }
@@ -130,6 +133,12 @@ export class EnemyManager {
                 );
                 
                 if (enemy) {
+                    // Apply Rabbit's Foot modifier if active in marketplace
+                    if (this.marketplaceSystem && this.marketplaceSystem.rabbitFootActive) {
+                        if (enemy.lootDropChance !== undefined) {
+                            enemy.lootDropChance *= 2; // Double the base loot chance
+                        }
+                    }
                     this.enemies.push(enemy);
                     this.spawnTimer = 0;
                 }
@@ -244,6 +253,18 @@ export class EnemyManager {
         // These will continue to display and fade until their life reaches 0
         for (let i = 0; i < this.orphanedSplatters.length; i++) {
             this.orphanedSplatters[i].render(ctx);
+        }
+    }
+
+    /**
+     * Apply loot multiplier to all existing enemies
+     * Used for Rabbit's Foot which doubles normal loot drop chance
+     */
+    applyLootMultiplier(multiplier = 2) {
+        for (const enemy of this.enemies) {
+            if (enemy.lootDropChance !== undefined) {
+                enemy.lootDropChance *= multiplier;
+            }
         }
     }
 }
