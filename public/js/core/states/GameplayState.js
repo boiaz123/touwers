@@ -374,7 +374,7 @@ export class GameplayState {
         
         // Apply loot multiplier effects to enemies
         // Rabbit's Foot: doubles normal loot drop chance for this level
-        if (marketplace.hasFreePlacement('rabbits-foot')) {
+        if (marketplace.getConsumableCount('rabbits-foot') > 0) {
             console.log('✓ Rabbit\'s Foot active - doubling normal loot drop chance');
             // Mark marketplace so enemies can check when they spawn
             marketplace.rabbitFootActive = true;
@@ -396,9 +396,11 @@ export class GameplayState {
         }
         
         // Strange Talisman: drops 2 rare items instead of 1
-        if (marketplace.hasFreePlacement('strange-talisman')) {
+        if (marketplace.getConsumableCount('strange-talisman') > 0) {
             console.log('✓ Strange Talisman active - rare loot will drop 2 items');
             this.applyTalisman = true;
+            // Consume the talisman now since we've applied the effect for this level
+            marketplace.useConsumable('strange-talisman');
         } else {
             this.applyTalisman = false;
         }
@@ -477,15 +479,7 @@ export class GameplayState {
             }
         }
         
-        // Mark consumables as used (only once per level, not per item)
-        if (this.applyTalisman) {
-            if (this.stateManager.marketplaceSystem) {
-                this.stateManager.marketplaceSystem.useConsumable('strange-talisman');
-                console.log('Strange Talisman consumed');
-            }
-            this.applyTalisman = false;
-        }
-        
+        // NOTE: Strange Talisman is consumed in applyConsumableEffects, not here
         // NOTE: Rabbit's Foot is consumed in applyConsumableEffects after modifying enemy chances
         
         return processedDrops;
@@ -1807,40 +1801,64 @@ export class GameplayState {
         
         let yPos = startY;
         for (const boonId of activeBoons) {
+            const boxWidth = 270;
+            const boxHeight = 45;
+            let glowColor, borderColor, bgColor, textColor, icon, text;
+            
             if (boonId === 'frog-king-bane') {
-                const boxWidth = 270;
-                const boxHeight = 45;
-                
-                // Animated glow effect
-                const glowIntensity = 0.3 + Math.sin((this.stateManager.gameState?.timeElapsed || 0) * 2) * 0.2;
-                ctx.shadowColor = '#FF8C00';
-                ctx.shadowBlur = 12 + glowIntensity * 8;
-                
-                // Border
-                ctx.strokeStyle = '#FF8C00';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(startX, yPos, boxWidth, boxHeight);
-                
-                // Background
-                ctx.fillStyle = 'rgba(30, 15, 5, 0.95)';
-                ctx.fillRect(startX, yPos, boxWidth, boxHeight);
-                
-                // Icon
-                ctx.font = 'bold 18px Arial';
-                ctx.fillStyle = '#FF8C00';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('👑', startX + 8, yPos + 22);
-                
-                // Text - unified single line: "The spirits of the woods protect you"
-                ctx.font = 'bold 11px Arial';
-                ctx.fillStyle = '#FFD700';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('The spirits of the woods protect you', startX + 35, yPos + 22);
-                
-                yPos += 55;
+                glowColor = '#FF8C00';
+                borderColor = '#FF8C00';
+                bgColor = 'rgba(30, 15, 5, 0.95)';
+                textColor = '#FFD700';
+                icon = '👑';
+                text = 'The spirits of the woods protect you';
+            } else if (boonId === 'strange-talisman') {
+                glowColor = '#9D4EDD';
+                borderColor = '#9D4EDD';
+                bgColor = 'rgba(15, 5, 30, 0.95)';
+                textColor = '#E0AAFF';
+                icon = '🔮';
+                text = 'Strange Talisman active';
+            } else if (boonId === 'rabbits-foot') {
+                glowColor = '#00B4D8';
+                borderColor = '#00B4D8';
+                bgColor = 'rgba(0, 15, 30, 0.95)';
+                textColor = '#90E0EF';
+                icon = '🐾';
+                text = 'Rabbit\'s Foot active';
+            } else {
+                continue;
             }
+            
+            // Animated glow effect
+            const glowIntensity = 0.3 + Math.sin((this.stateManager.gameState?.timeElapsed || 0) * 2) * 0.2;
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 12 + glowIntensity * 8;
+            
+            // Border
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(startX, yPos, boxWidth, boxHeight);
+            
+            // Background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(startX, yPos, boxWidth, boxHeight);
+            
+            // Icon
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = borderColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(icon, startX + 8, yPos + 22);
+            
+            // Text
+            ctx.font = 'bold 11px Arial';
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, startX + 35, yPos + 22);
+            
+            yPos += 55;
         }
         
         ctx.restore();

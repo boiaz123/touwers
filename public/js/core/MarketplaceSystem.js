@@ -54,6 +54,11 @@ export class MarketplaceSystem {
                 if (['forge-materials', 'training-materials', 'magic-tower-flatpack'].includes(consumableId)) {
                     this.freePlacementsAvailable.add(consumableId);
                 }
+                
+                // Mark loot multipliers as active boons for visualization
+                if (['rabbits-foot', 'strange-talisman'].includes(consumableId)) {
+                    this.activeBoons.set(consumableId, { active: true, used: false });
+                }
             }
         }
         
