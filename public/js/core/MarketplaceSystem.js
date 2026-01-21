@@ -20,6 +20,9 @@ export class MarketplaceSystem {
         
         // Track which free-placement consumables are available this level
         this.freePlacementsAvailable = new Set();
+        
+        // Track ALL consumables that will be consumed at level end (not just free placements)
+        this.consumablesToCommit = new Set();
     }
 
     /**
@@ -28,16 +31,29 @@ export class MarketplaceSystem {
      */
     resetForNewLevel() {
         this.freePlacementsAvailable.clear();
+        this.consumablesToCommit.clear();
         this.activeBoons.clear();
         
-        // Mark free-placement consumables as available this level
-        // These will be removed from inventory after the level completes
-        const freePlacementConsumables = ['forge-materials', 'training-materials', 'magic-tower-flatpack'];
-        for (const consumableId of freePlacementConsumables) {
+        // Mark ALL consumables that exist as will be consumed at level end
+        // This includes: free placements, loot multipliers, and other consumables
+        // EXCEPT: frog-king-bane (boons don't get consumed like regular items)
+        const consumablesToTrack = [
+            'forge-materials',           // Free forge placement
+            'training-materials',        // Free training grounds placement
+            'magic-tower-flatpack',      // Free magic tower placement
+            'rabbits-foot',              // Double loot multiplier
+            'strange-talisman'           // Rare/legendary loot multiplier
+        ];
+        
+        for (const consumableId of consumablesToTrack) {
             const count = this.consumables.get(consumableId) || 0;
             if (count > 0) {
-                // Mark as available for free placement
-                this.freePlacementsAvailable.add(consumableId);
+                this.consumablesToCommit.add(consumableId);
+                
+                // Also mark free-placement ones separately for UI purposes
+                if (['forge-materials', 'training-materials', 'magic-tower-flatpack'].includes(consumableId)) {
+                    this.freePlacementsAvailable.add(consumableId);
+                }
             }
         }
         
@@ -133,18 +149,20 @@ export class MarketplaceSystem {
     }
 
     /**
-     * Commit used consumables - removes free-placement items from inventory after level ends
+     * Commit used consumables - removes items from inventory after level ends
      * Called when returning to settlement after a level
+     * Consumes ALL tracked consumables that were available this level
      */
     commitUsedConsumables() {
-        // Remove free-placement consumables that were available this level
-        for (const itemId of this.freePlacementsAvailable) {
+        // Remove all tracked consumables that were available this level
+        for (const itemId of this.consumablesToCommit) {
             const current = this.consumables.get(itemId) || 0;
             if (current > 0) {
                 this.consumables.set(itemId, current - 1);
             }
         }
-        // Clear for next level
+        // Clear tracking sets for next level
+        this.consumablesToCommit.clear();
         this.freePlacementsAvailable.clear();
     }
 

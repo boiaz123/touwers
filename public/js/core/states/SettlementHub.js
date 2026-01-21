@@ -106,7 +106,8 @@ export class SettlementHub {
             }
             
             // Initialize marketplace system if not already done
-            if (!this.stateManager.marketplaceSystem) {
+            // IMPORTANT: If returning from a level, refresh from save to get latest consumable state
+            if (!this.stateManager.marketplaceSystem || returningFromLevel) {
                 this.stateManager.marketplaceSystem = new MarketplaceSystem();
                 if (currentSaveData.marketplace) {
                     this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
@@ -976,14 +977,14 @@ export class SettlementHub {
         if (frogKingBaneCount === 0) return;
         
         // Render boon status indicator in top-right corner
-        const startX = canvas.width - 280;
+        const startX = canvas.width - 300;
         const startY = 60;
         
         ctx.save();
         
         // Draw glowing boon indicator
-        const boxWidth = 250;
-        const boxHeight = 50;
+        const boxWidth = 270;
+        const boxHeight = 45;
         
         // Glow effect
         ctx.shadowColor = '#FF8C00';
@@ -1002,24 +1003,18 @@ export class SettlementHub {
         ctx.fillRect(startX, startY, boxWidth, boxHeight);
         
         // Icon
-        ctx.font = 'bold 24px Arial';
+        ctx.font = 'bold 18px Arial';
         ctx.fillStyle = '#FF8C00';
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText('👑', startX + 30, startY + 25);
+        ctx.fillText('👑', startX + 8, startY + 22);
         
-        // Text - unified font and size
-        ctx.font = 'bold 12px Arial';
+        // Text - unified single line: "The spirits of the woods protect you"
+        ctx.font = 'bold 11px Arial';
         ctx.fillStyle = '#FFD700';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText('The Frog King\'s Bane', startX + 60, startY + 18);
-        
-        ctx.font = 'bold 12px Arial';
-        ctx.fillStyle = '#FFA500';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Active - Ready to save', startX + 60, startY + 32);
+        ctx.fillText('The spirits of the woods protect you', startX + 35, startY + 22);
         
         ctx.restore();
     }
@@ -4121,9 +4116,9 @@ class UpgradesMenu {
             const descBoxY = nameY + 24;
             
             // Wrap description text to calculate height
-            const charPerLine = Math.floor((width - 16) / 9);  // Doubled char per line since font is 2x larger
+            const charPerLine = Math.floor((width - 16) / 6);  // Adjusted for 9px font
             const lines = this.wrapText(item.description, charPerLine);
-            const lineHeight = 18;  // Doubled from 9 to match 16px font
+            const lineHeight = 11;  // Adjusted for 9px font
             const textPadding = 4;
             
             // Calculate dynamic box height based on actual text lines
@@ -4138,8 +4133,8 @@ class UpgradesMenu {
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 4, descBoxY, width - 8, descBoxHeight);
             
-            // Description text (16px, left-aligned, inside box) - doubled from 8px
-            ctx.font = '16px Arial';
+            // Description text (9px, left-aligned, inside box)
+            ctx.font = '9px Arial';
             ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
@@ -4155,17 +4150,17 @@ class UpgradesMenu {
             if (item.effect) {
                 const effectBoxY = descBoxY + descBoxHeight + 3;
                 
-                // Effect text (7px, smaller font, color #a89968)
-                ctx.font = '7px Arial';
-                ctx.fillStyle = '#a89968';
+                // Effect text (9px bold, same size as description for better visibility, color #FFD700 for gold highlight)
+                ctx.font = 'bold 9px Arial';
+                ctx.fillStyle = '#FFD700';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
                 
-                const effectCharPerLine = Math.floor((width - 16) / 4);
+                const effectCharPerLine = Math.floor((width - 16) / 5);
                 const effectLines = this.wrapText(item.effect, effectCharPerLine);
                 
                 for (let i = 0; i < effectLines.length; i++) {
-                    ctx.fillText(effectLines[i], textX, effectBoxY + (i * 8));
+                    ctx.fillText(effectLines[i], textX, effectBoxY + (i * 11));
                 }
             }
         }

@@ -52,6 +52,23 @@ export class UIManager {
             // Check if this tower has a free placement available (without consuming it)
             const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(towerType, true);
             
+            // Special handling for magic tower: show if free placement is available OR if academy built it
+            if (towerType === 'magic') {
+                const isUnlockedByAcademy = this.towerManager.unlockSystem.magicTowerUnlockedByAcademy;
+                // Magic tower is shown if EITHER free placement is available OR academy has built it
+                isUnlocked = isFreeFromMarketplace || isUnlockedByAcademy;
+                // Determine if it can be built
+                if (isUnlockedByAcademy) {
+                    // If academy built it, use normal unlock logic
+                    canBuild = this.towerManager.unlockSystem.canBuildTower(towerType);
+                } else if (isFreeFromMarketplace) {
+                    // If only free placement available, allow building
+                    canBuild = true;
+                } else {
+                    canBuild = false;
+                }
+            }
+            
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
                 btn.style.display = 'none';

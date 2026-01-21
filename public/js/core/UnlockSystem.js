@@ -28,6 +28,9 @@ export class UnlockSystem {
         
         // IMPORTANT: Superweapon starts LOCKED - only unlocked at Academy Level 3
         this.superweaponUnlocked = false;
+        
+        // IMPORTANT: Magic Tower starts LOCKED - only unlocked when Academy is built (level 1)
+        this.magicTowerUnlockedByAcademy = false;
     }
     
     onForgeBuilt() {
@@ -56,6 +59,7 @@ export class UnlockSystem {
     onAcademyBuilt() {
         this.academyCount++;
         // Level 1: Magic Tower and Gem Mining automatically unlocked
+        this.magicTowerUnlockedByAcademy = true; // Mark magic tower as unlocked by academy
         this.unlockedTowers.add('magic');
         this.gemMiningResearched = true; // Automatically enabled at level 1
         return true;

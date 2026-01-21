@@ -46,11 +46,11 @@ export class GameplayState {
         this.levelCompletionDelay = 0;
         this.levelCompletionTimestampStart = undefined;
         
-        // Spell effects
-        this.spellEffects = [];
-        
         // Pending damage to apply during update (for delayed damage like meteor strikes)
         this.pendingDamage = [];
+        
+        // Spell effects for visual rendering
+        this.spellEffects = [];
         
         // NEW: Speed control (3 fixed speeds instead of cycling)
         this.gameSpeed = 1.0; // 1x, 2x, or 3x
@@ -357,9 +357,9 @@ export class GameplayState {
         // Check if magic tower flatpack is available for free placement
         if (marketplace.hasFreePlacement('magic-tower-flatpack')) {
             this.freeTowerPlacements['magic'] = true;
-            // Unlock the magic tower so the button appears
-            this.towerManager.unlockSystem.unlockedTowers.add('magic');
-            console.log('✓ Magic tower flatpack available - magic tower unlocked and free placement enabled');
+            // NOTE: Do NOT unlock magic tower - it will be shown as available via free placement only
+            // It will only stay unlocked if academy is built (which adds it to unlockedTowers)
+            console.log('✓ Magic tower flatpack available - free placement enabled');
         }
     }
     
@@ -506,20 +506,39 @@ export class GameplayState {
         return randomTrack;
     }
 
-    exit() {
+    exit(levelCompleted = false) {
+        console.log('GameplayState.exit() called');
+        
         // Clear reference to GameplayState
         this.stateManager.gameplayState = null;
         
         // Restore settlement gold to stateManager before leaving
         if (this.settlementGoldBackup !== undefined) {
-            console.log(`GameplayState.exit: Restoring settlement gold from ${this.stateManager.playerGold} to ${this.settlementGoldBackup}`);
+            console.log(`  Restoring settlement gold from ${this.stateManager.playerGold} to ${this.settlementGoldBackup}`);
             this.stateManager.playerGold = this.settlementGoldBackup;
         }
         
-        // Commit consumed marketplace items after level (regardless of completion or quit)
+        // Commit consumables if they haven't been consumed yet
+        // (completeLevel() already consumes them before saving, so check if there's anything to consume)
         if (this.stateManager.marketplaceSystem) {
-            console.log('GameplayState.exit: Committing used consumables');
-            this.stateManager.marketplaceSystem.commitUsedConsumables();
+            const hasConsumablesToCommit = this.stateManager.marketplaceSystem.consumablesToCommit && 
+                                          this.stateManager.marketplaceSystem.consumablesToCommit.size > 0;
+            
+            if (hasConsumablesToCommit) {
+                console.log('  Calling commitUsedConsumables() for early quit or defeat...');
+                this.stateManager.marketplaceSystem.commitUsedConsumables();
+                
+                // Save the updated marketplace state (with consumed items) to the current save slot
+                if (this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
+                    console.log('  Saving updated marketplace state to save file');
+                    this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+                    SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+                }
+            } else {
+                console.log('  No consumables to commit - already consumed in completeLevel() or no level was played');
+            }
+        } else {
+            console.warn('  WARNING: No marketplace system available!');
         }
         
         // Stop level music before exiting
@@ -1256,12 +1275,19 @@ export class GameplayState {
         if (this.stateManager.currentSaveData) {
             const saveData = this.stateManager.currentSaveData;
             
+            // CRITICAL: Commit (consume) marketplace items BEFORE saving
+            // This ensures consumables are removed from inventory after level completes
+            if (this.stateManager.marketplaceSystem) {
+                console.log('completeLevel: Committing used consumables before save');
+                this.stateManager.marketplaceSystem.commitUsedConsumables();
+            }
+            
             // CRITICAL: Update save data with current settlement state before saving
             // This ensures gold and inventory earned during level are persisted
             saveData.playerGold = this.stateManager.playerGold || 0;
             saveData.playerInventory = this.stateManager.playerInventory || [];
             
-            // Also save upgrades and marketplace system state
+            // Also save upgrades and marketplace system state (with consumed items)
             if (this.stateManager.upgradeSystem) {
                 saveData.upgrades = this.stateManager.upgradeSystem.serialize();
             }
@@ -1713,7 +1739,7 @@ export class GameplayState {
         if (activeBoons.length === 0) return;
         
         // Render boon indicator in top-right area of screen
-        const startX = ctx.canvas.width - 280;
+        const startX = ctx.canvas.width - 300;
         const startY = 20;
         
         ctx.save();
@@ -1722,8 +1748,8 @@ export class GameplayState {
         let yPos = startY;
         for (const boonId of activeBoons) {
             if (boonId === 'frog-king-bane') {
-                const boxWidth = 250;
-                const boxHeight = 40;
+                const boxWidth = 270;
+                const boxHeight = 45;
                 
                 // Animated glow effect
                 const glowIntensity = 0.3 + Math.sin((this.stateManager.gameState?.timeElapsed || 0) * 2) * 0.2;
@@ -1744,18 +1770,16 @@ export class GameplayState {
                 ctx.fillStyle = '#FF8C00';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('👑', startX + 8, yPos + 20);
+                ctx.fillText('👑', startX + 8, yPos + 22);
                 
-                // Text
+                // Text - unified single line: "The spirits of the woods protect you"
                 ctx.font = 'bold 11px Arial';
                 ctx.fillStyle = '#FFD700';
-                ctx.fillText('The spirits of old', startX + 35, yPos + 8);
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('The spirits of the woods protect you', startX + 35, yPos + 22);
                 
-                ctx.font = '10px Arial';
-                ctx.fillStyle = '#FFA500';
-                ctx.fillText('will protect you!', startX + 35, yPos + 24);
-                
-                yPos += 50;
+                yPos += 55;
             }
         }
         
@@ -1763,6 +1787,9 @@ export class GameplayState {
     }
     
     renderSpellEffects(ctx) {
+        if (!this.spellEffects) {
+            return;
+        }
         this.spellEffects.forEach(effect => {
             const alpha = effect.life / effect.maxLife;
             ctx.globalAlpha = alpha;
