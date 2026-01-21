@@ -352,6 +352,7 @@ export class GameplayState {
             // Unlock the forge building so the button appears
             this.towerManager.unlockSystem.unlockedBuildings.add('forge');
             console.log('✓ Forge materials available - forge unlocked and free placement enabled');
+            // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         }
         
         // Check if training materials are available for free placement
@@ -360,6 +361,7 @@ export class GameplayState {
             // Unlock the training grounds building so the button appears
             this.towerManager.unlockSystem.unlockedBuildings.add('training');
             console.log('✓ Training materials available - training grounds unlocked and free placement enabled');
+            // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         }
         
         // Check if magic tower flatpack is available for free placement
@@ -368,8 +370,10 @@ export class GameplayState {
             // Unlock the magic tower so the button appears (just like forge and training)
             this.towerManager.unlockSystem.unlockedTowers.add('magic');
             console.log('✓ Magic tower flatpack available - magic tower unlocked and free placement enabled');
-            // Consume the magic tower flatpack immediately (like forge and training)
-            marketplace.useConsumable('magic-tower-flatpack');
+            // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
+        } else {
+            console.log('  Magic tower flatpack NOT available (hasFreePlacement returned false)');
+            console.log(`  Flatpack count: ${marketplace.getConsumableCount('magic-tower-flatpack')}`);
         }
         
         // Apply loot multiplier effects to enemies
@@ -388,8 +392,7 @@ export class GameplayState {
             }
             // Mark for post-spawn modification too
             this.applyRabbitsFoot = true;
-            // Consume the Rabbit's Foot now since we've applied the effect
-            marketplace.useConsumable('rabbits-foot');
+            // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         } else {
             this.applyRabbitsFoot = false;
             marketplace.rabbitFootActive = false;
@@ -399,8 +402,7 @@ export class GameplayState {
         if (marketplace.getConsumableCount('strange-talisman') > 0) {
             console.log('✓ Strange Talisman active - rare loot will drop 2 items');
             this.applyTalisman = true;
-            // Consume the talisman now since we've applied the effect for this level
-            marketplace.useConsumable('strange-talisman');
+            // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         } else {
             this.applyTalisman = false;
         }
@@ -1820,10 +1822,10 @@ export class GameplayState {
                 icon = '🔮';
                 text = 'Strange Talisman active';
             } else if (boonId === 'rabbits-foot') {
-                glowColor = '#00B4D8';
-                borderColor = '#00B4D8';
-                bgColor = 'rgba(0, 15, 30, 0.95)';
-                textColor = '#90E0EF';
+                glowColor = '#FFD700';
+                borderColor = '#FFD700';
+                bgColor = 'rgba(30, 25, 0, 0.95)';
+                textColor = '#FFED4E';
                 icon = '🐾';
                 text = 'Rabbit\'s Foot active';
             } else {

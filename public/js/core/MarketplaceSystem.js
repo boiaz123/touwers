@@ -156,14 +156,22 @@ export class MarketplaceSystem {
     /**
      * Commit used consumables - removes items from inventory after level ends
      * Called when returning to settlement after a level
-     * Consumes ALL tracked consumables that were available this level
+     * Handles all consumables the same way: free-placements and loot multipliers
      */
     commitUsedConsumables() {
-        // Remove all tracked consumables that were available this level
+        // Items that provide free placements
+        const freePlacements = ['forge-materials', 'training-materials', 'magic-tower-flatpack'];
+        // Items that are loot multipliers
+        const lootMultipliers = ['rabbits-foot', 'strange-talisman'];
+        
         for (const itemId of this.consumablesToCommit) {
-            const current = this.consumables.get(itemId) || 0;
-            if (current > 0) {
-                this.consumables.set(itemId, current - 1);
+            // Decrement all consumables the same way
+            if (freePlacements.includes(itemId) || lootMultipliers.includes(itemId)) {
+                const current = this.consumables.get(itemId) || 0;
+                if (current > 0) {
+                    this.consumables.set(itemId, current - 1);
+                    console.log(`commitUsedConsumables: Consumed ${itemId}, new count: ${current - 1}`);
+                }
             }
         }
         // Clear tracking sets for next level
@@ -213,6 +221,11 @@ export class MarketplaceSystem {
             this.reset();
             return;
         }
+
+        // Clear all per-level collections
+        this.freePlacementsAvailable.clear();
+        this.consumablesToCommit.clear();
+        this.activeBoons.clear();
 
         // Restore consumables
         this.consumables.clear();
