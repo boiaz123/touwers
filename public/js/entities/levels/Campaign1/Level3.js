@@ -4,7 +4,8 @@ export class Level3 extends LevelBase {
     static levelMetadata = {
         name: 'Crazy Frogs',
         difficulty: 'Medium',
-        order: 3
+        order: 3,
+        campaign: 'forest'
     };
 
     constructor() {
@@ -13,6 +14,7 @@ export class Level3 extends LevelBase {
         this.levelName = Level3.levelMetadata.name;
         this.levelNumber = Level3.levelMetadata.order;
         this.difficulty = Level3.levelMetadata.difficulty;
+        this.campaign = Level3.levelMetadata.campaign;
         this.maxWaves = 10;
         
         // Customize visuals for swampy/frog theme

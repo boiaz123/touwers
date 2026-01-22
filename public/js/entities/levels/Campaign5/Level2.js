@@ -4,7 +4,8 @@ export class Level6 extends LevelBase {
     static levelMetadata = {
         name: 'Spiraling into Control',
         difficulty: 'Medium',
-        order: 2
+        order: 2,
+        campaign: 'forest'
     };
 
     constructor() {
@@ -13,6 +14,7 @@ export class Level6 extends LevelBase {
         this.levelName = Level6.levelMetadata.name;
         this.levelNumber = Level6.levelMetadata.order;
         this.difficulty = Level6.levelMetadata.difficulty;
+        this.campaign = Level6.levelMetadata.campaign;
         this.maxWaves = 16;
         
         // Customize visuals

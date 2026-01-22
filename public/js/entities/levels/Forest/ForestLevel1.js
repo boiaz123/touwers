@@ -1,6 +1,6 @@
 import { LevelBase } from '../LevelBase.js';
 
-export class Level1 extends LevelBase {
+export class ForestLevel1 extends LevelBase {
     static levelMetadata = {
         name: 'The King\'s Road',
         difficulty: 'Easy',
@@ -11,10 +11,10 @@ export class Level1 extends LevelBase {
     constructor() {
         super();
         // Derive instance properties from static metadata
-        this.levelName = Level1.levelMetadata.name;
-        this.levelNumber = Level1.levelMetadata.order;
-        this.difficulty = Level1.levelMetadata.difficulty;
-        this.campaign = Level1.levelMetadata.campaign;
+        this.levelName = ForestLevel1.levelMetadata.name;
+        this.levelNumber = ForestLevel1.levelMetadata.order;
+        this.difficulty = ForestLevel1.levelMetadata.difficulty;
+        this.campaign = ForestLevel1.levelMetadata.campaign;
         this.maxWaves = 12;
         
         // Customize visuals

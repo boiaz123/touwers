@@ -2,6 +2,8 @@
  * Main Level Designer Class
  * Orchestrates the level design UI, canvas interactions, and code generation
  */
+import { CampaignThemeConfig } from '../core/CampaignThemeConfig.js';
+
 export class LevelDesigner {
     constructor(canvasId, config = {}) {
         this.canvas = document.getElementById(canvasId);
@@ -15,6 +17,7 @@ export class LevelDesigner {
         // Game state
         this.pathPoints = [];
         this.castlePosition = null;
+        this.currentCampaign = 'forest'; // Track selected campaign
         this.mode = 'path'; // 'path', 'castle', 'terrain'
         this.terrainMode = null; // 'tree', 'rock', 'water' when in terrain mode
         this.waterMode = null; // 'river' or 'lake' when placing water
@@ -116,6 +119,16 @@ export class LevelDesigner {
     }
 
     setupFormHandlers() {
+        // Campaign theme selector
+        const campaignSelect = document.getElementById('campaignTheme');
+        if (campaignSelect) {
+            campaignSelect.addEventListener('change', (e) => {
+                this.currentCampaign = e.target.value;
+                CampaignThemeConfig.applyThemeToForm(this.currentCampaign);
+                this.updateGeneratedCode();
+            });
+        }
+
         // Auto-update code on form changes
         const inputs = document.querySelectorAll('.form-group input, .form-group select');
         inputs.forEach(input => {
@@ -400,6 +413,20 @@ export class LevelDesigner {
             return;
         }
         
+        // Auto-connect path end to castle (automatically)
+        const lastPathPoint = this.pathPoints[this.pathPoints.length - 1];
+        const castleX = this.castlePosition.gridX;
+        const castleY = this.castlePosition.gridY;
+        
+        // Only add castle connection if not already very close
+        const distance = Math.hypot(castleX - lastPathPoint.gridX, castleY - lastPathPoint.gridY);
+        if (distance > 1) {
+            this.pathPoints.push({
+                gridX: castleX,
+                gridY: castleY
+            });
+        }
+        
         // Lock path editing
         this.pathLocked = true;
         this.mode = null;
@@ -416,7 +443,7 @@ export class LevelDesigner {
         document.getElementById('placeCastleBtn').classList.remove('active');
         
         const pathInfo = document.getElementById('pathInfo');
-        pathInfo.textContent = '✓ Path finished! You can now edit terrain or export.';
+        pathInfo.textContent = '✓ Path finished! Path automatically connected to castle. You can now edit terrain or export.';
         
         this.updateGeneratedCode();
         this.render();
@@ -668,9 +695,8 @@ export class LevelDesigner {
     }
 
     render() {
-        // Clear canvas
-        this.ctx.fillStyle = '#2a2a2a';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Draw background based on campaign theme
+        this.drawBackground();
 
         // Draw grid
         this.drawGrid();
@@ -697,6 +723,66 @@ export class LevelDesigner {
 
         // Draw current mode indicator
         this.drawModeIndicator();
+        
+        // Draw campaign terrain info overlay
+        this.drawTerrainInfoOverlay();
+    }
+
+    drawBackground() {
+        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
+        const config = theme.visualConfig;
+        
+        // Draw gradient background using grass colors
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        gradient.addColorStop(0, config.grassColors.top);
+        gradient.addColorStop(0.3, config.grassColors.upper);
+        gradient.addColorStop(0.7, config.grassColors.lower);
+        gradient.addColorStop(1, config.grassColors.bottom);
+        
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    drawTerrainInfoOverlay() {
+        // Show current terrain type being placed
+        if (this.mode !== 'terrain' || !this.terrainMode) return;
+
+        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
+        const terrainDefaults = theme.terrainDefaults;
+        
+        let terrainText = '';
+        let color = '';
+        
+        if (this.terrainMode === 'tree') {
+            terrainText = `🌲 Placing ${this.currentCampaign.toUpperCase()} Trees`;
+            color = terrainDefaults.treeColor;
+        } else if (this.terrainMode === 'rock') {
+            terrainText = `🪨 Placing ${this.currentCampaign.toUpperCase()} Rocks`;
+            color = terrainDefaults.rockColor;
+        } else if (this.terrainMode === 'water') {
+            terrainText = `💧 Placing Water (${this.waterMode || 'select mode'})`;
+            color = '#4a6ba6';
+        }
+        
+        if (terrainText) {
+            // Semi-transparent background box for text
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(10, 10, 280, 40);
+            
+            // Text
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.fillText(terrainText, 20, 32);
+            
+            // Color preview circle
+            this.ctx.fillStyle = color;
+            this.ctx.beginPath();
+            this.ctx.arc(260, 28, 10, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
     }
 
     drawGrid() {
@@ -948,25 +1034,189 @@ export class LevelDesigner {
     }
 
     drawTree(x, y, size) {
-        // Determine tree type based on x,y coordinates (deterministic variation)
+        // Get campaign-specific tree info and colors
+        const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
+        const primaryColor = terrainInfo.primaryColor;
+        const accentColor = terrainInfo.accentColor;
+        
+        // Determine tree type based on campaign and x,y coordinates
         const seed = Math.floor(x + y) % 4;
         
-        switch(seed) {
-            case 0:
-                this.drawTreeType1(x, y, size);
+        // Use campaign-specific drawing methods
+        switch(this.currentCampaign) {
+            case 'mountain':
+                this.drawSnowPineTree(x, y, size, primaryColor, accentColor, seed);
                 break;
-            case 1:
-                this.drawTreeType2(x, y, size);
+            case 'desert':
+                this.drawCactusTree(x, y, size, primaryColor, accentColor, seed);
                 break;
-            case 2:
-                this.drawTreeType3(x, y, size);
+            case 'space':
+                this.drawCrystalStructure(x, y, size, primaryColor, accentColor, seed);
                 break;
-            default:
-                this.drawTreeType4(x, y, size);
+            default: // forest
+                switch(seed) {
+                    case 0:
+                        this.drawTreeType1(x, y, size, primaryColor, accentColor);
+                        break;
+                    case 1:
+                        this.drawTreeType2(x, y, size, primaryColor, accentColor);
+                        break;
+                    case 2:
+                        this.drawTreeType3(x, y, size, primaryColor, accentColor);
+                        break;
+                    default:
+                        this.drawTreeType4(x, y, size, primaryColor, accentColor);
+                }
         }
     }
 
-    drawTreeType1(x, y, size) {
+    drawSnowPineTree(x, y, size, primaryColor, accentColor, seed) {
+        // Snowy pine trees for mountain campaign
+        const trunkWidth = size * 0.16;
+        const trunkHeight = size * 0.4;
+        
+        // Trunk with snow
+        this.ctx.fillStyle = '#5a4a3a';
+        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        
+        // Snow on trunk
+        this.ctx.fillStyle = '#e8f4f8';
+        this.ctx.beginPath();
+        this.ctx.arc(x - trunkWidth * 0.25, y + trunkHeight * 0.3, trunkWidth * 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Layered foliage (snowy pine style)
+        // Bottom layer - widest
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.4);
+        this.ctx.lineTo(x + size * 0.35, y);
+        this.ctx.lineTo(x - size * 0.35, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Snow on bottom layer
+        this.ctx.fillStyle = 'rgba(232, 244, 248, 0.7)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.4);
+        this.ctx.lineTo(x + size * 0.32, y - size * 0.1);
+        this.ctx.lineTo(x - size * 0.32, y - size * 0.1);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Middle layer
+        this.ctx.fillStyle = accentColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.2);
+        this.ctx.lineTo(x + size * 0.25, y + size * 0.1);
+        this.ctx.lineTo(x - size * 0.25, y + size * 0.1);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Top point
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.5);
+        this.ctx.lineTo(x + size * 0.12, y - size * 0.4);
+        this.ctx.lineTo(x - size * 0.12, y - size * 0.4);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    drawCactusTree(x, y, size, primaryColor, accentColor, seed) {
+        // Cacti for desert campaign
+        const baseWidth = size * 0.18;
+        const baseHeight = size * 0.55;
+        
+        // Main cactus body
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.fillRect(x - baseWidth * 0.5, y - baseHeight, baseWidth, baseHeight);
+        
+        // Cactus shading
+        this.ctx.fillStyle = accentColor;
+        this.ctx.fillRect(x + baseWidth * 0.3, y - baseHeight, baseWidth * 0.2, baseHeight);
+        
+        // Left arm (if seed > 0)
+        if (seed > 0) {
+            this.ctx.fillStyle = primaryColor;
+            this.ctx.beginPath();
+            this.ctx.ellipse(x - size * 0.35, y - size * 0.25, size * 0.12, size * 0.08, -0.3, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            this.ctx.fillStyle = accentColor;
+            this.ctx.beginPath();
+            this.ctx.ellipse(x - size * 0.35, y - size * 0.25, size * 0.05, size * 0.04, -0.3, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+        
+        // Right arm
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + size * 0.35, y - size * 0.3, size * 0.12, size * 0.08, 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.fillStyle = accentColor;
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + size * 0.35, y - size * 0.3, size * 0.05, size * 0.04, 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Spines (small dots)
+        this.ctx.fillStyle = '#c4a140';
+        for (let i = 0; i < 5; i++) {
+            const posY = y - baseHeight + (baseHeight / 5) * (i + 0.5);
+            this.ctx.beginPath();
+            this.ctx.arc(x + baseWidth * 0.4, posY, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.beginPath();
+            this.ctx.arc(x - baseWidth * 0.4, posY, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+
+    drawCrystalStructure(x, y, size, primaryColor, accentColor, seed) {
+        // Alien crystalline structures for space campaign
+        const crystalHeight = size * 0.55;
+        
+        // Main crystal shaft
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.15, y);
+        this.ctx.lineTo(x - size * 0.08, y - crystalHeight);
+        this.ctx.lineTo(x + size * 0.08, y - crystalHeight);
+        this.ctx.lineTo(x + size * 0.15, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Crystal facet highlight
+        this.ctx.fillStyle = accentColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.08, y - crystalHeight);
+        this.ctx.lineTo(x, y - crystalHeight * 0.7);
+        this.ctx.lineTo(x + size * 0.08, y - crystalHeight);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Side crystal shards
+        if (seed % 2 === 0) {
+            this.ctx.fillStyle = primaryColor;
+            this.ctx.globalAlpha = 0.7;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + size * 0.15, y - size * 0.2);
+            this.ctx.lineTo(x + size * 0.3, y - size * 0.35);
+            this.ctx.lineTo(x + size * 0.25, y);
+            this.ctx.closePath();
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1;
+        }
+        
+        // Glow effect
+        this.ctx.fillStyle = 'rgba(138, 106, 170, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y - crystalHeight * 0.5, size * 0.25, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawTreeType1(x, y, size, primaryColor, accentColor) {
         // Tall conifer-style tree
         const trunkWidth = size * 0.25;
         const trunkHeight = size * 0.5;
@@ -980,7 +1230,7 @@ export class LevelDesigner {
         this.ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
 
         // Main foliage cone shape (dark)
-        this.ctx.fillStyle = '#0D3817';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - size * 0.6);
         this.ctx.lineTo(x + size * 0.35, y - size * 0.1);
@@ -989,7 +1239,7 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Mid foliage layer
-        this.ctx.fillStyle = '#1B5E20';
+        this.ctx.fillStyle = accentColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - size * 0.35);
         this.ctx.lineTo(x + size * 0.3, y + size * 0.05);
@@ -998,7 +1248,7 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Light foliage layer
-        this.ctx.fillStyle = '#2E7D32';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - size * 0.15);
         this.ctx.lineTo(x + size * 0.25, y + size * 0.2);
@@ -1007,7 +1257,7 @@ export class LevelDesigner {
         this.ctx.fill();
     }
 
-    drawTreeType2(x, y, size) {
+    drawTreeType2(x, y, size, primaryColor, accentColor) {
         // Deciduous round tree
         const trunkWidth = size * 0.2;
         const trunkHeight = size * 0.4;
@@ -1117,27 +1367,163 @@ export class LevelDesigner {
     }
 
     drawRock(x, y, size) {
-        // Determine rock type based on x,y coordinates (deterministic variation)
+        // Get campaign-specific rock info and colors
+        const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
+        const rockColor = terrainInfo.rockColor;
+        const rockAccent = terrainInfo.rockAccent;
+        
+        // Determine rock type based on campaign and x,y coordinates
         const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
         
-        switch(seed) {
-            case 0:
-                this.drawRockType1(x, y, size);
+        // Use campaign-specific drawing methods
+        switch(this.currentCampaign) {
+            case 'mountain':
+                this.drawSnowRock(x, y, size, rockColor, rockAccent, seed);
                 break;
-            case 1:
-                this.drawRockType2(x, y, size);
+            case 'desert':
+                this.drawSandstoneRock(x, y, size, rockColor, rockAccent, seed);
                 break;
-            case 2:
-                this.drawRockType3(x, y, size);
+            case 'space':
+                this.drawAlienRock(x, y, size, rockColor, rockAccent, seed);
                 break;
-            default:
-                this.drawRockType4(x, y, size);
+            default: // forest
+                switch(seed) {
+                    case 0:
+                        this.drawRockType1(x, y, size, rockColor, rockAccent);
+                        break;
+                    case 1:
+                        this.drawRockType2(x, y, size, rockColor, rockAccent);
+                        break;
+                    case 2:
+                        this.drawRockType3(x, y, size, rockColor, rockAccent);
+                        break;
+                    default:
+                        this.drawRockType4(x, y, size, rockColor, rockAccent);
+                }
         }
     }
 
-    drawRockType1(x, y, size) {
+    drawSnowRock(x, y, size, rockColor, rockAccent, seed) {
+        // Snow-covered rocks for mountain campaign
+        // Base icy grey rock
+        this.ctx.fillStyle = rockColor;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Shadow
+        this.ctx.fillStyle = rockAccent;
+        this.ctx.beginPath();
+        this.ctx.arc(x + size * 0.12, y + size * 0.12, size * 0.32, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Snow accumulation on top
+        this.ctx.fillStyle = '#e8f4f8';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.32, y);
+        this.ctx.bezierCurveTo(x - size * 0.25, y - size * 0.25, x + size * 0.25, y - size * 0.25, x + size * 0.32, y);
+        this.ctx.lineTo(x + size * 0.3, y + size * 0.15);
+        this.ctx.bezierCurveTo(x + size * 0.2, y + size * 0.2, x - size * 0.2, y + size * 0.2, x - size * 0.3, y + size * 0.15);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Ice highlights
+        this.ctx.fillStyle = 'rgba(232, 244, 248, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(x - size * 0.1, y - size * 0.15, size * 0.1, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSandstoneRock(x, y, size, rockColor, rockAccent, seed) {
+        // Sandstone rocks for desert campaign
+        // Irregular angular shape
+        this.ctx.fillStyle = rockColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.32, y - size * 0.1);
+        this.ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        this.ctx.lineTo(x + size * 0.25, y - size * 0.28);
+        this.ctx.lineTo(x + size * 0.3, y + size * 0.15);
+        this.ctx.lineTo(x + size * 0.1, y + size * 0.32);
+        this.ctx.lineTo(x - size * 0.25, y + size * 0.28);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Sandstone texture (layered coloring)
+        this.ctx.fillStyle = rockAccent;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.28, y - size * 0.05);
+        this.ctx.lineTo(x, y - size * 0.2);
+        this.ctx.lineTo(x + size * 0.25, y + size * 0.05);
+        this.ctx.lineTo(x, y + size * 0.25);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Sand erosion/pattern
+        this.ctx.strokeStyle = 'rgba(212, 165, 64, 0.4)';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.15, y - size * 0.15);
+        this.ctx.quadraticCurveTo(x + size * 0.1, y, x - size * 0.1, y + size * 0.15);
+        this.ctx.stroke();
+        
+        // Outline
+        this.ctx.strokeStyle = '#8a6a4a';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.32, y - size * 0.1);
+        this.ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        this.ctx.lineTo(x + size * 0.25, y - size * 0.28);
+        this.ctx.lineTo(x + size * 0.3, y + size * 0.15);
+        this.ctx.lineTo(x + size * 0.1, y + size * 0.32);
+        this.ctx.lineTo(x - size * 0.25, y + size * 0.28);
+        this.ctx.closePath();
+        this.ctx.stroke();
+    }
+
+    drawAlienRock(x, y, size, rockColor, rockAccent, seed) {
+        // Alien crystalline rocks for space campaign
+        // Main angular shape
+        this.ctx.fillStyle = rockColor;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.28, y - size * 0.2);
+        this.ctx.lineTo(x, y - size * 0.35);
+        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        this.ctx.lineTo(x + size * 0.25, y + size * 0.25);
+        this.ctx.lineTo(x - size * 0.25, y + size * 0.3);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Crystalline facet
+        this.ctx.fillStyle = rockAccent;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.35);
+        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        this.ctx.lineTo(x + size * 0.1, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        // Energy glow
+        this.ctx.fillStyle = 'rgba(122, 106, 170, 0.4)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.28, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Outline
+        this.ctx.strokeStyle = '#6a4aaa';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.28, y - size * 0.2);
+        this.ctx.lineTo(x, y - size * 0.35);
+        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        this.ctx.lineTo(x + size * 0.25, y + size * 0.25);
+        this.ctx.lineTo(x - size * 0.25, y + size * 0.3);
+        this.ctx.closePath();
+        this.ctx.stroke();
+    }
+
+    drawRockType1(x, y, size, primaryColor, accentColor) {
         // Jagged irregular rock
-        this.ctx.fillStyle = '#455A64';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x - size * 0.3, y - size * 0.15);
         this.ctx.lineTo(x - size * 0.25, y - size * 0.35);
@@ -1150,7 +1536,7 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Shadow
-        this.ctx.fillStyle = '#263238';
+        this.ctx.fillStyle = accentColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x + size * 0.28, y + size * 0.2);
         this.ctx.lineTo(x + size * 0.32, y - size * 0.18);
@@ -1160,10 +1546,12 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Highlight
-        this.ctx.fillStyle = '#90A4AE';
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.globalAlpha = 0.6;
         this.ctx.beginPath();
         this.ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.1, 0, Math.PI * 2);
         this.ctx.fill();
+        this.ctx.globalAlpha = 1;
 
         // Outline
         this.ctx.strokeStyle = '#1A1A1A';
@@ -1180,27 +1568,30 @@ export class LevelDesigner {
         this.ctx.stroke();
     }
 
-    drawRockType2(x, y, size) {
+    drawRockType2(x, y, size, primaryColor, accentColor) {
         // Round boulder with bumps
-        this.ctx.fillStyle = '#546E7A';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Shadow
-        this.ctx.fillStyle = '#37474F';
+        this.ctx.fillStyle = accentColor;
         this.ctx.beginPath();
         this.ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.33, 0, Math.PI * 2);
         this.ctx.fill();
 
         // Top light
-        this.ctx.fillStyle = '#9E9E9E';
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.globalAlpha = 0.6;
         this.ctx.beginPath();
         this.ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.15, 0, Math.PI * 2);
         this.ctx.fill();
+        this.ctx.globalAlpha = 1;
 
         // Bumps on surface
-        this.ctx.fillStyle = '#9E9E9E';
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.globalAlpha = 0.5;
         [
             {x: -0.18, y: 0.1, r: 0.08},
             {x: 0.22, y: -0.12, r: 0.07},
@@ -1210,6 +1601,7 @@ export class LevelDesigner {
             this.ctx.arc(x + bump.x * size, y + bump.y * size, size * bump.r, 0, Math.PI * 2);
             this.ctx.fill();
         });
+        this.ctx.globalAlpha = 1;
 
         // Outline
         this.ctx.strokeStyle = '#1A1A1A';
@@ -1219,9 +1611,9 @@ export class LevelDesigner {
         this.ctx.stroke();
     }
 
-    drawRockType3(x, y, size) {
+    drawRockType3(x, y, size, primaryColor, accentColor) {
         // Flat angular rock
-        this.ctx.fillStyle = '#37474F';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x - size * 0.32, y - size * 0.15);
         this.ctx.lineTo(x + size * 0.35, y - size * 0.2);
@@ -1231,13 +1623,15 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Highlight top
-        this.ctx.fillStyle = '#78909C';
+        this.ctx.fillStyle = accentColor;
+        this.ctx.globalAlpha = 0.6;
         this.ctx.beginPath();
         this.ctx.moveTo(x - size * 0.32, y - size * 0.15);
         this.ctx.lineTo(x + size * 0.35, y - size * 0.2);
         this.ctx.lineTo(x, y - size * 0.05);
         this.ctx.closePath();
         this.ctx.fill();
+        this.ctx.globalAlpha = 1;
 
         // Cracks
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
@@ -1259,9 +1653,9 @@ export class LevelDesigner {
         this.ctx.stroke();
     }
 
-    drawRockType4(x, y, size) {
+    drawRockType4(x, y, size, primaryColor, accentColor) {
         // Triangular jagged rock
-        this.ctx.fillStyle = '#455A64';
+        this.ctx.fillStyle = primaryColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - size * 0.35);
         this.ctx.lineTo(x + size * 0.33, y + size * 0.15);
@@ -1270,7 +1664,7 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Shadow right side
-        this.ctx.fillStyle = '#263238';
+        this.ctx.fillStyle = accentColor;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y - size * 0.35);
         this.ctx.lineTo(x + size * 0.33, y + size * 0.15);
@@ -1279,10 +1673,12 @@ export class LevelDesigner {
         this.ctx.fill();
 
         // Highlight
-        this.ctx.fillStyle = '#90A4AE';
+        this.ctx.fillStyle = primaryColor;
+        this.ctx.globalAlpha = 0.6;
         this.ctx.beginPath();
         this.ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.1, 0, Math.PI * 2);
         this.ctx.fill();
+        this.ctx.globalAlpha = 1;
 
         // Surface texture
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
@@ -1513,6 +1909,7 @@ export class LevelDesigner {
         const levelNumber = document.getElementById('levelNumber').value;
         const difficulty = document.getElementById('difficulty').value;
         const maxWaves = document.getElementById('maxWaves').value;
+        const campaignTheme = document.getElementById('campaignTheme').value;
 
         // Get visual config
         const visualConfig = {
@@ -1567,7 +1964,8 @@ export class Level${levelNumber} extends LevelBase {
     static levelMetadata = {
         name: '${levelName}',
         difficulty: '${difficulty}',
-        order: ${levelNumber}
+        order: ${levelNumber},
+        campaign: '${campaignTheme}'
     };
 
     constructor() {
@@ -1576,6 +1974,7 @@ export class Level${levelNumber} extends LevelBase {
         this.levelName = Level${levelNumber}.levelMetadata.name;
         this.levelNumber = Level${levelNumber}.levelMetadata.order;
         this.difficulty = Level${levelNumber}.levelMetadata.difficulty;
+        this.campaign = Level${levelNumber}.levelMetadata.campaign;
         this.maxWaves = ${maxWaves};
         
         // Customize visuals
@@ -1734,6 +2133,12 @@ ${pathCode}
             if (level.levelNumber) document.getElementById('levelNumber').value = level.levelNumber;
             if (level.difficulty) document.getElementById('difficulty').value = level.difficulty;
             if (level.maxWaves) document.getElementById('maxWaves').value = level.maxWaves;
+            
+            // Load campaign theme if available
+            if (level.campaign) {
+                document.getElementById('campaignTheme').value = level.campaign;
+                this.currentCampaign = level.campaign;
+            }
             
             // Load visual configuration
             if (level.visualConfig) {

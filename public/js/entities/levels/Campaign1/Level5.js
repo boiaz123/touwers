@@ -4,7 +4,8 @@ export class Level5 extends LevelBase {
     static levelMetadata = {
         name: 'Placeholder Level',
         difficulty: 'Hard',
-        order: 5
+        order: 5,
+        campaign: 'forest'
     };
 
     constructor() {
@@ -13,6 +14,7 @@ export class Level5 extends LevelBase {
         this.levelName = Level5.levelMetadata.name;
         this.levelNumber = Level5.levelMetadata.order;
         this.difficulty = Level5.levelMetadata.difficulty;
+        this.campaign = Level5.levelMetadata.campaign;
         this.maxWaves = 10;
         
         // Customize visuals for Level 5
