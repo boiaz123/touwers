@@ -171,8 +171,12 @@ export class CampaignBase {
                         // Only allow clicking unlocked levels (not placeholders or locked levels)
                         if (level.unlocked && !level.id.startsWith('placeholder-')) {
                             // Pass level info to GameplayState via stateManager
-                            this.stateManager.selectedLevelInfo = level;
-                            // GameplayState will read selectedLevelInfo.id to create the level
+                            // IMPORTANT: Include campaignId so GameplayState loads from correct campaign
+                            this.stateManager.selectedLevelInfo = {
+                                ...level,
+                                campaignId: this.campaignId
+                            };
+                            // GameplayState will read selectedLevelInfo.id and campaignId to create the level
                             this.stateManager.changeState('game');
                         }
                         return;

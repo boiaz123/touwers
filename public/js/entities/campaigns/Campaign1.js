@@ -1,15 +1,15 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 // Import level classes - they auto-register when imported
-import { Level1 } from '../levels/Campaign1/Level1.js';
-import { Level2 } from '../levels/Campaign1/Level2.js';
-import { Level3 } from '../levels/Campaign1/Level3.js';
-import { Level4 } from '../levels/Campaign1/Level4.js';
-import { Level5 } from '../levels/Campaign1/Level5.js';
+import { ForestLevel1 } from '../levels/Forest/ForestLevel1.js';
+import { ForestLevel2 } from '../levels/Forest/ForestLevel2.js';
+import { ForestLevel3 } from '../levels/Forest/ForestLevel3.js';
+import { ForestLevel4 } from '../levels/Forest/ForestLevel4.js';
+import { ForestLevel5 } from '../levels/Forest/ForestLevel5.js';
 
 /**
- * Campaign1: The Great Northern Campaign
- * Top-down landscape view with castles representing levels along a winding road
+ * Campaign1: The Forest Campaign
+ * Woodland landscape with forest fortifications and natural terrain
  * Castles rendered using exact Castle.js rendering methods for consistency
  */
 export class Campaign1 extends CampaignBase {
@@ -17,7 +17,7 @@ export class Campaign1 extends CampaignBase {
         super(stateManager);
         
         this.campaignId = 'campaign-1';
-        this.campaignName = 'The Great Northern Campaign';
+        this.campaignName = 'The Forest Campaign';
         
         // Castle rendering scale for campaign map
         this.castleScale = 0.5;
@@ -35,7 +35,7 @@ export class Campaign1 extends CampaignBase {
     
     registerLevels() {
         /**
-         * Register all Campaign 1 levels.
+         * Register all Forest Campaign levels.
          * Metadata is read from static levelMetadata property in each level class.
          */
         const registerLevel = (levelId, levelClass) => {
@@ -46,11 +46,11 @@ export class Campaign1 extends CampaignBase {
             LevelRegistry.registerLevel('campaign-1', levelId, levelClass, metadata);
         };
 
-        registerLevel('level1', Level1);
-        registerLevel('level2', Level2);
-        registerLevel('level3', Level3);
-        registerLevel('level4', Level4);
-        registerLevel('level5', Level5);
+        registerLevel('level1', ForestLevel1);
+        registerLevel('level2', ForestLevel2);
+        registerLevel('level3', ForestLevel3);
+        registerLevel('level4', ForestLevel4);
+        registerLevel('level5', ForestLevel5);
     }
     
     enter() {

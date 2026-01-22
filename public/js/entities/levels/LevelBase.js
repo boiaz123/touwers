@@ -3,6 +3,10 @@ export class LevelBase {
         // Resolution manager - will be set during initialization
         this.resolutionManager = resolutionManager;
         
+        // Campaign type - should be overridden by subclasses
+        // Default to 'forest' but subclasses MUST set this to their campaign type
+        this.campaign = 'forest';
+        
         // Grid configuration - will be set by resolutionManager or fallback defaults
         this.gridWidth = 70;
         this.gridHeight = 40;
@@ -68,6 +72,58 @@ export class LevelBase {
             edgeGrassColor: '#2e8b2e'
         };
         
+    }
+    
+    /**
+     * Lighten a hex color by a certain amount
+     * @param {string} color - Hex color (e.g., '#8b7355')
+     * @param {number} amount - Amount to lighten (0-255)
+     * @returns {string} RGB color string
+     */
+    lightenHexColor(color, amount) {
+        // Handle both hex and rgb colors
+        if (color.startsWith('#')) {
+            const hex = color.replace('#', '');
+            const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
+            const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
+            const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
+            return `rgba(${r}, ${g}, ${b}, 0.6)`;
+        }
+        // If it's already an rgba/rgb color, just return a lighter version
+        return color;
+    }
+
+    hexToRgba(color, alpha) {
+        // Convert hex color (#RRGGBB) to RGBA object with specified alpha
+        if (!color.startsWith('#')) {
+            return { r: 100, g: 100, b: 100, a: alpha };
+        }
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return { r, g, b, a: alpha };
+    }
+
+    /**
+     * Get the campaign type with multiple fallback checks
+     * This ensures we always return the correct campaign
+     */
+    getCampaign() {
+        // Try static levelMetadata first (most reliable)
+        if (this.constructor && this.constructor.levelMetadata && this.constructor.levelMetadata.campaign) {
+            const campaign = this.constructor.levelMetadata.campaign.toLowerCase();
+            console.log(`getCampaign (from static): ${this.constructor.name} -> ${campaign}`);
+            return campaign;
+        }
+        // Fall back to instance property
+        if (this.campaign && typeof this.campaign === 'string') {
+            console.log(`getCampaign (from instance): ${this.constructor.name} -> ${this.campaign}`);
+            return this.campaign.toLowerCase();
+        }
+        // Final default
+        console.log(`getCampaign (default): ${this.constructor.name} -> forest`);
+        return 'forest';
     }
     
     // Method to update visual configuration for a level
@@ -161,6 +217,10 @@ export class LevelBase {
         if (!canvasWidth || !canvasHeight || canvasWidth <= 0 || canvasHeight <= 0) {
             console.warn('Level: Invalid canvas dimensions, skipping initialization');
             return;
+        }
+
+        if (this.constructor.name !== 'ForestLevel1' && this.constructor.name !== 'LevelBase') {
+            console.log('Level initialized:', this.constructor.name, 'campaign:', this.campaign, 'terrainElements:', this.terrainElements?.length || 0);
         }
         
         // Prevent infinite loops by checking if already initializing
@@ -1071,6 +1131,9 @@ export class LevelBase {
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
+        // Get path color from config, parse hex to RGB for transparency effects
+        const pathColor = this.visualConfig.pathBaseColor || '#8b7355';
+        
         // Draw smooth dirt road using canvas line rendering
         if (this.path && this.path.length >= 2) {
             // Layer 1: Dark shadow base for depth and grounding
@@ -1085,8 +1148,8 @@ export class LevelBase {
             }
             ctx.stroke();
             
-            // Layer 2: Main dirt road color - warm earth tones
-            ctx.strokeStyle = 'rgba(170, 145, 110, 1)';
+            // Layer 2: Main dirt road color - from visualConfig
+            ctx.strokeStyle = pathColor;
             ctx.lineWidth = pathWidthPixels;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -1098,8 +1161,9 @@ export class LevelBase {
             }
             ctx.stroke();
             
-            // Layer 3: Lighter center stripe - worn dirt from heavy use
-            ctx.strokeStyle = 'rgba(190, 165, 135, 0.6)';
+            // Layer 3: Lighter center stripe - worn dirt from heavy use (lighten the path color)
+            const lighterColor = this.lightenHexColor(pathColor, 50);
+            ctx.strokeStyle = lighterColor;
             ctx.lineWidth = pathWidthPixels * 0.5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -1188,7 +1252,10 @@ export class LevelBase {
                         const offsetY = (Math.cos(seed * 0.4) - 0.5) * pathWidthPixels * 0.5;
                         const pebbleSize = 1.5 + Math.abs(Math.sin(seed * 0.7)) * 2.5;
                         
-                        ctx.fillStyle = `rgba(130, 115, 95, ${0.3 + Math.abs(Math.sin(seed)) * 0.2})`;
+                        // Use darkened path color for pebbles
+                        const pebbleColor = this.hexToRgba(pathColor, 0.3 + Math.abs(Math.sin(seed)) * 0.2);
+                        const darkenedPebble = `rgba(${pebbleColor.r * 0.7}, ${pebbleColor.g * 0.7}, ${pebbleColor.b * 0.7}, ${pebbleColor.a})`;
+                        ctx.fillStyle = darkenedPebble;
                         ctx.beginPath();
                         ctx.arc(x + offsetX, y + offsetY, pebbleSize, 0, Math.PI * 2);
                         ctx.fill();
@@ -1225,7 +1292,10 @@ export class LevelBase {
                     const dustChance = Math.abs(Math.sin(seed * 0.3));
                     
                     if (dustChance > 0.7) {
-                        ctx.fillStyle = `rgba(185, 160, 130, ${0.15 + Math.abs(Math.sin(seed * 2)) * 0.1})`;
+                        // Use lightened path color for dust
+                        const dustColor = this.hexToRgba(pathColor, 0.15 + Math.abs(Math.sin(seed * 2)) * 0.1);
+                        const lightenedDust = `rgba(${Math.min(255, dustColor.r * 1.3)}, ${Math.min(255, dustColor.g * 1.3)}, ${Math.min(255, dustColor.b * 1.3)}, ${dustColor.a})`;
+                        ctx.fillStyle = lightenedDust;
                         const edgeOffset = (Math.sin(seed * 2) > 0 ? 1 : -1) * pathWidthPixels * 0.48;
                         ctx.beginPath();
                         ctx.arc(x + perpX * edgeOffset, y + perpY * edgeOffset, 
@@ -1593,7 +1663,7 @@ export class LevelBase {
         this.renderPath(ctx);
         
         // 5. Render trees and vegetation - LAST, on top of everything
-        this.renderTerrainElementsByType(ctx, ['tree']);
+        this.renderTerrainElementsByType(ctx, ['vegetation', 'tree']);
         
         // Render castle - NOTE: Castle is now rendered by GameplayState after buildings/towers
         // This ensures proper z-ordering so the castle appears in front of buildings behind it
@@ -1800,8 +1870,8 @@ export class LevelBase {
             const size = element.size * this.cellSize;
 
             switch (element.type) {
-                case 'tree':
-                    this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                case 'vegetation':
+                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY);
                     break;
                 case 'rock':
                     this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
@@ -1833,11 +1903,20 @@ export class LevelBase {
             const size = element.size * this.cellSize;
 
             switch (element.type) {
+                case 'vegetation':
+                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    break;
                 case 'tree':
                     this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY);
                     break;
                 case 'rock':
                     this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    break;
+                case 'cactus':
+                    this.renderCactus(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    break;
+                case 'drybush':
+                    this.renderDryBush(ctx, screenX, screenY, size, element.gridX, element.gridY);
                     break;
                 case 'water':
                     if (element.waterType === 'river') {
@@ -1848,6 +1927,835 @@ export class LevelBase {
                     break;
             }
         });
+    }
+
+    renderVegetation(ctx, x, y, size, gridX, gridY) {
+        const campaign = this.getCampaign();
+        
+        // Log only once per level to avoid console spam
+        if (!this._renderedVegetationLogged) {
+            console.log(`renderVegetation: Using campaign "${campaign}" for level ${this.constructor.name}`);
+            this._renderedVegetationLogged = true;
+        }
+        
+        switch (campaign) {
+            case 'desert':
+                this.renderDesertVegetation(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'mountain':
+                this.renderMountainVegetation(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'space':
+                this.renderSpaceVegetation(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'forest':
+            default:
+                this.renderTree(ctx, x, y, size, gridX, gridY);
+                break;
+        }
+    }
+
+    renderDesertVegetation(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
+        switch(seed) {
+            case 0:
+                this.renderCactusSaguaro(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderCactusBarrel(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderCactusPricklyPear(ctx, x, y, size);
+                break;
+            case 3:
+                this.renderCactusColumnar(ctx, x, y, size);
+                break;
+            case 4:
+                this.renderCactusCholla(ctx, x, y, size);
+                break;
+            default:
+                this.renderDesertBush(ctx, x, y, size);
+        }
+    }
+
+    renderCactusSaguaro(ctx, x, y, size) {
+        // Classic saguaro cactus with branches
+        const mainHeight = size * 0.55;
+        const mainWidth = size * 0.25;
+        
+        // Main body - tapered top
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.25, y);
+        ctx.lineTo(x - mainWidth * 0.25, y - mainHeight * 0.7);
+        ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.25, y - mainHeight * 0.7);
+        ctx.lineTo(x + mainWidth * 0.25, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark side
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - mainHeight * 0.7);
+        ctx.quadraticCurveTo(x + mainWidth * 0.15, y - mainHeight * 0.85, x + mainWidth * 0.25, y - mainHeight * 0.7);
+        ctx.lineTo(x + mainWidth * 0.25, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Left arm
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
+        ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.4, x - mainWidth * 0.7, y - mainHeight * 0.2);
+        ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.05, x - mainWidth * 0.3, y - mainHeight * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right arm
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
+        ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.35, x + mainWidth * 0.7, y - mainHeight * 0.15);
+        ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.0, x + mainWidth * 0.3, y - mainHeight * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Spines
+        ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 8; i++) {
+            const px = x - mainWidth * 0.2 + (i * mainWidth * 0.1);
+            const py = y - mainHeight * 0.3;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    renderCactusBarrel(ctx, x, y, size) {
+        // Barrel cactus with proper ribbed structure
+        const height = size * 0.5;
+        const width = size * 0.32;
+
+        // Main body - bulbous shape
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.moveTo(x - width * 0.35, y - height * 0.2);
+        ctx.quadraticCurveTo(x - width * 0.42, y - height * 0.4, x, y - height * 0.5);
+        ctx.quadraticCurveTo(x + width * 0.42, y - height * 0.4, x + width * 0.35, y - height * 0.2);
+        ctx.quadraticCurveTo(x + width * 0.38, y, x + width * 0.35, y + height * 0.25);
+        ctx.quadraticCurveTo(x + width * 0.25, y + height * 0.4, x, y + height * 0.45);
+        ctx.quadraticCurveTo(x - width * 0.25, y + height * 0.4, x - width * 0.35, y + height * 0.25);
+        ctx.quadraticCurveTo(x - width * 0.38, y, x - width * 0.35, y - height * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark side
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.moveTo(x + width * 0.05, y - height * 0.2);
+        ctx.quadraticCurveTo(x + width * 0.4, y - height * 0.35, x + width * 0.35, y - height * 0.45);
+        ctx.quadraticCurveTo(x + width * 0.2, y - height * 0.48, x + width * 0.05, y - height * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Horizontal ribs
+        ctx.strokeStyle = '#1e8449';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const py = y - height * 0.35 + (i * height * 0.15);
+            const ribWidth = width * (0.35 - Math.abs(i - 2) * 0.08);
+            ctx.beginPath();
+            ctx.moveTo(x - ribWidth, py);
+            ctx.quadraticCurveTo(x, py - height * 0.02, x + ribWidth, py);
+            ctx.stroke();
+        }
+
+        // Spine clusters
+        ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const radius = width * 0.3;
+            const px = x + Math.cos(angle) * radius;
+            const py = y - height * 0.15 + Math.sin(angle) * height * 0.15;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    renderCactusPricklyPear(ctx, x, y, size) {
+        // Helper function to render organic leaf pad
+        const renderLeafPad = (x, y, width, height, rotation, color1, color2) => {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            // Main organic leaf pad using bezier curves
+            ctx.fillStyle = color1;
+            ctx.beginPath();
+            ctx.moveTo(0, -height * 0.5);
+            ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
+            ctx.quadraticCurveTo(width * 0.3, height * 0.4, 0, height * 0.5);
+            ctx.quadraticCurveTo(-width * 0.3, height * 0.4, -width * 0.4, 0);
+            ctx.quadraticCurveTo(-width * 0.35, -height * 0.35, 0, -height * 0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dark side shading
+            ctx.fillStyle = color2;
+            ctx.beginPath();
+            ctx.moveTo(0, -height * 0.5);
+            ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
+            ctx.quadraticCurveTo(width * 0.3, height * 0.4, width * 0.1, height * 0.5);
+            ctx.quadraticCurveTo(width * 0.05, height * 0.2, 0, -height * 0.5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Spine clusters on pad
+            ctx.fillStyle = '#1e8449';
+            const spines = [
+                {x: 0, y: -height * 0.35},
+                {x: width * 0.15, y: -height * 0.15},
+                {x: -width * 0.15, y: -height * 0.15},
+                {x: width * 0.25, y: height * 0.15},
+                {x: -width * 0.25, y: height * 0.15},
+                {x: 0, y: height * 0.35}
+            ];
+            spines.forEach(spine => {
+                ctx.beginPath();
+                ctx.arc(spine.x, spine.y, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        };
+
+        const padWidth = size * 0.22;
+        const padHeight = size * 0.35;
+
+        // Main central pad
+        renderLeafPad(x, y - padHeight * 0.2, padWidth * 0.5, padHeight * 0.6, 0, '#3a8659', '#2d6b4f');
+
+        // Right side pad
+        renderLeafPad(x + padWidth * 0.42, y - padHeight * 0.1, padWidth * 0.45, padHeight * 0.5, Math.PI / 4.5, '#3a8659', '#2d6b4f');
+
+        // Left side pad
+        renderLeafPad(x - padWidth * 0.42, y + padHeight * 0.05, padWidth * 0.45, padHeight * 0.5, -Math.PI / 4.5, '#3a8659', '#2d6b4f');
+
+        // Lower pad (base)
+        renderLeafPad(x, y + padHeight * 0.3, padWidth * 0.48, padHeight * 0.5, Math.PI / 8, '#2d6b4f', '#1e4d35');
+
+        // Highlight on main pad
+        ctx.fillStyle = '#58d68d';
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(x - padWidth * 0.15, y - padHeight * 0.35, padWidth * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    renderCactusColumnar(ctx, x, y, size) {
+        // Tall columnar organ pipe cactus
+        const bodyWidth = size * 0.18;
+        const bodyHeight = size * 0.6;
+
+        // Main body
+        ctx.fillStyle = '#2a5a2a';
+        ctx.fillRect(x - bodyWidth * 0.5, y - bodyHeight, bodyWidth, bodyHeight);
+
+        // Vertical ridge lines (4 ridges)
+        ctx.strokeStyle = '#1a3a1a';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const px = x - bodyWidth * 0.3 + i * bodyWidth * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(px, y - bodyHeight);
+            ctx.lineTo(px, y);
+            ctx.stroke();
+        }
+
+        // Spine clusters at intervals
+        ctx.fillStyle = '#4a4a2a';
+        for (let i = 0; i < 5; i++) {
+            const py = y - bodyHeight + (i * bodyHeight * 0.25);
+            // 2 spines per row
+            for (let j = 0; j < 2; j++) {
+                const px = x - bodyWidth * 0.25 + j * bodyWidth * 0.5;
+                ctx.beginPath();
+                ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Highlight stripe
+        ctx.fillStyle = 'rgba(100, 150, 100, 0.3)';
+        ctx.fillRect(x - bodyWidth * 0.15, y - bodyHeight * 0.9, bodyWidth * 0.2, bodyHeight * 0.8);
+    }
+
+    renderCactusCholla(ctx, x, y, size) {
+        // Branching cholla with arms
+        const mainHeight = size * 0.5;
+        const mainWidth = size * 0.15;
+
+        // Main body/stem
+        ctx.fillStyle = '#2a5a2a';
+        ctx.fillRect(x - mainWidth * 0.5, y - mainHeight, mainWidth, mainHeight);
+
+        // Upper left branch
+        ctx.save();
+        ctx.translate(x, y - mainHeight * 0.7);
+        ctx.rotate(-Math.PI * 0.35);
+        ctx.fillStyle = '#2a4a2a';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.35, mainWidth * 0.7, mainHeight * 0.35);
+        ctx.restore();
+
+        // Upper right branch
+        ctx.save();
+        ctx.translate(x, y - mainHeight * 0.7);
+        ctx.rotate(Math.PI * 0.35);
+        ctx.fillStyle = '#2a4a2a';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.35, mainWidth * 0.7, mainHeight * 0.35);
+        ctx.restore();
+
+        // Lower left branch
+        ctx.save();
+        ctx.translate(x, y - mainHeight * 0.2);
+        ctx.rotate(-Math.PI * 0.25);
+        ctx.fillStyle = '#1a3a1a';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.3, mainWidth * 0.7, mainHeight * 0.3);
+        ctx.restore();
+
+        // Lower right branch
+        ctx.save();
+        ctx.translate(x, y - mainHeight * 0.2);
+        ctx.rotate(Math.PI * 0.25);
+        ctx.fillStyle = '#1a3a1a';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.3, mainWidth * 0.7, mainHeight * 0.3);
+        ctx.restore();
+
+        // Dense spine perimeter (15 spines)
+        ctx.fillStyle = '#4a4a2a';
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2;
+            const spineX = x + Math.cos(angle) * mainWidth * 0.8;
+            const spineY = y - mainHeight * 0.5 + Math.sin(angle) * mainHeight * 0.4;
+            ctx.beginPath();
+            ctx.arc(spineX, spineY, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Highlight
+        ctx.fillStyle = 'rgba(100, 150, 100, 0.2)';
+        ctx.fillRect(x - mainWidth * 0.2, y - mainHeight * 0.8, mainWidth * 0.3, mainHeight * 0.6);
+    }
+
+    renderDesertBush(ctx, x, y, size) {
+        // Dry desert bush - irregular organic shape
+        const radius = size * 0.28;
+
+        // Main body with irregular outline
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const variation = Math.sin(angle * 3) * 0.15 + Math.cos(angle * 5) * 0.1;
+            const r = radius * (0.85 + variation);
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r * 0.8;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Darker inner layer for depth
+        ctx.fillStyle = '#7a5c3f';
+        ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const variation = Math.sin(angle * 3) * 0.08;
+            const r = radius * (0.5 + variation);
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r * 0.8;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight on top
+        ctx.fillStyle = '#bfa878';
+        ctx.beginPath();
+        ctx.moveTo(x - radius * 0.2, y - radius * 0.3);
+        ctx.quadraticCurveTo(x, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
+        ctx.quadraticCurveTo(x + radius * 0.1, y - radius * 0.15, x - radius * 0.1, y - radius * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Branch structure
+        ctx.strokeStyle = '#5c4630';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * radius * 0.2;
+            const startY = y + Math.sin(angle) * radius * 0.15;
+            const midX = x + Math.cos(angle) * radius * 0.65;
+            const midY = y + Math.sin(angle) * radius * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(midX, midY - size * 0.05, midX + Math.cos(angle + 0.3) * size * 0.08, midY + Math.sin(angle + 0.3) * size * 0.08);
+            ctx.stroke();
+        }
+    }
+
+    renderMountainVegetation(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 3;
+        switch(seed) {
+            case 0:
+                this.renderMountainPineType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderMountainPineType2(ctx, x, y, size);
+                break;
+            default:
+                this.renderMountainPineType3(ctx, x, y, size);
+        }
+    }
+
+    renderSpaceVegetation(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        switch(seed) {
+            case 0:
+                this.renderSpaceVortexPlant(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderSpaceSpikeCoral(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderSpaceFractalGrowth(ctx, x, y, size);
+                break;
+            case 3:
+                this.renderSpaceBiolumPlant(ctx, x, y, size);
+                break;
+            default:
+                this.renderSpaceAlienMushroom(ctx, x, y, size);
+        }
+    }
+
+    renderSpaceVortexPlant(ctx, x, y, size) {
+        // Swirling vortex-like alien plant
+        ctx.fillStyle = '#4a6a9a';
+        
+        // Spiral body
+        const spirals = 3;
+        for (let layer = 0; layer < spirals; layer++) {
+            const radius = size * (0.08 + layer * 0.08);
+            ctx.beginPath();
+            for (let i = 0; i < 50; i++) {
+                const angle = (i / 50) * Math.PI * 2 + layer * Math.PI / 2;
+                const dist = radius * (i / 50);
+                const px = x + Math.cos(angle) * dist;
+                const py = y + Math.sin(angle) * dist;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.strokeStyle = `rgba(100, 150, 255, ${0.6 - layer * 0.15})`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Center glow
+        ctx.fillStyle = 'rgba(200, 100, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceSpikeCoral(ctx, x, y, size) {
+        // Spike coral formation
+        ctx.fillStyle = '#5a7aaa';
+        
+        // Main body cluster
+        const spikeCount = 8;
+        for (let i = 0; i < spikeCount; i++) {
+            const angle = (i / spikeCount) * Math.PI * 2;
+            const baseX = x + Math.cos(angle) * size * 0.08;
+            const baseY = y + Math.sin(angle) * size * 0.08;
+            const tipX = x + Math.cos(angle) * size * 0.25;
+            const tipY = y + Math.sin(angle) * size * 0.25;
+            
+            // Spike
+            ctx.strokeStyle = `rgba(${100 + Math.cos(angle) * 50}, ${150}, ${200 + Math.sin(angle) * 50}, 0.9)`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY);
+            ctx.quadraticCurveTo(
+                (baseX + tipX) * 0.5 + Math.cos(angle + Math.PI/2) * size * 0.05,
+                (baseY + tipY) * 0.5 + Math.sin(angle + Math.PI/2) * size * 0.05,
+                tipX, tipY
+            );
+            ctx.stroke();
+        }
+
+        // Center sphere
+        ctx.fillStyle = '#8aaacc';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceFractalGrowth(ctx, x, y, size) {
+        // Fractal branching alien structure
+        const drawFractal = (cx, cy, length, angle, depth) => {
+            if (depth === 0) return;
+            
+            const endX = cx + Math.cos(angle) * length;
+            const endY = cy + Math.sin(angle) * length;
+            
+            ctx.strokeStyle = `rgba(${100 + depth * 30}, ${150 + depth * 20}, ${255 - depth * 30}, ${0.7 - depth * 0.1})`;
+            ctx.lineWidth = Math.max(1, 3 - depth);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            
+            // Branch left and right
+            drawFractal(endX, endY, length * 0.7, angle - Math.PI / 5, depth - 1);
+            drawFractal(endX, endY, length * 0.7, angle + Math.PI / 5, depth - 1);
+        };
+
+        // Draw three main branches
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            drawFractal(x, y, size * 0.15, angle, 3);
+        }
+
+        // Core
+        ctx.fillStyle = '#aabbdd';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceBiolumPlant(ctx, x, y, size) {
+        // Bioluminescent branching organism
+        ctx.fillStyle = '#3a7a9a';
+        
+        // Main body
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = size * (0.15 + Math.sin(i * 0.8) * 0.08);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Bioluminescent tendrils
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * size * 0.13;
+            const startY = y + Math.sin(angle) * size * 0.13;
+            
+            ctx.strokeStyle = `rgba(100, ${200 + Math.sin(angle) * 50}, 255, 0.8)`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            // Wavy tendril
+            for (let j = 0; j < 5; j++) {
+                const progress = (j + 1) / 5;
+                const offsetX = Math.cos(angle) * size * 0.2 * progress;
+                const offsetY = Math.sin(angle) * size * 0.2 * progress;
+                const wiggleX = Math.sin(angle + j) * size * 0.05;
+                const wiggleY = Math.cos(angle + j) * size * 0.05;
+                ctx.lineTo(startX + offsetX + wiggleX, startY + offsetY + wiggleY);
+            }
+            ctx.stroke();
+        }
+
+        // Intense core glow
+        ctx.fillStyle = 'rgba(150, 200, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceAlienMushroom(ctx, x, y, size) {
+        // Impossible geometry alien mushroom
+        // Cap with inverted perspective
+        ctx.fillStyle = '#6a5aaa';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y - size * 0.08);
+        ctx.bezierCurveTo(
+            x - size * 0.18, y - size * 0.18,
+            x + size * 0.18, y - size * 0.18,
+            x + size * 0.18, y - size * 0.08
+        );
+        ctx.lineTo(x + size * 0.1, y + size * 0.08);
+        ctx.lineTo(x - size * 0.1, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Inverted inner surface (different color)
+        ctx.fillStyle = '#4a3aaa';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.14, y - size * 0.05);
+        ctx.bezierCurveTo(
+            x - size * 0.14, y - size * 0.12,
+            x + size * 0.14, y - size * 0.12,
+            x + size * 0.14, y - size * 0.05
+        );
+        ctx.lineTo(x + size * 0.08, y + size * 0.04);
+        ctx.lineTo(x - size * 0.08, y + size * 0.04);
+        ctx.closePath();
+        ctx.fill();
+
+        // Stem
+        ctx.fillStyle = '#5a6aaa';
+        ctx.fillRect(x - size * 0.06, y + size * 0.08, size * 0.12, size * 0.16);
+
+        // Bioluminescent gill-like structures
+        ctx.strokeStyle = 'rgba(200, 100, 255, 0.6)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const py = y - size * 0.08 + (i * size * 0.035);
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.14, py);
+            ctx.quadraticCurveTo(x, py - size * 0.02, x + size * 0.14, py);
+            ctx.stroke();
+        }
+
+        // Glow aura
+        ctx.fillStyle = 'rgba(200, 100, 255, 0.2)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderMountainPineType1(ctx, x, y, size) {
+        // Tall pine with heavy snow
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.45;
+
+        // Trunk
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Tree shape - dark green cone
+        ctx.fillStyle = '#1a4d2e';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.65);
+        ctx.lineTo(x + size * 0.4, y - size * 0.05);
+        ctx.lineTo(x - size * 0.4, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid-layer
+        ctx.fillStyle = '#2d5a3d';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.35, y + size * 0.15);
+        ctx.lineTo(x - size * 0.35, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow cap
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x + size * 0.12, y - size * 0.4);
+        ctx.lineTo(x - size * 0.12, y - size * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow on middle branches
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.15, y - size * 0.2);
+        ctx.lineTo(x + size * 0.28, y);
+        ctx.lineTo(x + size * 0.08, y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.2);
+        ctx.lineTo(x - size * 0.28, y);
+        ctx.lineTo(x - size * 0.08, y);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderMountainPineType2(ctx, x, y, size) {
+        // Medium pine, less snow
+        const trunkWidth = size * 0.18;
+        const trunkHeight = size * 0.4;
+
+        // Trunk
+        ctx.fillStyle = '#704020';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Main tree cone
+        ctx.fillStyle = '#2d5a3d';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.55);
+        ctx.lineTo(x + size * 0.35, y);
+        ctx.lineTo(x - size * 0.35, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Darker accent
+        ctx.fillStyle = '#1a3d28';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.3);
+        ctx.lineTo(x + size * 0.15, y - size * 0.3);
+        ctx.lineTo(x - size * 0.28, y + size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Light snow cap
+        ctx.fillStyle = '#f5f5f5';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.5, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Snow on edges
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < 2; i++) {
+            const angle = (i / 2) * Math.PI;
+            const px = x + Math.cos(angle - Math.PI / 2) * size * 0.25;
+            const py = y - size * 0.15;
+            ctx.beginPath();
+            ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    renderMountainPineType3(ctx, x, y, size) {
+        // Small shrubby pine
+        const trunkWidth = size * 0.15;
+        const trunkHeight = size * 0.35;
+
+        // Trunk
+        ctx.fillStyle = '#8b5a3c';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Bushy tree shape
+        ctx.fillStyle = '#3d6d4d';
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.2, size * 0.3, size * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Dark shadow side
+        ctx.fillStyle = '#1a3d28';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.1, y - size * 0.2, size * 0.2, size * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Snow patches
+        ctx.fillStyle = '#e8e8e8';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.15, y - size * 0.35, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceCrystalType1(ctx, x, y, size) {
+        // Large geometric crystal formation
+        ctx.fillStyle = '#6a5a9a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.2, y + size * 0.15);
+        ctx.lineTo(x + size * 0.08, y + size * 0.3);
+        ctx.lineTo(x - size * 0.08, y + size * 0.3);
+        ctx.lineTo(x - size * 0.2, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Highlight face
+        ctx.fillStyle = '#8a7aaa';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.2, y + size * 0.15);
+        ctx.lineTo(x + size * 0.05, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glow
+        ctx.fillStyle = 'rgba(138, 122, 170, 0.6)';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.05, size * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright core
+        ctx.fillStyle = '#b9a8d9';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.15, size * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceCrystalType2(ctx, x, y, size) {
+        // Small crystal spike
+        ctx.fillStyle = '#7a6aaa';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x + size * 0.12, y + size * 0.2);
+        ctx.lineTo(x - size * 0.12, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Brighter side
+        ctx.fillStyle = '#9a8aaa';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.4);
+        ctx.lineTo(x + size * 0.12, y + size * 0.2);
+        ctx.lineTo(x, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glow
+        ctx.fillStyle = 'rgba(154, 138, 170, 0.5)';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderAlienPlant(ctx, x, y, size) {
+        // Bioluminescent organism
+        ctx.fillStyle = '#4a7a8a';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const radius = size * (0.2 + Math.abs(Math.sin(angle * 3)) * 0.08);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Intense glow
+        ctx.fillStyle = 'rgba(100, 200, 220, 0.7)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright core
+        ctx.fillStyle = '#7ad4d4';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.08, y - size * 0.08, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderTree(ctx, x, y, size, gridX, gridY) {
@@ -1976,20 +2884,743 @@ export class LevelBase {
     }
 
     renderRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+        const campaign = this.getCampaign();
+        
+        switch (campaign) {
+            case 'desert':
+                this.renderDesertRock(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'mountain':
+                this.renderMountainRock(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'space':
+                this.renderSpaceRock(ctx, x, y, size, gridX, gridY);
+                break;
+            case 'forest':
+            default:
+                // Forest/generic rocks
+                const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+                switch(seed) {
+                    case 0:
+                        this.renderRockType1(ctx, x, y, size);
+                        break;
+                    case 1:
+                        this.renderRockType2(ctx, x, y, size);
+                        break;
+                    case 2:
+                        this.renderRockType3(ctx, x, y, size);
+                        break;
+                    default:
+                        this.renderRockType4(ctx, x, y, size);
+                }
+                break;
+        }
+    }
+
+    renderMountainRock(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
         switch(seed) {
             case 0:
-                this.renderRockType1(ctx, x, y, size);
+                this.renderMountainRockSnowy(ctx, x, y, size);
                 break;
             case 1:
-                this.renderRockType2(ctx, x, y, size);
+                this.renderMountainRockJagged(ctx, x, y, size);
                 break;
             case 2:
-                this.renderRockType3(ctx, x, y, size);
+                this.renderMountainRockBoulder(ctx, x, y, size);
+                break;
+            case 3:
+                this.renderMountainRockSlab(ctx, x, y, size);
                 break;
             default:
-                this.renderRockType4(ctx, x, y, size);
+                this.renderMountainRockClustered(ctx, x, y, size);
         }
+    }
+
+    renderMountainRockSnowy(ctx, x, y, size) {
+        // Layered snowy rock with strong contrast
+        ctx.fillStyle = '#6a6a6a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.1);
+        ctx.lineTo(x, y - size * 0.3);
+        ctx.lineTo(x + size * 0.32, y + size * 0.1);
+        ctx.lineTo(x + size * 0.28, y + size * 0.3);
+        ctx.lineTo(x - size * 0.28, y + size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Large snow cap - very bright
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y - size * 0.08);
+        ctx.lineTo(x, y - size * 0.3);
+        ctx.lineTo(x + size * 0.28, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark shadow on right side
+        ctx.fillStyle = '#4a4a4a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.28, y + size * 0.1);
+        ctx.lineTo(x + size * 0.32, y + size * 0.1);
+        ctx.lineTo(x + size * 0.28, y + size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow shading beneath cap
+        ctx.fillStyle = '#d5d5d5';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y + size * 0.05);
+        ctx.lineTo(x + size * 0.18, y + size * 0.05);
+        ctx.lineTo(x + size * 0.12, y + size * 0.15);
+        ctx.lineTo(x - size * 0.12, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderMountainRockJagged(ctx, x, y, size) {
+        // Jagged peak with pronounced snow patches
+        const rockColor = '#5a5a5a';
+        const snowColor = '#ffffff';
+        
+        ctx.fillStyle = rockColor;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y + size * 0.15);
+        ctx.lineTo(x - size * 0.1, y - size * 0.25);
+        ctx.lineTo(x + size * 0.15, y - size * 0.2);
+        ctx.lineTo(x + size * 0.3, y + size * 0.2);
+        ctx.lineTo(x + size * 0.1, y + size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+
+        // Large snow patches on left
+        ctx.fillStyle = snowColor;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y - size * 0.08);
+        ctx.lineTo(x - size * 0.08, y - size * 0.2);
+        ctx.lineTo(x - size * 0.12, y + size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow patches on right - bright
+        ctx.fillStyle = '#e8e8e8';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y - size * 0.2);
+        ctx.lineTo(x + size * 0.2, y - size * 0.12);
+        ctx.lineTo(x + size * 0.15, y + size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark shadow in valley
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.12);
+        ctx.lineTo(x + size * 0.08, y - size * 0.15);
+        ctx.lineTo(x, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderMountainRockBoulder(ctx, x, y, size) {
+        // Round boulder with visible striations
+        ctx.fillStyle = '#7a7a7a';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Deep striations
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 1.5;
+        for (let i = -3; i <= 3; i++) {
+            const offset = i * size * 0.08;
+            ctx.beginPath();
+            ctx.arc(x + offset, y, size * 0.28, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Bright highlight - upper left
+        ctx.fillStyle = '#ababab';
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(x - size * 0.12, y - size * 0.18, size * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Dark shadow - lower right
+        ctx.fillStyle = '#4a4a4a';
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    renderMountainRockSlab(ctx, x, y, size) {
+        // Flat slab with prominent snow layer
+        ctx.fillStyle = '#5a5a5a';
+        ctx.fillRect(x - size * 0.32, y - size * 0.1, size * 0.64, size * 0.3);
+
+        // Thick snow layer on top - very bright
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - size * 0.32, y - size * 0.14, size * 0.64, size * 0.06);
+
+        // Snow shadows
+        ctx.fillStyle = '#d5d5d5';
+        ctx.fillRect(x - size * 0.32, y - size * 0.08, size * 0.64, size * 0.02);
+
+        // Rock edge highlight
+        ctx.fillStyle = '#7a7a7a';
+        ctx.fillRect(x - size * 0.32, y + size * 0.15, size * 0.64, size * 0.05);
+
+        // Rock details
+        ctx.strokeStyle = '#5a5a5a';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const py = y - size * 0.08 + i * size * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.32, py);
+            ctx.lineTo(x + size * 0.32, py);
+            ctx.stroke();
+        }
+    }
+
+    renderMountainRockClustered(ctx, x, y, size) {
+        // Clustered arrangement of small rocks
+        const clusters = [
+            {x: -0.2, y: 0.1, r: 0.18},
+            {x: 0.2, y: 0, r: 0.2},
+            {x: 0, y: 0.22, r: 0.15}
+        ];
+
+        ctx.fillStyle = '#8a8a8a';
+        clusters.forEach(cluster => {
+            ctx.beginPath();
+            ctx.arc(x + cluster.x * size, y + cluster.y * size, size * cluster.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Snow accents
+        ctx.fillStyle = 'rgba(240, 240, 240, 0.6)';
+        clusters.forEach(cluster => {
+            ctx.beginPath();
+            ctx.arc(x + cluster.x * size - size * 0.08, y + cluster.y * size - size * 0.08, size * cluster.r * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    renderDesertRock(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        switch(seed) {
+            case 0:
+                this.renderDesertRockSmooth(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderDesertRockLayered(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderDesertRockWeathered(ctx, x, y, size);
+                break;
+            case 3:
+                this.renderDesertRockAngular(ctx, x, y, size);
+                break;
+            default:
+                this.renderDesertRockCrystal(ctx, x, y, size);
+        }
+    }
+
+    renderDesertRockSmooth(ctx, x, y, size) {
+        // Smooth rounded rock - polished appearance
+        ctx.fillStyle = '#d9a876';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Strong highlight - very smooth
+        ctx.fillStyle = '#f5d9b8';
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.arc(x - size * 0.1, y - size * 0.15, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Deep shadow
+        ctx.fillStyle = '#7a6a4a';
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Rim highlight
+        ctx.strokeStyle = '#e5c9a8';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    renderDesertRockLayered(ctx, x, y, size) {
+        // Horizontally striated rock with strong layering
+        ctx.fillStyle = '#9a8a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y - size * 0.2);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.28, y + size * 0.25);
+        ctx.lineTo(x - size * 0.28, y + size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+
+        // Strong dark striation lines
+        ctx.strokeStyle = '#6a5a3a';
+        ctx.lineWidth = 2;
+        for (let i = -2; i <= 3; i++) {
+            const py = y - size * 0.1 + i * size * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.28, py);
+            ctx.lineTo(x + size * 0.28, py);
+            ctx.stroke();
+        }
+
+        // Alternating lighter stripes
+        ctx.strokeStyle = '#d9b89a';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.7;
+        for (let i = -1; i <= 3; i += 2) {
+            const py = y - size * 0.1 + i * size * 0.12;
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.28, py);
+            ctx.lineTo(x + size * 0.28, py);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // Highlight top edge
+        ctx.strokeStyle = '#e9d9a8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.3, y - size * 0.2);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.stroke();
+    }
+
+    renderDesertRockWeathered(ctx, x, y, size) {
+        // Porous weathered rock with prominent holes
+        ctx.fillStyle = '#a8876a';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Deep weathering holes
+        ctx.fillStyle = '#3a2a0a';
+        const holes = [
+            {x: -0.12, y: -0.1, r: 0.1},
+            {x: 0.15, y: -0.05, r: 0.08},
+            {x: 0.08, y: 0.15, r: 0.09},
+            {x: -0.15, y: 0.12, r: 0.07},
+            {x: 0.02, y: 0, r: 0.06}
+        ];
+        holes.forEach(hole => {
+            ctx.beginPath();
+            ctx.arc(x + hole.x * size, y + hole.y * size, size * hole.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Rust/oxidation stains with better visibility
+        ctx.fillStyle = 'rgba(139, 69, 19, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(x - size * 0.15, y + size * 0.1, size * 0.12, size * 0.08, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(160, 82, 45, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.1, y - size * 0.15, size * 0.1, size * 0.06, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rim highlight
+        ctx.strokeStyle = '#c9a876';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    renderDesertRockAngular(ctx, x, y, size) {
+        // Angular faceted rock with dramatic contrast
+        ctx.fillStyle = '#8a7a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y - size * 0.15);
+        ctx.lineTo(x + size * 0.2, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.15, y + size * 0.3);
+        ctx.lineTo(x - size * 0.2, y + size * 0.28);
+        ctx.lineTo(x - size * 0.32, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright facet - upper
+        ctx.fillStyle = '#e5c9a8';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y - size * 0.15);
+        ctx.lineTo(x + size * 0.2, y - size * 0.25);
+        ctx.lineTo(x + size * 0.08, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid-tone facet - right side
+        ctx.fillStyle = '#b89a7a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.2, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.12, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark facet shadow - lower
+        ctx.fillStyle = '#6a5a3a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.15, y + size * 0.3);
+        ctx.lineTo(x + size * 0.08, y + size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Very dark shadow - bottom left
+        ctx.fillStyle = '#4a3a1a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.2, y + size * 0.28);
+        ctx.lineTo(x + size * 0.15, y + size * 0.3);
+        ctx.lineTo(x - size * 0.1, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderDesertRockCrystal(ctx, x, y, size) {
+        // Multi-faceted crystal with strong shine
+        ctx.fillStyle = '#c9a98a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.3);
+        ctx.lineTo(x + size * 0.22, y - size * 0.08);
+        ctx.lineTo(x + size * 0.18, y + size * 0.28);
+        ctx.lineTo(x - size * 0.18, y + size * 0.28);
+        ctx.lineTo(x - size * 0.22, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Very bright left facet - crystal shine
+        ctx.fillStyle = '#f5e9d9';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.3);
+        ctx.lineTo(x + size * 0.22, y - size * 0.08);
+        ctx.lineTo(x + size * 0.02, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid-bright right facet
+        ctx.fillStyle = '#d9c9b0';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.3);
+        ctx.lineTo(x - size * 0.22, y - size * 0.08);
+        ctx.lineTo(x - size * 0.05, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark lower facet
+        ctx.fillStyle = '#8a7a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y + size * 0.28);
+        ctx.lineTo(x + size * 0.18, y + size * 0.28);
+        ctx.lineTo(x + size * 0.02, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Very dark bottom shadow
+        ctx.fillStyle = '#5a4a2a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y + size * 0.28);
+        ctx.lineTo(x + size * 0.18, y + size * 0.28);
+        ctx.lineTo(x + size * 0.08, y + size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.lineTo(x + size * 0.02, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderSpaceRock(ctx, x, y, size, gridX, gridY) {
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        switch(seed) {
+            case 0:
+                this.renderSpaceRockFractal(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderSpaceRockSpiky(ctx, x, y, size);
+                break;
+            case 2:
+                this.renderSpaceRockCrystalline(ctx, x, y, size);
+                break;
+            case 3:
+                this.renderSpaceRockVoid(ctx, x, y, size);
+                break;
+            default:
+                this.renderSpaceRockNonEuclidean(ctx, x, y, size);
+        }
+    }
+
+    renderSpaceRockFractal(ctx, x, y, size) {
+        // Impossible angle asteroid with fractal pattern
+        ctx.fillStyle = '#5a4a7a';
+        
+        // Main jagged form
+        const points = [
+            {x: -0.25, y: -0.3},
+            {x: 0.15, y: -0.35},
+            {x: 0.28, y: -0.1},
+            {x: 0.35, y: 0.15},
+            {x: 0.2, y: 0.3},
+            {x: -0.1, y: 0.35},
+            {x: -0.32, y: 0.1},
+            {x: -0.3, y: -0.15}
+        ];
+        
+        ctx.beginPath();
+        ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Glowing edges
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Void-like center
+        ctx.fillStyle = 'rgba(40, 20, 60, 0.8)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceRockSpiky(ctx, x, y, size) {
+        // Jagged asteroid with bioluminescent spikes
+        ctx.fillStyle = '#6a4a8a';
+        
+        // Main body
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spike protrusions in all directions
+        const spikeCount = 12;
+        for (let i = 0; i < spikeCount; i++) {
+            const angle = (i / spikeCount) * Math.PI * 2;
+            const baseX = x + Math.cos(angle) * size * 0.22;
+            const baseY = y + Math.sin(angle) * size * 0.22;
+            const tipX = x + Math.cos(angle) * size * 0.35;
+            const tipY = y + Math.sin(angle) * size * 0.35;
+
+            // Spike body
+            ctx.fillStyle = '#5a3a7a';
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY);
+            ctx.lineTo(tipX, tipY);
+            ctx.lineTo(baseX + Math.cos(angle + 0.2) * size * 0.08, baseY + Math.sin(angle + 0.2) * size * 0.08);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bioluminescent glow on spike
+            ctx.strokeStyle = `rgba(100, ${150 + Math.sin(i) * 50}, 255, 0.8)`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY);
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+        }
+
+        // Glow core
+        ctx.fillStyle = 'rgba(100, 150, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceRockCrystalline(ctx, x, y, size) {
+        // Crystalline hexagonal structure
+        const hexagonSize = size * 0.25;
+        
+        // Main crystal body
+        ctx.fillStyle = '#7a5aaa';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const px = x + Math.cos(angle) * hexagonSize;
+            const py = y + Math.sin(angle) * hexagonSize;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Inner crystal layers
+        ctx.fillStyle = '#9a7aaa';
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const px = x + Math.cos(angle) * hexagonSize * 0.6;
+            const py = y + Math.sin(angle) * hexagonSize * 0.6;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Radiating glow rays
+        ctx.strokeStyle = 'rgba(200, 150, 255, 0.7)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * hexagonSize;
+            const startY = y + Math.sin(angle) * hexagonSize;
+            const endX = x + Math.cos(angle) * hexagonSize * 1.4;
+            const endY = y + Math.sin(angle) * hexagonSize * 1.4;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        // Center glow
+        ctx.fillStyle = 'rgba(200, 150, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderSpaceRockVoid(ctx, x, y, size) {
+        // Floating chunk with impossible topology
+        // Outer distorted form
+        ctx.fillStyle = '#4a3a6a';
+        ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distortion = 0.15 + Math.sin(angle * 3) * 0.1;
+            const px = x + Math.cos(angle) * size * distortion;
+            const py = y + Math.sin(angle) * size * distortion;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        // Energy field distortion ring
+        ctx.strokeStyle = 'rgba(150, 100, 200, 0.5)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            const radius = size * (0.2 + Math.sin(angle * 4) * 0.08);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Void core
+        ctx.fillStyle = 'rgba(20, 10, 40, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Void event horizon
+        ctx.strokeStyle = 'rgba(200, 100, 255, 0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    renderSpaceRockNonEuclidean(ctx, x, y, size) {
+        // Non-euclidean geometry rock with bezier curves
+        ctx.fillStyle = '#6a4a9a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y - size * 0.2);
+        ctx.bezierCurveTo(
+            x - size * 0.3, y - size * 0.35,
+            x + size * 0.1, y - size * 0.4,
+            x + size * 0.3, y - size * 0.1
+        );
+        ctx.lineTo(x + size * 0.2, y + size * 0.15);
+        ctx.bezierCurveTo(
+            x + size * 0.05, y + size * 0.3,
+            x - size * 0.15, y + size * 0.25,
+            x - size * 0.25, y + size * 0.05
+        );
+        ctx.closePath();
+        ctx.fill();
+
+        // Second overlapping surface
+        ctx.fillStyle = '#7a5aaa';
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.25);
+        ctx.bezierCurveTo(
+            x - size * 0.05, y - size * 0.38,
+            x + size * 0.25, y - size * 0.3,
+            x + size * 0.25, y);
+        ctx.lineTo(x + size * 0.1, y + size * 0.2);
+        ctx.bezierCurveTo(
+            x - size * 0.05, y + size * 0.2,
+            x - size * 0.2, y + size * 0.1,
+            x - size * 0.15, y - size * 0.1
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Energy flowing between surfaces
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.6)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+            const progress = i / 5;
+            const startX = x - size * 0.25 + size * 0.5 * progress;
+            const startY = y - size * 0.2;
+            const endX = x - size * 0.25 + size * 0.5 * progress;
+            const endY = y + size * 0.2;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(
+                startX + Math.sin(progress * Math.PI * 4) * size * 0.1,
+                (startY + endY) * 0.5,
+                endX, endY
+            );
+            ctx.stroke();
+        }
+
+        // Edge glow
+        ctx.strokeStyle = 'rgba(150, 100, 255, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y - size * 0.2);
+        ctx.bezierCurveTo(
+            x - size * 0.3, y - size * 0.35,
+            x + size * 0.1, y - size * 0.4,
+            x + size * 0.3, y - size * 0.1
+        );
+        ctx.stroke();
     }
 
     renderRockType1(ctx, x, y, size) {
@@ -2502,6 +4133,378 @@ export class LevelBase {
             
             ctx.globalAlpha = 1;
         });
+    }
+
+    renderCactus(ctx, x, y, size, gridX, gridY) {
+        // Use deterministic variation based on grid position
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 3;
+        switch(seed) {
+            case 0:
+                this.renderCactusType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderCactusType2(ctx, x, y, size);
+                break;
+            default:
+                this.renderCactusType3(ctx, x, y, size);
+        }
+    }
+
+    renderCactusType1(ctx, x, y, size) {
+        // Tall columnar saguaro-style cactus with arms
+        const mainHeight = size * 0.6;
+        const mainWidth = size * 0.25;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, mainWidth * 0.8, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body - bright green
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(x - mainWidth * 0.5, y - mainHeight, mainWidth, mainHeight);
+
+        // Left arm
+        ctx.fillStyle = '#27ae60';
+        const leftArmStartX = x - mainWidth * 0.35;
+        const leftArmStartY = y - mainHeight * 0.5;
+        const leftArmWidth = size * 0.15;
+        const leftArmLength = size * 0.35;
+        ctx.fillRect(leftArmStartX - leftArmLength, leftArmStartY - leftArmWidth * 0.5, leftArmLength, leftArmWidth);
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(leftArmStartX - leftArmLength + 2, leftArmStartY - leftArmWidth * 0.5 + 2, leftArmLength - 4, leftArmWidth - 4);
+
+        // Right arm
+        ctx.fillStyle = '#27ae60';
+        const rightArmStartX = x + mainWidth * 0.35;
+        const rightArmStartY = y - mainHeight * 0.6;
+        const rightArmWidth = size * 0.15;
+        const rightArmLength = size * 0.3;
+        ctx.fillRect(rightArmStartX, rightArmStartY - rightArmWidth * 0.5, rightArmLength, rightArmWidth);
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(rightArmStartX + 2, rightArmStartY - rightArmWidth * 0.5 + 2, rightArmLength - 4, rightArmWidth - 4);
+
+        // Spines (darker green dots)
+        ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 6; i++) {
+            const spineY = y - mainHeight + (i * mainHeight / 6);
+            // Left side spines
+            ctx.beginPath();
+            ctx.arc(x - mainWidth * 0.4, spineY, 2, 0, Math.PI * 2);
+            ctx.fill();
+            // Right side spines
+            ctx.beginPath();
+            ctx.arc(x + mainWidth * 0.4, spineY, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Highlight on main body
+        ctx.fillStyle = '#58d68d';
+        ctx.fillRect(x - mainWidth * 0.3, y - mainHeight * 0.8, mainWidth * 0.35, mainHeight * 0.5);
+
+        // Outline
+        ctx.strokeStyle = '#186a3b';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x - mainWidth * 0.5, y - mainHeight, mainWidth, mainHeight);
+    }
+
+    renderCactusType2(ctx, x, y, size) {
+        // Round barrel cactus
+        const radius = size * 0.28;
+        const height = size * 0.5;
+
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, radius * 0.9, size * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body - bright green barrel shape
+        ctx.fillStyle = '#2ecc71';
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.1, radius, radius * 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Darker shadow side
+        ctx.fillStyle = '#27ae60';
+        ctx.beginPath();
+        ctx.ellipse(x + radius * 0.3, y - size * 0.1, radius * 0.6, radius * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spines arranged in vertical rows
+        ctx.fillStyle = '#1e8449';
+        const spineRows = 4;
+        const spinesPerRow = 3;
+        for (let row = 0; row < spineRows; row++) {
+            const rowY = y - radius - (row * radius * 0.35);
+            for (let i = 0; i < spinesPerRow; i++) {
+                const angle = (i / spinesPerRow) * Math.PI * 2;
+                const spineX = x + Math.cos(angle) * radius * 0.8;
+                const spineY = rowY;
+                ctx.beginPath();
+                ctx.arc(spineX, spineY, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Highlight reflection
+        ctx.fillStyle = '#58d68d';
+        ctx.beginPath();
+        ctx.ellipse(x - radius * 0.3, y - radius * 0.6, radius * 0.35, radius * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Top of cactus - top view
+        ctx.fillStyle = '#20c061';
+        ctx.beginPath();
+        ctx.ellipse(x, y - radius, radius * 0.85, radius * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outline
+        ctx.strokeStyle = '#186a3b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.1, radius, radius * 1.1, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    renderCactusType3(ctx, x, y, size) {
+        // Cluster of prickly pear style cactus pads
+        const padSize = size * 0.22;
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, padSize * 1.5, padSize * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bottom left pad
+        ctx.fillStyle = '#27ae60';
+        ctx.save();
+        ctx.translate(x - padSize * 0.5, y);
+        ctx.rotate(-Math.PI / 6);
+        ctx.fillRect(-padSize * 0.4, -padSize * 0.6, padSize * 0.8, padSize * 1.2);
+        ctx.restore();
+
+        ctx.fillStyle = '#2ecc71';
+        ctx.save();
+        ctx.translate(x - padSize * 0.5, y);
+        ctx.rotate(-Math.PI / 6);
+        ctx.fillRect(-padSize * 0.3, -padSize * 0.5, padSize * 0.6, padSize * 1.0);
+        ctx.restore();
+
+        // Bottom right pad
+        ctx.fillStyle = '#27ae60';
+        ctx.save();
+        ctx.translate(x + padSize * 0.5, y);
+        ctx.rotate(Math.PI / 6);
+        ctx.fillRect(-padSize * 0.4, -padSize * 0.6, padSize * 0.8, padSize * 1.2);
+        ctx.restore();
+
+        ctx.fillStyle = '#2ecc71';
+        ctx.save();
+        ctx.translate(x + padSize * 0.5, y);
+        ctx.rotate(Math.PI / 6);
+        ctx.fillRect(-padSize * 0.3, -padSize * 0.5, padSize * 0.6, padSize * 1.0);
+        ctx.restore();
+
+        // Top center pad
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x - padSize * 0.35, y - padSize * 0.8, padSize * 0.7, padSize * 1.0);
+
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(x - padSize * 0.25, y - padSize * 0.7, padSize * 0.5, padSize * 0.8);
+
+        // Spines on top pad
+        ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 4; i++) {
+            const spineX = x - padSize * 0.1 + (i - 1.5) * padSize * 0.15;
+            ctx.beginPath();
+            ctx.arc(spineX, y - padSize * 0.3, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Highlight
+        ctx.fillStyle = '#58d68d';
+        ctx.beginPath();
+        ctx.ellipse(x - padSize * 0.2, y - padSize * 0.4, padSize * 0.3, padSize * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderDryBush(ctx, x, y, size, gridX, gridY) {
+        // Use deterministic variation based on grid position
+        const seed = Math.floor(gridX * 0.3 + gridY * 0.8) % 3;
+        switch(seed) {
+            case 0:
+                this.renderDryBushType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.renderDryBushType2(ctx, x, y, size);
+                break;
+            default:
+                this.renderDryBushType3(ctx, x, y, size);
+        }
+    }
+
+    renderDryBushType1(ctx, x, y, size) {
+        // Spiky tumbleweed style dry bush - browns and tans
+        const radius = size * 0.3;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(80, 40, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, radius * 0.9, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main dry wood color branches
+        ctx.strokeStyle = '#8b6f47';
+        ctx.lineWidth = size * 0.08;
+        const branchCount = 6;
+        for (let i = 0; i < branchCount; i++) {
+            const angle = (i / branchCount) * Math.PI * 2;
+            const endX = x + Math.cos(angle) * radius;
+            const endY = y + Math.sin(angle) * radius;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        // Lighter tan highlights on branches
+        ctx.strokeStyle = '#a0845c';
+        ctx.lineWidth = size * 0.04;
+        for (let i = 0; i < branchCount; i++) {
+            const angle = (i / branchCount) * Math.PI * 2 + 0.1;
+            const endX = x + Math.cos(angle) * radius * 0.8;
+            const endY = y + Math.sin(angle) * radius * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y + 2);
+            ctx.lineTo(endX + 2, endY + 2);
+            ctx.stroke();
+        }
+
+        // Dry leafless appearance with small twigs
+        ctx.strokeStyle = '#6b5238';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * radius * 0.7;
+            const startX = x + Math.cos(angle) * distance;
+            const startY = y + Math.sin(angle) * distance;
+            const twigAngle = Math.random() * Math.PI * 2;
+            const twigLength = size * 0.08;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX + Math.cos(twigAngle) * twigLength, startY + Math.sin(twigAngle) * twigLength);
+            ctx.stroke();
+        }
+    }
+
+    renderDryBushType2(ctx, x, y, size) {
+        // Low rounded dry shrub - browns with gaps
+        const baseWidth = size * 0.35;
+        const baseHeight = size * 0.28;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(80, 40, 20, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, baseWidth * 0.8, baseHeight * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main dry brown body
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath();
+        ctx.ellipse(x, y, baseWidth, baseHeight, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Darker shadowed side
+        ctx.fillStyle = '#7a5c3f';
+        ctx.beginPath();
+        ctx.ellipse(x + baseWidth * 0.2, y + baseHeight * 0.2, baseWidth * 0.6, baseHeight * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lighter tan highlights
+        ctx.fillStyle = '#bfa878';
+        ctx.beginPath();
+        ctx.ellipse(x - baseWidth * 0.15, y - baseHeight * 0.3, baseWidth * 0.4, baseHeight * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Gnarled texture - visible dead twigs/branches
+        ctx.strokeStyle = '#5c4630';
+        ctx.lineWidth = 1.5;
+        const twigCount = 6;
+        for (let i = 0; i < twigCount; i++) {
+            const angle = (i / twigCount) * Math.PI * 2;
+            const startDist = baseWidth * 0.3;
+            const endDist = baseWidth * 0.7;
+            const startX = x + Math.cos(angle) * startDist;
+            const startY = y + Math.sin(angle) * startDist;
+            const endX = x + Math.cos(angle) * endDist;
+            const endY = y + Math.sin(angle) * endDist;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        // Outline
+        ctx.strokeStyle = '#6b5238';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x, y, baseWidth, baseHeight, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    renderDryBushType3(ctx, x, y, size) {
+        // Scattered wisps of dry brush - almost like tumble weed fragments
+        const clumpCount = 4;
+        const colors = ['#8b6f47', '#9d7c54', '#a0845c', '#7a5c3f'];
+
+        // Shadow
+        ctx.fillStyle = 'rgba(80, 40, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, size * 0.3, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Create scattered clumps
+        for (let i = 0; i < clumpCount; i++) {
+            const angle = (i / clumpCount) * Math.PI * 2;
+            const distance = size * 0.18;
+            const clumpX = x + Math.cos(angle) * distance;
+            const clumpY = y + Math.sin(angle) * distance;
+            const clumpSize = size * (0.12 + Math.abs(Math.sin(i * 0.7)) * 0.08);
+
+            // Clump body
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.beginPath();
+            ctx.arc(clumpX, clumpY, clumpSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner lighter part
+            ctx.fillStyle = 'rgba(224, 200, 150, 0.4)';
+            ctx.beginPath();
+            ctx.arc(clumpX - clumpSize * 0.3, clumpY - clumpSize * 0.3, clumpSize * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Small twig details
+            ctx.strokeStyle = '#5c4630';
+            ctx.lineWidth = 0.8;
+            for (let j = 0; j < 3; j++) {
+                const twigAngle = Math.PI * 2 * j / 3;
+                const twigEndX = clumpX + Math.cos(twigAngle) * clumpSize * 0.7;
+                const twigEndY = clumpY + Math.sin(twigAngle) * clumpSize * 0.7;
+                ctx.beginPath();
+                ctx.moveTo(clumpX, clumpY);
+                ctx.lineTo(twigEndX, twigEndY);
+                ctx.stroke();
+            }
+        }
+
+        // Central connection point - darker
+        ctx.fillStyle = '#6b5238';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
     }
 }
 

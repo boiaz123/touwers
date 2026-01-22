@@ -18,7 +18,32 @@ export class MountainLevel3 extends LevelBase {
             edgeGrassColor: '#dcdce0',
             flowerDensity: 80000
         });
-        this.terrainElements = [];
+        this.terrainElements = [
+            // Mountain rocks
+            { type: 'rock', gridX: 6.00, gridY: 6.00, size: 1.2 },
+            { type: 'rock', gridX: 16.00, gridY: 2.00, size: 1.0 },
+            { type: 'rock', gridX: 26.00, gridY: 10.00, size: 1.1 },
+            { type: 'rock', gridX: 36.00, gridY: 4.00, size: 1.3 },
+            { type: 'rock', gridX: 48.00, gridY: 12.00, size: 1.0 },
+            { type: 'rock', gridX: 58.00, gridY: 6.00, size: 1.2 },
+            { type: 'rock', gridX: 14.00, gridY: 24.00, size: 1.1 },
+            { type: 'rock', gridX: 32.00, gridY: 28.00, size: 1.2 },
+            { type: 'rock', gridX: 50.00, gridY: 26.00, size: 1.0 },
+            
+            // Alpine vegetation (pine trees with snow)
+            { type: 'vegetation', gridX: 8.00, gridY: 14.00, size: 1.0 },
+            { type: 'vegetation', gridX: 20.00, gridY: 18.00, size: 1.1 },
+            { type: 'vegetation', gridX: 34.00, gridY: 16.00, size: 1.0 },
+            { type: 'vegetation', gridX: 44.00, gridY: 22.00, size: 1.2 },
+            { type: 'vegetation', gridX: 10.00, gridY: 30.00, size: 1.1 },
+            { type: 'vegetation', gridX: 56.00, gridY: 18.00, size: 1.0 },
+            { type: 'vegetation', gridX: 40.00, gridY: 28.00, size: 1.1 },
+            
+            // More alpine plants
+            { type: 'vegetation', gridX: 4.00, gridY: 10.00, size: 1.0 },
+            { type: 'vegetation', gridX: 28.00, gridY: 20.00, size: 1.2 },
+            { type: 'vegetation', gridX: 54.00, gridY: 24.00, size: 1.1 }
+        ];
     }
     createMeanderingPath() {
         const pathInGridCoords = [{ gridX: 0, gridY: 16.875 }, { gridX: 20, gridY: 8 }, { gridX: 40, gridY: 25 }, { gridX: 60, gridY: 16.875 }];

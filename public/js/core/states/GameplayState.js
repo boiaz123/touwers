@@ -163,11 +163,12 @@ export class GameplayState {
         const settlementGoldBeforeLevel = this.stateManager.playerGold || 0;
         
         // Get level info from state manager
-        const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign' };
+        const levelInfo = this.stateManager.selectedLevelInfo || { id: 'level1', name: 'The King\'s Road', type: 'campaign', campaignId: 'campaign-1' };
         
         // Create the level using LevelRegistry
+        // IMPORTANT: Pass campaignId to ensure correct campaign's level is loaded
         try {
-            this.level = LevelRegistry.createLevel(levelInfo.id);
+            this.level = LevelRegistry.createLevel(levelInfo.id, levelInfo.campaignId);
         } catch (error) {
             console.error('GameplayState: Failed to create level:', error);
             this.level = null;

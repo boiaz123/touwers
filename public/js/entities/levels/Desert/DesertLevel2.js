@@ -18,7 +18,34 @@ export class DesertLevel2 extends LevelBase {
             edgeGrassColor: '#d9a652',
             flowerDensity: 150000
         });
-        this.terrainElements = [];
+        this.terrainElements = [
+            // Vegetation scattered around the level
+            { type: 'vegetation', gridX: 10.00, gridY: 3.00, size: 1.2 },
+            { type: 'vegetation', gridX: 22.00, gridY: 12.00, size: 1.0 },
+            { type: 'vegetation', gridX: 35.00, gridY: 5.00, size: 1.3 },
+            { type: 'vegetation', gridX: 48.00, gridY: 18.00, size: 1.1 },
+            { type: 'vegetation', gridX: 5.00, gridY: 22.00, size: 1.0 },
+            { type: 'vegetation', gridX: 40.00, gridY: 30.00, size: 1.2 },
+            { type: 'vegetation', gridX: 55.00, gridY: 28.00, size: 1.1 },
+            { type: 'vegetation', gridX: 25.00, gridY: 32.00, size: 1.0 },
+            { type: 'vegetation', gridX: 12.00, gridY: 25.00, size: 1.3 },
+            
+            // More vegetation
+            { type: 'vegetation', gridX: 18.00, gridY: 6.00, size: 1.1 },
+            { type: 'vegetation', gridX: 32.00, gridY: 18.00, size: 1.0 },
+            { type: 'vegetation', gridX: 42.00, gridY: 8.00, size: 1.2 },
+            { type: 'vegetation', gridX: 8.00, gridY: 14.00, size: 1.0 },
+            { type: 'vegetation', gridX: 50.00, gridY: 25.00, size: 1.1 },
+            { type: 'vegetation', gridX: 20.00, gridY: 28.00, size: 1.3 },
+            { type: 'vegetation', gridX: 58.00, gridY: 15.00, size: 1.0 },
+            { type: 'vegetation', gridX: 38.00, gridY: 23.00, size: 1.1 },
+            
+            // Desert rocks
+            { type: 'rock', gridX: 6.00, gridY: 28.00, size: 1.0 },
+            { type: 'rock', gridX: 28.00, gridY: 5.00, size: 1.2 },
+            { type: 'rock', gridX: 52.00, gridY: 6.00, size: 1.1 },
+            { type: 'rock', gridX: 35.00, gridY: 28.00, size: 1.3 }
+        ];
     }
     createMeanderingPath() {
         const pathInGridCoords = [{ gridX: 0, gridY: 16.875 }, { gridX: 15, gridY: 8 }, { gridX: 30, gridY: 25 }, { gridX: 45, gridY: 12 }, { gridX: 60, gridY: 22 }];

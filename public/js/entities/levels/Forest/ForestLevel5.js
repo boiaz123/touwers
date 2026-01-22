@@ -30,7 +30,46 @@ export class ForestLevel5 extends LevelBase {
             edgeGrassColor: '#1a6a1a'
         });
 
-        this.terrainElements = [];
+        this.terrainElements = [
+            { type: 'vegetation', gridX: 8.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 10.00, gridY: 6.00, size: 1.5 },
+            { type: 'vegetation', gridX: 12.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 14.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 16.00, gridY: 9.00, size: 1.5 },
+            { type: 'vegetation', gridX: 18.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 20.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 22.00, gridY: 6.00, size: 1.5 },
+            { type: 'vegetation', gridX: 24.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 26.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 28.00, gridY: 9.00, size: 1.5 },
+            { type: 'vegetation', gridX: 30.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 32.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 34.00, gridY: 6.00, size: 1.5 },
+            { type: 'vegetation', gridX: 36.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 38.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 40.00, gridY: 9.00, size: 1.5 },
+            { type: 'vegetation', gridX: 42.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 44.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 46.00, gridY: 6.00, size: 1.5 },
+            { type: 'vegetation', gridX: 48.00, gridY: 8.00, size: 1.5 },
+            { type: 'vegetation', gridX: 50.00, gridY: 7.00, size: 1.5 },
+            { type: 'vegetation', gridX: 52.00, gridY: 9.00, size: 1.5 },
+            { type: 'rock', gridX: 7.00, gridY: 4.00, size: 1.5 },
+            { type: 'rock', gridX: 17.00, gridY: 5.00, size: 1.5 },
+            { type: 'rock', gridX: 27.00, gridY: 4.00, size: 1.5 },
+            { type: 'rock', gridX: 37.00, gridY: 5.00, size: 1.5 },
+            { type: 'rock', gridX: 47.00, gridY: 4.00, size: 1.5 },
+            { type: 'rock', gridX: 57.00, gridY: 5.00, size: 1.5 },
+            { type: 'vegetation', gridX: 10.00, gridY: 28.00, size: 1.5 },
+            { type: 'vegetation', gridX: 12.00, gridY: 26.00, size: 1.5 },
+            { type: 'vegetation', gridX: 14.00, gridY: 28.00, size: 1.5 },
+            { type: 'vegetation', gridX: 16.00, gridY: 27.00, size: 1.5 },
+            { type: 'vegetation', gridX: 18.00, gridY: 29.00, size: 1.5 },
+            { type: 'vegetation', gridX: 20.00, gridY: 27.00, size: 1.5 },
+            { type: 'vegetation', gridX: 22.00, gridY: 28.00, size: 1.5 },
+            { type: 'rock', gridX: 9.00, gridY: 24.00, size: 1.5 },
+            { type: 'rock', gridX: 19.00, gridY: 25.00, size: 1.5 }
+        ];
     }
     
     createMeanderingPath() {
@@ -69,3 +108,4 @@ export class ForestLevel5 extends LevelBase {
         return (wave > 0 && wave <= waveConfigs.length) ? waveConfigs[wave - 1] : null;
     }
 }
+

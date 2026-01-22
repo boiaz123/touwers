@@ -6,6 +6,9 @@ import { StartScreen } from '../core/states/StartScreen.js';
 import { MainMenu } from '../core/states/MainMenu.js';
 import { CampaignMenu } from '../core/states/CampaignMenu.js';
 import { Campaign1 } from '../entities/campaigns/Campaign1.js';
+import { Campaign2 } from '../entities/campaigns/Campaign2.js';
+import { Campaign3 } from '../entities/campaigns/Campaign3.js';
+import { Campaign4 } from '../entities/campaigns/Campaign4.js';
 import { Campaign5 } from '../entities/campaigns/Campaign5.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SettlementHub } from '../core/states/SettlementHub.js';
@@ -128,11 +131,20 @@ export class Game {
             LevelRegistry.registerLevel('sandbox', 'sandbox', SandboxLevel, SandboxLevel.levelMetadata);
             
             // Initialize campaign registry with campaign classes
-            CampaignRegistry.initialize({ Campaign1, Campaign5 });
+            CampaignRegistry.initialize({ Campaign1, Campaign2, Campaign3, Campaign4, Campaign5 });
             
             // Add campaign states
             const campaign1 = new Campaign1(this.stateManager);
             this.stateManager.addState('levelSelect', campaign1);
+            
+            const campaign2 = new Campaign2(this.stateManager);
+            this.stateManager.addState('campaign-2', campaign2);
+            
+            const campaign3 = new Campaign3(this.stateManager);
+            this.stateManager.addState('campaign-3', campaign3);
+            
+            const campaign4 = new Campaign4(this.stateManager);
+            this.stateManager.addState('campaign-4', campaign4);
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);

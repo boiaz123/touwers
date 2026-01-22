@@ -18,66 +18,66 @@ export class CampaignRegistry {
         this.campaigns = {
             'campaign-1': {
                 id: 'campaign-1',
-                name: 'The Great Northern Campaign',
-                description: 'Defend the northern territories from the invading forces. Hold the line!',
-                icon: '⚔️',
+                name: 'The Forest Campaign',
+                description: 'Explore the mystical forest and defend against dark forces among the trees.',
+                icon: '🌲',
                 difficulty: 'Beginner',
                 class: campaignClasses.Campaign1,
                 rewards: {
                     gold: 5000,
                     experience: 1500,
-                    unlocks: ['Special Tower Skin #1']
+                    unlocks: ['Forestkeeper\'s Bow']
                 },
-                story: 'The northern territories are under siege. Gather your forces and defend the realm from invasion.',
+                story: 'The ancient forests are under threat. Defend the woodland realm and its creatures from darkness.',
                 progress: 0
             },
             'campaign-2': {
                 id: 'campaign-2',
-                name: 'The Eastern Expedition',
-                description: 'Venture east to unknown lands and face mysterious threats.',
-                icon: '🗺️',
+                name: 'The Mountain Campaign',
+                description: 'Conquer the snowy peaks and alpine passes against the mountain invaders.',
+                icon: '⛰️',
                 difficulty: 'Intermediate',
-                class: null, // Will be Campaign2 when created
+                class: campaignClasses.Campaign2,
                 rewards: {
                     gold: 7500,
                     experience: 2000,
-                    unlocks: ['Explorer\'s Arsenal']
+                    unlocks: ['Alpine Fortress']
                 },
-                story: 'Strange reports from the east speak of powerful creatures and ancient magic. Your expertise is needed.',
+                story: 'The mountains hold strategic fortresses. Claim them for the realm and defeat the invading force.',
                 progress: 0,
-                locked: true
+                locked: false
             },
             'campaign-3': {
                 id: 'campaign-3',
-                name: 'The Underground Depths',
-                description: 'Descend into the depths to stop an ancient evil awakening.',
-                icon: '⛏️',
+                name: 'The Desert Campaign',
+                description: 'Brave the scorching sands and defend the oasis strongholds.',
+                icon: '🏜️',
                 difficulty: 'Advanced',
-                class: null, // Will be Campaign3 when created
+                class: campaignClasses.Campaign3,
                 rewards: {
                     gold: 10000,
                     experience: 3000,
-                    unlocks: ['Subterranean Technology']
+                    unlocks: ['Desert Nomad\'s Blade']
                 },
-                story: 'Deep beneath the earth, an ancient evil stirs. Only the bravest warriors can stop it.',
+                story: 'The deserts hide ancient secrets and fierce enemies. Survive the heat and defend your outposts.',
                 progress: 0,
-                locked: true
+                locked: false
             },
             'campaign-4': {
                 id: 'campaign-4',
-                name: 'The Sky Citadel',
-                description: 'Ascend to the floating citadel and reclaim it from dark forces.',
-                icon: '☁️',
+                name: 'The Space Campaign',
+                description: 'Defend space stations from extraterrestrial threats orbiting in the void.',
+                icon: '🚀',
                 difficulty: 'Expert',
-                class: null, // Will be Campaign4 when created
+                class: campaignClasses.Campaign4,
                 rewards: {
                     gold: 15000,
                     experience: 4000,
-                    unlocks: ['Celestial Weapons']
+                    unlocks: ['Plasma Cannon', 'Advanced Targeting System']
                 },
-                story: 'The legendary sky citadel has fallen into darkness. Lead your forces to reclaim this beacon of hope.',
+                story: 'Humanity\'s outposts in space are under attack. Defend the orbital stations with advanced technology.',
                 progress: 0,
-                locked: true
+                locked: false
             },
             'campaign-5': {
                 id: 'campaign-5',

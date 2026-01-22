@@ -35,6 +35,7 @@ export class LevelDesigner {
         this.setupCanvas();
         this.setupEventListeners();
         this.setupFormHandlers();
+        this.updateTerrainButtonsForCampaign(); // Set initial terrain button visibility
         this.createDefaultWave();
         this.render();
     }
@@ -77,7 +78,7 @@ export class LevelDesigner {
         document.getElementById('finishRiverBtn')?.addEventListener('click', () => this.finishRiverConfirm());
 
         // Terrain buttons
-        document.getElementById('drawTreeBtn')?.addEventListener('click', () => this.setTerrainMode('tree'));
+        document.getElementById('drawVegetationBtn')?.addEventListener('click', () => this.setTerrainMode('vegetation'));
         document.getElementById('drawRockBtn')?.addEventListener('click', () => this.setTerrainMode('rock'));
         document.getElementById('drawWaterBtn')?.addEventListener('click', () => this.setTerrainMode('water'));
         
@@ -125,6 +126,7 @@ export class LevelDesigner {
             campaignSelect.addEventListener('change', (e) => {
                 this.currentCampaign = e.target.value;
                 CampaignThemeConfig.applyThemeToForm(this.currentCampaign);
+                this.updateTerrainButtonsForCampaign();
                 this.updateGeneratedCode();
             });
         }
@@ -190,7 +192,7 @@ export class LevelDesigner {
         
         document.getElementById('drawPathBtn').classList.toggle('active', false);
         document.getElementById('placeCastleBtn').classList.toggle('active', false);
-        document.getElementById('drawTreeBtn')?.classList.toggle('active', terrainType === 'tree');
+        document.getElementById('drawVegetationBtn')?.classList.toggle('active', terrainType === 'vegetation');
         document.getElementById('drawRockBtn')?.classList.toggle('active', terrainType === 'rock');
         document.getElementById('drawWaterBtn')?.classList.toggle('active', terrainType === 'water');
         
@@ -215,7 +217,7 @@ export class LevelDesigner {
         }
         
         const pathInfo = document.getElementById('pathInfo');
-        const names = { tree: '🌲 Trees', rock: '🪨 Rocks', water: '💧 Water' };
+        const names = { vegetation: '🌲 Vegetation (random variety)', rock: '🪨 Rocks (random variety)', water: '💧 Water' };
         pathInfo.textContent = `🎨 Click to place ${names[terrainType]}. Right-click to erase.`;
     }
 
@@ -254,6 +256,15 @@ export class LevelDesigner {
             pathInfo.textContent = `💧 Click to place circular lakes (size: ${this.waterSize.toFixed(1)}). Right-click to erase.`;
             this.riverPoints = [];
         }
+    }
+
+    updateTerrainButtonsForCampaign() {
+        // All campaigns now have vegetation and rock buttons
+        // No need to hide/show buttons anymore - always available
+        // Styling is handled by the campaign theme
+        document.getElementById('drawVegetationBtn').style.display = 'inline-block';
+        document.getElementById('drawRockBtn').style.display = 'inline-block';
+        document.getElementById('drawWaterBtn').style.display = 'inline-block';
     }
 
     pixelToGrid(canvasX, canvasY) {
@@ -352,7 +363,7 @@ export class LevelDesigner {
         // Determine size based on type
         let size = customSize;
         if (size === null) {
-            if (type === 'tree') size = 1.5;
+            if (type === 'vegetation') size = 2.0;
             else if (type === 'rock') size = 1.5;
             else if (type === 'water') size = 2;
         }
@@ -891,27 +902,29 @@ export class LevelDesigner {
 
     drawPathWaypoints(cellWidthPixels, cellHeightPixels) {
         // Draw thin waypoint line while editing (like river mode)
-        if (this.pathPoints.length < 2) return;
+        if (this.pathPoints.length < 1) return;
 
-        this.ctx.strokeStyle = '#58c4dc';
-        this.ctx.lineWidth = 5;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.globalAlpha = 0.6;
+        // Only draw connecting line if we have 2+ points
+        if (this.pathPoints.length >= 2) {
+            this.ctx.strokeStyle = '#58c4dc';
+            this.ctx.lineWidth = 5;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.globalAlpha = 0.6;
 
-        this.ctx.beginPath();
-        const firstPoint = this.pathPoints[0];
-        this.ctx.moveTo(firstPoint.gridX * cellWidthPixels, firstPoint.gridY * cellHeightPixels);
+            this.ctx.beginPath();
+            const firstPoint = this.pathPoints[0];
+            this.ctx.moveTo(firstPoint.gridX * cellWidthPixels, firstPoint.gridY * cellHeightPixels);
 
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            const point = this.pathPoints[i];
-            this.ctx.lineTo(point.gridX * cellWidthPixels, point.gridY * cellHeightPixels);
+            for (let i = 1; i < this.pathPoints.length; i++) {
+                const point = this.pathPoints[i];
+                this.ctx.lineTo(point.gridX * cellWidthPixels, point.gridY * cellHeightPixels);
+            }
+            this.ctx.stroke();
+            this.ctx.globalAlpha = 1;
         }
-        this.ctx.stroke();
 
-        this.ctx.globalAlpha = 1;
-
-        // Draw waypoints
+        // Draw waypoints (including first point if only one exists)
         this.pathPoints.forEach((point, idx) => {
             const x = point.gridX * cellWidthPixels;
             const y = point.gridY * cellHeightPixels;
@@ -1016,8 +1029,8 @@ export class LevelDesigner {
             const size = element.size * Math.min(cellWidthPixels, cellHeightPixels);
 
             switch (element.type) {
-                case 'tree':
-                    this.drawTree(x, y, size);
+                case 'vegetation':
+                    this.drawVegetation(x, y, size);
                     break;
                 case 'rock':
                     this.drawRock(x, y, size);
@@ -1481,43 +1494,296 @@ export class LevelDesigner {
     }
 
     drawAlienRock(x, y, size, rockColor, rockAccent, seed) {
-        // Alien crystalline rocks for space campaign
-        // Main angular shape
-        this.ctx.fillStyle = rockColor;
+        // Weird alien rocks - 5 abstract variations
+        const typeIndex = seed % 5;
+        
+        switch(typeIndex) {
+            case 0:
+                this.drawSpaceRockFractal(x, y, size);
+                break;
+            case 1:
+                this.drawSpaceRockSpiky(x, y, size);
+                break;
+            case 2:
+                this.drawSpaceRockCrystalline(x, y, size);
+                break;
+            case 3:
+                this.drawSpaceRockVoid(x, y, size);
+                break;
+            default:
+                this.drawSpaceRockNonEuclidean(x, y, size);
+        }
+    }
+
+    drawSpaceRockFractal(x, y, size) {
+        // Impossible angle asteroid with fractal pattern
+        this.ctx.fillStyle = '#5a4a7a';
+        
+        // Main jagged form
+        const points = [
+            {x: -0.25, y: -0.3},
+            {x: 0.15, y: -0.35},
+            {x: 0.28, y: -0.1},
+            {x: 0.35, y: 0.15},
+            {x: 0.2, y: 0.3},
+            {x: -0.1, y: 0.35},
+            {x: -0.32, y: 0.1},
+            {x: -0.3, y: -0.15}
+        ];
+        
         this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.28, y - size * 0.2);
-        this.ctx.lineTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.25, y + size * 0.25);
-        this.ctx.lineTo(x - size * 0.25, y + size * 0.3);
+        this.ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+        for (let i = 1; i < points.length; i++) {
+            this.ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
+        }
         this.ctx.closePath();
         this.ctx.fill();
-        
-        // Crystalline facet
-        this.ctx.fillStyle = rockAccent;
+
+        // Fractal surface pattern
+        this.ctx.strokeStyle = 'rgba(200, 150, 255, 0.5)';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 3; j++) {
+                const px = x + (Math.random() - 0.5) * size * 0.4;
+                const py = y + (Math.random() - 0.5) * size * 0.4;
+                const angle = Math.random() * Math.PI * 2;
+                const len = size * (0.05 + Math.random() * 0.08);
+                this.ctx.beginPath();
+                this.ctx.moveTo(px, py);
+                this.ctx.lineTo(px + Math.cos(angle) * len, py + Math.sin(angle) * len);
+                this.ctx.stroke();
+            }
+        }
+
+        // Glowing edges
+        this.ctx.strokeStyle = 'rgba(150, 100, 255, 0.7)';
+        this.ctx.lineWidth = 2;
         this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.1, y);
+        this.ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+        for (let i = 1; i < points.length; i++) {
+            this.ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
+        }
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Void-like center
+        this.ctx.fillStyle = 'rgba(40, 20, 60, 0.8)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.15, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceRockSpiky(x, y, size) {
+        // Jagged asteroid with bioluminescent spikes
+        this.ctx.fillStyle = '#6a4a8a';
+        
+        // Main body
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Spike protrusions in all directions
+        const spikeCount = 12;
+        for (let i = 0; i < spikeCount; i++) {
+            const angle = (i / spikeCount) * Math.PI * 2;
+            const baseX = x + Math.cos(angle) * size * 0.22;
+            const baseY = y + Math.sin(angle) * size * 0.22;
+            const tipX = x + Math.cos(angle) * size * 0.35;
+            const tipY = y + Math.sin(angle) * size * 0.35;
+
+            // Spike body
+            this.ctx.fillStyle = '#5a3a7a';
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseX, baseY);
+            this.ctx.lineTo(tipX, tipY);
+            this.ctx.lineTo(baseX + Math.cos(angle + 0.2) * size * 0.08, baseY + Math.sin(angle + 0.2) * size * 0.08);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Bioluminescent glow on spike
+            this.ctx.strokeStyle = `rgba(100, ${150 + Math.sin(i) * 50}, 255, 0.8)`;
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseX, baseY);
+            this.ctx.lineTo(tipX, tipY);
+            this.ctx.stroke();
+        }
+
+        // Glow core
+        this.ctx.fillStyle = 'rgba(100, 150, 255, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.18, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceRockCrystalline(x, y, size) {
+        // Crystalline hexagonal structure
+        const hexagonSize = size * 0.25;
+        
+        // Main crystal body
+        this.ctx.fillStyle = '#7a5aaa';
+        this.ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const px = x + Math.cos(angle) * hexagonSize;
+            const py = y + Math.sin(angle) * hexagonSize;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
         this.ctx.closePath();
         this.ctx.fill();
-        
-        // Energy glow
-        this.ctx.fillStyle = 'rgba(122, 106, 170, 0.4)';
+
+        // Inner crystal layers
+        this.ctx.fillStyle = '#9a7aaa';
         this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.28, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Outline
-        this.ctx.strokeStyle = '#6a4aaa';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.28, y - size * 0.2);
-        this.ctx.lineTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.25, y + size * 0.25);
-        this.ctx.lineTo(x - size * 0.25, y + size * 0.3);
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const px = x + Math.cos(angle) * hexagonSize * 0.6;
+            const py = y + Math.sin(angle) * hexagonSize * 0.6;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
         this.ctx.closePath();
+        this.ctx.fill();
+
+        // Radiating glow rays
+        this.ctx.strokeStyle = 'rgba(200, 150, 255, 0.7)';
+        this.ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * hexagonSize;
+            const startY = y + Math.sin(angle) * hexagonSize;
+            const endX = x + Math.cos(angle) * hexagonSize * 1.4;
+            const endY = y + Math.sin(angle) * hexagonSize * 1.4;
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, startY);
+            this.ctx.lineTo(endX, endY);
+            this.ctx.stroke();
+        }
+
+        // Center glow
+        this.ctx.fillStyle = 'rgba(200, 150, 255, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceRockVoid(x, y, size) {
+        // Floating chunk with impossible topology
+        // Outer distorted form
+        this.ctx.fillStyle = '#4a3a6a';
+        this.ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const distortion = 0.15 + Math.sin(angle * 3) * 0.1;
+            const px = x + Math.cos(angle) * size * distortion;
+            const py = y + Math.sin(angle) * size * distortion;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Energy field distortion ring
+        this.ctx.strokeStyle = 'rgba(150, 100, 200, 0.5)';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            const radius = size * (0.2 + Math.sin(angle * 4) * 0.08);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
+        this.ctx.closePath();
+        this.ctx.stroke();
+
+        // Void core - darker than surrounding space
+        this.ctx.fillStyle = 'rgba(20, 10, 40, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Void event horizon
+        this.ctx.strokeStyle = 'rgba(200, 100, 255, 0.8)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        this.ctx.stroke();
+    }
+
+    drawSpaceRockNonEuclidean(x, y, size) {
+        // Non-euclidean geometry rock with bezier curves and energy field
+        // Multiple overlapping surfaces at impossible angles
+        
+        // First impossible surface
+        this.ctx.fillStyle = '#6a4a9a';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.25, y - size * 0.2);
+        this.ctx.bezierCurveTo(
+            x - size * 0.3, y - size * 0.35,
+            x + size * 0.1, y - size * 0.4,
+            x + size * 0.3, y - size * 0.1
+        );
+        this.ctx.lineTo(x + size * 0.2, y + size * 0.15);
+        this.ctx.bezierCurveTo(
+            x + size * 0.05, y + size * 0.3,
+            x - size * 0.15, y + size * 0.25,
+            x - size * 0.25, y + size * 0.05
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Second overlapping surface
+        this.ctx.fillStyle = '#7a5aaa';
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.15, y - size * 0.25);
+        this.ctx.bezierCurveTo(
+            x - size * 0.05, y - size * 0.38,
+            x + size * 0.25, y - size * 0.3,
+            x + size * 0.25, y);
+        this.ctx.lineTo(x + size * 0.1, y + size * 0.2);
+        this.ctx.bezierCurveTo(
+            x - size * 0.05, y + size * 0.2,
+            x - size * 0.2, y + size * 0.1,
+            x - size * 0.15, y - size * 0.1
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1;
+
+        // Energy flowing between surfaces
+        this.ctx.strokeStyle = 'rgba(150, 100, 255, 0.6)';
+        this.ctx.lineWidth = 2;
+        for (let i = 0; i < 5; i++) {
+            const progress = i / 5;
+            const startX = x - size * 0.25 + size * 0.5 * progress;
+            const startY = y - size * 0.2;
+            const endX = x - size * 0.25 + size * 0.5 * progress;
+            const endY = y + size * 0.2;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, startY);
+            this.ctx.quadraticCurveTo(
+                startX + Math.sin(progress * Math.PI * 4) * size * 0.1,
+                (startY + endY) * 0.5,
+                endX, endY
+            );
+            this.ctx.stroke();
+        }
+
+        // Edge glow
+        this.ctx.strokeStyle = 'rgba(150, 100, 255, 0.9)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.25, y - size * 0.2);
+        this.ctx.bezierCurveTo(
+            x - size * 0.3, y - size * 0.35,
+            x + size * 0.1, y - size * 0.4,
+            x + size * 0.3, y - size * 0.1
+        );
         this.ctx.stroke();
     }
 
@@ -1761,6 +2027,790 @@ export class LevelDesigner {
     drawRiver(x, y, size, flowAngle) {
         // River rendering is handled entirely by drawRiversSmooth()
         // No cell-based rendering needed - smooth line rendering creates the complete visualization
+    }
+
+    drawVegetation(x, y, size) {
+        // Draw campaign-specific vegetation with random variations
+        if (this.currentCampaign === 'mountain') {
+            this.drawMountainVegetation(x, y, size);
+        } else if (this.currentCampaign === 'space') {
+            this.drawSpaceVegetation(x, y, size);
+        } else if (this.currentCampaign === 'desert') {
+            this.drawDesertVegetation(x, y, size);
+        } else {
+            // Forest - use regular tree drawing
+            this.drawTree(x, y, size);
+        }
+    }
+
+    drawMountainVegetation(x, y, size) {
+        // Mountain pine trees with snow - 3 variations
+        const seed = Math.floor(x * 0.5 + y * 0.7) % 3;
+        
+        switch(seed) {
+            case 0:
+                this.drawMountainPine1(x, y, size);
+                break;
+            case 1:
+                this.drawMountainPine2(x, y, size);
+                break;
+            default:
+                this.drawMountainPine3(x, y, size);
+        }
+    }
+
+    drawMountainPine1(x, y, size) {
+        // Tall pine with heavy snow
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.45;
+
+        // Trunk
+        this.ctx.fillStyle = '#654321';
+        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Tree shape - dark green cone
+        this.ctx.fillStyle = '#1a4d2e';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.65);
+        this.ctx.lineTo(x + size * 0.4, y - size * 0.05);
+        this.ctx.lineTo(x - size * 0.4, y - size * 0.05);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Mid-layer
+        this.ctx.fillStyle = '#2d5a3d';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.35);
+        this.ctx.lineTo(x + size * 0.35, y + size * 0.15);
+        this.ctx.lineTo(x - size * 0.35, y + size * 0.15);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Snow cap - white frosting on top
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.62);
+        this.ctx.lineTo(x + size * 0.12, y - size * 0.4);
+        this.ctx.lineTo(x - size * 0.12, y - size * 0.4);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Snow on middle branches
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + size * 0.15, y - size * 0.2);
+        this.ctx.lineTo(x + size * 0.28, y);
+        this.ctx.lineTo(x + size * 0.08, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.15, y - size * 0.2);
+        this.ctx.lineTo(x - size * 0.28, y);
+        this.ctx.lineTo(x - size * 0.08, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    drawMountainPine2(x, y, size) {
+        // Medium pine, less snow
+        const trunkWidth = size * 0.18;
+        const trunkHeight = size * 0.4;
+
+        // Trunk
+        this.ctx.fillStyle = '#704020';
+        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Main tree cone
+        this.ctx.fillStyle = '#2d5a3d';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - size * 0.55);
+        this.ctx.lineTo(x + size * 0.35, y);
+        this.ctx.lineTo(x - size * 0.35, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Darker accent
+        this.ctx.fillStyle = '#1a3d28';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.15, y - size * 0.3);
+        this.ctx.lineTo(x + size * 0.15, y - size * 0.3);
+        this.ctx.lineTo(x - size * 0.28, y + size * 0.1);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Light snow cap
+        this.ctx.fillStyle = '#f5f5f5';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y - size * 0.5, size * 0.08, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Snow on edges
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let i = 0; i < 2; i++) {
+            const angle = (i / 2) * Math.PI;
+            const px = x + Math.cos(angle - Math.PI / 2) * size * 0.25;
+            const py = y - size * 0.15;
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+
+    drawMountainPine3(x, y, size) {
+        // Small shrubby pine
+        const trunkWidth = size * 0.15;
+        const trunkHeight = size * 0.35;
+
+        // Trunk
+        this.ctx.fillStyle = '#8b5a3c';
+        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+
+        // Bushy tree shape
+        this.ctx.fillStyle = '#3d6d4d';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x, y - size * 0.2, size * 0.3, size * 0.4, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Dark shadow side
+        this.ctx.fillStyle = '#1a3d28';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + size * 0.1, y - size * 0.2, size * 0.2, size * 0.35, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Snow patches
+        this.ctx.fillStyle = '#e8e8e8';
+        this.ctx.beginPath();
+        this.ctx.arc(x - size * 0.15, y - size * 0.35, size * 0.1, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.08, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawDesertVegetation(x, y, size) {
+        // Desert vegetation - cacti and bushes mix - 6 variations
+        const seed = Math.floor(x * 0.5 + y * 0.7) % 6;
+        
+        switch(seed) {
+            case 0:
+                this.drawDesertCactusSaguaro(x, y, size);
+                break;
+            case 1:
+                this.drawDesertCactusBarrel(x, y, size);
+                break;
+            case 2:
+                this.drawDesertCactusPricklyPear(x, y, size);
+                break;
+            case 3:
+                this.drawDesertCactusColumnar(x, y, size);
+                break;
+            case 4:
+                this.drawDesertCactusCholla(x, y, size);
+                break;
+            default:
+                this.drawDesertBush(x, y, size);
+        }
+    }
+
+    drawDesertCactusSaguaro(x, y, size) {
+        // Classic saguaro cactus with branches
+        const mainHeight = size * 0.55;
+        const mainWidth = size * 0.25;
+
+        // Shadow
+        this.ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 2, y + 2, mainWidth * 0.6, size * 0.12, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Main body - rectangular with tapered top
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - mainWidth * 0.25, y);
+        this.ctx.lineTo(x - mainWidth * 0.25, y - mainHeight * 0.7);
+        this.ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.25, y - mainHeight * 0.7);
+        this.ctx.lineTo(x + mainWidth * 0.25, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y);
+        this.ctx.lineTo(x, y - mainHeight * 0.7);
+        this.ctx.quadraticCurveTo(x + mainWidth * 0.15, y - mainHeight * 0.85, x + mainWidth * 0.25, y - mainHeight * 0.7);
+        this.ctx.lineTo(x + mainWidth * 0.25, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Highlight
+        this.ctx.fillStyle = '#58d68d';
+        this.ctx.fillRect(x - mainWidth * 0.2, y - mainHeight * 0.6, mainWidth * 0.12, mainHeight * 0.5);
+
+        // Left arm - curved and organic
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
+        this.ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.4, x - mainWidth * 0.7, y - mainHeight * 0.2);
+        this.ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.05, x - mainWidth * 0.3, y - mainHeight * 0.1);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Left arm dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - mainWidth * 0.3, y - mainHeight * 0.25);
+        this.ctx.quadraticCurveTo(x - mainWidth * 0.55, y - mainHeight * 0.3, x - mainWidth * 0.6, y - mainHeight * 0.15);
+        this.ctx.quadraticCurveTo(x - mainWidth * 0.5, y - mainHeight * 0.08, x - mainWidth * 0.35, y - mainHeight * 0.12);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Right arm
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
+        this.ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.35, x + mainWidth * 0.7, y - mainHeight * 0.15);
+        this.ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.0, x + mainWidth * 0.3, y - mainHeight * 0.08);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Right arm dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + mainWidth * 0.3, y - mainHeight * 0.22);
+        this.ctx.quadraticCurveTo(x + mainWidth * 0.55, y - mainHeight * 0.28, x + mainWidth * 0.6, y - mainHeight * 0.12);
+        this.ctx.quadraticCurveTo(x + mainWidth * 0.5, y - mainHeight * 0.02, x + mainWidth * 0.35, y - mainHeight * 0.08);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Spines along main body
+        this.ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 8; i++) {
+            const px = x - mainWidth * 0.2 + (i * mainWidth * 0.1);
+            const py = y - mainHeight * 0.3;
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+
+    drawDesertCactusBarrel(x, y, size) {
+        // Barrel cactus - oval shape with ribbing
+        const height = size * 0.5;
+        const width = size * 0.32;
+
+        // Shadow
+        this.ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 2, y + 2, width * 0.5, size * 0.1, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Main body - more realistic barrel shape
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - width * 0.35, y - height * 0.2);
+        this.ctx.quadraticCurveTo(x - width * 0.42, y - height * 0.4, x, y - height * 0.5);
+        this.ctx.quadraticCurveTo(x + width * 0.42, y - height * 0.4, x + width * 0.35, y - height * 0.2);
+        this.ctx.quadraticCurveTo(x + width * 0.38, y, x + width * 0.35, y + height * 0.25);
+        this.ctx.quadraticCurveTo(x + width * 0.25, y + height * 0.4, x, y + height * 0.45);
+        this.ctx.quadraticCurveTo(x - width * 0.25, y + height * 0.4, x - width * 0.35, y + height * 0.25);
+        this.ctx.quadraticCurveTo(x - width * 0.38, y, x - width * 0.35, y - height * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + width * 0.05, y - height * 0.2);
+        this.ctx.quadraticCurveTo(x + width * 0.4, y - height * 0.35, x + width * 0.35, y - height * 0.45);
+        this.ctx.quadraticCurveTo(x + width * 0.2, y - height * 0.48, x + width * 0.05, y - height * 0.3);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Highlight
+        this.ctx.fillStyle = '#58d68d';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x - width * 0.2, y - height * 0.25, width * 0.12, height * 0.25, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Horizontal ribs for texture
+        this.ctx.strokeStyle = '#1e8449';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const py = y - height * 0.35 + (i * height * 0.15);
+            const ribWidth = width * (0.35 - Math.abs(i - 2) * 0.08);
+            this.ctx.beginPath();
+            this.ctx.moveTo(x - ribWidth, py);
+            this.ctx.quadraticCurveTo(x, py - height * 0.02, x + ribWidth, py);
+            this.ctx.stroke();
+        }
+
+        // Spine clusters
+        this.ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const radius = width * 0.3 + Math.sin(i * 1.5) * width * 0.1;
+            const px = x + Math.cos(angle) * radius;
+            const py = y - height * 0.15 + Math.sin(angle) * height * 0.15;
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+
+    drawDesertCactusPricklyPear(x, y, size) {
+        // Helper function to draw organic leaf pad
+        const drawLeafPad = (x, y, width, height, rotation, color1, color2) => {
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            this.ctx.rotate(rotation);
+
+            // Main organic leaf pad using bezier curves
+            this.ctx.fillStyle = color1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -height * 0.5);
+            this.ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
+            this.ctx.quadraticCurveTo(width * 0.3, height * 0.4, 0, height * 0.5);
+            this.ctx.quadraticCurveTo(-width * 0.3, height * 0.4, -width * 0.4, 0);
+            this.ctx.quadraticCurveTo(-width * 0.35, -height * 0.35, 0, -height * 0.5);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Dark side shading
+            this.ctx.fillStyle = color2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -height * 0.5);
+            this.ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
+            this.ctx.quadraticCurveTo(width * 0.3, height * 0.4, width * 0.1, height * 0.5);
+            this.ctx.quadraticCurveTo(width * 0.05, height * 0.2, 0, -height * 0.5);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Spine clusters on pad
+            this.ctx.fillStyle = '#1e8449';
+            const spines = [
+                {x: 0, y: -height * 0.35},
+                {x: width * 0.15, y: -height * 0.15},
+                {x: -width * 0.15, y: -height * 0.15},
+                {x: width * 0.25, y: height * 0.15},
+                {x: -width * 0.25, y: height * 0.15},
+                {x: 0, y: height * 0.35}
+            ];
+            spines.forEach(spine => {
+                this.ctx.beginPath();
+                this.ctx.arc(spine.x, spine.y, 1.2, 0, Math.PI * 2);
+                this.ctx.fill();
+            });
+
+            this.ctx.restore();
+        };
+
+        const padWidth = size * 0.22;
+        const padHeight = size * 0.35;
+
+        // Main central pad
+        drawLeafPad(x, y - padHeight * 0.2, padWidth * 0.5, padHeight * 0.6, 0, '#3a8659', '#2d6b4f');
+
+        // Right side pad
+        drawLeafPad(x + padWidth * 0.42, y - padHeight * 0.1, padWidth * 0.45, padHeight * 0.5, Math.PI / 4.5, '#3a8659', '#2d6b4f');
+
+        // Left side pad
+        drawLeafPad(x - padWidth * 0.42, y + padHeight * 0.05, padWidth * 0.45, padHeight * 0.5, -Math.PI / 4.5, '#3a8659', '#2d6b4f');
+
+        // Lower pad (base)
+        drawLeafPad(x, y + padHeight * 0.3, padWidth * 0.48, padHeight * 0.5, Math.PI / 8, '#2d6b4f', '#1e4d35');
+
+        // Highlight on main pad
+        this.ctx.fillStyle = '#58d68d';
+        this.ctx.globalAlpha = 0.6;
+        this.ctx.beginPath();
+        this.ctx.arc(x - padWidth * 0.15, y - padHeight * 0.35, padWidth * 0.12, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawDesertCactusColumnar(x, y, size) {
+        // Tall columnar organ pipe cactus - increased scale
+        const height = size * 0.75;
+        const width = size * 0.28;
+
+        // Shadow
+        this.ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 1, y + 1, width * 0.4, size * 0.15, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Main body
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.fillRect(x - width * 0.3, y - height * 0.5, width * 0.6, height);
+
+        // Dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.fillRect(x + width * 0.05, y - height * 0.5, width * 0.25, height);
+
+        // Vertical ridges
+        this.ctx.strokeStyle = '#1e8449';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const px = x - width * 0.2 + (i * width * 0.15);
+            this.ctx.beginPath();
+            this.ctx.moveTo(px, y - height * 0.5);
+            this.ctx.lineTo(px, y + height * 0.5);
+            this.ctx.stroke();
+        }
+
+        // Spine clusters
+        this.ctx.fillStyle = '#1e8449';
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 2; col++) {
+                const px = x - width * 0.2 + (col * width * 0.4);
+                const py = y - height * 0.4 + (row * height * 0.2);
+                this.ctx.beginPath();
+                this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+        }
+
+        // Highlight stripe
+        this.ctx.fillStyle = '#58d68d';
+        this.ctx.fillRect(x - width * 0.15, y - height * 0.4, width * 0.1, height * 0.8);
+    }
+
+    drawDesertCactusCholla(x, y, size) {
+        // Cholla - spiky branching cactus - increased scale
+        const height = size * 0.65;
+        const width = size * 0.23;
+
+        // Main trunk
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.fillRect(x - width * 0.25, y - height * 0.4, width * 0.5, height * 0.8);
+
+        // Dark side
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.fillRect(x + width * 0.05, y - height * 0.4, width * 0.2, height * 0.8);
+
+        // Upper left branch
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.save();
+        this.ctx.translate(x - width * 0.4, y - height * 0.2);
+        this.ctx.rotate(-Math.PI / 3);
+        this.ctx.fillRect(-width * 0.2, -width * 0.15, width * 0.4, width * 0.3);
+        this.ctx.restore();
+
+        // Upper right branch
+        this.ctx.save();
+        this.ctx.translate(x + width * 0.4, y - height * 0.15);
+        this.ctx.rotate(Math.PI / 3);
+        this.ctx.fillRect(-width * 0.2, -width * 0.15, width * 0.4, width * 0.3);
+        this.ctx.restore();
+
+        // Lower branches
+        this.ctx.save();
+        this.ctx.translate(x - width * 0.35, y + height * 0.1);
+        this.ctx.rotate(-Math.PI / 4);
+        this.ctx.fillRect(-width * 0.15, -width * 0.12, width * 0.3, width * 0.24);
+        this.ctx.restore();
+
+        this.ctx.save();
+        this.ctx.translate(x + width * 0.35, y + height * 0.1);
+        this.ctx.rotate(Math.PI / 4);
+        this.ctx.fillRect(-width * 0.15, -width * 0.12, width * 0.3, width * 0.24);
+        this.ctx.restore();
+
+        // Dense spines
+        this.ctx.fillStyle = '#1e8449';
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2;
+            const radius = size * 0.15;
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            this.ctx.beginPath();
+            this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+
+        // Highlight
+        this.ctx.fillStyle = '#58d68d';
+        this.ctx.beginPath();
+        this.ctx.arc(x - width * 0.12, y - height * 0.25, width * 0.1, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawDesertBush(x, y, size) {
+        // Dry bush vegetation - irregular organic shape
+        const radius = size * 0.28;
+
+        // Main body with irregular outline
+        this.ctx.fillStyle = '#9d7c54';
+        this.ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const variation = Math.sin(angle * 3) * 0.15 + Math.cos(angle * 5) * 0.1;
+            const r = radius * (0.85 + variation);
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r * 0.8;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Darker inner layer for depth
+        this.ctx.fillStyle = '#7a5c3f';
+        this.ctx.beginPath();
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const variation = Math.sin(angle * 3) * 0.08;
+            const r = radius * (0.5 + variation);
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r * 0.8;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Highlight on top
+        this.ctx.fillStyle = '#bfa878';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - radius * 0.2, y - radius * 0.3);
+        this.ctx.quadraticCurveTo(x, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
+        this.ctx.quadraticCurveTo(x + radius * 0.1, y - radius * 0.15, x - radius * 0.1, y - radius * 0.2);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Branch structure - more realistic twigs
+        this.ctx.strokeStyle = '#5c4630';
+        this.ctx.lineWidth = 1.5;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * radius * 0.2;
+            const startY = y + Math.sin(angle) * radius * 0.15;
+            const midX = x + Math.cos(angle) * radius * 0.65;
+            const midY = y + Math.sin(angle) * radius * 0.6;
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, startY);
+            this.ctx.quadraticCurveTo(midX, midY - size * 0.05, midX + Math.cos(angle + 0.3) * size * 0.08, midY + Math.sin(angle + 0.3) * size * 0.08);
+            this.ctx.stroke();
+        }
+    }
+
+    drawSpaceVegetation(x, y, size) {
+        // Alien space vegetation - 5 weird abstract variations
+        const seed = Math.floor(x * 0.5 + y * 0.7) % 5;
+        
+        switch(seed) {
+            case 0:
+                this.drawSpaceVortexPlant(x, y, size);
+                break;
+            case 1:
+                this.drawSpaceSpikeCoral(x, y, size);
+                break;
+            case 2:
+                this.drawSpaceFractalGrowth(x, y, size);
+                break;
+            case 3:
+                this.drawSpaceBiolumPlant(x, y, size);
+                break;
+            default:
+                this.drawSpaceAlienMushroom(x, y, size);
+        }
+    }
+
+    drawSpaceVortexPlant(x, y, size) {
+        // Swirling vortex-like alien plant
+        this.ctx.fillStyle = '#4a6a9a';
+        
+        // Spiral body
+        const spirals = 3;
+        for (let layer = 0; layer < spirals; layer++) {
+            const radius = size * (0.08 + layer * 0.08);
+            this.ctx.beginPath();
+            for (let i = 0; i < 50; i++) {
+                const angle = (i / 50) * Math.PI * 2 + layer * Math.PI / 2;
+                const dist = radius * (i / 50);
+                const px = x + Math.cos(angle) * dist;
+                const py = y + Math.sin(angle) * dist;
+                if (i === 0) this.ctx.moveTo(px, py);
+                else this.ctx.lineTo(px, py);
+            }
+            this.ctx.strokeStyle = `rgba(100, 150, 255, ${0.6 - layer * 0.15})`;
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+        }
+
+        // Center glow
+        this.ctx.fillStyle = 'rgba(200, 100, 255, 0.8)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.08, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceSpikeCoral(x, y, size) {
+        // Spike coral formation
+        this.ctx.fillStyle = '#5a7aaa';
+        
+        // Main body cluster
+        const spikeCount = 8;
+        for (let i = 0; i < spikeCount; i++) {
+            const angle = (i / spikeCount) * Math.PI * 2;
+            const baseX = x + Math.cos(angle) * size * 0.08;
+            const baseY = y + Math.sin(angle) * size * 0.08;
+            const tipX = x + Math.cos(angle) * size * 0.25;
+            const tipY = y + Math.sin(angle) * size * 0.25;
+            
+            // Spike
+            this.ctx.strokeStyle = `rgba(${100 + Math.cos(angle) * 50}, ${150}, ${200 + Math.sin(angle) * 50}, 0.9)`;
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.moveTo(baseX, baseY);
+            this.ctx.quadraticCurveTo(
+                (baseX + tipX) * 0.5 + Math.cos(angle + Math.PI/2) * size * 0.05,
+                (baseY + tipY) * 0.5 + Math.sin(angle + Math.PI/2) * size * 0.05,
+                tipX, tipY
+            );
+            this.ctx.stroke();
+        }
+
+        // Center sphere
+        this.ctx.fillStyle = '#8aaacc';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceFractalGrowth(x, y, size) {
+        // Fractal branching alien structure
+        const drawFractal = (cx, cy, length, angle, depth) => {
+            if (depth === 0) return;
+            
+            const endX = cx + Math.cos(angle) * length;
+            const endY = cy + Math.sin(angle) * length;
+            
+            this.ctx.strokeStyle = `rgba(${100 + depth * 30}, ${150 + depth * 20}, ${255 - depth * 30}, ${0.7 - depth * 0.1})`;
+            this.ctx.lineWidth = Math.max(1, 3 - depth);
+            this.ctx.beginPath();
+            this.ctx.moveTo(cx, cy);
+            this.ctx.lineTo(endX, endY);
+            this.ctx.stroke();
+            
+            // Branch left and right
+            drawFractal(endX, endY, length * 0.7, angle - Math.PI / 5, depth - 1);
+            drawFractal(endX, endY, length * 0.7, angle + Math.PI / 5, depth - 1);
+        };
+
+        // Draw three main branches
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            drawFractal(x, y, size * 0.15, angle, 3);
+        }
+
+        // Core
+        this.ctx.fillStyle = '#aabbdd';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.05, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceBiolumPlant(x, y, size) {
+        // Bioluminescent branching organism
+        this.ctx.fillStyle = '#3a7a9a';
+        
+        // Main body
+        this.ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = size * (0.15 + Math.sin(i * 0.8) * 0.08);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            if (i === 0) this.ctx.moveTo(px, py);
+            else this.ctx.lineTo(px, py);
+        }
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Bioluminescent tendrils
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const startX = x + Math.cos(angle) * size * 0.13;
+            const startY = y + Math.sin(angle) * size * 0.13;
+            
+            this.ctx.strokeStyle = `rgba(100, ${200 + Math.sin(angle) * 50}, 255, 0.8)`;
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, startY);
+            
+            // Wavy tendril
+            for (let j = 0; j < 5; j++) {
+                const progress = (j + 1) / 5;
+                const offsetX = Math.cos(angle) * size * 0.2 * progress;
+                const offsetY = Math.sin(angle) * size * 0.2 * progress;
+                const wiggleX = Math.sin(angle + j) * size * 0.05;
+                const wiggleY = Math.cos(angle + j) * size * 0.05;
+                this.ctx.lineTo(startX + offsetX + wiggleX, startY + offsetY + wiggleY);
+            }
+            this.ctx.stroke();
+        }
+
+        // Intense core glow
+        this.ctx.fillStyle = 'rgba(150, 200, 255, 0.9)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
+        this.ctx.fill();
+    }
+
+    drawSpaceAlienMushroom(x, y, size) {
+        // Impossible geometry alien mushroom
+        // Cap with inverted perspective
+        this.ctx.fillStyle = '#6a5aaa';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.18, y - size * 0.08);
+        this.ctx.bezierCurveTo(
+            x - size * 0.18, y - size * 0.18,
+            x + size * 0.18, y - size * 0.18,
+            x + size * 0.18, y - size * 0.08
+        );
+        this.ctx.lineTo(x + size * 0.1, y + size * 0.08);
+        this.ctx.lineTo(x - size * 0.1, y + size * 0.08);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Inverted inner surface (different color)
+        this.ctx.fillStyle = '#4a3aaa';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - size * 0.14, y - size * 0.05);
+        this.ctx.bezierCurveTo(
+            x - size * 0.14, y - size * 0.12,
+            x + size * 0.14, y - size * 0.12,
+            x + size * 0.14, y - size * 0.05
+        );
+        this.ctx.lineTo(x + size * 0.08, y + size * 0.04);
+        this.ctx.lineTo(x - size * 0.08, y + size * 0.04);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Stem
+        this.ctx.fillStyle = '#5a6aaa';
+        this.ctx.fillRect(x - size * 0.06, y + size * 0.08, size * 0.12, size * 0.16);
+
+        // Bioluminescent gill-like structures
+        this.ctx.strokeStyle = 'rgba(200, 100, 255, 0.6)';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+            const py = y - size * 0.08 + (i * size * 0.035);
+            this.ctx.beginPath();
+            this.ctx.moveTo(x - size * 0.14, py);
+            this.ctx.quadraticCurveTo(x, py - size * 0.02, x + size * 0.14, py);
+            this.ctx.stroke();
+        }
+
+        // Glow aura
+        this.ctx.fillStyle = 'rgba(200, 100, 255, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
+        this.ctx.fill();
     }
 
     drawModeIndicator() {

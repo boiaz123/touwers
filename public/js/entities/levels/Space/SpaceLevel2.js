@@ -18,7 +18,32 @@ export class SpaceLevel2 extends LevelBase {
             edgeGrassColor: '#4a8aaa',
             flowerDensity: 30000
         });
-        this.terrainElements = [];
+        this.terrainElements = [
+            // Space rocks
+            { type: 'rock', gridX: 5.00, gridY: 10.00, size: 1.1 },
+            { type: 'rock', gridX: 16.00, gridY: 3.00, size: 1.2 },
+            { type: 'rock', gridX: 28.00, gridY: 22.00, size: 1.0 },
+            { type: 'rock', gridX: 40.00, gridY: 8.00, size: 1.3 },
+            { type: 'rock', gridX: 50.00, gridY: 18.00, size: 1.1 },
+            { type: 'rock', gridX: 12.00, gridY: 30.00, size: 1.2 },
+            { type: 'rock', gridX: 38.00, gridY: 32.00, size: 1.0 },
+            { type: 'rock', gridX: 56.00, gridY: 28.00, size: 1.1 },
+            
+            // Space vegetation (crystals and alien growths)
+            { type: 'vegetation', gridX: 8.00, gridY: 26.00, size: 1.0 },
+            { type: 'vegetation', gridX: 20.00, gridY: 12.00, size: 1.1 },
+            { type: 'vegetation', gridX: 34.00, gridY: 5.00, size: 1.2 },
+            { type: 'vegetation', gridX: 48.00, gridY: 32.00, size: 1.0 },
+            { type: 'vegetation', gridX: 25.00, gridY: 28.00, size: 1.1 },
+            { type: 'vegetation', gridX: 52.00, gridY: 10.00, size: 1.3 },
+            
+            // More alien vegetation
+            { type: 'vegetation', gridX: 14.00, gridY: 18.00, size: 1.1 },
+            { type: 'vegetation', gridX: 32.00, gridY: 12.00, size: 1.0 },
+            { type: 'vegetation', gridX: 44.00, gridY: 20.00, size: 1.2 },
+            { type: 'vegetation', gridX: 10.00, gridY: 4.00, size: 1.0 },
+            { type: 'vegetation', gridX: 58.00, gridY: 5.00, size: 1.1 }
+        ];
     }
     createMeanderingPath() {
         const pathInGridCoords = [{ gridX: 0, gridY: 16.875 }, { gridX: 18, gridY: 5 }, { gridX: 36, gridY: 28 }, { gridX: 54, gridY: 12 }, { gridX: 60, gridY: 20 }];
