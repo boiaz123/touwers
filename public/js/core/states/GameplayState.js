@@ -364,11 +364,13 @@ export class GameplayState {
         }
         
         // Check if training materials are available for free placement
-        if (marketplace.hasFreePlacement('training-materials')) {
+        // Also need to check that player has the training-gear upgrade
+        const hasTrainingGearUpgrade = this.stateManager.upgradeSystem && this.stateManager.upgradeSystem.hasUpgrade('training-gear');
+        if (marketplace.hasFreePlacement('training-materials') && hasTrainingGearUpgrade) {
             this.freeBuildingPlacements['training'] = true;
             // Unlock the training grounds building so the button appears
             this.towerManager.unlockSystem.unlockedBuildings.add('training');
-            console.log('✓ Training materials available - training grounds unlocked and free placement enabled');
+            console.log('✓ Training materials available and training-gear upgrade owned - training grounds unlocked and free placement enabled');
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         }
         

@@ -3471,12 +3471,17 @@ class UpgradesMenu {
         for (const upgrade of upgradeData) {
             const isPurchased = upgradeSystem.hasUpgrade(upgrade.id);
             let canPurchase = !isPurchased;
-            let prerequisiteMsg = null;
+            let requirementMsg = null;
             
             // Check prerequisites
             if (upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
                 canPurchase = false;
-                prerequisiteMsg = `Requires: ${upgradeData.find(u => u.id === upgrade.prerequisite)?.name}`;
+                requirementMsg = `Requires: ${upgradeData.find(u => u.id === upgrade.prerequisite)?.name}`;
+            }
+            
+            // If already purchased, set requirement message to "Purchased"
+            if (isPurchased) {
+                requirementMsg = 'Purchased';
             }
             
             items.push({
@@ -3490,7 +3495,7 @@ class UpgradesMenu {
                 hovered: false,
                 isPurchased: isPurchased,
                 canPurchase: canPurchase,
-                prerequisiteMsg: prerequisiteMsg
+                requirementMsg: requirementMsg
             });
         }
         
@@ -3597,9 +3602,25 @@ class UpgradesMenu {
         const now = Date.now();
         if (this.isOpen && (now - this.lastConsumableCheckTime) > 500) { // Check every 500ms
             this.lastConsumableCheckTime = now;
+            // Preserve hover states before rebuilding
+            const oldBuyItems = this.buyItems;
+            const hoverStateMap = new Map();
+            if (oldBuyItems) {
+                oldBuyItems.forEach(item => {
+                    if (item.hovered) {
+                        hoverStateMap.set(item.id, true);
+                    }
+                });
+            }
+            
             // Rebuild items to reflect any changes in marketplace consumables
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
+            
+            // Restore hover states
+            this.buyItems.forEach(item => {
+                item.hovered = hoverStateMap.has(item.id);
+            });
         }
     }
 
@@ -3714,7 +3735,7 @@ class UpgradesMenu {
         
         // Check category filter buttons (only visible in buy tab)
         if (this.activeTab === 'buy') {
-            const categoryY = tabY + tabHeight + 10;
+            const categoryY = panelY + 74;
             const categoryHeight = 25;
             const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
             
@@ -3905,7 +3926,7 @@ class UpgradesMenu {
         setTimeout(() => { this.clickLock = false; }, 100); // 100ms debounce
         
         if (this.activeTab === 'buy') {
-            // Handle marketplace item purchase
+            // Handle both marketplace items and upgrades (upgrades are now a category in buy tab)
             if (!item.canPurchase) {
                 if (item.requirementMsg) {
                     console.log('Cannot purchase item. ' + item.requirementMsg);
@@ -3922,13 +3943,31 @@ class UpgradesMenu {
             this.playerGold -= item.cost;
             this.stateManager.playerGold = this.playerGold;
             
-            // Add consumable to marketplace system
-            this.stateManager.marketplaceSystem.addConsumable(item.id, 1);
-            
-            // Handle Intel pack purchases - unlock corresponding enemy intel
-            if (item.category === 'intel') {
-                this.stateManager.marketplaceSystem.unlockEnemyIntel(item.id);
-                console.log(`Unlocked enemy intel from: ${item.name}`);
+            // Handle upgrades separately from marketplace items
+            if (item.type === 'upgrade') {
+                // Purchase upgrade to upgrade system
+                this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
+                console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
+                
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('upgrade');
+                }
+            } else {
+                // Purchase marketplace item
+                this.stateManager.marketplaceSystem.addConsumable(item.id, 1);
+                
+                // Handle Intel pack purchases - unlock corresponding enemy intel
+                if (item.category === 'intel') {
+                    this.stateManager.marketplaceSystem.unlockEnemyIntel(item.id);
+                    console.log(`Unlocked enemy intel from: ${item.name}`);
+                }
+                
+                console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
+                
+                if (this.stateManager.audioManager) {
+                    // Use upgrade sound for buying in marketplace
+                    this.stateManager.audioManager.playSFX('upgrade');
+                }
             }
             
             // Update statistics when buying
@@ -3940,13 +3979,6 @@ class UpgradesMenu {
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
             this.currentPage = 0;
-            
-            console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
-            
-            if (this.stateManager.audioManager) {
-                // Use upgrading sound for buying in marketplace (as per user request)
-                this.stateManager.audioManager.playSFX('upgrading');
-            }
         } else if (this.activeTab === 'sell') {
             // Sell the loot item
             this.playerGold += item.sellPrice;
@@ -3979,41 +4011,6 @@ class UpgradesMenu {
             if (this.stateManager.audioManager) {
                 // Use LootCollect sound for selling (as per user request)
                 this.stateManager.audioManager.playSFX('loot-collect');
-            }
-        } else if (this.activeTab === 'upgrade') {
-            // Handle upgrade purchase
-            if (item.isPurchased) {
-                console.log('Upgrade already purchased:', item.name);
-                return;
-            }
-            
-            if (!item.canPurchase) {
-                if (item.prerequisiteMsg) {
-                    console.log('Cannot purchase upgrade. ' + item.prerequisiteMsg);
-                }
-                return;
-            }
-            
-            if (this.playerGold < item.cost) {
-                console.log('Not enough gold to purchase:', item.name, '. Need:', item.cost, 'Have:', this.playerGold);
-                return;
-            }
-            
-            // Purchase the upgrade
-            this.playerGold -= item.cost;
-            this.stateManager.playerGold = this.playerGold;
-            this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
-            
-            // Rebuild buy items (since upgrades may unlock marketplace items)
-            this.allBuyItems = this.buildBuyItems();
-            this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
-            this.currentPage = 0;
-            
-            console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
-            
-            if (this.stateManager.audioManager) {
-                // Use upgrading sound for purchasing upgrades
-                this.stateManager.audioManager.playSFX('upgrading');
             }
         }
     }
@@ -4416,7 +4413,7 @@ class UpgradesMenu {
         }
         
         // Disabled overlay and message
-        if (isDisabled && item.requirementMsg) {
+        if (isDisabled) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x, y, width, height);
             
@@ -4424,7 +4421,8 @@ class UpgradesMenu {
             ctx.fillStyle = '#ffaa00';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(item.requirementMsg, x + width / 2, y + height - 18);
+            const displayMsg = item.requirementMsg || 'Not Available';
+            ctx.fillText(displayMsg, x + width / 2, y + height - 18);
         }
         
         // Action button

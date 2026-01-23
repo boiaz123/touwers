@@ -3,6 +3,8 @@
  * Defines items that can be purchased with gold in the marketplace
  * These items can be consumables (used once per level) or persistent boons
  */
+import { UpgradeRegistry } from './UpgradeRegistry.js';
+
 export class MarketplaceRegistry {
     static #registry = {
         'forge-materials': {
@@ -338,7 +340,10 @@ export class MarketplaceRegistry {
         if (item.requirements && item.requirements.length > 0) {
             for (const requiredUpgrade of item.requirements) {
                 if (!upgradeSystem || !upgradeSystem.hasUpgrade(requiredUpgrade)) {
-                    return `Requires: ${requiredUpgrade} upgrade`;
+                    // Get the proper name from UpgradeRegistry
+                    const upgradeData = UpgradeRegistry.getUpgrade(requiredUpgrade);
+                    const upgradeName = upgradeData ? upgradeData.name : requiredUpgrade;
+                    return `Requires: ${upgradeName}`;
                 }
             }
         }
