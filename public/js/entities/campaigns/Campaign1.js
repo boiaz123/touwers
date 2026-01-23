@@ -1,5 +1,6 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
+import { Castle } from '../buildings/Castle.js';
 // Import level classes - they auto-register when imported
 import { ForestLevel1 } from '../levels/Forest/ForestLevel1.js';
 import { ForestLevel2 } from '../levels/Forest/ForestLevel2.js';
@@ -19,8 +20,8 @@ export class Campaign1 extends CampaignBase {
         this.campaignId = 'campaign-1';
         this.campaignName = 'The Forest Campaign';
         
-        // Castle rendering scale for campaign map
-        this.castleScale = 0.5;
+        // Castle instances for each level slot (for exact rendering consistency)
+        this.castleInstances = {};
         
         // Animation time for castle flags
         this.animationTime = 0;
@@ -28,6 +29,10 @@ export class Campaign1 extends CampaignBase {
         // Terrain cache - generated once on enter to prevent flickering
         this.terrainDetails = null;
         this.pathPoints = [];
+        
+        // Falling leaves particle effect
+        this.fallingLeaves = [];
+        this.maxLeaves = 40;
         
         // Register campaign levels once during construction
         this.registerLevels();
@@ -83,58 +88,73 @@ export class Campaign1 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Define a more winding, natural path with multiple loops and turns
-        // Keep all points well within canvas bounds for level placement
+        // Long winding S-curve path - more meanders, avoids all lakes
         this.pathPoints = [
-            // Left edge entry
-            { x: -20, y: height * 0.6 },
-            { x: width * 0.08, y: height * 0.65 },    // Level 1 area - bottom left
+            // Entry from left at middle
+            { x: 20, y: height * 0.50 },
             
-            // First loop - wind left to right bottom
-            { x: width * 0.15, y: height * 0.75 },
-            { x: width * 0.22, y: height * 0.68 },
-            { x: width * 0.28, y: height * 0.58 },    // Level 2 area
+            // Wind UP the left side
+            { x: width * 0.08, y: height * 0.48 },
+            { x: width * 0.13, y: height * 0.42 },
+            { x: width * 0.18, y: height * 0.34 },
+            { x: width * 0.23, y: height * 0.26 },
+            { x: width * 0.28, y: height * 0.18 },
+            { x: width * 0.33, y: height * 0.12 },
             
-            // Wind back and up
-            { x: width * 0.35, y: height * 0.48 },
-            { x: width * 0.38, y: height * 0.35 },    // Level 3 area - middle left
+            // Top left, curve far right to avoid center lake
+            { x: width * 0.40, y: height * 0.14 },
+            { x: width * 0.48, y: height * 0.12 },
+            { x: width * 0.55, y: height * 0.13 },
+            { x: width * 0.62, y: height * 0.20 },
             
-            // Loop up and around
-            { x: width * 0.45, y: height * 0.28 },
-            { x: width * 0.52, y: height * 0.22 },    // Level 4 area - top middle
-            { x: width * 0.60, y: height * 0.28 },
+            // Start coming down right side
+            { x: width * 0.68, y: height * 0.32 },
+            { x: width * 0.73, y: height * 0.45 },
+            { x: width * 0.77, y: height * 0.58 },
+            { x: width * 0.80, y: height * 0.68 },
+            { x: width * 0.83, y: height * 0.75 },
             
-            // Wind down to right side
-            { x: width * 0.68, y: height * 0.38 },    // Level 5 area - middle right
-            { x: width * 0.75, y: height * 0.48 },
-            { x: width * 0.80, y: height * 0.55 },    // Level 6 area - lower right
+            // Bottom area - curve left to avoid bottom lakes
+            { x: width * 0.86, y: height * 0.80 },
+            { x: width * 0.89, y: height * 0.77 },
+            { x: width * 0.92, y: height * 0.70 },
             
-            // Final wind up and across
-            { x: width * 0.85, y: height * 0.62 },
-            { x: width * 0.90, y: height * 0.68 },    // Level 7 area
-            { x: width * 0.95, y: height * 0.60 },    // Level 8 area - approaching exit
+            // Back up toward exit
+            { x: width * 0.95, y: height * 0.58 },
+            { x: width * 0.97, y: height * 0.50 },
             
-            // Right edge exit
-            { x: width + 20, y: height * 0.60 }
+            // Exit right
+            { x: width + 20, y: height * 0.50 }
         ];
         
-        // Generate 8 level slots - specifically positioned along key path points
-        const totalSlots = 8;
+        // Generate 12 level slots positioned along the path
+        const totalSlots = 12;
         this.levelSlots = [];
         
-        // Define specific indices for level placement on the path for better control
-        const levelPathIndices = [1, 4, 6, 8, 10, 12, 14, 15];
+        // Spread 12 castles across 21-point path for better spacing
+        const slotIndices = [2, 4, 6, 8, 10, 11, 12, 14, 15, 16, 18, 19];
         
         for (let i = 0; i < totalSlots; i++) {
-            // Interpolate between two path points for level placement
-            const pathIndex = levelPathIndices[i];
-            let pos;
+            const pathIndex = Math.min(slotIndices[i], this.pathPoints.length - 1);
+            const pathPoint = this.pathPoints[pathIndex];
             
-            if (pathIndex < this.pathPoints.length) {
-                pos = { ...this.pathPoints[pathIndex] };
-            } else {
-                const t = i / (totalSlots - 1);
-                pos = this.getPointOnPath(t);
+            // Position at path point with minimal perpendicular offset to keep on path
+            const pos = { ...pathPoint };
+            
+            // Add tiny offset perpendicular to path direction (10px to stay on road)
+            const offset = (i % 2 === 0 ? 1 : -1) * 10;
+            if (pathIndex > 0 && pathIndex < this.pathPoints.length - 1) {
+                const prev = this.pathPoints[pathIndex - 1];
+                const next = this.pathPoints[pathIndex + 1];
+                const dx = next.x - prev.x;
+                const dy = next.y - prev.y;
+                const len = Math.hypot(dx, dy);
+                if (len > 0) {
+                    const perpX = -dy / len;
+                    const perpY = dx / len;
+                    pos.x += perpX * offset;
+                    pos.y += perpY * offset;
+                }
             }
             
             // Use existing level or create placeholder
@@ -142,7 +162,6 @@ export class Campaign1 extends CampaignBase {
                 pos.level = this.levels[i];
                 pos.levelIndex = i;
             } else {
-                // Create placeholder for missing levels
                 pos.level = {
                     id: `placeholder-${i}`,
                     name: `Level ${i + 1}`,
@@ -157,8 +176,7 @@ export class Campaign1 extends CampaignBase {
     }
     
     generateTerrainCache() {
-        // Generate all terrain variations once on enter
-        // This prevents recalculation and flickering on every frame
+        // Generate all terrain variations once on enter for a dense forest look
         this.terrainDetails = {
             forests: [],
             rocks: [],
@@ -175,254 +193,125 @@ export class Campaign1 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Generate mountain ranges for background depth - rolling hills with rocky appearance
-        const mountains = [
-            { x: 120, y: 140, width: 240, height: 200, rolliness: 4, rockiness: 8 },
-            { x: width - 160, y: 160, width: 220, height: 180, rolliness: 3, rockiness: 7 },
-            { x: width / 2 - 80, y: 120, width: 200, height: 190, rolliness: 3, rockiness: 8 }
-        ];
-        this.terrainDetails.mountains = mountains;
+        // NO MOUNTAINS - create a dense forest instead
+        this.terrainDetails.mountains = [];
         
-        // Generate grass patches for variety and depth - more organic with more opacity variation
-        const grassPatchCount = 35;
-        for (let i = 0; i < grassPatchCount; i++) {
-            this.terrainDetails.grassPatches.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                width: 100 + Math.random() * 150,
-                height: 80 + Math.random() * 120,
-                color: Math.random() > 0.5 ? '#5aa85a' : '#4a8a4a',
-                opacity: 0.15 + Math.random() * 0.2
-            });
-        }
-        
-        // Generate large boulders - removed for cleaner look
-        const boulders = [];
-        this.terrainDetails.boulders = boulders;
-        
-        // Generate many small rocks for detail
-        const smallRocks = [];
-        for (let i = 0; i < 40; i++) {
-            smallRocks.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: 4 + Math.random() * 12,
-                opacity: 0.4 + Math.random() * 0.4
-            });
-        }
-        this.terrainDetails.smallRocks = smallRocks;
-        
-        // Generate forest clusters - positioned FAR from mountains, not on them, and away from road
-        const forestClusters = [
-            // Far left corners
-            {x: 30, y: 80, size: 95, treeCount: 16, density: 0.58},
-            {x: 50, y: 250, size: 100, treeCount: 17, density: 0.59},
-            {x: 40, y: 500, size: 105, treeCount: 18, density: 0.60},
-            {x: 60, y: height - 80, size: 100, treeCount: 17, density: 0.59},
-            
-            // Far right corners
-            {x: width - 40, y: 100, size: 95, treeCount: 16, density: 0.58},
-            {x: width - 60, y: 280, size: 100, treeCount: 17, density: 0.59},
-            {x: width - 50, y: 520, size: 105, treeCount: 18, density: 0.60},
-            {x: width - 70, y: height - 90, size: 100, treeCount: 17, density: 0.59},
-            
-            // Far bottom edges
-            {x: 150, y: height - 60, size: 95, treeCount: 16, density: 0.58},
-            {x: width / 2, y: height - 70, size: 110, treeCount: 19, density: 0.61},
-            {x: width - 150, y: height - 65, size: 95, treeCount: 16, density: 0.58},
-            
-            // Far top edges  
-            {x: 120, y: 40, size: 90, treeCount: 15, density: 0.56},
-            {x: width / 2, y: 50, size: 100, treeCount: 17, density: 0.59},
-            {x: width - 130, y: 45, size: 90, treeCount: 15, density: 0.56},
-            
-            // Distant outer left and right
-            {x: 20, y: height / 2, size: 85, treeCount: 14, density: 0.55},
-            {x: width - 25, y: height / 2, size: 85, treeCount: 14, density: 0.55}
-        ];
-        
-        for (const cluster of forestClusters) {
-            // Generate trees within cluster with better distribution
-            const trees = [];
-            for (let i = 0; i < cluster.treeCount; i++) {
-                const angle = (i / cluster.treeCount) * Math.PI * 2;
-                const randomness = Math.random() * 0.35 + 0.65;
-                const distance = randomness * cluster.size * 0.85;
-                trees.push({
-                    x: cluster.x + Math.cos(angle) * distance,
-                    y: cluster.y + Math.sin(angle) * distance,
-                    size: 14 + Math.random() * 24,
-                    variant: Math.floor(Math.random() * 3) // Tree variations
-                });
-            }
-            this.terrainDetails.forests.push({
-                x: cluster.x,
-                y: cluster.y,
-                trees: trees,
-                density: cluster.density
-            });
-        }
-        
-        // Generate water features - positioned away from mountains
-        const mountainsForWater = this.terrainDetails.mountains;
+        // Generate water features - only organic/shaped lakes, no simple circles
         const waterFeatures = [
-            {x: 280, y: 380, radiusX: 55, radiusY: 35, rotation: 0.3},
-            {x: width - 220, y: 480, radiusX: 50, radiusY: 42, rotation: -0.2},
-            {x: width / 2 + 170, y: height - 140, radiusX: 60, radiusY: 38, rotation: 0.5},
-            {x: 220, y: height - 160, radiusX: 45, radiusY: 32, rotation: -0.4},
-            {x: width - 180, y: height - 100, radiusX: 48, radiusY: 36, rotation: 0.1}
-        ].filter(water => {
-            // Remove water if too close to any mountain
-            for (const mountain of mountainsForWater) {
-                const dist = Math.hypot(water.x - mountain.x, water.y - mountain.y);
-                const minDist = Math.max(mountain.width, mountain.height) * 0.9;
-                if (dist < minDist) {
-                    return false;
-                }
-            }
-            return true;
-        });
+            // Top-left - tall vertical lake with jagged shore
+            {x: 140, y: 150, radiusX: 55, radiusY: 90, rotation: 0.4, shapeVariant: 1},
+            
+            // Top-center - wide asymmetric crescent
+            {x: width / 2 + 20, y: 130, radiusX: 105, radiusY: 50, rotation: -0.8, shapeVariant: 3},
+            
+            // Top-right - organic bean shape
+            {x: width - 140, y: 200, radiusX: 75, radiusY: 80, rotation: 0.6, shapeVariant: 2},
+            
+            // Middle-left - elongated with jagged edges
+            {x: 200, y: height / 2 - 20, radiusX: 50, radiusY: 100, rotation: 0.2, shapeVariant: 1},
+            
+            // Center - irregular crescent
+            {x: width / 2 - 100, y: height / 2 + 40, radiusX: 110, radiusY: 60, rotation: -0.5, shapeVariant: 3},
+            
+            // Center-right - jagged shore
+            {x: width / 2 + 120, y: height / 2 + 20, radiusX: 85, radiusY: 75, rotation: 0.9, shapeVariant: 1},
+            
+            // Bottom-center - tall bean shape
+            {x: width / 2 + 40, y: height - 140, radiusX: 70, radiusY: 95, rotation: -0.7, shapeVariant: 3},
+            
+            // Bottom-right - organic jagged shape
+            {x: width - 130, y: height - 100, radiusX: 80, radiusY: 85, rotation: 0.4, shapeVariant: 2}
+        ];
         this.terrainDetails.water = waterFeatures;
         
-        // Generate rock formations with variety - away from mountains
-        const mountainsList = this.terrainDetails.mountains || [];
+        // Generate MANY more rocks scattered throughout - dense forest has lots of boulders
         const rocks = [
-            {x: 210, y: 430, size: 28, type: 'large'},
-            {x: 380, y: 180, size: 22, type: 'medium'},
-            {x: width - 210, y: 520, size: 32, type: 'large'},
-            {x: width / 2 + 120, y: 380, size: 24, type: 'medium'},
-            {x: width - 120, y: 280, size: 20, type: 'small'},
-            {x: 450, y: 520, size: 28, type: 'large'},
-            {x: 320, y: 380, size: 18, type: 'small'},
-            {x: width - 280, y: 410, size: 22, type: 'medium'},
-            {x: 140, y: 560, size: 25, type: 'large'},
-            {x: width - 100, y: 340, size: 19, type: 'medium'}
+            {x: 120, y: 150, size: 35, type: 'large'},
+            {x: 200, y: 320, size: 28, type: 'medium'},
+            {x: 280, y: 450, size: 32, type: 'large'},
+            {x: 360, y: 280, size: 26, type: 'medium'},
+            {x: 420, y: 520, size: 30, type: 'large'},
+            {x: 180, y: 600, size: 24, type: 'medium'},
+            {x: 320, y: 150, size: 28, type: 'medium'},
+            {x: 480, y: 380, size: 34, type: 'large'},
+            {x: width - 150, y: 200, size: 30, type: 'large'},
+            {x: width - 280, y: 380, size: 26, type: 'medium'},
+            {x: width - 100, y: 520, size: 32, type: 'large'},
+            {x: width - 400, y: 450, size: 28, type: 'medium'},
+            {x: width - 220, y: 150, size: 24, type: 'medium'},
+            {x: width / 2 - 180, y: 320, size: 29, type: 'medium'},
+            {x: width / 2 + 150, y: 480, size: 31, type: 'large'},
+            {x: width / 2 - 320, y: 500, size: 25, type: 'medium'},
+            {x: width / 2 + 280, y: 250, size: 27, type: 'medium'},
+            {x: 100, y: height - 150, size: 33, type: 'large'},
+            {x: 350, y: height - 200, size: 28, type: 'medium'},
+            {x: width - 200, y: height - 180, size: 30, type: 'large'},
+            {x: width / 2, y: height - 220, size: 26, type: 'medium'},
+            {x: 520, y: 150, size: 29, type: 'medium'},
+            {x: width - 450, y: 320, size: 32, type: 'large'},
+            {x: 250, y: 250, size: 25, type: 'medium'},
+            {x: width - 320, y: 600, size: 28, type: 'medium'}
         ];
         
-        // Filter rocks to remove any that are too close to mountains
-        const filteredRocks = rocks.filter(rock => {
-            for (const mountain of mountainsList) {
-                const dist = Math.hypot(rock.x - mountain.x, rock.y - mountain.y);
-                const minDist = Math.max(mountain.width, mountain.height) * 0.65;
-                if (dist < minDist) {
-                    return false; // Remove this rock
-                }
-            }
-            return true;
-        });
+        this.terrainDetails.rocks = rocks;
         
-        this.terrainDetails.rocks = filteredRocks;
-        
-        // Generate scattered shrubs for variety
-        const shrubCount = 60;
-        for (let i = 0; i < shrubCount; i++) {
-            this.terrainDetails.shrubs.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                size: 5 + Math.random() * 14,
-                color: Math.random() > 0.5 ? '#4a6b4a' : '#3a5a3a',
-                opacity: 0.4 + Math.random() * 0.4
-            });
-        }
-        
-        // Generate scattered trees for diversity - with STRICT mountain, water, AND road avoidance
+        // Generate scattered trees with natural distribution - very dense forest
         const scatteredTrees = [];
-        let treesAdded = 0;
         const waterRegions = this.terrainDetails.water;
-        const mountainRegions = this.terrainDetails.mountains;
-        const roadPathPoints = this.pathPoints;
+        const minTreeSpacing = 40; // Even smaller spacing for much denser forest
         
-        // Very high attempt count to force trees away from mountains
-        for (let attempt = 0; attempt < 3000 && treesAdded < 250; attempt++) {
+        // Massive number of placement attempts to create very dense forest
+        const attempts = 15000;
+        for (let attempt = 0; attempt < attempts; attempt++) {
             const x = Math.random() * width;
             const y = Math.random() * height;
             
-            // FIRST CHECK: Absolutely NO point inside mountain shape
-            let insideMountain = false;
-            for (const mountain of mountainRegions) {
-                if (this.isPointInMountain(x, y, mountain)) {
-                    insideMountain = true;
-                    break;
-                }
-            }
-            
-            if (insideMountain) continue;
-            
-            // SECOND CHECK: Not too close to water
+            // Check if too close to water - allow trees closer to lakes
             let tooCloseToWater = false;
             for (const water of waterRegions) {
                 const dist = Math.hypot(x - water.x, y - water.y);
-                const minDist = Math.max(water.radiusX, water.radiusY) + 80;
+                const minDist = Math.max(water.radiusX, water.radiusY) + 35;
                 if (dist < minDist) {
                     tooCloseToWater = true;
                     break;
                 }
             }
-            
             if (tooCloseToWater) continue;
             
-            // THIRD CHECK: Large safety buffer from mountain centers
-            let tooCloseToMountain = false;
-            for (const mountain of mountainRegions) {
-                const dist = Math.hypot(x - mountain.x, y - mountain.y);
-                // Much larger buffer to keep trees far away even from base
-                const minDist = Math.max(mountain.width, mountain.height) * 1.15;
-                if (dist < minDist) {
-                    tooCloseToMountain = true;
-                    break;
-                }
-            }
-            
-            if (tooCloseToMountain) continue;
-            
-            // Check if tree is too close to road path - strict buffer
+            // Check if too close to road path
             let tooCloseToRoad = false;
-            for (const roadPoint of roadPathPoints) {
+            for (const roadPoint of this.pathPoints) {
                 const dist = Math.hypot(x - roadPoint.x, y - roadPoint.y);
-                if (dist < 70) { // 70px buffer around road
+                if (dist < 75) {
                     tooCloseToRoad = true;
                     break;
                 }
             }
-            
             if (tooCloseToRoad) continue;
             
-            // Only place tree if not near water, mountains, or road
+            // Check if too close to other scattered trees
+            let tooCloseToOtherTree = false;
+            for (const tree of scatteredTrees) {
+                const dist = Math.hypot(x - tree.x, y - tree.y);
+                if (dist < minTreeSpacing) {
+                    tooCloseToOtherTree = true;
+                    break;
+                }
+            }
+            if (tooCloseToOtherTree) continue;
+            
             scatteredTrees.push({
                 x: x,
                 y: y,
-                size: 10 + Math.random() * 20,
-                variant: Math.floor(Math.random() * 3)
+                size: 32 + Math.random() * 40, // Much bigger trees (32-72px)
+                variant: Math.floor(Math.random() * 6)
             });
-            treesAdded++;
         }
         this.terrainDetails.trees = scatteredTrees;
-    }
-    
-    // Helper function to check if a point is inside a mountain shape
-    isPointInMountain(x, y, mountain) {
-        const { x: mx, y: my, width: mw, height: mh } = mountain;
         
-        // Extended bounds check
-        if (x < mx - mw / 2 - 40 || x > mx + mw / 2 + 40) {
-            return false;
-        }
-        
-        // Normalize x position to 0-1 range
-        const t = (x - (mx - mw / 2)) / mw;
-        
-        // Use exact same formula as drawing for consistency
-        const peak1 = Math.sin(t * Math.PI) * mh * 0.75;
-        const peak2 = Math.sin(t * Math.PI * 2 + 0.3) * mh * 0.35;
-        const peak3 = Math.sin(t * Math.PI * 4.2 + 2) * mh * 0.08;
-        
-        // Smooth edge transition (same as drawing)
-        const edgeSmooth = Math.pow(Math.sin(t * Math.PI), 0.6);
-        const mountainTopY = my + mh * 0.2 - (peak1 + peak2 + peak3) * edgeSmooth;
-        
-        // Point is in mountain if y is above (less than) the mountain top
-        // With 10 pixel buffer for extra safety
-        return y < mountainTopY + 10;
+        // Remove forest clusters - use only scattered random trees for natural look
+        // This prevents the circular clustering pattern
+        this.terrainDetails.forests = [];
     }
     
     
@@ -434,23 +323,18 @@ export class Campaign1 extends CampaignBase {
     
     renderTerrain(ctx) {
         const canvas = this.stateManager.canvas;
-        const w = canvas.width;
-        const h = canvas.height;
         
-        // Render background mountains first (far background, behind everything)
-        if (this.terrainDetails && this.terrainDetails.mountains) {
-            for (const mountain of this.terrainDetails.mountains) {
-                this.drawMountain(ctx, mountain);
+        // Render water features FIRST (behind everything)
+        if (this.terrainDetails && this.terrainDetails.water) {
+            for (const water of this.terrainDetails.water) {
+                this.drawWater(ctx, water);
             }
         }
         
-        // THEN: Render the winding path after mountains so it sits on the ground
-        this.renderPath(ctx);
-        
-        // Render large boulders (background layer before water)
-        if (this.terrainDetails && this.terrainDetails.boulders) {
-            for (const boulder of this.terrainDetails.boulders) {
-                this.drawBoulder(ctx, boulder.x, boulder.y, boulder.size, boulder.type);
+        // Render rocks
+        if (this.terrainDetails && this.terrainDetails.rocks) {
+            for (const rock of this.terrainDetails.rocks) {
+                this.drawRock(ctx, rock.x, rock.y, rock.size);
             }
         }
         
@@ -461,152 +345,23 @@ export class Campaign1 extends CampaignBase {
             }
         }
         
-        // Render shrubs (background layer)
-        if (this.terrainDetails && this.terrainDetails.shrubs) {
-            for (const shrub of this.terrainDetails.shrubs) {
-                this.drawShrub(ctx, shrub.x, shrub.y, shrub.size, shrub.color, shrub.opacity);
-            }
-        }
+        // Render the path on the ground
+        this.renderPath(ctx);
         
-        // Render water features (behind trees)
-        if (this.terrainDetails && this.terrainDetails.water) {
-            for (const water of this.terrainDetails.water) {
-                this.drawWater(ctx, water);
-            }
-        }
-        
-        // Render rocks
-        if (this.terrainDetails && this.terrainDetails.rocks) {
-            for (const rock of this.terrainDetails.rocks) {
-                this.drawRock(ctx, rock.x, rock.y, rock.size, rock.type);
-            }
-        }
-        
-        // Render forests and individual trees (foreground) - on top of everything
-        if (this.terrainDetails && this.terrainDetails.forests) {
-            for (const cluster of this.terrainDetails.forests) {
-                for (const tree of cluster.trees) {
-                    this.drawTreeTopDown(ctx, tree.x, tree.y, tree.size, tree.variant);
-                }
-            }
-        }
-        
-        // Render scattered trees (front layer) - on top of everything
+        // Render all trees on top of the path - sorted by Y for 2.5D perspective
+        // Lower Y (top of screen) renders first, appears behind
+        // Higher Y (bottom of screen) renders last, appears in front
         if (this.terrainDetails && this.terrainDetails.trees) {
-            for (const tree of this.terrainDetails.trees) {
+            const sortedTrees = [...this.terrainDetails.trees].sort((a, b) => a.y - b.y);
+            for (const tree of sortedTrees) {
                 this.drawTreeTopDown(ctx, tree.x, tree.y, tree.size, tree.variant);
             }
         }
+        
+        // Render falling leaves particle effect on top
+        this.updateAndRenderFallingLeaves(ctx);
     }
     
-    drawMountain(ctx, mountain) {
-        const { x, y, width, height, rolliness, rockiness } = mountain;
-        
-        ctx.save();
-        
-        // Helper to build mountain profile points
-        const buildMountainProfile = (peaks) => {
-            const points = [];
-            for (let i = 0; i <= 150; i++) {
-                const t = i / 150;
-                const mountainX = x - width / 2 + t * width;
-                
-                const peak1 = Math.sin(t * Math.PI) * height * peaks.p1;
-                const peak2 = Math.sin(t * Math.PI * 2 + peaks.offset2) * height * peaks.p2;
-                const peak3 = Math.sin(t * Math.PI * peaks.freq3 + peaks.offset3) * height * peaks.p3;
-                
-                const edgeSmooth = Math.pow(Math.sin(t * Math.PI), 0.6);
-                const mountainY = y + height * peaks.base - (peak1 + peak2 + peak3) * edgeSmooth;
-                points.push({ x: mountainX, y: mountainY });
-            }
-            return points;
-        };
-        
-        // Draw far mountain layer
-        ctx.globalAlpha = 0.5;
-        ctx.fillStyle = '#505050';
-        const farPoints = buildMountainProfile({
-            p1: 0.5, p2: 0.2, p3: 0.12, 
-            offset2: 0.7, offset3: 1.2, freq3: 3.5,
-            base: 0.35
-        });
-        ctx.beginPath();
-        ctx.moveTo(x - width / 2, y + height);
-        for (const pt of farPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(x + width / 2, y + height);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw mid-layer mountain
-        ctx.globalAlpha = 0.75;
-        ctx.fillStyle = '#6a7a7a';
-        const midPoints = buildMountainProfile({
-            p1: 0.62, p2: 0.28, p3: 0.1,
-            offset2: 0.5, offset3: 1.5, freq3: 3.8,
-            base: 0.28
-        });
-        ctx.beginPath();
-        ctx.moveTo(x - width / 2, y + height);
-        for (const pt of midPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(x + width / 2, y + height);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw front mountain layer
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#9a9a9a';
-        const frontPoints = buildMountainProfile({
-            p1: 0.75, p2: 0.35, p3: 0.08,
-            offset2: 0.3, offset3: 2, freq3: 4.2,
-            base: 0.2
-        });
-        ctx.beginPath();
-        ctx.moveTo(x - width / 2, y + height);
-        for (const pt of frontPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(x + width / 2, y + height);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.restore();
-    }
-    
-    drawBoulder(ctx, x, y, size, type) {
-        // Large boulder shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.5, y + size * 0.6, size * 0.9, size * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Multiple concentric circles for boulder shape
-        const gradient = ctx.createRadialGradient(x - size * 0.25, y - size * 0.25, 0, x, y, size);
-        gradient.addColorStop(0, '#9a8970');
-        gradient.addColorStop(0.5, '#7a6a5a');
-        gradient.addColorStop(1, '#5a4a3a');
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Boulder cracks and texture
-        ctx.strokeStyle = '#4a3a2a';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.7, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Highlight for 3D effect
-        ctx.fillStyle = 'rgba(200, 190, 170, 0.5)';
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.4, y - size * 0.4, size * 0.6, size * 0.5, -Math.PI / 3, 0, Math.PI * 2);
-        ctx.fill();
-    }
     
     drawSmallRock(ctx, x, y, size, opacity) {
         ctx.globalAlpha = opacity;
@@ -623,24 +378,9 @@ export class Campaign1 extends CampaignBase {
         ctx.globalAlpha = 1;
     }
     
-    drawShrub(ctx, x, y, size, color, opacity) {
-        // Shrub with opacity
-        ctx.fillStyle = color;
-        ctx.globalAlpha = opacity;
-        ctx.beginPath();
-        ctx.ellipse(x, y, size * 1.2, size * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Shrub highlight
-        ctx.fillStyle = 'rgba(100, 150, 100, 0.4)';
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.4, y - size * 0.3, size * 0.5, size * 0.35, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-    }
     
     drawWater(ctx, water) {
-        const { x, y, radiusX, radiusY, rotation } = water;
+        const { x, y, radiusX, radiusY, rotation, shapeVariant } = water;
         
         ctx.save();
         ctx.translate(x, y);
@@ -649,7 +389,35 @@ export class Campaign1 extends CampaignBase {
         // Water depth shadow
         ctx.fillStyle = '#0f3a4a';
         ctx.beginPath();
-        ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+        
+        // Draw differently shaped water based on variant
+        if (shapeVariant === 0) {
+            // Simple ellipse
+            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+        } else if (shapeVariant === 1) {
+            // Irregular jagged shore
+            const points = [];
+            for (let i = 0; i < 32; i++) {
+                const angle = (i / 32) * Math.PI * 2;
+                const dist = (Math.sin(i * 0.5) * 0.15 + 0.9);
+                const px = Math.cos(angle) * radiusX * dist;
+                const py = Math.sin(angle) * radiusY * dist;
+                points.push({x: px, y: py});
+            }
+            ctx.moveTo(points[0].x, points[0].y);
+            for (const pt of points) ctx.lineTo(pt.x, pt.y);
+            ctx.closePath();
+        } else if (shapeVariant === 2) {
+            // Crescent/curved shape
+            ctx.arc(0, 0, radiusX, 0, Math.PI * 2);
+            ctx.moveTo(radiusX * 0.6, 0);
+            ctx.arc(radiusX * 0.3, 0, radiusX * 0.4, 0, Math.PI * 2);
+        } else {
+            // Bean-like organic shape
+            ctx.ellipse(-radiusX * 0.2, 0, radiusX * 0.8, radiusY, 0, 0, Math.PI * 2);
+            ctx.moveTo(radiusX * 0.2, 0);
+            ctx.ellipse(radiusX * 0.2, 0, radiusX * 0.6, radiusY * 0.8, 0, 0, Math.PI * 2);
+        }
         ctx.fill();
         
         // Main water color with gradient
@@ -660,7 +428,31 @@ export class Campaign1 extends CampaignBase {
         
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+        
+        // Redraw shape for water fill
+        if (shapeVariant === 0) {
+            ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
+        } else if (shapeVariant === 1) {
+            const points = [];
+            for (let i = 0; i < 32; i++) {
+                const angle = (i / 32) * Math.PI * 2;
+                const dist = (Math.sin(i * 0.5) * 0.15 + 0.9);
+                const px = Math.cos(angle) * radiusX * dist;
+                const py = Math.sin(angle) * radiusY * dist;
+                points.push({x: px, y: py});
+            }
+            ctx.moveTo(points[0].x, points[0].y);
+            for (const pt of points) ctx.lineTo(pt.x, pt.y);
+            ctx.closePath();
+        } else if (shapeVariant === 2) {
+            ctx.arc(0, 0, radiusX, 0, Math.PI * 2);
+            ctx.moveTo(radiusX * 0.6, 0);
+            ctx.arc(radiusX * 0.3, 0, radiusX * 0.4, 0, Math.PI * 2);
+        } else {
+            ctx.ellipse(-radiusX * 0.2, 0, radiusX * 0.8, radiusY, 0, 0, Math.PI * 2);
+            ctx.moveTo(radiusX * 0.2, 0);
+            ctx.ellipse(radiusX * 0.2, 0, radiusX * 0.6, radiusY * 0.8, 0, 0, Math.PI * 2);
+        }
         ctx.fill();
         
         // Water shimmer - subtle ripples
@@ -685,144 +477,558 @@ export class Campaign1 extends CampaignBase {
         ctx.restore();
     }
     
-    drawRock(ctx, x, y, size, type = 'large') {
-        // Rock shadow - more pronounced
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    drawRock(ctx, x, y, size) {
+        // Use level-based rock rendering with seed-based variation
+        // Rocks on campaign map don't have grid coordinates, so use position-based seed
+        const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
+        switch(seed) {
+            case 0:
+                this.drawRockType1(ctx, x, y, size);
+                break;
+            case 1:
+                this.drawRockType2(ctx, x, y, size);
+                break;
+            case 2:
+                this.drawRockType3(ctx, x, y, size);
+                break;
+            default:
+                this.drawRockType4(ctx, x, y, size);
+        }
+    }
+
+    drawRockType1(ctx, x, y, size) {
+        // Large rough mountain-like rock with better depth and integration
+        
+        // Create layered shadow for depth effect
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.4)';
         ctx.beginPath();
-        ctx.ellipse(x + size * 0.4, y + size * 0.4, size * 0.7, size * 0.4, 0, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.36, y - size * 0.22);
+        ctx.lineTo(x - size * 0.21, y - size * 0.38);
+        ctx.lineTo(x + size * 0.06, y - size * 0.43);
+        ctx.lineTo(x + size * 0.36, y - size * 0.13);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x + 1, y + size * 0.42);
+        ctx.lineTo(x - size * 0.34, y + size * 0.23);
+        ctx.closePath();
         ctx.fill();
         
-        // Main rock - irregular shape for more natural look
-        const gradient = ctx.createRadialGradient(x - size * 0.2, y - size * 0.2, 0, x, y, size);
-        gradient.addColorStop(0, '#a39985');
-        gradient.addColorStop(0.5, '#8b7d6b');
-        gradient.addColorStop(1, '#6b5d4b');
-        ctx.fillStyle = gradient;
+        // Main mountain body with multiple shades
+        ctx.fillStyle = '#505050';
         ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
         ctx.fill();
         
-        // Rock detail - cracks and texture
-        ctx.strokeStyle = '#5a4a3a';
-        ctx.lineWidth = 1;
+        // Right shadow side for dimension
+        ctx.fillStyle = '#343434';
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Rock highlight - shiny surface
-        ctx.fillStyle = 'rgba(200, 190, 170, 0.4)';
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.3, y - size * 0.3, size * 0.5, size * 0.35, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.moveTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.08, y - size * 0.3);
+        ctx.lineTo(x + size * 0.02, y + size * 0.32);
+        ctx.closePath();
         ctx.fill();
         
-        // Additional texture for larger rocks
-        if (type === 'large') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        // Light highlights on top faces
+        ctx.fillStyle = '#8a8a8a';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.3 + x * 0.01) - 0.5) * size * 0.25;
+            const offsetY = (Math.cos(i * 1.3 + y * 0.01) - 0.5) * size * 0.15;
             ctx.beginPath();
-            ctx.ellipse(x + size * 0.2, y + size * 0.1, size * 0.4, size * 0.3, Math.PI / 6, 0, Math.PI * 2);
+            ctx.arc(x + offsetX, y - size * 0.15 + offsetY, size * 0.06, 0, Math.PI * 2);
             ctx.fill();
         }
+        
+        // Weathering spots and moss - spread naturally
+        ctx.fillStyle = 'rgba(90, 110, 70, 0.4)';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.38;
+            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.28;
+            const spotSize = size * (0.08 + Math.abs(Math.sin(i * 0.7)) * 0.04);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Rock cracks/texture
+        ctx.strokeStyle = 'rgba(40, 35, 30, 0.3)';
+        ctx.lineWidth = 1.5;
+        const crackCount = 2 + Math.floor(Math.abs(Math.sin(x * 0.02)) * 2);
+        for (let i = 0; i < crackCount; i++) {
+            const startX = (Math.sin(i * 0.7 + x * 0.01) - 0.5) * size * 0.3;
+            const startY = (Math.cos(i * 0.7 + y * 0.01) - 0.5) * size * 0.2;
+            const endX = startX + (Math.sin(i * 1.2 + x * 0.02) - 0.5) * size * 0.2;
+            const endY = startY + (Math.cos(i * 1.2 + y * 0.02) - 0.5) * size * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(x + startX, y + startY);
+            ctx.lineTo(x + endX, y + endY);
+            ctx.stroke();
+        }
+        
+        // Outline for definition
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Natural growth at base - connects mountain to ground
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.32, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawRockType2(ctx, x, y, size) {
+        // Rounded mountain form with better integration and detail
+        
+        // Shadow base for grounding
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        ctx.beginPath();
+        ctx.arc(x + 2, y + 2, size * 0.39, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Main rounded mountain body
+        ctx.fillStyle = '#595959';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Darker overlay for form and depth
+        ctx.fillStyle = '#414141';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.12, y + size * 0.12, size * 0.34, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Light highlights on upper portions
+        ctx.fillStyle = '#9a9a9a';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#888888';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.25, y - size * 0.05, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Weathering and moss spread naturally across the mountain
+        ctx.fillStyle = 'rgba(85, 105, 65, 0.35)';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const distance = size * (0.15 + Math.abs(Math.sin(i * 0.5)) * 0.12);
+            const vx = x + Math.cos(angle) * distance;
+            const vy = y + Math.sin(angle) * distance;
+            const spotSize = size * (0.09 + Math.abs(Math.cos(i * 0.7)) * 0.05);
+            ctx.beginPath();
+            ctx.arc(vx, vy, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Darker moss in crevices
+        ctx.fillStyle = 'rgba(60, 80, 45, 0.4)';
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3 + 0.3) * Math.PI * 2;
+            const vx = x + Math.cos(angle) * size * 0.2;
+            const vy = y + Math.sin(angle) * size * 0.2;
+            ctx.beginPath();
+            ctx.arc(vx, vy, size * 0.07, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Subtle cracks for texture
+        ctx.strokeStyle = 'rgba(40, 35, 30, 0.25)';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(
+                x + Math.cos(angle) * size * 0.3,
+                y + Math.sin(angle) * size * 0.3
+            );
+            ctx.stroke();
+        }
+        
+        // Define outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.34, size * 0.42, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawRockType3(ctx, x, y, size) {
+        // Jagged angular mountain with better weathering and integration
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.36, y - size * 0.09);
+        ctx.lineTo(x - size * 0.1, y - size * 0.37);
+        ctx.lineTo(x + size * 0.32, y - size * 0.17);
+        ctx.lineTo(x + size * 0.34, y + size * 0.28);
+        ctx.lineTo(x - size * 0.3, y + size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Main rocky body
+        ctx.fillStyle = '#4a4a4a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.12);
+        ctx.lineTo(x - size * 0.08, y - size * 0.4);
+        ctx.lineTo(x + size * 0.30, y - size * 0.2);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x - size * 0.28, y + size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right side shadow
+        ctx.fillStyle = '#2a2a2a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.30, y - size * 0.2);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.1, y + size * 0.15);
+        ctx.lineTo(x + size * 0.05, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Highlight faces
+        ctx.fillStyle = '#7a7a7a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.12);
+        ctx.lineTo(x - size * 0.08, y - size * 0.4);
+        ctx.lineTo(x - size * 0.15, y - size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Light moss and weathering
+        ctx.fillStyle = 'rgba(80, 100, 60, 0.35)';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.32;
+            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.22;
+            const spotSize = size * (0.09 + Math.abs(Math.cos(i * 0.6)) * 0.04);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.12);
+        ctx.lineTo(x - size * 0.08, y - size * 0.4);
+        ctx.lineTo(x + size * 0.30, y - size * 0.2);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x - size * 0.28, y + size * 0.22);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.28, size * 0.38, size * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawRockType4(ctx, x, y, size) {
+        // Massive blocky boulder with strong presence
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + 1, size * 0.4, size * 0.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Main blocky form
+        ctx.fillStyle = '#5a5a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y - size * 0.1);
+        ctx.lineTo(x - size * 0.12, y - size * 0.42);
+        ctx.lineTo(x + size * 0.28, y - size * 0.28);
+        ctx.lineTo(x + size * 0.38, y + size * 0.05);
+        ctx.lineTo(x + size * 0.22, y + size * 0.3);
+        ctx.lineTo(x - size * 0.32, y + size * 0.24);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right side darker shade
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.28, y - size * 0.28);
+        ctx.lineTo(x + size * 0.38, y + size * 0.05);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Top light face
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y - size * 0.1);
+        ctx.lineTo(x - size * 0.12, y - size * 0.42);
+        ctx.lineTo(x + size * 0.05, y - size * 0.32);
+        ctx.lineTo(x - size * 0.18, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering spots and moss
+        ctx.fillStyle = 'rgba(85, 105, 65, 0.4)';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.4 + x * 0.01) - 0.5) * size * 0.36;
+            const offsetY = (Math.cos(i * 1.4 + y * 0.01) - 0.5) * size * 0.26;
+            const spotSize = size * (0.1 + Math.abs(Math.sin(i * 0.8)) * 0.04);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Outline
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y - size * 0.1);
+        ctx.lineTo(x - size * 0.12, y - size * 0.42);
+        ctx.lineTo(x + size * 0.28, y - size * 0.28);
+        ctx.lineTo(x + size * 0.38, y + size * 0.05);
+        ctx.lineTo(x + size * 0.22, y + size * 0.3);
+        ctx.lineTo(x - size * 0.32, y + size * 0.24);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Natural growth at base
+        ctx.fillStyle = 'rgba(100, 120, 80, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.3, size * 0.42, size * 0.13, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     drawTreeTopDown(ctx, x, y, size, variant = 0) {
-        const treeSize = size * 0.7;
+        // Use level-based tree rendering with seed-based variation
+        // Seed based on position for consistent variation
+        const seed = Math.floor(x + y) % 6;
+        const treeVariant = seed;
         
-        // Tree shadow - cast outward
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        ctx.ellipse(x + treeSize * 0.3, y + treeSize * 0.4, treeSize * 0.8, treeSize * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Choose tree variant for visual variety
-        let canopyColor1, canopyColor2, trunkColor;
-        switch (variant) {
+        switch(treeVariant) {
             case 0:
-                canopyColor1 = '#2d5a2d';
-                canopyColor2 = '#3d7a3d';
-                trunkColor = '#5a4a3a';
+                this.drawTreeType1(ctx, x, y, size);
                 break;
             case 1:
-                canopyColor1 = '#3a6b3a';
-                canopyColor2 = '#4a8a4a';
-                trunkColor = '#6a5a4a';
+                this.drawTreeType2(ctx, x, y, size);
                 break;
             case 2:
-                canopyColor1 = '#1f4a1f';
-                canopyColor2 = '#2f6a2f';
-                trunkColor = '#4a3a2a';
+                this.drawTreeType3(ctx, x, y, size);
+                break;
+            case 3:
+                this.drawTreeType4(ctx, x, y, size);
+                break;
+            case 4:
+                this.drawTreeType5(ctx, x, y, size);
                 break;
             default:
-                canopyColor1 = '#2d5a2d';
-                canopyColor2 = '#3d7a3d';
-                trunkColor = '#5a4a3a';
+                this.drawTreeType6(ctx, x, y, size);
         }
-        
-        // Tree canopy - outer layer
-        ctx.fillStyle = canopyColor2;
+    }
+
+    drawTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
         ctx.beginPath();
-        ctx.arc(x, y, treeSize, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawTreeType3(ctx, x, y, size) {
+        // Sparse tree with distinct branches
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.25, y - size * 0.25, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.08, y + size * 0.1, size * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawTreeType4(ctx, x, y, size) {
+        // Compact round tree
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#6D4C41';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.08, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.15, size * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawTreeType5(ctx, x, y, size) {
+        // Tall conical tree
+        const trunkWidth = size * 0.16;
+        ctx.fillStyle = '#8D6E63';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.55);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.55);
+        ctx.lineTo(x + size * 0.32, y - size * 0.15);
+        ctx.lineTo(x - size * 0.32, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.36, y + size * 0.08);
+        ctx.lineTo(x - size * 0.36, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y + size * 0.15, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawTreeType6(ctx, x, y, size) {
+        // Wide spreading tree
+        const trunkWidth = size * 0.2;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.2, y - size * 0.25, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.2, y - size * 0.2, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tree canopy - inner (darker) layer
-        ctx.fillStyle = canopyColor1;
         ctx.beginPath();
-        ctx.arc(x, y, treeSize * 0.75, 0, Math.PI * 2);
+        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
         
-        // Tree canopy - core
-        ctx.fillStyle = canopyColor1;
-        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#2d8b3f';
         ctx.beginPath();
-        ctx.arc(x, y, treeSize * 0.5, 0, Math.PI * 2);
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
-        
-        // Tree trunk
-        const trunkWidth = treeSize * 0.25;
-        const trunkHeight = treeSize * 0.55;
-        
-        // Trunk shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.fillRect(x - trunkWidth / 2 + 1, y + treeSize * 0.25, trunkWidth, trunkHeight);
-        
-        // Main trunk
-        const trunkGradient = ctx.createLinearGradient(x - trunkWidth / 2, y, x + trunkWidth / 2, y);
-        trunkGradient.addColorStop(0, '#4a3a2a');
-        trunkGradient.addColorStop(0.5, trunkColor);
-        trunkGradient.addColorStop(1, '#4a3a2a');
-        ctx.fillStyle = trunkGradient;
-        ctx.fillRect(x - trunkWidth / 2, y + treeSize * 0.25, trunkWidth, trunkHeight);
-        
-        // Trunk highlight
-        ctx.fillStyle = '#7a6a5a';
-        ctx.globalAlpha = 0.5;
-        ctx.fillRect(x - trunkWidth / 3, y + treeSize * 0.25, trunkWidth * 0.4, trunkHeight * 0.6);
-        ctx.globalAlpha = 1;
     }
     
     renderPath(ctx) {
         if (!this.pathPoints || this.pathPoints.length < 2) return;
         
-        const canvas = this.stateManager.canvas;
-        
-        // Very subtle shadow - barely visible
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = 40;
+        // Layer 1: Dark shadow base for depth and grounding
+        ctx.strokeStyle = 'rgba(40, 30, 25, 0.5)';
+        ctx.lineWidth = 50;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        ctx.globalAlpha = 1;
         ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x + 2, this.pathPoints[0].y + 2);
+        ctx.moveTo(this.pathPoints[0].x + 3, this.pathPoints[0].y + 3);
         for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x + 2, this.pathPoints[i].y + 2);
+            ctx.lineTo(this.pathPoints[i].x + 3, this.pathPoints[i].y + 3);
         }
         ctx.stroke();
         
-        // Main road surface - blends with ground, natural stone color
-        ctx.strokeStyle = '#7a8a6a';
-        ctx.lineWidth = 38;
+        // Layer 2: Main dirt road color
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 46;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
+        for (let i = 1; i < this.pathPoints.length; i++) {
+            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
+        }
+        ctx.stroke();
+        
+        // Layer 3: Lighter center stripe - worn from foot traffic
+        ctx.strokeStyle = '#a8927a';
+        ctx.lineWidth = 22;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.7;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
         for (let i = 1; i < this.pathPoints.length; i++) {
@@ -830,18 +1036,6 @@ export class Campaign1 extends CampaignBase {
         }
         ctx.stroke();
         ctx.globalAlpha = 1;
-        
-        // Subtle worn centerline
-        ctx.strokeStyle = 'rgba(80, 70, 60, 0.3)';
-        ctx.lineWidth = 0.8;
-        ctx.setLineDash([8, 10]);
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
     }
 
     
@@ -858,9 +1052,9 @@ export class Campaign1 extends CampaignBase {
         if (isPlaceholder) {
             this.drawPlaceholderSlot(ctx, slot.x, slot.y, isHovered);
         } else if (isLocked) {
-            this.drawLockedCastleTopDown(ctx, slot.x, slot.y, this.castleScale);
+            this.drawLockedCastleTopDown(ctx, slot.x, slot.y, isHovered);
         } else {
-            this.drawCastleTopDown(ctx, slot.x, slot.y, isHovered);
+            this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
         }
         
         // Draw level name/number below
@@ -871,7 +1065,7 @@ export class Campaign1 extends CampaignBase {
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {
-        const scale = this.castleScale;
+        const scale = 0.45;
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.scale(scale, scale);
@@ -905,6 +1099,41 @@ export class Campaign1 extends CampaignBase {
     }
     
     // Castle rendering methods copied from Castle.js for exact visual consistency
+    drawCastleFromInstance(ctx, centerX, centerY, slotIndex, isHovered) {
+        // Create or retrieve castle instance for this slot
+        const slotKey = `slot_${slotIndex}`;
+        if (!this.castleInstances[slotKey]) {
+            this.castleInstances[slotKey] = new Castle(0, 0, 0, 0);
+        }
+        const castle = this.castleInstances[slotKey];
+        
+        // Update animation time on castle
+        castle.animationTime = this.animationTime;
+        
+        const scale = 0.45;
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(scale, scale);
+        
+        if (isHovered) {
+            ctx.fillStyle = 'rgba(212, 175, 55, 0.3)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 220, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw using exact Castle.js rendering methods for consistency
+        castle.drawMainWall(ctx);
+        castle.drawTower(ctx, -castle.wallWidth/2 - castle.towerWidth/2, 'left');
+        castle.drawTower(ctx, castle.wallWidth/2 + castle.towerWidth/2, 'right');
+        castle.drawCastleBase(ctx);
+        castle.drawGate(ctx);
+        castle.drawCrenellations(ctx);
+        // Removed flags and flagposts for cleaner map appearance
+        
+        ctx.restore();
+    }
+    
     drawCastleTopDown(ctx, centerX, centerY, isHovered) {
         const scale = this.castleScale;
         ctx.save();
@@ -918,13 +1147,12 @@ export class Campaign1 extends CampaignBase {
             ctx.fill();
         }
         
-        // Draw in order: base, walls, towers, gate, crenellations, flags
+        // Draw in order: base, walls, towers, gate, crenellations (no flags)
         this.drawCastleBase(ctx);
         this.drawMainWall(ctx);
         this.drawTowers(ctx);
         this.drawGate(ctx);
         this.drawCrenellations(ctx);
-        this.drawFlags(ctx);
         
         ctx.restore();
     }
@@ -1108,81 +1336,46 @@ export class Campaign1 extends CampaignBase {
     }
     
     drawFlags(ctx) {
-        const towerX = [-110, 110];
-        const towerHeight = 75;
-        const towerTopY = -towerHeight; // Top of tower
-        const flagPoleHeight = 30;
-        const flagWidth = 40;
-        const flagHeight = 24;
-        
-        const flagColors = ['#cc3333', '#334dbf'];
-        
-        for (let i = 0; i < towerX.length; i++) {
-            const x = towerX[i];
-            const flagPoleBaseY = towerTopY; // At top of tower
-            
-            // Flag pole
-            ctx.strokeStyle = '#6a5a4a';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(x, flagPoleBaseY);
-            ctx.lineTo(x, flagPoleBaseY - flagPoleHeight);
-            ctx.stroke();
-            
-            // Flag with waving animation
-            const waveAmount = Math.sin(this.animationTime * 4 + i * Math.PI) * 5;
-            
-            ctx.fillStyle = flagColors[i];
-            ctx.beginPath();
-            // Base of flag at pole
-            ctx.moveTo(x, flagPoleBaseY - flagPoleHeight);
-            // Top right corner (waves)
-            ctx.lineTo(x + flagWidth + waveAmount, flagPoleBaseY - flagPoleHeight - flagHeight / 2 + waveAmount * 0.15);
-            // Bottom right corner
-            ctx.lineTo(x + flagWidth + waveAmount * 0.5, flagPoleBaseY - flagPoleHeight + flagHeight / 2 + waveAmount * 0.1);
-            // Back to pole
-            ctx.closePath();
-            ctx.fill();
-            
-            // Flag border
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        }
+        // Flags removed - using exact castle rendering without flag poles
     }
     
-    drawLockedCastleTopDown(ctx, x, y, scale) {
+    drawLockedCastleTopDown(ctx, x, y, isHovered) {
+        const scale = 0.45;
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(scale, scale);
         
-        // Locked castle is grayed out
-        ctx.globalAlpha = 0.5;
+        if (isHovered) {
+            ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 220, 0, Math.PI * 2);
+            ctx.fill();
+        }
         
-        // Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(0, 40, 130, 30, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Draw dimmed castle to show it's locked
+        ctx.globalAlpha = 0.4;
         
-        // Main wall - grayed out
-        const wallWidth = 240;
-        const wallHeight = 120;
+        // Create a dimmed castle instance for visual
+        const tempCastle = new Castle(0, 0, 0, 0);
+        tempCastle.drawMainWall(ctx);
+        tempCastle.drawTower(ctx, -tempCastle.wallWidth/2 - tempCastle.towerWidth/2, 'left');
+        tempCastle.drawTower(ctx, tempCastle.wallWidth/2 + tempCastle.towerWidth/2, 'right');
+        tempCastle.drawCastleBase(ctx);
+        tempCastle.drawGate(ctx);
+        tempCastle.drawCrenellations(ctx);
         
-        ctx.fillStyle = '#5a5a5a';
-        ctx.fillRect(-wallWidth / 2, -wallHeight, wallWidth, wallHeight);
-        
-        ctx.strokeStyle = '#3a3a3a';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-wallWidth / 2, -wallHeight, wallWidth, wallHeight);
-        
-        // Lock symbol overlay
         ctx.globalAlpha = 1;
-        ctx.font = 'bold 40px serif';
+        
+        // Lock icon overlay
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 30px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#999';
-        ctx.fillText('🔒', 0, -50);
+        ctx.fillText('🔒', 0, 2);
         
         ctx.restore();
     }
@@ -1197,5 +1390,72 @@ export class Campaign1 extends CampaignBase {
     update(deltaTime) {
         // Update animation for castle flags
         this.animationTime += deltaTime;
+        
+        // Update falling leaves
+        this.updateFallingLeaves(deltaTime);
+    }
+    
+    updateFallingLeaves(deltaTime) {
+        // Spawn new leaves occasionally
+        if (this.fallingLeaves.length < this.maxLeaves && Math.random() < 0.15) {
+            const canvas = this.stateManager.canvas;
+            this.fallingLeaves.push({
+                x: Math.random() * canvas.width,
+                y: -10,
+                vx: (Math.random() - 0.5) * 30,
+                vy: 40 + Math.random() * 40,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 8,
+                swayPhase: Math.random() * Math.PI * 2,
+                color: Math.random() > 0.5 ? '#d4a574' : '#a68d5b'
+            });
+        }
+        
+        const canvas = this.stateManager.canvas;
+        
+        // Update leaves
+        for (let i = this.fallingLeaves.length - 1; i >= 0; i--) {
+            const leaf = this.fallingLeaves[i];
+            
+            leaf.y += leaf.vy * deltaTime;
+            leaf.swayPhase += deltaTime * 2;
+            leaf.x += leaf.vx * deltaTime + Math.sin(leaf.swayPhase) * 20 * deltaTime;
+            leaf.rotation += leaf.rotationSpeed * deltaTime;
+            
+            // Remove leaves that have fallen off screen
+            if (leaf.y > canvas.height + 10 || leaf.x < -10 || leaf.x > canvas.width + 10) {
+                this.fallingLeaves.splice(i, 1);
+            }
+        }
+    }
+    
+    updateAndRenderFallingLeaves(ctx) {
+        const canvas = this.stateManager.canvas;
+        
+        for (const leaf of this.fallingLeaves) {
+            ctx.save();
+            ctx.translate(leaf.x, leaf.y);
+            ctx.rotate(leaf.rotation);
+            
+            // Draw leaf shape
+            ctx.fillStyle = leaf.color;
+            ctx.globalAlpha = 0.7;
+            
+            // Simple leaf shape - ellipse with point
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 6, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Leaf vein
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(-6, 0);
+            ctx.lineTo(6, 0);
+            ctx.stroke();
+            
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
     }
 }

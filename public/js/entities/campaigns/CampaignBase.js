@@ -192,11 +192,8 @@ export class CampaignBase {
         // Render background
         this.renderBackground(ctx, canvas);
         
-        // Render terrain
+        // Render terrain (includes path rendering before trees)
         this.renderTerrain(ctx);
-        
-        // Render path
-        this.renderPath(ctx);
         
         // Render level slots
         this.renderLevelSlots(ctx);
