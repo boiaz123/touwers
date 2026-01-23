@@ -107,7 +107,7 @@ export function initializeMusicRegistry() {
     // Campaign 1 (Forest) songs
     MusicRegistry.registerMusic(
         'campaign-1-battle-1',
-        'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song1.mp3',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle.mp3',
         {
             loop: true,
             category: 'campaign-1',
@@ -117,7 +117,7 @@ export function initializeMusicRegistry() {
 
     MusicRegistry.registerMusic(
         'campaign-1-battle-2',
-        'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song2.mp3',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle2.mp3',
         {
             loop: true,
             category: 'campaign-1',
@@ -127,7 +127,7 @@ export function initializeMusicRegistry() {
     
     MusicRegistry.registerMusic(
         'campaign-1-battle-3',
-        'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song3.mp3',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle3.mp3',
         {
             loop: true,
             category: 'campaign-1',
@@ -135,10 +135,10 @@ export function initializeMusicRegistry() {
         }
     );
 
-    // Campaign 2 (Desert) songs
+    // Campaign 2 (Mountain) songs
     MusicRegistry.registerMusic(
         'campaign-2-battle-1',
-        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
+        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle.mp3',
         {
             loop: true,
             category: 'campaign-2',
@@ -146,20 +146,10 @@ export function initializeMusicRegistry() {
         }
     );
 
-    MusicRegistry.registerMusic(
-        'campaign-2-battle-2',
-        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
-        {
-            loop: true,
-            category: 'campaign-2',
-            volume: 0.7
-        }
-    );
-
-    // Campaign 3 (Mountain) songs
+    // Campaign 3 (Desert) songs
     MusicRegistry.registerMusic(
         'campaign-3-battle-1',
-        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle.mp3',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
         {
             loop: true,
             category: 'campaign-3',
@@ -167,11 +157,21 @@ export function initializeMusicRegistry() {
         }
     );
 
-    // Campaign 4 (Space) songs - placeholder, add actual songs when available
-    // For now, reuse space theme if available
+    MusicRegistry.registerMusic(
+        'campaign-3-battle-2',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-3',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 4 (Space) songs - fallback to Forest songs for now since SpaceSongs folder is empty
+    // TODO: Add actual space music tracks when available
     MusicRegistry.registerMusic(
         'campaign-4-battle-1',
-        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle.mp3',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle.mp3',
         {
             loop: true,
             category: 'campaign-4',
@@ -179,10 +179,30 @@ export function initializeMusicRegistry() {
         }
     );
 
-    // Campaign 5 (Generic) songs - fallback/additional songs
+    MusicRegistry.registerMusic(
+        'campaign-4-battle-2',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 5 (Level Testing/Sandbox) songs - use Forest songs as fallback
     MusicRegistry.registerMusic(
         'campaign-5-battle-1',
-        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign-5',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-5-battle-2',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle2.mp3',
         {
             loop: true,
             category: 'campaign-5',

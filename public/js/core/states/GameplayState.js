@@ -186,6 +186,7 @@ export class GameplayState {
         // Normal level start - reset game state
         this.gameState = this.createGameState();
         this.currentLevel = levelInfo.id;
+        this.currentCampaignId = levelInfo.campaignId || 'campaign-1';
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
         
@@ -311,13 +312,8 @@ export class GameplayState {
         
         // Play level-specific music with category-based looping
         if (this.stateManager.audioManager) {
-            // Determine the campaign ID from the current level
-            const campaignMatch = this.currentLevel.match(/^campaign-\d+/);
-            const campaignId = campaignMatch ? campaignMatch[0] : 'campaign-1';
-            
-            // Play the campaign-specific music category (e.g., 'campaign-1', 'campaign-2', etc.)
-            // This will select a random track and auto-play next track when one finishes
-            this.stateManager.audioManager.playMusicCategory(campaignId);
+            // Use the stored campaign ID for music selection
+            this.stateManager.audioManager.playMusicCategory(this.currentCampaignId);
         }
         
         // Wave system starts in cooldown mode - don't call startWave() here
@@ -549,13 +545,13 @@ export class GameplayState {
      */
     getAudioTrackForLevel(levelId) {
         // Define available music tracks for each campaign
-        // Campaign IDs: campaign-1 (Forest), campaign-2 (Desert), campaign-3 (Mountain), campaign-4 (Space), campaign-5 (Generic)
+        // Campaign IDs: campaign-1 (Forest), campaign-2 (Mountain), campaign-3 (Desert), campaign-4 (Space), campaign-5 (Level Testing)
         const campaignMusicMap = {
             'campaign-1': ['campaign-1-battle-1', 'campaign-1-battle-2', 'campaign-1-battle-3'],
-            'campaign-2': ['campaign-2-battle-1', 'campaign-2-battle-2'],
-            'campaign-3': ['campaign-3-battle-1'],
-            'campaign-4': ['campaign-4-battle-1'],
-            'campaign-5': ['campaign-5-battle-1'],
+            'campaign-2': ['campaign-2-battle-1'],
+            'campaign-3': ['campaign-3-battle-1', 'campaign-3-battle-2'],
+            'campaign-4': ['campaign-4-battle-1', 'campaign-4-battle-2'],
+            'campaign-5': ['campaign-5-battle-1', 'campaign-5-battle-2'],
         };
         
         // Extract campaign ID from level ID (e.g., 'campaign-1-level-1' -> 'campaign-1')
