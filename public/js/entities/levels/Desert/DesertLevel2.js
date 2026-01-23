@@ -42,9 +42,9 @@ export class DesertLevel2 extends LevelBase {
             
             // Desert rocks
             { type: 'rock', gridX: 6.00, gridY: 28.00, size: 1.0 },
-            { type: 'rock', gridX: 28.00, gridY: 5.00, size: 1.2 },
-            { type: 'rock', gridX: 52.00, gridY: 6.00, size: 1.1 },
-            { type: 'rock', gridX: 35.00, gridY: 28.00, size: 1.3 }
+            { type: 'rock', gridX: 28.00, gridY: 5.00, size: 1.0 },
+            { type: 'rock', gridX: 52.00, gridY: 6.00, size: 1.0 },
+            { type: 'rock', gridX: 35.00, gridY: 28.00, size: 1.0 }
         ];
     }
     createMeanderingPath() {

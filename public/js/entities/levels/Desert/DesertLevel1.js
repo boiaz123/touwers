@@ -58,11 +58,11 @@ export class DesertLevel1 extends LevelBase {
             { type: 'vegetation', gridX: 60.00, gridY: 15.00, size: 1.0 },
             
             // Desert rocks
-            { type: 'rock', gridX: 8.00, gridY: 18.00, size: 1.1 },
-            { type: 'rock', gridX: 32.00, gridY: 30.00, size: 1.2 },
+            { type: 'rock', gridX: 8.00, gridY: 18.00, size: 1.0 },
+            { type: 'rock', gridX: 32.00, gridY: 30.00, size: 1.0 },
             { type: 'rock', gridX: 45.00, gridY: 5.00, size: 1.0 },
-            { type: 'rock', gridX: 58.00, gridY: 28.00, size: 1.3 },
-            { type: 'rock', gridX: 24.00, gridY: 20.00, size: 1.1 }
+            { type: 'rock', gridX: 58.00, gridY: 28.00, size: 1.0 },
+            { type: 'rock', gridX: 24.00, gridY: 20.00, size: 1.0 }
         ];
     }
 

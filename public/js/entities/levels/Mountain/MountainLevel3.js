@@ -20,14 +20,14 @@ export class MountainLevel3 extends LevelBase {
         });
         this.terrainElements = [
             // Mountain rocks
-            { type: 'rock', gridX: 6.00, gridY: 6.00, size: 1.2 },
+            { type: 'rock', gridX: 6.00, gridY: 6.00, size: 1.0 },
             { type: 'rock', gridX: 16.00, gridY: 2.00, size: 1.0 },
-            { type: 'rock', gridX: 26.00, gridY: 10.00, size: 1.1 },
-            { type: 'rock', gridX: 36.00, gridY: 4.00, size: 1.3 },
+            { type: 'rock', gridX: 26.00, gridY: 10.00, size: 1.0 },
+            { type: 'rock', gridX: 36.00, gridY: 4.00, size: 1.0 },
             { type: 'rock', gridX: 48.00, gridY: 12.00, size: 1.0 },
-            { type: 'rock', gridX: 58.00, gridY: 6.00, size: 1.2 },
-            { type: 'rock', gridX: 14.00, gridY: 24.00, size: 1.1 },
-            { type: 'rock', gridX: 32.00, gridY: 28.00, size: 1.2 },
+            { type: 'rock', gridX: 58.00, gridY: 6.00, size: 1.0 },
+            { type: 'rock', gridX: 14.00, gridY: 24.00, size: 1.0 },
+            { type: 'rock', gridX: 32.00, gridY: 28.00, size: 1.0 },
             { type: 'rock', gridX: 50.00, gridY: 26.00, size: 1.0 },
             
             // Alpine vegetation (pine trees with snow)

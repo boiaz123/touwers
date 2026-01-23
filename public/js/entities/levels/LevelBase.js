@@ -417,16 +417,32 @@ export class LevelBase {
     }
 
     markTerrainCells() {
-        // Mark terrain element cells (trees, rocks, water) as occupied
+        // Mark terrain element cells (trees, rocks, water, vegetation, cacti) as occupied
         // This prevents towers and buildings from being placed on terrain
+        // Uses consistent collision detection across all campaigns
         if (!this.terrainElements || this.terrainElements.length === 0) {
+            console.warn(`[${this.constructor.name}] No terrain elements to mark`);
             return;
         }
 
-        this.terrainElements.forEach(element => {
-            const gridX = Math.floor(element.gridX);
-            const gridY = Math.floor(element.gridY);
-            const radius = element.size * 0.6; // Slightly smaller than visual size for gameplay
+        console.log(`[${this.constructor.name}] Marking ${this.terrainElements.length} terrain elements for collision`);
+
+        this.terrainElements.forEach((element, idx) => {
+            const gridX = element.gridX;
+            const gridY = element.gridY;
+            // Use provided size or default to 1.0 if not specified
+            const size = element.size || 1.0;
+            // Radius must be at least √0.5 ≈ 0.707 to mark the center cell
+            // (distance from cell center to terrain center is √0.5 for diagonals)
+            // Using 0.71 ensures size 1.0 blocks exactly 1 grid cell
+            const radius = size * 0.71;
+            
+            if (typeof gridX !== 'number' || typeof gridY !== 'number') {
+                console.warn(`[${this.constructor.name}] Terrain element ${idx} missing gridX/gridY:`, element);
+                return;
+            }
+            
+            let cellsMarked = 0;
             
             // Mark cells within the terrain element's radius
             for (let x = gridX - Math.ceil(radius); x <= gridX + Math.ceil(radius); x++) {
@@ -436,15 +452,26 @@ export class LevelBase {
                     // Calculate distance from cell center to terrain center
                     const cellCenterX = x + 0.5;
                     const cellCenterY = y + 0.5;
-                    const distance = Math.hypot(cellCenterX - element.gridX, cellCenterY - element.gridY);
+                    const distance = Math.hypot(cellCenterX - gridX, cellCenterY - gridY);
                     
                     // Mark cell if within radius
+                    // Apply same collision detection for all element types:
+                    // - trees, vegetation, cacti (type: 'tree', 'vegetation', 'cactus', 'drybush')
+                    // - rocks (type: 'rock')
+                    // - water (type: 'water')
                     if (distance <= radius) {
                         this.occupiedCells.add(`${x},${y}`);
+                        cellsMarked++;
                     }
                 }
             }
+            
+            if (cellsMarked === 0) {
+                console.warn(`[${this.constructor.name}] Element ${idx} (${element.type} at ${gridX},${gridY}, size=${size}) marked 0 cells! (radius=${radius})`);
+            }
         });
+        
+        console.log(`[${this.constructor.name}] Total occupied cells: ${this.occupiedCells.size}`);
     }
     
     isValidGridPosition(gridX, gridY) {
@@ -455,7 +482,13 @@ export class LevelBase {
         // Check if a 2x2 tower can be placed at this grid position
         for (let x = gridX; x < gridX + this.towerSize; x++) {
             for (let y = gridY; y < gridY + this.towerSize; y++) {
-                if (!this.isValidGridPosition(x, y) || this.occupiedCells.has(`${x},${y}`)) {
+                const cellKey = `${x},${y}`;
+                if (!this.isValidGridPosition(x, y)) {
+                    console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Position (${x},${y}) invalid (grid is ${this.gridWidth}x${this.gridHeight})`);
+                    return false;
+                }
+                if (this.occupiedCells.has(cellKey)) {
+                    console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Position (${x},${y}) blocked! occupiedCells has ${this.occupiedCells.size} total cells`);
                     return false;
                 }
             }
@@ -463,9 +496,10 @@ export class LevelBase {
         
         // Also check if there's already a tower at this position
         if (towerManager && towerManager.isTowerPositionOccupied(gridX, gridY)) {
+            console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Tower already exists here`);
             return false;
         }
-        
+
         return true;
     }
     
@@ -1663,7 +1697,7 @@ export class LevelBase {
         this.renderPath(ctx);
         
         // 5. Render trees and vegetation - LAST, on top of everything
-        this.renderTerrainElementsByType(ctx, ['vegetation', 'tree']);
+        this.renderTerrainElementsByType(ctx, ['vegetation', 'tree', 'cactus', 'drybush']);
         
         // Render castle - NOTE: Castle is now rendered by GameplayState after buildings/towers
         // This ensures proper z-ordering so the castle appears in front of buildings behind it
@@ -1956,35 +1990,42 @@ export class LevelBase {
     }
 
     renderDesertVegetation(ctx, x, y, size, gridX, gridY) {
+        const scaledSize = size * 1.5; // Scale up desert vegetation to match forest trees
         const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
         switch(seed) {
             case 0:
-                this.renderCactusSaguaro(ctx, x, y, size);
+                this.renderCactusSaguaro(ctx, x, y, scaledSize);
                 break;
             case 1:
-                this.renderCactusBarrel(ctx, x, y, size);
+                this.renderCactusBarrel(ctx, x, y, scaledSize);
                 break;
             case 2:
-                this.renderCactusPricklyPear(ctx, x, y, size);
+                this.renderCactusPricklyPear(ctx, x, y, scaledSize);
                 break;
             case 3:
-                this.renderCactusColumnar(ctx, x, y, size);
+                this.renderCactusColumnar(ctx, x, y, scaledSize);
                 break;
             case 4:
-                this.renderCactusCholla(ctx, x, y, size);
+                this.renderCactusCholla(ctx, x, y, scaledSize);
                 break;
             default:
-                this.renderDesertBush(ctx, x, y, size);
+                this.renderDesertBush(ctx, x, y, scaledSize);
         }
     }
 
     renderCactusSaguaro(ctx, x, y, size) {
-        // Classic saguaro cactus with branches
+        // Classic saguaro cactus with branches and improved spines
         const mainHeight = size * 0.55;
         const mainWidth = size * 0.25;
         
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + 2, mainWidth * 0.8, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
         // Main body - tapered top
-        ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath();
         ctx.moveTo(x - mainWidth * 0.25, y);
         ctx.lineTo(x - mainWidth * 0.25, y - mainHeight * 0.7);
@@ -1993,52 +2034,95 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
 
-        // Dark side
-        ctx.fillStyle = '#27ae60';
+        // Dark side with depth
+        ctx.fillStyle = '#15803d';
         ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x, y - mainHeight * 0.7);
-        ctx.quadraticCurveTo(x + mainWidth * 0.15, y - mainHeight * 0.85, x + mainWidth * 0.25, y - mainHeight * 0.7);
+        ctx.moveTo(x + mainWidth * 0.05, y);
+        ctx.lineTo(x + mainWidth * 0.05, y - mainHeight * 0.6);
+        ctx.quadraticCurveTo(x + mainWidth * 0.2, y - mainHeight * 0.8, x + mainWidth * 0.25, y - mainHeight * 0.7);
         ctx.lineTo(x + mainWidth * 0.25, y);
         ctx.closePath();
         ctx.fill();
 
         // Left arm
-        ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath();
         ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
         ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.4, x - mainWidth * 0.7, y - mainHeight * 0.2);
         ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.05, x - mainWidth * 0.3, y - mainHeight * 0.1);
         ctx.closePath();
         ctx.fill();
+        
+        // Left arm shadow
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
+        ctx.quadraticCurveTo(x - mainWidth * 0.55, y - mainHeight * 0.35, x - mainWidth * 0.6, y - mainHeight * 0.25);
+        ctx.quadraticCurveTo(x - mainWidth * 0.5, y - mainHeight * 0.1, x - mainWidth * 0.3, y - mainHeight * 0.1);
+        ctx.closePath();
+        ctx.fill();
 
         // Right arm
-        ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath();
         ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
         ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.35, x + mainWidth * 0.7, y - mainHeight * 0.15);
         ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.0, x + mainWidth * 0.3, y - mainHeight * 0.08);
         ctx.closePath();
         ctx.fill();
+        
+        // Right arm shadow
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
+        ctx.quadraticCurveTo(x + mainWidth * 0.55, y - mainHeight * 0.32, x + mainWidth * 0.6, y - mainHeight * 0.2);
+        ctx.quadraticCurveTo(x + mainWidth * 0.5, y - mainHeight * 0.05, x + mainWidth * 0.3, y - mainHeight * 0.08);
+        ctx.closePath();
+        ctx.fill();
 
-        // Spines
-        ctx.fillStyle = '#1e8449';
-        for (let i = 0; i < 8; i++) {
-            const px = x - mainWidth * 0.2 + (i * mainWidth * 0.1);
-            const py = y - mainHeight * 0.3;
+        // Spine clusters - much more prominent with better distribution
+        ctx.fillStyle = '#166534';
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const height = y - mainHeight * (0.2 + 0.5 * Math.abs(Math.sin(angle)));
+            const distance = mainWidth * 0.35;
+            const px = x + Math.cos(angle) * distance;
+            const py = height;
+            
+            // Main spine
             ctx.beginPath();
-            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx.arc(px, py, 1.2, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Smaller spine cluster around main
+            for (let j = 0; j < 2; j++) {
+                const angle2 = angle + (j - 0.5) * 0.5;
+                const px2 = x + Math.cos(angle2) * distance * 0.85;
+                const py2 = height + (j - 0.5) * 2;
+                ctx.beginPath();
+                ctx.arc(px2, py2, 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
+        
+        // Highlight stripe on main body
+        ctx.fillStyle = 'rgba(100, 200, 100, 0.3)';
+        ctx.fillRect(x - mainWidth * 0.12, y - mainHeight * 0.7, mainWidth * 0.12, mainHeight * 0.6);
     }
 
     renderCactusBarrel(ctx, x, y, size) {
-        // Barrel cactus with proper ribbed structure
+        // Barrel cactus with improved ribbed structure and spines
         const height = size * 0.5;
         const width = size * 0.32;
+        
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x + 2, y + 2, width * 0.35, height * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         // Main body - bulbous shape
-        ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath();
         ctx.moveTo(x - width * 0.35, y - height * 0.2);
         ctx.quadraticCurveTo(x - width * 0.42, y - height * 0.4, x, y - height * 0.5);
@@ -2051,47 +2135,79 @@ export class LevelBase {
         ctx.fill();
 
         // Dark side
-        ctx.fillStyle = '#27ae60';
+        ctx.fillStyle = '#15803d';
         ctx.beginPath();
-        ctx.moveTo(x + width * 0.05, y - height * 0.2);
-        ctx.quadraticCurveTo(x + width * 0.4, y - height * 0.35, x + width * 0.35, y - height * 0.45);
-        ctx.quadraticCurveTo(x + width * 0.2, y - height * 0.48, x + width * 0.05, y - height * 0.3);
+        ctx.moveTo(x + width * 0.08, y - height * 0.2);
+        ctx.quadraticCurveTo(x + width * 0.38, y - height * 0.35, x + width * 0.32, y - height * 0.43);
+        ctx.quadraticCurveTo(x + width * 0.15, y - height * 0.45, x + width * 0.08, y - height * 0.28);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(x + width * 0.08, y + height * 0.05);
+        ctx.quadraticCurveTo(x + width * 0.35, y + height * 0.3, x + width * 0.3, y + height * 0.4);
+        ctx.quadraticCurveTo(x + width * 0.15, y + height * 0.42, x + width * 0.08, y + height * 0.1);
         ctx.closePath();
         ctx.fill();
 
-        // Horizontal ribs
-        ctx.strokeStyle = '#1e8449';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-            const py = y - height * 0.35 + (i * height * 0.15);
-            const ribWidth = width * (0.35 - Math.abs(i - 2) * 0.08);
+        // Horizontal ribs - more defined
+        ctx.strokeStyle = '#0f6b3d';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 6; i++) {
+            const py = y - height * 0.4 + (i * height * 0.16);
+            const ribWidth = width * (0.38 - Math.abs(i - 2.5) * 0.085);
             ctx.beginPath();
             ctx.moveTo(x - ribWidth, py);
-            ctx.quadraticCurveTo(x, py - height * 0.02, x + ribWidth, py);
+            ctx.quadraticCurveTo(x, py - height * 0.015, x + ribWidth, py);
             ctx.stroke();
         }
 
-        // Spine clusters
-        ctx.fillStyle = '#1e8449';
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const radius = width * 0.3;
+        // Spine clusters - much more prominent
+        ctx.fillStyle = '#166534';
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = width * 0.32;
             const px = x + Math.cos(angle) * radius;
-            const py = y - height * 0.15 + Math.sin(angle) * height * 0.15;
+            const py = y - height * 0.1 + Math.sin(angle) * height * 0.2;
+            
+            // Main cluster spine
             ctx.beginPath();
-            ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            ctx.arc(px, py, 1.3, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Surrounding spines
+            for (let j = 0; j < 3; j++) {
+                const angle2 = angle + (j - 1) * 0.4;
+                const px2 = x + Math.cos(angle2) * radius * 0.9;
+                const py2 = py + (j - 1) * 2;
+                ctx.beginPath();
+                ctx.arc(px2, py2, 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
+        
+        // Highlight
+        ctx.fillStyle = 'rgba(100, 200, 100, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(x - width * 0.15, y - height * 0.25, width * 0.18, height * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderCactusPricklyPear(ctx, x, y, size) {
-        // Helper function to render organic leaf pad
+        // Helper function to render organic leaf pad with prominent spines
         const renderLeafPad = (x, y, width, height, rotation, color1, color2) => {
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(rotation);
 
-            // Main organic leaf pad using bezier curves
+            // Shadow base
+            ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, height * 0.45, width * 0.3, height * 0.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main organic leaf pad using bezier curves with brighter green
             ctx.fillStyle = color1;
             ctx.beginPath();
             ctx.moveTo(0, -height * 0.5);
@@ -2112,20 +2228,31 @@ export class LevelBase {
             ctx.closePath();
             ctx.fill();
 
-            // Spine clusters on pad
-            ctx.fillStyle = '#1e8449';
+            // Spine clusters on pad - much more prominent
+            ctx.fillStyle = '#4a8a4a';
             const spines = [
                 {x: 0, y: -height * 0.35},
-                {x: width * 0.15, y: -height * 0.15},
-                {x: -width * 0.15, y: -height * 0.15},
-                {x: width * 0.25, y: height * 0.15},
-                {x: -width * 0.25, y: height * 0.15},
-                {x: 0, y: height * 0.35}
+                {x: width * 0.18, y: -height * 0.18},
+                {x: -width * 0.18, y: -height * 0.18},
+                {x: width * 0.28, y: height * 0.15},
+                {x: -width * 0.28, y: height * 0.15},
+                {x: width * 0.1, y: height * 0.35},
+                {x: -width * 0.1, y: height * 0.35},
+                {x: 0, y: height * 0.4}
             ];
             spines.forEach(spine => {
+                // Main spine
                 ctx.beginPath();
-                ctx.arc(spine.x, spine.y, 1.2, 0, Math.PI * 2);
+                ctx.arc(spine.x, spine.y, 1.1, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Surrounding mini-spines
+                for (let j = 0; j < 2; j++) {
+                    const offset = (j - 0.5) * width * 0.12;
+                    ctx.beginPath();
+                    ctx.arc(spine.x + offset, spine.y, 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             });
 
             ctx.restore();
@@ -2135,38 +2262,49 @@ export class LevelBase {
         const padHeight = size * 0.35;
 
         // Main central pad
-        renderLeafPad(x, y - padHeight * 0.2, padWidth * 0.5, padHeight * 0.6, 0, '#3a8659', '#2d6b4f');
+        renderLeafPad(x, y - padHeight * 0.2, padWidth * 0.5, padHeight * 0.6, 0, '#22c55e', '#15803d');
 
         // Right side pad
-        renderLeafPad(x + padWidth * 0.42, y - padHeight * 0.1, padWidth * 0.45, padHeight * 0.5, Math.PI / 4.5, '#3a8659', '#2d6b4f');
+        renderLeafPad(x + padWidth * 0.42, y - padHeight * 0.1, padWidth * 0.45, padHeight * 0.5, Math.PI / 4.5, '#22c55e', '#15803d');
 
         // Left side pad
-        renderLeafPad(x - padWidth * 0.42, y + padHeight * 0.05, padWidth * 0.45, padHeight * 0.5, -Math.PI / 4.5, '#3a8659', '#2d6b4f');
+        renderLeafPad(x - padWidth * 0.42, y + padHeight * 0.05, padWidth * 0.45, padHeight * 0.5, -Math.PI / 4.5, '#22c55e', '#15803d');
 
         // Lower pad (base)
-        renderLeafPad(x, y + padHeight * 0.3, padWidth * 0.48, padHeight * 0.5, Math.PI / 8, '#2d6b4f', '#1e4d35');
+        renderLeafPad(x, y + padHeight * 0.3, padWidth * 0.48, padHeight * 0.5, Math.PI / 8, '#22c55e', '#15803d');
 
         // Highlight on main pad
-        ctx.fillStyle = '#58d68d';
-        ctx.globalAlpha = 0.6;
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#22c55e';
         ctx.beginPath();
-        ctx.arc(x - padWidth * 0.15, y - padHeight * 0.35, padWidth * 0.12, 0, Math.PI * 2);
+        ctx.ellipse(x - padWidth * 0.1, y - padHeight * 0.3, padWidth * 0.15, padHeight * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 
     renderCactusColumnar(ctx, x, y, size) {
-        // Tall columnar organ pipe cactus
+        // Tall columnar organ pipe cactus with prominent spines
         const bodyWidth = size * 0.18;
         const bodyHeight = size * 0.6;
 
-        // Main body
-        ctx.fillStyle = '#2a5a2a';
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + bodyHeight * 0.05, bodyWidth * 0.4, bodyHeight * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body with bright green
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(x - bodyWidth * 0.5, y - bodyHeight, bodyWidth, bodyHeight);
 
-        // Vertical ridge lines (4 ridges)
-        ctx.strokeStyle = '#1a3a1a';
-        ctx.lineWidth = 1;
+        // Dark side shading
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(x - bodyWidth * 0.5, y - bodyHeight, bodyWidth * 0.35, bodyHeight);
+
+        // Vertical ridge lines (4 ridges with better definition)
+        ctx.strokeStyle = '#0f6b3d';
+        ctx.lineWidth = 1.2;
         for (let i = 0; i < 4; i++) {
             const px = x - bodyWidth * 0.3 + i * bodyWidth * 0.2;
             ctx.beginPath();
@@ -2175,84 +2313,125 @@ export class LevelBase {
             ctx.stroke();
         }
 
-        // Spine clusters at intervals
-        ctx.fillStyle = '#4a4a2a';
-        for (let i = 0; i < 5; i++) {
-            const py = y - bodyHeight + (i * bodyHeight * 0.25);
-            // 2 spines per row
-            for (let j = 0; j < 2; j++) {
-                const px = x - bodyWidth * 0.25 + j * bodyWidth * 0.5;
+        // Spine clusters - much more prominent with more spines per row
+        ctx.fillStyle = '#4a8a4a';
+        for (let i = 0; i < 6; i++) {
+            const py = y - bodyHeight + (i * bodyHeight * 0.2);
+            // 4 spines per row instead of 2
+            for (let j = 0; j < 4; j++) {
+                const px = x - bodyWidth * 0.3 + j * bodyWidth * 0.2;
+                
+                // Main spine
                 ctx.beginPath();
-                ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+                ctx.arc(px, py, 1.1, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Surrounding mini-spines
+                for (let k = 0; k < 2; k++) {
+                    const offset = (k - 0.5) * 1.8;
+                    ctx.beginPath();
+                    ctx.arc(px, py + offset, 0.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         }
 
         // Highlight stripe
-        ctx.fillStyle = 'rgba(100, 150, 100, 0.3)';
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
         ctx.fillRect(x - bodyWidth * 0.15, y - bodyHeight * 0.9, bodyWidth * 0.2, bodyHeight * 0.8);
     }
 
     renderCactusCholla(ctx, x, y, size) {
-        // Branching cholla with arms
+        // Branching cholla with prominent spines
         const mainHeight = size * 0.5;
         const mainWidth = size * 0.15;
 
-        // Main body/stem
-        ctx.fillStyle = '#2a5a2a';
+        // Shadow base
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + mainHeight * 0.05, mainWidth * 0.6, mainHeight * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body/stem with bright green
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(x - mainWidth * 0.5, y - mainHeight, mainWidth, mainHeight);
+
+        // Dark side shading
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(x - mainWidth * 0.5, y - mainHeight, mainWidth * 0.3, mainHeight);
 
         // Upper left branch
         ctx.save();
         ctx.translate(x, y - mainHeight * 0.7);
         ctx.rotate(-Math.PI * 0.35);
-        ctx.fillStyle = '#2a4a2a';
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.35, mainWidth * 0.7, mainHeight * 0.35);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.35, mainWidth * 0.35, mainHeight * 0.35);
         ctx.restore();
 
         // Upper right branch
         ctx.save();
         ctx.translate(x, y - mainHeight * 0.7);
         ctx.rotate(Math.PI * 0.35);
-        ctx.fillStyle = '#2a4a2a';
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.35, mainWidth * 0.7, mainHeight * 0.35);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(0, -mainHeight * 0.35, mainWidth * 0.35, mainHeight * 0.35);
         ctx.restore();
 
         // Lower left branch
         ctx.save();
         ctx.translate(x, y - mainHeight * 0.2);
         ctx.rotate(-Math.PI * 0.25);
-        ctx.fillStyle = '#1a3a1a';
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.3, mainWidth * 0.7, mainHeight * 0.3);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.3, mainWidth * 0.35, mainHeight * 0.3);
         ctx.restore();
 
         // Lower right branch
         ctx.save();
         ctx.translate(x, y - mainHeight * 0.2);
         ctx.rotate(Math.PI * 0.25);
-        ctx.fillStyle = '#1a3a1a';
+        ctx.fillStyle = '#22c55e';
         ctx.fillRect(-mainWidth * 0.35, -mainHeight * 0.3, mainWidth * 0.7, mainHeight * 0.3);
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(0, -mainHeight * 0.3, mainWidth * 0.35, mainHeight * 0.3);
         ctx.restore();
 
-        // Dense spine perimeter (15 spines)
-        ctx.fillStyle = '#4a4a2a';
-        for (let i = 0; i < 15; i++) {
-            const angle = (i / 15) * Math.PI * 2;
-            const spineX = x + Math.cos(angle) * mainWidth * 0.8;
-            const spineY = y - mainHeight * 0.5 + Math.sin(angle) * mainHeight * 0.4;
+        // Prominent spine clusters - 20+ spines with supporting mini-spines
+        ctx.fillStyle = '#4a8a4a';
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            const spineX = x + Math.cos(angle) * mainWidth * 0.9;
+            const spineY = y - mainHeight * 0.5 + Math.sin(angle) * mainHeight * 0.5;
+            
+            // Main spine
             ctx.beginPath();
-            ctx.arc(spineX, spineY, 1.5, 0, Math.PI * 2);
+            ctx.arc(spineX, spineY, 1.1, 0, Math.PI * 2);
             ctx.fill();
+
+            // Surrounding mini-spines for detail
+            for (let j = 0; j < 3; j++) {
+                const miniAngle = angle + (j - 1) * (Math.PI / 8);
+                const miniX = x + Math.cos(miniAngle) * mainWidth * 0.75;
+                const miniY = y - mainHeight * 0.5 + Math.sin(miniAngle) * mainHeight * 0.35;
+                ctx.beginPath();
+                ctx.arc(miniX, miniY, 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Highlight
-        ctx.fillStyle = 'rgba(100, 150, 100, 0.2)';
-        ctx.fillRect(x - mainWidth * 0.2, y - mainHeight * 0.8, mainWidth * 0.3, mainHeight * 0.6);
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+        ctx.fillRect(x - mainWidth * 0.15, y - mainHeight * 0.8, mainWidth * 0.2, mainHeight * 0.7);
     }
 
     renderDesertBush(ctx, x, y, size) {
-        // Dry desert bush - irregular organic shape
-        const radius = size * 0.28;
+        // Dry desert bush - irregular organic shape, scaled up
+        const scaledSize = size * 1.3;
+        const radius = scaledSize * 0.28;
 
         // Main body with irregular outline
         ctx.fillStyle = '#9d7c54';
@@ -2269,13 +2448,13 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
 
-        // Darker inner layer for depth
-        ctx.fillStyle = '#7a5c3f';
+        // Darker inner layer for depth - more pronounced
+        ctx.fillStyle = '#6a4c2f';
         ctx.beginPath();
         for (let i = 0; i < 12; i++) {
             const angle = (i / 12) * Math.PI * 2;
             const variation = Math.sin(angle * 3) * 0.08;
-            const r = radius * (0.5 + variation);
+            const r = radius * (0.45 + variation);
             const px = x + Math.cos(angle) * r;
             const py = y + Math.sin(angle) * r * 0.8;
             if (i === 0) ctx.moveTo(px, py);
@@ -2284,62 +2463,68 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
 
-        // Highlight on top
-        ctx.fillStyle = '#bfa878';
+        // Bright highlight for dimension
+        ctx.fillStyle = '#c9a878';
+        ctx.globalAlpha = 0.7;
         ctx.beginPath();
         ctx.moveTo(x - radius * 0.2, y - radius * 0.3);
-        ctx.quadraticCurveTo(x, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
+        ctx.quadraticCurveTo(x - radius * 0.05, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
         ctx.quadraticCurveTo(x + radius * 0.1, y - radius * 0.15, x - radius * 0.1, y - radius * 0.2);
         ctx.closePath();
         ctx.fill();
+        ctx.globalAlpha = 1;
 
-        // Branch structure
-        ctx.strokeStyle = '#5c4630';
-        ctx.lineWidth = 1.5;
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
+        // Subtle texture - light lines instead of prominent dots
+        ctx.strokeStyle = '#8a6a44';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
             const startX = x + Math.cos(angle) * radius * 0.2;
             const startY = y + Math.sin(angle) * radius * 0.15;
             const midX = x + Math.cos(angle) * radius * 0.65;
             const midY = y + Math.sin(angle) * radius * 0.6;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(midX, midY - size * 0.05, midX + Math.cos(angle + 0.3) * size * 0.08, midY + Math.sin(angle + 0.3) * size * 0.08);
+            ctx.quadraticCurveTo(midX, midY - scaledSize * 0.03, midX + Math.cos(angle + 0.3) * scaledSize * 0.05, midY + Math.sin(angle + 0.3) * scaledSize * 0.05);
             ctx.stroke();
         }
+        ctx.globalAlpha = 1;
     }
 
     renderMountainVegetation(ctx, x, y, size, gridX, gridY) {
+        const scaledSize = size * 1.4;
         const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 3;
         switch(seed) {
             case 0:
-                this.renderMountainPineType1(ctx, x, y, size);
+                this.renderMountainPineType1(ctx, x, y, scaledSize);
                 break;
             case 1:
-                this.renderMountainPineType2(ctx, x, y, size);
+                this.renderMountainPineType2(ctx, x, y, scaledSize);
                 break;
             default:
-                this.renderMountainPineType3(ctx, x, y, size);
+                this.renderMountainPineType3(ctx, x, y, scaledSize);
         }
     }
 
     renderSpaceVegetation(ctx, x, y, size, gridX, gridY) {
         const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        const scaledSize = size * 1.3;
         switch(seed) {
             case 0:
-                this.renderSpaceVortexPlant(ctx, x, y, size);
+                this.renderSpaceVortexPlant(ctx, x, y, scaledSize);
                 break;
             case 1:
-                this.renderSpaceSpikeCoral(ctx, x, y, size);
+                this.renderSpaceSpikeCoral(ctx, x, y, scaledSize);
                 break;
             case 2:
-                this.renderSpaceFractalGrowth(ctx, x, y, size);
+                this.renderSpaceFractalGrowth(ctx, x, y, scaledSize);
                 break;
             case 3:
-                this.renderSpaceBiolumPlant(ctx, x, y, size);
+                this.renderSpaceBiolumPlant(ctx, x, y, scaledSize);
                 break;
             default:
-                this.renderSpaceAlienMushroom(ctx, x, y, size);
+                this.renderSpaceAlienMushroom(ctx, x, y, scaledSize);
         }
     }
 
@@ -2759,7 +2944,7 @@ export class LevelBase {
     }
 
     renderTree(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX + gridY) % 4;
+        const seed = Math.floor(gridX + gridY) % 6;
         switch(seed) {
             case 0:
                 this.renderTreeType1(ctx, x, y, size);
@@ -2770,8 +2955,14 @@ export class LevelBase {
             case 2:
                 this.renderTreeType3(ctx, x, y, size);
                 break;
-            default:
+            case 3:
                 this.renderTreeType4(ctx, x, y, size);
+                break;
+            case 4:
+                this.renderTreeType5(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType6(ctx, x, y, size);
         }
     }
 
@@ -2883,6 +3074,75 @@ export class LevelBase {
         ctx.fill();
     }
 
+    renderTreeType5(ctx, x, y, size) {
+        // Tall columnar tree with narrow form
+        const trunkWidth = size * 0.15;
+        ctx.fillStyle = '#704214';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.55);
+        
+        // Dark trunk shadow
+        ctx.fillStyle = '#4a2511';
+        ctx.fillRect(x + trunkWidth * 0.15, y - size * 0.15, trunkWidth * 0.35, size * 0.55);
+        
+        // Narrow triangular crown
+        ctx.fillStyle = '#0f3d1f';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x - size * 0.28, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#1a5a2a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.42);
+        ctx.lineTo(x + size * 0.22, y - size * 0.08);
+        ctx.lineTo(x - size * 0.22, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#2d7a3d';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.55);
+        ctx.lineTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x - size * 0.15, y - size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType6(ctx, x, y, size) {
+        // Broad oak/maple style tree with wide crown
+        const trunkWidth = size * 0.22;
+        
+        // Trunk
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
+        
+        // Trunk highlight
+        ctx.fillStyle = '#8B6434';
+        ctx.fillRect(x - trunkWidth * 0.3, y - size * 0.1, trunkWidth * 0.35, size * 0.5);
+        
+        // Wide rounded crown - multiple overlapping circles
+        ctx.fillStyle = '#0d4a1a';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.25, size * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#1b6b2f';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#2d8b3f';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     renderRock(ctx, x, y, size, gridX, gridY) {
         const campaign = this.getCampaign();
         
@@ -2918,7 +3178,7 @@ export class LevelBase {
     }
 
     renderMountainRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 7;
         switch(seed) {
             case 0:
                 this.renderMountainRockSnowy(ctx, x, y, size);
@@ -2932,8 +3192,14 @@ export class LevelBase {
             case 3:
                 this.renderMountainRockSlab(ctx, x, y, size);
                 break;
-            default:
+            case 4:
                 this.renderMountainRockClustered(ctx, x, y, size);
+                break;
+            case 5:
+                this.renderMountainRockIcy(ctx, x, y, size);
+                break;
+            default:
+                this.renderMountainRockPeaked(ctx, x, y, size);
         }
     }
 
@@ -3108,8 +3374,119 @@ export class LevelBase {
         });
     }
 
+    renderMountainRockIcy(ctx, x, y, size) {
+        // Ice-covered jagged rock with glassy surfaces
+        // Dark rock body
+        ctx.fillStyle = '#4a5a6a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.20, y - size * 0.30);
+        ctx.lineTo(x, y - size * 0.32);
+        ctx.lineTo(x + size * 0.22, y - size * 0.28);
+        ctx.lineTo(x + size * 0.32, y - size * 0.08);
+        ctx.lineTo(x + size * 0.34, y + size * 0.20);
+        ctx.lineTo(x + size * 0.12, y + size * 0.30);
+        ctx.lineTo(x - size * 0.1, y + size * 0.32);
+        ctx.closePath();
+        ctx.fill();
+
+        // Left shadowed face
+        ctx.fillStyle = '#2a3a4a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.20, y - size * 0.30);
+        ctx.lineTo(x - size * 0.12, y - size * 0.20);
+        ctx.lineTo(x - size * 0.1, y + size * 0.32);
+        ctx.closePath();
+        ctx.fill();
+
+        // Ice coating - glossy bright areas
+        ctx.fillStyle = '#d5e8f5';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y - size * 0.25);
+        ctx.lineTo(x, y - size * 0.32);
+        ctx.lineTo(x + size * 0.15, y - size * 0.20);
+        ctx.lineTo(x - size * 0.08, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right ice shine
+        ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.22, y - size * 0.28);
+        ctx.lineTo(x + size * 0.32, y - size * 0.08);
+        ctx.lineTo(x + size * 0.25, y - size * 0.10);
+        ctx.lineTo(x + size * 0.18, y - size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Ice crack details
+        ctx.strokeStyle = 'rgba(100, 150, 200, 0.5)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.18);
+        ctx.lineTo(x + size * 0.12, y + size * 0.15);
+        ctx.stroke();
+
+        // Sharp edge highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.32, y - size * 0.08);
+        ctx.lineTo(x + size * 0.34, y + size * 0.20);
+        ctx.stroke();
+    }
+
+    renderMountainRockPeaked(ctx, x, y, size) {
+        // Sharp peaked formation with dramatic angles
+        ctx.fillStyle = '#7a7a8a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.28, y - size * 0.08);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.32);
+        ctx.lineTo(x - size * 0.32, y + size * 0.25);
+        ctx.lineTo(x - size * 0.28, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright left peak facet
+        ctx.fillStyle = '#d5d5e5';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x - size * 0.28, y - size * 0.08);
+        ctx.lineTo(x - size * 0.08, y - size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow cap on peak
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right facet darker
+        ctx.fillStyle = '#5a5a6a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.28, y - size * 0.08);
+        ctx.lineTo(x + size * 0.1, y - size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark shadow base
+        ctx.fillStyle = '#4a4a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.2, y + size * 0.15);
+        ctx.lineTo(x - size * 0.2, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
     renderDesertRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 7;
         switch(seed) {
             case 0:
                 this.renderDesertRockSmooth(ctx, x, y, size);
@@ -3123,8 +3500,14 @@ export class LevelBase {
             case 3:
                 this.renderDesertRockAngular(ctx, x, y, size);
                 break;
-            default:
+            case 4:
                 this.renderDesertRockCrystal(ctx, x, y, size);
+                break;
+            case 5:
+                this.renderDesertRockRounded(ctx, x, y, size);
+                break;
+            default:
+                this.renderDesertRockJagged(ctx, x, y, size);
         }
     }
 
@@ -3350,23 +3733,107 @@ export class LevelBase {
         ctx.fill();
     }
 
+    renderDesertRockRounded(ctx, x, y, size) {
+        // Smooth rounded boulder with warm orange tones
+        ctx.fillStyle = '#c99a6a';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight - upper left
+        ctx.fillStyle = '#e5b88a';
+        ctx.globalAlpha = 0.75;
+        ctx.beginPath();
+        ctx.arc(x - size * 0.12, y - size * 0.18, size * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Shadow - lower right
+        ctx.fillStyle = '#6a5a3a';
+        ctx.globalAlpha = 0.65;
+        ctx.beginPath();
+        ctx.arc(x + size * 0.15, y + size * 0.18, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Subtle rim
+        ctx.strokeStyle = '#b89a6a';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    renderDesertRockJagged(ctx, x, y, size) {
+        // Sharp angular rock with varied facets
+        ctx.fillStyle = '#9a7a4a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y - size * 0.2);
+        ctx.lineTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x + size * 0.1, y + size * 0.32);
+        ctx.lineTo(x - size * 0.22, y + size * 0.3);
+        ctx.lineTo(x - size * 0.3, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bright upper facet
+        ctx.fillStyle = '#d9b99a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y - size * 0.2);
+        ctx.lineTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x - size * 0.08, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid-tone right facet
+        ctx.fillStyle = '#b59a7a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dark lower facet
+        ctx.fillStyle = '#5a4a2a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.1, y + size * 0.32);
+        ctx.lineTo(x - size * 0.22, y + size * 0.3);
+        ctx.lineTo(x + size * 0.05, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+
+        // Left shadow
+        ctx.fillStyle = '#6a5a3a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.22, y + size * 0.3);
+        ctx.lineTo(x - size * 0.3, y + size * 0.08);
+        ctx.lineTo(x - size * 0.1, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
     renderSpaceRock(ctx, x, y, size, gridX, gridY) {
         const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+        const scaledSize = size * 1.4;
         switch(seed) {
             case 0:
-                this.renderSpaceRockFractal(ctx, x, y, size);
+                this.renderSpaceRockFractal(ctx, x, y, scaledSize);
                 break;
             case 1:
-                this.renderSpaceRockSpiky(ctx, x, y, size);
+                this.renderSpaceRockSpiky(ctx, x, y, scaledSize);
                 break;
             case 2:
-                this.renderSpaceRockCrystalline(ctx, x, y, size);
+                this.renderSpaceRockCrystalline(ctx, x, y, scaledSize);
                 break;
             case 3:
-                this.renderSpaceRockVoid(ctx, x, y, size);
+                this.renderSpaceRockVoid(ctx, x, y, scaledSize);
                 break;
             default:
-                this.renderSpaceRockNonEuclidean(ctx, x, y, size);
+                this.renderSpaceRockNonEuclidean(ctx, x, y, scaledSize);
         }
     }
 
@@ -3891,86 +4358,102 @@ export class LevelBase {
     }
 
     renderRockType4(ctx, x, y, size) {
-        // Peaked mountain form with better depth and weathering
+        // Jagged rocky formation with proper polygonal structure
         
         // Shadow base
-        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        ctx.fillStyle = 'rgba(30, 25, 20, 0.4)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.39);
-        ctx.lineTo(x + size * 0.39, y + size * 0.2);
-        ctx.lineTo(x - size * 0.39, y + size * 0.2);
+        ctx.ellipse(x + size * 0.05, y + size * 0.22, size * 0.38, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Main rock body - irregular polygon
+        ctx.fillStyle = '#5a5a5a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.15, y + size * 0.22);
         ctx.closePath();
         ctx.fill();
         
-        // Main mountain body
-        ctx.fillStyle = '#575757';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.4);
-        ctx.lineTo(x + size * 0.38, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Light highlighted left face
+        // Left highlighted face
         ctx.fillStyle = '#8a8a8a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.4);
-        ctx.lineTo(x - size * 0.38, y + size * 0.18);
-        ctx.lineTo(x - size * 0.1, y - size * 0.05);
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x - size * 0.05, y - size * 0.1);
         ctx.closePath();
         ctx.fill();
         
-        // Dark shadowed right side
-        ctx.fillStyle = '#353535';
+        // Top bright face
+        ctx.fillStyle = '#9a9a9a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.4);
-        ctx.lineTo(x + size * 0.38, y + size * 0.18);
-        ctx.lineTo(x + size * 0.08, y - size * 0.08);
+        ctx.moveTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.15, y - size * 0.2);
+        ctx.lineTo(x - size * 0.05, y - size * 0.15);
         ctx.closePath();
         ctx.fill();
         
-        // Moss and weathering spread across slopes
-        ctx.fillStyle = 'rgba(85, 105, 65, 0.35)';
-        for (let i = 0; i < 6; i++) {
-            const offsetX = (Math.sin(i * 1.3 + x * 0.01) - 0.5) * size * 0.3;
-            const offsetY = (Math.cos(i * 1.3 + y * 0.01) - 0.5) * size * 0.22;
-            const spotSize = size * (0.08 + Math.abs(Math.sin(i * 0.7)) * 0.05);
+        // Dark right face
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.2, y + size * 0.05);
+        ctx.lineTo(x + size * 0.05, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering stains and moss
+        ctx.fillStyle = 'rgba(85, 105, 65, 0.25)';
+        for (let i = 0; i < 8; i++) {
+            const offsetX = (Math.sin(i * 1.2 + x * 0.01) - 0.5) * size * 0.3;
+            const offsetY = (Math.cos(i * 1.2 + y * 0.01) - 0.5) * size * 0.25;
+            const spotSize = size * (0.07 + Math.abs(Math.sin(i * 0.6)) * 0.04);
             ctx.beginPath();
             ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Rocky texture detail
-        ctx.fillStyle = 'rgba(100, 100, 100, 0.25)';
-        for (let i = 0; i < 4; i++) {
-            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.25;
-            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.15;
-            ctx.beginPath();
-            ctx.arc(x + offsetX, y + offsetY, size * 0.06, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Peak highlight for dimension
-        ctx.fillStyle = '#a0a0a0';
+        // Cracks and surface texture
+        ctx.strokeStyle = 'rgba(40, 40, 40, 0.4)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(x - size * 0.08, y - size * 0.25, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Outline
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.4);
-        ctx.lineTo(x + size * 0.38, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.18);
-        ctx.closePath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.15);
+        ctx.lineTo(x + size * 0.1, y + size * 0.1);
         ctx.stroke();
         
-        // Natural growth at base
-        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
         ctx.beginPath();
-        ctx.ellipse(x, y + size * 0.2, size * 0.4, size * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x - size * 0.1, y + size * 0.15);
+        ctx.stroke();
+        
+        // Surface edge definition
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.stroke();
+        
+        // Lichen patches
+        ctx.fillStyle = 'rgba(120, 140, 100, 0.2)';
+        for (let i = 0; i < 3; i++) {
+            const px = x - size * 0.2 + Math.sin(i * 2.3) * size * 0.25;
+            const py = y - size * 0.1 + Math.cos(i * 2.3) * size * 0.15;
+            ctx.beginPath();
+            ctx.arc(px, py, size * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     renderLake(ctx, x, y, size) {

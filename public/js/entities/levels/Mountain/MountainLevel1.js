@@ -34,15 +34,15 @@ export class MountainLevel1 extends LevelBase {
 
         this.terrainElements = [
             // Mountain rocks - lots of them
-            { type: 'rock', gridX: 10.00, gridY: 5.00, size: 1.2 },
+            { type: 'rock', gridX: 10.00, gridY: 5.00, size: 1.0 },
             { type: 'rock', gridX: 20.00, gridY: 2.00, size: 1.0 },
-            { type: 'rock', gridX: 32.00, gridY: 8.00, size: 1.3 },
-            { type: 'rock', gridX: 45.00, gridY: 4.00, size: 1.1 },
-            { type: 'rock', gridX: 55.00, gridY: 10.00, size: 1.2 },
+            { type: 'rock', gridX: 32.00, gridY: 8.00, size: 1.0 },
+            { type: 'rock', gridX: 45.00, gridY: 4.00, size: 1.0 },
+            { type: 'rock', gridX: 55.00, gridY: 10.00, size: 1.0 },
             { type: 'rock', gridX: 5.00, gridY: 15.00, size: 1.0 },
-            { type: 'rock', gridX: 25.00, gridY: 20.00, size: 1.1 },
-            { type: 'rock', gridX: 40.00, gridY: 25.00, size: 1.2 },
-            { type: 'rock', gridX: 15.00, gridY: 28.00, size: 1.3 },
+            { type: 'rock', gridX: 25.00, gridY: 20.00, size: 1.0 },
+            { type: 'rock', gridX: 40.00, gridY: 25.00, size: 1.0 },
+            { type: 'rock', gridX: 15.00, gridY: 28.00, size: 1.0 },
             { type: 'rock', gridX: 50.00, gridY: 30.00, size: 1.0 },
             
             // Alpine vegetation (pine trees with snow)

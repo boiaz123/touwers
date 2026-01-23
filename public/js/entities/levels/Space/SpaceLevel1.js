@@ -34,14 +34,14 @@ export class SpaceLevel1 extends LevelBase {
 
         this.terrainElements = [
             // Space rocks (alien stone formations)
-            { type: 'rock', gridX: 8.00, gridY: 4.00, size: 1.2 },
+            { type: 'rock', gridX: 8.00, gridY: 4.00, size: 1.0 },
             { type: 'rock', gridX: 18.00, gridY: 12.00, size: 1.0 },
-            { type: 'rock', gridX: 28.00, gridY: 6.00, size: 1.3 },
-            { type: 'rock', gridX: 42.00, gridY: 10.00, size: 1.1 },
-            { type: 'rock', gridX: 52.00, gridY: 30.00, size: 1.2 },
+            { type: 'rock', gridX: 28.00, gridY: 6.00, size: 1.0 },
+            { type: 'rock', gridX: 42.00, gridY: 10.00, size: 1.0 },
+            { type: 'rock', gridX: 52.00, gridY: 30.00, size: 1.0 },
             { type: 'rock', gridX: 10.00, gridY: 28.00, size: 1.0 },
-            { type: 'rock', gridX: 35.00, gridY: 25.00, size: 1.2 },
-            { type: 'rock', gridX: 55.00, gridY: 8.00, size: 1.1 },
+            { type: 'rock', gridX: 35.00, gridY: 25.00, size: 1.0 },
+            { type: 'rock', gridX: 55.00, gridY: 8.00, size: 1.0 },
             
             // Space vegetation (crystals and alien growths)
             { type: 'vegetation', gridX: 6.00, gridY: 22.00, size: 1.1 },

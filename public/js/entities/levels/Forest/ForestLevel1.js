@@ -42,9 +42,9 @@ export class ForestLevel1 extends LevelBase {
             { type: 'vegetation', gridX: 35.00, gridY: 15.00, size: 1.0 },
             { type: 'vegetation', gridX: 45.00, gridY: 6.00, size: 1.2 },
             { type: 'vegetation', gridX: 55.00, gridY: 20.00, size: 1.1 },
-            { type: 'rock', gridX: 10.00, gridY: 18.00, size: 1.0 },
-            { type: 'rock', gridX: 30.00, gridY: 10.00, size: 1.2 },
-            { type: 'rock', gridX: 50.00, gridY: 25.00, size: 1.1 },
+            { type: 'rock', gridX: 10.00, gridY: 18.00, size: 1.5 },
+            { type: 'rock', gridX: 30.00, gridY: 10.00, size: 1.5 },
+            { type: 'rock', gridX: 50.00, gridY: 25.00, size: 1.5 },
             
             // River
             { type: 'water', gridX: 60.00, gridY: 32.00, size: 1.5, waterType: 'river' },
