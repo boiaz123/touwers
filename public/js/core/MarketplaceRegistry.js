@@ -50,7 +50,7 @@ export class MarketplaceRegistry {
             description: 'In ages past, the greatest arcane scholars of the realm created a marvel of magical engineering—a tower of pure elemental force, capable of channeling devastating spells against enemies. This enchanted blueprint, preserved for centuries, contains all the knowledge and materials needed to construct such a tower in mere moments. In the next battle, you may erect a Magic Tower at no cost. This powerful tower can be infused with different elemental forces (fire, water, earth, air) to deal specialized damage and adapt to any threat. No gold required—only the will to embrace ancient magic.',
             cost: 500,
             icon: '📦',
-            category: 'tower',
+            category: 'building',
             type: 'consumable',
             effect: 'Free Magic Tower with elemental selection next level',
             requirements: []
@@ -63,6 +63,139 @@ export class MarketplaceRegistry {
             category: 'boon',
             type: 'boon',
             effect: 'Revive castle once if destroyed - forest spirits protect you',
+            requirements: []
+        },
+        // MUSICAL SCORES
+        'music-menu-theme': {
+            name: 'Menu Theme',
+            description: 'The iconic theme that welcomes heroes to the realm. A stirring melody that captures the spirit of adventure and conquest.',
+            cost: 50,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'menu-theme',
+            effect: 'Unlock menu theme for Arcane Library',
+            requirements: []
+        },
+        'music-settlement-1': {
+            name: 'Settlement Theme - Spring',
+            description: 'A peaceful melody that echoes through the settlement during peaceful times. Reminiscent of spring blossoms and new beginnings.',
+            cost: 75,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'settlement-theme-1',
+            effect: 'Unlock settlement theme for Arcane Library',
+            requirements: []
+        },
+        'music-settlement-2': {
+            name: 'Settlement Theme - Summer',
+            description: 'A warm and hopeful melody that fills the air during the golden season. The sounds of prosperity and growth.',
+            cost: 75,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'settlement-theme-2',
+            effect: 'Unlock settlement theme for Arcane Library',
+            requirements: []
+        },
+        'music-settlement-3': {
+            name: 'Settlement Theme - Winter',
+            description: 'A contemplative melody that speaks of rest and renewal. The quiet beauty of the cold season.',
+            cost: 75,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'settlement-theme-3',
+            effect: 'Unlock settlement theme for Arcane Library',
+            requirements: []
+        },
+        'music-forest-1': {
+            name: 'Forest Battle - Awakening',
+            description: 'The sound of the forest coming alive. Ancient magic stirs as your defenders prepare for battle.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-1-battle-1',
+            effect: 'Unlock forest battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-forest-2': {
+            name: 'Forest Battle - Rising Tide',
+            description: 'The intensity builds as enemies approach. Nature itself seems to join the fray.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-1-battle-2',
+            effect: 'Unlock forest battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-forest-3': {
+            name: 'Forest Battle - Triumph',
+            description: 'A powerful theme that speaks of victory and dominance. Hear the triumph of the forest.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-1-battle-3',
+            effect: 'Unlock forest battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-mountain': {
+            name: 'Mountain Battle Theme',
+            description: 'Echoing through mountain peaks, this theme speaks of strength and unshakeable resolve.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-2-battle-1',
+            effect: 'Unlock mountain battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-desert-1': {
+            name: 'Desert Battle - Sands of Time',
+            description: 'The melody of endless dunes and ancient ruins. Timeless and mysterious.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-3-battle-1',
+            effect: 'Unlock desert battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-desert-2': {
+            name: 'Desert Battle - Mirage',
+            description: 'A disorienting yet beautiful theme that captures the desert\'s enigmatic nature.',
+            cost: 100,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-3-battle-2',
+            effect: 'Unlock desert battle theme for Arcane Library',
+            requirements: []
+        },
+        'music-victory': {
+            name: 'Victory Fanfare',
+            description: 'A triumphant theme that plays when you claim victory. The sound of conquest and glory.',
+            cost: 150,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'victory-tune',
+            effect: 'Unlock victory fanfare for Arcane Library',
+            requirements: []
+        },
+        'music-defeat': {
+            name: 'Defeat Elegy',
+            description: 'A somber reflection on defeat. A reminder of battles lost and lessons learned.',
+            cost: 75,
+            icon: '🎵',
+            category: 'music',
+            type: 'music',
+            musicId: 'defeat-tune',
+            effect: 'Unlock defeat elegy for Arcane Library',
             requirements: []
         }
     };
@@ -196,7 +329,8 @@ export class MarketplaceRegistry {
             'building': 'Building Materials',
             'loot': 'Loot Enhancers',
             'tower': 'Tower Supplies',
-            'boon': 'Protective Boons'
+            'boon': 'Protective Boons',
+            'music': 'Musical Scores'
         };
         return categoryNames[category] || category;
     }

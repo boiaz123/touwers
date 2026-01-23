@@ -1,4 +1,5 @@
 import { SaveSystem } from '../SaveSystem.js';
+import { GameStatistics } from '../GameStatistics.js';
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
@@ -33,6 +34,7 @@ export class SettlementHub {
         this.contentOpacity = 1; // Fully opaque from the start
         this.fadeInOpacity = 0; // For optional fade-in overlay
         this.enableFadeInOverlay = true; // Professional fade-in effect overlay
+        this.lastLoadedSaveSlot = null; // Track which save slot is loaded
         
         // Create actual building instances positioned INSIDE the settlement
         this.settlementBuildings = [];
@@ -41,14 +43,14 @@ export class SettlementHub {
         this.buildings = [
             { id: 'trainingGrounds', name: 'Training Grounds', action: 'levelSelect', x: 0, y: 0, width: 80, height: 60, hovered: false },
             { id: 'towerForge', name: 'Tower Forge', action: 'upgrades', x: 0, y: 0, width: 80, height: 60, hovered: false },
-            { id: 'magicAcademy', name: 'Magic Academy', action: 'enemyLogs', x: 0, y: 0, width: 80, height: 60, hovered: false },
+            { id: 'arcaneLibrary', name: 'Arcane Library', action: 'arcaneLibrary', x: 0, y: 0, width: 80, height: 60, hovered: false },
         ];
 
         // UI state
         this.activePopup = null;
         this.upgradesPopup = null;
         this.optionsPopup = null;
-        this.arcaneKnowledgePopup = null;
+        this.arcaneLibraryPopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -83,10 +85,13 @@ export class SettlementHub {
         // This includes gold, inventory, upgrades, and unlock progression
         const currentSaveData = SaveSystem.getSave(this.stateManager.currentSaveSlot);
         
+        // Detect if we've switched save slots
+        const saveSlotChanged = this.lastLoadedSaveSlot !== this.stateManager.currentSaveSlot;
+        const returningFromLevel = this.stateManager.previousState === 'game';
+        
         if (currentSaveData) {
             // Initialize player gold from save data, but not if we're returning from a level
             // (in that case, the level exit() already restored the correct gold amount)
-            const returningFromLevel = this.stateManager.previousState === 'game';
             if (!returningFromLevel) {
                 this.stateManager.playerGold = currentSaveData.playerGold || 0;
             }
@@ -105,12 +110,21 @@ export class SettlementHub {
                 }
             }
             
-            // Initialize marketplace system if not already done
-            // IMPORTANT: If returning from a level, refresh from save to get latest consumable state
-            if (!this.stateManager.marketplaceSystem || returningFromLevel) {
+            // Initialize marketplace system
+            // ALWAYS reinitialize if save slot changed, or if returning from a level
+            if (saveSlotChanged || !this.stateManager.marketplaceSystem || returningFromLevel) {
                 this.stateManager.marketplaceSystem = new MarketplaceSystem();
                 if (currentSaveData.marketplace) {
                     this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
+                }
+            }
+            
+            // Initialize game statistics
+            // ALWAYS reinitialize if save slot changed, or if not already done, or if returning from level
+            if (saveSlotChanged || !this.stateManager.gameStatistics || returningFromLevel) {
+                this.stateManager.gameStatistics = new GameStatistics();
+                if (currentSaveData.statistics) {
+                    this.stateManager.gameStatistics.restoreFromSave(currentSaveData.statistics);
                 }
             }
         } else {
@@ -122,10 +136,14 @@ export class SettlementHub {
             if (!this.stateManager.upgradeSystem) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
             }
-            if (!this.stateManager.marketplaceSystem) {
-                this.stateManager.marketplaceSystem = new MarketplaceSystem();
-            }
+            // Always create new marketplace system for empty slot
+            this.stateManager.marketplaceSystem = new MarketplaceSystem();
+            // Always create new statistics for empty slot
+            this.stateManager.gameStatistics = new GameStatistics();
         }
+        
+        // Remember which save slot is loaded
+        this.lastLoadedSaveSlot = this.stateManager.currentSaveSlot;
         
         // Reset all popup hover states
         if (this.upgradesPopup && this.upgradesPopup.tabButtons) {
@@ -135,9 +153,9 @@ export class SettlementHub {
             this.optionsPopup.buttons = this.optionsPopup.buttons.map(b => ({ ...b, hovered: false }));
             this.optionsPopup.closeButtonHovered = false;
         }
-        if (this.arcaneKnowledgePopup && this.arcaneKnowledgePopup.buttons) {
-            this.arcaneKnowledgePopup.buttons = this.arcaneKnowledgePopup.buttons.map(b => ({ ...b, hovered: false }));
-            this.arcaneKnowledgePopup.closeButtonHovered = false;
+        if (this.arcaneLibraryPopup && this.arcaneLibraryPopup.tabs) {
+            this.arcaneLibraryPopup.tabs = this.arcaneLibraryPopup.tabs.map(b => ({ ...b, hovered: false }));
+            this.arcaneLibraryPopup.closeButtonHovered = false;
         }
         
         // Play settlement theme music - pick random settlement song and loop it
@@ -180,12 +198,12 @@ export class SettlementHub {
                 clickable: true,
                 action: 'upgrades'
             },
-            // Magic Academy - positioned at purple circle arrow
+            // Arcane Library - positioned at purple circle arrow
             {
                 building: new MagicAcademy(centerX - 130, centerY - 55, 1, 0),
                 scale: 29,
                 clickable: true,
-                action: 'arcaneKnowledge'
+                action: 'arcaneLibrary'
             },
             // Castle - positioned to the right side of settlement (clickable)
             {
@@ -338,8 +356,8 @@ export class SettlementHub {
             this.upgradesPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.updateHoverState(x, y);
-        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
-            this.arcaneKnowledgePopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
+            this.arcaneLibraryPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             let isHoveringBuilding = false;
@@ -384,8 +402,8 @@ export class SettlementHub {
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.handleClick(x, y);
             return;
-        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
-            this.arcaneKnowledgePopup.handleClick(x, y);
+        } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
+            this.arcaneLibraryPopup.handleClick(x, y);
             return;
         }
 
@@ -436,12 +454,12 @@ export class SettlementHub {
                 this.optionsPopup = new ManageSettlementMenu(this.stateManager, this);
             }
             this.optionsPopup.open();
-        } else if (buildingItem.action === 'arcaneKnowledge') {
-            this.activePopup = 'arcaneKnowledge';
-            if (!this.arcaneKnowledgePopup) {
-                this.arcaneKnowledgePopup = new ArcaneKnowledgeMenu(this.stateManager, this);
+        } else if (buildingItem.action === 'arcaneLibrary') {
+            this.activePopup = 'arcaneLibrary';
+            if (!this.arcaneLibraryPopup) {
+                this.arcaneLibraryPopup = new ArcaneLibraryMenu(this.stateManager, this);
             }
-            this.arcaneKnowledgePopup.open();
+            this.arcaneLibraryPopup.open();
         }
     }
 
@@ -462,8 +480,8 @@ export class SettlementHub {
             this.upgradesPopup.update(deltaTime);
         } else if (this.activePopup === 'options' && this.optionsPopup) {
             this.optionsPopup.update(deltaTime);
-        } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
-            this.arcaneKnowledgePopup.update(deltaTime);
+        } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
+            this.arcaneLibraryPopup.update(deltaTime);
         }
 
         // Update settlement buildings for animations
@@ -515,8 +533,8 @@ export class SettlementHub {
                 this.upgradesPopup.render(ctx);
             } else if (this.activePopup === 'options' && this.optionsPopup) {
                 this.optionsPopup.render(ctx);
-            } else if (this.activePopup === 'arcaneKnowledge' && this.arcaneKnowledgePopup) {
-                this.arcaneKnowledgePopup.render(ctx);
+            } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
+                this.arcaneLibraryPopup.render(ctx);
             }
 
             // Professional fade-in overlay effect (soft, from dark to transparent)
@@ -1597,8 +1615,8 @@ export class SettlementHub {
         // Render all actual building instances with settlement-specific visuals
         const headers = {
             'TrainingGrounds': 'Campaign',
-            'MagicAcademy': 'Arcane Knowledge',
-            'TowerForge': 'Upgrades & Marketplace',
+            'MagicAcademy': 'Arcane Library',
+            'TowerForge': 'Buy & Sell',
             'Castle': 'Manage Settlement'
         };
 
@@ -3260,9 +3278,11 @@ class UpgradesMenu {
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
-        this.activeTab = 'buy'; // 'buy', 'sell', 'upgrade'
+        this.activeTab = 'buy'; // 'buy' or 'sell'
         this.currentPage = 0;
         this.clickLock = false; // Prevent double-clicks on items
+        this.lastPaginationClickTime = 0; // Prevent double-click pagination
+        this.lastConsumableCheckTime = 0; // Track last time we checked for marketplace changes
         // Get player gold from stateManager (persistent between levels)
         this.playerGold = stateManager.playerGold || 0;
         
@@ -3271,18 +3291,28 @@ class UpgradesMenu {
             this.stateManager.marketplaceSystem = new MarketplaceSystem();
         }
         
+        // Category system for buy tab - now includes upgrades as a category
+        this.allBuyItems = this.buildBuyItems();
+        this.buyCategories = [
+            { label: 'ALL', id: 'all', hovered: false },
+            { label: 'BUILDINGS', id: 'building', hovered: false },
+            { label: 'CONSUMABLES', id: 'consumable', hovered: false },
+            { label: 'MUSIC', id: 'music', hovered: false },
+            { label: 'UPGRADES', id: 'upgrade', hovered: false }
+        ];
+        this.activeBuyCategory = 'all';
+        this.buyItems = this.filterBuyItemsByCategory('all');
+        
         // Build all tabs
-        this.buyItems = this.buildBuyItems();
         this.sellItems = []; // Will be populated dynamically
-        this.upgradeItems = this.buildUpgradeItems();
+
         
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
         this.rightArrowHovered = false;
         this.tabButtons = [
             { label: 'BUY', action: 'buy', hovered: false },
-            { label: 'SELL', action: 'sell', hovered: false },
-            { label: 'UPGRADE', action: 'upgrade', hovered: false }
+            { label: 'SELL', action: 'sell', hovered: false }
         ];
     }
 
@@ -3291,6 +3321,8 @@ class UpgradesMenu {
         const marketplaceSystem = this.stateManager.marketplaceSystem || { hasUsedConsumable: () => false, isBoonActive: () => false, getConsumableCount: () => 0 };
         
         const items = [];
+        
+        // Add marketplace items from registry
         const allItems = MarketplaceRegistry.getAllItemIds();
         
         for (const itemId of allItems) {
@@ -3300,8 +3332,14 @@ class UpgradesMenu {
             let canPurchase = MarketplaceRegistry.canPurchase(itemId, upgradeSystem, marketplaceSystem);
             let requirementMsg = MarketplaceRegistry.getRequirementMessage(itemId, upgradeSystem, marketplaceSystem);
             
+            // Special check: if it's a music item and player already has it, mark as unavailable
+            if (itemData.category === 'music' && marketplaceSystem.getConsumableCount(itemId) > 0) {
+                canPurchase = false;
+                requirementMsg = 'Owned';
+            }
+            
             // Special check: if it's a consumable and player already has it, mark as unavailable
-            if (itemData.type === 'consumable' && !requirementMsg && marketplaceSystem.getConsumableCount(itemId) > 0) {
+            if (itemData.type === 'consumable' && itemData.category !== 'music' && !requirementMsg && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
                 requirementMsg = 'Owned';
             }
@@ -3313,13 +3351,19 @@ class UpgradesMenu {
                 requirementMsg = 'Active';
             }
             
+            // Combine loot and boon into consumable category
+            let category = itemData.category;
+            if (category === 'loot' || category === 'boon') {
+                category = 'consumable';
+            }
+            
             items.push({
                 id: itemId,
                 name: itemData.name,
                 description: itemData.description,
                 cost: itemData.cost,
                 icon: itemData.icon,
-                category: itemData.category,
+                category: category,
                 type: itemData.type,
                 effect: itemData.effect,
                 hovered: false,
@@ -3328,18 +3372,7 @@ class UpgradesMenu {
             });
         }
         
-        return items;
-    }
-
-    buildUpgradeItems() {
-        // Get references from stateManager or create defaults
-        const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
-        
-        // Import UpgradeRegistry via stateManager (should be set during init)
-        // For now, build a basic structure that will be updated when needed
-        const items = [];
-        
-        // Hardcode the 6 upgrades for now (they'll be defined in the UI/rendering logic)
+        // Add upgrades as items with 'upgrade' category
         const upgradeData = [
             {
                 id: 'training-gear',
@@ -3347,7 +3380,7 @@ class UpgradesMenu {
                 description: 'Unlocks the ability to build Training Grounds in levels',
                 cost: 500,
                 icon: '⚔️',
-                category: 'building'
+                category: 'upgrade'
             },
             {
                 id: 'musical-equipment',
@@ -3355,7 +3388,7 @@ class UpgradesMenu {
                 description: 'Adds a music player to the UI for settling ambiance',
                 cost: 300,
                 icon: '🎵',
-                category: 'ui'
+                category: 'upgrade'
             },
             {
                 id: 'wooden-chest',
@@ -3363,7 +3396,7 @@ class UpgradesMenu {
                 description: 'Increase starting gold by 100',
                 cost: 250,
                 icon: '📦',
-                category: 'gold'
+                category: 'upgrade'
             },
             {
                 id: 'golden-chest',
@@ -3371,7 +3404,7 @@ class UpgradesMenu {
                 description: 'Increase starting gold by another 100',
                 cost: 400,
                 icon: '🪙',
-                category: 'gold',
+                category: 'upgrade',
                 prerequisite: 'wooden-chest'
             },
             {
@@ -3380,7 +3413,7 @@ class UpgradesMenu {
                 description: 'Increase starting gold by another 100',
                 cost: 600,
                 icon: '💎',
-                category: 'gold',
+                category: 'upgrade',
                 prerequisite: 'golden-chest'
             },
             {
@@ -3389,7 +3422,7 @@ class UpgradesMenu {
                 description: 'Increase gem mining chance in gold mines',
                 cost: 800,
                 icon: '⛏️',
-                category: 'mining'
+                category: 'upgrade'
             }
         ];
         
@@ -3411,6 +3444,7 @@ class UpgradesMenu {
                 cost: upgrade.cost,
                 icon: upgrade.icon,
                 category: upgrade.category,
+                type: 'upgrade',
                 hovered: false,
                 isPurchased: isPurchased,
                 canPurchase: canPurchase,
@@ -3421,6 +3455,12 @@ class UpgradesMenu {
         return items;
     }
 
+    filterBuyItemsByCategory(categoryId) {
+        if (categoryId === 'all') {
+            return this.allBuyItems;
+        }
+        return this.allBuyItems.filter(item => item.category === categoryId);
+    }
     buildSellItems() {
         const items = [];
         const inventory = this.stateManager.playerInventory || [];
@@ -3478,13 +3518,17 @@ class UpgradesMenu {
         this.animationProgress = 0;
         this.activeTab = 'buy';
         this.currentPage = 0;
+        this.activeBuyCategory = 'all';
         
         // Refresh player gold from stateManager (in case it changed)
         this.playerGold = this.stateManager.playerGold || 0;
         
-        // Rebuild buy and upgrade items to reflect current state
-        this.buyItems = this.buildBuyItems();
-        this.upgradeItems = this.buildUpgradeItems();
+        // Force immediate refresh of buy/sell items
+        this.lastConsumableCheckTime = 0;
+        
+        // Rebuild buy items to reflect current state
+        this.allBuyItems = this.buildBuyItems();
+        this.buyItems = this.filterBuyItemsByCategory('all');
         
         // Refresh sell items when opening
         this.sellItems = this.buildSellItems();
@@ -3498,6 +3542,19 @@ class UpgradesMenu {
     update(deltaTime) {
         if (this.isOpen && this.animationProgress < 1) {
             this.animationProgress += deltaTime * 2;
+        }
+        
+        // Periodically check if marketplace consumables have changed (e.g., magic flatpack was used)
+        // This ensures the panel always shows the current state
+        if (!this.lastConsumableCheckTime) {
+            this.lastConsumableCheckTime = 0;
+        }
+        const now = Date.now();
+        if (this.isOpen && (now - this.lastConsumableCheckTime) > 500) { // Check every 500ms
+            this.lastConsumableCheckTime = now;
+            // Rebuild items to reflect any changes in marketplace consumables
+            this.allBuyItems = this.buildBuyItems();
+            this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
         }
     }
 
@@ -3529,8 +3586,6 @@ class UpgradesMenu {
             return Math.ceil(this.buyItems.length / 6); // Dynamic pages based on buy items
         } else if (this.activeTab === 'sell') {
             return Math.ceil(this.sellItems.length / 6);
-        } else if (this.activeTab === 'upgrade') {
-            return Math.ceil(this.upgradeItems.length / 6); // Dynamic pages based on upgrade items
         }
         return 1;
     }
@@ -3543,8 +3598,6 @@ class UpgradesMenu {
             return this.buyItems.slice(startIdx, startIdx + itemsPerPage);
         } else if (this.activeTab === 'sell') {
             return this.sellItems.slice(startIdx, startIdx + itemsPerPage);
-        } else if (this.activeTab === 'upgrade') {
-            return this.upgradeItems.slice(startIdx, startIdx + itemsPerPage);
         }
         return [];
     }
@@ -3560,7 +3613,7 @@ class UpgradesMenu {
         
         const tabY = panelY + 42;
         const tabHeight = 32;
-        const tabWidth = (panelWidth - 40) / 3;
+        const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
         // Check tab buttons
@@ -3568,6 +3621,19 @@ class UpgradesMenu {
             const tabX = panelX + 20 + index * (tabWidth + tabGap);
             tab.hovered = x >= tabX && x <= tabX + tabWidth && y >= tabY && y <= tabY + tabHeight;
         });
+        
+        // Check category filter buttons (only visible in buy tab)
+        if (this.activeTab === 'buy') {
+            const categoryY = tabY + tabHeight + 10;
+            const categoryHeight = 25;
+            const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
+            
+            this.buyCategories.forEach((category, index) => {
+                const categoryX = panelX + 20 + index * categoryButtonWidth;
+                category.hovered = x >= categoryX && x <= categoryX + categoryButtonWidth && 
+                                 y >= categoryY && y <= categoryY + categoryHeight;
+            });
+        }
         
         // Check close button
         const closeX = panelX + panelWidth - 40;
@@ -3583,8 +3649,8 @@ class UpgradesMenu {
         this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize;
         
         // Check item buttons (for sell and upgrade tabs)
-        const contentY = panelY + 78;
-        const contentHeight = panelHeight - 140;
+        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
+        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
         
         const horizontalPadding = 20;
         const verticalPadding = 15;
@@ -3609,7 +3675,9 @@ class UpgradesMenu {
         });
         
         this.stateManager.canvas.style.cursor = 
-            (this.tabButtons.some(t => t.hovered) || this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || items.some(i => i.hovered))
+            (this.tabButtons.some(t => t.hovered) || 
+             this.buyCategories.some(c => c.hovered) ||
+             this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || items.some(i => i.hovered))
             ? 'pointer' : 'default';
     }
 
@@ -3633,7 +3701,7 @@ class UpgradesMenu {
         // Check tab buttons
         const tabY = panelY + 42;
         const tabHeight = 32;
-        const tabWidth = (panelWidth - 40) / 3;
+        const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
         this.tabButtons.forEach((tab, index) => {
@@ -3644,6 +3712,7 @@ class UpgradesMenu {
                 }
                 this.activeTab = tab.action;
                 this.currentPage = 0;
+                this.activeBuyCategory = 'all'; // Reset category filter when switching tabs
                 
                 // Refresh sell items when switching to sell tab
                 if (tab.action === 'sell') {
@@ -3652,6 +3721,26 @@ class UpgradesMenu {
             }
         });
         
+        // Check category filter buttons (only visible in buy tab)
+        if (this.activeTab === 'buy') {
+            const categoryY = tabY + tabHeight + 10;
+            const categoryHeight = 25;
+            const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
+            
+            this.buyCategories.forEach((category, index) => {
+                const categoryX = panelX + 20 + index * categoryButtonWidth;
+                if (x >= categoryX && x <= categoryX + categoryButtonWidth && 
+                    y >= categoryY && y <= categoryY + categoryHeight) {
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('button-click');
+                    }
+                    this.activeBuyCategory = category.id;
+                    this.buyItems = this.filterBuyItemsByCategory(category.id);
+                    this.currentPage = 0;
+                }
+            });
+        }
+        
         // Check arrow buttons
         const arrowY = panelY + panelHeight - 45;
         const arrowSize = 25;
@@ -3659,9 +3748,14 @@ class UpgradesMenu {
         const rightArrowX = panelX + panelWidth - 45;
         const maxPages = this.getMaxPages();
         
+        // Prevent double-click by checking time since last click
+        const now = Date.now();
+        const debounceTime = 200; // milliseconds
+        
         if (x >= leftArrowX && x <= leftArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize) {
-            if (this.currentPage > 0) {
+            if (this.currentPage > 0 && (now - this.lastPaginationClickTime) > debounceTime) {
                 this.currentPage--;
+                this.lastPaginationClickTime = now;
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -3670,8 +3764,9 @@ class UpgradesMenu {
         }
         
         if (x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize) {
-            if (this.currentPage < maxPages - 1) {
+            if (this.currentPage < maxPages - 1 && (now - this.lastPaginationClickTime) > debounceTime) {
                 this.currentPage++;
+                this.lastPaginationClickTime = now;
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -3680,8 +3775,8 @@ class UpgradesMenu {
         }
         
         // Check item buttons
-        const contentY = panelY + 78;
-        const contentHeight = panelHeight - 140;
+        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
+        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
         
         const horizontalPadding = 20;
         const verticalPadding = 15;
@@ -3740,8 +3835,14 @@ class UpgradesMenu {
             // Add consumable to marketplace system
             this.stateManager.marketplaceSystem.addConsumable(item.id, 1);
             
+            // Update statistics when buying
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.totalMoneySpentOnMarketplace += item.cost;
+            }
+            
             // Rebuild buy items to reflect purchase restrictions and active status
-            this.buyItems = this.buildBuyItems();
+            this.allBuyItems = this.buildBuyItems();
+            this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
             this.currentPage = 0;
             
             console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
@@ -3753,6 +3854,11 @@ class UpgradesMenu {
             // Sell the loot item
             this.playerGold += item.sellPrice;
             this.stateManager.playerGold = this.playerGold;
+            
+            // Update statistics when selling
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.totalMoneyEarnedInMarketplace += item.sellPrice;
+            }
             
             // Remove from inventory
             const inventoryIndex = this.stateManager.playerInventory.findIndex(
@@ -3795,9 +3901,9 @@ class UpgradesMenu {
             this.stateManager.playerGold = this.playerGold;
             this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
             
-            // Rebuild both upgrade items AND buy items (since upgrades may unlock marketplace items)
-            this.upgradeItems = this.buildUpgradeItems();
-            this.buyItems = this.buildBuyItems();
+            // Rebuild buy items (since upgrades may unlock marketplace items)
+            this.allBuyItems = this.buildBuyItems();
+            this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
             this.currentPage = 0;
             
             console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
@@ -3862,7 +3968,7 @@ class UpgradesMenu {
         // Tabs
         const tabY = panelY + 42;
         const tabHeight = 32;
-        const tabWidth = (panelWidth - 40) / 3;
+        const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
         this.tabButtons.forEach((tab, index) => {
@@ -3903,9 +4009,37 @@ class UpgradesMenu {
             ctx.fillText(tab.label, tabX + tabWidth / 2, tabY + tabHeight / 2);
         });
         
+        // Render category filter buttons (only in buy tab)
+        if (this.activeTab === 'buy') {
+            const categoryY = panelY + 74;
+            const categoryHeight = 25;
+            const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
+            
+            this.buyCategories.forEach((category, index) => {
+                const categoryX = panelX + 20 + index * categoryButtonWidth;
+                const isActive = this.activeBuyCategory === category.id;
+                
+                // Button background
+                ctx.fillStyle = isActive ? '#6b5a47' : '#3a2a1a';
+                ctx.fillRect(categoryX, categoryY, categoryButtonWidth, categoryHeight);
+                
+                // Button border
+                ctx.strokeStyle = isActive ? '#ffd700' : '#5a4a3a';
+                ctx.lineWidth = isActive ? 2 : 1;
+                ctx.strokeRect(categoryX, categoryY, categoryButtonWidth, categoryHeight);
+                
+                // Button text
+                ctx.font = isActive ? 'bold 11px Arial' : '11px Arial';
+                ctx.fillStyle = isActive ? '#ffd700' : '#b89968';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(category.label, categoryX + categoryButtonWidth / 2, categoryY + categoryHeight / 2);
+            });
+        }
+        
         // Content area based on active tab - expanded to fill space
-        const contentY = panelY + 78;
-        const contentHeight = panelHeight - 140;
+        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
+        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
         
         this.renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight);
         
@@ -5098,29 +5232,68 @@ class ManageSettlementMenu {
  * Arcane Knowledge Menu
  * Placeholder menu for tracking magical knowledge, enemy encounters and statistics
  */
-class ArcaneKnowledgeMenu {
+class ArcaneLibraryMenu {
     constructor(stateManager, settlementHub) {
         this.stateManager = stateManager;
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
-        this.buttons = [
-            { label: 'CAMPAIGN JOURNAL', action: 'journal', hovered: false },
-            { label: 'MONSTER JOURNAL', action: 'monsters', hovered: false },
-            { label: 'STATISTICS', action: 'stats', hovered: false },
+        
+        // Initialize GameStatistics if not already done
+        if (!this.stateManager.gameStatistics) {
+            this.stateManager.gameStatistics = new GameStatistics();
+        }
+        
+        // Tab system
+        this.tabs = [
+            { label: 'STATISTICS', id: 'statistics', hovered: false },
+            { label: 'MUSICAL SCORES', id: 'musical-scores', hovered: false },
+            { label: 'COLLECTION', id: 'collection', hovered: false },
+            { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false }
         ];
-        this.buttonWidth = 200;
-        this.buttonHeight = 50;
+        this.activeTab = 'statistics';
+        
+        // Pagination for musical scores
+        this.musicCurrentPage = 0;
+        this.musicItemsPerPage = 6; // 2 rows x 3 columns
+        this.unlockedMusicTracks = new Map(); // Track which music the player owns
+        
+        this.closeButtonHovered = false;
+        this.leftArrowHovered = false;
+        this.rightArrowHovered = false;
     }
 
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
+        this.activeTab = 'statistics';
+        this.musicCurrentPage = 0;
+        this.buildUnlockedMusicList();
     }
 
     close() {
         this.isOpen = false;
         this.settlementHub.closePopup();
+    }
+
+    buildUnlockedMusicList() {
+        this.unlockedMusicTracks.clear();
+        
+        // Get purchased music items from marketplace system
+        if (this.stateManager.marketplaceSystem) {
+            const musicItems = MarketplaceRegistry.getItemsByCategory('music');
+            for (const [itemId, itemData] of Object.entries(musicItems)) {
+                const count = this.stateManager.marketplaceSystem.getConsumableCount(itemId);
+                if (count > 0) {
+                    this.unlockedMusicTracks.set(itemData.musicId, {
+                        id: itemId,
+                        name: itemData.name,
+                        musicId: itemData.musicId,
+                        isPlaying: false
+                    });
+                }
+            }
+        }
     }
 
     update(deltaTime) {
@@ -5131,146 +5304,279 @@ class ArcaneKnowledgeMenu {
 
     updateHoverState(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
-        const menuWidth = 300;
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+        
+        // Close button
         const closeButtonX = menuX + menuWidth - 35;
         const closeButtonY = menuY + 10;
         const closeButtonSize = 25;
-
-        // Check close button
+        
         this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
-
-        this.buttons.forEach((button, index) => {
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 70 + index * 70;
-            button.hovered = x >= buttonX && x <= buttonX + this.buttonWidth &&
-                           y >= buttonY && y <= buttonY + this.buttonHeight;
+        
+        // Tab buttons
+        const tabHeight = 35;
+        const tabStartY = menuY + 35;
+        const tabButtonWidth = menuWidth / 4;
+        
+        this.tabs.forEach((tab, index) => {
+            const tabX = menuX + index * tabButtonWidth;
+            const tabY = tabStartY;
+            tab.hovered = x >= tabX && x <= tabX + tabButtonWidth &&
+                         y >= tabY && y <= tabY + tabHeight;
         });
-
-        this.stateManager.canvas.style.cursor =
-            (this.buttons.some(b => b.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
+        
+        // Content area hover detection
+        if (this.activeTab === 'musical-scores') {
+            const contentX = menuX + 20;
+            const contentY = tabStartY + tabHeight + 20;
+            const contentWidth = menuWidth - 40;
+            const contentHeight = menuHeight - tabHeight - 80;
+            
+            // Arrow buttons
+            this.leftArrowHovered = false;
+            this.rightArrowHovered = false;
+            
+            // Grid layout matching render method
+            const cols = 3;
+            const rows = 2;
+            const itemSize = 100;
+            const padding = 15;
+            const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+            const startY = contentY + 20;
+            
+            const musicArray = Array.from(this.unlockedMusicTracks.values());
+            const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+            const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+            
+            // Check if hovering over a music item
+            let musicItemHovered = false;
+            for (let i = startIdx; i < endIdx; i++) {
+                const gridIdx = i - startIdx;
+                const col = gridIdx % cols;
+                const row = Math.floor(gridIdx / cols);
+                
+                const itemX = startX + col * (itemSize + padding);
+                const itemY = startY + row * (itemSize + padding);
+                
+                if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
+                    musicItemHovered = true;
+                    break;
+                }
+            }
+            
+            const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
+            if (totalPages > 1) {
+                const arrowSize = 30;
+                const leftArrowX = contentX - 40;
+                const rightArrowX = contentX + contentWidth + 10;
+                const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+                
+                this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize &&
+                                      y >= arrowY && y <= arrowY + arrowSize &&
+                                      this.musicCurrentPage > 0;
+                
+                this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize &&
+                                        y >= arrowY && y <= arrowY + arrowSize &&
+                                        this.musicCurrentPage < totalPages - 1;
+            }
+            
+            this.stateManager.canvas.style.cursor =
+                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || 
+                 this.leftArrowHovered || this.rightArrowHovered || musicItemHovered) ? 'pointer' : 'default';
+            return;
+        }
     }
 
     handleClick(x, y) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
-        const menuWidth = 300;
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+        
+        // Close button
         const closeButtonX = menuX + menuWidth - 35;
         const closeButtonY = menuY + 10;
         const closeButtonSize = 25;
-
-        // Check close button first
+        
         if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
             y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
             this.close();
             return;
         }
-
-        for (let i = 0; i < this.buttons.length; i++) {
-            const button = this.buttons[i];
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 70 + i * 70;
-
-            if (x >= buttonX && x <= buttonX + this.buttonWidth &&
-                y >= buttonY && y <= buttonY + this.buttonHeight) {
-                this.handleButtonAction(button.action);
+        
+        // Tab buttons
+        const tabHeight = 35;
+        const tabStartY = menuY + 35;
+        const tabButtonWidth = menuWidth / 4;
+        
+        for (let i = 0; i < this.tabs.length; i++) {
+            const tab = this.tabs[i];
+            const tabX = menuX + i * tabButtonWidth;
+            const tabY = tabStartY;
+            
+            if (x >= tabX && x <= tabX + tabButtonWidth &&
+                y >= tabY && y <= tabY + tabHeight) {
+                this.activeTab = tab.id;
+                this.musicCurrentPage = 0; // Reset pagination when switching tabs
                 return;
+            }
+        }
+        
+        // Handle content area clicks
+        if (this.activeTab === 'musical-scores') {
+            const contentX = menuX + 20;
+            const contentY = tabStartY + tabHeight + 20;
+            const contentWidth = menuWidth - 40;
+            const contentHeight = menuHeight - tabHeight - 80;
+            
+            // Grid layout matching render method
+            const cols = 3;
+            const rows = 2;
+            const itemSize = 100;
+            const padding = 15;
+            const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+            const startY = contentY + 20;
+            
+            const musicArray = Array.from(this.unlockedMusicTracks.values());
+            const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+            const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+            
+            // Check if clicked on a music item
+            for (let i = startIdx; i < endIdx; i++) {
+                const gridIdx = i - startIdx;
+                const col = gridIdx % cols;
+                const row = Math.floor(gridIdx / cols);
+                
+                const itemX = startX + col * (itemSize + padding);
+                const itemY = startY + row * (itemSize + padding);
+                
+                if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
+                    const music = musicArray[i];
+                    this.playMusicTrack(music);
+                    return;
+                }
+            }
+            
+            // Check arrow clicks
+            const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
+            if (totalPages > 1) {
+                const arrowSize = 30;
+                const leftArrowX = contentX - 40;
+                const rightArrowX = contentX + contentWidth + 10;
+                const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+                
+                if (x >= leftArrowX && x <= leftArrowX + arrowSize &&
+                    y >= arrowY && y <= arrowY + arrowSize &&
+                    this.musicCurrentPage > 0) {
+                    this.musicCurrentPage--;
+                    return;
+                }
+                
+                if (x >= rightArrowX && x <= rightArrowX + arrowSize &&
+                    y >= arrowY && y <= arrowY + arrowSize &&
+                    this.musicCurrentPage < totalPages - 1) {
+                    this.musicCurrentPage++;
+                    return;
+                }
             }
         }
     }
 
-    handleButtonAction(action) {
-        switch (action) {
-            case 'journal':
-                // TODO: Implement campaign journal
-                break;
-            case 'monsters':
-                // TODO: Implement monster journal
-                break;
-            case 'stats':
-                // TODO: Implement magic statistics
-                break;
+    playMusicTrack(music) {
+        // Stop playlist mode if active (to avoid random track switching)
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.musicPlaylistMode = false;
+        }
+
+        // Play the selected music track on loop
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playMusic(music.musicId, false);
         }
     }
 
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 150;
-        const menuY = canvas.height / 2 - 150;
-        const menuWidth = 300;
-        const menuHeight = 340;
-
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+        
         // Semi-transparent overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+        
         // Menu background
         ctx.fillStyle = '#2a1a0f';
         ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-
+        
         // Menu border
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
-
+        
         // Menu title
-        ctx.font = 'bold 20px serif';
+        ctx.font = 'bold 24px serif';
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('ARCANE KNOWLEDGE', menuX + menuWidth / 2, menuY + 20);
-
-        // Render buttons in StartScreen style
-        this.buttons.forEach((button, index) => {
-            const buttonX = menuX + 30;
-            const buttonY = menuY + 70 + index * 70;
-
-            // Button background gradient
-            const bgGradient = ctx.createLinearGradient(buttonX, buttonY, buttonX, buttonY + this.buttonHeight);
-            bgGradient.addColorStop(0, '#44301c');
-            bgGradient.addColorStop(1, '#261200');
-            ctx.fillStyle = bgGradient;
-            ctx.fillRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
-
-            // Button border - outset style
-            ctx.strokeStyle = button.hovered ? '#ffd700' : '#8b7355';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
-
-            // Top highlight line for beveled effect
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(buttonX, buttonY);
-            ctx.lineTo(buttonX + this.buttonWidth, buttonY);
-            ctx.stroke();
-
-            // Inset shadow
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(buttonX, buttonY + this.buttonHeight);
-            ctx.lineTo(buttonX + this.buttonWidth, buttonY + this.buttonHeight);
-            ctx.stroke();
-
-            // Button text
-            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
-            ctx.font = 'bold 16px Trebuchet MS, sans-serif';
+        ctx.fillText('ARCANE LIBRARY', menuX + menuWidth / 2, menuY + 8);
+        
+        // Render tabs
+        const tabHeight = 35;
+        const tabStartY = menuY + 35;
+        const tabButtonWidth = menuWidth / 4;
+        
+        this.tabs.forEach((tab, index) => {
+            const tabX = menuX + index * tabButtonWidth;
+            const tabY = tabStartY;
+            
+            // Tab background
+            const isActive = this.activeTab === tab.id;
+            ctx.fillStyle = isActive ? '#3d2817' : '#261200';
+            ctx.fillRect(tabX, tabY, tabButtonWidth, tabHeight);
+            
+            // Tab border
+            ctx.strokeStyle = isActive ? '#d4af37' : '#8b7355';
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.strokeRect(tabX, tabY, tabButtonWidth, tabHeight);
+            
+            // Tab text
+            ctx.font = isActive ? 'bold 12px Trebuchet MS, sans-serif' : '12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = isActive ? '#ffd700' : '#d4af37';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
-            // Text shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.fillText(button.label, buttonX + this.buttonWidth / 2 + 1, buttonY + this.buttonHeight / 2 + 1);
-            
-            // Main text
-            ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
-            ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
+            ctx.fillText(tab.label, tabX + tabButtonWidth / 2, tabY + tabHeight / 2);
         });
-
+        
+        // Content area
+        const contentX = menuX + 20;
+        const contentY = tabStartY + tabHeight + 20;
+        const contentWidth = menuWidth - 40;
+        const contentHeight = menuHeight - tabHeight - 80;
+        
+        // Content background
+        ctx.fillStyle = '#1a0f0a';
+        ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(contentX, contentY, contentWidth, contentHeight);
+        
+        // Render active tab content
+        if (this.activeTab === 'statistics') {
+            this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'musical-scores') {
+            this.renderMusicalScoresTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'collection') {
+            this.renderCollectionTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'enemy-intel') {
+            this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        }
+        
         // Red X close button at top right
         const closeButtonX = menuX + menuWidth - 35;
         const closeButtonY = menuY + 10;
@@ -5288,8 +5594,194 @@ class ArcaneKnowledgeMenu {
         ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
         ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
         ctx.stroke();
-
+        
         ctx.globalAlpha = 1;
+    }
+
+    renderStatisticsTab(ctx, x, y, width, height) {
+        const stats = this.stateManager.gameStatistics || { 
+            victories: 0, defeats: 0, totalEnemiesSlain: 0, 
+            totalPlaytime: 0, totalItemsConsumed: 0,
+            totalMoneySpentOnMarketplace: 0, totalMoneyEarnedInMarketplace: 0,
+            getWinRate: () => 0, getFormattedPlaytime: () => '0s'
+        };
+        
+        const padding = 20;
+        const lineHeight = 28;
+        let currentY = y + padding;
+        
+        ctx.font = '14px Trebuchet MS, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        const stats_data = [
+            { label: 'Victories:', value: stats.victories },
+            { label: 'Defeats:', value: stats.defeats },
+            { label: 'Win Rate:', value: stats.getWinRate() + '%' },
+            { label: 'Enemies Slain:', value: stats.totalEnemiesSlain },
+            { label: 'Playtime:', value: stats.getFormattedPlaytime() },
+            { label: 'Items Consumed:', value: stats.totalItemsConsumed },
+            { label: 'Marketplace Spent:', value: stats.totalMoneySpentOnMarketplace + ' gold' },
+            { label: 'Marketplace Earned:', value: stats.totalMoneyEarnedInMarketplace + ' gold' }
+        ];
+        
+        stats_data.forEach(stat => {
+            // Label
+            ctx.fillStyle = '#d4af37';
+            ctx.fillText(stat.label, x + padding, currentY);
+            
+            // Value
+            ctx.fillStyle = '#ffd700';
+            ctx.textAlign = 'right';
+            ctx.fillText(String(stat.value), x + width - padding, currentY);
+            ctx.textAlign = 'left';
+            
+            currentY += lineHeight;
+        });
+    }
+
+    renderMusicalScoresTab(ctx, x, y, width, height) {
+        if (this.unlockedMusicTracks.size === 0) {
+            ctx.font = '16px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No musical scores unlocked yet.', x + width / 2, y + height / 2);
+            ctx.fillText('Purchase scores at the Marketplace!', x + width / 2, y + height / 2 + 25);
+            return;
+        }
+        
+        // Grid layout: 3 columns, 2 rows per page
+        const cols = 3;
+        const rows = 2;
+        const itemSize = 100;
+        const padding = 15;
+        const startX = x + (width - cols * (itemSize + padding)) / 2;
+        const startY = y + 20;
+        
+        const musicArray = Array.from(this.unlockedMusicTracks.values());
+        const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+        const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+        
+        for (let i = startIdx; i < endIdx; i++) {
+            const music = musicArray[i];
+            const gridIdx = i - startIdx;
+            const col = gridIdx % cols;
+            const row = Math.floor(gridIdx / cols);
+            
+            const itemX = startX + col * (itemSize + padding);
+            const itemY = startY + row * (itemSize + padding);
+            
+            // Music tile background
+            ctx.fillStyle = '#3d2817';
+            ctx.fillRect(itemX, itemY, itemSize, itemSize);
+            
+            // Tile border
+            ctx.strokeStyle = '#8b7355';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(itemX, itemY, itemSize, itemSize);
+            
+            // Music icon
+            ctx.font = 'bold 30px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#d4af37';
+            ctx.fillText('🎵', itemX + itemSize / 2, itemY + itemSize / 3);
+            
+            // Music title
+            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#ffd700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            // Wrap text
+            const words = music.name.split(' ');
+            let line = '';
+            let lineY = itemY + itemSize / 2;
+            
+            words.forEach(word => {
+                const testLine = line + (line ? ' ' : '') + word;
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > itemSize - 10 && line) {
+                    ctx.fillText(line, itemX + itemSize / 2, lineY);
+                    line = word;
+                    lineY += 12;
+                } else {
+                    line = testLine;
+                }
+            });
+            ctx.fillText(line, itemX + itemSize / 2, lineY);
+            
+            // Play button at bottom
+            const playButtonSize = 20;
+            const playButtonX = itemX + itemSize / 2 - playButtonSize / 2;
+            const playButtonY = itemY + itemSize - 25;
+            
+            // Play button background
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
+            
+            // Play button border
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
+            
+            // Play icon (triangle)
+            ctx.fillStyle = '#1a0f0a';
+            ctx.beginPath();
+            ctx.moveTo(playButtonX + 6, playButtonY + 4);
+            ctx.lineTo(playButtonX + 6, playButtonY + 16);
+            ctx.lineTo(playButtonX + 16, playButtonY + 10);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Pagination arrows if needed
+        const totalPages = Math.ceil(musicArray.length / this.musicItemsPerPage);
+        if (totalPages > 1) {
+            const arrowSize = 30;
+            const arrowY = y + height / 2 - arrowSize / 2;
+            
+            // Left arrow
+            if (this.musicCurrentPage > 0) {
+                ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('<', x - 25, arrowY + arrowSize / 2);
+            }
+            
+            // Right arrow
+            if (this.musicCurrentPage < totalPages - 1) {
+                ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('>', x + width + 15, arrowY + arrowSize / 2);
+            }
+            
+            // Page indicator
+            ctx.font = '12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Page ${this.musicCurrentPage + 1} of ${totalPages}`, x + width / 2, y + height - 15);
+        }
+    }
+
+    renderCollectionTab(ctx, x, y, width, height) {
+        ctx.font = '16px Trebuchet MS, sans-serif';
+        ctx.fillStyle = '#8b7355';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Collection feature coming soon...', x + width / 2, y + height / 2);
+    }
+
+    renderEnemyIntelTab(ctx, x, y, width, height) {
+        ctx.font = '16px Trebuchet MS, sans-serif';
+        ctx.fillStyle = '#8b7355';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Enemy Intel feature coming soon...', x + width / 2, y + height / 2);
     }
 }
 

@@ -592,6 +592,12 @@ export class GameplayState {
                 if (this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
                     console.log('  Saving updated marketplace state to save file');
                     this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+                    
+                    // Also save statistics
+                    if (this.stateManager.gameStatistics) {
+                        this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
+                    }
+                    
                     SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
                 }
             } else {
@@ -1359,6 +1365,11 @@ export class GameplayState {
             }
             if (this.stateManager.marketplaceSystem) {
                 saveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+            }
+            
+            // Save game statistics
+            if (this.stateManager.gameStatistics) {
+                saveData.statistics = this.stateManager.gameStatistics.serialize();
             }
             
             // Mark level as completed
