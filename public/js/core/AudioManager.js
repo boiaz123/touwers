@@ -381,22 +381,13 @@ export class AudioManager {
     /**
      * Play a random settlement theme track
      * Chooses randomly from settlement songs and keeps it stored for looping
+     * Enters playlist mode so tracks continue to loop randomly
      * @returns {string} Name of the selected track
      */
     playRandomSettlementTheme() {
-        const settlementTracks = Object.entries(this.musicRegistry)
-            .filter(([_, data]) => data.category === 'settlement')
-            .map(([name, _]) => name);
-        
-        if (settlementTracks.length === 0) {
-            console.warn('AudioManager: No settlement tracks found');
-            return null;
-        }
-        
-        // Pick a random settlement track
-        const randomTrack = settlementTracks[Math.floor(Math.random() * settlementTracks.length)];
-        this.playMusic(randomTrack);
-        return randomTrack;
+        // Use playMusicCategory to enable playlist mode for settlement music
+        // This way, when one settlement song finishes, another is randomly selected
+        return this.playMusicCategory('settlement');
     }
     
     /**

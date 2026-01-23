@@ -2013,6 +2013,38 @@ export class LevelBase {
         }
     }
 
+    renderCactusBaseBushes(ctx, x, y, size) {
+        // Add bushes around the base of cacti for a more natural look
+        // Small bush cluster on left
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#a88a6a';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Small bush cluster on right
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#a88a6a';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Front center small bushes
+        ctx.fillStyle = '#8a7654';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     renderCactusSaguaro(ctx, x, y, size) {
         // Classic saguaro cactus with branches and improved spines
         const mainHeight = size * 0.55;
@@ -2108,6 +2140,9 @@ export class LevelBase {
         // Highlight stripe on main body
         ctx.fillStyle = 'rgba(100, 200, 100, 0.3)';
         ctx.fillRect(x - mainWidth * 0.12, y - mainHeight * 0.7, mainWidth * 0.12, mainHeight * 0.6);
+        
+        // Add base bushes for natural look
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.7);
     }
 
     renderCactusBarrel(ctx, x, y, size) {
@@ -2192,6 +2227,9 @@ export class LevelBase {
         ctx.beginPath();
         ctx.ellipse(x - width * 0.15, y - height * 0.25, width * 0.18, height * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Add base bushes for natural look
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.6);
     }
 
     renderCactusPricklyPear(ctx, x, y, size) {
@@ -2281,6 +2319,9 @@ export class LevelBase {
         ctx.ellipse(x - padWidth * 0.1, y - padHeight * 0.3, padWidth * 0.15, padHeight * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+        
+        // Add base bushes for natural look
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.5);
     }
 
     renderCactusColumnar(ctx, x, y, size) {
@@ -2339,6 +2380,9 @@ export class LevelBase {
         // Highlight stripe
         ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
         ctx.fillRect(x - bodyWidth * 0.15, y - bodyHeight * 0.9, bodyWidth * 0.2, bodyHeight * 0.8);
+        
+        // Add base bushes for natural look
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.55);
     }
 
     renderCactusCholla(ctx, x, y, size) {
@@ -2426,6 +2470,9 @@ export class LevelBase {
         // Highlight
         ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
         ctx.fillRect(x - mainWidth * 0.15, y - mainHeight * 0.8, mainWidth * 0.2, mainHeight * 0.7);
+        
+        // Add base bushes for natural look
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.6);
     }
 
     renderDesertBush(ctx, x, y, size) {
@@ -2493,8 +2540,8 @@ export class LevelBase {
     }
 
     renderMountainVegetation(ctx, x, y, size, gridX, gridY) {
-        const scaledSize = size * 1.4;
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 3;
+        const scaledSize = size * 1.8;  // Increased from 1.4 for larger trees
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;  // Added extra variation
         switch(seed) {
             case 0:
                 this.renderMountainPineType1(ctx, x, y, scaledSize);
@@ -2502,14 +2549,18 @@ export class LevelBase {
             case 1:
                 this.renderMountainPineType2(ctx, x, y, scaledSize);
                 break;
-            default:
+            case 2:
                 this.renderMountainPineType3(ctx, x, y, scaledSize);
+                break;
+            case 3:
+                this.renderMountainPineType4(ctx, x, y, scaledSize);
+                break;
         }
     }
 
     renderSpaceVegetation(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
-        const scaledSize = size * 1.3;
+        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 6;  // Increased from 5 to 6 for more variation
+        const scaledSize = size * 1.6;  // Increased from 1.3 for larger vegetation
         switch(seed) {
             case 0:
                 this.renderSpaceVortexPlant(ctx, x, y, scaledSize);
@@ -2523,8 +2574,11 @@ export class LevelBase {
             case 3:
                 this.renderSpaceBiolumPlant(ctx, x, y, scaledSize);
                 break;
-            default:
+            case 4:
                 this.renderSpaceAlienMushroom(ctx, x, y, scaledSize);
+                break;
+            default:
+                this.renderSpaceCrystalOrganism(ctx, x, y, scaledSize);
         }
     }
 
@@ -2722,6 +2776,66 @@ export class LevelBase {
         ctx.fill();
     }
 
+    renderSpaceCrystalOrganism(ctx, x, y, size) {
+        // Hybrid crystal organism - larger and more detailed variation
+        ctx.fillStyle = '#7a6aaa';
+        
+        // Base crystal cluster
+        const clusters = 5;
+        for (let i = 0; i < clusters; i++) {
+            const angle = (i / clusters) * Math.PI * 2;
+            const radius = size * 0.15;
+            const cX = x + Math.cos(angle) * radius;
+            const cY = y + Math.sin(angle) * radius;
+            
+            // Individual crystal
+            ctx.beginPath();
+            ctx.moveTo(cX, cY - size * 0.18);
+            ctx.lineTo(cX + size * 0.1, cY + size * 0.08);
+            ctx.lineTo(cX - size * 0.1, cY + size * 0.08);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Crystal highlight
+            ctx.fillStyle = '#9a8aaa';
+            ctx.beginPath();
+            ctx.arc(cX - size * 0.05, cY - size * 0.08, size * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#7a6aaa';
+        }
+        
+        // Central growth core
+        ctx.fillStyle = '#5a8aaa';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Energetic tendrils extending outward
+        ctx.strokeStyle = 'rgba(150, 180, 255, 0.6)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const endX = x + Math.cos(angle) * size * 0.35;
+            const endY = y + Math.sin(angle) * size * 0.35;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(
+                x + Math.cos(angle) * size * 0.15,
+                y + Math.sin(angle) * size * 0.15,
+                endX,
+                endY
+            );
+            ctx.stroke();
+        }
+        
+        // Pulsing core glow
+        ctx.fillStyle = 'rgba(180, 200, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     renderMountainPineType1(ctx, x, y, size) {
         // Tall pine with heavy snow
         const trunkWidth = size * 0.2;
@@ -2849,6 +2963,60 @@ export class LevelBase {
 
         ctx.beginPath();
         ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderMountainPineType4(ctx, x, y, size) {
+        // Thick, sturdy pine with minimal snow - new variation
+        const trunkWidth = size * 0.24;
+        const trunkHeight = size * 0.48;
+
+        // Trunk with deep shading
+        ctx.fillStyle = '#6b4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3a2418';
+        ctx.fillRect(x - trunkWidth * 0.15, y, trunkWidth * 0.15, trunkHeight);
+
+        // Dark green base
+        ctx.fillStyle = '#0d3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.7);
+        ctx.lineTo(x + size * 0.42, y - size * 0.08);
+        ctx.lineTo(x - size * 0.42, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Mid section
+        ctx.fillStyle = '#1a5a2a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.38, y + size * 0.1);
+        ctx.lineTo(x - size * 0.38, y + size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Darker shading on right
+        ctx.fillStyle = '#0d3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.38, y + size * 0.1);
+        ctx.lineTo(x + size * 0.1, y + size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+
+        // Small snow cap on top
+        ctx.fillStyle = '#f5f5f5';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.68, size * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Slight snow accent on upper branches
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
         ctx.fill();
     }
 

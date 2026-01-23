@@ -101,55 +101,91 @@ export function initializeMusicRegistry() {
         }
     );
     
-    // Campaign/Battle tracks - desert track for all campaign levels for now
+    // CAMPAIGN-SPECIFIC MUSIC TRACKS
+    // Each campaign type has its own dedicated music folder and songs
+    
+    // Campaign 1 (Forest) songs
     MusicRegistry.registerMusic(
-        'campaign-desert',
-        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
-        {
-            loop: true,
-            category: 'campaign',
-            volume: 0.7
-        }
-
-    );
-    MusicRegistry.registerMusic(
-        'campaign-desert',
-        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
-        {
-            loop: true,
-            category: 'campaign',
-            volume: 0.7
-        }
-    );
-
-    MusicRegistry.registerMusic(
-        'campaign-song-1',
+        'campaign-1-battle-1',
         'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song1.mp3',
         {
             loop: true,
-            category: 'campaign',
+            category: 'campaign-1',
             volume: 0.7
         }
-
     );
 
-        MusicRegistry.registerMusic(
-        'campaign-song-2',
+    MusicRegistry.registerMusic(
+        'campaign-1-battle-2',
         'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song2.mp3',
         {
             loop: true,
-            category: 'campaign',
+            category: 'campaign-1',
             volume: 0.7
         }
-
     );
     
-        MusicRegistry.registerMusic(
-        'campaign-song-3',
+    MusicRegistry.registerMusic(
+        'campaign-1-battle-3',
         'assets/audio/music/CampaignSongs/Campaign1songs/Campaign1_Song3.mp3',
         {
             loop: true,
-            category: 'campaign',
+            category: 'campaign-1',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 2 (Desert) songs
+    MusicRegistry.registerMusic(
+        'campaign-2-battle-1',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign-2',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-2-battle-2',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-2',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 3 (Mountain) songs
+    MusicRegistry.registerMusic(
+        'campaign-3-battle-1',
+        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign-3',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 4 (Space) songs - placeholder, add actual songs when available
+    // For now, reuse space theme if available
+    MusicRegistry.registerMusic(
+        'campaign-4-battle-1',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+    );
+
+    // Campaign 5 (Generic) songs - fallback/additional songs
+    MusicRegistry.registerMusic(
+        'campaign-5-battle-1',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle.mp3',
+        {
+            loop: true,
+            category: 'campaign-5',
             volume: 0.7
         }
     );

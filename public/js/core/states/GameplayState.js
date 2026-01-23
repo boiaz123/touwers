@@ -311,8 +311,13 @@ export class GameplayState {
         
         // Play level-specific music with category-based looping
         if (this.stateManager.audioManager) {
-            // Use music category for random track selection and looping
-            this.stateManager.audioManager.playMusicCategory('campaign');
+            // Determine the campaign ID from the current level
+            const campaignMatch = this.currentLevel.match(/^campaign-\d+/);
+            const campaignId = campaignMatch ? campaignMatch[0] : 'campaign-1';
+            
+            // Play the campaign-specific music category (e.g., 'campaign-1', 'campaign-2', etc.)
+            // This will select a random track and auto-play next track when one finishes
+            this.stateManager.audioManager.playMusicCategory(campaignId);
         }
         
         // Wave system starts in cooldown mode - don't call startWave() here
@@ -540,12 +545,17 @@ export class GameplayState {
     /**
      * Get the audio track name for a specific level
      * Maps level IDs to their corresponding music tracks
+     * Each campaign type has access only to its dedicated music folder
      */
     getAudioTrackForLevel(levelId) {
         // Define available music tracks for each campaign
+        // Campaign IDs: campaign-1 (Forest), campaign-2 (Desert), campaign-3 (Mountain), campaign-4 (Space), campaign-5 (Generic)
         const campaignMusicMap = {
-            'campaign-1': ['campaign-desert', 'campaign-song-1'],
-            'campaign-5': ['campaign-desert'],
+            'campaign-1': ['campaign-1-battle-1', 'campaign-1-battle-2', 'campaign-1-battle-3'],
+            'campaign-2': ['campaign-2-battle-1', 'campaign-2-battle-2'],
+            'campaign-3': ['campaign-3-battle-1'],
+            'campaign-4': ['campaign-4-battle-1'],
+            'campaign-5': ['campaign-5-battle-1'],
         };
         
         // Extract campaign ID from level ID (e.g., 'campaign-1-level-1' -> 'campaign-1')
@@ -553,7 +563,7 @@ export class GameplayState {
         const campaignId = campaignMatch ? campaignMatch[0] : 'campaign-1';
         
         // Get available tracks for this campaign
-        const availableTracks = campaignMusicMap[campaignId] || ['campaign-desert'];
+        const availableTracks = campaignMusicMap[campaignId] || campaignMusicMap['campaign-1'];
         
         // Select a random track from available options
         const randomTrack = availableTracks[Math.floor(Math.random() * availableTracks.length)];
@@ -598,6 +608,8 @@ export class GameplayState {
         // Stop level music before exiting
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.stopMusic();
+            // Resume settlement music when returning from a level
+            this.stateManager.audioManager.playRandomSettlementTheme();
         }
         
         // Clean up free placement flags
