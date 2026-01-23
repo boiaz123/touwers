@@ -3386,11 +3386,11 @@ class UpgradesMenu {
                 // Don't set requirementMsg - marketplace will show it as greyed out but without a requirement message
             }
             
-            // Special check: if it's the Frog King's Bane (boon type) and it's currently active, prevent purchase
-            // Only one boon can be active at a time
-            if (itemId === 'frog-king-bane' && marketplaceSystem.isBoonActive('frog-king-bane')) {
+            // Special check: if it's the Frog King's Bane (boon type), prevent re-purchase
+            // Boons are one-time purchases like music and intel
+            if (itemId === 'frog-king-bane' && marketplaceSystem.getConsumableCount('frog-king-bane') > 0) {
                 canPurchase = false;
-                requirementMsg = 'Active';
+                requirementMsg = 'Owned';
             }
             
             // Combine loot and boon into consumable category
