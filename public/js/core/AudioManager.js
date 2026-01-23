@@ -380,14 +380,58 @@ export class AudioManager {
     
     /**
      * Play a random settlement theme track
-     * Chooses randomly from settlement songs and keeps it stored for looping
-     * Enters playlist mode so tracks continue to loop randomly
+     * Plays a random settlement song and loops it (doesn't switch to other songs)
      * @returns {string} Name of the selected track
      */
     playRandomSettlementTheme() {
-        // Use playMusicCategory to enable playlist mode for settlement music
-        // This way, when one settlement song finishes, another is randomly selected
-        return this.playMusicCategory('settlement');
+        const settlementTracks = this.getSettlementTracks();
+        if (settlementTracks.length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return null;
+        }
+        
+        // Pick a random settlement track
+        const randomTrack = settlementTracks[Math.floor(Math.random() * settlementTracks.length)];
+        console.log(`AudioManager: Playing random settlement track:`, randomTrack);
+        
+        // Do NOT enable playlist mode for settlement - just play the single track on loop
+        this.musicPlaylistMode = false;
+        this.currentMusicCategory = null;
+        
+        // Play the track with looping enabled
+        return this.playMusic(randomTrack);
+    }
+    
+    /**
+     * Play a different settlement theme when returning from a level
+     * Ensures we don't play the same track that might still be in memory
+     * @returns {string} Name of the selected track
+     */
+    playDifferentSettlementTheme() {
+        const settlementTracks = this.getSettlementTracks();
+        if (settlementTracks.length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return null;
+        }
+        
+        // Filter out the currently playing track
+        const differentTracks = settlementTracks.filter(track => track !== this.currentMusicTrack);
+        
+        if (differentTracks.length === 0) {
+            // Only one track available, play it anyway
+            console.log('AudioManager: Only one settlement track available, will play it');
+            return this.playRandomSettlementTheme();
+        }
+        
+        // Pick a random different track
+        const randomTrack = differentTracks[Math.floor(Math.random() * differentTracks.length)];
+        console.log(`AudioManager: Playing different settlement track:`, randomTrack);
+        
+        // Do NOT enable playlist mode - just play the single track on loop
+        this.musicPlaylistMode = false;
+        this.currentMusicCategory = null;
+        
+        return this.playMusic(randomTrack);
     }
     
     /**

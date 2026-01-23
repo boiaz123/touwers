@@ -19,10 +19,10 @@ export class CampaignMenu {
             topPadding: 140,
             rightPadding: 40,
             bottomPadding: 40,
-            campaignTileWidth: 320,
-            campaignTileHeight: 160,
-            campaignGapX: 25,
-            campaignGapY: 20,
+            campaignTileWidth: 380,
+            campaignTileHeight: 200,
+            campaignGapX: 30,
+            campaignGapY: 25,
             campaignCols: 2,
             infoPanelRightMargin: 40,
             infoPanelTopMargin: 140
@@ -61,10 +61,18 @@ export class CampaignMenu {
         if (this.stateManager.audioManager) {
             const currentTrack = this.stateManager.audioManager.getCurrentTrack();
             const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
+            const isManualMusic = this.stateManager.audioManager.isManualMusicSelection;
             
+            // If a player manually selected music from the library, keep playing it
+            if (isManualMusic) {
+                // Leave it as is - don't change tracks
+            }
             // If settlement music is already playing, keep it
-            // If not, start settlement music (should rarely happen but failsafe)
-            if (!settlementTracks.includes(currentTrack)) {
+            else if (settlementTracks.includes(currentTrack)) {
+                // Leave it as is - don't restart
+            }
+            // Otherwise, start new settlement music
+            else {
                 this.stateManager.audioManager.playRandomSettlementTheme();
             }
         }

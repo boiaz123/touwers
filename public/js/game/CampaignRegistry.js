@@ -19,7 +19,7 @@ export class CampaignRegistry {
             'campaign-1': {
                 id: 'campaign-1',
                 name: 'The Forest Campaign',
-                description: 'Explore the mystical forest and defend against dark forces among the trees.',
+                description: 'Defend the mystical forest from an unknown darkness.',
                 icon: '🌲',
                 difficulty: 'Beginner',
                 class: campaignClasses.Campaign1,
@@ -28,13 +28,13 @@ export class CampaignRegistry {
                     experience: 1500,
                     unlocks: ['Forestkeeper\'s Bow']
                 },
-                story: 'The ancient forests are under threat. Defend the woodland realm and its creatures from darkness.',
+                story: 'Strange creatures have emerged from the depths of the ancient forest. No one knows where they come from or why they suddenly attack. You take up arms to defend the woodland realm, but questions plague your mind... What are these creatures? Why do they feel so unnatural? The answers must lie deeper within the mystery that surrounds your world.',
                 progress: 0
             },
             'campaign-2': {
                 id: 'campaign-2',
                 name: 'The Mountain Campaign',
-                description: 'Conquer the snowy peaks and alpine passes against the mountain invaders.',
+                description: 'Traverse the snowy peaks to reach the desert beyond.',
                 icon: '⛰️',
                 difficulty: 'Intermediate',
                 class: campaignClasses.Campaign2,
@@ -43,14 +43,14 @@ export class CampaignRegistry {
                     experience: 2000,
                     unlocks: ['Alpine Fortress']
                 },
-                story: 'The mountains hold strategic fortresses. Claim them for the realm and defeat the invading force.',
+                story: 'The forest victory reveals a disturbing truth: these creatures are coordinated, purposeful. An ancient prophecy speaks of an artifact hidden in the desert that holds the key to understanding—and defeating—these magical beings. But the desert lies beyond the treacherous mountains. You must brave the alpine peaks, survive the harsh conditions, and reach the desert planes where answers await. Each victory brings more frog creatures, each one more powerful and magical than before.',
                 progress: 0,
                 locked: false
             },
             'campaign-3': {
                 id: 'campaign-3',
                 name: 'The Desert Campaign',
-                description: 'Brave the scorching sands and defend the oasis strongholds.',
+                description: 'Uncover the ancient artifact that holds the secret to victory.',
                 icon: '🏜️',
                 difficulty: 'Advanced',
                 class: campaignClasses.Campaign3,
@@ -59,30 +59,30 @@ export class CampaignRegistry {
                     experience: 3000,
                     unlocks: ['Desert Nomad\'s Blade']
                 },
-                story: 'The deserts hide ancient secrets and fierce enemies. Survive the heat and defend your outposts.',
+                story: 'At last, the desert stretches before you. The creatures here are elemental, infused with the very essence of earth, water, fire, and air. They guard the oasis settlements fiercely, but you press forward. Finally, you discover the artifact—a radiant crystal that pulses with otherworldly energy. Ancient inscriptions reveal a shocking truth: these magical frogs are not native to your world. They are from another dimension, another plane of existence entirely. The artifact is a key—a gateway that will allow you to enter their realm and face their leader, the fabled Frog King.',
                 progress: 0,
                 locked: false
             },
             'campaign-4': {
                 id: 'campaign-4',
-                name: 'The Space Campaign',
-                description: 'Defend space stations from extraterrestrial threats orbiting in the void.',
-                icon: '🚀',
+                name: 'The Frog King\'s Realm',
+                description: 'Enter the interdimensional plane and face the Frog King.',
+                icon: '👑',
                 difficulty: 'Expert',
                 class: campaignClasses.Campaign4,
                 rewards: {
                     gold: 15000,
                     experience: 4000,
-                    unlocks: ['Plasma Cannon', 'Advanced Targeting System']
+                    unlocks: ['Crown of Victory', 'Interdimensional Compass']
                 },
-                story: 'Humanity\'s outposts in space are under attack. Defend the orbital stations with advanced technology.',
+                story: 'Using the artifact\'s power, you open a rift to the Frog King\'s otherworldly realm. The dimension itself is strange and hostile, its landscape twisted by ancient magic. The Frog King rules from his throne at the end of a perilous path, and his champions stand ready to defend him. This is your final battle. The fate of both your world and theirs depends on your victory. The Frog King awaits...',
                 progress: 0,
                 locked: false
             },
             'campaign-5': {
                 id: 'campaign-5',
                 name: 'Level Testing Campaign',
-                description: 'A sandbox campaign with all slots available for level testing purposes.',
+                description: 'A sandbox campaign for testing and experimentation.',
                 icon: '🧪',
                 difficulty: 'Testing',
                 class: campaignClasses.Campaign5,
@@ -91,7 +91,7 @@ export class CampaignRegistry {
                     experience: 0,
                     unlocks: []
                 },
-                story: 'A test environment for level design and gameplay mechanics.',
+                story: 'A test environment for level design and gameplay mechanics. Use this campaign to experiment with different tower and enemy combinations without affecting your main progression.',
                 progress: 0,
                 locked: false
             }

@@ -316,6 +316,8 @@ export class GameplayState {
         
         // Play level-specific music with category-based looping
         if (this.stateManager.audioManager) {
+            // Clear manual music selection flag - we're starting a level, so use campaign music
+            this.stateManager.audioManager.isManualMusicSelection = false;
             // Use the stored campaign ID for music selection
             this.stateManager.audioManager.playMusicCategory(this.currentCampaignId);
         }
@@ -614,8 +616,8 @@ export class GameplayState {
         // Stop level music before exiting
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.stopMusic();
-            // Resume settlement music when returning from a level
-            this.stateManager.audioManager.playRandomSettlementTheme();
+            // Resume settlement music when returning from a level - play a different track than last time
+            this.stateManager.audioManager.playDifferentSettlementTheme();
         }
         
         // Clean up free placement flags
