@@ -197,6 +197,47 @@ export class MarketplaceRegistry {
             musicId: 'defeat-tune',
             effect: 'Unlock defeat elegy for Arcane Library',
             requirements: []
+        },
+        // INTEL PACKS
+        'intel-pack-1': {
+            name: 'Spy Report I',
+            description: 'Intelligence gathered by scouts reveals the weakness of common foes. Unlock detailed information about Basic Enemies, Archer Enemies, Beefy Enemies, and Villager Enemies in the Arcane Library. Know thy enemy, and you shall never fear them.',
+            cost: 100,
+            icon: '📜',
+            category: 'intel',
+            type: 'consumable',
+            effect: 'Unlock intel on common enemies',
+            requirements: []
+        },
+        'intel-pack-2': {
+            name: 'Spy Report II',
+            description: 'Through careful espionage, you gain knowledge of intermediate threats. Unlock information about Knight Enemies and Shield Knight Enemies. Fortify your defenses with understanding.',
+            cost: 200,
+            icon: '📋',
+            category: 'intel',
+            type: 'consumable',
+            effect: 'Unlock intel on knight enemies',
+            requirements: []
+        },
+        'intel-pack-3': {
+            name: 'Spy Report III',
+            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies and Frog Enemies. Master the arcane, and you master the battlefield.',
+            cost: 300,
+            icon: '🔍',
+            category: 'intel',
+            type: 'consumable',
+            effect: 'Unlock intel on magical enemies',
+            requirements: []
+        },
+        'intel-pack-4': {
+            name: 'Spy Report IV',
+            description: 'The most dangerous intelligence—knowledge of the realm\'s rarest and most powerful foes. Unlock intel on Elemental Frog Enemies. Understanding these ancient forces may be the key to your survival.',
+            cost: 400,
+            icon: '⚡',
+            category: 'intel',
+            type: 'consumable',
+            effect: 'Unlock intel on elemental enemies',
+            requirements: []
         }
     };
 

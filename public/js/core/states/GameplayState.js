@@ -70,6 +70,9 @@ export class GameplayState {
         // This will be initialized when a level starts, not when the game boots
         this.lastRealTimestamp = 0;
         
+        // Track level start time for statistics
+        this.levelStartTime = 0;
+        
         // Performance Monitor
         this.performanceMonitor = new PerformanceMonitor();
         this.performanceMonitor.enable(); // Enable by default to show FPS
@@ -206,6 +209,7 @@ export class GameplayState {
         this.totalEnemiesSpawned = 0; // Reset total enemies counter
         this.levelCompletionDelay = 0;
         this.levelCompletionTimestampStart = undefined;
+        this.levelStartTime = Date.now() / 1000; // Record level start time in seconds
         
         // Configure level-specific settings
         this.isSandbox = (this.levelType === 'sandbox');
@@ -1351,7 +1355,25 @@ export class GameplayState {
             // This ensures consumables are removed from inventory after level completes
             if (this.stateManager.marketplaceSystem) {
                 console.log('completeLevel: Committing used consumables before save');
+                
+                // Count items consumed before committing
+                const consumedCount = this.stateManager.marketplaceSystem.consumablesToCommit.size;
+                
                 this.stateManager.marketplaceSystem.commitUsedConsumables();
+                
+                // Record items consumed to statistics
+                if (this.stateManager.gameStatistics && consumedCount > 0) {
+                    this.stateManager.gameStatistics.incrementItemsConsumed(consumedCount);
+                }
+            }
+            
+            // Record victory and playtime
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.recordVictory();
+                
+                // Add playtime from this level
+                const levelPlaytime = (Date.now() / 1000) - this.levelStartTime;
+                this.stateManager.gameStatistics.addPlaytime(levelPlaytime);
             }
             
             // CRITICAL: Update save data with current settlement state before saving
@@ -1751,6 +1773,35 @@ export class GameplayState {
     
     gameOver() {
         this.waveInProgress = false;
+        
+        // Record defeat and playtime
+        if (this.stateManager.gameStatistics) {
+            this.stateManager.gameStatistics.recordDefeat();
+            
+            // Add playtime from this level
+            const levelPlaytime = (Date.now() / 1000) - this.levelStartTime;
+            this.stateManager.gameStatistics.addPlaytime(levelPlaytime);
+        }
+        
+        // Commit consumables when game ends
+        if (this.stateManager.marketplaceSystem) {
+            const consumedCount = this.stateManager.marketplaceSystem.consumablesToCommit.size;
+            
+            this.stateManager.marketplaceSystem.commitUsedConsumables();
+            
+            // Record items consumed to statistics
+            if (this.stateManager.gameStatistics && consumedCount > 0) {
+                this.stateManager.gameStatistics.incrementItemsConsumed(consumedCount);
+            }
+        }
+        
+        // Save statistics before showing results
+        if (this.stateManager.gameStatistics && this.stateManager.currentSaveData) {
+            this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
+            if (this.stateManager.currentSaveSlot) {
+                SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+            }
+        }
         
         // Show custom results screen instead of alert
         this.resultsScreen.show('gameOver', {

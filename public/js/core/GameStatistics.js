@@ -16,6 +16,7 @@ export class GameStatistics {
         this.totalItemsConsumed = 0;
         this.totalMoneySpentOnMarketplace = 0;
         this.totalMoneyEarnedInMarketplace = 0;
+        this.totalItemsSold = 0; // Track total items sold through marketplace
     }
 
     /**
@@ -73,6 +74,14 @@ export class GameStatistics {
     }
 
     /**
+     * Add to total items sold count
+     * @param {number} count - Number of items sold (default 1)
+     */
+    addItemsSold(count = 1) {
+        this.totalItemsSold += count;
+    }
+
+    /**
      * Get formatted playtime string (e.g., "2h 30m 45s")
      */
     getFormattedPlaytime() {
@@ -108,7 +117,8 @@ export class GameStatistics {
             totalPlaytime: this.totalPlaytime,
             totalItemsConsumed: this.totalItemsConsumed,
             totalMoneySpentOnMarketplace: this.totalMoneySpentOnMarketplace,
-            totalMoneyEarnedInMarketplace: this.totalMoneyEarnedInMarketplace
+            totalMoneyEarnedInMarketplace: this.totalMoneyEarnedInMarketplace,
+            totalItemsSold: this.totalItemsSold
         };
     }
 
@@ -124,6 +134,7 @@ export class GameStatistics {
         this.totalItemsConsumed = data.totalItemsConsumed || 0;
         this.totalMoneySpentOnMarketplace = data.totalMoneySpentOnMarketplace || 0;
         this.totalMoneyEarnedInMarketplace = data.totalMoneyEarnedInMarketplace || 0;
+        this.totalItemsSold = data.totalItemsSold || 0;
     }
 
     /**

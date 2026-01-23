@@ -23,6 +23,10 @@ export class MarketplaceSystem {
         
         // Track ALL consumables that will be consumed at level end (not just free placements)
         this.consumablesToCommit = new Set();
+        
+        // Track which enemy intel packs have been purchased (one-time purchase)
+        // Keys are intel pack IDs, values are true if purchased
+        this.unlockedEnemyIntel = new Set();
     }
 
     /**
@@ -199,6 +203,31 @@ export class MarketplaceSystem {
     }
 
     /**
+     * Unlock enemy intel pack (called when intel pack is purchased)
+     * @param {string} intelPackId - The intel pack ID
+     */
+    unlockEnemyIntel(intelPackId) {
+        this.unlockedEnemyIntel.add(intelPackId);
+    }
+
+    /**
+     * Check if enemy intel pack is unlocked
+     * @param {string} intelPackId - The intel pack ID
+     * @returns {boolean} - True if unlocked
+     */
+    isEnemyIntelUnlocked(intelPackId) {
+        return this.unlockedEnemyIntel.has(intelPackId);
+    }
+
+    /**
+     * Get all unlocked enemy intel packs
+     * @returns {Array<string>} - Array of unlocked intel pack IDs
+     */
+    getUnlockedEnemyIntel() {
+        return Array.from(this.unlockedEnemyIntel);
+    }
+
+    /**
      * Get all available consumables
      * @returns {Object} - Object mapping item ID to quantity
      */
@@ -244,15 +273,24 @@ export class MarketplaceSystem {
      * @returns {Object} - Serialized state
      */
     serialize() {
-        const consumablesObj = {};
-        for (const [id, qty] of this.consumables.entries()) {
-            if (qty > 0) {
-                consumablesObj[id] = qty;
-            }
-        }
-        
         return {
-            consumables: consumablesObj
+            consumables: Object.fromEntries(this.consumables),
+            unlockedEnemyIntel: Array.from(this.unlockedEnemyIntel)
         };
+    }
+
+    /**
+     * Deserialize from save
+     * @param {Object} data - Serialized state
+     */
+    deserialize(data) {
+        if (!data) return;
+        
+        if (data.consumables) {
+            this.consumables = new Map(Object.entries(data.consumables));
+        }
+        if (data.unlockedEnemyIntel) {
+            this.unlockedEnemyIntel = new Set(data.unlockedEnemyIntel);
+        }
     }
 }

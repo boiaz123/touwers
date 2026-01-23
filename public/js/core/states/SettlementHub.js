@@ -11,6 +11,7 @@ import { UpgradeSystem } from '../UpgradeSystem.js';
 import { UpgradeRegistry } from '../UpgradeRegistry.js';
 import { MarketplaceSystem } from '../MarketplaceSystem.js';
 import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
+import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -59,6 +60,9 @@ export class SettlementHub {
         // Pre-rendered scene for instant loading
         this.preRenderedScene = null;
         this.isFirstRender = true;
+        
+        // Track settlement start time for playtime statistics
+        this.settlementStartTime = 0;
     }
 
     enter() {
@@ -72,6 +76,9 @@ export class SettlementHub {
         if (sidebar) {
             sidebar.style.display = 'none';
         }
+
+        // Track settlement start time for playtime statistics
+        this.settlementStartTime = Date.now() / 1000;
 
         // Reset animation - content is shown immediately
         this.animationTime = 0;
@@ -296,6 +303,12 @@ export class SettlementHub {
     }
 
     exit() {
+        // Record settlement time to statistics
+        if (this.stateManager.gameStatistics && this.settlementStartTime > 0) {
+            const settlementPlaytime = (Date.now() / 1000) - this.settlementStartTime;
+            this.stateManager.gameStatistics.addPlaytime(settlementPlaytime);
+        }
+        
         // Save all settlement data when exiting the settlement hub
         // This captures current state of gold, inventory, upgrades, marketplace, and campaign progress
         if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
@@ -305,6 +318,7 @@ export class SettlementHub {
                 playerInventory: this.stateManager.playerInventory,
                 upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                 marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
                 // Campaign state from current save data
                 lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
                 unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
@@ -1651,13 +1665,13 @@ export class SettlementHub {
                             ctx.font = 'bold 22px Arial';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
-                            ctx.fillText('UPGRADES &', headerX + 1, headerY - 15 + 1);
-                            ctx.fillText('MARKETPLACE', headerX + 1, headerY + 15 + 1);
+                            ctx.fillText('Upgrades &', headerX + 1, headerY - 15 + 1);
+                            ctx.fillText('Marketplace', headerX + 1, headerY + 15 + 1);
                             
                             // Header text
                             ctx.fillStyle = '#FFD700';
-                            ctx.fillText('UPGRADES &', headerX, headerY - 15);
-                            ctx.fillText('MARKETPLACE', headerX, headerY + 15);
+                            ctx.fillText('Upgrades &', headerX, headerY - 15);
+                            ctx.fillText('Marketplace', headerX, headerY + 15);
                         } else {
                             // Header text shadow
                             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -3297,6 +3311,7 @@ class UpgradesMenu {
             { label: 'ALL', id: 'all', hovered: false },
             { label: 'BUILDINGS', id: 'building', hovered: false },
             { label: 'CONSUMABLES', id: 'consumable', hovered: false },
+            { label: 'INTEL', id: 'intel', hovered: false },
             { label: 'MUSIC', id: 'music', hovered: false },
             { label: 'UPGRADES', id: 'upgrade', hovered: false }
         ];
@@ -3333,20 +3348,29 @@ class UpgradesMenu {
             let requirementMsg = MarketplaceRegistry.getRequirementMessage(itemId, upgradeSystem, marketplaceSystem);
             
             // Special check: if it's a music item and player already has it, mark as unavailable
+            // Music items should only be purchased once
             if (itemData.category === 'music' && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
                 requirementMsg = 'Owned';
             }
             
-            // Special check: if it's a consumable and player already has it, mark as unavailable
-            if (itemData.type === 'consumable' && itemData.category !== 'music' && !requirementMsg && marketplaceSystem.getConsumableCount(itemId) > 0) {
+            // Special check: if it's an Intel item and player already has it, mark as unavailable
+            // Intel items are one-time purchases like music
+            if (itemData.category === 'intel' && marketplaceSystem.unlockedEnemyIntel && marketplaceSystem.unlockedEnemyIntel.has(itemId)) {
                 canPurchase = false;
-                requirementMsg = 'Owned';
+                requirementMsg = 'Unlocked';
+            }
+            
+            // Special check: Consumables (forge-materials, magic-tower-flatpack, training-materials, etc.)
+            // are stackable but should be greyed out when player already owns one (until it's consumed at level end)
+            if (itemData.type === 'consumable' && itemData.category !== 'music' && itemData.category !== 'intel' && marketplaceSystem.getConsumableCount(itemId) > 0) {
+                canPurchase = false;
+                // Don't set requirementMsg - marketplace will show it as greyed out but without a requirement message
             }
             
             // Special check: if it's the Frog King's Bane (boon type) and it's currently active, prevent purchase
             // Only one boon can be active at a time
-            if (itemId === 'frog-king-bane' && marketplaceSystem.getConsumableCount('frog-king-bane') > 0) {
+            if (itemId === 'frog-king-bane' && marketplaceSystem.isBoonActive('frog-king-bane')) {
                 canPurchase = false;
                 requirementMsg = 'Active';
             }
@@ -3477,7 +3501,9 @@ class UpgradesMenu {
             items.push({
                 id: inventoryItem.lootId,
                 name: lootInfo.name,
+                description: lootInfo.description || `A valuable treasure. Sell for ${lootInfo.sellValue} gold.`,
                 sellPrice: lootInfo.sellValue,
+                icon: lootInfo.emblem || '💎',
                 emblem: lootInfo.emblem,
                 rarity: lootInfo.rarity,
                 lootId: inventoryItem.lootId,
@@ -3497,6 +3523,7 @@ class UpgradesMenu {
             console.log('Found loot in registry for', lootId, ':', lootInfo.name);
             return {
                 name: lootInfo.name,
+                description: lootInfo.description || `A ${lootInfo.rarity || 'common'} treasure from fallen enemies.`,
                 sellValue: lootInfo.sellValue,
                 emblem: lootInfo.emblem,
                 rarity: lootInfo.rarity
@@ -3579,6 +3606,51 @@ class UpgradesMenu {
         }
         
         return lines;
+    }
+
+    /**
+     * Draw decorative golden corner trim on panel corners
+     */
+    drawCornerTrim(ctx, x, y, size = 20, isTopLeft = true, isTopRight = false, isBottomLeft = false, isBottomRight = false) {
+        const cornerSize = size;
+        
+        // Draw corner rectangle with golden color
+        ctx.fillStyle = '#d4af37';
+        
+        if (isTopLeft) {
+            ctx.fillRect(x, y, cornerSize, 3);
+            ctx.fillRect(x, y, 3, cornerSize);
+        } else if (isTopRight) {
+            ctx.fillRect(x - cornerSize, y, cornerSize, 3);
+            ctx.fillRect(x - 3, y, 3, cornerSize);
+        } else if (isBottomLeft) {
+            ctx.fillRect(x, y - 3, cornerSize, 3);
+            ctx.fillRect(x, y - cornerSize, 3, cornerSize);
+        } else if (isBottomRight) {
+            ctx.fillRect(x - cornerSize, y - 3, cornerSize, 3);
+            ctx.fillRect(x - 3, y - cornerSize, 3, cornerSize);
+        }
+        
+        // Add a small decorative gem/circle in each corner
+        ctx.fillStyle = '#ffd700';
+        const gemSize = 5;
+        if (isTopLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isTopRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     getMaxPages() {
@@ -3835,6 +3907,12 @@ class UpgradesMenu {
             // Add consumable to marketplace system
             this.stateManager.marketplaceSystem.addConsumable(item.id, 1);
             
+            // Handle Intel pack purchases - unlock corresponding enemy intel
+            if (item.category === 'intel') {
+                this.stateManager.marketplaceSystem.unlockEnemyIntel(item.id);
+                console.log(`Unlocked enemy intel from: ${item.name}`);
+            }
+            
             // Update statistics when buying
             if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.totalMoneySpentOnMarketplace += item.cost;
@@ -3848,7 +3926,8 @@ class UpgradesMenu {
             console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
             
             if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.playSFX('purchase-success');
+                // Use upgrading sound for buying in marketplace (as per user request)
+                this.stateManager.audioManager.playSFX('upgrading');
             }
         } else if (this.activeTab === 'sell') {
             // Sell the loot item
@@ -3858,6 +3937,7 @@ class UpgradesMenu {
             // Update statistics when selling
             if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.totalMoneyEarnedInMarketplace += item.sellPrice;
+                this.stateManager.gameStatistics.addItemsSold(1);
             }
             
             // Remove from inventory
@@ -3877,6 +3957,11 @@ class UpgradesMenu {
             this.currentPage = 0;
             
             console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
+            
+            if (this.stateManager.audioManager) {
+                // Use LootCollect sound for selling (as per user request)
+                this.stateManager.audioManager.playSFX('loot-collect');
+            }
         } else if (this.activeTab === 'upgrade') {
             // Handle upgrade purchase
             if (item.isPurchased) {
@@ -3909,7 +3994,8 @@ class UpgradesMenu {
             console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
             
             if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.playSFX('purchase-success');
+                // Use upgrading sound for purchasing upgrades
+                this.stateManager.audioManager.playSFX('upgrading');
             }
         }
     }
@@ -3941,12 +4027,18 @@ class UpgradesMenu {
         ctx.lineWidth = 3;
         ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
         
+        // Draw corner trim on all four corners
+        this.drawCornerTrim(ctx, panelX, panelY, 20, true, false, false, false);  // Top-left
+        this.drawCornerTrim(ctx, panelX + panelWidth, panelY, 20, false, true, false, false);  // Top-right
+        this.drawCornerTrim(ctx, panelX, panelY + panelHeight, 20, false, false, true, false);  // Bottom-left
+        this.drawCornerTrim(ctx, panelX + panelWidth, panelY + panelHeight, 20, false, false, false, true);  // Bottom-right
+        
         // Panel title - inside at top
         ctx.font = 'bold 18px serif';
         ctx.fillStyle = '#ffd700';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('UPGRADES & MARKETPLACE', panelX + panelWidth / 2, panelY + 12);
+        ctx.fillText('Upgrades & Marketplace', panelX + panelWidth / 2, panelY + 12);
         
         // Gold display in top left
         this.renderGoldDisplay(ctx, panelX + 20, panelY + 10);
@@ -4494,6 +4586,61 @@ class SettlementOptionsMenu {
         }
     }
 
+    drawCornerTrim(ctx, x, y, size, isTopLeft, isTopRight, isBottomLeft, isBottomRight) {
+        const trimWidth = 20;
+        const gemSize = 5;
+        const gemColor = '#d4af37';
+        
+        if (isTopLeft) {
+            // Horizontal bar
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(x, y, size, trimWidth);
+            // Vertical bar
+            ctx.fillRect(x, y, trimWidth, size);
+            // Gem
+            ctx.fillStyle = gemColor;
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y + gemSize, gemSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (isTopRight) {
+            // Horizontal bar
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(x + size - trimWidth, y, trimWidth, trimWidth);
+            // Vertical bar
+            ctx.fillRect(x + size - trimWidth, y, trimWidth, size);
+            // Gem
+            ctx.fillStyle = gemColor;
+            ctx.beginPath();
+            ctx.arc(x + size - gemSize, y + gemSize, gemSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (isBottomLeft) {
+            // Horizontal bar
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(x, y + size - trimWidth, trimWidth, trimWidth);
+            // Vertical bar
+            ctx.fillRect(x, y + size - trimWidth, trimWidth, trimWidth);
+            // Gem
+            ctx.fillStyle = gemColor;
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y + size - gemSize, gemSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (isBottomRight) {
+            // Horizontal bar
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(x + size - trimWidth, y + size - trimWidth, trimWidth, trimWidth);
+            // Vertical bar
+            ctx.fillRect(x + size - trimWidth, y + size - trimWidth, trimWidth, trimWidth);
+            // Gem
+            ctx.fillStyle = gemColor;
+            ctx.beginPath();
+            ctx.arc(x + size - gemSize, y + size - gemSize, gemSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     render(ctx) {
         const canvas = this.stateManager.canvas;
         const menuX = canvas.width / 2 - 150;
@@ -4516,6 +4663,11 @@ class SettlementOptionsMenu {
         ctx.strokeStyle = '#d4af37';
         ctx.lineWidth = 3;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        // Corner trim
+        ctx.globalAlpha = Math.min(1, this.animationProgress);
+        this.drawCornerTrim(ctx, menuX, menuY, menuWidth, true, true, true, true);
+        ctx.globalAlpha = 1;
 
         // Title
         ctx.font = 'bold 22px serif';
@@ -5248,7 +5400,7 @@ class ArcaneLibraryMenu {
         this.tabs = [
             { label: 'STATISTICS', id: 'statistics', hovered: false },
             { label: 'MUSICAL SCORES', id: 'musical-scores', hovered: false },
-            { label: 'COLLECTION', id: 'collection', hovered: false },
+            { label: 'ACHIEVEMENTS', id: 'achievements', hovered: false },
             { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false }
         ];
         this.activeTab = 'statistics';
@@ -5257,6 +5409,16 @@ class ArcaneLibraryMenu {
         this.musicCurrentPage = 0;
         this.musicItemsPerPage = 6; // 2 rows x 3 columns
         this.unlockedMusicTracks = new Map(); // Track which music the player owns
+        
+        // Achievements (placeholder achievements)
+        this.achievements = [
+            { id: 'first-victory', name: 'First Victory', description: 'Win your first level', icon: '🏆', unlocked: false },
+            { id: 'ten-victories', name: 'Victory Streak', description: 'Win 10 levels', icon: '⭐', unlocked: false },
+            { id: 'fifty-kills', name: 'Deadly Force', description: 'Slay 50 enemies', icon: '⚔️', unlocked: false },
+            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '💰', unlocked: false },
+            { id: 'collector', name: 'Collector', description: 'Sell 20 items', icon: '🎁', unlocked: false },
+            { id: 'tower-master', name: 'Tower Master', description: 'Build 100 towers', icon: '🏰', unlocked: false }
+        ];
         
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
@@ -5499,6 +5661,51 @@ class ArcaneLibraryMenu {
         }
     }
 
+    /**
+     * Draw decorative golden corner trim on panel corners
+     */
+    drawCornerTrim(ctx, x, y, size = 15, isTopLeft = true, isTopRight = false, isBottomLeft = false, isBottomRight = false) {
+        const cornerSize = size;
+        
+        // Draw corner rectangle with golden color
+        ctx.fillStyle = '#d4af37';
+        
+        if (isTopLeft) {
+            ctx.fillRect(x, y, cornerSize, 3);
+            ctx.fillRect(x, y, 3, cornerSize);
+        } else if (isTopRight) {
+            ctx.fillRect(x - cornerSize, y, cornerSize, 3);
+            ctx.fillRect(x - 3, y, 3, cornerSize);
+        } else if (isBottomLeft) {
+            ctx.fillRect(x, y - 3, cornerSize, 3);
+            ctx.fillRect(x, y - cornerSize, 3, cornerSize);
+        } else if (isBottomRight) {
+            ctx.fillRect(x - cornerSize, y - 3, cornerSize, 3);
+            ctx.fillRect(x - 3, y - cornerSize, 3, cornerSize);
+        }
+        
+        // Add a small decorative gem/circle in each corner
+        ctx.fillStyle = '#ffd700';
+        const gemSize = 4;
+        if (isTopLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isTopRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     render(ctx) {
         const canvas = this.stateManager.canvas;
         const menuX = canvas.width / 2 - 400;
@@ -5518,6 +5725,12 @@ class ArcaneLibraryMenu {
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+        
+        // Draw corner trim on all four corners
+        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);  // Top-left
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);  // Top-right
+        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);  // Bottom-left
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);  // Bottom-right
         
         // Menu title
         ctx.font = 'bold 24px serif';
@@ -5571,8 +5784,8 @@ class ArcaneLibraryMenu {
             this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
         } else if (this.activeTab === 'musical-scores') {
             this.renderMusicalScoresTab(ctx, contentX, contentY, contentWidth, contentHeight);
-        } else if (this.activeTab === 'collection') {
-            this.renderCollectionTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'achievements') {
+            this.renderAchievementsTab(ctx, contentX, contentY, contentWidth, contentHeight);
         } else if (this.activeTab === 'enemy-intel') {
             this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
         }
@@ -5603,6 +5816,7 @@ class ArcaneLibraryMenu {
             victories: 0, defeats: 0, totalEnemiesSlain: 0, 
             totalPlaytime: 0, totalItemsConsumed: 0,
             totalMoneySpentOnMarketplace: 0, totalMoneyEarnedInMarketplace: 0,
+            totalItemsSold: 0,
             getWinRate: () => 0, getFormattedPlaytime: () => '0s'
         };
         
@@ -5621,6 +5835,7 @@ class ArcaneLibraryMenu {
             { label: 'Enemies Slain:', value: stats.totalEnemiesSlain },
             { label: 'Playtime:', value: stats.getFormattedPlaytime() },
             { label: 'Items Consumed:', value: stats.totalItemsConsumed },
+            { label: 'Items Sold:', value: stats.totalItemsSold },
             { label: 'Marketplace Spent:', value: stats.totalMoneySpentOnMarketplace + ' gold' },
             { label: 'Marketplace Earned:', value: stats.totalMoneyEarnedInMarketplace + ' gold' }
         ];
@@ -5765,6 +5980,193 @@ class ArcaneLibraryMenu {
             ctx.fillStyle = '#8b7355';
             ctx.textAlign = 'center';
             ctx.fillText(`Page ${this.musicCurrentPage + 1} of ${totalPages}`, x + width / 2, y + height - 15);
+        }
+    }
+
+    wrapText(text, maxCharsPerLine) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            if ((currentLine + word).length <= maxCharsPerLine) {
+                currentLine += (currentLine ? ' ' : '') + word;
+            } else {
+                if (currentLine) {
+                    lines.push(currentLine);
+                }
+                currentLine = word;
+            }
+        }
+        
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        return lines;
+    }
+
+    renderAchievementsTab(ctx, x, y, width, height) {
+        // Grid layout: 3 columns, 2 rows per page (matching the screenshot)
+        const cols = 3;
+        const rows = 2;
+        const itemWidth = 110;
+        const itemHeight = 160;
+        const padding = 15;
+        const startX = x + (width - cols * (itemWidth + padding)) / 2;
+        const startY = y + 20;
+        
+        for (let i = 0; i < this.achievements.length; i++) {
+            const achievement = this.achievements[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            
+            const itemX = startX + col * (itemWidth + padding);
+            const itemY = startY + row * (itemHeight + padding);
+            
+            // Achievement tile background (greyed out if locked)
+            ctx.fillStyle = achievement.unlocked ? '#3d2817' : '#2a1a0f';
+            ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
+            
+            // Tile border (gold if unlocked, brown if locked)
+            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#6a5a4a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(itemX, itemY, itemWidth, itemHeight);
+            
+            // Achievement icon - larger and centered
+            ctx.font = 'bold 50px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = achievement.unlocked ? '#ffd700' : '#5a4a3a';
+            ctx.fillText(achievement.icon, itemX + itemWidth / 2, itemY + 35);
+            
+            // Achievement name
+            ctx.font = 'bold 11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = achievement.unlocked ? '#c9a876' : '#6a5a4a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            const nameLines = this.wrapText(achievement.name, 11);
+            let nameY = itemY + 75;
+            for (const line of nameLines) {
+                ctx.fillText(line, itemX + itemWidth / 2, nameY);
+                nameY += 12;
+            }
+            
+            // Progress bar at bottom
+            const progressBarHeight = 8;
+            const progressBarWidth = itemWidth - 10;
+            const progressBarX = itemX + 5;
+            const progressBarY = itemY + itemHeight - 15;
+            
+            // Progress bar background
+            ctx.fillStyle = '#1a0f05';
+            ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+            
+            // Progress bar border
+            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#6a5a4a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+            
+            // Progress text (placeholder: "0/10" for first, "0/100" for some, etc.)
+            const progressTexts = ['0/1', '0/10', '0/50', '0/5000', '0/20', '0/100'];
+            const progressText = progressTexts[i] || '0/1';
+            
+            ctx.font = 'bold 8px Trebuchet MS, sans-serif';
+            ctx.fillStyle = achievement.unlocked ? '#d4af37' : '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(progressText, itemX + itemWidth / 2, progressBarY + progressBarHeight / 2);
+            
+            // Locked indicator overlay (if not unlocked)
+            if (!achievement.unlocked) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
+            }
+        }
+    }
+
+    renderEnemyIntelTab(ctx, x, y, width, height) {
+        // Get unlocked enemy intel from marketplace system
+        const unlockedIntelPacks = this.stateManager?.marketplaceSystem?.getUnlockedEnemyIntel() || [];
+        const unlockedEnemies = EnemyIntelRegistry.getUnlockedEnemies(unlockedIntelPacks);
+        
+        // Grid layout: 2 columns, 3 rows per page
+        const cols = 2;
+        const itemWidth = 140;
+        const itemHeight = 180;
+        const padding = 20;
+        const startX = x + (width - cols * (itemWidth + padding)) / 2;
+        const startY = y + 20;
+        
+        // If no intel unlocked, show message
+        if (unlockedEnemies.length === 0) {
+            ctx.font = 'bold 14px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Purchase Intel packs to unlock enemy information', x + width / 2, y + height / 2 - 20);
+            ctx.font = '12px Trebuchet MS, sans-serif';
+            ctx.fillText('Visit the marketplace to buy spy reports', x + width / 2, y + height / 2 + 20);
+            return;
+        }
+        
+        // Display each unlocked enemy
+        for (let i = 0; i < unlockedEnemies.length; i++) {
+            const enemyId = unlockedEnemies[i];
+            const enemyIntel = EnemyIntelRegistry.getEnemyIntel(enemyId);
+            if (!enemyIntel) continue;
+            
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            
+            const itemX = startX + col * (itemWidth + padding);
+            const itemY = startY + row * (itemHeight + padding);
+            
+            // Enemy tile background
+            ctx.fillStyle = '#3d2817';
+            ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
+            
+            // Tile border (gold)
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(itemX, itemY, itemWidth, itemHeight);
+            
+            // Enemy icon
+            ctx.font = 'bold 50px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText(enemyIntel.icon, itemX + itemWidth / 2, itemY + 35);
+            
+            // Enemy name
+            ctx.font = 'bold 12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#c9a876';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(enemyIntel.name, itemX + itemWidth / 2, itemY + 85);
+            
+            // Health stat
+            ctx.font = '10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.fillText(`HP: ${enemyIntel.stats.health}`, itemX + 10, itemY + 110);
+            
+            // Speed stat
+            ctx.fillText(`SPD: ${enemyIntel.stats.speed}`, itemX + itemWidth / 2, itemY + 110);
+            
+            // Damage stat
+            ctx.fillText(`DMG: ${enemyIntel.stats.damage}`, itemX + itemWidth - 30, itemY + 110);
+            
+            // Abilities
+            ctx.font = '9px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#6a5a4a';
+            const abilityText = enemyIntel.abilities.slice(0, 2).join(', ');
+            const abilityLines = this.wrapText(abilityText, 16);
+            let abilityY = itemY + 135;
+            for (const line of abilityLines) {
+                ctx.fillText(line, itemX + itemWidth / 2, abilityY);
+                abilityY += 10;
+            }
         }
     }
 
