@@ -76,6 +76,9 @@ export class Game {
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             
+            // Initialize all save slot files (create empty files if they don't exist)
+            SaveSystem.initializeSaveSlots();
+            
             // Initialize player progression system (persistent gold and inventory)
             this.stateManager.playerGold = 0; // Start with 0 gold - must earn from loot sales
             this.stateManager.playerInventory = []; // Start with no inventory items

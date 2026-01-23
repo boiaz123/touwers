@@ -278,26 +278,25 @@ export class SettlementHub {
     }
 
     exit() {
-        // Save campaign progress before exiting (with current save slot)
-        const settleementData = {
-            playerGold: this.stateManager.playerGold,
-            playerInventory: this.stateManager.playerInventory,
-            upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
-            marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} }
-        };
-        
-        SaveSystem.saveCampaignProgress(
-            this.stateManager.playerGold,
-            this.stateManager.playerInventory,
-            this.stateManager.upgradeSystem,
-            this.stateManager.currentSaveSlot
-        );
-        
-        // Also save to the main settlement data
-        SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, settleementData);
-        
-        // NOTE: commitUsedConsumables() is now called in GameplayState.exit()
-        // This ensures consumed items are removed immediately after a level completes or is quit
+        // Save all settlement data when exiting the settlement hub
+        // This captures current state of gold, inventory, upgrades, marketplace, and campaign progress
+        if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+            const settlementData = {
+                // Current settlement state
+                playerGold: this.stateManager.playerGold,
+                playerInventory: this.stateManager.playerInventory,
+                upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                // Campaign state from current save data
+                lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
+                unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
+                completedLevels: this.stateManager.currentSaveData.completedLevels,
+                unlockSystem: this.stateManager.currentSaveData.unlockSystem
+            };
+            
+            // Save to the slot file
+            SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+        }
         
         this.removeMouseListeners();
     }

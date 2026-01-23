@@ -3361,16 +3361,22 @@ export class UIManager {
                 unlockedCombinationSpells: unlockSystem?.unlockedCombinationSpells ? Array.from(unlockSystem.unlockedCombinationSpells) : []
             };
             
-            // Save only settlement data - NOT mid-game level state
+            // Get campaign progress from current save data
+            const lastPlayedLevel = this.stateManager.currentSaveData?.lastPlayedLevel || 'level1';
+            const unlockedLevels = this.stateManager.currentSaveData?.unlockedLevels || ['level1'];
+            const completedLevels = this.stateManager.currentSaveData?.completedLevels || [];
+            
+            // Save settlement data - only settlement-related, no mid-game level state
             SaveSystem.saveSettlementData(
                 this.stateManager.currentSaveSlot,
                 {
-                    playerGold: this.gameState.gold || 0,
+                    playerGold: this.stateManager.playerGold || 0,
                     playerInventory: this.stateManager.playerInventory || [],
                     upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
-                    lastPlayedLevel: this.gameplayState.currentLevel,
-                    unlockedLevels: this.stateManager.currentSaveData?.unlockedLevels || [],
-                    completedLevels: this.stateManager.currentSaveData?.completedLevels || [],
+                    marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                    lastPlayedLevel: lastPlayedLevel,
+                    unlockedLevels: unlockedLevels,
+                    completedLevels: completedLevels,
                     unlockSystem: unlockState
                 }
             );

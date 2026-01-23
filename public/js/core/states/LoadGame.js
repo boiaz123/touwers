@@ -180,15 +180,15 @@ export class LoadGame {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title fade in
-        if (this.animationTime > 0.3) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.7);
+        // Title fade in (faster - 0.4 seconds)
+        if (this.animationTime > 0.1) {
+            this.titleOpacity = Math.min(1, (this.animationTime - 0.1) / 0.4);
         }
 
-        // Content fade in
-        if (this.animationTime > 1) {
+        // Content fade in (faster - 0.5 seconds, starts at 0.3 seconds)
+        if (this.animationTime > 0.3) {
             this.showContent = true;
-            this.contentOpacity = Math.min(1, (this.animationTime - 1) / 0.7);
+            this.contentOpacity = Math.min(1, (this.animationTime - 0.3) / 0.5);
         }
     }
 

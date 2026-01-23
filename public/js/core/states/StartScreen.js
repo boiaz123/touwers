@@ -138,8 +138,9 @@ export class StartScreen {
     }
 
     handleMouseMove(x, y) {
-        // Handle mouse hover only after transition completes
-        if (this.transitionTime >= 3) {
+        // Handle mouse hover after smoke fades (around 1.8 seconds into transition)
+        // Smoke phase: 0.7-2.0 seconds, mostly faded by 1.8 seconds
+        if (this.transitionTime >= 1.8) {
             this.buttons.forEach((button, index) => {
                 const pos = this.getButtonPosition(index);
                 button.hovered = x >= pos.x && x <= pos.x + pos.width && 
@@ -167,8 +168,9 @@ export class StartScreen {
             return;
         }
 
-        // After transition completes (transitionTime >= 3): handle button clicks
-        if (this.transitionTime >= 3) {
+        // After smoke fades (transitionTime >= 1.8): handle button clicks
+        // Smoke phase ends by 2 seconds, mostly clear by 1.8 seconds
+        if (this.transitionTime >= 1.8) {
             for (let i = 0; i < this.buttons.length; i++) {
                 const button = this.buttons[i];
                 const pos = this.getButtonPosition(i);
@@ -822,8 +824,9 @@ export class StartScreen {
                 this.renderTransitionEffect(ctx);
             }
             
-            // After transition completes, show menu buttons
-            if (this.transitionTime >= 3) {
+            // After smoke fades (around 1.8 seconds into transition), show menu buttons
+            // This gives immediate visual feedback while smoke is clearing
+            if (this.transitionTime >= 1.8) {
                 this.renderMenuButtons(ctx);
             }
             

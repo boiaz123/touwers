@@ -1,61 +1,85 @@
+/**
+ * SaveSystem - File-based save system with 3 independent save slots
+ * 
+ * Each save slot is a completely independent file stored as a localStorage entry.
+ * Save files contain all settlement-related data: campaign progress, gold, inventory, 
+ * upgrades, unlocks, and marketplace consumables.
+ * 
+ * No mid-game level saves are stored - saves are only created at settlement transitions.
+ */
 export class SaveSystem {
-    static STORAGE_KEY = 'touwers_saves';
     static NUM_SLOTS = 3;
+    
+    /**
+     * Get the storage key for a specific save slot file
+     * @param {number} slotNumber - Slot number (1-3)
+     * @returns {string} - The localStorage key for this slot
+     */
+    static getSaveSlotKey(slotNumber) {
+        return `touwers_save_slot_${slotNumber}`;
+    }
 
     /**
-     * Get all saves
+     * Initialize all save slot files
+     * Called once on game startup to ensure all 3 slots exist (empty if no game saved)
      */
-    static getAllSaves() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        if (!data) {
-            return this.initializeSaves();
+    static initializeSaveSlots() {
+        for (let i = 1; i <= this.NUM_SLOTS; i++) {
+            const key = this.getSaveSlotKey(i);
+            if (!localStorage.getItem(key)) {
+                // Slot file doesn't exist, create empty (null) slot
+                localStorage.setItem(key, JSON.stringify(null));
+                console.log('SaveSystem: Initialized empty save slot', i);
+            }
         }
-        return JSON.parse(data);
     }
 
     /**
-     * Initialize saves if they don't exist
-     */
-    static initializeSaves() {
-        const saves = {
-            slot1: null,
-            slot2: null,
-            slot3: null
-        };
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saves));
-        return saves;
-    }
-
-    /**
-     * Get a specific save by slot number (1-3)
+     * Get a specific save file by slot number
+     * @param {number} slotNumber - Slot number (1-3)
+     * @returns {Object|null} - Save data if slot contains a game, null if empty
      */
     static getSave(slotNumber) {
         if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`Invalid save slot: ${slotNumber}`);
+            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
             return null;
         }
 
-        const saves = this.getAllSaves();
-        const slotKey = `slot${slotNumber}`;
-        return saves[slotKey];
+        const key = this.getSaveSlotKey(slotNumber);
+        const data = localStorage.getItem(key);
+        
+        if (!data) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(data);
+            return parsed; // Can be null (empty slot) or an object (saved game)
+        } catch (error) {
+            console.error(`SaveSystem: Failed to parse save slot ${slotNumber}:`, error);
+            return null;
+        }
     }
 
     /**
      * Save settlement data to a specific slot
-     * Saves only settlement-wide data: campaign progress, upgrades, inventory, unlocks, etc
-     * Does NOT save mid-game level state
+     * This creates or overwrites the entire save file for that slot
+     * Contains all settlement-related data but NO mid-game level state
+     * @param {number} slotNumber - Slot number (1-3)
+     * @param {Object} settlementData - Settlement data to save
+     * @returns {boolean} - Success status
      */
     static saveSettlementData(slotNumber, settlementData) {
         if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`Invalid save slot: ${slotNumber}`);
+            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
             return false;
         }
 
-        const saves = this.getAllSaves();
-        const slotKey = `slot${slotNumber}`;
-
-        // Save only settlement-wide data, dedicated to this specific slot
-        saves[slotKey] = {
+        const key = this.getSaveSlotKey(slotNumber);
+        
+        // Create complete settlement save file for this slot
+        const saveFile = {
+            version: '1.0',
             timestamp: new Date().toISOString(),
             // Settlement progression
             playerGold: settlementData.playerGold || 0,
@@ -87,35 +111,51 @@ export class SaveSystem {
         };
 
         try {
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saves));
+            localStorage.setItem(key, JSON.stringify(saveFile));
             console.log('SaveSystem: Successfully saved settlement data to slot', slotNumber);
             return true;
         } catch (error) {
-            console.error('SaveSystem: Failed to save settlement data:', error);
+            console.error('SaveSystem: Failed to save settlement data to slot', slotNumber, ':', error);
             return false;
         }
     }
 
+    /**
+     * Wipe a save slot completely
+     * Used when player starts a new game - sets the slot file back to empty (null)
+     * @param {number} slotNumber - Slot number to wipe (1-3)
+     * @returns {boolean} - Success status
+     */
+    static wipeSaveSlot(slotNumber) {
+        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
+            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
+            return false;
+        }
+
+        const key = this.getSaveSlotKey(slotNumber);
+        try {
+            localStorage.setItem(key, JSON.stringify(null));
+            console.log('SaveSystem: Wiped save slot', slotNumber);
+            return true;
+        } catch (error) {
+            console.error('SaveSystem: Failed to wipe save slot', slotNumber, ':', error);
+            return false;
+        }
+    }
 
     /**
-     * Delete a save from a slot
+     * Delete a save from a slot (alias for wipeSaveSlot for backwards compatibility)
+     * @param {number} slotNumber - Slot number to delete (1-3)
+     * @returns {boolean} - Success status
      */
     static deleteSave(slotNumber) {
-        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`Invalid save slot: ${slotNumber}`);
-            return false;
-        }
-
-        const saves = this.getAllSaves();
-        const slotKey = `slot${slotNumber}`;
-        saves[slotKey] = null;
-
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(saves));
-        return true;
+        return this.wipeSaveSlot(slotNumber);
     }
 
     /**
-     * Get level name by level ID
+     * Get the human-readable name for a level
+     * @param {string} levelId - Level ID (e.g., 'level1')
+     * @returns {string} - Display name for the level
      */
     static getLevelName(levelId) {
         const levelNames = {
@@ -131,6 +171,8 @@ export class SaveSystem {
 
     /**
      * Get formatted level display (e.g., "Level 1: The King's Road")
+     * @param {string} levelId - Level ID
+     * @returns {string} - Formatted level name with number
      */
     static getFormattedLevelName(levelId) {
         const levelNumbers = {
@@ -152,7 +194,10 @@ export class SaveSystem {
     }
 
     /**
-     * Get formatted save data for display
+     * Get formatted save data for display in save slot selection and load menus
+     * Shows whether slot is empty or contains a game with progress information
+     * @param {number} slotNumber - Slot number (1-3)
+     * @returns {Object} - Display information for the save slot
      */
     static getSaveInfo(slotNumber) {
         const save = this.getSave(slotNumber);
@@ -161,7 +206,8 @@ export class SaveSystem {
             return {
                 isEmpty: true,
                 slotNumber: slotNumber,
-                displayText: 'Empty Save Slot'
+                displayText: 'Empty Save Slot',
+                description: 'Click to start a new game'
             };
         }
 
@@ -191,15 +237,16 @@ export class SaveSystem {
     }
 
     /**
-     * Create a new game save state with all settlement data initialized
-     * Returns complete settlement data for a fresh save
+     * Create a new game save state with all settlement data initialized to defaults
+     * Called when a player starts a new game
+     * @returns {Object} - Fresh settlement data for a new save
      */
     static createNewGameState() {
         return {
             playerGold: 0,
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },
-            marketplace: { consumables: { 'magic-tower-flatpack': 1 } },
+            marketplace: { consumables: {} },
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
             completedLevels: [],
@@ -225,6 +272,9 @@ export class SaveSystem {
 
     /**
      * Check if a level is unlocked in a save
+     * @param {string} levelId - Level ID to check
+     * @param {Array} unlockedLevels - Array of unlocked level IDs
+     * @returns {boolean} - True if the level is unlocked
      */
     static isLevelUnlocked(levelId, unlockedLevels) {
         return unlockedLevels.includes(levelId);
@@ -232,13 +282,19 @@ export class SaveSystem {
 
     /**
      * Check if a level is completed in a save
+     * @param {string} levelId - Level ID to check
+     * @param {Array} completedLevels - Array of completed level IDs
+     * @returns {boolean} - True if the level is completed
      */
     static isLevelCompleted(levelId, completedLevels) {
         return completedLevels.includes(levelId);
     }
 
     /**
-     * Unlock the next level after completing current one
+     * Unlock the next level after completing the current one
+     * @param {string} levelId - The level just completed
+     * @param {Array} unlockedLevels - Current array of unlocked levels
+     * @returns {Array} - Updated unlocked levels array
      */
     static unlockNextLevel(levelId, unlockedLevels) {
         const levelMap = {
@@ -260,113 +316,14 @@ export class SaveSystem {
 
     /**
      * Mark a level as completed
+     * @param {string} levelId - Level ID to mark as completed
+     * @param {Array} completedLevels - Current array of completed levels
+     * @returns {Array} - Updated completed levels array
      */
     static markLevelCompleted(levelId, completedLevels) {
         if (!completedLevels.includes(levelId)) {
             completedLevels.push(levelId);
         }
         return completedLevels;
-    }
-
-    /**
-     * Save campaign progress (settlement data: gold, inventory, upgrades)
-     * This is campaign-wide data, not level-specific
-     * Now scoped to specific save slot instead of global
-     */
-    static saveCampaignProgress(playerGold, playerInventory, upgradeSystem, slotNumber = null) {
-        // Determine which slot to save to
-        if (slotNumber === null) {
-            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
-        }
-        
-        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
-        
-        const progress = {
-            playerGold: playerGold || 0,
-            playerInventory: playerInventory || [],
-            upgrades: upgradeSystem ? upgradeSystem.serialize() : { purchasedUpgrades: [] },
-            timestamp: new Date().toISOString()
-        };
-
-        try {
-            localStorage.setItem(campaignProgressKey, JSON.stringify(progress));
-            console.log('SaveSystem: Saved campaign progress to slot', slotNumber);
-            return true;
-        } catch (error) {
-            console.error('SaveSystem: Failed to save campaign progress:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Load campaign progress (settlement data)
-     * Now loads from the specific save slot instead of global
-     */
-    static loadCampaignProgress(slotNumber = null) {
-        // Determine which slot to load from
-        if (slotNumber === null) {
-            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
-        }
-        
-        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
-        const data = localStorage.getItem(campaignProgressKey);
-        
-        if (!data) {
-            console.log('SaveSystem: No campaign progress found for slot', slotNumber, '- returning defaults');
-            return {
-                playerGold: 0,
-                playerInventory: [],
-                upgrades: { purchasedUpgrades: [] }
-            };
-        }
-
-        try {
-            const parsed = JSON.parse(data);
-            console.log('SaveSystem: Loaded campaign progress for slot', slotNumber);
-            return parsed;
-        } catch (error) {
-            console.error('SaveSystem: Failed to parse campaign progress:', error);
-            return {
-                playerGold: 0,
-                playerInventory: [],
-                upgrades: { purchasedUpgrades: [] },
-                marketplace: { consumables: {} }
-            };
-        }
-    }
-
-    /**
-     * Clear campaign progress (used for new game)
-     * Now clears only for specific save slot
-     */
-    static clearCampaignProgress(slotNumber = null) {
-        if (slotNumber === null) {
-            slotNumber = this.getCurrentSlot ? this.getCurrentSlot() : 1;
-        }
-        
-        const campaignProgressKey = `touwers_campaign_progress_slot${slotNumber}`;
-        try {
-            localStorage.removeItem(campaignProgressKey);
-            console.log('SaveSystem: Cleared campaign progress for slot', slotNumber);
-            return true;
-        } catch (error) {
-            console.error('SaveSystem: Failed to clear campaign progress:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Get the current save slot number
-     * Used for determining which slot's campaign progress to use
-     */
-    static getCurrentSlot() {
-        // Check if there's a slot number stored in the game state manager
-        // This should be set when entering from SaveSlotSelection or LoadGame
-        if (window.gameStateManager && window.gameStateManager.currentSaveSlot) {
-            return window.gameStateManager.currentSaveSlot;
-        }
-        
-        // Default to slot 1 if not set
-        return 1;
     }
 }

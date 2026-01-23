@@ -189,7 +189,10 @@ export class SaveSlotSelection {
             
             if (x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
                 y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
-                // Create new game in this slot (overwrite existing save)
+                // Wipe the slot completely first to ensure clean slate
+                SaveSystem.wipeSaveSlot(this.warningSlotNumber);
+                
+                // Create new game in this slot with default data
                 const newGameData = SaveSystem.createNewGameState();
                 SaveSystem.saveSettlementData(this.warningSlotNumber, newGameData);
 
@@ -239,7 +242,7 @@ export class SaveSlotSelection {
                     this.showWarning = true;
                     this.warningSlotNumber = slotNum;
                 } else {
-                    // Create new game in empty slot
+                    // Create new game in empty slot (no need to wipe, it's already null)
                     const newGameData = SaveSystem.createNewGameState();
                     SaveSystem.saveSettlementData(slotNum, newGameData);
 
@@ -257,12 +260,16 @@ export class SaveSlotSelection {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title is immediately visible
-        this.titleOpacity = 1;
+        // Title fade in (faster - 0.4 seconds)
+        if (this.animationTime > 0.1) {
+            this.titleOpacity = Math.min(1, (this.animationTime - 0.1) / 0.4);
+        }
 
-        // Content is immediately visible
-        this.showContent = true;
-        this.contentOpacity = 1;
+        // Content fade in (faster - 0.5 seconds, starts at 0.3 seconds)
+        if (this.animationTime > 0.3) {
+            this.showContent = true;
+            this.contentOpacity = Math.min(1, (this.animationTime - 0.3) / 0.5);
+        }
     }
 
     render(ctx) {
@@ -358,8 +365,8 @@ export class SaveSlotSelection {
 
     renderSaveSlot(ctx, slotNum, index) {
         const pos = this.getSlotPosition(index);
+        const saveInfo = SaveSystem.getSaveInfo(slotNum);
         const isHovered = this.hoveredSlot === slotNum;
-        const existingSave = SaveSystem.getSave(slotNum);
         const adjustedY = isHovered ? pos.y - 3 : pos.y;  // Move up when hovered
 
         // Slot background
@@ -388,21 +395,18 @@ export class SaveSlotSelection {
         ctx.font = 'bold 18px serif';
         ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
 
-        if (existingSave) {
-            const date = new Date(existingSave.timestamp);
-            const dateString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-            
-            ctx.font = '16px serif';
-            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-            ctx.fillText(`Progress: Level ${existingSave.lastPlayedLevel}`, pos.x + 20, adjustedY + 50);
-
-            ctx.font = '12px serif';
-            ctx.fillStyle = '#999';
-            ctx.fillText(`Last played: ${dateString}`, pos.x + 20, adjustedY + 65);
-        } else {
+        if (saveInfo.isEmpty) {
             ctx.font = '14px serif';
             ctx.fillStyle = '#666';
             ctx.fillText('Empty Slot - Click to start new game', pos.x + 20, adjustedY + 55);
+        } else {
+            ctx.font = '16px serif';
+            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 50);
+
+            ctx.font = '12px serif';
+            ctx.fillStyle = '#999';
+            ctx.fillText(saveInfo.dateString, pos.x + 20, adjustedY + 65);
         }
 
         // Reset shadow properties
