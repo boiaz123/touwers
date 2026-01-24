@@ -88,42 +88,50 @@ export class Campaign1 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Long winding S-curve path - more meanders, avoids all lakes
+        // Horizontal S-curve path with more turns through the forest
+        // Creates a natural winding road that curves left then right
         this.pathPoints = [
-            // Entry from left at middle
+            // Entry from left at middle height
             { x: 20, y: height * 0.50 },
             
-            // Wind UP the left side
-            { x: width * 0.08, y: height * 0.48 },
-            { x: width * 0.13, y: height * 0.42 },
-            { x: width * 0.18, y: height * 0.34 },
-            { x: width * 0.23, y: height * 0.26 },
-            { x: width * 0.28, y: height * 0.18 },
-            { x: width * 0.33, y: height * 0.12 },
+            // First curve: Gentle slope down and to the right
+            { x: width * 0.08, y: height * 0.52 },
+            { x: width * 0.12, y: height * 0.56 },
+            { x: width * 0.16, y: height * 0.60 },
+            { x: width * 0.20, y: height * 0.62 },
             
-            // Top left, curve far right to avoid center lake
-            { x: width * 0.40, y: height * 0.14 },
-            { x: width * 0.48, y: height * 0.12 },
-            { x: width * 0.55, y: height * 0.13 },
-            { x: width * 0.62, y: height * 0.20 },
+            // Bottom of first curve - heading left
+            { x: width * 0.24, y: height * 0.64 },
+            { x: width * 0.28, y: height * 0.66 },
+            { x: width * 0.32, y: height * 0.68 },
+            { x: width * 0.36, y: height * 0.69 },
+            { x: width * 0.40, y: height * 0.68 },
             
-            // Start coming down right side
-            { x: width * 0.68, y: height * 0.32 },
-            { x: width * 0.73, y: height * 0.45 },
-            { x: width * 0.77, y: height * 0.58 },
-            { x: width * 0.80, y: height * 0.68 },
-            { x: width * 0.83, y: height * 0.75 },
+            // Transition - start curving back up and right
+            { x: width * 0.44, y: height * 0.64 },
+            { x: width * 0.48, y: height * 0.58 },
+            { x: width * 0.52, y: height * 0.50 },
+            { x: width * 0.56, y: height * 0.42 },
             
-            // Bottom area - curve left to avoid bottom lakes
-            { x: width * 0.86, y: height * 0.80 },
-            { x: width * 0.89, y: height * 0.77 },
-            { x: width * 0.92, y: height * 0.70 },
+            // Upper middle section - curve left turn
+            { x: width * 0.60, y: height * 0.38 },
+            { x: width * 0.64, y: height * 0.36 },
+            { x: width * 0.68, y: height * 0.37 },
+            { x: width * 0.72, y: height * 0.40 },
             
-            // Back up toward exit
-            { x: width * 0.95, y: height * 0.58 },
-            { x: width * 0.97, y: height * 0.50 },
+            // Start second big turn - curve down and right
+            { x: width * 0.75, y: height * 0.45 },
+            { x: width * 0.78, y: height * 0.52 },
+            { x: width * 0.81, y: height * 0.60 },
+            { x: width * 0.84, y: height * 0.66 },
+            { x: width * 0.87, y: height * 0.70 },
             
-            // Exit right
+            // Bottom right - curve left for exit
+            { x: width * 0.90, y: height * 0.71 },
+            { x: width * 0.93, y: height * 0.68 },
+            { x: width * 0.96, y: height * 0.60 },
+            
+            // Exit right at middle height
             { x: width + 20, y: height * 0.50 }
         ];
         
@@ -131,31 +139,17 @@ export class Campaign1 extends CampaignBase {
         const totalSlots = 12;
         this.levelSlots = [];
         
-        // Spread 12 castles across 21-point path for better spacing
-        const slotIndices = [2, 4, 6, 8, 10, 11, 12, 14, 15, 16, 18, 19];
+        // Spread 12 castles with varied spacing - some clustered, some more spread out
+        // Creates a more natural, organic distribution along the path
+        const slotIndices = [1, 3, 5, 8, 10, 12, 13, 15, 17, 20, 22, 25];
         
         for (let i = 0; i < totalSlots; i++) {
             const pathIndex = Math.min(slotIndices[i], this.pathPoints.length - 1);
             const pathPoint = this.pathPoints[pathIndex];
             
-            // Position at path point with minimal perpendicular offset to keep on path
+            // Position castles directly on the road path (no perpendicular offset)
+            // This ensures castles are in the middle of the road
             const pos = { ...pathPoint };
-            
-            // Add tiny offset perpendicular to path direction (10px to stay on road)
-            const offset = (i % 2 === 0 ? 1 : -1) * 10;
-            if (pathIndex > 0 && pathIndex < this.pathPoints.length - 1) {
-                const prev = this.pathPoints[pathIndex - 1];
-                const next = this.pathPoints[pathIndex + 1];
-                const dx = next.x - prev.x;
-                const dy = next.y - prev.y;
-                const len = Math.hypot(dx, dy);
-                if (len > 0) {
-                    const perpX = -dy / len;
-                    const perpY = dx / len;
-                    pos.x += perpX * offset;
-                    pos.y += perpY * offset;
-                }
-            }
             
             // Use existing level or create placeholder
             if (i < this.levels.length) {
@@ -204,23 +198,14 @@ export class Campaign1 extends CampaignBase {
             // Top-center - wide asymmetric crescent
             {x: width / 2 + 20, y: 130, radiusX: 105, radiusY: 50, rotation: -0.8, shapeVariant: 3},
             
-            // Top-right - organic bean shape
-            {x: width - 140, y: 200, radiusX: 75, radiusY: 80, rotation: 0.6, shapeVariant: 2},
+            // Top-right - organic jagged shape (moved far from path)
+            {x: width - 160, y: 240, radiusX: 80, radiusY: 85, rotation: 0.4, shapeVariant: 1},
             
-            // Middle-left - elongated with jagged edges
-            {x: 200, y: height / 2 - 20, radiusX: 50, radiusY: 100, rotation: 0.2, shapeVariant: 1},
+            // Bottom-center - tall bean shape (moved left away from path)
+            {x: width / 2 - 100, y: height - 140, radiusX: 70, radiusY: 95, rotation: -0.7, shapeVariant: 3},
             
-            // Center - irregular crescent
-            {x: width / 2 - 100, y: height / 2 + 40, radiusX: 110, radiusY: 60, rotation: -0.5, shapeVariant: 3},
-            
-            // Center-right - jagged shore
-            {x: width / 2 + 120, y: height / 2 + 20, radiusX: 85, radiusY: 75, rotation: 0.9, shapeVariant: 1},
-            
-            // Bottom-center - tall bean shape
-            {x: width / 2 + 40, y: height - 140, radiusX: 70, radiusY: 95, rotation: -0.7, shapeVariant: 3},
-            
-            // Bottom-right - organic jagged shape
-            {x: width - 130, y: height - 100, radiusX: 80, radiusY: 85, rotation: 0.4, shapeVariant: 2}
+            // Bottom-right - organic jagged shape (moved far from path)
+            {x: width - 180, y: height - 120, radiusX: 85, radiusY: 90, rotation: 0.6, shapeVariant: 1}
         ];
         this.terrainDetails.water = waterFeatures;
         
@@ -1023,6 +1008,20 @@ export class Campaign1 extends CampaignBase {
         }
         ctx.stroke();
         
+        // Layer 2b: Dark grass border - natural edge of road
+        ctx.strokeStyle = '#5a5038';
+        ctx.lineWidth = 48;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
+        for (let i = 1; i < this.pathPoints.length; i++) {
+            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
         // Layer 3: Lighter center stripe - worn from foot traffic
         ctx.strokeStyle = '#a8927a';
         ctx.lineWidth = 22;
@@ -1033,6 +1032,26 @@ export class Campaign1 extends CampaignBase {
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
         for (let i = 1; i < this.pathPoints.length; i++) {
             ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
+        }
+        ctx.stroke();
+        
+        // Layer 4: Road edge highlights - natural weathering
+        ctx.strokeStyle = '#b5a484';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(this.pathPoints[0].x - 19, this.pathPoints[0].y - 19);
+        for (let i = 1; i < this.pathPoints.length; i++) {
+            ctx.lineTo(this.pathPoints[i].x - 19, this.pathPoints[i].y - 19);
+        }
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(this.pathPoints[0].x + 19, this.pathPoints[0].y + 19);
+        for (let i = 1; i < this.pathPoints.length; i++) {
+            ctx.lineTo(this.pathPoints[i].x + 19, this.pathPoints[i].y + 19);
         }
         ctx.stroke();
         ctx.globalAlpha = 1;
