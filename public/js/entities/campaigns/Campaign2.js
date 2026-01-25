@@ -155,17 +155,42 @@ export class Campaign2 extends CampaignBase {
         // The entire background will be one continuous mountain range
         this.terrainDetails.mountainRangeGenerated = true;
         
-        // Generate rocks in lower terrain
+        // Generate rocks in lower terrain - more rocks with better spacing
         const rocks = [
-            { x: width * 0.1, y: height * 0.65, size: 28 },
-            { x: width * 0.15, y: height * 0.72, size: 32 },
-            { x: width * 0.08, y: height * 0.78, size: 24 },
-            { x: width * 0.35, y: height * 0.68, size: 30 },
-            { x: width * 0.45, y: height * 0.75, size: 26 },
-            { x: width * 0.60, y: height * 0.70, size: 28 },
-            { x: width * 0.75, y: height * 0.68, size: 32 },
-            { x: width * 0.88, y: height * 0.74, size: 30 },
-            { x: width * 0.92, y: height * 0.80, size: 26 }
+            // Left side rocks
+            { x: width * 0.08, y: height * 0.65, size: 24 },
+            { x: width * 0.12, y: height * 0.68, size: 20 },
+            { x: width * 0.05, y: height * 0.72, size: 28 },
+            { x: width * 0.15, y: height * 0.75, size: 26 },
+            { x: width * 0.18, y: height * 0.70, size: 22 },
+            { x: width * 0.10, y: height * 0.80, size: 24 },
+            
+            // Center-left rocks
+            { x: width * 0.28, y: height * 0.64, size: 28 },
+            { x: width * 0.32, y: height * 0.72, size: 24 },
+            { x: width * 0.24, y: height * 0.78, size: 26 },
+            { x: width * 0.38, y: height * 0.68, size: 22 },
+            { x: width * 0.42, y: height * 0.76, size: 20 },
+            
+            // Center rocks
+            { x: width * 0.48, y: height * 0.66, size: 26 },
+            { x: width * 0.52, y: height * 0.70, size: 24 },
+            { x: width * 0.56, y: height * 0.74, size: 28 },
+            { x: width * 0.50, y: height * 0.80, size: 22 },
+            
+            // Center-right rocks
+            { x: width * 0.62, y: height * 0.65, size: 24 },
+            { x: width * 0.68, y: height * 0.72, size: 26 },
+            { x: width * 0.58, y: height * 0.76, size: 20 },
+            { x: width * 0.72, y: height * 0.68, size: 28 },
+            { x: width * 0.78, y: height * 0.75, size: 24 },
+            
+            // Right side rocks
+            { x: width * 0.82, y: height * 0.64, size: 26 },
+            { x: width * 0.88, y: height * 0.70, size: 28 },
+            { x: width * 0.85, y: height * 0.78, size: 22 },
+            { x: width * 0.92, y: height * 0.73, size: 24 },
+            { x: width * 0.95, y: height * 0.80, size: 26 }
         ];
         this.terrainDetails.rocks = rocks;
         
@@ -183,15 +208,15 @@ export class Campaign2 extends CampaignBase {
         const lakeBuffer = 180;
         const mountainBaseLine = height * 0.55; // Trees below this line
         
-        // Balanced tree density - good spacing to avoid stacking
-        const gridSpacing = 50; // Medium spacing for healthy forest
+        // Tighter tree density with better spreading - reduced grid spacing
+        const gridSpacing = 35; // Smaller spacing for more trees
         
         // Left side trees
         for (let x = 0; x < width * 0.4; x += gridSpacing) {
             for (let y = mountainBaseLine; y < height; y += gridSpacing) {
-                if (Math.random() > 0.30) continue; // Increased spawn chance to 70%
-                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.8;
-                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.8;
+                if (Math.random() > 0.25) continue; // 75% spawn chance
+                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.6;
+                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.6;
                 
                 let tooClose = false;
                 // Check path proximity
@@ -224,9 +249,9 @@ export class Campaign2 extends CampaignBase {
         // Right side trees
         for (let x = width * 0.6; x < width; x += gridSpacing) {
             for (let y = mountainBaseLine; y < height; y += gridSpacing) {
-                if (Math.random() > 0.30) continue;
-                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.8;
-                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.8;
+                if (Math.random() > 0.25) continue;
+                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.6;
+                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.6;
                 
                 let tooClose = false;
                 // Check path proximity
@@ -256,12 +281,12 @@ export class Campaign2 extends CampaignBase {
             }
         }
         
-        // Center area trees (around the path but in wider spaces)
+        // Center area trees (around the path but in wider spaces) - much denser
         for (let x = width * 0.3; x < width * 0.7; x += gridSpacing) {
             for (let y = mountainBaseLine + (height * 0.05); y < height; y += gridSpacing) {
-                if (Math.random() > 0.40) continue;
-                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.8;
-                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.8;
+                if (Math.random() > 0.35) continue; // 65% spawn chance
+                const tx = x + (Math.random() - 0.5) * gridSpacing * 0.6;
+                const ty = y + (Math.random() - 0.5) * gridSpacing * 0.6;
                 
                 let tooClose = false;
                 // Check path proximity (wider buffer for center)
@@ -478,127 +503,82 @@ export class Campaign2 extends CampaignBase {
     drawFullMountainRange(ctx, canvas) {
         const width = canvas.width;
         const height = canvas.height;
+        const separationLine = height * 0.55;
         
-        // Helper to generate mountain profile with multiple peaks
-        const generateMountainProfile = (baseY, peakHeight, numPeaks, roughness, seed) => {
-            const points = [];
-            const segmentsPerPeak = 40;
-            const totalSegments = numPeaks * segmentsPerPeak;
-            
-            for (let i = 0; i <= totalSegments; i++) {
-                const t = i / totalSegments;
-                const x = t * width;
-                
-                // Main peaks using sine waves with different frequencies for natural look
-                let y = baseY;
-                y -= Math.sin(t * Math.PI * numPeaks) * peakHeight * 0.9;
-                y -= Math.sin(t * Math.PI * (numPeaks * 2) + seed) * peakHeight * 0.4;
-                y -= Math.sin(t * Math.PI * (numPeaks * 4) + seed * 2) * peakHeight * roughness;
-                
-                // Moderate edge fade for natural silhouette
-                const edgeFade = Math.sin(t * Math.PI);
-                y = baseY - (baseY - y) * Math.pow(edgeFade, 0.4);
-                
-                points.push({ x, y });
-            }
-            return points;
-        };
+        // Create mountain range using large-scale triangular rocks
+        // All mountain bottoms aligned to the separation line
+        // Rendered from back to front with proper depth layering
+        // Fewer mountains but full coverage with good depth
         
-        // Far distant mountains - subtle and misty
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = '#3a4a5a';
-        const farPoints = generateMountainProfile(height * 0.25, height * 0.15, 5, 0.2, 1.2);
+        ctx.globalAlpha = 1;
+        
+        // FIRST: Draw the two background big mountains - rendered FIRST so they're always behind
+        // Third big mountain brought to background with reduced opacity - appears behind other mountains
+        this.drawLargeMountainRock(ctx, width * 0.82, separationLine, 950, 0.8);
+        
+        // Additional mountain between middle and right - brought to background with reduced opacity
+        this.drawLargeMountainRock(ctx, width * 0.66, separationLine, 750, 0.8);
+        
+        // Background mountains - small, faded, rendered next - creates depth
+        this.drawLargeMountainRock(ctx, width * 0.12, separationLine, 190, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.35, separationLine, 170, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.58, separationLine, 210, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.80, separationLine, 180, 1.0);
+        
+        // Mid-layer mountains - medium size, medium opacity - bridge foreground and background
+        // Plus additional taller mountains to fill gaps and stick out between big peaks
+        this.drawLargeMountainRock(ctx, width * 0.05, separationLine, 310, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.28, separationLine, 340, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.52, separationLine, 305, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.75, separationLine, 335, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.93, separationLine, 295, 1.0);
+        
+        // Additional taller background mountains to fill gaps and create visual continuity
+        // Left side of first big mountain
+        this.drawLargeMountainRock(ctx, width * 0.08, separationLine, 380, 1.0);
+        
+        // Between 1st and 2nd big mountains - taller to stick out between peaks
+        this.drawLargeMountainRock(ctx, width * 0.32, separationLine, 420, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.42, separationLine, 400, 1.0);
+        
+        // Between 2nd and 3rd big mountains - taller to stick out between peaks
+        this.drawLargeMountainRock(ctx, width * 0.62, separationLine, 415, 1.0);
+        this.drawLargeMountainRock(ctx, width * 0.70, separationLine, 390, 1.0);
+        
+        // Right side of last big mountain
+        this.drawLargeMountainRock(ctx, width * 0.88, separationLine, 370, 1.0);
+        
+        // Foreground mountains - MUCH larger, fully opaque, rendered last, well spaced
+        // More variation in the big two: 900, 1150 (tallest)
+        this.drawLargeMountainRock(ctx, width * 0.18, separationLine, 900, 1.0);   // 1st big - 900
+        this.drawLargeMountainRock(ctx, width * 0.50, separationLine, 1150, 1.0);  // 2nd big - 1150 (tallest)
+    }
+    
+    drawLargeMountainRock(ctx, x, baseY, size, opacity) {
+        ctx.globalAlpha = opacity;
+        
+        // Position rock so bottom sits on baseY
+        const y = baseY - size * 0.15;
+        
+        // Triangular rock (mountain peak style)
+        ctx.fillStyle = '#5a6a7a';
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        for (const pt of farPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(width, 0);
+        ctx.moveTo(x - size * 0.35, baseY);
+        ctx.lineTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.35, baseY);
         ctx.closePath();
         ctx.fill();
         
-        // Add subtle snow to far mountains for depth effect
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = '#e8f0ff';
-        for (let i = 2; i < farPoints.length - 2; i += 3) {
-            const pt = farPoints[i];
-            const ptPrev = farPoints[i - 2];
-            const ptNext = farPoints[i + 2];
-            
-            // Only snow on peaks
-            if (pt.y < ptPrev.y && pt.y < ptNext.y && pt.y < height * 0.20) {
-                const snowWidth = 40;
-                ctx.beginPath();
-                ctx.moveTo(pt.x, pt.y);
-                ctx.lineTo(pt.x - snowWidth, pt.y + 18);
-                ctx.lineTo(pt.x + snowWidth, pt.y + 18);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-        
-        // Mid-distant mountains
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = '#4a5a7a';
-        const midPoints = generateMountainProfile(height * 0.32, height * 0.18, 4, 0.15, 2.5);
+        // Snow cap - perfectly fitted triangle to match peak
+        // Snow base width matches the mountain width at that height level
+        ctx.fillStyle = '#f5f9ff';
+        ctx.globalAlpha = opacity * 0.95;
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        for (const pt of midPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(width, 0);
+        ctx.moveTo(x - size * 0.18, y - size * 0.05);
+        ctx.lineTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.18, y - size * 0.05);
         ctx.closePath();
         ctx.fill();
-        
-        // Add subtle snow to mid-distance mountains for depth effect
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#e8f0ff';
-        for (let i = 2; i < midPoints.length - 2; i += 3) {
-            const pt = midPoints[i];
-            const ptPrev = midPoints[i - 2];
-            const ptNext = midPoints[i + 2];
-            
-            // Only snow on peaks
-            if (pt.y < ptPrev.y && pt.y < ptNext.y && pt.y < height * 0.27) {
-                const snowWidth = 45;
-                ctx.beginPath();
-                ctx.moveTo(pt.x, pt.y);
-                ctx.lineTo(pt.x - snowWidth, pt.y + 20);
-                ctx.lineTo(pt.x + snowWidth, pt.y + 20);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-        
-        // Main mountain range - rocky appearance
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = '#5a6a8a';
-        const mainPoints = generateMountainProfile(height * 0.40, height * 0.24, 3, 0.12, 0.8);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        for (const pt of mainPoints) {
-            ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.lineTo(width, 0);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Subtle rocky shading on main ridge - minimal and understated
-        ctx.globalAlpha = 0.08;
-        ctx.fillStyle = '#3a4a6a';
-        for (let i = 0; i < mainPoints.length - 1; i += 10) {
-            const pt = mainPoints[i];
-            const ptNext = mainPoints[i + 1];
-            if (pt.y < height * 0.40) {
-                ctx.beginPath();
-                ctx.moveTo(pt.x, pt.y);
-                ctx.lineTo(ptNext.x, ptNext.y);
-                ctx.lineTo(pt.x + 6, pt.y + 12);
-                ctx.closePath();
-                ctx.fill();
-            }
-        }
-        // Main ridge has no snow - snow is only on distant background mountains for depth
         
         ctx.globalAlpha = 1;
     }
