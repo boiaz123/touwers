@@ -36,10 +36,6 @@ export class Campaign3 extends CampaignBase {
         };
         this.pathPoints = [];
         
-        // Tumbleweed animation
-        this.tumbleweeds = [];
-        this.maxTumbleweeds = 3;
-        
         // Register campaign levels once during construction
         this.registerLevels();
     }
@@ -160,10 +156,10 @@ export class Campaign3 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Oasis location - center-middle of the landscape (above the path)
+        // Oasis location - center-middle of the landscape (above the path), moved down slightly
         this.terrainDetails.oasis = {
             x: width * 0.50,
-            y: height * 0.70,
+            y: height * 0.75,
             radiusX: width * 0.14,
             radiusY: height * 0.09
         };
@@ -171,76 +167,114 @@ export class Campaign3 extends CampaignBase {
         // Create a LevelBase instance to use for rendering desert elements
         this.levelBase = new LevelBase();
         
-        // Generate cacti scattered around the desert ground
+        // Generate cacti scattered ONLY on the light sand plane (above and below path, around lake)
         const cacti = [];
-        const groundLevel = height * 0.78;
+        const groundLevelBottom = height * 0.95;   // Bottom of screen
+        const groundTopAbove = height * 0.72;      // Above path (on light sand, not dunes)
+        const groundLevelPath = height * 0.78;     // Path level
+        const groundTopBelow = height * 0.78;      // Below path (on light sand)
         
-        // Spread cacti across multiple areas with different Y positions
-        const cactusAreas = [
-            { centerX: width * 0.08, centerY: groundLevel - 15, count: 3 },
-            { centerX: width * 0.18, centerY: groundLevel - 8, count: 3 },
-            { centerX: width * 0.32, centerY: groundLevel - 12, count: 2 },
-            { centerX: width * 0.68, centerY: groundLevel - 10, count: 2 },
-            { centerX: width * 0.82, centerY: groundLevel - 18, count: 3 },
-            { centerX: width * 0.92, centerY: groundLevel - 6, count: 3 }
-        ];
+        // Use fewer placement attempts for less cacti spread out more
+        const cactiAttempts = 200;  // Same as before
+        const oasis = this.terrainDetails.oasis;
+        const minCactusSpacing = 70;  // Increased from 55 for better spread
         
-        for (const area of cactusAreas) {
-            for (let i = 0; i < area.count; i++) {
-                // Spread within area with some randomness
-                const offsetX = (Math.random() - 0.5) * (width * 0.08);
-                const offsetY = (Math.random() - 0.5) * 20; // Increased vertical spread
-                const x = area.centerX + offsetX;
-                const y = area.centerY + offsetY;
-                
-                // Skip if too close to oasis
-                const oasis = this.terrainDetails.oasis;
-                const distToOasis = Math.hypot((x - oasis.x) / oasis.radiusX, (y - oasis.y) / oasis.radiusY);
-                if (distToOasis < 1.2) continue;
-                
-                cacti.push({
-                    x: x,
-                    y: y,
-                    size: 32 + Math.random() * 20,
-                    type: Math.floor(Math.random() * 4),
-                    gridX: Math.floor(x / 32),
-                    gridY: Math.floor(y / 32)
-                });
+        for (let attempt = 0; attempt < cactiAttempts; attempt++) {
+            const x = Math.random() * width;
+            
+            // Randomly decide if cacti goes above or below the path (both on light sand plane)
+            let y, groundTop, groundLevel;
+            if (Math.random() < 0.3) {
+                // Above path on light sand (30%)
+                groundTop = groundTopAbove;
+                groundLevel = groundLevelPath;
+            } else {
+                // Below path on light sand (70%)
+                groundTop = groundTopBelow;
+                groundLevel = groundLevelBottom;
             }
+            
+            y = groundTop + Math.random() * (groundLevel - groundTop);
+            
+            // Skip if too close to oasis
+            const distToOasis = Math.hypot((x - oasis.x) / oasis.radiusX, (y - oasis.y) / oasis.radiusY);
+            if (distToOasis < 1.3) continue;
+            
+            // Skip if too close to path
+            let tooCloseToPath = false;
+            for (const pathPoint of this.pathPoints) {
+                const dist = Math.hypot(x - pathPoint.x, y - pathPoint.y);
+                if (dist < 60) {
+                    tooCloseToPath = true;
+                    break;
+                }
+            }
+            if (tooCloseToPath) continue;
+            
+            // Skip if too close to other cacti
+            let tooCloseToOtherCactus = false;
+            for (const cactus of cacti) {
+                const dist = Math.hypot(x - cactus.x, y - cactus.y);
+                if (dist < minCactusSpacing) {
+                    tooCloseToOtherCactus = true;
+                    break;
+                }
+            }
+            if (tooCloseToOtherCactus) continue;
+            
+            cacti.push({
+                x: x,
+                y: y,
+                size: 32 + Math.random() * 20,
+                type: Math.floor(Math.random() * 4),
+                gridX: Math.floor(x / 32),
+                gridY: Math.floor(y / 32)
+            });
         }
         
         this.terrainDetails.cacti = cacti;
         
-        // Generate rocks scattered naturally around the desert floor with good vertical spread
-        const rocks = [
-            // Left area
-            { x: width * 0.05, y: groundLevel - 8, size: 18 },
-            { x: width * 0.10, y: groundLevel - 14, size: 16 },
+        // Generate rocks scattered ONLY below the path with natural distribution
+        const rocks = [];
+        const rocksAttempts = 100;  // Same as before
+        const minRockSpacing = 80;  // Increased from 65 for better spread
+        
+        for (let attempt = 0; attempt < rocksAttempts; attempt++) {
+            const x = Math.random() * width;
+            const y = groundTopBelow + Math.random() * (groundLevelBottom - groundTopBelow);
             
-            // Left-center area
-            { x: width * 0.20, y: groundLevel - 4, size: 20 },
-            { x: width * 0.26, y: groundLevel - 16, size: 17 },
+            // Skip if too close to oasis
+            const distToOasis = Math.hypot((x - oasis.x) / oasis.radiusX, (y - oasis.y) / oasis.radiusY);
+            if (distToOasis < 1.3) continue;
             
-            // Center-left area
-            { x: width * 0.35, y: groundLevel - 10, size: 19 },
-            { x: width * 0.40, y: groundLevel - 6, size: 18 },
+            // Skip if too close to path
+            let tooCloseToPath = false;
+            for (const pathPoint of this.pathPoints) {
+                const dist = Math.hypot(x - pathPoint.x, y - pathPoint.y);
+                if (dist < 65) {
+                    tooCloseToPath = true;
+                    break;
+                }
+            }
+            if (tooCloseToPath) continue;
             
-            // Center area
-            { x: width * 0.50, y: groundLevel - 12, size: 20 },
-            { x: width * 0.55, y: groundLevel - 7, size: 17 },
+            // Skip if too close to other rocks
+            let tooCloseToOtherRock = false;
+            for (const rock of rocks) {
+                const dist = Math.hypot(x - rock.x, y - rock.y);
+                if (dist < minRockSpacing) {
+                    tooCloseToOtherRock = true;
+                    break;
+                }
+            }
+            if (tooCloseToOtherRock) continue;
             
-            // Center-right area
-            { x: width * 0.60, y: groundLevel - 9, size: 20 },
-            { x: width * 0.65, y: groundLevel - 13, size: 17 },
-            
-            // Right-center area
-            { x: width * 0.74, y: groundLevel - 5, size: 19 },
-            { x: width * 0.80, y: groundLevel - 15, size: 21 },
-            
-            // Right area
-            { x: width * 0.90, y: groundLevel - 11, size: 18 },
-            { x: width * 0.95, y: groundLevel - 7, size: 20 }
-        ];
+            rocks.push({
+                x: x,
+                y: y,
+                size: 16 + Math.random() * 12
+            });
+        }
         
         this.terrainDetails.rocks = rocks;
     }
@@ -248,56 +282,6 @@ export class Campaign3 extends CampaignBase {
     update(deltaTime) {
         super.update(deltaTime);
         this.animationTime += deltaTime;
-        this.updateTumbleweeds(deltaTime);
-    }
-    
-    updateTumbleweeds(deltaTime) {
-        const canvas = this.stateManager.canvas;
-        const height = canvas.height;
-        const groundLevel = height * 0.78;
-        
-        // Define different lane heights for tumbleweeds
-        const tumbleweeds_lanes = [
-            groundLevel,           // Lane 0: Ground level
-            groundLevel - 40,      // Lane 1: Low height
-            groundLevel - 80,      // Lane 2: Medium height
-            groundLevel - 120      // Lane 3: High height
-        ];
-        
-        // Spawn new tumbleweeds occasionally from the left side in different lanes
-        if (this.tumbleweeds.length < this.maxTumbleweeds && Math.random() < 0.06) {
-            // Pick a random lane
-            const laneIndex = Math.floor(Math.random() * tumbleweeds_lanes.length);
-            const laneY = tumbleweeds_lanes[laneIndex];
-            
-            this.tumbleweeds.push({
-                x: -40,  // Start off-screen on the left
-                y: laneY,
-                targetY: laneY, // Stay on this lane
-                vx: 40 + Math.random() * 60,  // Horizontal speed
-                vy: 0,   // No vertical velocity - stay on lane
-                rotationSpeed: 3 + Math.random() * 5,
-                rotation: Math.random() * Math.PI * 2,
-                size: 20 + Math.random() * 14
-            });
-        }
-        
-        // Update tumbleweeds
-        for (let i = this.tumbleweeds.length - 1; i >= 0; i--) {
-            const tumbleweed = this.tumbleweeds[i];
-            
-            // Move right along its lane
-            tumbleweed.x += tumbleweed.vx * deltaTime;
-            tumbleweed.rotation += tumbleweed.rotationSpeed * deltaTime;
-            
-            // Keep tumbleweed on its assigned lane (no bouncing, just stay at target height)
-            tumbleweed.y = tumbleweed.targetY;
-            
-            // Remove tumbleweeds off screen
-            if (tumbleweed.x > canvas.width + 50) {
-                this.tumbleweeds.splice(i, 1);
-            }
-        }
     }
 
     renderBackground(ctx) {
@@ -326,19 +310,19 @@ export class Campaign3 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // BACKGROUND LAYER 1: Sand ground (moved down to not overlap dunes)
-        ctx.fillStyle = '#e8c590';
+        // Light sand ground plane
+        ctx.fillStyle = '#e8c898';
         ctx.fillRect(0, height * 0.75, width, height * 0.25);
         
-        // BACKGROUND LAYER 2: Render oasis water first (far background)
+        // Render oasis water first (far background)
         if (this.terrainDetails && this.terrainDetails.oasis) {
             this.renderOasis(ctx);
         }
         
-        // MIDDLE LAYER: Desert path
+        // Desert path
         this.renderDesertPath(ctx);
         
-        // FOREGROUND LAYER: Render cacti and rocks (sorted by Y for depth)
+        // Foreground: Render cacti and rocks (sorted by Y for depth)
         if (this.terrainDetails && this.terrainDetails.cacti) {
             const sortedCacti = [...this.terrainDetails.cacti].sort((a, b) => a.y - b.y);
             for (const cactus of sortedCacti) {
@@ -353,8 +337,8 @@ export class Campaign3 extends CampaignBase {
             }
         }
         
-        // FOREGROUND FX: Tumbleweeds drift over terrain
-        this.renderTumbleweeds(ctx);
+        // Heat shimmer effect over landscape
+        this.renderHeatShimmer(ctx, canvas);
     }
     
     renderCactusOnMap(ctx, cactus) {
@@ -415,8 +399,7 @@ export class Campaign3 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Simple smooth wave-like dunes - no harsh overlaps
-        // LAYER 1 (BACK): Distant dunes at 35% height
+        // LAYER 1 (BACK): Far dunes - subtle and hazy
         ctx.fillStyle = '#d4a574';
         ctx.beginPath();
         ctx.moveTo(0, height * 0.35);
@@ -429,7 +412,7 @@ export class Campaign3 extends CampaignBase {
         ctx.closePath();
         ctx.fill();
         
-        // LAYER 2 (MIDDLE): Medium dunes at 50% height
+        // LAYER 2 (MIDDLE): Medium dunes - fill completely to ground level
         ctx.fillStyle = '#dbb896';
         ctx.beginPath();
         ctx.moveTo(0, height * 0.50);
@@ -437,12 +420,12 @@ export class Campaign3 extends CampaignBase {
             const waveY = Math.sin(x * 0.005 + 1.5) * 10 + height * 0.50;
             ctx.lineTo(x, waveY);
         }
-        ctx.lineTo(width, height * 0.65);
-        ctx.lineTo(0, height * 0.65);
+        ctx.lineTo(width, height * 0.75);
+        ctx.lineTo(0, height * 0.75);
         ctx.closePath();
         ctx.fill();
         
-        // LAYER 3 (FRONT): Large prominent dunes at 65% height
+        // LAYER 3 (FRONT): Large foreground dunes - now blend into ground
         ctx.fillStyle = '#e8c898';
         ctx.beginPath();
         ctx.moveTo(0, height * 0.65);
@@ -455,8 +438,8 @@ export class Campaign3 extends CampaignBase {
         ctx.closePath();
         ctx.fill();
         
-        // Add subtle shading for depth on the back dunes
-        ctx.fillStyle = 'rgba(150, 100, 50, 0.15)';
+        // Add subtle shading for depth on back dunes
+        ctx.fillStyle = 'rgba(150, 100, 50, 0.12)';
         ctx.beginPath();
         ctx.moveTo(0, height * 0.35);
         for (let x = 0; x <= width; x += 40) {
@@ -523,19 +506,8 @@ export class Campaign3 extends CampaignBase {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Layer 1: Dark shadow base
-        ctx.strokeStyle = 'rgba(40, 40, 40, 0.4)';
-        ctx.lineWidth = 58;
-        ctx.globalAlpha = 1;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x + 3, this.pathPoints[0].y + 3);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x + 3, this.pathPoints[i].y + 3);
-        }
-        ctx.stroke();
-        
-        // Layer 2: Main sand path - packed dirt
-        ctx.strokeStyle = '#c9a876';
+        // Simple path with no dark edges - just light sand color
+        ctx.strokeStyle = '#e8c898';
         ctx.lineWidth = 54;
         ctx.globalAlpha = 1;
         ctx.beginPath();
@@ -545,20 +517,9 @@ export class Campaign3 extends CampaignBase {
         }
         ctx.stroke();
         
-        // Layer 3: Edge darkening
-        ctx.strokeStyle = '#a88a6a';
-        ctx.lineWidth = 54;
-        ctx.globalAlpha = 0.3;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        
-        // Layer 4: Worn center stripe
-        ctx.strokeStyle = '#ddb892';
-        ctx.lineWidth = 26;
+        // Subtle center highlight
+        ctx.strokeStyle = '#f0e0c8';
+        ctx.lineWidth = 20;
         ctx.globalAlpha = 0.6;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
@@ -594,79 +555,55 @@ export class Campaign3 extends CampaignBase {
         ctx.fill();
     }
     
-    renderTumbleweeds(ctx) {
-        for (const tumbleweed of this.tumbleweeds) {
-            ctx.save();
-            ctx.translate(tumbleweed.x, tumbleweed.y);
-            ctx.rotate(tumbleweed.rotation);
-            
-            // Draw bushy tumbleweed with organic appearance
-            const size = tumbleweed.size;
-            const baseSize = size * 0.4;
-            
-            // Main bushy body - concentric circles with fuzzy edges
-            // Outer layer - light brown with transparency
-            ctx.fillStyle = 'rgba(180, 120, 60, 0.6)';
+    renderHeatShimmer(ctx, canvas) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const shimmerHeight = height * 0.5;  // Top portion of screen
+        
+        // Create a wavy shimmer effect - much more visible
+        const shimmerStrength = 12 + Math.sin(this.animationTime * 3) * 6;
+        
+        // Draw semi-transparent wavy lines for heat distortion - much more opaque
+        ctx.strokeStyle = 'rgba(255, 255, 200, 0.15)';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        
+        const waveCount = 8;
+        for (let w = 0; w < waveCount; w++) {
+            const baseY = (shimmerHeight * w) / waveCount;
             ctx.beginPath();
-            ctx.arc(0, 0, baseSize * 1.2, 0, Math.PI * 2);
-            ctx.fill();
             
-            // Middle layer - darker brown
-            ctx.fillStyle = 'rgba(140, 90, 40, 0.8)';
-            ctx.beginPath();
-            ctx.arc(0, 0, baseSize * 0.95, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Inner layer - darkest for depth
-            ctx.fillStyle = 'rgba(100, 60, 20, 0.8)';
-            ctx.beginPath();
-            ctx.arc(0, 0, baseSize * 0.6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add spiky branches radiating out for bushy texture
-            ctx.strokeStyle = 'rgba(120, 80, 40, 0.7)';
-            ctx.lineWidth = 1.5;
-            const branchCount = 12;
-            for (let i = 0; i < branchCount; i++) {
-                const angle = (i / branchCount) * Math.PI * 2;
-                const branchLength = baseSize * (0.8 + Math.random() * 0.5);
-                const branchX = Math.cos(angle) * branchLength;
-                const branchY = Math.sin(angle) * branchLength;
+            for (let x = 0; x <= width; x += 15) {
+                const waveOffset = Math.sin((x * 0.012 + this.animationTime * 2.5) + w) * shimmerStrength;
+                const y = baseY + waveOffset;
                 
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(branchX, branchY);
-                ctx.stroke();
-                
-                // Small twigs on branches
-                ctx.lineWidth = 0.8;
-                for (let j = 0; j < 2; j++) {
-                    const twigDist = branchLength * (0.4 + j * 0.4);
-                    const twigAngle = angle + (Math.random() - 0.5) * 0.6;
-                    const twigLength = baseSize * 0.3;
-                    const twigX = Math.cos(angle) * twigDist + Math.cos(twigAngle) * twigLength;
-                    const twigY = Math.sin(angle) * twigDist + Math.sin(twigAngle) * twigLength;
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(angle) * twigDist, Math.sin(angle) * twigDist);
-                    ctx.lineTo(twigX, twigY);
-                    ctx.stroke();
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
                 }
             }
-            
-            // Add fuzzy outline by drawing semi-transparent points around edge
-            ctx.fillStyle = 'rgba(150, 100, 50, 0.4)';
-            const fuzzyPoints = 20;
-            for (let i = 0; i < fuzzyPoints; i++) {
-                const angle = (i / fuzzyPoints) * Math.PI * 2;
-                const fuzzX = Math.cos(angle) * baseSize * 1.3;
-                const fuzzY = Math.sin(angle) * baseSize * 1.3;
-                ctx.beginPath();
-                ctx.arc(fuzzX, fuzzY, baseSize * 0.15, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            ctx.restore();
+            ctx.stroke();
         }
+        
+        // Add multiple radial gradient heat effects for more prominent mirage
+        const sunX = width * 0.85;
+        const sunY = height * 0.15;
+        
+        // Large outer shimmer
+        let heatGradient = ctx.createRadialGradient(sunX, sunY, 100, sunX, sunY, 500);
+        heatGradient.addColorStop(0, 'rgba(255, 220, 100, 0.15)');
+        heatGradient.addColorStop(0.5, 'rgba(255, 150, 50, 0.08)');
+        heatGradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        ctx.fillStyle = heatGradient;
+        ctx.fillRect(0, 0, width, shimmerHeight);
+        
+        // Bright inner core
+        heatGradient = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 200);
+        heatGradient.addColorStop(0, 'rgba(255, 255, 150, 0.2)');
+        heatGradient.addColorStop(1, 'rgba(255, 200, 100, 0)');
+        ctx.fillStyle = heatGradient;
+        ctx.fillRect(0, 0, width, shimmerHeight);
     }
     
     renderLevelSlot(ctx, index) {
@@ -763,45 +700,43 @@ export class Campaign3 extends CampaignBase {
         ctx.restore();
     }
     
-    drawLockedCastleTopDown(ctx, centerX, centerY, isHovered) {
-        ctx.save();
-        ctx.translate(centerX, centerY);
+    drawLockedCastleTopDown(ctx, x, y, isHovered) {
         const scale = 0.45;
+        ctx.save();
+        ctx.translate(x, y);
         ctx.scale(scale, scale);
         
         if (isHovered) {
-            ctx.fillStyle = 'rgba(150, 150, 150, 0.1)';
+            ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
             ctx.beginPath();
             ctx.arc(0, 0, 220, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Draw locked castle - desaturated
-        ctx.fillStyle = '#888888';
+        // Draw dimmed castle to show it's locked
+        ctx.globalAlpha = 0.4;
+        
+        // Create a dimmed castle instance for visual
+        const tempCastle = new Castle(0, 0, 0, 0);
+        tempCastle.drawMainWall(ctx);
+        tempCastle.drawTower(ctx, -tempCastle.wallWidth/2 - tempCastle.towerWidth/2, 'left');
+        tempCastle.drawTower(ctx, tempCastle.wallWidth/2 + tempCastle.towerWidth/2, 'right');
+        tempCastle.drawCastleBase(ctx);
+        tempCastle.drawGate(ctx);
+        tempCastle.drawCrenellations(ctx);
+        
+        ctx.globalAlpha = 1;
+        
+        // Lock icon overlay
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
         ctx.beginPath();
-        ctx.rect(-100, -80, 200, 160);
+        ctx.arc(0, 0, 25, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Walls
-        ctx.strokeStyle = '#666666';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(-100, -80, 200, 160);
-        
-        // Towers
-        ctx.fillStyle = '#777777';
-        ctx.fillRect(-100, -80, 40, 50);
-        ctx.fillRect(60, -80, 40, 50);
-        
-        // Lock symbol
-        ctx.fillStyle = '#555555';
-        ctx.beginPath();
-        ctx.arc(0, 0, 30, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#888888';
-        ctx.beginPath();
-        ctx.arc(0, 0, 20, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 30px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔒', 0, 2);
         
         ctx.restore();
     }
