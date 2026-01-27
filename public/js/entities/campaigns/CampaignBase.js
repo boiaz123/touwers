@@ -44,15 +44,11 @@ export class CampaignBase {
         
         this.hoveredExitButton = false;
         
-        // Campaign screen should play settlement music (same as campaign menu)
-        if (this.stateManager.audioManager) {
-            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
-            const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
-            
-            // If settlement music is not already playing, start a new one
-            if (!settlementTracks.includes(currentTrack)) {
-                this.stateManager.audioManager.playRandomSettlementTheme();
-            }
+        // Play campaign-specific music
+        if (this.stateManager.audioManager && this.campaignId) {
+            // Use playMusicCategory to play campaign-specific music
+            // This will automatically rotate through all campaign tracks
+            this.stateManager.audioManager.playMusicCategory(this.campaignId);
         }
         
         this.setupMouseListeners();
@@ -85,10 +81,10 @@ export class CampaignBase {
     
     getExitButtonBounds() {
         return {
-            x: this.stateManager.canvas.width - 120,
-            y: 20,
-            width: 100,
-            height: 40
+            x: this.stateManager.canvas.width - 140,
+            y: 30,
+            width: 110,
+            height: 44
         };
     }
     
@@ -123,16 +119,16 @@ export class CampaignBase {
         
         // Check level slots using circular hit detection
         // Radius of 110px matches castle visual size at 0.5 scale (base castle ~220px)
-        // Castles are drawn via drawCastleTopDown(ctx, centerX, centerY, this.castleScale)
+        // Only allow hover for UNLOCKED levels
         if (this.levelSlots && this.levelSlots.length > 0) {
             for (let i = 0; i < this.levelSlots.length; i++) {
                 const slot = this.levelSlots[i];
-                if (slot) {
+                if (slot && slot.level && slot.level.unlocked) {
                     const distance = Math.sqrt(
                         Math.pow(x - slot.x, 2) + Math.pow(y - slot.y, 2)
                     );
                     
-                    // Increased from 50 to 110 to match castle visual size at 0.5 scale
+                    // Radius of 110px matches castle visual size at 0.5 scale
                     if (distance <= 110) {
                         this.hoveredLevel = i;
                         break;

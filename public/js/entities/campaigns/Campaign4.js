@@ -126,34 +126,40 @@ export class Campaign4 extends CampaignBase {
             // Final rise toward exit
             { x: width * 0.85, y: height * 0.80 },
             { x: width * 0.90, y: height * 0.75 },
-            { x: width * 0.95, y: height * 0.70 }
+            { x: width * 0.95, y: height * 0.70 },
+            
+            // Exit right
+            { x: width + 20, y: height * 0.70 }
         ];
         
         // Generate 8 level slots positioned evenly along the path
-        // Last level slot will be at the end of the path (no exit extension)
+        const totalSlots = 8;
         this.levelSlots = [];
-        const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / 8; // 8 slots evenly distributed
         
-        for (let i = 0; i < 8; i++) {
+        // Spread slots evenly along path with margins from edges
+        const pathLength = this.pathPoints.length - 1;
+        const slotSpacing = pathLength / (totalSlots + 1); // Even distribution with margins
+        
+        for (let i = 0; i < totalSlots; i++) {
             const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
             const pathPoint = this.pathPoints[pathIndex];
             
-            // Use existing level or create stub for future level
-            const level = i < this.levels.length ? this.levels[i] : {
-                id: `level${i + 1}`,
-                name: `Level ${i + 1}`,
-                difficulty: 'medium',
-                unlocked: i === 0, // Only first level unlocked
-                type: 'campaign'
-            };
+            const pos = { ...pathPoint };
+            // Assign level if available, otherwise create a locked level
+            if (i < this.levels.length) {
+                pos.level = this.levels[i];
+            } else {
+                pos.level = {
+                    id: `level${i + 1}`,
+                    name: `Level ${i + 1}`,
+                    difficulty: 'medium',
+                    unlocked: false,
+                    type: 'campaign'
+                };
+            }
+            pos.levelIndex = i;
             
-            this.levelSlots.push({
-                x: pathPoint.x,
-                y: pathPoint.y,
-                level: level,
-                levelIndex: i
-            });
+            this.levelSlots.push(pos);
         }
     }
     
@@ -728,15 +734,14 @@ export class Campaign4 extends CampaignBase {
         if (!this.levelSlots || index >= this.levelSlots.length) return;
         
         const slot = this.levelSlots[index];
+        if (!slot || !slot.level) return;
+        
         const level = slot.level;
         const isHovered = index === this.hoveredLevel;
         const isLocked = !level.unlocked;
-        const isPlaceholder = level.id.startsWith('placeholder-');
         
-        // Draw castle for this level (or placeholder)
-        if (isPlaceholder) {
-            this.drawPlaceholderSlot(ctx, slot.x, slot.y, isHovered);
-        } else if (isLocked) {
+        // Draw castle for this level
+        if (isLocked) {
             this.drawLockedCastleTopDown(ctx, slot.x, slot.y, isHovered);
         } else {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
@@ -746,7 +751,8 @@ export class Campaign4 extends CampaignBase {
         ctx.font = 'bold 12px serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#d0c8a8';
-        ctx.fillText(level.name, slot.x, slot.y + 80);
+        const displayName = level.name || `Level ${index + 1}`;
+        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {

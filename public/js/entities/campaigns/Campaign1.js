@@ -135,35 +135,32 @@ export class Campaign1 extends CampaignBase {
             { x: width + 20, y: height * 0.50 }
         ];
         
-        // Generate 12 level slots positioned along the path
+        // Generate 12 level slots positioned evenly along the path
         const totalSlots = 12;
         this.levelSlots = [];
         
-        // Spread 12 castles with varied spacing - some clustered, some more spread out
-        // Creates a more natural, organic distribution along the path
-        const slotIndices = [1, 3, 5, 8, 10, 12, 13, 15, 17, 20, 22, 25];
+        // Spread slots evenly along path with margins from edges
+        const pathLength = this.pathPoints.length - 1;
+        const slotSpacing = pathLength / (totalSlots + 1); // Even distribution with margins
         
         for (let i = 0; i < totalSlots; i++) {
-            const pathIndex = Math.min(slotIndices[i], this.pathPoints.length - 1);
+            const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
             const pathPoint = this.pathPoints[pathIndex];
             
-            // Position castles directly on the road path (no perpendicular offset)
-            // This ensures castles are in the middle of the road
             const pos = { ...pathPoint };
-            
-            // Use existing level or create placeholder
+            // Assign level if available, otherwise create a locked level
             if (i < this.levels.length) {
                 pos.level = this.levels[i];
-                pos.levelIndex = i;
             } else {
                 pos.level = {
-                    id: `placeholder-${i}`,
+                    id: `level${i + 1}`,
                     name: `Level ${i + 1}`,
+                    difficulty: 'medium',
                     unlocked: false,
-                    completed: false
+                    type: 'campaign'
                 };
-                pos.levelIndex = i;
             }
+            pos.levelIndex = i;
             
             this.levelSlots.push(pos);
         }
@@ -1059,18 +1056,17 @@ export class Campaign1 extends CampaignBase {
 
     
     renderLevelSlot(ctx, index) {
+        if (!this.levelSlots || index >= this.levelSlots.length) return;
+        
         const slot = this.levelSlots[index];
-        if (!slot) return;
+        if (!slot || !slot.level) return;
         
         const level = slot.level;
         const isHovered = index === this.hoveredLevel;
         const isLocked = !level.unlocked;
-        const isPlaceholder = level.id.startsWith('placeholder-');
         
-        // Draw castle for this level (or placeholder)
-        if (isPlaceholder) {
-            this.drawPlaceholderSlot(ctx, slot.x, slot.y, isHovered);
-        } else if (isLocked) {
+        // Draw castle for this level
+        if (isLocked) {
             this.drawLockedCastleTopDown(ctx, slot.x, slot.y, isHovered);
         } else {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
@@ -1080,7 +1076,8 @@ export class Campaign1 extends CampaignBase {
         ctx.font = 'bold 12px serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#1a0f05';
-        ctx.fillText(level.name, slot.x, slot.y + 80);
+        const displayName = level.name || `Level ${index + 1}`;
+        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {

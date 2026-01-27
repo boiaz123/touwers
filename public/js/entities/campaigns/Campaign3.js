@@ -610,15 +610,14 @@ export class Campaign3 extends CampaignBase {
         if (!this.levelSlots || index >= this.levelSlots.length) return;
         
         const slot = this.levelSlots[index];
+        if (!slot || !slot.level) return;
+        
         const level = slot.level;
         const isHovered = index === this.hoveredLevel;
         const isLocked = !level.unlocked;
-        const isPlaceholder = level.id.startsWith('placeholder-');
         
-        // Draw castle for this level (or placeholder)
-        if (isPlaceholder) {
-            this.drawPlaceholderSlot(ctx, slot.x, slot.y, isHovered);
-        } else if (isLocked) {
+        // Draw castle for this level
+        if (isLocked) {
             this.drawLockedCastleTopDown(ctx, slot.x, slot.y, isHovered);
         } else {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
@@ -628,7 +627,8 @@ export class Campaign3 extends CampaignBase {
         ctx.font = 'bold 12px serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#3d2817';
-        ctx.fillText(level.name, slot.x, slot.y + 80);
+        const displayName = level.name || `Level ${index + 1}`;
+        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {
