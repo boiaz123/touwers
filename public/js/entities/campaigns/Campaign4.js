@@ -123,19 +123,17 @@ export class Campaign4 extends CampaignBase {
             { x: width * 0.75, y: height * 0.86 },
             { x: width * 0.80, y: height * 0.85 },
             
-            // Final rise to exit
+            // Final rise toward exit
             { x: width * 0.85, y: height * 0.80 },
             { x: width * 0.90, y: height * 0.75 },
-            { x: width * 0.95, y: height * 0.70 },
-            
-            // Exit to right
-            { x: width + 20, y: height * 0.68 }
+            { x: width * 0.95, y: height * 0.70 }
         ];
         
-        // Generate 8 level slots positioned evenly along the path with good spacing
+        // Generate 8 level slots positioned evenly along the path
+        // Last level slot will be at the end of the path (no exit extension)
         this.levelSlots = [];
         const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / 9; // 9 intervals for 8 slots, keeping margin from edges
+        const slotSpacing = pathLength / 8; // 8 slots evenly distributed
         
         for (let i = 0; i < 8; i++) {
             const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
@@ -459,16 +457,17 @@ export class Campaign4 extends CampaignBase {
         // Draw wavy, crater-filled horizon first
         this.renderCraterHorizon(ctx, width, height, horizonY);
         
-        // Tall alien spires/structures scattered across horizon with more variation
+        // Clustered alien city structures - bunched together in center area
+        // Creates impression of a distant alien metropolis
         const structures = [
-            { x: width * 0.08, height: 70, width: 18, color: '#4a5a7a', spikes: true },
-            { x: width * 0.18, height: 95, width: 22, color: '#5a6a8a', spikes: true },
-            { x: width * 0.32, height: 60, width: 16, color: '#6a7a9a', spikes: false },
-            { x: width * 0.48, height: 110, width: 20, color: '#4a5a7a', spikes: true },
-            { x: width * 0.62, height: 75, width: 19, color: '#5a6a8a', spikes: false },
-            { x: width * 0.76, height: 100, width: 23, color: '#6a7a9a', spikes: true },
-            { x: width * 0.88, height: 65, width: 17, color: '#5a6a8a', spikes: false },
-            { x: width * 0.95, height: 85, width: 20, color: '#4a5a7a', spikes: true }
+            { x: width * 0.35, height: 85, width: 19, color: '#5a6a8a', spikes: true },
+            { x: width * 0.40, height: 70, width: 17, color: '#4a5a7a', spikes: false },
+            { x: width * 0.43, height: 110, width: 22, color: '#6a7a9a', spikes: true },
+            { x: width * 0.48, height: 65, width: 18, color: '#5a6a8a', spikes: false },
+            { x: width * 0.52, height: 95, width: 20, color: '#4a5a7a', spikes: true },
+            { x: width * 0.57, height: 75, width: 19, color: '#6a7a9a', spikes: false },
+            { x: width * 0.60, height: 105, width: 23, color: '#5a6a8a', spikes: true },
+            { x: width * 0.65, height: 80, width: 18, color: '#4a5a7a', spikes: false }
         ];
         
         for (const struct of structures) {
@@ -530,10 +529,10 @@ export class Campaign4 extends CampaignBase {
     }
     
     renderCraterHorizon(ctx, width, height, horizonY) {
-        // Draw wavy horizon line with craters
+        // Draw wavy horizon line without craters
         ctx.fillStyle = '#8a9a7a';
         
-        // Main horizon shape with waves and craters
+        // Main horizon shape with waves
         ctx.beginPath();
         ctx.moveTo(0, horizonY);
         
@@ -552,31 +551,6 @@ export class Campaign4 extends CampaignBase {
         ctx.lineTo(0, height * 0.75);
         ctx.closePath();
         ctx.fill();
-        
-        // Draw craters on horizon
-        const craters = [
-            { x: width * 0.12, y: horizonY - 5, r: 25 },
-            { x: width * 0.28, y: horizonY + 8, r: 18 },
-            { x: width * 0.42, y: horizonY - 3, r: 22 },
-            { x: width * 0.58, y: horizonY + 6, r: 20 },
-            { x: width * 0.72, y: horizonY - 4, r: 24 },
-            { x: width * 0.85, y: horizonY + 5, r: 19 }
-        ];
-        
-        // Draw crater shadows
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        for (const crater of craters) {
-            ctx.beginPath();
-            ctx.arc(crater.x, crater.y, crater.r, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Crater rim highlight
-            ctx.strokeStyle = 'rgba(200, 220, 200, 0.4)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(crater.x - crater.r * 0.3, crater.y - crater.r * 0.3, crater.r * 0.6, 0, Math.PI * 2);
-            ctx.stroke();
-        }
     }
     
     renderStars(ctx, width, height) {
@@ -608,15 +582,24 @@ export class Campaign4 extends CampaignBase {
         // Generate shooting stars if not exists
         if (!this.terrainDetails.shootingStars || this.terrainDetails.shootingStars.length === 0) {
             this.terrainDetails.shootingStars = [];
-            // Create 2-3 shooting stars at random times
-            for (let i = 0; i < 2; i++) {
+            // Create 1 shooting star with rare appearances
+            for (let i = 0; i < 1; i++) {
+                // Varied directions including more horizontal paths
+                const directions = [
+                    { angle: -Math.PI / 12, label: 'gentle-horizontal' },  // 15 degrees (very shallow)
+                    { angle: -Math.PI / 8, label: 'slight-diagonal' },     // 22.5 degrees
+                    { angle: -Math.PI / 6, label: 'down-right' },          // 30 degrees down-right
+                    { angle: -Math.PI / 7, label: 'mild-down' }            // 25.7 degrees
+                ];
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                
                 this.terrainDetails.shootingStars.push({
                     startX: Math.random() * width,
-                    startY: Math.random() * height * 0.4,
-                    speed: 300 + Math.random() * 200,
-                    angle: -Math.PI / 4 - Math.random() * 0.5,
-                    duration: 1.5 + Math.random() * 1,
-                    delay: Math.random() * 10,
+                    startY: Math.random() * height * 0.35,
+                    speed: 80 + Math.random() * 60,  // Much slower speed (was 150-250)
+                    angle: dir.angle,
+                    duration: 3 + Math.random() * 2, // Longer duration for slower appearance
+                    delay: 20 + Math.random() * 25,  // Longer delay between appearances
                     active: false,
                     time: 0
                 });
@@ -639,7 +622,7 @@ export class Campaign4 extends CampaignBase {
                 const opacity = 1 - (progress > 0.7 ? (progress - 0.7) / 0.3 : 0);
                 
                 // Trail
-                const trailLength = 60;
+                const trailLength = 80;  // Slightly longer trail for slower stars
                 const gradient = ctx.createLinearGradient(
                     x, y,
                     x - Math.cos(star.angle) * trailLength,
@@ -665,8 +648,8 @@ export class Campaign4 extends CampaignBase {
                 ctx.fill();
             }
             
-            // Reset if finished
-            if (star.time > star.delay + star.duration + 3) {
+            // Reset if finished - much longer cooldown before reappearing
+            if (star.time > star.delay + star.duration + 5) {
                 star.time = 0;
             }
         }
