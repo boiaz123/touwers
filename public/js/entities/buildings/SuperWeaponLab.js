@@ -3,6 +3,7 @@ import { Building } from './Building.js';
 export class SuperWeaponLab extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
+        this.type = 'superweapon'; // Ensure type is set for reliable detection
         this.isSelected = false;
         this.academy = null; // Reference to Magic Academy
         

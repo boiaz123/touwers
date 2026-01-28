@@ -26,6 +26,14 @@ export class SaveSlotSelection {
         this.warningSlotNumber = null;
         this.warningConfirmHovered = false;
         this.warningCancelHovered = false;
+        
+        // Name input dialog state
+        this.showNameInput = false;
+        this.nameInputValue = '';
+        this.pendingSlotNumber = null;
+        this.nameInputConfirmHovered = false;
+        this.nameInputCancelHovered = false;
+        this.maxNameLength = 20;
     }
 
     enter() {
@@ -56,6 +64,13 @@ export class SaveSlotSelection {
         this.warningConfirmHovered = false;
         this.warningCancelHovered = false;
         
+        // Reset name input dialog
+        this.showNameInput = false;
+        this.nameInputValue = '';
+        this.pendingSlotNumber = null;
+        this.nameInputConfirmHovered = false;
+        this.nameInputCancelHovered = false;
+        
         // Get or initialize shared particle system
         if (this.stateManager.canvas && this.stateManager.canvas.width > 0 && this.stateManager.canvas.height > 0) {
             this.particleSystem = ParticleSystem.getInstance(this.stateManager.canvas.width, this.stateManager.canvas.height);
@@ -71,6 +86,10 @@ export class SaveSlotSelection {
 
     exit() {
         this.removeMouseListeners();
+        // Reset cursor to default
+        if (this.stateManager.canvas) {
+            this.stateManager.canvas.style.cursor = 'default';
+        }
     }
 
     setupMouseListeners() {
@@ -84,8 +103,10 @@ export class SaveSlotSelection {
             const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
+        this.keyDownHandler = (e) => this.handleKeyDown(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        window.addEventListener('keydown', this.keyDownHandler);
     }
 
     removeMouseListeners() {
@@ -94,6 +115,9 @@ export class SaveSlotSelection {
         }
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
+        }
+        if (this.keyDownHandler) {
+            window.removeEventListener('keydown', this.keyDownHandler);
         }
     }
 
@@ -127,6 +151,32 @@ export class SaveSlotSelection {
         const scaleY = this.stateManager.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
+
+        // If name input dialog is showing, handle name input button hovers
+        if (this.showNameInput) {
+            const canvas = this.stateManager.canvas;
+            const panelWidth = 500;
+            const panelHeight = 280;
+            const panelX = (canvas.width - panelWidth) / 2;
+            const panelY = (canvas.height - panelHeight) / 2;
+            
+            // Confirm button
+            const confirmButtonX = panelX + panelWidth / 2 - 110;
+            const confirmButtonY = panelY + panelHeight - 80;
+            const buttonWidth = 100;
+            const buttonHeight = 40;
+            this.nameInputConfirmHovered = x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
+                                           y >= confirmButtonY && y <= confirmButtonY + buttonHeight;
+            
+            // Cancel button
+            const cancelButtonX = panelX + panelWidth / 2 + 10;
+            this.nameInputCancelHovered = x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
+                                          y >= confirmButtonY && y <= confirmButtonY + buttonHeight;
+            
+            this.stateManager.canvas.style.cursor = 
+                (this.nameInputConfirmHovered || this.nameInputCancelHovered) ? 'pointer' : 'default';
+            return;
+        }
 
         // If warning dialog is showing, handle warning button hovers
         if (this.showWarning) {
@@ -173,6 +223,41 @@ export class SaveSlotSelection {
     }
 
     handleClick(x, y) {
+        // If name input dialog is showing, handle name input button clicks
+        if (this.showNameInput) {
+            const canvas = this.stateManager.canvas;
+            const panelWidth = 500;
+            const panelHeight = 280;
+            const panelX = (canvas.width - panelWidth) / 2;
+            const panelY = (canvas.height - panelHeight) / 2;
+            
+            // Confirm button
+            const confirmButtonX = panelX + panelWidth / 2 - 110;
+            const confirmButtonY = panelY + panelHeight - 80;
+            const buttonWidth = 100;
+            const buttonHeight = 40;
+            
+            if (x >= confirmButtonX && x <= confirmButtonX + buttonWidth &&
+                y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
+                this.confirmNameInput();
+                return;
+            }
+            
+            // Cancel button
+            const cancelButtonX = panelX + panelWidth / 2 + 10;
+            if (x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
+                y >= confirmButtonY && y <= confirmButtonY + buttonHeight) {
+                // Close name input dialog
+                this.showNameInput = false;
+                this.nameInputValue = '';
+                this.pendingSlotNumber = null;
+                this.nameInputConfirmHovered = false;
+                this.nameInputCancelHovered = false;
+                return;
+            }
+            return;
+        }
+
         // If warning dialog is showing, handle warning button clicks
         if (this.showWarning) {
             const canvas = this.stateManager.canvas;
@@ -192,16 +277,17 @@ export class SaveSlotSelection {
                 // Wipe the slot completely first to ensure clean slate
                 SaveSystem.wipeSaveSlot(this.warningSlotNumber);
                 
-                // Create new game in this slot with default data
-                const newGameData = SaveSystem.createNewGameState();
-                SaveSystem.saveSettlementData(this.warningSlotNumber, newGameData);
-
-                // Set as current slot
-                this.stateManager.currentSaveSlot = this.warningSlotNumber;
-                this.stateManager.currentSaveData = newGameData;
-
-                // Go to settlement hub
-                this.stateManager.changeState('settlementHub');
+                // Close warning dialog and show name input dialog
+                const slotNum = this.warningSlotNumber;
+                this.showWarning = false;
+                this.warningSlotNumber = null;
+                this.warningConfirmHovered = false;
+                this.warningCancelHovered = false;
+                
+                // Show name input dialog
+                this.showNameInput = true;
+                this.pendingSlotNumber = slotNum;
+                this.nameInputValue = '';
                 return;
             }
             
@@ -224,7 +310,7 @@ export class SaveSlotSelection {
         if (x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
             y >= buttonPos.y && y <= buttonPos.y + buttonPos.height) {
 
-            this.stateManager.changeState('mainMenu');
+            this.stateManager.changeState('startScreen');
             return;
         }
 
@@ -242,19 +328,63 @@ export class SaveSlotSelection {
                     this.showWarning = true;
                     this.warningSlotNumber = slotNum;
                 } else {
-                    // Create new game in empty slot (no need to wipe, it's already null)
-                    const newGameData = SaveSystem.createNewGameState();
-                    SaveSystem.saveSettlementData(slotNum, newGameData);
-
-                    // Set as current slot
-                    this.stateManager.currentSaveSlot = slotNum;
-                    this.stateManager.currentSaveData = newGameData;
-
-                    // Go to settlement hub
-                    this.stateManager.changeState('settlementHub');
+                    // Show name input dialog for new game
+                    this.showNameInput = true;
+                    this.pendingSlotNumber = slotNum;
+                    this.nameInputValue = '';
                 }
             }
         });
+    }
+
+    handleKeyDown(e) {
+        if (!this.showNameInput) return;
+        
+        if (e.key === 'Escape') {
+            // Close name input dialog
+            this.showNameInput = false;
+            this.nameInputValue = '';
+            this.pendingSlotNumber = null;
+            this.nameInputConfirmHovered = false;
+            this.nameInputCancelHovered = false;
+            return;
+        }
+        
+        if (e.key === 'Enter') {
+            this.confirmNameInput();
+            return;
+        }
+        
+        if (e.key === 'Backspace') {
+            this.nameInputValue = this.nameInputValue.slice(0, -1);
+            return;
+        }
+        
+        // Allow letters, numbers, spaces, and common punctuation
+        if (e.key.length === 1 && this.nameInputValue.length < this.maxNameLength) {
+            const validChars = /^[a-zA-Z0-9 \-_'.]$/;
+            if (validChars.test(e.key)) {
+                this.nameInputValue += e.key;
+            }
+        }
+    }
+
+    confirmNameInput() {
+        const commanderName = this.nameInputValue.trim() || 'Commander';
+        
+        // Create new game in this slot with the entered commander name
+        const newGameData = SaveSystem.createNewGameState(commanderName);
+        SaveSystem.saveSettlementData(this.pendingSlotNumber, newGameData);
+
+        // Set as current slot
+        this.stateManager.currentSaveSlot = this.pendingSlotNumber;
+        this.stateManager.currentSaveData = newGameData;
+
+        // Close dialog and go to settlement hub
+        this.showNameInput = false;
+        this.nameInputValue = '';
+        this.pendingSlotNumber = null;
+        this.stateManager.changeState('settlementHub');
     }
 
     update(deltaTime) {
@@ -349,6 +479,11 @@ export class SaveSlotSelection {
             if (this.showWarning) {
                 this.renderWarningDialog(ctx);
             }
+            
+            // Name input dialog
+            if (this.showNameInput) {
+                this.renderNameInputDialog(ctx);
+            }
 
             ctx.globalAlpha = 1;
 
@@ -393,20 +528,21 @@ export class SaveSlotSelection {
         ctx.textAlign = 'left';
         ctx.fillStyle = isHovered ? '#ffe700' : '#c9a876';
         ctx.font = 'bold 18px serif';
-        ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
-
+        
+        // Display commander name if save exists, otherwise show slot number
         if (saveInfo.isEmpty) {
+            ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
             ctx.font = '14px serif';
             ctx.fillStyle = '#666';
             ctx.fillText('Empty Slot - Click to start new game', pos.x + 20, adjustedY + 55);
         } else {
-            ctx.font = '16px serif';
-            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 50);
-
-            ctx.font = '12px serif';
+            // Show commander name prominently
+            ctx.fillText(saveInfo.commanderName || 'Commander', pos.x + 20, adjustedY + 30);
+            
+            // Show last saved date/time
+            ctx.font = '14px serif';
             ctx.fillStyle = '#999';
-            ctx.fillText(saveInfo.dateString, pos.x + 20, adjustedY + 65);
+            ctx.fillText(`Last saved: ${saveInfo.dateString}`, pos.x + 20, adjustedY + 55);
         }
 
         // Reset shadow properties
@@ -494,5 +630,120 @@ export class SaveSlotSelection {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('NO', cancelButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
+    }
+
+    renderNameInputDialog(ctx) {
+        const canvas = this.stateManager.canvas;
+        const panelWidth = 500;
+        const panelHeight = 280;
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
+        // Semi-transparent background overlay
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        
+        // Panel background
+        ctx.fillStyle = '#3a2f26';
+        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Panel border
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Title
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#ffe700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Enter Commander Name', canvas.width / 2, panelY + 30);
+        
+        // Subtitle
+        ctx.font = '14px serif';
+        ctx.fillStyle = '#999';
+        ctx.fillText('(Press Enter to confirm, Escape to cancel)', canvas.width / 2, panelY + 65);
+        
+        // Text input box
+        const inputBoxWidth = 350;
+        const inputBoxHeight = 45;
+        const inputBoxX = (canvas.width - inputBoxWidth) / 2;
+        const inputBoxY = panelY + 100;
+        
+        // Input box background
+        ctx.fillStyle = '#1a0f05';
+        ctx.fillRect(inputBoxX, inputBoxY, inputBoxWidth, inputBoxHeight);
+        
+        // Input box border
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(inputBoxX, inputBoxY, inputBoxWidth, inputBoxHeight);
+        
+        // Input text
+        ctx.font = 'bold 20px serif';
+        ctx.fillStyle = '#ffe700';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const displayText = this.nameInputValue || '';
+        ctx.fillText(displayText, inputBoxX + 15, inputBoxY + inputBoxHeight / 2);
+        
+        // Blinking cursor
+        const cursorBlink = Math.floor(Date.now() / 500) % 2 === 0;
+        if (cursorBlink) {
+            const textWidth = ctx.measureText(displayText).width;
+            ctx.fillStyle = '#ffe700';
+            ctx.fillRect(inputBoxX + 15 + textWidth + 2, inputBoxY + 10, 2, inputBoxHeight - 20);
+        }
+        
+        // Character count
+        ctx.font = '12px serif';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${this.nameInputValue.length}/${this.maxNameLength}`, inputBoxX + inputBoxWidth - 10, inputBoxY + inputBoxHeight + 20);
+        
+        // Confirm button
+        const confirmButtonX = panelX + panelWidth / 2 - 110;
+        const confirmButtonY = panelY + panelHeight - 80;
+        const buttonWidth = 100;
+        const buttonHeight = 40;
+        
+        if (this.nameInputConfirmHovered) {
+            ctx.fillStyle = '#ffe700';
+        } else {
+            ctx.fillStyle = '#d4af37';
+        }
+        ctx.fillRect(confirmButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.strokeStyle = this.nameInputConfirmHovered ? '#ffff00' : '#a67c52';
+        ctx.lineWidth = this.nameInputConfirmHovered ? 2 : 1;
+        ctx.strokeRect(confirmButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.font = 'bold 14px serif';
+        ctx.fillStyle = '#1a0f05';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('CONFIRM', confirmButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
+        
+        // Cancel button
+        const cancelButtonX = panelX + panelWidth / 2 + 10;
+        
+        if (this.nameInputCancelHovered) {
+            ctx.fillStyle = '#ffe700';
+        } else {
+            ctx.fillStyle = '#d4af37';
+        }
+        ctx.fillRect(cancelButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.strokeStyle = this.nameInputCancelHovered ? '#ffff00' : '#a67c52';
+        ctx.lineWidth = this.nameInputCancelHovered ? 2 : 1;
+        ctx.strokeRect(cancelButtonX, confirmButtonY, buttonWidth, buttonHeight);
+        
+        ctx.font = 'bold 14px serif';
+        ctx.fillStyle = '#1a0f05';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('CANCEL', cancelButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
     }
 }

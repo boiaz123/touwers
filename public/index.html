@@ -21,6 +21,16 @@
     <div id="game-container">
         <!-- Stats bar at the top -->
         <div id="stats-bar" style="display: none;">
+            <!-- Speed Controls - Left side of stats bar -->
+            <div id="speed-controls-top">
+                <button id="speed-pause-btn" class="speed-pause-btn" title="Pause/Resume Game">
+                    <span class="pause-play-icon">⏸</span>
+                </button>
+                <div class="speed-circle active" data-speed="1" title="Normal Speed (1x)">1x</div>
+                <div class="speed-circle" data-speed="2" title="Double Speed (2x)">2x</div>
+                <div class="speed-circle" data-speed="3" title="Triple Speed (3x)">3x</div>
+            </div>
+            
             <div id="stats">
                 <div class="stat">
                     <div class="stat-label">Gold</div>
@@ -67,15 +77,15 @@
                         <img src="assets/towers/basic.png" alt="Basic Tower" class="btn-icon-img">
                         <div class="btn-price-box">$50</div>
                     </button>
-                    <button class="tower-btn" data-type="cannon" data-cost="100" data-name="Cannon Tower">
+                    <button class="tower-btn" data-type="cannon" data-cost="100" data-name="Cannon Tower" style="display: none;">
                         <img src="assets/towers/cannon.png" alt="Cannon Tower" class="btn-icon-img">
                         <div class="btn-price-box">$100</div>
                     </button>
-                    <button class="tower-btn" data-type="archer" data-cost="75" data-name="Archer Tower">
+                    <button class="tower-btn" data-type="archer" data-cost="75" data-name="Archer Tower" style="display: none;">
                         <img src="assets/towers/archer.png" alt="Archer Tower" class="btn-icon-img">
                         <div class="btn-price-box">$75</div>
                     </button>
-                    <button class="tower-btn" data-type="magic" data-cost="150" data-name="Magic Tower">
+                    <button class="tower-btn" data-type="magic" data-cost="150" data-name="Magic Tower" style="display: none;">
                         <img src="assets/towers/magic.png" alt="Magic Tower" class="btn-icon-img">
                         <div class="btn-price-box">$150</div>
                     </button>
@@ -83,7 +93,7 @@
                         <img src="assets/towers/barricade.png" alt="Barricade Tower" class="btn-icon-img">
                         <div class="btn-price-box">$90</div>
                     </button>
-                    <button class="tower-btn" data-type="poison" data-cost="120" data-name="Poison Archer">
+                    <button class="tower-btn" data-type="poison" data-cost="120" data-name="Poison Archer" style="display: none;">
                         <img src="assets/towers/poison.png" alt="Poison Archer" class="btn-icon-img">
                         <div class="btn-price-box">$120</div>
                     </button>
@@ -104,7 +114,7 @@
                 <div id="building-section">
                     <div id="building-label">BUILDINGS</div>
                     <div id="building-grid">
-                        <button class="building-btn" data-type="mine" data-cost="200" data-name="Gold Mine">
+                        <button class="building-btn" data-type="mine" data-cost="200" data-name="Gold Mine" style="display: none;">
                             <img src="assets/buildings/mine.png" alt="Gold Mine" class="btn-icon-img">
                             <div class="btn-price-box">$200</div>
                         </button>
@@ -112,7 +122,7 @@
                             <img src="assets/buildings/forge.png" alt="Tower Forge" class="btn-icon-img">
                             <div class="btn-price-box">$300</div>
                         </button>
-                        <button class="building-btn" data-type="academy" data-cost="250" data-name="Magic Academy">
+                        <button class="building-btn" data-type="academy" data-cost="250" data-name="Magic Academy" style="display: none;">
                             <img src="assets/buildings/academy.png" alt="Magic Academy" class="btn-icon-img">
                             <div class="btn-price-box">$250</div>
                         </button>
@@ -211,21 +221,6 @@
             <div class="pause-menu-buttons">
                 <button id="restart-confirm-btn" class="pause-menu-btn restart-btn">Restart</button>
                 <button id="restart-cancel-btn" class="pause-menu-btn resume-btn">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Speed Controls - Bottom Left Corner -->
-    <div id="speed-controls-bottom">
-        <div id="speed-controls-group">
-            <div class="speed-label-bottom">Speed</div>
-            <div class="speed-circle-container">
-                <button id="speed-pause-btn" class="speed-pause-btn" title="Pause/Resume Game">
-                    <span class="pause-play-icon">⏸</span>
-                </button>
-                <div class="speed-circle active" data-speed="1" title="Normal Speed (1x)">1x</div>
-                <div class="speed-circle" data-speed="2" title="Double Speed (2x)">2x</div>
-                <div class="speed-circle" data-speed="3" title="Triple Speed (3x)">3x</div>
             </div>
         </div>
     </div>

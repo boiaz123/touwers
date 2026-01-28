@@ -11,6 +11,14 @@ import { PerformanceMonitor } from '../PerformanceMonitor.js';
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
 
+// Gameplay constants for wave timing and initial state
+const GAMEPLAY_CONSTANTS = {
+    INITIAL_WAVE_COOLDOWN: 30,   // seconds before first wave
+    BETWEEN_WAVE_COOLDOWN: 15,   // seconds between waves
+    INITIAL_CASTLE_HEALTH: 20,
+    INITIAL_GOLD: 100
+};
+
 export class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -29,8 +37,8 @@ export class GameplayState {
         this.superWeaponLab = null;
         
         // Wave cooldown system
-        this.waveCooldownTimer = 30; // 30 seconds at start, 15 between waves
-        this.waveCooldownDuration = 30; // Initial cooldown duration
+        this.waveCooldownTimer = GAMEPLAY_CONSTANTS.INITIAL_WAVE_COOLDOWN;
+        this.waveCooldownDuration = GAMEPLAY_CONSTANTS.INITIAL_WAVE_COOLDOWN;
         this.isInWaveCooldown = true; // Start in cooldown
         this.maxWavesForLevel = 10;
         
@@ -38,7 +46,7 @@ export class GameplayState {
         this.enemiesDefeated = 0;
         this.totalEnemiesSpawned = 0; // Track total enemies spawned across all waves
         this.goldEarnedThisLevel = 0;
-        this.startingGold = 100;
+        this.startingGold = GAMEPLAY_CONSTANTS.INITIAL_GOLD;
         
         // Results screen for level completion / game over
         this.resultsScreen = new ResultsScreen(stateManager);
@@ -88,6 +96,30 @@ export class GameplayState {
         this.defendersCacheNeedsUpdate = true;
         this.guardPostDefenderCache = null;
         
+        // ============ CACHED DOM REFERENCES ============
+        // Cache frequently accessed DOM elements to avoid repeated querySelector calls
+        this._domCache = {
+            statsBar: null,
+            towerSidebar: null,
+            waveCountdownContainer: null,
+            spellButtonsContainer: null,
+            towerButtons: null,
+            buildingButtons: null
+        };
+    }
+    
+    /**
+     * Initialize/refresh cached DOM element references
+     * Called when entering gameplay state to ensure fresh references
+     */
+    _initDOMCache() {
+        const cache = this._domCache;
+        cache.statsBar = document.getElementById('stats-bar');
+        cache.towerSidebar = document.getElementById('tower-sidebar');
+        cache.waveCountdownContainer = document.getElementById('wave-countdown-container');
+        cache.spellButtonsContainer = document.getElementById('spell-buttons-container');
+        cache.towerButtons = document.querySelectorAll('.tower-btn');
+        cache.buildingButtons = document.querySelectorAll('.building-btn');
     }
 
     setGameSpeed(speed) {
@@ -132,8 +164,8 @@ export class GameplayState {
     createGameState() {
         // CRITICAL: Always create a fresh, clean game state with default values
         const state = {
-            health: 20,  // Default castle health
-            gold: 100,   // Default starting gold (before upgrades)
+            health: GAMEPLAY_CONSTANTS.INITIAL_CASTLE_HEALTH,
+            gold: GAMEPLAY_CONSTANTS.INITIAL_GOLD,
             wave: 1,     // ALWAYS start at wave 1
             canAfford: function(cost) {
                 return this.gold >= cost;
@@ -146,8 +178,8 @@ export class GameplayState {
                 return false;
             },
             reset: function() {
-                this.health = 20;
-                this.gold = 100;
+                this.health = GAMEPLAY_CONSTANTS.INITIAL_CASTLE_HEALTH;
+                this.gold = GAMEPLAY_CONSTANTS.INITIAL_GOLD;
                 this.wave = 1;
             }
         };
@@ -225,23 +257,18 @@ export class GameplayState {
         // CRITICAL: Reset all wave state to ensure fresh level start
         this.waveInProgress = false;
         this.waveCompleted = false;
-        this.waveCooldownTimer = 30.0; // Always start at 30 seconds
-        this.waveCooldownDuration = 30.0; // Reset duration to 30 seconds
+        this.waveCooldownTimer = GAMEPLAY_CONSTANTS.INITIAL_WAVE_COOLDOWN;
+        this.waveCooldownDuration = GAMEPLAY_CONSTANTS.INITIAL_WAVE_COOLDOWN;
         this.isInWaveCooldown = true; // Always start in cooldown
         this.lastWaveCooldownTime = 0; // Track real time for wave cooldown
         this.waveIndex = 0; // Reset wave index
         this.gameState.wave = 1; // Ensure wave starts at 1
         
-        // Ensure UI is visible
-        const statsBar = document.getElementById('stats-bar');
-        const sidebar = document.getElementById('tower-sidebar');
+        // Initialize DOM cache for this gameplay session
+        this._initDOMCache();
         
-        if (statsBar) {
-            statsBar.style.display = 'flex';
-        }
-        if (sidebar) {
-            sidebar.style.display = 'flex';
-        }
+        // NOTE: Sidebar visibility is set AFTER setupEventListeners() to ensure 
+        // button states are correctly hidden before the sidebar appears
         
         // Initialize level for current canvas size first
         this.level.initializeForCanvas(this.stateManager.canvas.width, this.stateManager.canvas.height, this.stateManager.resolutionManager);
@@ -307,8 +334,19 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         
+        // NOW show the sidebar and stats bar - after setupEventListeners() has set correct button states
+        const statsBar = this._domCache.statsBar;
+        const sidebar = this._domCache.towerSidebar;
+        if (statsBar) {
+            statsBar.style.display = 'flex';
+        }
+        if (sidebar) {
+            sidebar.style.display = 'flex';
+        }
+        
         // CRITICAL: Ensure wave countdown container is visible for new level
-        const waveCountdownContainer = document.getElementById('wave-countdown-container');
+        // Use cached reference
+        const waveCountdownContainer = this._domCache.waveCountdownContainer;
         if (waveCountdownContainer) {
             waveCountdownContainer.style.display = 'block'; // Reset display property
             waveCountdownContainer.classList.remove('visible'); // Will be added by updateWaveCooldownDisplay
@@ -509,7 +547,7 @@ export class GameplayState {
         const buildingManager = this.towerManager.buildingManager;
         
         // Find academy
-        let academy = buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+        let academy = buildingManager.buildings.find(b => b.type === 'academy');
         
         if (academy) {
             
@@ -533,7 +571,7 @@ export class GameplayState {
             
             // Enable gem toggle on all existing mines
             buildingManager.buildings.forEach(building => {
-                if (building.constructor.name === 'GoldMine') {
+                if (building.type === 'mine') {
                     building.setAcademy(academy);
                     building.gemMiningUnlocked = true; // Force enable toggle
                 }
@@ -634,23 +672,24 @@ export class GameplayState {
             this.uiManager.resetGameSpeed(); // Reset speed to 1x when leaving
         }
         
-        // Hide spell buttons when exiting gameplay
-        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        // Hide spell buttons when exiting gameplay - use cached reference
+        const spellButtonsContainer = this._domCache.spellButtonsContainer;
         if (spellButtonsContainer) {
             spellButtonsContainer.style.display = 'none';
         }
         
         // Hide wave countdown container - CRITICAL: prevent it from persisting to settlement
-        const waveCountdownContainer = document.getElementById('wave-countdown-container');
+        // Use cached reference
+        const waveCountdownContainer = this._domCache.waveCountdownContainer;
         if (waveCountdownContainer) {
             waveCountdownContainer.classList.remove('visible');
             // Clear inline style to let CSS default (display: none) take over
             waveCountdownContainer.style.display = '';
         }
         
-        // Hide stats bar and sidebar
-        const statsBar = document.getElementById('stats-bar');
-        const sidebar = document.getElementById('tower-sidebar');
+        // Hide stats bar and sidebar - use cached references
+        const statsBar = this._domCache.statsBar;
+        const sidebar = this._domCache.towerSidebar;
         if (statsBar) statsBar.style.display = 'none';
         if (sidebar) sidebar.style.display = 'none';
         
@@ -1024,7 +1063,8 @@ export class GameplayState {
                     this.uiManager.updateUI();
                     
                     this.selectedTowerType = null;
-                    document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                    // Use cached button collection
+                    this._domCache.towerButtons.forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
                     // Mark that placement just happened - prevent menu opening on next click of same location
                     this.justPlacedTower = true;
@@ -1042,7 +1082,8 @@ export class GameplayState {
                         this.uiManager.updateUI();
                         
                         this.selectedTowerType = null;
-                        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+                        // Use cached button collection
+                        this._domCache.towerButtons.forEach(b => b.classList.remove('selected'));
                         this.level.setPlacementPreview(0, 0, false);
                         // Mark that placement just happened - prevent menu opening on next click of same location
                         this.justPlacedTower = true;
@@ -1078,7 +1119,7 @@ export class GameplayState {
                     // Store reference to SuperWeaponLab if it was just built
                     if (this.selectedBuildingType === 'superweapon') {
                         const newBuilding = this.towerManager.buildingManager.buildings.find(
-                            b => b.constructor.name === 'SuperWeaponLab' && b.x === screenX && b.y === screenY
+                            b => b.type === 'superweapon' && b.x === screenX && b.y === screenY
                         );
                         if (newBuilding) {
                             this.superWeaponLab = newBuilding;
@@ -1094,7 +1135,8 @@ export class GameplayState {
                     this.uiManager.updateButtonStates();
                     
                     this.selectedBuildingType = null;
-                    document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+                    // Use cached button collection
+                    this._domCache.buildingButtons.forEach(b => b.classList.remove('selected'));
                     this.level.setPlacementPreview(0, 0, false);
                     // Mark that placement just happened - prevent menu opening
                     this.justPlacedBuilding = true;
@@ -1173,7 +1215,7 @@ export class GameplayState {
                 // Gem collection from gold mine - close any open goldmine menu
                 this.uiManager.closeAllPanels();
                 const academies = this.towerManager.buildingManager.buildings.filter(b => 
-                    b.constructor.name === 'MagicAcademy'
+                    b.type === 'academy'
                 );
                 if (academies.length > 0) {
                     const academy = academies[0];
@@ -1216,14 +1258,16 @@ export class GameplayState {
         // Cancel tower selection
         if (this.selectedTowerType) {
             this.selectedTowerType = null;
-            document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+            // Use cached button collection
+            this._domCache.towerButtons.forEach(b => b.classList.remove('selected'));
             this.level.setPlacementPreview(0, 0, false);
         }
         
         // Cancel building selection
         if (this.selectedBuildingType) {
             this.selectedBuildingType = null;
-            document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+            // Use cached button collection
+            this._domCache.buildingButtons.forEach(b => b.classList.remove('selected'));
             this.level.setPlacementPreview(0, 0, false);
         }
         
@@ -1459,14 +1503,17 @@ export class GameplayState {
         }
         
         // Process pending damage (delayed spell effects)
-        this.pendingDamage = this.pendingDamage.filter(damage => {
+        // OPTIMIZATION: Use backward splice loop instead of filter to avoid array allocation
+        let pendingIdx = this.pendingDamage.length - 1;
+        while (pendingIdx >= 0) {
+            const damage = this.pendingDamage[pendingIdx];
             damage.time -= adjustedDeltaTime;
             if (damage.time <= 0) {
                 damage.callback();
-                return false; // Remove from pending list
+                this.pendingDamage.splice(pendingIdx, 1);
             }
-            return true;
-        });
+            pendingIdx--;
+        }
         
         // Update castle first so it's ready for defender positioning
         if (this.level.castle) {
@@ -1598,9 +1645,11 @@ export class GameplayState {
             return;
         }
         
+        // OPTIMIZATION: Cache enemies array reference and count for faster access in loop
         const enemies = this.enemyManager.enemies;
+        const enemyCount = enemies.length;
         
-        for (let i = 0; i < enemies.length; i++) {
+        for (let i = 0; i < enemyCount; i++) {
             const enemy = enemies[i];
             
             // Clean up dead path defenders
@@ -1740,22 +1789,26 @@ export class GameplayState {
             this.waveCompleted = true;
             
             // Check if this was the last wave
-            if (this.gameState.wave >= this.maxWavesForLevel) {
+            const isLastWave = this.gameState.wave >= this.maxWavesForLevel;
+            if (isLastWave) {
                 // Final wave completed - level is finished
                 // Show results immediately - game will continue to render
                 this.completeLevel();
                 return; // Stop game updates but rendering continues
             } else {
-                // Enter cooldown between waves (15 seconds)
+                // Enter cooldown between waves
                 this.isInWaveCooldown = true;
-                this.waveCooldownTimer = 15;
-                this.waveCooldownDuration = 15;
+                this.waveCooldownTimer = GAMEPLAY_CONSTANTS.BETWEEN_WAVE_COOLDOWN;
+                this.waveCooldownDuration = GAMEPLAY_CONSTANTS.BETWEEN_WAVE_COOLDOWN;
                 this.gameState.wave++;
             }
         }
         
         // Update spell UI - only updates displays, doesn't recreate every frame
         this.uiManager.updateSpellUI();
+        
+        // Update button states to show/hide spell container
+        this.uiManager.updateButtonStates();
         
         // Update wave countdown display
         this.uiManager.updateWaveCooldownDisplay();
@@ -1764,15 +1817,21 @@ export class GameplayState {
         this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
         
         // Update spell effects
-        this.spellEffects = this.spellEffects.filter(effect => {
+        // OPTIMIZATION: Use backward splice loop instead of filter to avoid array allocation
+        let effectIdx = this.spellEffects.length - 1;
+        while (effectIdx >= 0) {
+            const effect = this.spellEffects[effectIdx];
             effect.life -= adjustedDeltaTime;
             if (effect.x !== undefined && effect.vx !== undefined) {
                 effect.x += effect.vx * adjustedDeltaTime;
                 effect.y += effect.vy * adjustedDeltaTime;
                 effect.vy += 100 * adjustedDeltaTime; // gravity
             }
-            return effect.life > 0;
-        });
+            if (effect.life <= 0) {
+                this.spellEffects.splice(effectIdx, 1);
+            }
+            effectIdx--;
+        }
     }
     
     gameOver() {
@@ -1942,14 +2001,25 @@ export class GameplayState {
     }
     
     renderSpellEffects(ctx) {
-        if (!this.spellEffects) {
+        if (!this.spellEffects || this.spellEffects.length === 0) {
             return;
         }
-        this.spellEffects.forEach(effect => {
+        
+        // OPTIMIZATION: Cache Date.now() once per frame for rotation effects
+        const now = Date.now();
+        const effectCount = this.spellEffects.length;
+        
+        // OPTIMIZATION: Use regular for loop instead of forEach
+        for (let i = 0; i < effectCount; i++) {
+            const effect = this.spellEffects[i];
+            
+            // OPTIMIZATION: Pre-calculate alpha once and cache it
             const alpha = effect.life / effect.maxLife;
+            const effectType = effect.type;
+            
             ctx.globalAlpha = alpha;
             
-            if (effect.type === 'arcaneBlast') {
+            if (effectType === 'arcaneBlast') {
                 // Purple particle
                 ctx.fillStyle = effect.color;
                 ctx.beginPath();
@@ -1963,17 +2033,17 @@ export class GameplayState {
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, effect.size + 2, 0, Math.PI * 2);
                 ctx.stroke();
-            } else if (effect.type === 'arcaneBlastRing') {
-                // Expanding ring
-                const progress = 1 - (effect.life / effect.maxLife);
+            } else if (effectType === 'arcaneBlastRing') {
+                // Expanding ring - use cached alpha to derive progress
+                const progress = 1 - alpha;
                 const radius = effect.maxRadius * progress;
                 ctx.strokeStyle = effect.color;
                 ctx.lineWidth = 2;
-                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.globalAlpha = alpha * alpha; // alpha * (1 - progress) = alpha * alpha
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
                 ctx.stroke();
-            } else if (effect.type === 'frostNova') {
+            } else if (effectType === 'frostNova') {
                 // Cyan particle
                 ctx.fillStyle = effect.color;
                 ctx.beginPath();
@@ -1984,33 +2054,36 @@ export class GameplayState {
                 ctx.strokeStyle = effect.color;
                 ctx.lineWidth = 1;
                 ctx.globalAlpha = alpha * 0.7;
-                for (let i = 0; i < 4; i++) {
-                    const angle = (i / 4) * Math.PI * 2;
+                const sizeTimesTwo = effect.size * 2;
+                for (let j = 0; j < 4; j++) {
+                    const angle = (j / 4) * Math.PI * 2;
                     ctx.beginPath();
                     ctx.moveTo(effect.x, effect.y);
                     ctx.lineTo(
-                        effect.x + Math.cos(angle) * effect.size * 2,
-                        effect.y + Math.sin(angle) * effect.size * 2
+                        effect.x + Math.cos(angle) * sizeTimesTwo,
+                        effect.y + Math.sin(angle) * sizeTimesTwo
                     );
                     ctx.stroke();
                 }
-            } else if (effect.type === 'frostNovaRing') {
-                // Expanding ice ring
-                const progress = 1 - (effect.life / effect.maxLife);
+            } else if (effectType === 'frostNovaRing') {
+                // Expanding ice ring - use cached alpha to derive progress
+                const progress = 1 - alpha;
                 const radius = effect.maxRadius * progress;
                 ctx.strokeStyle = effect.color;
                 ctx.lineWidth = 3;
-                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.globalAlpha = alpha * alpha; // alpha * (1 - progress) = alpha * alpha
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
                 ctx.stroke();
-            } else if (effect.type === 'meteorStrike') {
+            } else if (effectType === 'meteorStrike') {
                 // Orange/red particle with rotation
                 ctx.fillStyle = effect.color;
                 ctx.save();
                 ctx.translate(effect.x, effect.y);
-                ctx.rotate(Date.now() / 100);
-                ctx.fillRect(-effect.size / 2, -effect.size / 2, effect.size, effect.size);
+                // OPTIMIZATION: Use cached Date.now() instead of calling it repeatedly
+                ctx.rotate(now / 100);
+                const halfSize = effect.size / 2;
+                ctx.fillRect(-halfSize, -halfSize, effect.size, effect.size);
                 ctx.restore();
                 
                 // Glow
@@ -2019,25 +2092,26 @@ export class GameplayState {
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, effect.size * 2, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (effect.type === 'meteorStrikeImpact') {
-                // Impact circle with rings
-                const progress = 1 - (effect.life / effect.maxLife);
+            } else if (effectType === 'meteorStrikeImpact') {
+                // Impact circle with rings - use cached alpha to derive progress
+                const progress = 1 - alpha;
                 const radius = effect.maxRadius * progress;
+                const alphaTimesAlpha = alpha * alpha; // alpha * (1 - progress)
                 
                 ctx.strokeStyle = effect.color;
                 ctx.lineWidth = 3;
-                ctx.globalAlpha = alpha * (1 - progress);
+                ctx.globalAlpha = alphaTimesAlpha;
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
                 ctx.stroke();
                 
                 // Inner ring
                 ctx.lineWidth = 1;
-                ctx.globalAlpha = alpha * 0.5 * (1 - progress);
+                ctx.globalAlpha = alpha * 0.5 * alpha; // alpha * 0.5 * (1 - progress)
                 ctx.beginPath();
                 ctx.arc(effect.x, effect.y, radius * 0.6, 0, Math.PI * 2);
                 ctx.stroke();
-            } else if (effect.type === 'chainLightning') {
+            } else if (effectType === 'chainLightning') {
                 // Yellow lightning particle
                 ctx.fillStyle = effect.color;
                 ctx.beginPath();
@@ -2048,17 +2122,18 @@ export class GameplayState {
                 ctx.strokeStyle = effect.color;
                 ctx.lineWidth = 1;
                 ctx.globalAlpha = alpha * 0.6;
-                for (let i = 0; i < 4; i++) {
-                    const angle = (i / 4) * Math.PI * 2;
+                const sizeTimesThree = effect.size * 3;
+                for (let j = 0; j < 4; j++) {
+                    const angle = (j / 4) * Math.PI * 2;
                     ctx.beginPath();
                     ctx.moveTo(effect.x, effect.y);
                     ctx.lineTo(
-                        effect.x + Math.cos(angle) * effect.size * 3,
-                        effect.y + Math.sin(angle) * effect.size * 3
+                        effect.x + Math.cos(angle) * sizeTimesThree,
+                        effect.y + Math.sin(angle) * sizeTimesThree
                     );
                     ctx.stroke();
                 }
-            } else if (effect.type === 'chainLightningBolt') {
+            } else if (effectType === 'chainLightningBolt') {
                 // Lightning bolt between two targets
                 ctx.strokeStyle = '#FBBF24';
                 ctx.lineWidth = 3;
@@ -2078,9 +2153,10 @@ export class GameplayState {
                 ctx.lineTo(effect.x2, effect.y2);
                 ctx.stroke();
             }
-            
-            ctx.globalAlpha = 1;
-        });
+        }
+        
+        // OPTIMIZATION: Reset globalAlpha only once at end instead of each iteration
+        ctx.globalAlpha = 1;
     }
     
     resize() {

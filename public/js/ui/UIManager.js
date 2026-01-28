@@ -23,6 +23,137 @@ export class UIManager {
         // Music player - created if Musical Equipment upgrade is purchased
         this.musicPlayer = null;
         this.initializeMusicPlayerIfUnlocked();
+        
+        // ============ CACHED DOM REFERENCES ============
+        // Cache frequently accessed DOM elements to avoid repeated querySelector calls
+        this._domCache = {
+            // Stats and sidebar
+            statsBar: null,
+            towerSidebar: null,
+            
+            // Wave countdown
+            waveCountdownContainer: null,
+            waveCountdownBtn: null,
+            waveCountdownText: null,
+            waveCountdownTimer: null,
+            
+            // Speed and menu controls
+            speedPauseBtn: null,
+            menuBtn: null,
+            speedControlsTop: null,
+            
+            // Pause menu
+            pauseMenuModal: null,
+            pauseMenuOverlay: null,
+            resumeBtn: null,
+            restartBtn: null,
+            quitBtn: null,
+            optionsBtn: null,
+            
+            // Spell UI
+            spellButtonsContainer: null,
+            spellButtonsList: null,
+            spellWheel: null,
+            
+            // Stats display
+            goldElement: null,
+            waveElement: null,
+            levelElement: null,
+            gemsFire: null,
+            gemsWater: null,
+            gemsAir: null,
+            gemsEarth: null,
+            gemsDiamond: null,
+            
+            // Button collections (cached NodeLists)
+            towerButtons: null,
+            buildingButtons: null,
+            speedCircles: null
+        };
+        
+        // Initialize DOM cache
+        this._initDOMCache();
+    }
+    
+    /**
+     * Initialize cached DOM element references
+     * Called once in constructor to avoid repeated DOM queries
+     */
+    _initDOMCache() {
+        const cache = this._domCache;
+        
+        // Stats and sidebar
+        cache.statsBar = document.getElementById('stats-bar');
+        cache.towerSidebar = document.getElementById('tower-sidebar');
+        
+        // Wave countdown
+        cache.waveCountdownContainer = document.getElementById('wave-countdown-container');
+        cache.waveCountdownBtn = document.getElementById('wave-countdown-btn');
+        cache.waveCountdownText = document.getElementById('wave-countdown-text');
+        cache.waveCountdownTimer = document.getElementById('wave-countdown-timer');
+        
+        // Speed and menu controls
+        cache.speedPauseBtn = document.getElementById('speed-pause-btn');
+        cache.menuBtn = document.getElementById('menu-btn');
+        cache.speedControlsTop = document.getElementById('speed-controls-top');
+        
+        // Pause menu
+        cache.pauseMenuModal = document.getElementById('pause-menu-modal');
+        cache.pauseMenuOverlay = document.getElementById('pause-menu-overlay');
+        cache.resumeBtn = document.getElementById('resume-btn');
+        cache.restartBtn = document.getElementById('restart-btn');
+        cache.quitBtn = document.getElementById('quit-btn');
+        cache.optionsBtn = document.getElementById('options-btn');
+        
+        // Spell UI
+        cache.spellButtonsContainer = document.getElementById('spell-buttons-container');
+        cache.spellButtonsList = document.getElementById('spell-buttons-list');
+        cache.spellWheel = document.getElementById('spell-wheel');
+        
+        // Stats display
+        cache.goldElement = document.getElementById('gold');
+        cache.waveElement = document.getElementById('wave');
+        cache.levelElement = document.getElementById('level');
+        cache.gemsFire = document.getElementById('gems-fire');
+        cache.gemsWater = document.getElementById('gems-water');
+        cache.gemsAir = document.getElementById('gems-air');
+        cache.gemsEarth = document.getElementById('gems-earth');
+        cache.gemsDiamond = document.getElementById('gems-diamond');
+        
+        // Button collections - cache the NodeLists
+        cache.towerButtons = document.querySelectorAll('.tower-btn');
+        cache.buildingButtons = document.querySelectorAll('.building-btn');
+        cache.speedCircles = document.querySelectorAll('.speed-circle');
+    }
+    
+    /**
+     * Get cached DOM element with lazy initialization fallback
+     * @param {string} key - The cache key
+     * @param {string} selector - The selector to use if not cached
+     * @returns {Element|null}
+     */
+    _getCached(key, selector) {
+        if (!this._domCache[key]) {
+            this._domCache[key] = document.getElementById(selector) || document.querySelector(selector);
+        }
+        return this._domCache[key];
+    }
+    
+    /**
+     * Refresh button collections cache (call after dynamic button changes)
+     */
+    refreshButtonCache() {
+        this._domCache.towerButtons = document.querySelectorAll('.tower-btn');
+        this._domCache.buildingButtons = document.querySelectorAll('.building-btn');
+        this._domCache.speedCircles = document.querySelectorAll('.speed-circle');
+        // Also refresh individual pause menu buttons as they may have been cloned
+        this._domCache.speedPauseBtn = document.getElementById('speed-pause-btn');
+        this._domCache.menuBtn = document.getElementById('menu-btn');
+        this._domCache.resumeBtn = document.getElementById('resume-btn');
+        this._domCache.restartBtn = document.getElementById('restart-btn');
+        this._domCache.quitBtn = document.getElementById('quit-btn');
+        this._domCache.optionsBtn = document.getElementById('options-btn');
+        this._domCache.pauseMenuOverlay = document.getElementById('pause-menu-overlay');
     }
 
     initializeMusicPlayerIfUnlocked() {
@@ -40,8 +171,12 @@ export class UIManager {
      * based on unlock status, resource availability, and build limits
      */
     updateButtonStates() {
+        // Use cached button collections for performance
+        const towerButtons = this._domCache.towerButtons;
+        const buildingButtons = this._domCache.buildingButtons;
+        
         // Update tower buttons
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        towerButtons.forEach(btn => {
             const towerType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -97,45 +232,70 @@ export class UIManager {
             }
         });
 
-        // Update building buttons
-        document.querySelectorAll('.building-btn').forEach(btn => {
-            const buildingType = btn.dataset.type;
-            const cost = parseInt(btn.dataset.cost);
-            
-            // Check if building is unlocked (separate from whether it can be built)
-            const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
-            
-            // Check if this building has a free placement available (without consuming it)
-            const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(buildingType, false);
-            
-            // Hide if not unlocked, show if unlocked
-            if (!isUnlocked) {
-                btn.style.display = 'none';
-                btn.disabled = true;
-                btn.classList.remove('free-placement');
-            } else {
-                btn.style.display = 'flex';
-                // Check if it can be built (not at limit) and affordable (or free from marketplace)
-                const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
-                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+        // Update building buttons using cached collection
+        buildingButtons.forEach(btn => {
+            try {
+                const buildingType = btn.dataset.type;
+                const cost = parseInt(btn.dataset.cost);
                 
-                // Determine if button should be disabled
-                if (!canBuild || !canAfford) {
-                    btn.classList.add('disabled');
+                // Check if building is unlocked (separate from whether it can be built)
+                const isUnlocked = this.towerManager.unlockSystem.isBuildingUnlocked(buildingType);
+                
+                // Check if this building has a free placement available (without consuming it)
+                const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(buildingType, false);
+                
+                // Hide if not unlocked, show if unlocked
+                if (!isUnlocked) {
+                    btn.style.display = 'none';
                     btn.disabled = true;
                     btn.classList.remove('free-placement');
                 } else {
-                    btn.classList.remove('disabled');
-                    btn.disabled = false;
-                    // Add free-placement class if this is a free build
-                    if (isFreeFromMarketplace) {
-                        btn.classList.add('free-placement');
-                    } else {
+                    btn.style.display = 'flex';
+                    // Check if it can be built (not at limit) and affordable (or free from marketplace)
+                    const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+                    const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+                    
+                    // Determine if button should be disabled
+                    if (!canBuild || !canAfford) {
+                        btn.classList.add('disabled');
+                        btn.disabled = true;
                         btn.classList.remove('free-placement');
+                    } else {
+                        btn.classList.remove('disabled');
+                        btn.disabled = false;
+                        // Add free-placement class if this is a free build
+                        if (isFreeFromMarketplace) {
+                            btn.classList.add('free-placement');
+                        } else {
+                            btn.classList.remove('free-placement');
+                        }
                     }
                 }
+            } catch (error) {
+                console.error('Error in buildingButtons forEach:', error);
             }
         });
+        
+        // Update spell buttons visibility AND create/update spell buttons
+        const spellButtonsContainer = this._domCache.spellButtonsContainer;
+        
+        if (spellButtonsContainer) {
+            // Use type property (reliable) instead of constructor.name (breaks with minification)
+            const superWeaponLab = this.towerManager.buildingManager.buildings.find(
+                b => b.type === 'superweapon'
+            );
+            
+            let hasAvailableSpells = false;
+            if (superWeaponLab) {
+                const availableSpells = superWeaponLab.getAvailableSpells();
+                hasAvailableSpells = availableSpells && availableSpells.length > 0;
+                
+                // Update/create spell buttons when lab exists
+                this.updateSpellUI();
+            }
+            
+            spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
+        }
     }
 
     // ============ SETUP ============
@@ -146,8 +306,17 @@ export class UIManager {
     }
 
     setupUIEventListeners() {
+        // Refresh button collections cache before attaching listeners
+        // This ensures we attach to current DOM elements after any cloning
+        this.refreshButtonCache();
+        
+        // Use cached button collections for performance
+        const towerButtons = this._domCache.towerButtons;
+        const buildingButtons = this._domCache.buildingButtons;
+        const speedCircles = this._domCache.speedCircles;
+        
         // Tower button listeners
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        towerButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Play button click SFX
                 if (this.stateManager.audioManager) {
@@ -167,7 +336,7 @@ export class UIManager {
         });
         
         // Building button listeners
-        document.querySelectorAll('.building-btn').forEach(btn => {
+        buildingButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // Play button click SFX
                 if (this.stateManager.audioManager) {
@@ -187,9 +356,7 @@ export class UIManager {
         });
 
         
-        // Speed control circles - new bottom-left design
-        const speedCircles = document.querySelectorAll('.speed-circle');
-        
+        // Speed control circles - use cached collection
         if (speedCircles.length > 0) {
             speedCircles.forEach(circle => {
                 circle.addEventListener('click', (e) => {
@@ -206,7 +373,8 @@ export class UIManager {
         }
 
         // ============ WAVE COUNTDOWN BUTTON ============
-        const waveCountdownBtn = document.getElementById('wave-countdown-btn');
+        // Use cached reference
+        const waveCountdownBtn = this._domCache.waveCountdownBtn;
         if (waveCountdownBtn) {
             waveCountdownBtn.addEventListener('click', () => {
                 // Play button click SFX
@@ -219,14 +387,14 @@ export class UIManager {
         }
 
         // ============ PAUSE AND MENU BUTTONS ============
-        const speedPauseBtn = document.getElementById('speed-pause-btn');
-        const menuBtn = document.getElementById('menu-btn');
-        const pauseMenuModal = document.getElementById('pause-menu-modal');
-        const resumeBtn = document.getElementById('resume-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const quitBtn = document.getElementById('quit-btn');
-        const optionsBtn = document.getElementById('options-btn');
-        const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
+        // Use cached references for all pause menu elements
+        const speedPauseBtn = this._domCache.speedPauseBtn;
+        const menuBtn = this._domCache.menuBtn;
+        const resumeBtn = this._domCache.resumeBtn;
+        const restartBtn = this._domCache.restartBtn;
+        const quitBtn = this._domCache.quitBtn;
+        const optionsBtn = this._domCache.optionsBtn;
+        const pauseMenuOverlay = this._domCache.pauseMenuOverlay;
 
         // Reset pause button to show pause icon (game is not paused on entry)
         if (speedPauseBtn) {
@@ -396,22 +564,21 @@ export class UIManager {
         if (restartWarningOverlay) {
             restartWarningOverlay.replaceWith(restartWarningOverlay.cloneNode(true));
         }
+        
+        // After all the cloning is done, refresh the DOM cache to point to new elements
+        this._initDOMCache();
     }
 
     // ============ SPEED CONTROLS ============
 
     showSpeedControls() {
-        const speedControls = document.getElementById('speed-controls-bottom');
-        if (speedControls) {
-            speedControls.classList.add('visible');
-        }
+        // Speed controls are now in the stats bar, they show/hide with the stats bar automatically
+        // This method is kept for compatibility but no longer needs to do anything
     }
 
     hideSpeedControls() {
-        const speedControls = document.getElementById('speed-controls-bottom');
-        if (speedControls) {
-            speedControls.classList.remove('visible');
-        }
+        // Speed controls are now in the stats bar, they show/hide with the stats bar automatically
+        // This method is kept for compatibility but no longer needs to do anything
     }
 
     resetGameSpeed() {
@@ -423,17 +590,23 @@ export class UIManager {
     // ============ SPELL WHEEL ============
 
     toggleSpellWheel() {
-        const spellWheel = document.getElementById('spell-wheel');
-        if (spellWheel.style.display === 'none') {
-            spellWheel.style.display = 'block';
-        } else {
-            spellWheel.style.display = 'none';
+        // Use cached reference
+        const spellWheel = this._domCache.spellWheel;
+        if (spellWheel) {
+            if (spellWheel.style.display === 'none') {
+                spellWheel.style.display = 'block';
+            } else {
+                spellWheel.style.display = 'none';
+            }
         }
     }
 
     closeSpellWheel() {
-        const spellWheel = document.getElementById('spell-wheel');
-        spellWheel.style.display = 'none';
+        // Use cached reference
+        const spellWheel = this._domCache.spellWheel;
+        if (spellWheel) {
+            spellWheel.style.display = 'none';
+        }
     }
 
     // ============ TOWER/BUILDING SELECTION ============
@@ -466,14 +639,14 @@ export class UIManager {
             });
         }
         
-        // Update selection
-        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+        // Update selection using cached button collections
+        this._domCache.towerButtons.forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         this.gameplayState.selectedTowerType = towerType;
         
         // Clear building selection
         this.gameplayState.selectedBuildingType = null;
-        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+        this._domCache.buildingButtons.forEach(b => b.classList.remove('selected'));
         
         this.showTowerInfo(towerType);
     }
@@ -506,9 +679,9 @@ export class UIManager {
             });
         }
         
-        // Update selection
-        document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
-        document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
+        // Update selection using cached button collections
+        this._domCache.buildingButtons.forEach(b => b.classList.remove('selected'));
+        this._domCache.towerButtons.forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         
         // Clear tower selection
@@ -598,7 +771,7 @@ export class UIManager {
                 disabledNote = '<div style="color: #ff6b6b;">⚠️ Unlock at Academy Level 3</div>';
             } else {
                 // Check for diamond cost
-                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+            const academy = this.towerManager.buildingManager.buildings.find(b => b.type === 'academy');
                 const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
                 const needsDiamonds = diamondCount < 5;
                 if (needsDiamonds) {
@@ -666,30 +839,41 @@ export class UIManager {
     // ============ SPELL UI ============
 
     updateSpellUI() {
-        const spellButtonsList = document.getElementById('spell-buttons-list');
+        // Use cached reference
+        const spellButtonsList = this._domCache.spellButtonsList;
         
         if (!spellButtonsList) {
-            return;
+            console.warn('UIManager.updateSpellUI: spellButtonsList is null! Attempting to re-cache...');
+            this._domCache.spellButtonsList = document.getElementById('spell-buttons-list');
+            if (!this._domCache.spellButtonsList) {
+                console.error('UIManager.updateSpellUI: Could not find spell-buttons-list element in DOM!');
+                return;
+            }
         }
         
-        // Find super weapon lab
+        // Use the potentially re-cached reference
+        const buttonsList = this._domCache.spellButtonsList;
+        
+        // Find super weapon lab by type property (more reliable than constructor.name)
         const superWeaponLab = this.towerManager.buildingManager.buildings.find(
-            b => b.constructor.name === 'SuperWeaponLab'
+            b => b.type === 'superweapon'
         );
         
         if (!superWeaponLab) {
-            spellButtonsList.innerHTML = '';
+            buttonsList.innerHTML = '';
             return;
         }
         
         const availableSpells = superWeaponLab.getAvailableSpells();
-        const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
+        console.log('UIManager.updateSpellUI: Found lab, available spells:', availableSpells.map(s => s.id));
+        
+        const currentButtonCount = buttonsList.querySelectorAll('.spell-btn').length;
         
         // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
         // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
         if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
-            console.log('UIManager: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
-            spellButtonsList.innerHTML = '';
+            console.log('UIManager.updateSpellUI: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
+            buttonsList.innerHTML = '';
             
             // Create a button for each unlocked spell
             availableSpells.forEach(spell => {
@@ -698,6 +882,7 @@ export class UIManager {
                 btn.dataset.spellId = spell.id;
                 btn.title = `${spell.name}: ${spell.description}`;
                 btn.innerHTML = `<span>${spell.icon}</span>`;
+                console.log('UIManager.updateSpellUI: Creating button for spell:', spell.id, 'icon:', spell.icon);
                 
                 // Add click listener with proper closure
                 btn.addEventListener('click', (e) => {
@@ -717,7 +902,7 @@ export class UIManager {
                     }
                 });
                 
-                spellButtonsList.appendChild(btn);
+                buttonsList.appendChild(btn);
             });
             
             // Clear the force rebuild flag after rebuilding
@@ -726,7 +911,7 @@ export class UIManager {
         
         // Update button states (cooldown/ready) without recreating
         availableSpells.forEach(spell => {
-            const btn = spellButtonsList.querySelector(`[data-spell-id="${spell.id}"]`);
+            const btn = buttonsList.querySelector(`[data-spell-id="${spell.id}"]`);
             if (btn) {
                 const isReady = spell.currentCooldown === 0;
                 
@@ -769,36 +954,37 @@ export class UIManager {
             return; // Not in gameplay, don't update
         }
         
-        document.getElementById('gold').textContent = Math.floor(this.gameplayState.gameState.gold);
+        // Use cached DOM references for performance
+        const cache = this._domCache;
+        
+        if (cache.goldElement) {
+            cache.goldElement.textContent = Math.floor(this.gameplayState.gameState.gold);
+        }
         
         // Show wave info differently for sandbox mode
-        if (this.gameplayState.isSandbox) {
-            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave} (∞)`;
-        } else {
-            // Use the actual number of waves from the level
-            const maxWaves = this.gameplayState.maxWavesForLevel || this.level?.maxWaves || 10;
-            document.getElementById('wave').textContent = `${this.gameplayState.gameState.wave}/${maxWaves}`;
+        if (cache.waveElement) {
+            if (this.gameplayState.isSandbox) {
+                cache.waveElement.textContent = `${this.gameplayState.gameState.wave} (∞)`;
+            } else {
+                // Use the actual number of waves from the level
+                const maxWaves = this.gameplayState.maxWavesForLevel || this.level?.maxWaves || 10;
+                cache.waveElement.textContent = `${this.gameplayState.gameState.wave}/${maxWaves}`;
+            }
         }
         
         // Show level
-        const levelElement = document.getElementById('level');
-        if (levelElement) {
-            levelElement.textContent = this.level?.levelName || 'Unknown Level';
+        if (cache.levelElement) {
+            cache.levelElement.textContent = this.level?.levelName || 'Unknown Level';
         }
         
-        // Update gem display in top bar with new structure
+        // Update gem display in top bar with cached references
         const gems = this.towerManager.getGemStocks();
-        const gemFireElement = document.getElementById('gems-fire');
-        const gemWaterElement = document.getElementById('gems-water');
-        const gemAirElement = document.getElementById('gems-air');
-        const gemEarthElement = document.getElementById('gems-earth');
-        const gemDiamondElement = document.getElementById('gems-diamond');
         
-        if (gemFireElement) gemFireElement.textContent = gems.fire || 0;
-        if (gemWaterElement) gemWaterElement.textContent = gems.water || 0;
-        if (gemAirElement) gemAirElement.textContent = gems.air || 0;
-        if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
-        if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
+        if (cache.gemsFire) cache.gemsFire.textContent = gems.fire || 0;
+        if (cache.gemsWater) cache.gemsWater.textContent = gems.water || 0;
+        if (cache.gemsAir) cache.gemsAir.textContent = gems.air || 0;
+        if (cache.gemsEarth) cache.gemsEarth.textContent = gems.earth || 0;
+        if (cache.gemsDiamond) cache.gemsDiamond.textContent = gems.diamond || 0;
         
         // Debug logging for sandbox
         if (this.gameplayState.isSandbox) {
@@ -810,8 +996,12 @@ export class UIManager {
     updateUIAvailability() {
         const unlockSystem = this.towerManager.getUnlockSystem();
         
+        // Use cached button collections for performance
+        const towerButtons = this._domCache.towerButtons;
+        const buildingButtons = this._domCache.buildingButtons;
+        
         // Update tower button states - show only when unlocked, disable based on resources
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        towerButtons.forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const isUnlocked = unlockSystem.unlockedTowers.has(type);
@@ -848,7 +1038,7 @@ export class UIManager {
         });
         
         // Update building button states - show when unlocked, disable based on limits and resources
-        document.querySelectorAll('.building-btn').forEach(btn => {
+        buildingButtons.forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -890,35 +1080,54 @@ export class UIManager {
                 }
             }
         });
+        console.log('=== AFTER BUILDING BUTTONS ===');
         
-        // Update spell buttons visibility - only show when spells are actually unlocked
-        const spellButtonsContainer = document.getElementById('spell-buttons-container');
+        // Update spell buttons visibility AND create/update spell buttons
+        console.log('=== SPELL BUTTON CODE REACHED ===');
+        // Use cached reference
+        const spellButtonsContainer = this._domCache.spellButtonsContainer;
         
         if (spellButtonsContainer) {
+            // Use type property (reliable) instead of constructor.name (breaks with minification)
             const superWeaponLab = this.towerManager.buildingManager.buildings.find(
-                b => b.constructor.name === 'SuperWeaponLab'
+                b => b.type === 'superweapon'
             );
             
             let hasAvailableSpells = false;
             if (superWeaponLab) {
                 const availableSpells = superWeaponLab.getAvailableSpells();
                 hasAvailableSpells = availableSpells && availableSpells.length > 0;
+                console.log('UIManager.updateButtonStates: SuperWeaponLab found, availableSpells:', availableSpells.length, 'hasAvailable:', hasAvailableSpells);
+                
+                // Update/create spell buttons when lab exists
+                this.updateSpellUI();
             }
             
+            console.log('UIManager.updateButtonStates: Setting spellButtonsContainer display to:', hasAvailableSpells ? 'flex' : 'none');
             spellButtonsContainer.style.display = hasAvailableSpells ? 'flex' : 'none';
+            
+            // DEBUG: Check container position and contents after setting display
+            if (hasAvailableSpells) {
+                const rect = spellButtonsContainer.getBoundingClientRect();
+                const listEl = this._domCache.spellButtonsList;
+                const buttonCount = listEl ? listEl.querySelectorAll('.spell-btn').length : 0;
+                console.log('UIManager.updateButtonStates: Container rect:', rect, 'buttons in list:', buttonCount);
+            }
+        } else {
+            console.warn('UIManager.updateButtonStates: spellButtonsContainer is null!');
         }
     }
 
     setGameSpeedButtonState(speed) {
-        // Update speed circles
-        document.querySelectorAll('.speed-circle').forEach(circle => {
+        // Use cached speed circles collection
+        const speedCircles = this._domCache.speedCircles;
+        speedCircles.forEach(circle => {
             circle.classList.remove('active');
+            // Check if this is the active speed
+            if (parseFloat(circle.dataset.speed) === speed) {
+                circle.classList.add('active');
+            }
         });
-        
-        const activeCircle = document.querySelector(`.speed-circle[data-speed="${speed}"]`);
-        if (activeCircle) {
-            activeCircle.classList.add('active');
-        }
     }
 
     updateSpeedCircles(speed) {
@@ -928,8 +1137,8 @@ export class UIManager {
     updateWaveCooldownDisplay() {
         // CRITICAL: Don't update if not in gameplay state or if gameplayState is null
         if (!this.gameplayState) {
-            // Hide the wave countdown if no gameplay state
-            const container = document.getElementById('wave-countdown-container');
+            // Hide the wave countdown if no gameplay state - use cached reference
+            const container = this._domCache.waveCountdownContainer;
             if (container) {
                 container.classList.remove('visible');
                 container.style.display = ''; // Clear inline style to use CSS default
@@ -937,9 +1146,10 @@ export class UIManager {
             return;
         }
         
-        const container = document.getElementById('wave-countdown-container');
-        const textEl = document.getElementById('wave-countdown-text');
-        const timerEl = document.getElementById('wave-countdown-timer');
+        // Use cached references
+        const container = this._domCache.waveCountdownContainer;
+        const textEl = this._domCache.waveCountdownText;
+        const timerEl = this._domCache.waveCountdownTimer;
         
         if (!container || !textEl || !timerEl) {
             return; // Elements don't exist yet
@@ -1074,8 +1284,25 @@ export class UIManager {
             return;
         }
         
+        // Get current forge level directly from the forge building
+        const currentForgeLevel = forgeData.forge ? forgeData.forge.forgeLevel : (forgeData.forgeUpgrade ? forgeData.forgeUpgrade.level : 0);
+        const maxForgeLevel = forgeData.forge ? forgeData.forge.maxForgeLevel : (forgeData.forgeUpgrade ? forgeData.forgeUpgrade.maxLevel : 5);
+        
         // Build upgraded HTML with better visual structure
         let contentHTML = '';
+        
+        // Building Info Header - Always visible, shows current building status
+        contentHTML += `
+            <div class="building-info-header" style="padding: 0.8rem; background: rgba(0,0,0,0.3); border-bottom: 2px solid rgba(255, 215, 0, 0.3); margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: bold; color: #FFD700; margin-bottom: 0.4rem;">🔨 Tower Forge</div>
+                <div style="font-size: 0.9rem; color: #c9a876; line-height: 1.4;">
+                    The Tower Forge allows you to permanently upgrade your towers. Higher forge levels unlock more powerful upgrades for all tower types.
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #aaa;">
+                    <strong>Current Level:</strong> ${currentForgeLevel} / ${maxForgeLevel}
+                </div>
+            </div>
+        `;
         
         // Forge Level Section - Special styling
         if (forgeData.forgeUpgrade) {
@@ -1090,25 +1317,25 @@ export class UIManager {
                             <div class="upgrade-icon-section">${forgeUpgrade.icon}</div>
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">${forgeUpgrade.name}</div>
-                                <div class="upgrade-description">${forgeUpgrade.description}</div>
                                 <div class="upgrade-level-display">
-                                    Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}
+                                    Level: ${forgeUpgrade.level} / ${forgeUpgrade.maxLevel}
                                     <div class="upgrade-level-bar">
                                         <div class="upgrade-level-bar-fill" style="width: ${(forgeUpgrade.level / forgeUpgrade.maxLevel) * 100}%"></div>
                                     </div>
                                 </div>
-                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${forgeUpgrade.nextUnlock}</div>
+                                <div style="font-size: 0.85rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.4rem; line-height: 1.3;">${forgeUpgrade.nextUnlock}</div>
                             </div>
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${forgeUpgrade.cost}`}
+                                ${isMaxed ? 'MAXED' : `$${forgeUpgrade.cost}`}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-upgrade="${forgeUpgrade.id}" 
                                     data-forge-level="true"
+                                    title="Upgrade the forge to unlock new tower upgrades"
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade Forge'}
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -1125,39 +1352,89 @@ export class UIManager {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 
-                // Calculate what the stats WILL BE after upgrade
-                let currentEffect = '';
-                let nextLevelEffect = '';
-                let buttonText = '';
+                // Calculate current and next level effects for tooltip with detailed info
+                let tooltipText = '';
+                let statDescription = '';
                 
-                if (upgrade.id === 'basic' || upgrade.id === 'archer') {
-                    currentEffect = `Current Damage: +${upgrade.level * 8}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 8}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 8})`;
+                if (upgrade.id === 'basic') {
+                    const baseDamage = 10; // Base tower damage
+                    const current = upgrade.level * 8;
+                    const bonus = 8;
+                    const totalCurrent = baseDamage + current;
+                    const totalAfter = baseDamage + current + bonus;
+                    tooltipText = isMaxed 
+                        ? `Basic Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nMAXIMUM LEVEL REACHED` 
+                        : `Basic Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nAfter upgrade: ${totalAfter} (+${bonus} bonus)`;
+                    statDescription = isMaxed 
+                        ? `Damage: ${totalCurrent}` 
+                        : `Damage: ${totalCurrent} <span class="upgrade-bonus">+${bonus}</span>`;
+                } else if (upgrade.id === 'archer') {
+                    const baseDamage = 15;
+                    const current = upgrade.level * 8;
+                    const bonus = 8;
+                    const totalCurrent = baseDamage + current;
+                    const totalAfter = baseDamage + current + bonus;
+                    tooltipText = isMaxed 
+                        ? `Archer Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nMAXIMUM LEVEL REACHED` 
+                        : `Archer Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nAfter upgrade: ${totalAfter} (+${bonus} bonus)`;
+                    statDescription = isMaxed 
+                        ? `Damage: ${totalCurrent}` 
+                        : `Damage: ${totalCurrent} <span class="upgrade-bonus">+${bonus}</span>`;
                 } else if (upgrade.id === 'barricade_effectiveness') {
                     const currentCapacity = 4 + Math.round(upgrade.level * 1.8);
                     const nextCapacity = 4 + Math.round((upgrade.level + 1) * 1.8);
                     const currentDuration = (4 + upgrade.level * 1.0).toFixed(1);
                     const nextDuration = (4 + (upgrade.level + 1) * 1.0).toFixed(1);
-                    currentEffect = `Currently: ${currentCapacity} enemies for ${currentDuration}s`;
-                    nextLevelEffect = `After Upgrade: ${nextCapacity} enemies for ${nextDuration}s`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                    tooltipText = isMaxed 
+                        ? `Barricade Effectiveness\nCurrent: Holds ${currentCapacity} enemies for ${currentDuration}s\nMAXIMUM LEVEL REACHED` 
+                        : `Barricade Effectiveness\nCurrent: Holds ${currentCapacity} enemies for ${currentDuration}s\nAfter upgrade: ${nextCapacity} enemies for ${nextDuration}s`;
+                    const bonusCapacity = nextCapacity - currentCapacity;
+                    const bonusDuration = (parseFloat(nextDuration) - parseFloat(currentDuration)).toFixed(1);
+                    statDescription = isMaxed 
+                        ? `Holds: ${currentCapacity}, Duration: ${currentDuration}s` 
+                        : `Holds: ${currentCapacity} <span class="upgrade-bonus">+${bonusCapacity}</span>, Duration: ${currentDuration}s <span class="upgrade-bonus">+${bonusDuration}s</span>`;
                 } else if (upgrade.id === 'archer_armor_pierce') {
-                    currentEffect = `Current Armor Pierce: +${upgrade.level * 5}%`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}%`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5}%)`;
+                    const current = upgrade.level * 5;
+                    const bonus = 5;
+                    tooltipText = isMaxed 
+                        ? `Archer Armor Piercing\nCurrent: ${current}% armor penetration\nMAXIMUM LEVEL REACHED` 
+                        : `Archer Armor Piercing\nCurrent: ${current}% armor penetration\nAfter upgrade: ${current + bonus}% (+${bonus}% bonus)`;
+                    statDescription = isMaxed 
+                        ? `Armor Pierce: ${current}%` 
+                        : `Armor Pierce: ${current}% <span class="upgrade-bonus">+${bonus}%</span>`;
                 } else if (upgrade.id === 'poison') {
-                    currentEffect = `Current Poison: +${upgrade.level * 5}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5})`;
+                    const current = upgrade.level * 5;
+                    const bonus = 5;
+                    tooltipText = isMaxed 
+                        ? `Poison Archer Damage\nCurrent: +${current} poison damage\nMAXIMUM LEVEL REACHED` 
+                        : `Poison Archer Damage\nCurrent: +${current} poison damage\nAfter upgrade: +${current + bonus} (+${bonus} bonus)`;
+                    statDescription = isMaxed 
+                        ? `Poison: +${current}` 
+                        : `Poison: +${current} <span class="upgrade-bonus">+${bonus}</span>`;
                 } else if (upgrade.id === 'cannon') {
-                    currentEffect = `Current Damage: +${upgrade.level * 10}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 10}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 10})`;
+                    const baseDamage = 40;
+                    const current = upgrade.level * 10;
+                    const bonus = 10;
+                    const totalCurrent = baseDamage + current;
+                    const totalAfter = baseDamage + current + bonus;
+                    tooltipText = isMaxed 
+                        ? `Cannon Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nMAXIMUM LEVEL REACHED` 
+                        : `Cannon Tower Damage\nCurrent: ${totalCurrent} (+${current} from upgrades)\nAfter upgrade: ${totalAfter} (+${bonus} bonus)`;
+                    statDescription = isMaxed 
+                        ? `Damage: ${totalCurrent}` 
+                        : `Damage: ${totalCurrent} <span class="upgrade-bonus">+${bonus}</span>`;
                 } else if (upgrade.id === 'reinforce_wall') {
-                    currentEffect = `Current Health: +${upgrade.level * 50}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 50}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 50})`;
+                    const baseHealth = 100;
+                    const current = upgrade.level * 50;
+                    const bonus = 50;
+                    const totalCurrent = baseHealth + current;
+                    const totalAfter = baseHealth + current + bonus;
+                    tooltipText = isMaxed 
+                        ? `Castle Wall Health\nCurrent: ${totalCurrent} (+${current} from upgrades)\nMAXIMUM LEVEL REACHED` 
+                        : `Castle Wall Health\nCurrent: ${totalCurrent} (+${current} from upgrades)\nAfter upgrade: ${totalAfter} (+${bonus} bonus)`;
+                    statDescription = isMaxed 
+                        ? `Health: ${totalCurrent}` 
+                        : `Health: ${totalCurrent} <span class="upgrade-bonus">+${bonus}</span>`;
                 }
                 
                 contentHTML += `
@@ -1166,25 +1443,21 @@ export class UIManager {
                             <div class="upgrade-icon-section">${upgrade.icon}</div>
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">${upgrade.name}</div>
-                                <div class="upgrade-description">${upgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    Level: ${upgrade.level}/${upgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
-                                    </div>
-                                </div>
-                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
-                                ${nextLevelEffect && !isMaxed ? `<div style="font-size: 0.8rem; color: #FFD700; margin-top: 0.2rem;">${nextLevelEffect}</div>` : ''}
+                                <div class="upgrade-stat-display">${statDescription}</div>
                             </div>
                         </div>
                         <div class="upgrade-action-row">
+                            <div class="upgrade-level-display" style="flex: 0 0 auto; margin-right: 0.3rem;">
+                                Lv ${upgrade.level}/${upgrade.maxLevel}
+                            </div>
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                                ${isMaxed ? 'MAXED' : `$${upgrade.cost}`}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
+                                    title="${tooltipText}"
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${buttonText}
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -1196,9 +1469,9 @@ export class UIManager {
         
         // Add sell button for forge
         contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <div style="padding: 0.4rem 0.5rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.3rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Forge
+                    Sell Forge
                 </button>
             </div>
         `;
@@ -1464,43 +1737,55 @@ export class UIManager {
         
         let contentHTML = '';
         
-        // Add academy building upgrades first
+        // Building Info Header - Always visible, shows current building status
+        contentHTML += `
+            <div class="building-info-header" style="padding: 0.8rem; background: rgba(0,0,0,0.3); border-bottom: 2px solid rgba(139, 92, 246, 0.3); margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: bold; color: #8B5CF6; margin-bottom: 0.4rem;">🎓 Magic Academy</div>
+                <div style="font-size: 0.9rem; color: #c9a876; line-height: 1.4;">
+                    The Magic Academy allows you to research elemental magic and upgrade your Magic Towers. Higher levels unlock gem mining, super weapons, and combination spells.
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #aaa;">
+                    <strong>Current Level:</strong> ${academyData.academy.academyLevel} / ${academyData.academy.maxAcademyLevel}
+                </div>
+            </div>
+        `;
+        
+        // Add academy building upgrades
         const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
-        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
-            const isMaxed = academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel;
-            const canAfford = academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
-            
-            contentHTML += `
-                <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${academyUpgrade.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${academyUpgrade.name}</div>
-                                <div class="upgrade-description">${academyUpgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(academyUpgrade.level / academyUpgrade.maxLevel) * 100}%"></div>
-                                    </div>
+        const isMaxedAcademy = academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel;
+        const canAffordAcademy = academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
+        
+        contentHTML += `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item ${isMaxedAcademy ? 'maxed' : ''}">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">${academyUpgrade.icon}</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">${academyUpgrade.name}</div>
+                            <div class="upgrade-description">${academyUpgrade.description}</div>
+                            <div class="upgrade-level-display">
+                                Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}
+                                <div class="upgrade-level-bar">
+                                    <div class="upgrade-level-bar-fill" style="width: ${(academyUpgrade.level / academyUpgrade.maxLevel) * 100}%"></div>
                                 </div>
-                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${academyUpgrade.nextUnlock}</div>
                             </div>
-                        </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${academyUpgrade.cost}`}
-                            </div>
-                            <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="academy_upgrade" 
-                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
-                            </button>
+                            <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${academyUpgrade.nextUnlock}</div>
                         </div>
                     </div>
+                    <div class="upgrade-action-row">
+                        <div class="upgrade-cost-display ${isMaxedAcademy ? 'maxed' : canAffordAcademy ? 'affordable' : ''}">
+                            ${isMaxedAcademy ? 'MAXED' : `$${academyUpgrade.cost}`}
+                        </div>
+                        <button class="upgrade-button panel-upgrade-btn" 
+                                data-upgrade="academy_upgrade" 
+                                title="${isMaxedAcademy ? 'Academy is at maximum level' : 'Upgrade the Academy to unlock new features'}"
+                                ${isMaxedAcademy || !canAffordAcademy ? 'disabled' : ''}>
+                            ${isMaxedAcademy ? '✓' : '⬆'}
+                        </button>
+                    </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
         
         // Add elemental upgrades section
         if (academyData.upgrades && academyData.upgrades.length > 0) {
@@ -1566,12 +1851,13 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : costDisplay}
+                                ${isMaxed ? 'MAXED' : costDisplay}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="${upgrade.id}" 
+                                    data-upgrade="${upgrade.id}"
+                                    title="${upgrade.name}: ${upgrade.description}"
                                     ${isDisabled ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade')}
+                                ${isMaxed ? '✓' : (upgrade.isCombinationUnlock ? '🔓' : '⬆')}
                             </button>
                         </div>
                     </div>
@@ -2202,11 +2488,27 @@ export class UIManager {
         
         let contentHTML = '';
         
-        // 1. Add lab level upgrade at top
+        // Building Info Header - Always visible, shows current building status
+        const currentLabLevel = menuData.building.labLevel;
+        const maxLabLevel = menuData.building.maxLabLevel;
+        contentHTML += `
+            <div class="building-info-header" style="padding: 0.8rem; background: rgba(0,0,0,0.3); border-bottom: 2px solid rgba(200, 100, 255, 0.4); margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: bold; color: #DA70D6; margin-bottom: 0.4rem;">🔮 Super Weapon Lab</div>
+                <div style="font-size: 0.9rem; color: #c9a876; line-height: 1.4;">
+                    The Super Weapon Lab unlocks devastating spells to cast on the battlefield. Higher levels unlock more powerful spells and enable diamond upgrades.
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #aaa;">
+                    <strong>Current Level:</strong> ${currentLabLevel} / ${maxLabLevel}
+                </div>
+            </div>
+        `;
+        
+        // 1. Add lab level upgrade
         const labUpgrade = menuData.building.getLabUpgradeOption();
         if (labUpgrade) {
             const isMaxed = labUpgrade.level >= labUpgrade.maxLevel;
-            const labCost = isMaxed ? 0 : labUpgrade.cost;
+            const canAffordGold = this.gameState.gold >= labUpgrade.cost;
+            const canAffordDiamonds = menuData.academy && (menuData.academy.gems.diamond || 0) >= (labUpgrade.diamondCost || 0);
             
             contentHTML += `
                 <div class="upgrade-category">
@@ -2225,12 +2527,13 @@ export class UIManager {
                             </div>
                         </div>
                         <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : (this.gameState.gold >= labUpgrade.cost && (menuData.academy && menuData.academy.gems.diamond >= (labUpgrade.diamondCost || 0)) ? 'affordable' : 'unavailable')}">
-                                ${isMaxed ? 'MAX' : `$${labUpgrade.cost} + 💎${labUpgrade.diamondCost || 0}`}
+                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : (canAffordGold && canAffordDiamonds ? 'affordable' : 'unavailable')}">
+                                ${isMaxed ? 'MAXED' : `$${labUpgrade.cost} + 💎${labUpgrade.diamondCost || 0}`}
                             </div>
-                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="lab_upgrade" 
-                                    ${isMaxed || this.gameState.gold < labUpgrade.cost || (menuData.academy && (menuData.academy.gems.diamond || 0) < (labUpgrade.diamondCost || 0)) ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                            <button class="upgrade-button panel-upgrade-btn" data-upgrade="lab_upgrade"
+                                    title="${isMaxed ? 'Lab is at maximum level' : 'Upgrade the Lab to unlock new spells and features'}"
+                                    ${isMaxed || !canAffordGold || !canAffordDiamonds ? 'disabled' : ''}>
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -2327,11 +2630,12 @@ export class UIManager {
                             </div>
                             <div class="upgrade-action-row">
                                 <div class="upgrade-cost-display ${canUpgrade ? 'affordable' : 'unavailable'}">
-                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : `$${upgrade.goldCost || 50}`}
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAXED' : `$${upgrade.goldCost || 50}`}
                                 </div>
-                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}" 
+                                <button class="upgrade-button panel-upgrade-btn" data-combo-spell="${upgrade.id}"
+                                        title="${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'Spell at maximum level' : `Upgrade ${upgrade.name} for increased power`}"
                                         ${!canUpgrade ? 'disabled' : ''}>
-                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? 'MAX' : 'Upgrade'}
+                                    ${upgrade.upgradeLevel >= upgrade.maxUpgradeLevel ? '✓' : '⬆'}
                                 </button>
                             </div>
                         </div>
@@ -2593,12 +2897,13 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : upgrade.cost ? `$${upgrade.cost}` : 'N/A'}
+                                ${isMaxed ? 'MAXED' : upgrade.cost ? `$${upgrade.cost}` : 'N/A'}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
-                                    data-castle-upgrade="${upgrade.id}" 
+                                    data-castle-upgrade="${upgrade.id}"
+                                    title="${upgrade.name}: ${upgrade.currentEffect}"
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -2720,7 +3025,22 @@ export class UIManager {
         
         let contentHTML = '';
         
-        // Add training grounds building level upgrade first
+        // Building Info Header - Always visible, shows current building status
+        const currentLevel = trainingData.trainingUpgrade ? trainingData.trainingUpgrade.level : 1;
+        const maxLevel = trainingData.trainingUpgrade ? trainingData.trainingUpgrade.maxLevel : 5;
+        contentHTML += `
+            <div class="building-info-header" style="padding: 0.8rem; background: rgba(0,0,0,0.3); border-bottom: 2px solid rgba(139, 69, 19, 0.5); margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: bold; color: #CD853F; margin-bottom: 0.4rem;">⚔️ Training Grounds</div>
+                <div style="font-size: 0.9rem; color: #c9a876; line-height: 1.4;">
+                    The Training Grounds improves your manned tower crews with enhanced range and fire rate. Higher levels unlock Guard Posts and the Castle Defender.
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #aaa;">
+                    <strong>Current Level:</strong> ${currentLevel} / ${maxLevel}
+                </div>
+            </div>
+        `;
+        
+        // Add training grounds building level upgrade
         if (trainingData.trainingUpgrade) {
             const upgrade = trainingData.trainingUpgrade;
             const isMaxed = upgrade.level >= upgrade.maxLevel;
@@ -2745,12 +3065,13 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                                ${isMaxed ? 'MAXED' : `$${upgrade.cost}`}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="training_level" 
+                                    data-upgrade="training_level"
+                                    title="${isMaxed ? 'Training Grounds at maximum level' : 'Upgrade Training Grounds to unlock new features'}"
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade Training'}
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -2767,6 +3088,16 @@ export class UIManager {
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 const isUnlocked = upgrade.isUnlocked;
                 const isDisabled = isMaxed || !canAfford || !isUnlocked;
+                
+                // Calculate actual range values for tooltip
+                const baseRange = upgrade.baseRange || 120; // Default base range
+                const rangePerLevel = upgrade.rangePerLevel || 15;
+                const currentRange = baseRange + (upgrade.level * rangePerLevel);
+                const nextRange = baseRange + ((upgrade.level + 1) * rangePerLevel);
+                const rangeBonus = upgrade.level * rangePerLevel;
+                const tooltipText = isMaxed 
+                    ? `${upgrade.name} Range\nCurrent: ${currentRange} pixels (+${rangeBonus} from training)\nMAXIMUM LEVEL REACHED`
+                    : `${upgrade.name} Range\nCurrent: ${currentRange} pixels (+${rangeBonus} from training)\nAfter upgrade: ${nextRange} pixels (+${rangePerLevel} bonus)`;
                 
                 let statusClass = '';
                 if (isMaxed) {
@@ -2786,6 +3117,7 @@ export class UIManager {
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">${upgrade.name}</div>
                                 <div class="upgrade-description">${upgrade.description}</div>
+                                <div style="font-size: 0.8rem; color: #aaa; margin-top: 0.2rem;">Current range bonus: +${rangeBonus} pixels</div>
                                 <div class="upgrade-level-display">
                                     Level: ${upgrade.level}/${upgrade.maxLevel}
                                     <div class="upgrade-level-bar">
@@ -2797,13 +3129,14 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isDisabled ? (isMaxed ? 'maxed' : 'unavailable') : canAfford ? 'affordable' : 'unaffordable'}">
-                                ${isMaxed ? 'MAX' : isUnlocked ? (canAfford ? `$${upgrade.cost}` : `$${upgrade.cost}`) : 'LOCKED'}
+                                ${isMaxed ? 'MAXED' : isUnlocked ? (canAfford ? `$${upgrade.cost}` : `$${upgrade.cost}`) : 'LOCKED'}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
                                     data-tower-type="${upgrade.towerType}"
+                                    title="${tooltipText}"
                                     ${isDisabled ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : isUnlocked ? 'Train Range' : 'LOCKED'}
+                                ${isMaxed ? '✓' : isUnlocked ? '⬆' : '🔒'}
                             </button>
                         </div>
                     </div>
@@ -2821,23 +3154,30 @@ export class UIManager {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 
-                // Calculate what the stats WILL BE after upgrade
-                let currentEffect = '';
-                let nextLevelEffect = '';
-                let buttonText = '';
+                // Calculate detailed tooltip for fire rate upgrades
+                let tooltipText = '';
+                let currentStatText = '';
                 
                 if (upgrade.id === 'barricadeFireRate') {
-                    const currentFireRate = (0.2 + upgrade.level * 0.1).toFixed(1);
-                    const nextFireRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
-                    currentEffect = `Current fire rate: ${currentFireRate}/sec`;
-                    nextLevelEffect = `After Upgrade: ${nextFireRate}/sec`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                    const baseFireRate = 0.2;
+                    const ratePerLevel = 0.1;
+                    const currentFireRate = (baseFireRate + upgrade.level * ratePerLevel).toFixed(1);
+                    const nextFireRate = (baseFireRate + (upgrade.level + 1) * ratePerLevel).toFixed(1);
+                    const bonus = upgrade.level * ratePerLevel;
+                    tooltipText = isMaxed 
+                        ? `Barricade Fire Rate\nCurrent: ${currentFireRate} shots/sec (+${bonus.toFixed(1)} from training)\nMAXIMUM LEVEL REACHED`
+                        : `Barricade Fire Rate\nCurrent: ${currentFireRate} shots/sec (+${bonus.toFixed(1)} from training)\nAfter upgrade: ${nextFireRate} shots/sec (+${ratePerLevel} bonus)`;
+                    currentStatText = `Current: ${currentFireRate} shots/sec`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
-                    const currentFireRate = (0.8 + upgrade.level * 0.08).toFixed(2);
-                    const nextFireRate = (0.8 + (upgrade.level + 1) * 0.08).toFixed(2);
-                    currentEffect = `Current fire rate: ${currentFireRate}/sec`;
-                    nextLevelEffect = `After Upgrade: ${nextFireRate}/sec`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
+                    const baseFireRate = 0.8;
+                    const ratePerLevel = 0.08;
+                    const currentFireRate = (baseFireRate + upgrade.level * ratePerLevel).toFixed(2);
+                    const nextFireRate = (baseFireRate + (upgrade.level + 1) * ratePerLevel).toFixed(2);
+                    const bonus = upgrade.level * ratePerLevel;
+                    tooltipText = isMaxed 
+                        ? `Poison Archer Fire Rate\nCurrent: ${currentFireRate} shots/sec (+${bonus.toFixed(2)} from training)\nMAXIMUM LEVEL REACHED`
+                        : `Poison Archer Fire Rate\nCurrent: ${currentFireRate} shots/sec (+${bonus.toFixed(2)} from training)\nAfter upgrade: ${nextFireRate} shots/sec (+${ratePerLevel} bonus)`;
+                    currentStatText = `Current: ${currentFireRate} shots/sec`;
                 }
                 
                 contentHTML += `
@@ -2847,24 +3187,24 @@ export class UIManager {
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">${upgrade.name}</div>
                                 <div class="upgrade-description">${upgrade.description}</div>
+                                <div style="font-size: 0.8rem; color: #aaa; margin-top: 0.2rem;">${currentStatText}</div>
                                 <div class="upgrade-level-display">
                                     Level: ${upgrade.level}/${upgrade.maxLevel}
                                     <div class="upgrade-level-bar">
                                         <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
                                     </div>
                                 </div>
-                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
-                                ${nextLevelEffect && !isMaxed ? `<div style="font-size: 0.8rem; color: #FFD700; margin-top: 0.2rem;">${nextLevelEffect}</div>` : ''}
                             </div>
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
+                                ${isMaxed ? 'MAXED' : `$${upgrade.cost}`}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="${upgrade.id}" 
+                                    data-upgrade="${upgrade.id}"
+                                    title="${tooltipText}"
                                     ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${buttonText}
+                                ${isMaxed ? '✓' : '⬆'}
                             </button>
                         </div>
                     </div>
@@ -3107,7 +3447,7 @@ export class UIManager {
                 if (goldMine.gemMode) {
                     // Collect gems - need to distribute them to academy
                     const academies = this.towerManager.buildingManager.buildings.filter(b => 
-                        b.constructor.name === 'MagicAcademy'
+                        b.type === 'academy'
                     );
                     if (academies.length > 0) {
                         const collectedGems = goldMine.collectGems();
@@ -3214,7 +3554,8 @@ export class UIManager {
 
     togglePauseGame() {
         const wasPaused = this.gameplayState.togglePause();
-        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        // Use cached reference
+        const speedPauseBtn = this._domCache.speedPauseBtn;
         
         if (speedPauseBtn) {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
@@ -3238,7 +3579,8 @@ export class UIManager {
         }
         
         // Update pause button to show correct state (play icon since game is now paused)
-        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        // Use cached reference
+        const speedPauseBtn = this._domCache.speedPauseBtn;
         if (speedPauseBtn) {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {
@@ -3247,14 +3589,16 @@ export class UIManager {
             }
         }
         
-        const pauseMenuModal = document.getElementById('pause-menu-modal');
+        // Use cached reference
+        const pauseMenuModal = this._domCache.pauseMenuModal;
         if (pauseMenuModal) {
             pauseMenuModal.classList.add('show');
         }
     }
 
     closePauseMenu() {
-        const pauseMenuModal = document.getElementById('pause-menu-modal');
+        // Use cached reference
+        const pauseMenuModal = this._domCache.pauseMenuModal;
         if (pauseMenuModal) {
             pauseMenuModal.classList.remove('show');
         }
@@ -3271,7 +3615,8 @@ export class UIManager {
         this.updateSpeedCircles(1);
         
         // Update pause button to show pause icon (game is now playing)
-        const speedPauseBtn = document.getElementById('speed-pause-btn');
+        // Use cached reference
+        const speedPauseBtn = this._domCache.speedPauseBtn;
         if (speedPauseBtn) {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {

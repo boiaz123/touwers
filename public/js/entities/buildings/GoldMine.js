@@ -3,6 +3,7 @@ import { Building } from './Building.js';
 export class GoldMine extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
+        this.type = 'mine'; // Ensure type is set for reliable detection
         this.goldReady = false;
         this.productionTime = 30;
         this.currentProduction = 0;
@@ -287,7 +288,7 @@ export class GoldMine extends Building {
         if (this.mineCountCheckTimer <= 0) {
             if (this.buildingManager) {
                 this.cachedMineCount = this.buildingManager.buildings.filter(
-                    b => b.constructor.name === 'GoldMine'
+                    b => b.type === 'mine'
                 ).length;
             } else {
                 this.cachedMineCount = 1;

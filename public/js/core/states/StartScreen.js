@@ -21,18 +21,22 @@ export class StartScreen {
         this.transitionTime = 0;
         this.particleSystem = null;
         this.swordSoundPlayed = false; // Track if sword sound has been played
+        this.mouseMoveHandler = null;
         
-        // Menu buttons
-        this.buttons = [
-            { label: 'NEW GAME', action: 'newGame', hovered: false },
-            { label: 'LOAD GAME', action: 'loadGame', hovered: false },
-            { label: 'OPTIONS', action: 'options', hovered: false },
-            { label: 'QUIT GAME', action: 'quitGame', hovered: false }
+        // Menu mode - activated after smoke clears, replaces transitioning to MainMenu
+        this.menuMode = false;
+        this.hoveredButtonIndex = -1;
+        
+        // MainMenu button config (matches MainMenu.js exactly)
+        this.menuButtons = [
+            { label: 'NEW GAME', action: 'saveSlotSelection' },
+            { label: 'LOAD GAME', action: 'loadGame' },
+            { label: 'OPTIONS', action: 'options' },
+            { label: 'QUIT GAME', action: 'quit' }
         ];
         this.buttonWidth = 220;
         this.buttonHeight = 50;
         this.buttonGap = 15;
-        this.mouseMoveHandler = null;
     }
     
     enter() {
@@ -48,24 +52,27 @@ export class StartScreen {
             sidebar.style.display = 'none';
         }
         
-        // Check if we're returning from options or loadGame menus
-        // If so, skip to the post-transition button menu state
-        const returningFromMenu = this.stateManager.previousState === 'options' || 
+        // Check if we're returning from another menu (options, loadGame, saveSlotSelection)
+        // If so, skip directly to menu mode without intro animation
+        const returningFromMenu = this.stateManager.previousState === 'options' ||
                                   this.stateManager.previousState === 'loadGame' ||
-                                  this.stateManager.previousState === 'saveSlotSelection';
+                                  this.stateManager.previousState === 'saveSlotSelection' ||
+                                  this.stateManager.previousState === 'settlementHub';
         
         if (returningFromMenu) {
-            // Skip to post-transition state (buttons visible)
-            this.animationTime = 0;
+            // Skip to menu mode immediately - no intro animation
+            this.animationTime = 10; // Large value to skip all timing checks
             this.showContinue = false;
             this.titleOpacity = 1;
-            this.subtitleOpacity = 1;
+            this.subtitleOpacity = 0; // Hide subtitle in menu mode
             this.continueOpacity = 0;
-            this.transitionActive = false;
-            this.transitionTime = 3;  // Jump to post-transition state
-            this.swordSoundPlayed = false;
+            this.transitionActive = true;
+            this.transitionTime = 10; // Past the transition end
+            this.swordSoundPlayed = true;
+            this.menuMode = true;
+            this.hoveredButtonIndex = -1;
         } else {
-            // Normal reset for initial entry
+            // Normal entry - show intro animation
             this.animationTime = 0;
             this.showContinue = false;
             this.titleOpacity = 0;
@@ -74,6 +81,8 @@ export class StartScreen {
             this.transitionActive = false;
             this.transitionTime = 0;
             this.swordSoundPlayed = false;
+            this.menuMode = false;
+            this.hoveredButtonIndex = -1;
         }
         
         // Get or initialize shared particle system
@@ -92,6 +101,10 @@ export class StartScreen {
 
     exit() {
         this.removeClickListener();
+        // Reset cursor to default
+        if (this.stateManager.canvas) {
+            this.stateManager.canvas.style.cursor = 'default';
+        }
     }
 
     setupClickListener() {
@@ -126,86 +139,74 @@ export class StartScreen {
         }
     }
 
-    getButtonPosition(index) {
-        const canvas = this.stateManager.canvas;
-        const startY = canvas.height / 2 + 80;
-        return {
-            x: canvas.width / 2 - this.buttonWidth / 2,
-            y: startY + index * (this.buttonHeight + this.buttonGap),
-            width: this.buttonWidth,
-            height: this.buttonHeight
-        };
-    }
-
     handleMouseMove(x, y) {
-        // Handle mouse hover after smoke fades (around 1.8 seconds into transition)
-        // Smoke phase: 0.7-2.0 seconds, mostly faded by 1.8 seconds
-        if (this.transitionTime >= 1.8) {
-            this.buttons.forEach((button, index) => {
-                const pos = this.getButtonPosition(index);
-                button.hovered = x >= pos.x && x <= pos.x + pos.width && 
-                                 y >= pos.y && y <= pos.y + pos.height;
+        // In menu mode, track button hovers
+        if (this.menuMode) {
+            const canvas = this.stateManager.canvas;
+            const startY = canvas.height / 2 + 100;
+            let foundHover = false;
+            
+            this.menuButtons.forEach((button, index) => {
+                const btnX = canvas.width / 2 - this.buttonWidth / 2;
+                const btnY = startY + index * (this.buttonHeight + this.buttonGap);
+                
+                if (x >= btnX && x <= btnX + this.buttonWidth &&
+                    y >= btnY && y <= btnY + this.buttonHeight) {
+                    this.hoveredButtonIndex = index;
+                    foundHover = true;
+                }
             });
-
-            this.stateManager.canvas.style.cursor = 
-                this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+            
+            if (!foundHover) {
+                this.hoveredButtonIndex = -1;
+            }
+            
+            this.stateManager.canvas.style.cursor = this.hoveredButtonIndex >= 0 ? 'pointer' : 'default';
         } else {
+            // Before menu mode, cursor is always default
             this.stateManager.canvas.style.cursor = 'default';
         }
     }
 
     handleClick(x, y) {
-        // Before transition: if showing continue message AND transition hasn't started, start transition
+        // In menu mode, handle button clicks
+        if (this.menuMode) {
+            const canvas = this.stateManager.canvas;
+            const startY = canvas.height / 2 + 100;
+            
+            this.menuButtons.forEach((button, index) => {
+                const btnX = canvas.width / 2 - this.buttonWidth / 2;
+                const btnY = startY + index * (this.buttonHeight + this.buttonGap);
+                
+                if (x >= btnX && x <= btnX + this.buttonWidth &&
+                    y >= btnY && y <= btnY + this.buttonHeight) {
+                    // Play button click sound
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('button-click');
+                    }
+                    
+                    // Handle button action
+                    if (button.action === 'quit') {
+                        this.quitGame();
+                    } else {
+                        this.stateManager.changeState(button.action);
+                    }
+                }
+            });
+            return;
+        }
+        
+        // If showing continue message AND transition hasn't started, start transition
         if (!this.transitionActive && this.showContinue && this.animationTime > 1 && this.transitionTime === 0) {
             this.transitionActive = true;
             this.transitionTime = 0;
             this.swordSoundPlayed = false; // Reset sound flag when starting new transition
             return;
         }
-
-        // While animating: don't handle clicks
-        if (this.transitionActive) {
-            return;
-        }
-
-        // After smoke fades (transitionTime >= 1.8): handle button clicks
-        // Smoke phase ends by 2 seconds, mostly clear by 1.8 seconds
-        if (this.transitionTime >= 1.8) {
-            for (let i = 0; i < this.buttons.length; i++) {
-                const button = this.buttons[i];
-                const pos = this.getButtonPosition(i);
-                
-                if (x >= pos.x && x <= pos.x + pos.width && 
-                    y >= pos.y && y <= pos.y + pos.height) {
-                    // Play button click SFX
-                    if (this.stateManager.audioManager) {
-                        this.stateManager.audioManager.playSFX('button-click');
-                    }
-                    this.handleButtonAction(button.action);
-                    return;
-                }
-            }
-        }
+        // While animating: don't handle clicks here
     }
 
-    handleButtonAction(action) {
-        switch (action) {
-            case 'newGame':
-                this.stateManager.startNewGame();
-                break;
-            case 'loadGame':
-                this.stateManager.changeState('loadGame');
-                break;
-            case 'options':
-                this.stateManager.previousState = 'startScreen';
-                this.stateManager.changeState('options');
-                break;
-            case 'quitGame':
-                this.quitGame();
-                break;
-        }
-    }
-
+    // quitGame moved to MainMenu - StartScreen doesn't need it
     async quitGame() {
         try {
             // Helper to log both to console and localStorage
@@ -299,10 +300,10 @@ export class StartScreen {
                 this.swordSoundPlayed = true;
             }
             
-            // After 3-second transition completes, transition time stays at 3 seconds (final state)
-            if (this.transitionTime >= 3) {
-                this.transitionTime = 3;
-                this.transitionActive = false; // Animation complete, allow button clicks
+            // After smoke animation clears (2 seconds), enable menu mode instead of transitioning
+            // This keeps us in StartScreen but with interactive buttons - no state change = no flash
+            if (this.transitionTime >= 2 && !this.menuMode) {
+                this.menuMode = true;
             }
         }
         
@@ -347,7 +348,7 @@ export class StartScreen {
 
     renderTransitionEffect(ctx) {
         const canvas = this.stateManager.canvas;
-        const totalDuration = 3; // Total transition time - 3 seconds
+        const totalDuration = 2; // Transition is now 2 seconds (sword + smoke, then switch to MainMenu)
         const progress = Math.min(1, this.transitionTime / totalDuration);
 
         if (progress < 0.01) return;
@@ -356,7 +357,7 @@ export class StartScreen {
         const centerY = canvas.height / 2 + 80; // Moved down below "Defend the Realm" text
 
         // PHASE 1: Sword clash (0 - 0.7 seconds)
-        const swordDuration = 0.7 / totalDuration; // 0.7 seconds out of 3
+        const swordDuration = 0.7 / totalDuration; // 0.7 seconds out of 2
         if (progress < swordDuration) {
             const swordProgress = progress / swordDuration;
             
@@ -401,21 +402,14 @@ export class StartScreen {
         }
 
         // PHASE 2: Smoke appearance and fade (0.7 - 2 seconds)
-        const smokeStartTime = swordDuration; // 0.7 seconds / 3
-        const smokeDuration = (1.3 / totalDuration); // 1.3 seconds of smoke effect
+        // Smoke fades out and we transition to MainMenu (no buttons here)
+        const smokeStartTime = swordDuration; // 0.7 seconds / 2
+        const smokeDuration = 1 - swordDuration; // Remaining time until transition
         
-        if (progress >= smokeStartTime && progress < (smokeStartTime + smokeDuration)) {
+        if (progress >= smokeStartTime) {
             const smokePhaseProgress = (progress - smokeStartTime) / smokeDuration;
             
-            // Render buttons right away as smoke appears
-            const buttonRenderStartTime = 0.05 / 1.3; // 0.05 seconds into 1.3 second phase
-            if (smokePhaseProgress >= buttonRenderStartTime) {
-                ctx.globalAlpha = 1;
-                this.renderMenuButtons(ctx);
-            }
-            
-            // NOW render dense natural smoke clouds covering entire bottom half
-            // This will be drawn ON TOP of the buttons
+            // Render dense natural smoke clouds covering entire bottom half
             ctx.globalAlpha = 1;
             
             // Create a dense, natural-looking smoke screen with many overlapping clouds
@@ -434,19 +428,16 @@ export class StartScreen {
                 
                 // Smoke appears quickly (0.1 second), then fades gradually
                 let cloudOpacity = 0.45;
-                const fillDuration = 0.1 / 1.3; // 0.1 seconds into smoke phase
-                const fadeDuration = 1.0 / 1.3; // 1.0 second gradual fade
-                const fadeStartInPhase = fillDuration; // Fade starts right after fill
+                const fillDuration = 0.1; // Quick fill
+                const fadeDuration = 0.9; // Gradual fade
                 
                 if (smokePhaseProgress < fillDuration) {
-                    // Filling phase - clouds appear quickly (first 0.1 second)
+                    // Filling phase - clouds appear quickly
                     cloudOpacity = 0.45 * (smokePhaseProgress / fillDuration);
-                } else if (smokePhaseProgress > fadeStartInPhase) {
-                    // Fading phase - smooth gradual fade out
-                    const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / fadeDuration;
-                    cloudOpacity = 0.45 * Math.max(0, 1 - fadeProgress);
                 } else {
-                    cloudOpacity = 0.45; // Full opacity between fill and fade (minimal)
+                    // Fading phase - smooth gradual fade out
+                    const fadeProgress = (smokePhaseProgress - fillDuration) / fadeDuration;
+                    cloudOpacity = 0.45 * Math.max(0, 1 - fadeProgress);
                 }
                 
                 this.drawSilkySmokeCloud(ctx, baseX, baseY, cloudSize, cloudOpacity, i);
@@ -458,17 +449,14 @@ export class StartScreen {
                     const cloudSize = 130 + Math.sin(x * 0.008) * 35;
                     
                     let cloudOpacity = 0.35;
-                    const fillDuration = 0.1 / 1.3;
-                    const fadeDuration = 1.0 / 1.3;
-                    const fadeStartInPhase = fillDuration;
+                    const fillDuration = 0.1;
+                    const fadeDuration = 0.9;
                     
                     if (smokePhaseProgress < fillDuration) {
                         cloudOpacity = 0.35 * (smokePhaseProgress / fillDuration);
-                    } else if (smokePhaseProgress > fadeStartInPhase) {
-                        const fadeProgress = (smokePhaseProgress - fadeStartInPhase) / fadeDuration;
-                        cloudOpacity = 0.35 * Math.max(0, 1 - fadeProgress);
                     } else {
-                        cloudOpacity = 0.35;
+                        const fadeProgress = (smokePhaseProgress - fillDuration) / fadeDuration;
+                        cloudOpacity = 0.35 * Math.max(0, 1 - fadeProgress);
                     }
                     
                     if (cloudOpacity > 0) {
@@ -478,11 +466,88 @@ export class StartScreen {
             }
         }
 
-        // Continue showing buttons after transition completes (opacity set to 1 in renderMenuButtons)
-        if (progress >= (smokeStartTime + smokeDuration)) {
-            this.renderMenuButtons(ctx);
-        }
+        ctx.globalAlpha = 1;
+    }
 
+    /**
+     * Render menu buttons - used both during transition (preview) and in menu mode (interactive).
+     * In menu mode, applies hover effects based on hoveredButtonIndex.
+     */
+    renderMainMenuPreview(ctx) {
+        const canvas = this.stateManager.canvas;
+        
+        // Render main menu buttons
+        // Must match MainMenu.renderControlButton() exactly for visual consistency
+        const startY = canvas.height / 2 + 100;
+        
+        ctx.globalAlpha = 1;
+        
+        this.menuButtons.forEach((button, index) => {
+            const x = canvas.width / 2 - this.buttonWidth / 2;
+            const isHovered = this.menuMode && this.hoveredButtonIndex === index;
+            const y = isHovered ? startY + index * (this.buttonHeight + this.buttonGap) - 3 : startY + index * (this.buttonHeight + this.buttonGap);
+            
+            // Background gradient - match MainMenu exactly
+            if (isHovered) {
+                const bgGrad = ctx.createLinearGradient(0, y, 0, y + this.buttonHeight);
+                bgGrad.addColorStop(0, 'rgba(90, 74, 63, 0.98)');
+                bgGrad.addColorStop(0.5, 'rgba(74, 58, 47, 0.98)');
+                bgGrad.addColorStop(1, 'rgba(64, 48, 37, 0.98)');
+                ctx.fillStyle = bgGrad;
+            } else {
+                const bgGrad = ctx.createLinearGradient(0, y, 0, y + this.buttonHeight);
+                bgGrad.addColorStop(0, 'rgba(68, 48, 28, 0.85)');
+                bgGrad.addColorStop(0.5, 'rgba(48, 28, 8, 0.85)');
+                bgGrad.addColorStop(1, 'rgba(38, 18, 0, 0.85)');
+                ctx.fillStyle = bgGrad;
+            }
+            ctx.fillRect(x, y, this.buttonWidth, this.buttonHeight);
+            
+            // Border with glow on hover - match MainMenu
+            if (isHovered) {
+                ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+                ctx.shadowBlur = 20;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            }
+            
+            ctx.strokeStyle = isHovered ? '#ffe700' : '#7a6038';
+            ctx.lineWidth = isHovered ? 3 : 2;
+            ctx.strokeRect(x, y, this.buttonWidth, this.buttonHeight);
+            
+            // Reset shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+            ctx.shadowBlur = 0;
+            
+            // Top highlight - match MainMenu
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + 1, y + 1);
+            ctx.lineTo(x + this.buttonWidth - 1, y + 1);
+            ctx.stroke();
+            
+            // Inset shadow effect - match MainMenu
+            ctx.strokeStyle = isHovered ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(x + 1, y + this.buttonHeight - 1);
+            ctx.lineTo(x + this.buttonWidth - 1, y + this.buttonHeight - 1);
+            ctx.stroke();
+            
+            // Button text - match MainMenu font and styling exactly
+            ctx.font = 'bold 20px Trebuchet MS, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Text shadow - match MainMenu
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText(button.label, x + this.buttonWidth / 2 + 1, y + this.buttonHeight / 2 + 1);
+            
+            // Main text - match MainMenu colors
+            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+            ctx.fillText(button.label, x + this.buttonWidth / 2, y + this.buttonHeight / 2);
+        });
+        
         ctx.globalAlpha = 1;
     }
 
@@ -819,16 +884,19 @@ export class StartScreen {
 
             ctx.globalAlpha = 1;
 
-            // Render transition effect (smoke on top of everything except title)
-            if (this.transitionActive) {
+            // In menu mode, render the menu buttons (only after smoke has cleared)
+            // During transition, only show buttons after smoke animation is mostly done (1.5 seconds)
+            const showButtons = this.menuMode || (this.transitionActive && this.transitionTime >= 1.5);
+            if (showButtons) {
+                this.renderMainMenuPreview(ctx);
+            }
+
+            // Render transition effect (smoke on top of the menu preview) - only during transition, not in menu mode
+            if (this.transitionActive && !this.menuMode) {
                 this.renderTransitionEffect(ctx);
             }
             
-            // After smoke fades (around 1.8 seconds into transition), show menu buttons
-            // This gives immediate visual feedback while smoke is clearing
-            if (this.transitionTime >= 1.8) {
-                this.renderMenuButtons(ctx);
-            }
+            // In menu mode, buttons are already rendered and interactive - no state transition needed
             
         } catch (error) {
             console.error('StartScreen render error:', error);
@@ -839,62 +907,5 @@ export class StartScreen {
             ctx.textAlign = 'center';
             ctx.fillText('StartScreen Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
-    }
-
-    renderMenuButtons(ctx) {
-        const canvas = this.stateManager.canvas;
-
-        // Render all buttons
-        ctx.globalAlpha = 1;
-        for (let i = 0; i < this.buttons.length; i++) {
-            const button = this.buttons[i];
-            const pos = this.getButtonPosition(i);
-            this.renderControlButton(ctx, pos.x, pos.y, pos.width, pos.height, button.label, button.hovered);
-        }
-        ctx.globalAlpha = 1;
-    }
-
-    renderControlButton(ctx, x, y, width, height, text, isHovered) {
-        // Button background gradient
-        const bgGradient = ctx.createLinearGradient(x, y, x, y + height);
-        bgGradient.addColorStop(0, '#44301c');
-        bgGradient.addColorStop(1, '#261200');
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(x, y, width, height);
-
-        // Button border - outset style
-        ctx.strokeStyle = isHovered ? '#ffd700' : '#8b7355';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
-
-        // Top highlight line for beveled effect
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + width, y);
-        ctx.stroke();
-
-        // Inset shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, y + height);
-        ctx.lineTo(x + width, y + height);
-        ctx.stroke();
-
-        // Button text
-        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
-        ctx.font = 'bold 20px Trebuchet MS, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Text shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        ctx.fillText(text, x + width / 2 + 1, y + height / 2 + 1);
-        
-        // Main text
-        ctx.fillStyle = isHovered ? '#ffd700' : '#d4af37';
-        ctx.fillText(text, x + width / 2, y + height / 2);
     }
 }

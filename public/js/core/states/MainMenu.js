@@ -53,16 +53,15 @@ export class MainMenu {
                           this.stateManager.previousState === 'loadGame' ||
                           this.stateManager.previousState === 'saveSlotSelection';
         
-        // Reset animation state
-        this.animationTime = 0;
-        this.showButtons = false;
+        // Reset animation state - but set to "complete" if skipping fade
+        this.animationTime = this.skipFadeIn ? 10 : 0; // High value ensures all fade checks pass
         
         // Reset all button hover states when entering
         this.buttons.forEach(button => {
             button.hovered = false;
         });
         
-        // If skipping fade-in (coming from StartScreen transition or other menus), start with full opacity
+        // If skipping fade-in (coming from StartScreen transition or other menus), start fully visible
         if (this.skipFadeIn) {
             this.titleOpacity = 1;
             this.buttonsOpacity = 1;
@@ -70,6 +69,7 @@ export class MainMenu {
         } else {
             this.titleOpacity = 0;
             this.buttonsOpacity = 0;
+            this.showButtons = false;
         }
 
         // Get or initialize shared particle system
@@ -87,6 +87,10 @@ export class MainMenu {
 
     exit() {
         this.removeMouseListeners();
+        // Reset cursor to default
+        if (this.stateManager.canvas) {
+            this.stateManager.canvas.style.cursor = 'default';
+        }
     }
 
     setupMouseListeners() {
@@ -134,17 +138,27 @@ export class MainMenu {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
 
-        this.buttons.forEach((button, index) => {
-            const pos = this.getButtonPosition(index);
-            button.hovered = x >= pos.x && x <= pos.x + pos.width &&
-                           y >= pos.y && y <= pos.y + pos.height;
-        });
+        // Only update hover states when buttons are visible
+        if (this.showButtons) {
+            this.buttons.forEach((button, index) => {
+                const pos = this.getButtonPosition(index);
+                button.hovered = x >= pos.x && x <= pos.x + pos.width &&
+                               y >= pos.y && y <= pos.y + pos.height;
+            });
 
-        this.stateManager.canvas.style.cursor = 
-            this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+            this.stateManager.canvas.style.cursor = 
+                this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+        } else {
+            // Reset hover states and cursor when buttons not visible
+            this.buttons.forEach(button => button.hovered = false);
+            this.stateManager.canvas.style.cursor = 'default';
+        }
     }
 
     handleClick(x, y) {
+        // Only handle clicks when buttons are visible
+        if (!this.showButtons) return;
+        
         this.buttons.forEach((button, index) => {
             const pos = this.getButtonPosition(index);
 

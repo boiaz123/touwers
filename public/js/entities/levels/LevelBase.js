@@ -595,7 +595,7 @@ export class LevelBase {
 
         // Check for Training Grounds upgrades
         const trainingGrounds = towerManager.buildingManager.buildings.find(b => 
-            b.constructor.name === 'TrainingGrounds'
+            b.type === 'training'
         );
 
         if (!trainingGrounds || !trainingGrounds.rangeUpgrades) {
