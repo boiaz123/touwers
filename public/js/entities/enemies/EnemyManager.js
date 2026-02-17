@@ -147,37 +147,26 @@ export class EnemyManager {
             this.spawning = false;
         }
         
-        // OPTIMIZATION: Cache enemies array length for loop
-        const enemyCount = this.enemies.length;
-        
-        // OPTIMIZATION: Consolidate enemy update and splatter update into single loop
-        // This prevents multiple loop passes over enemies array
-        for (let i = 0; i < enemyCount; i++) {
-            const enemy = this.enemies[i];
-            enemy.update(deltaTime);
-            
-            // Update splatters for this enemy in same pass
-            const splatters = enemy.hitSplatters;
-            // OPTIMIZATION: Early continue if no splatters
-            if (!splatters || splatters.length === 0) {
-                continue;
-            }
-            
-            // OPTIMIZATION: Single pass update and removal
-            let j = splatters.length - 1;
-            while (j >= 0) {
-                const splatter = splatters[j];
-                splatter.update(deltaTime);
-                if (!splatter.isAlive()) {
-                    splatters.splice(j, 1);
-                }
-                j--;
-            }
+        // Update all enemies (this no longer updates their splatters internally)
+        for (let i = 0; i < this.enemies.length; i++) {
+            this.enemies[i].update(deltaTime);
         }
         
-        // OPTIMIZATION: Early return if no orphaned splatters
-        if (this.orphanedSplatters.length === 0) {
-            return;
+        // OPTIMIZATION: Consolidate splatter updates into single loop
+        // This prevents multiple forEach passes over enemies
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                let j = enemy.hitSplatters.length - 1;
+                while (j >= 0) {
+                    const splatter = enemy.hitSplatters[j];
+                    splatter.update(deltaTime);
+                    if (!splatter.isAlive()) {
+                        enemy.hitSplatters.splice(j, 1);
+                    }
+                    j--;
+                }
+            }
         }
         
         // Update orphaned splatters from dead enemies
@@ -194,15 +183,13 @@ export class EnemyManager {
     
     checkReachedEnd() {
         let reachedCount = 0;
-        // OPTIMIZATION: Use backward splice loop instead of filter to avoid array allocation
-        let i = this.enemies.length - 1;
-        while (i >= 0) {
-            if (this.enemies[i].reachedEnd) {
+        this.enemies = this.enemies.filter(enemy => {
+            if (enemy.reachedEnd) {
                 reachedCount++;
-                this.enemies.splice(i, 1);
+                return false;
             }
-            i--;
-        }
+            return true;
+        });
         return reachedCount;
     }
     
@@ -210,10 +197,7 @@ export class EnemyManager {
         let totalGold = 0;
         const lootDrops = []; // Array of { x, y, lootId, isRare }
         
-        // OPTIMIZATION: Use backward splice loop instead of filter to avoid array allocation
-        let i = this.enemies.length - 1;
-        while (i >= 0) {
-            const enemy = this.enemies[i];
+        this.enemies = this.enemies.filter(enemy => {
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
                 
@@ -242,46 +226,32 @@ export class EnemyManager {
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     this.orphanedSplatters.push(...enemy.hitSplatters);
                 }
-                this.enemies.splice(i, 1);
+                return false;
             }
-            i--;
-        }
+            return true;
+        });
         
         return { totalGold, lootDrops };
     }
     
     render(ctx) {
-        const enemyCount = this.enemies.length;
-        const orphanedCount = this.orphanedSplatters.length;
-        
-        // Early return if nothing to render
-        if (enemyCount === 0 && orphanedCount === 0) {
-            return;
-        }
-        
-        // OPTIMIZATION: Render all enemies first, then all splatters
-        // This groups similar rendering operations together
-        
-        // Pass 1: Render all enemies
-        for (let i = 0; i < enemyCount; i++) {
-            this.enemies[i].render(ctx);
-        }
-        
-        // Pass 2: Render all active splatters from living enemies
-        // Batch splatter rendering to minimize state changes
-        for (let i = 0; i < enemyCount; i++) {
-            const splatters = this.enemies[i].hitSplatters;
-            if (splatters && splatters.length > 0) {
-                const splatterCount = splatters.length;
-                for (let j = 0; j < splatterCount; j++) {
-                    splatters[j].render(ctx);
+        // OPTIMIZATION: Consolidate rendering into single loop
+        // Render all enemies and their splatters in one pass
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            enemy.render(ctx);
+            
+            // Render splatters from this enemy
+            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                for (let j = 0; j < enemy.hitSplatters.length; j++) {
+                    enemy.hitSplatters[j].render(ctx);
                 }
             }
         }
         
-        // Pass 3: Render orphaned splatters from dead enemies
+        // Render orphaned splatters from dead enemies
         // These will continue to display and fade until their life reaches 0
-        for (let i = 0; i < orphanedCount; i++) {
+        for (let i = 0; i < this.orphanedSplatters.length; i++) {
             this.orphanedSplatters[i].render(ctx);
         }
     }

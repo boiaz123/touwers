@@ -59,21 +59,14 @@ export class LoadGame {
 
     exit() {
         this.removeMouseListeners();
-        // Reset cursor to default
-        if (this.stateManager.canvas) {
-            this.stateManager.canvas.style.cursor = 'default';
-        }
     }
 
     setupMouseListeners() {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -114,11 +107,8 @@ export class LoadGame {
 
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        // Account for CSS scaling
-        const scaleX = this.stateManager.canvas.width / rect.width;
-        const scaleY = this.stateManager.canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
         const buttonPos = this.getBackButtonPosition();
         this.backButtonHovered = x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
@@ -150,7 +140,7 @@ export class LoadGame {
 
             // Navigate back to the state that opened this LoadGame
             // Use stateManager.previousState which is set during state transition
-            const targetState = this.stateManager.previousState || 'startScreen';
+            const targetState = this.stateManager.previousState || 'mainMenu';
             this.stateManager.changeState(targetState);
             return;
         }
@@ -306,21 +296,20 @@ export class LoadGame {
         ctx.textAlign = 'left';
         ctx.fillStyle = isHovered ? '#ffe700' : '#c9a876';
         ctx.font = 'bold 18px serif';
-        
-        // Display commander name if save exists, otherwise show slot number
+        ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
+
         if (saveInfo.isEmpty) {
-            ctx.fillText(`SLOT ${slotNum}`, pos.x + 20, adjustedY + 30);
             ctx.font = '14px serif';
             ctx.fillStyle = '#666';
-            ctx.fillText('Empty Slot', pos.x + 20, adjustedY + 55);
+            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 55);
         } else {
-            // Show commander name prominently
-            ctx.fillText(saveInfo.commanderName || 'Commander', pos.x + 20, adjustedY + 30);
-            
-            // Show last saved date/time
-            ctx.font = '14px serif';
+            ctx.font = '16px serif';
+            ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
+            ctx.fillText(saveInfo.displayText, pos.x + 20, adjustedY + 50);
+
+            ctx.font = '12px serif';
             ctx.fillStyle = '#999';
-            ctx.fillText(`Last saved: ${saveInfo.dateString}`, pos.x + 20, adjustedY + 55);
+            ctx.fillText(saveInfo.dateString, pos.x + 20, adjustedY + 65);
         }
 
         // Reset shadow properties

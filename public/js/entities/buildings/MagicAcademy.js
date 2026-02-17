@@ -3,7 +3,6 @@ import { Building } from './Building.js';
 export class MagicAcademy extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.type = 'academy'; // Ensure type is set for reliable detection
         this.magicParticles = [];
         this.isSelected = false;
         

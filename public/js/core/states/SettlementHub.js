@@ -92,11 +92,6 @@ export class SettlementHub {
         // This includes gold, inventory, upgrades, and unlock progression
         const currentSaveData = SaveSystem.getSave(this.stateManager.currentSaveSlot);
         
-        // CRITICAL: Update stateManager.currentSaveData so commanderName and other data persists
-        if (currentSaveData) {
-            this.stateManager.currentSaveData = currentSaveData;
-        }
-        
         // Detect if we've switched save slots
         const saveSlotChanged = this.lastLoadedSaveSlot !== this.stateManager.currentSaveSlot;
         const returningFromLevel = this.stateManager.previousState === 'game';
@@ -331,8 +326,6 @@ export class SettlementHub {
         // This captures current state of gold, inventory, upgrades, marketplace, and campaign progress
         if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
             const settlementData = {
-                // Commander name - preserve from current save data
-                commanderName: this.stateManager.currentSaveData.commanderName || 'Commander',
                 // Current settlement state
                 playerGold: this.stateManager.playerGold,
                 playerInventory: this.stateManager.playerInventory,
@@ -434,36 +427,18 @@ export class SettlementHub {
     }
 
     handleClick(x, y) {
-        console.log('SettlementHub.handleClick called, activePopup:', this.activePopup);
-        // If popup was ALREADY active from a previous click, delegate to it
-        // But skip if this is the click that just opened it (ignoreNextClick flag)
+        // If popup is active, delegate click to popup
         if (this.activePopup === 'upgrades' && this.upgradesPopup) {
-            console.log('Popup is active, checking ignoreNextClick:', this.upgradesPopup.ignoreNextClick);
-            if (this.upgradesPopup.ignoreNextClick) {
-                console.log('Ignoring this click because ignoreNextClick is set');
-                this.upgradesPopup.ignoreNextClick = false;
-                return;
-            }
-            console.log('Delegating click to upgrades popup');
             this.upgradesPopup.handleClick(x, y);
             return;
         } else if (this.activePopup === 'options' && this.optionsPopup) {
-            if (this.optionsPopup.ignoreNextClick) {
-                this.optionsPopup.ignoreNextClick = false;
-                return;
-            }
             this.optionsPopup.handleClick(x, y);
             return;
         } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
-            if (this.arcaneLibraryPopup.ignoreNextClick) {
-                this.arcaneLibraryPopup.ignoreNextClick = false;
-                return;
-            }
             this.arcaneLibraryPopup.handleClick(x, y);
             return;
         }
 
-        console.log('No popup is active, checking settlement buildings');
         // Check settlement building clicks
         this.settlementBuildings.forEach(item => {
             if (item.clickable) {
@@ -490,46 +465,34 @@ export class SettlementHub {
                 // Check if click is within building bounds
                 if (x >= bounds.x && x <= bounds.x + bounds.width &&
                     y >= bounds.y && y <= bounds.y + bounds.height) {
-                    // onBuildingClick returns true if a popup was opened - stop processing clicks
-                    if (this.onBuildingClick(item)) {
-                        return;
-                    }
+                    this.onBuildingClick(item);
                 }
             }
         });
     }
 
     onBuildingClick(buildingItem) {
-        console.log('onBuildingClick called for action:', buildingItem.action);
         if (buildingItem.action === 'levelSelect') {
             this.stateManager.changeState('campaignMenu');
-            return false; // State change, not a popup
         } else if (buildingItem.action === 'upgrades') {
-            console.log('Opening upgrades popup, setting activePopup and ignoreNextClick');
             this.activePopup = 'upgrades';
             if (!this.upgradesPopup) {
                 this.upgradesPopup = new UpgradesMenu(this.stateManager, this);
             }
             this.upgradesPopup.open();
-            this.upgradesPopup.ignoreNextClick = true;
-            console.log('Upgrades popup opened, activePopup is now:', this.activePopup, 'ignoreNextClick:', this.upgradesPopup.ignoreNextClick);
-            return true; // Popup opened, stop processing clicks
         } else if (buildingItem.action === 'options') {
             this.activePopup = 'options';
             if (!this.optionsPopup) {
                 this.optionsPopup = new ManageSettlementMenu(this.stateManager, this);
             }
             this.optionsPopup.open();
-            return true; // Popup opened, stop processing clicks
         } else if (buildingItem.action === 'arcaneLibrary') {
             this.activePopup = 'arcaneLibrary';
             if (!this.arcaneLibraryPopup) {
                 this.arcaneLibraryPopup = new ArcaneLibraryMenu(this.stateManager, this);
             }
             this.arcaneLibraryPopup.open();
-            return true; // Popup opened, stop processing clicks
         }
-        return false; // No popup opened
     }
 
     closePopup() {
@@ -3352,7 +3315,6 @@ class UpgradesMenu {
         this.clickLock = false; // Prevent double-clicks on items
         this.lastPaginationClickTime = 0; // Prevent double-click pagination
         this.lastConsumableCheckTime = 0; // Track last time we checked for marketplace changes
-        this.ignoreNextClick = false; // Flag to skip the click that opened the menu
         // Get player gold from stateManager (persistent between levels)
         this.playerGold = stateManager.playerGold || 0;
         
@@ -3831,31 +3793,6 @@ class UpgradesMenu {
     }
 
     handleClick(x, y) {
-        // If popup is active, delegate click to popup (but not the click that opened it)
-        if (this.activePopup === 'upgrades' && this.upgradesPopup) {
-            // Skip if popup was just opened (ignore the opening click)
-            if (this.upgradesPopup.ignoreNextClick) {
-                this.upgradesPopup.ignoreNextClick = false;
-                return;
-            }
-            this.upgradesPopup.handleClick(x, y);
-            return;
-        } else if (this.activePopup === 'options' && this.optionsPopup) {
-            if (this.optionsPopup.ignoreNextClick) {
-                this.optionsPopup.ignoreNextClick = false;
-                return;
-            }
-            this.optionsPopup.handleClick(x, y);
-            return;
-        } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
-            if (this.arcaneLibraryPopup.ignoreNextClick) {
-                this.arcaneLibraryPopup.ignoreNextClick = false;
-                return;
-            }
-            this.arcaneLibraryPopup.handleClick(x, y);
-            return;
-        }
-
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
@@ -3981,9 +3918,6 @@ class UpgradesMenu {
     }
 
     handleItemAction(item) {
-        // DEBUG: Log call stack to understand where this is coming from
-        console.log('handleItemAction called for:', item.name, 'stack:', new Error().stack);
-        
         // Prevent rapid double-clicks
         if (this.clickLock) {
             return;
@@ -4044,12 +3978,7 @@ class UpgradesMenu {
             // Rebuild buy items to reflect purchase restrictions and active status
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
-            // Preserve current page if still valid, otherwise adjust
-            const itemsPerPage = 8;
-            const maxPages = Math.max(1, Math.ceil(this.buyItems.length / itemsPerPage));
-            if (this.currentPage >= maxPages) {
-                this.currentPage = maxPages - 1;
-            }
+            this.currentPage = 0;
         } else if (this.activeTab === 'sell') {
             // Sell the loot item
             this.playerGold += item.sellPrice;
@@ -4075,12 +4004,7 @@ class UpgradesMenu {
             
             // Rebuild sell items to reflect the change
             this.sellItems = this.buildSellItems();
-            // Preserve current page if still valid, otherwise adjust
-            const itemsPerPage = 8;
-            const maxPages = Math.max(1, Math.ceil(this.sellItems.length / itemsPerPage));
-            if (this.currentPage >= maxPages) {
-                this.currentPage = maxPages - 1;
-            }
+            this.currentPage = 0;
             
             console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
             
@@ -4672,7 +4596,7 @@ class SettlementOptionsMenu {
         } else if (action === 'load') {
             this.stateManager.changeState('loadGame');
         } else if (action === 'menu') {
-            this.stateManager.changeState('startScreen');
+            this.stateManager.changeState('mainMenu');
         } else if (action === 'close') {
             this.close();
         }
@@ -5202,7 +5126,7 @@ class ManageSettlementMenu {
     }
 
     quitSettlement() {
-        this.stateManager.changeState('startScreen');
+        this.stateManager.changeState('mainMenu');
     }
 
     async quitTouwers() {

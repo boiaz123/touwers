@@ -236,7 +236,7 @@ export class OptionsMenu {
         const backPos = this.getBackButtonPosition();
         if (x >= backPos.x && x <= backPos.x + backPos.width &&
             y >= backPos.y && y <= backPos.y + backPos.height) {
-            const previousState = this.stateManager.previousState || 'startScreen';
+            const previousState = this.stateManager.previousState || 'mainMenu';
             this.stateManager.changeState(previousState);
             return;
         }

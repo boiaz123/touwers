@@ -81,7 +81,6 @@ export class SaveSystem {
         const saveFile = {
             version: '1.0',
             timestamp: new Date().toISOString(),
-            commanderName: settlementData.commanderName || 'Commander',
             // Settlement progression
             playerGold: settlementData.playerGold || 0,
             playerInventory: settlementData.playerInventory || [],
@@ -234,7 +233,6 @@ export class SaveSystem {
         return {
             isEmpty: false,
             slotNumber: slotNumber,
-            commanderName: save.commanderName || 'Commander',
             displayText: `Completed: ${completedCount} Level${completedCount !== 1 ? 's' : ''}`,
             detailText: formattedLevelName,
             dateString: dateString,
@@ -250,12 +248,10 @@ export class SaveSystem {
     /**
      * Create a new game save state with all settlement data initialized to defaults
      * Called when a player starts a new game
-     * @param {string} commanderName - The commander name for this save (defaults to 'Commander')
      * @returns {Object} - Fresh settlement data for a new save
      */
-    static createNewGameState(commanderName = 'Commander') {
+    static createNewGameState() {
         return {
-            commanderName: commanderName || 'Commander',
             playerGold: 0,
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },

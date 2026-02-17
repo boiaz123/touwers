@@ -3,7 +3,6 @@ import { Building } from './Building.js';
 export class TowerForge extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.type = 'forge'; // Ensure type is set for reliable detection
         this.upgradeRadius = 200;
         this.sparks = [];
         this.nextSparkTime = 0;

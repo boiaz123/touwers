@@ -51,7 +51,7 @@ export class BuildingManager {
         if (type === 'superweapon') {
             // Super Weapon Lab requires 5 diamonds + gold
             const diamondCost = 5;
-            const academy = this.buildings.find(b => b.type === 'academy');
+            const academy = this.buildings.find(b => b.constructor.name === 'MagicAcademy');
             if (!academy || (academy.gems.diamond || 0) < diamondCost) {
                 return false;
             }
@@ -65,7 +65,7 @@ export class BuildingManager {
         if (isFree || this.gameState.spend(buildingType.cost)) {
             // Deduct additional costs
             if (type === 'superweapon') {
-                const academy = this.buildings.find(b => b.type === 'academy');
+                const academy = this.buildings.find(b => b.constructor.name === 'MagicAcademy');
                 if (academy) {
                     academy.gems.diamond -= 5;
                 }
@@ -119,7 +119,7 @@ export class BuildingManager {
             building.update(deltaTime);
             
             // Apply mine income multiplier to gold mines
-            if (building.type === 'mine' && this.mineIncomeMultiplier) {
+            if (building.constructor.name === 'GoldMine' && this.mineIncomeMultiplier) {
                 building.incomeMultiplier = this.mineIncomeMultiplier;
             }
         });
@@ -176,7 +176,7 @@ export class BuildingManager {
                 if (building.onClick) {
                     const result = building.onClick();
                     return result;
-                } else if (building.type === 'mine') {
+                } else if (building.constructor.name === 'GoldMine') {
                     // Fallback for GoldMine if onClick doesn't exist
                     return building.collectGold();
                 }

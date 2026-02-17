@@ -3,7 +3,6 @@ import { Building } from './Building.js';
 export class TrainingGrounds extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
-        this.type = 'training'; // Ensure type is set for reliable detection
         this.isSelected = false;
         
         // Training Grounds building level - starts at 1 when built

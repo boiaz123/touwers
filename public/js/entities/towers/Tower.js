@@ -1,11 +1,3 @@
-// Tower default constants - base units, not pixels
-// These stay constant across all resolutions
-const TOWER_DEFAULTS = {
-    RANGE: 120,       // pixels at base resolution = 3.75 grid cells
-    DAMAGE: 20,
-    FIRE_RATE: 1      // shots per second
-};
-
 export class Tower {
     constructor(x, y, gridX, gridY) {
         this.x = x;
@@ -16,9 +8,9 @@ export class Tower {
         
         // Tower stats - all measured in base units, not pixels
         // These stay constant across all resolutions
-        this.range = TOWER_DEFAULTS.RANGE;
-        this.damage = TOWER_DEFAULTS.DAMAGE;
-        this.fireRate = TOWER_DEFAULTS.FIRE_RATE;
+        this.range = 120; // pixels at base resolution = 3.75 grid cells
+        this.damage = 20;
+        this.fireRate = 1;
         
         this.cooldown = 0;
         this.target = null;
@@ -39,17 +31,13 @@ export class Tower {
     
     findTarget(enemies) {
         let closest = null;
-        // OPTIMIZATION: Use squared distances to avoid expensive sqrt in Math.hypot
-        const rangeSq = this.range * this.range;
-        let closestDistSq = rangeSq;
+        let closestDist = this.range;
         
         for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq <= rangeSq && distSq < closestDistSq) {
+            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+            if (dist <= this.range && dist < closestDist) {
                 closest = enemy;
-                closestDistSq = distSq;
+                closestDist = dist;
             }
         }
         

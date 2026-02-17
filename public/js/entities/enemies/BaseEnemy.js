@@ -1,16 +1,5 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
 
-// Enemy default constants - constant across all resolutions
-const ENEMY_DEFAULTS = {
-    LOOT_DROP_CHANCE: 0.1,        // 1% chance to drop normal loot on death
-    RARE_LOOT_DROP_CHANCE: 0.025, // 0.25% chance to drop rare loot on death
-    ATTACK_DAMAGE: 5,
-    ATTACK_SPEED: 1.0,             // attacks per second
-    ATTACK_RANGE: 30,              // pixels
-    PATH_OFFSET_RANGE: 60,         // total range of path offset (±30 pixels)
-    MAX_PATH_OFFSET: 25            // max allowed distance from path center
-};
-
 export class BaseEnemy {
     constructor(path, health, speed, armour, magicResistance) {
         this.path = path;
@@ -21,8 +10,8 @@ export class BaseEnemy {
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
-        this.lootDropChance = ENEMY_DEFAULTS.LOOT_DROP_CHANCE;
-        this.rareLootDropChance = ENEMY_DEFAULTS.RARE_LOOT_DROP_CHANCE;
+        this.lootDropChance = 0.01; // 1% chance to drop normal loot on death (0-1)
+        this.rareLootDropChance = 0.0025; // 0.25% chance to drop rare loot on death (0-1)
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
@@ -35,10 +24,10 @@ export class BaseEnemy {
         this.pathDefenders = [];
         
         // Attack properties - constant across all resolutions
-        this.attackDamage = ENEMY_DEFAULTS.ATTACK_DAMAGE;
-        this.attackSpeed = ENEMY_DEFAULTS.ATTACK_SPEED;
+        this.attackDamage = 5;
+        this.attackSpeed = 1.0;
         this.attackCooldown = 0;
-        this.attackRange = ENEMY_DEFAULTS.ATTACK_RANGE;
+        this.attackRange = 30;
         this.isAttackingCastle = false;
         
         // Defender combat properties
@@ -53,7 +42,7 @@ export class BaseEnemy {
         // Path spreading: random lateral offset from the main path
         // This prevents all enemies from walking in a straight line
         // Range: ±30 pixels for consistent spreading within path bounds
-        this.pathOffsetAmount = (Math.random() - 0.5) * ENEMY_DEFAULTS.PATH_OFFSET_RANGE;
+        this.pathOffsetAmount = (Math.random() - 0.5) * 60; // ±30 pixels offset
         
         // Only apply offset every N frames to reduce computation
         this.offsetUpdateCounter = 0;
@@ -108,14 +97,15 @@ export class BaseEnemy {
         // PATH DEFENDER LOGIC: Check if we're at a waypoint where a path defender is stationed
         // If so, engage with the defender instead of continuing to the castle
         if (this.defenderWaypoint) {
-            // OPTIMIZATION: Use squared distance to avoid expensive sqrt
-            const dx = this.defenderWaypoint.x - this.x;
-            const dy = this.defenderWaypoint.y - this.y;
-            const distanceToWaypointSq = dx * dx + dy * dy;
+            const distanceToWaypoint = Math.hypot(
+                this.defenderWaypoint.x - this.x,
+                this.defenderWaypoint.y - this.y
+            );
+            
+
             
             // If we've reached the defender waypoint, engage with available path defender
-            // 50^2 = 2500
-            if (distanceToWaypointSq < 2500) {
+            if (distanceToWaypoint < 50) {
 
                 this.reachedEnd = true;
                 this.isAttackingCastle = false;
@@ -140,13 +130,11 @@ export class BaseEnemy {
         
         const dx = target.x - this.x;
         const dy = target.y - this.y;
-        // OPTIMIZATION: Use squared distance for threshold comparison
-        const distSq = dx * dx + dy * dy;
+        const distance = Math.hypot(dx, dy);
         
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        const reachThresholdSq = reachThreshold * reachThreshold;
         
-        if (distSq < reachThresholdSq) {
+        if (distance < reachThreshold) {
             this.currentPathIndex++;
             // Apply lateral offset when reaching waypoint
             const nextTarget = this.path[this.currentPathIndex];
@@ -161,8 +149,8 @@ export class BaseEnemy {
             }
             return;
         }
-                // Only calculate actual distance when needed for movement normalization
-        const distance = Math.sqrt(distSq);        const moveDistance = this.speed * deltaTime;
+        
+        const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
         
@@ -187,13 +175,9 @@ export class BaseEnemy {
         // Calculate direction vector along path
         const pathDx = nextPos.x - currentPos.x;
         const pathDy = nextPos.y - currentPos.y;
-        // OPTIMIZATION: Use squared length first to check for zero
-        const pathLengthSq = pathDx * pathDx + pathDy * pathDy;
+        const pathLength = Math.hypot(pathDx, pathDy);
         
-        if (pathLengthSq === 0) return;
-        
-        // Only calculate actual length when needed
-        const pathLength = Math.sqrt(pathLengthSq);
+        if (pathLength === 0) return;
         
         // Perpendicular vector (rotate 90 degrees)
         const perpX = -pathDy / pathLength;
@@ -202,39 +186,35 @@ export class BaseEnemy {
         // Calculate distance from path center (project position onto path segment)
         const toCurrentDx = this.x - currentPos.x;
         const toCurrentDy = this.y - currentPos.y;
-        // OPTIMIZATION: Use cached pathLengthSq instead of recalculating
-        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / pathLengthSq;
+        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / (pathLength * pathLength);
         const projX = currentPos.x + projectionLength * pathDx;
         const projY = currentPos.y + projectionLength * pathDy;
         
-        // OPTIMIZATION: Use squared distance from path center for comparison
-        const toCenterX = projX - this.x;
-        const toCenterY = projY - this.y;
-        const distFromPathSq = toCenterX * toCenterX + toCenterY * toCenterY;
+        // Distance from enemy to path center line
+        const distFromPath = Math.hypot(this.x - projX, this.y - projY);
         
         // Max allowed offset (path width is 60px total, so ±25px from center)
-        const maxOffset = ENEMY_DEFAULTS.MAX_PATH_OFFSET;
-        const maxOffsetSq = maxOffset * maxOffset;
+        const maxOffset = 25;
         
         // If we're too far from path center, pull back toward it
-        if (distFromPathSq > maxOffsetSq) {
-            // Only calculate actual distance when we need it for the math
-            const distFromPath = Math.sqrt(distFromPathSq);
+        if (distFromPath > maxOffset) {
             // Calculate how much we're over the limit
             const excess = distFromPath - maxOffset;
             
-            // Direction from enemy to path center (toCenterX/Y already calculated above)
-            // distFromPath is same as toCenterLen since toCenterX = projX - this.x = -(this.x - projX)
-            if (distFromPath > 0) {
+            // Direction from enemy to path center
+            const toCenterX = projX - this.x;
+            const toCenterY = projY - this.y;
+            const toCenterLen = Math.hypot(toCenterX, toCenterY);
+            
+            if (toCenterLen > 0) {
                 // Pull back toward center
                 const pullStrength = 0.08;
-                this.x += (toCenterX / distFromPath) * excess * pullStrength;
-                this.y += (toCenterY / distFromPath) * excess * pullStrength;
+                this.x += (toCenterX / toCenterLen) * excess * pullStrength;
+                this.y += (toCenterY / toCenterLen) * excess * pullStrength;
             }
         } else {
             // We're within bounds, apply gentle spreading offset
             // Use the initial random offset, but scale it based on distance from center
-            const distFromPath = Math.sqrt(distFromPathSq);
             const spreadAmount = (this.pathOffsetAmount / 30) * (1 - (distFromPath / maxOffset) * 0.5);
             this.x += perpX * spreadAmount * 0.02;
             this.y += perpY * spreadAmount * 0.02;
@@ -253,12 +233,8 @@ export class BaseEnemy {
         }
         
         // Check if defender is in range - works for both castle defenders and guard post defenders
-        // OPTIMIZATION: Use squared distance to avoid expensive sqrt
-        const dx = defender.x - this.x;
-        const dy = defender.y - this.y;
-        const distSq = dx * dx + dy * dy;
-        const rangeSq = (this.attackRange * 1.5) * (this.attackRange * 1.5); // Slightly larger range for defender
-        if (distSq < rangeSq) {
+        const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
+        if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
             this.isAttackingDefender = true;
             this.defenderTarget = defender;
             return true;
@@ -346,38 +322,20 @@ export class BaseEnemy {
     }
     
     renderHealthBar(ctx, baseSize) {
-        // OPTIMIZATION: Pre-calculate bar dimensions
         const barWidth = baseSize * 3;
         const barHeight = Math.max(2, baseSize * 0.4);
         const barY = this.y - baseSize * 2.2;
-        const barX = this.x - barWidth * 0.5;
         
-        // OPTIMIZATION: Cache health percentage calculation
-        const healthPercent = this.health / this.maxHealth;
-        
-        // OPTIMIZATION: Determine color with minimal branching
-        // Colors: green > 50%, yellow > 25%, red <= 25%
-        let healthColor;
-        if (healthPercent > 0.5) {
-            healthColor = '#4CAF50';
-        } else if (healthPercent > 0.25) {
-            healthColor = '#FFC107';
-        } else {
-            healthColor = '#F44336';
-        }
-        
-        // Draw background
         ctx.fillStyle = '#000';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
         
-        // Draw health fill
-        ctx.fillStyle = healthColor;
-        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+        const healthPercent = this.health / this.maxHealth;
+        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
         
-        // Draw border
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
-        ctx.strokeRect(barX, barY, barWidth, barHeight);
+        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
     
     darkenColor(color, factor) {
