@@ -3316,6 +3316,11 @@ class UpgradesMenu {
         // Get player gold from stateManager (persistent between levels)
         this.playerGold = stateManager.playerGold || 0;
         
+        // Visual effects
+        this.floatingGoldEffects = []; // For gold coin splashes on sell
+        this.glowEffects = []; // For glow effects on buy
+        this.errorEffects = []; // For "Not Enough Gold" error messages
+        
         // Initialize marketplace system if not already done
         if (!this.stateManager.marketplaceSystem) {
             this.stateManager.marketplaceSystem = new MarketplaceSystem();
@@ -3582,6 +3587,10 @@ class UpgradesMenu {
 
     close() {
         this.isOpen = false;
+        // Clear effects
+        this.floatingGoldEffects = [];
+        this.glowEffects = [];
+        this.errorEffects = [];
         this.settlementHub.closePopup();
     }
 
@@ -3589,6 +3598,9 @@ class UpgradesMenu {
         if (this.isOpen && this.animationProgress < 1) {
             this.animationProgress += deltaTime * 2;
         }
+        
+        // Update visual effects
+        this.updateEffects(deltaTime);
         
         // Periodically check if marketplace consumables have changed (e.g., magic flatpack was used)
         // This ensures the panel always shows the current state
@@ -3910,16 +3922,23 @@ class UpgradesMenu {
             const col = index % 3;
             const itemX = itemsGridStartX + col * (itemWidth + gridSpacing);
             const itemY = itemsGridStartY + row * (itemHeight + gridSpacing);
-            if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
+            
+            // Check if click is within button bounds (not entire item)
+            const buttonWidth = itemWidth - 14;
+            const buttonHeight = 18;
+            const buttonX = itemX + 7;
+            const buttonY = itemY + itemHeight - 26;
+            
+            if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                this.handleItemAction(item);
+                this.handleItemAction(item, itemX + itemWidth / 2, buttonY);
             }
         });
     }
 
-    handleItemAction(item) {
+    handleItemAction(item, originX, originY) {
         // Prevent rapid double-clicks
         if (this.clickLock) {
             return;
@@ -3936,12 +3955,17 @@ class UpgradesMenu {
             }
             
             if (this.playerGold < item.cost) {
+                // Show "Not Enough Gold" error
+                this.createErrorEffect('Not Enough Gold', originX, originY);
                 return;
             }
             
             // Deduct gold
             this.playerGold -= item.cost;
             this.stateManager.playerGold = this.playerGold;
+            
+            // Create glow effect with gold amount
+            this.createGlowEffect(item.cost, originX, originY);
             
             // Handle upgrades separately from marketplace items
             if (item.type === 'upgrade') {
@@ -3980,6 +4004,9 @@ class UpgradesMenu {
             this.playerGold += item.sellPrice;
             this.stateManager.playerGold = this.playerGold;
             
+            // Create gold splash effect
+            this.createGoldSplash(originX, originY, item.sellPrice);
+            
             // Update statistics when selling
             if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.totalMoneyEarnedInMarketplace += item.sellPrice;
@@ -4008,6 +4035,188 @@ class UpgradesMenu {
             }
         }
     }
+
+    createGoldSplash(originX, originY, amount) {
+        // Create multiple gold coin particles that splash outward and fall
+        const coinCount = Math.min(15, Math.ceil(amount / 30)); // More coins for higher amounts
+        for (let i = 0; i < coinCount; i++) {
+            const angle = (i / coinCount) * Math.PI * 2;
+            const velocity = {
+                x: Math.cos(angle) * (3 + Math.random() * 3),
+                y: Math.sin(angle) * (3 + Math.random() * 2) - 2
+            };
+            this.floatingGoldEffects.push({
+                x: originX,
+                y: originY,
+                velocityX: velocity.x,
+                velocityY: velocity.y,
+                gravity: 0.15,
+                duration: 1.2,
+                elapsed: 0,
+                rotation: Math.random() * Math.PI * 2,
+                rotationVel: (Math.random() - 0.5) * 0.3,
+                showText: true,
+                textAmount: amount,
+                textColor: '#00FF00' // Green for sale (positive)
+            });
+        }
+        
+        // Add one text effect at the origin showing the amount
+        this.glowEffects.push({
+            x: originX,
+            y: originY,
+            startY: originY,
+            duration: 1.5,
+            elapsed: 0,
+            amount: '+' + amount,
+            float: 0,
+            floatVel: 0.5,
+            color: '#00FF00'
+        });
+    }
+
+    createGlowEffect(goldAmount, originX, originY) {
+        // Create coin splash effect with red text for buying
+        const coinCount = Math.min(15, Math.ceil(goldAmount / 30)); // More coins for higher amounts
+        for (let i = 0; i < coinCount; i++) {
+            const angle = (i / coinCount) * Math.PI * 2;
+            const velocity = {
+                x: Math.cos(angle) * (3 + Math.random() * 3),
+                y: Math.sin(angle) * (3 + Math.random() * 2) - 2
+            };
+            this.floatingGoldEffects.push({
+                x: originX,
+                y: originY,
+                velocityX: velocity.x,
+                velocityY: velocity.y,
+                gravity: 0.15,
+                duration: 1.2,
+                elapsed: 0,
+                rotation: Math.random() * Math.PI * 2,
+                rotationVel: (Math.random() - 0.5) * 0.3,
+                showText: true,
+                textAmount: goldAmount,
+                textColor: '#FF4444' // Red for buy (negative)
+            });
+        }
+        
+        // Add one text effect at the origin showing the amount
+        this.glowEffects.push({
+            x: originX,
+            y: originY,
+            startY: originY,
+            duration: 1.5,
+            elapsed: 0,
+            amount: '-' + goldAmount,
+            float: 0,
+            floatVel: 0.5,
+            color: '#FF4444'
+        });
+    }
+
+    createErrorEffect(message, originX, originY) {
+        // Create error message effect
+        this.errorEffects.push({
+            x: originX,
+            y: originY,
+            startY: originY,
+            duration: 2,
+            elapsed: 0,
+            message: message,
+            float: 0,
+            floatVel: 0.3
+        });
+    }
+
+    updateEffects(deltaTime) {
+        // Update gold splash effects
+        this.floatingGoldEffects = this.floatingGoldEffects.filter(effect => {
+            effect.elapsed += deltaTime;
+            effect.y += effect.velocityY;
+            effect.velocityY += effect.gravity;
+            effect.x += effect.velocityX;
+            effect.rotation += effect.rotationVel;
+            return effect.elapsed < effect.duration;
+        });
+        
+        // Update glow effects
+        this.glowEffects = this.glowEffects.filter(effect => {
+            effect.elapsed += deltaTime;
+            effect.float += effect.floatVel * deltaTime;
+            return effect.elapsed < effect.duration;
+        });
+        
+        // Update error effects
+        this.errorEffects = this.errorEffects.filter(effect => {
+            effect.elapsed += deltaTime;
+            effect.float += effect.floatVel * deltaTime;
+            return effect.elapsed < effect.duration;
+        });
+    }
+
+    renderEffects(ctx) {
+        // Render gold splash effects
+        this.floatingGoldEffects.forEach(effect => {
+            const progress = effect.elapsed / effect.duration;
+            const alpha = Math.max(0, 1 - progress); // Fade out
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(effect.x, effect.y);
+            ctx.rotate(effect.rotation);
+            
+            // Draw gold coin
+            ctx.fillStyle = '#ffd700';
+            ctx.beginPath();
+            ctx.arc(0, 0, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Coin edge
+            ctx.strokeStyle = '#ffed4e';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Coin shine
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(-1.5, -1.5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        });
+        
+        // Render glow effects
+        this.glowEffects.forEach(effect => {
+            const progress = effect.elapsed / effect.duration;
+            const alpha = Math.max(0, 1 - progress * 1.2); // Fade out
+            
+            // Draw amount text
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = effect.color || '#FFD700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(effect.amount + 'g', effect.x, effect.y - effect.float);
+            ctx.restore();
+        });
+        
+        // Render error effects
+        this.errorEffects.forEach(effect => {
+            const progress = effect.elapsed / effect.duration;
+            const alpha = Math.max(0, 1 - progress); // Fade out
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = '#ff4444';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(effect.message, effect.x, effect.y - effect.float);
+            ctx.restore();
+        });
+    }
+
 
     render(ctx) {
         if (!this.isOpen) return;
@@ -4149,6 +4358,9 @@ class UpgradesMenu {
         if (maxPages > 1) {
             this.renderPaginationControls(ctx, panelX, panelY + panelHeight - 50, panelWidth);
         }
+        
+        // Render visual effects
+        this.renderEffects(ctx);
         
         ctx.globalAlpha = 1;
     }
