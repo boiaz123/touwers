@@ -3344,6 +3344,11 @@ class UpgradesMenu {
             this.stateManager.marketplaceSystem = new MarketplaceSystem();
         }
         
+        // Initialize item error effects tracking
+        this.itemErrorEffects = [];
+        this.goldDisplayX = 0;
+        this.goldDisplayY = 0;
+        
         // Category system for buy tab - now includes upgrades as a category
         this.allBuyItems = this.buildBuyItems();
         this.buyCategories = [
@@ -3392,7 +3397,7 @@ class UpgradesMenu {
             // Music items should only be purchased once
             if (itemData.category === 'music' && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
-                requirementMsg = 'Owned';
+                requirementMsg = 'Item already owned';
             }
             
             // Special check: if it's an Intel item and player already has it, mark as unavailable
@@ -3406,14 +3411,14 @@ class UpgradesMenu {
             // are stackable but should be greyed out when player already owns one (until it's consumed at level end)
             if (itemData.type === 'consumable' && itemData.category !== 'music' && itemData.category !== 'intel' && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
-                // Don't set requirementMsg - marketplace will show it as greyed out but without a requirement message
+                requirementMsg = 'Item already owned';
             }
             
             // Special check: if it's the Frog King's Bane (boon type), prevent re-purchase
             // Boons are one-time purchases like music and intel
             if (itemId === 'frog-king-bane' && marketplaceSystem.getConsumableCount('frog-king-bane') > 0) {
                 canPurchase = false;
-                requirementMsg = 'Owned';
+                requirementMsg = 'Item already owned';
             }
             
             // Combine loot and boon into consumable category
@@ -3955,12 +3960,12 @@ class UpgradesMenu {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                this.handleItemAction(item, itemX + itemWidth / 2, buttonY);
+                this.handleItemAction(item, itemX + itemWidth / 2, itemY + itemHeight / 2);
             }
         });
     }
 
-    handleItemAction(item, originX, originY) {
+    handleItemAction(item, itemCenterX, itemCenterY) {
         // Prevent rapid double-clicks
         if (this.clickLock) {
             return;
@@ -3971,14 +3976,16 @@ class UpgradesMenu {
         if (this.activeTab === 'buy') {
             // Handle both marketplace items and upgrades (upgrades are now a category in buy tab)
             if (!item.canPurchase) {
+                // Show error message centered in the item panel
                 if (item.requirementMsg) {
+                    this.createItemErrorEffect(item.requirementMsg, itemCenterX, itemCenterY);
                 }
                 return;
             }
             
             if (this.playerGold < item.cost) {
-                // Show "Not Enough Gold" error
-                this.createErrorEffect('Not Enough Gold', originX, originY);
+                // Show "Not Enough Gold" error centered in the item panel
+                this.createItemErrorEffect('Not Enough Gold', itemCenterX, itemCenterY);
                 return;
             }
             
@@ -3986,8 +3993,8 @@ class UpgradesMenu {
             this.playerGold -= item.cost;
             this.stateManager.playerGold = this.playerGold;
             
-            // Create glow effect with gold amount
-            this.createGlowEffect(item.cost, originX, originY);
+            // Create glow effect with gold amount at player gold display location
+            this.createGlowEffect(item.cost, this.goldDisplayX, this.goldDisplayY);
             
             // Handle upgrades separately from marketplace items
             if (item.type === 'upgrade') {
@@ -4026,8 +4033,8 @@ class UpgradesMenu {
             this.playerGold += item.sellPrice;
             this.stateManager.playerGold = this.playerGold;
             
-            // Create gold splash effect
-            this.createGoldSplash(originX, originY, item.sellPrice);
+            // Create gold add effect at the gold display location
+            this.createAddGoldEffect(item.sellPrice, this.goldDisplayX, this.goldDisplayY);
             
             // Update statistics when selling
             if (this.stateManager.gameStatistics) {
@@ -4152,41 +4159,34 @@ class UpgradesMenu {
     }
 
     createGlowEffect(goldAmount, originX, originY) {
-        // Create coin splash effect with red text for buying
-        const coinCount = Math.min(100, Math.ceil(goldAmount / 30)); // More coins for higher amounts
-        for (let i = 0; i < coinCount; i++) {
-            const angle = (i / coinCount) * Math.PI * 2;
-            const velocity = {
-                x: Math.cos(angle) * (3 + Math.random() * 3),
-                y: Math.sin(angle) * (3 + Math.random() * 2) - 2
-            };
-            this.floatingGoldEffects.push({
-                x: originX,
-                y: originY,
-                velocityX: velocity.x,
-                velocityY: velocity.y,
-                gravity: 0.15,
-                duration: 1.2,
-                elapsed: 0,
-                rotation: Math.random() * Math.PI * 2,
-                rotationVel: (Math.random() - 0.5) * 0.3,
-                showText: true,
-                textAmount: goldAmount,
-                textColor: '#FF4444' // Red for buy (negative)
-            });
-        }
-        
-        // Add one text effect at the origin showing the amount
+        // Create text effect at the gold display location showing the gold spent
+        // Animates DOWNWARD and fades out in RED
         this.glowEffects.push({
             x: originX,
             y: originY,
             startY: originY,
-            duration: 1.5,
+            duration: 1.8,
             elapsed: 0,
             amount: '-' + goldAmount,
             float: 0,
-            floatVel: 0.5,
-            color: '#FF4444'
+            floatVel: -80,  // Negative velocity for downward movement (pixels per second)
+            color: '#FF6666'  // Red for spent gold
+        });
+    }
+
+    createAddGoldEffect(goldAmount, originX, originY) {
+        // Create text effect at the gold display location showing the gold added
+        // Animates UPWARD and fades out in GREEN
+        this.glowEffects.push({
+            x: originX,
+            y: originY,
+            startY: originY,
+            duration: 1.8,
+            elapsed: 0,
+            amount: '+' + goldAmount,
+            float: 0,
+            floatVel: 80,  // Positive velocity for upward movement (pixels per second)
+            color: '#00FF00'  // Green for added gold
         });
     }
 
@@ -4201,6 +4201,21 @@ class UpgradesMenu {
             message: message,
             float: 0,
             floatVel: 0.3
+        });
+    }
+
+    createItemErrorEffect(message, itemCenterX, itemCenterY) {
+        // Create error message effect displayed in the center of an item panel
+        this.itemErrorEffects = this.itemErrorEffects || [];
+        this.itemErrorEffects.push({
+            x: itemCenterX,
+            y: itemCenterY,
+            startY: itemCenterY,
+            duration: 2,
+            elapsed: 0,
+            message: message,
+            float: 0,
+            floatVel: 0.2
         });
     }
 
@@ -4224,6 +4239,14 @@ class UpgradesMenu {
         
         // Update error effects
         this.errorEffects = this.errorEffects.filter(effect => {
+            effect.elapsed += deltaTime;
+            effect.float += effect.floatVel * deltaTime;
+            return effect.elapsed < effect.duration;
+        });
+        
+        // Update item error effects
+        if (!this.itemErrorEffects) this.itemErrorEffects = [];
+        this.itemErrorEffects = this.itemErrorEffects.filter(effect => {
             effect.elapsed += deltaTime;
             effect.float += effect.floatVel * deltaTime;
             return effect.elapsed < effect.duration;
@@ -4288,6 +4311,26 @@ class UpgradesMenu {
             ctx.fillStyle = '#ff4444';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
+            ctx.fillText(effect.message, effect.x, effect.y - effect.float);
+            ctx.restore();
+        });
+        
+        // Render item error effects
+        if (!this.itemErrorEffects) this.itemErrorEffects = [];
+        this.itemErrorEffects.forEach(effect => {
+            const progress = effect.elapsed / effect.duration;
+            const alpha = Math.max(0, 1 - progress); // Fade out
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = 'bold 15px Arial';
+            ctx.fillStyle = '#ff4444';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
             ctx.fillText(effect.message, effect.x, effect.y - effect.float);
             ctx.restore();
         });
@@ -4435,6 +4478,12 @@ class UpgradesMenu {
             this.renderPaginationControls(ctx, panelX, panelY + panelHeight - 50, panelWidth);
         }
         
+        // Store panel info for coordinate calculations
+        this.lastPanelX = panelX;
+        this.lastPanelY = panelY;
+        this.lastPanelWidth = panelWidth;
+        this.lastPanelHeight = panelHeight;
+        
         // Render visual effects
         this.renderEffects(ctx);
         
@@ -4519,12 +4568,25 @@ class UpgradesMenu {
         ctx.ellipse(x + chestWidth + 10, y + 20, 2, 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Gold amount text next to chest
-        ctx.font = 'bold 14px Arial';
-        ctx.fillStyle = '#ffd700';
+        // Gold amount text next to chest - ENHANCED STYLING
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = '#ffed4e';  // Brighter gold
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.playerGold + ' Gold', x + chestWidth + 18, y + 14);
+        const goldTextX = x + chestWidth + 18;
+        const goldTextY = y + 14;
+        
+        // Add subtle glow/shadow effect
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.fillText(this.playerGold + ' Gold', goldTextX, goldTextY);
+        ctx.shadowColor = 'transparent';
+        
+        // Store position for gold effect target
+        this.goldDisplayX = goldTextX + 20;
+        this.goldDisplayY = goldTextY;
     }
 
     renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight) {
@@ -4746,17 +4808,10 @@ class UpgradesMenu {
             ctx.fillText('x' + item.count, x + width / 2, effectBoxStartY + effectBoxHeight / 2);
         }
         
-        // Disabled overlay and message
+        // Disabled overlay - no message shown here, it will appear as floating text
         if (isDisabled) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.fillRect(x, y, width, height);
-            
-            ctx.font = '8px Arial';
-            ctx.fillStyle = '#ffaa00';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const displayMsg = item.requirementMsg || 'Not Available';
-            ctx.fillText(displayMsg, x + width / 2, y + height - 18);
         }
         
         // Action button - LARGER

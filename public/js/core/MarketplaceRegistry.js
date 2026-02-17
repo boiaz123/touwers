@@ -14,7 +14,7 @@ export class MarketplaceRegistry {
             icon: '🔨',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Tower Forge\nUnlocks tower upgrades\nEnhances all towers',
+            effect: 'Free Tower Forge in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
             requirements: []
         },
         'training-materials': {
@@ -24,7 +24,7 @@ export class MarketplaceRegistry {
             icon: '🎖️',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Training Grounds\nUnlock defender training\nEnhanced tower abilities',
+            effect: 'Free Training Grounds in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
             requirements: ['training-gear']
         },
         'rabbits-foot': {
@@ -34,7 +34,7 @@ export class MarketplaceRegistry {
             icon: '🐾',
             category: 'loot',
             type: 'consumable',
-            effect: 'Double loot rewards\nDouble gold drops\nDouble gem finds',
+            effect: 'The chances of normale loot are doubled in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
             requirements: []
         },
         'strange-talisman': {
@@ -44,7 +44,7 @@ export class MarketplaceRegistry {
             icon: '🔮',
             category: 'loot',
             type: 'consumable',
-            effect: 'Rare drops doubled\nLegendary drops doubled\nMystical artifacts enhanced',
+            effect: 'Enemies carrying Legendary loot will drop two bags in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
             requirements: []
         },
         'magic-tower-flatpack': {
@@ -54,7 +54,7 @@ export class MarketplaceRegistry {
             icon: '📦',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Magic Tower\nElemental selection\nSpecialized damage',
+            effect: 'Free Magic Tower in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
             requirements: []
         },
         'frog-king-bane': {
@@ -64,7 +64,7 @@ export class MarketplaceRegistry {
             icon: '👑',
             category: 'boon',
             type: 'boon',
-            effect: 'Revive castle once\nForest spirit protection\nContinue the battle',
+            effect: 'Rebuild your castle once\nItem is consumed when your castle gets destroyed\nStays active until consumed',
             requirements: []
         },
         // MUSICAL SCORES
@@ -76,7 +76,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'menu-theme',
-            effect: 'Unlock menu theme for Arcane Library',
+            effect: 'Unlock menu theme to be played within the Arcane Library',
             requirements: []
         },
         'music-settlement-1': {
@@ -87,7 +87,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'settlement-theme-1',
-            effect: 'Unlock settlement theme for Arcane Library',
+            effect: 'Unlock settlement theme to be played within the Arcane Library',
             requirements: []
         },
         'music-settlement-2': {
@@ -98,7 +98,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'settlement-theme-2',
-            effect: 'Unlock settlement theme for Arcane Library',
+            effect: 'Unlock settlement theme to be played within the Arcane Library',
             requirements: []
         },
         'music-settlement-3': {
@@ -109,7 +109,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'settlement-theme-3',
-            effect: 'Unlock settlement theme for Arcane Library',
+            effect: 'Unlock settlement theme to be played within the Arcane Library',
             requirements: []
         },
         'music-forest-1': {
@@ -120,7 +120,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-1-battle-1',
-            effect: 'Unlock forest battle theme for Arcane Library',
+            effect: 'Unlock forest battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-forest-2': {
@@ -131,7 +131,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-1-battle-2',
-            effect: 'Unlock forest battle theme for Arcane Library',
+            effect: 'Unlock forest battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-forest-3': {
@@ -142,7 +142,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-1-battle-3',
-            effect: 'Unlock forest battle theme for Arcane Library',
+            effect: 'Unlock forest battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-mountain': {
@@ -153,7 +153,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-2-battle-1',
-            effect: 'Unlock mountain battle theme for Arcane Library',
+            effect: 'Unlock mountain battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-desert-1': {
@@ -164,7 +164,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-3-battle-1',
-            effect: 'Unlock desert battle theme for Arcane Library',
+            effect: 'Unlock desert battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-desert-2': {
@@ -175,7 +175,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-3-battle-2',
-            effect: 'Unlock desert battle theme for Arcane Library',
+            effect: 'Unlock desert battle theme to be played within the Arcane Library',
             requirements: []
         },
         'music-victory': {
@@ -186,7 +186,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'victory-tune',
-            effect: 'Unlock victory fanfare for Arcane Library',
+            effect: 'Unlock victory fanfare to be played within the Arcane Library',
             requirements: []
         },
         'music-defeat': {
@@ -197,7 +197,7 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'defeat-tune',
-            effect: 'Unlock defeat elegy for Arcane Library',
+            effect: 'Unlock defeat elegy to be played within the Arcane Library',
             requirements: []
         },
         // INTEL PACKS
