@@ -2,7 +2,6 @@ import { GameStateManager } from '../core/states/GameStateManager.js';
 import { LoadGame } from '../core/states/LoadGame.js';
 import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
-import { StartScreen } from '../core/states/StartScreen.js';
 import { MainMenu } from '../core/states/MainMenu.js';
 import { CampaignMenu } from '../core/states/CampaignMenu.js';
 import { Campaign1 } from '../entities/campaigns/Campaign1.js';
@@ -118,9 +117,6 @@ export class Game {
             const optionsMenu = new OptionsMenu(this.stateManager);
             this.stateManager.addState('options', optionsMenu);
             
-            const startScreen = new StartScreen(this.stateManager);
-            this.stateManager.addState('start', startScreen);
-            
             const mainMenu = new MainMenu(this.stateManager);
             this.stateManager.addState('mainMenu', mainMenu);
             
@@ -153,7 +149,7 @@ export class Game {
             this.stateManager.addState('game', gameplayState);
             
             
-            const stateChanged = this.stateManager.changeState('start');
+            const stateChanged = this.stateManager.changeState('mainMenu');
             
             if (!stateChanged) {
                 throw new Error('Failed to change to start state');
