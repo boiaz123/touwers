@@ -336,8 +336,8 @@ export class SettlementHub {
                 unlockSystem: this.stateManager.currentSaveData.unlockSystem
             };
             
-            // Save to the slot file
-            SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+            // Use helper to save while preserving commander name
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
         }
         
         // Clear manual music selection flag when exiting settlement

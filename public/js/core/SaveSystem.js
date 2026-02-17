@@ -80,6 +80,7 @@ export class SaveSystem {
         const saveFile = {
             version: '1.0',
             timestamp: new Date().toISOString(),
+            commanderName: settlementData.commanderName || '',
             // Settlement progression
             playerGold: settlementData.playerGold || 0,
             playerInventory: settlementData.playerInventory || [],
@@ -159,6 +160,75 @@ export class SaveSystem {
     }
 
     /**
+     * Update and save settlement data while preserving commander name and campaign progression
+     * This is the PREFERRED save method during gameplay to ensure consistent saves across all contexts
+     * @param {number} slotNumber - Slot number (1-3)
+     * @param {Object} updateData - Data to update (will be merged with existing save)
+     * @returns {boolean} - Success status
+     */
+    static updateAndSaveSettlementData(slotNumber, updateData) {
+        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
+            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
+            return false;
+        }
+
+        // Get existing save to preserve commander name and campaign progression
+        const existingSave = this.getSave(slotNumber);
+        
+        // Build the save data, preserving existing values
+        const saveData = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            // Always preserve commander name from existing save
+            commanderName: existingSave?.commanderName || updateData.commanderName || '',
+            // Settlement state
+            playerGold: updateData.playerGold !== undefined ? updateData.playerGold : (existingSave?.playerGold || 0),
+            playerInventory: updateData.playerInventory !== undefined ? updateData.playerInventory : (existingSave?.playerInventory || []),
+            upgrades: updateData.upgrades || existingSave?.upgrades || { purchasedUpgrades: [] },
+            marketplace: updateData.marketplace || existingSave?.marketplace || { consumables: {} },
+            statistics: updateData.statistics || existingSave?.statistics || {
+                victories: 0,
+                defeats: 0,
+                totalEnemiesSlain: 0,
+                totalPlaytime: 0,
+                totalItemsConsumed: 0,
+                totalMoneySpentOnMarketplace: 0,
+                totalMoneyEarnedInMarketplace: 0
+            },
+            // Campaign progression - always preserve
+            lastPlayedLevel: updateData.lastPlayedLevel !== undefined ? updateData.lastPlayedLevel : (existingSave?.lastPlayedLevel || 'level1'),
+            unlockedLevels: updateData.unlockedLevels !== undefined ? updateData.unlockedLevels : (existingSave?.unlockedLevels || ['level1']),
+            completedLevels: updateData.completedLevels !== undefined ? updateData.completedLevels : (existingSave?.completedLevels || []),
+            unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || {
+                forgeLevel: 0,
+                hasForge: false,
+                forgeCount: 0,
+                mineCount: 0,
+                academyCount: 0,
+                trainingGroundsCount: 0,
+                superweaponCount: 0,
+                guardPostCount: 0,
+                maxGuardPosts: 0,
+                superweaponUnlocked: false,
+                gemMiningResearched: false,
+                unlockedTowers: [],
+                unlockedBuildings: [],
+                unlockedUpgrades: [],
+                unlockedCombinationSpells: []
+            }
+        };
+
+        const key = this.getSaveSlotKey(slotNumber);
+        try {
+            localStorage.setItem(key, JSON.stringify(saveData));
+            return true;
+        } catch (error) {
+            console.error('SaveSystem: Failed to update and save settlement data to slot', slotNumber, ':', error);
+            return false;
+        }
+    }
+
+    /**
      * Get the human-readable name for a level
      * @param {string} levelId - Level ID (e.g., 'level1')
      * @returns {string} - Display name for the level
@@ -212,31 +282,25 @@ export class SaveSystem {
             return {
                 isEmpty: true,
                 slotNumber: slotNumber,
-                displayText: 'Empty Save Slot',
-                description: 'Click to start a new game'
+                commanderName: '',
+                dateString: 'Empty',
+                displayText: 'Empty Save Slot'
             };
         }
 
         const date = new Date(save.timestamp);
         const dateString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-        
-        // Count completed levels
-        const completedCount = (save.completedLevels && save.completedLevels.length) || 0;
-        
-        // Get last played level for display
-        const lastPlayedLevelId = save.lastPlayedLevel || 'level1';
-        const formattedLevelName = this.getFormattedLevelName(lastPlayedLevelId);
+        const commanderName = save.commanderName || 'Unknown Commander';
         
         return {
             isEmpty: false,
             slotNumber: slotNumber,
-            displayText: `Completed: ${completedCount} Level${completedCount !== 1 ? 's' : ''}`,
-            detailText: formattedLevelName,
+            commanderName: commanderName,
             dateString: dateString,
+            displayText: commanderName,
             lastPlayedLevel: save.lastPlayedLevel,
             completedLevels: save.completedLevels || [],
             unlockedLevels: save.unlockedLevels || [],
-            completedCount: completedCount,
             playerGold: save.playerGold || 0,
             inventoryCount: (save.playerInventory && save.playerInventory.length) || 0
         };
@@ -249,6 +313,7 @@ export class SaveSystem {
      */
     static createNewGameState() {
         return {
+            commanderName: '',
             playerGold: 0,
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },

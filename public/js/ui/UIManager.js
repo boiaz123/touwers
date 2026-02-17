@@ -3361,20 +3361,21 @@ export class UIManager {
             const unlockedLevels = this.stateManager.currentSaveData?.unlockedLevels || ['level1'];
             const completedLevels = this.stateManager.currentSaveData?.completedLevels || [];
             
-            // Save settlement data - only settlement-related, no mid-game level state
-            SaveSystem.saveSettlementData(
-                this.stateManager.currentSaveSlot,
-                {
-                    playerGold: this.stateManager.playerGold || 0,
-                    playerInventory: this.stateManager.playerInventory || [],
-                    upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
-                    marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
-                    lastPlayedLevel: lastPlayedLevel,
-                    unlockedLevels: unlockedLevels,
-                    completedLevels: completedLevels,
-                    unlockSystem: unlockState
-                }
-            );
+            // Build save data - use new helper method to preserve commander name and campaign data
+            const saveData = {
+                playerGold: this.stateManager.playerGold || 0,
+                playerInventory: this.stateManager.playerInventory || [],
+                upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                lastPlayedLevel: lastPlayedLevel,
+                unlockedLevels: unlockedLevels,
+                completedLevels: completedLevels,
+                unlockSystem: unlockState
+            };
+            
+            // Use new helper to save while preserving commander name and campaign progress
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
             
             // Show save confirmation
             const saveBtn = document.getElementById('save-btn');
@@ -3437,12 +3438,35 @@ export class UIManager {
         // Close pause menu
         this.closePauseMenu();
         
+        // CRITICAL: Save settlement state before quitting (gold, inventory, marketplace, stats)
+        if (this.gameplayState && this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+            // Update settlement data with current level progress
+            this.stateManager.currentSaveData.playerGold = this.stateManager.playerGold || 0;
+            this.stateManager.currentSaveData.playerInventory = this.stateManager.playerInventory || [];
+            
+            // Save upgrades and marketplace with consumed items
+            if (this.stateManager.upgradeSystem) {
+                this.stateManager.currentSaveData.upgrades = this.stateManager.upgradeSystem.serialize();
+            }
+            if (this.stateManager.marketplaceSystem) {
+                this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+            }
+            
+            // Save statistics so far in this level
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
+            }
+            
+            // Save the quit state
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+        }
+        
         // Unpause the game before quitting
         this.gameplayState.setPaused(false);
         
-        // Small delay to ensure menu closes visually
+        // Small delay to ensure menu closes visually before state change
         setTimeout(() => {
-            // Change to settlement state
+            // Change to settlement state (this will also call GameplayState.exit())
             this.stateManager.changeState('settlementHub');
         }, 100);
     }

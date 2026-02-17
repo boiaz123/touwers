@@ -570,7 +570,7 @@ export class GameplayState {
             if (hasConsumablesToCommit) {
                 this.stateManager.marketplaceSystem.commitUsedConsumables();
                 
-                // Save the updated marketplace state (with consumed items) to the current save slot
+                // Save the updated marketplace state (with consumed items) and statistics to the current save slot
                 if (this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
                     this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
                     
@@ -579,7 +579,7 @@ export class GameplayState {
                         this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
                     }
                     
-                    SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+                    SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
                 }
             } else {
             }
@@ -1368,9 +1368,9 @@ export class GameplayState {
             saveData.isMidGameSave = false;
             delete saveData.midGameState;
             
-            // Save to current slot if available
+            // Save to current slot if available using helper to ensure commander name is preserved
             if (this.stateManager.currentSaveSlot) {
-                SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, saveData);
+                SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
             }
         }
 
@@ -1754,13 +1754,26 @@ export class GameplayState {
                 this.stateManager.gameStatistics.incrementItemsConsumed(consumedCount);
             }
         }
-        
-        // Save statistics before showing results
-        if (this.stateManager.gameStatistics && this.stateManager.currentSaveData) {
-            this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
-            if (this.stateManager.currentSaveSlot) {
-                SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+
+        // CRITICAL: Save all settlement data (gold, inventory, upgrades, marketplace, AND statistics + campaign progress)
+        if (this.stateManager.gameStatistics && this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
+            // Update settlement state in save data
+            this.stateManager.currentSaveData.playerGold = this.stateManager.playerGold || 0;
+            this.stateManager.currentSaveData.playerInventory = this.stateManager.playerInventory || [];
+            
+            // Save upgrades and marketplace with consumed items
+            if (this.stateManager.upgradeSystem) {
+                this.stateManager.currentSaveData.upgrades = this.stateManager.upgradeSystem.serialize();
             }
+            if (this.stateManager.marketplaceSystem) {
+                this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+            }
+            
+            // Save statistics
+            this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
+            
+            // Use the new helper method to save while preserving commander name and campaign progress
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
         }
         
         // Show custom results screen instead of alert
