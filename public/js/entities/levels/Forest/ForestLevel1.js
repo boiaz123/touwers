@@ -459,8 +459,8 @@ export class ForestLevel1 extends LevelBase {
             enemyCount: 15, 
             enemyHealth_multiplier: 0.8, 
             enemySpeed: 35, 
-            spawnInterval: 2.0, 
-            pattern: ['basic'] 
+            spawnInterval: 20, 
+            pattern: ['frogking'] 
         }
         // Wave 2
         , { 

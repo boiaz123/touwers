@@ -10,6 +10,7 @@ import { EarthFrogEnemy } from './EarthFrogEnemy.js';
 import { WaterFrogEnemy } from './WaterFrogEnemy.js';
 import { FireFrogEnemy } from './FireFrogEnemy.js';
 import { AirFrogEnemy } from './AirFrogEnemy.js';
+import { FrogKingEnemy } from './FrogKingEnemy.js';
 
 /**
  * EnemyRegistry - Centralized registry for all enemy types
@@ -65,6 +66,10 @@ export class EnemyRegistry {
         'airfrog': { 
             class: AirFrogEnemy, 
             ...AirFrogEnemy.BASE_STATS
+        },
+        'frogking': { 
+            class: FrogKingEnemy, 
+            ...FrogKingEnemy.BASE_STATS
         }
     };
 
