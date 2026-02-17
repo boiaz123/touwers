@@ -21,6 +21,21 @@
     <div id="game-container">
         <!-- Stats bar at the top -->
         <div id="stats-bar" style="display: none;">
+            <!-- Speed Controls - Top Left -->
+            <div id="speed-controls-top" class="speed-controls-top">
+                <div id="speed-controls-group">
+                    <div class="speed-label-top">Speed</div>
+                    <div class="speed-circle-container">
+                        <button id="speed-pause-btn" class="speed-pause-btn" title="Pause/Resume Game">
+                            <span class="pause-play-icon">⏸</span>
+                        </button>
+                        <div class="speed-circle active" data-speed="1" title="Normal Speed (1x)">1x</div>
+                        <div class="speed-circle" data-speed="2" title="Double Speed (2x)">2x</div>
+                        <div class="speed-circle" data-speed="3" title="Triple Speed (3x)">3x</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="stats">
                 <div class="stat">
                     <div class="stat-label">Gold</div>
@@ -215,20 +230,7 @@
         </div>
     </div>
 
-    <!-- Speed Controls - Bottom Left Corner -->
-    <div id="speed-controls-bottom">
-        <div id="speed-controls-group">
-            <div class="speed-label-bottom">Speed</div>
-            <div class="speed-circle-container">
-                <button id="speed-pause-btn" class="speed-pause-btn" title="Pause/Resume Game">
-                    <span class="pause-play-icon">⏸</span>
-                </button>
-                <div class="speed-circle active" data-speed="1" title="Normal Speed (1x)">1x</div>
-                <div class="speed-circle" data-speed="2" title="Double Speed (2x)">2x</div>
-                <div class="speed-circle" data-speed="3" title="Triple Speed (3x)">3x</div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Wave Countdown Button - Bottom Middle -->
     <div id="wave-countdown-container">

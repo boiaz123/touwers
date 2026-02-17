@@ -401,14 +401,14 @@ export class UIManager {
     // ============ SPEED CONTROLS ============
 
     showSpeedControls() {
-        const speedControls = document.getElementById('speed-controls-bottom');
+        const speedControls = document.getElementById('speed-controls-top');
         if (speedControls) {
             speedControls.classList.add('visible');
         }
     }
 
     hideSpeedControls() {
-        const speedControls = document.getElementById('speed-controls-bottom');
+        const speedControls = document.getElementById('speed-controls-top');
         if (speedControls) {
             speedControls.classList.remove('visible');
         }
