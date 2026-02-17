@@ -4038,7 +4038,7 @@ class UpgradesMenu {
 
     createGoldSplash(originX, originY, amount) {
         // Create multiple gold coin particles that splash outward and fall
-        const coinCount = Math.min(15, Math.ceil(amount / 30)); // More coins for higher amounts
+        const coinCount = Math.min(60, Math.ceil(amount / 30)); // More coins for higher amounts
         for (let i = 0; i < coinCount; i++) {
             const angle = (i / coinCount) * Math.PI * 2;
             const velocity = {
@@ -4077,7 +4077,7 @@ class UpgradesMenu {
 
     createGlowEffect(goldAmount, originX, originY) {
         // Create coin splash effect with red text for buying
-        const coinCount = Math.min(15, Math.ceil(goldAmount / 30)); // More coins for higher amounts
+        const coinCount = Math.min(100, Math.ceil(goldAmount / 30)); // More coins for higher amounts
         for (let i = 0; i < coinCount; i++) {
             const angle = (i / coinCount) * Math.PI * 2;
             const velocity = {
