@@ -3312,6 +3312,7 @@ class UpgradesMenu {
         this.clickLock = false; // Prevent double-clicks on items
         this.lastPaginationClickTime = 0; // Prevent double-click pagination
         this.lastConsumableCheckTime = 0; // Track last time we checked for marketplace changes
+        this.openTime = 0; // Track when menu was opened to prevent click-through
         // Get player gold from stateManager (persistent between levels)
         this.playerGold = stateManager.playerGold || 0;
         
@@ -3563,6 +3564,7 @@ class UpgradesMenu {
         this.activeTab = 'buy';
         this.currentPage = 0;
         this.activeBuyCategory = 'all';
+        this.openTime = Date.now(); // Record when menu was opened
         
         // Refresh player gold from stateManager (in case it changed)
         this.playerGold = this.stateManager.playerGold || 0;
@@ -3787,6 +3789,12 @@ class UpgradesMenu {
     }
 
     handleClick(x, y) {
+        // Prevent registering clicks for 200ms after opening to avoid click-through
+        const timeSinceOpen = Date.now() - this.openTime;
+        if (timeSinceOpen < 200) {
+            return;
+        }
+        
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
@@ -3967,7 +3975,6 @@ class UpgradesMenu {
             // Rebuild buy items to reflect purchase restrictions and active status
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
-            this.currentPage = 0;
         } else if (this.activeTab === 'sell') {
             // Sell the loot item
             this.playerGold += item.sellPrice;
@@ -3993,7 +4000,6 @@ class UpgradesMenu {
             
             // Rebuild sell items to reflect the change
             this.sellItems = this.buildSellItems();
-            this.currentPage = 0;
             
             
             if (this.stateManager.audioManager) {
@@ -4864,6 +4870,7 @@ class ManageSettlementMenu {
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
+        this.openTime = 0; // Track when menu was opened to prevent click-through
         this.activeWarningDialog = null; // 'quitSettlement', 'quitTouwers', or null
         
         this.buttons = [
@@ -4883,6 +4890,7 @@ class ManageSettlementMenu {
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
+        this.openTime = Date.now(); // Record when menu was opened
         this.activeWarningDialog = null; // Clear any existing warning dialog state
     }
 
@@ -4958,6 +4966,12 @@ class ManageSettlementMenu {
     }
 
     handleClick(x, y) {
+        // Prevent registering clicks for 200ms after opening to avoid click-through
+        const timeSinceOpen = Date.now() - this.openTime;
+        if (timeSinceOpen < 200) {
+            return;
+        }
+        
         const canvas = this.stateManager.canvas;
         
         if (this.activeWarningDialog) {
@@ -5388,6 +5402,7 @@ class ArcaneLibraryMenu {
         this.settlementHub = settlementHub;
         this.isOpen = false;
         this.animationProgress = 0;
+        this.openTime = 0; // Track when menu was opened to prevent click-through
         
         // Initialize GameStatistics if not already done
         if (!this.stateManager.gameStatistics) {
@@ -5432,6 +5447,7 @@ class ArcaneLibraryMenu {
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
+        this.openTime = Date.now(); // Record when menu was opened
         this.activeTab = 'statistics';
         this.musicCurrentPage = 0;
         this.intelCurrentPage = 0;
@@ -5603,6 +5619,12 @@ class ArcaneLibraryMenu {
     }
 
     handleClick(x, y) {
+        // Prevent registering clicks for 200ms after opening to avoid click-through
+        const timeSinceOpen = Date.now() - this.openTime;
+        if (timeSinceOpen < 200) {
+            return;
+        }
+        
         const canvas = this.stateManager.canvas;
         const menuX = canvas.width / 2 - 400;
         const menuY = canvas.height / 2 - 250;
