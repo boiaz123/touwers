@@ -14,7 +14,7 @@ export class MarketplaceRegistry {
             icon: '🔨',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Tower Forge - unlocks tower upgrades next level',
+            effect: 'Free Tower Forge\nUnlocks tower upgrades\nEnhances all towers',
             requirements: []
         },
         'training-materials': {
@@ -24,7 +24,7 @@ export class MarketplaceRegistry {
             icon: '🎖️',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Training Grounds - unlocks defender training next level',
+            effect: 'Free Training Grounds\nUnlock defender training\nEnhanced tower abilities',
             requirements: ['training-gear']
         },
         'rabbits-foot': {
@@ -34,7 +34,7 @@ export class MarketplaceRegistry {
             icon: '🐾',
             category: 'loot',
             type: 'consumable',
-            effect: 'Double loot and treasure rewards next level',
+            effect: 'Double loot rewards\nDouble gold drops\nDouble gem finds',
             requirements: []
         },
         'strange-talisman': {
@@ -44,7 +44,7 @@ export class MarketplaceRegistry {
             icon: '🔮',
             category: 'loot',
             type: 'consumable',
-            effect: 'Rare and legendary loot doubled next level',
+            effect: 'Rare drops doubled\nLegendary drops doubled\nMystical artifacts enhanced',
             requirements: []
         },
         'magic-tower-flatpack': {
@@ -54,7 +54,7 @@ export class MarketplaceRegistry {
             icon: '📦',
             category: 'building',
             type: 'consumable',
-            effect: 'Free Magic Tower with elemental selection next level',
+            effect: 'Free Magic Tower\nElemental selection\nSpecialized damage',
             requirements: []
         },
         'frog-king-bane': {
@@ -64,7 +64,7 @@ export class MarketplaceRegistry {
             icon: '👑',
             category: 'boon',
             type: 'boon',
-            effect: 'Revive castle once if destroyed - forest spirits protect you',
+            effect: 'Revive castle once\nForest spirit protection\nContinue the battle',
             requirements: []
         },
         // MUSICAL SCORES

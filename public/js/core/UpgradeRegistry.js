@@ -8,7 +8,7 @@ export class UpgradeRegistry {
             name: 'Training Gear',
             description: 'Unlocks the ability to build Training Grounds in levels',
             cost: 500,
-            icon: '⚔️',
+            icon: '🛡️',
             category: 'building',
             effect: 'Unlocks Training Grounds building'
         },
@@ -16,7 +16,7 @@ export class UpgradeRegistry {
             name: 'Musical Equipment',
             description: 'Adds a music player to the UI for settling ambiance',
             cost: 300,
-            icon: '🎵',
+            icon: '🎼',
             category: 'ui',
             effect: 'Adds music player to gameplay UI'
         },
@@ -24,7 +24,7 @@ export class UpgradeRegistry {
             name: 'Wooden Chest',
             description: 'Increase starting gold by 100',
             cost: 250,
-            icon: '📦',
+            icon: '💰',
             category: 'gold',
             effect: 'Increases starting gold by 100'
         },
@@ -32,7 +32,7 @@ export class UpgradeRegistry {
             name: 'Golden Chest',
             description: 'Increase starting gold by another 100 (requires Wooden Chest)',
             cost: 400,
-            icon: '🪙',
+            icon: '👑',
             category: 'gold',
             effect: 'Increases starting gold by 100',
             prerequisite: 'wooden-chest'
@@ -41,7 +41,7 @@ export class UpgradeRegistry {
             name: 'Platinum Chest',
             description: 'Increase starting gold by another 100 (requires Golden Chest)',
             cost: 600,
-            icon: '💎',
+            icon: '⭐',
             category: 'gold',
             effect: 'Increases starting gold by 100',
             prerequisite: 'golden-chest'
@@ -50,7 +50,7 @@ export class UpgradeRegistry {
             name: 'Diamond Pickaxe',
             description: 'Increase gem mining chance in gold mines',
             cost: 800,
-            icon: '⛏️',
+            icon: '💎',
             category: 'mining',
             effect: 'Increases diamond drop rate from mines'
         }

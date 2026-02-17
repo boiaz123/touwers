@@ -361,6 +361,21 @@ export class SettlementHub {
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+        
+        // Add wheel event listener for scrolling in upgrade tiles
+        this.wheelHandler = (e) => {
+            // Only handle wheel events when upgrades panel is open
+            if (this.activePopup === 'upgrades' && this.upgradesPopup && this.upgradesPopup.isOpen) {
+                e.preventDefault();
+                const rect = this.stateManager.canvas.getBoundingClientRect();
+                const scaleX = this.stateManager.canvas.width / rect.width;
+                const scaleY = this.stateManager.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                this.upgradesPopup.handleWheel(x, y, e.deltaY);
+            }
+        };
+        this.stateManager.canvas.addEventListener('wheel', this.wheelHandler, { passive: false });
     }
 
     removeMouseListeners() {
@@ -369,6 +384,9 @@ export class SettlementHub {
         }
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
+        }
+        if (this.wheelHandler) {
+            this.stateManager.canvas.removeEventListener('wheel', this.wheelHandler);
         }
     }
 
@@ -3342,6 +3360,8 @@ class UpgradesMenu {
         // Build all tabs
         this.sellItems = []; // Will be populated dynamically
 
+        // Upgrade scroll state - track scroll position for each upgrade tile on hover
+        this.scrollableTiles = new Map(); // Maps item.id to { scrollOffset: 0, maxScroll: 0 }
         
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
@@ -3591,6 +3611,8 @@ class UpgradesMenu {
         this.floatingGoldEffects = [];
         this.glowEffects = [];
         this.errorEffects = [];
+        // Reset scroll states for upgrade tiles
+        this.scrollableTiles.clear();
         this.settlementHub.closePopup();
     }
 
@@ -4036,9 +4058,63 @@ class UpgradesMenu {
         }
     }
 
+    handleWheel(x, y, deltaY) {
+        // Handle scrolling on upgrade tiles
+        const canvas = this.stateManager.canvas;
+        const baseWidth = canvas.width - 80;
+        const baseHeight = canvas.height - 60;
+        const panelWidth = Math.min(baseWidth * 0.85, 1200);
+        const panelHeight = Math.min(baseHeight * 0.85, 700);
+        const panelX = (canvas.width - panelWidth) / 2;
+        const panelY = (canvas.height - panelHeight) / 2;
+        
+        // Calculate item grid positions (same as in updateHoverState and renderTabContent)
+        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
+        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
+        
+        const horizontalPadding = 20;
+        const verticalPadding = 15;
+        const gridSpacing = 10;
+        
+        const availableWidth = panelWidth - (horizontalPadding * 2);
+        const availableHeight = contentHeight - (verticalPadding * 2);
+        
+        const itemWidth = (availableWidth - (gridSpacing * 2)) / 3;
+        const itemHeight = (availableHeight - gridSpacing) / 2;
+        
+        const itemsGridStartX = panelX + horizontalPadding;
+        const itemsGridStartY = contentY + verticalPadding;
+        
+        // Find which item is under the mouse
+        const items = this.getItemsForCurrentPage();
+        for (let index = 0; index < items.length; index++) {
+            const item = items[index];
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const itemX = itemsGridStartX + col * (itemWidth + gridSpacing);
+            const itemY = itemsGridStartY + row * (itemHeight + gridSpacing);
+            
+            // Check if mouse is within this item bounds
+            if (x >= itemX && x <= itemX + itemWidth && y >= itemY && y <= itemY + itemHeight) {
+                // Scroll all items that have scroll state
+                if (this.scrollableTiles.has(item.id)) {
+                    const scrollState = this.scrollableTiles.get(item.id);
+                    if (scrollState.maxScroll > 0) {
+                        // Scroll up (negative deltaY) or down (positive deltaY)
+                        const scrollDirection = deltaY > 0 ? 1 : -1;
+                        scrollState.scrollOffset += scrollDirection;
+                        // Clamp scroll offset
+                        scrollState.scrollOffset = Math.max(0, Math.min(scrollState.scrollOffset, scrollState.maxScroll));
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     createGoldSplash(originX, originY, amount) {
         // Create multiple gold coin particles that splash outward and fall
-        const coinCount = Math.min(60, Math.ceil(amount / 30)); // More coins for higher amounts
+        const coinCount = Math.min(100, Math.ceil(amount / 30)); // More coins for higher amounts
         for (let i = 0; i < coinCount; i++) {
             const angle = (i / coinCount) * Math.PI * 2;
             const velocity = {
@@ -4479,7 +4555,12 @@ class UpgradesMenu {
     }
 
     renderItemTile(ctx, x, y, width, height, item) {
-        // Background
+        // Handle upgrade tiles differently with new layout
+        if (item.type === 'upgrade') {
+            return this.renderUpgradeTile(ctx, x, y, width, height, item);
+        }
+        
+        // Standard rendering for marketplace items and loot - NEW LAYOUT: scrollable desc at top, effects at bottom
         const canBuy = this.activeTab === 'buy' && item.canPurchase;
         const isDisabled = this.activeTab === 'buy' && !item.canPurchase;
         ctx.fillStyle = item.hovered && !isDisabled ? '#6b5a47' : '#3a2a1a';
@@ -4556,66 +4637,113 @@ class UpgradesMenu {
             ctx.fillText(item.name, x + width / 2, nameY);
         }
         
-        // Description box section - bordered box with story text (for all tabs: buy, sell, upgrade)
-        if (item.description) {
-            // Calculate description section
-            const descBoxY = nameY + 24;
+        // ===== SCROLLABLE DESCRIPTION BOX AT TOP (SMALLER, FIXED HEIGHT) =====
+        const descBoxStartY = nameY + 30;
+        const descBoxHeight = 50; // Fixed smaller size for scrollable textbox
+        const textPadding = 4;
+        
+        // Description box background
+        ctx.fillStyle = '#2a2010';
+        ctx.fillRect(x + 4, descBoxStartY, width - 8, descBoxHeight);
+        
+        // Description box border
+        ctx.strokeStyle = item.hovered && !isDisabled ? '#8b7355' : '#6a5a4a';
+        ctx.lineWidth = item.hovered && !isDisabled ? 2 : 1;
+        ctx.strokeRect(x + 4, descBoxStartY, width - 8, descBoxHeight);
+        
+        // Initialize scroll state if not exists
+        if (!this.scrollableTiles.has(item.id)) {
+            this.scrollableTiles.set(item.id, { scrollOffset: 0, maxScroll: 0 });
+        }
+        
+        const scrollState = this.scrollableTiles.get(item.id);
+        
+        // Wrap description text
+        const charPerLine = Math.floor((width - 16) / 6);
+        const lines = this.wrapText(item.description, charPerLine);
+        const lineHeight = 11;
+        
+        // Calculate max scroll
+        const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
+        scrollState.maxScroll = Math.max(0, lines.length - maxVisibleLines);
+        
+        // Render visible portion of description text with clip
+        ctx.save();
+        ctx.beginPath();
+        // Reserve space on the right for scroll bar
+        const scrollBarWidth = scrollState.maxScroll > 0 ? 6 : 0;
+        ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
+        ctx.clip();
+        
+        ctx.font = '9px Arial';
+        ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        const startLine = Math.min(scrollState.scrollOffset, scrollState.maxScroll);
+        const textX = x + 8;
+        const textStartY = descBoxStartY + textPadding - (startLine * lineHeight);
+        
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
+        }
+        
+        ctx.restore();
+        
+        // Draw scroll bar if there's scrollable content
+        if (scrollState.maxScroll > 0) {
+            const scrollBarX = x + width - 8;
+            const scrollBarY = descBoxStartY + 2;
+            const scrollBarHeight = descBoxHeight - 4;
             
-            // Wrap description text to calculate height
-            const charPerLine = Math.floor((width - 16) / 6);  // Adjusted for 9px font
-            const lines = this.wrapText(item.description, charPerLine);
-            const lineHeight = 11;  // Adjusted for 9px font
-            const textPadding = 4;
+            // Background of scroll bar track
+            ctx.fillStyle = '#1a1010';
+            ctx.fillRect(scrollBarX, scrollBarY, 4, scrollBarHeight);
             
-            // Calculate dynamic box height based on actual text lines
-            const descBoxHeight = (lines.length * lineHeight) + (textPadding * 2);
+            // Calculate scroll thumb position and size
+            const thumbHeight = Math.max(8, (maxVisibleLines / lines.length) * (scrollBarHeight - 2));
+            const thumbY = scrollBarY + 1 + (scrollState.scrollOffset / scrollState.maxScroll) * (scrollBarHeight - thumbHeight - 2);
             
-            // Description box background
-            ctx.fillStyle = '#2a2010';
-            ctx.fillRect(x + 4, descBoxY, width - 8, descBoxHeight);
-            
-            // Description box border
-            ctx.strokeStyle = '#6a5a4a';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x + 4, descBoxY, width - 8, descBoxHeight);
-            
-            // Description text (9px, left-aligned, inside box)
-            ctx.font = '9px Arial';
-            ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
+            // Draw scroll thumb
+            ctx.fillStyle = scrollState.maxScroll > 0 ? '#8b7355' : '#5a4a3a';
+            ctx.fillRect(scrollBarX + 0.5, thumbY, 3, thumbHeight);
+        }
+        
+        // ===== EFFECTS SECTION AT BOTTOM (BEFORE BUTTON) =====
+        const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
+        const effectBoxHeight = (height - 32) - (descBoxStartY + descBoxHeight + 2);
+        
+        // Effects header/content
+        if (item.effect) {
+            // Effect text with bullet points
+            ctx.font = 'bold 10px Arial';
+            ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             
-            const textX = x + 8;
-            const textStartY = descBoxY + textPadding;
+            // Split effect by newlines first, then wrap each line if needed
+            const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const effectLines = [];
+            const effectCharPerLine = Math.floor((width - 16) / 4.5);
             
-            for (let i = 0; i < lines.length; i++) {
-                ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
+            for (const rawLine of rawEffectLines) {
+                const wrappedLines = this.wrapText(rawLine, effectCharPerLine);
+                effectLines.push(...wrappedLines);
             }
             
-            // Effects section - underneath description box
-            if (item.effect) {
-                const effectBoxY = descBoxY + descBoxHeight + 3;
-                
-                // Effect text (9px bold, same size as description for better visibility, color #FFD700 for gold highlight)
-                ctx.font = 'bold 9px Arial';
-                ctx.fillStyle = '#FFD700';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                
-                const effectCharPerLine = Math.floor((width - 16) / 5);
-                const effectLines = this.wrapText(item.effect, effectCharPerLine);
-                
-                for (let i = 0; i < effectLines.length; i++) {
-                    ctx.fillText(effectLines[i], textX, effectBoxY + (i * 11));
-                }
+            const effectTextStartY = effectBoxStartY + 2;
+            for (let i = 0; i < Math.min(effectLines.length, 3); i++) {
+                const bulletText = '• ' + effectLines[i];
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 12));
             }
         }
         
         // Count (for sell tab)
         if (this.activeTab === 'sell' && item.count > 1) {
-            ctx.font = '10px Arial';
+            ctx.font = '8px Arial';
             ctx.fillStyle = '#b89968';
-            ctx.fillText('x' + item.count, x + width / 2, y + height / 2 + 8);
+            ctx.textAlign = 'center';
+            ctx.fillText('x' + item.count, x + width / 2, effectBoxStartY + effectBoxHeight / 2);
         }
         
         // Disabled overlay and message
@@ -4623,7 +4751,7 @@ class UpgradesMenu {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x, y, width, height);
             
-            ctx.font = '9px Arial';
+            ctx.font = '8px Arial';
             ctx.fillStyle = '#ffaa00';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -4631,11 +4759,11 @@ class UpgradesMenu {
             ctx.fillText(displayMsg, x + width / 2, y + height - 18);
         }
         
-        // Action button
+        // Action button - LARGER
         const buttonWidth = width - 14;
-        const buttonHeight = 18;
+        const buttonHeight = 24;
         const buttonX = x + 7;
-        const buttonY = y + height - 26;
+        const buttonY = y + height - 32;
         
         // Button beveled effect
         ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? '#8b6f47' : '#5a4a3a');
@@ -4649,21 +4777,241 @@ class UpgradesMenu {
         ctx.lineWidth = isDisabled ? 1 : (item.hovered ? 2 : 1);
         ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
-        // For buy tab, show price instead of "BUY" text
-        let buttonText = '';
+        // For buy tab, show coin icon + price
+        // For sell tab, show coin icon + sell price
+        let displayPrice = 0;
         if (this.activeTab === 'buy') {
-            buttonText = item.cost + 'g';
+            displayPrice = item.cost;
         } else if (this.activeTab === 'sell') {
-            buttonText = 'SELL';
-        } else if (this.activeTab === 'upgrade') {
-            buttonText = item.cost + 'g';
+            displayPrice = item.sellPrice;
         }
         
-        ctx.font = 'bold 9px Arial';
+        // Render coin icon and price - MUCH LARGER
+        ctx.font = 'bold 13px Arial';
         ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
-        ctx.textAlign = 'center';
+        ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        ctx.fillText(buttonText, buttonX + buttonWidth / 2, buttonY + buttonHeight / 2);
+        
+        // Draw larger coin icon and price text with better alignment
+        const buttonCenterY = buttonY + buttonHeight / 2;
+        const coinRadius = 5;
+        const coinX = buttonX + buttonWidth / 2 - 12;
+        const priceTextX = buttonX + buttonWidth / 2 + 2;
+        this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius, 
+                                  isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
+        ctx.textAlign = 'left';
+        ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
+    }
+
+    renderCoinIconInline(ctx, x, y, radius, color) {
+        // Draw a small coin icon (circle with shine)
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Add shine effect
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(x - 1, y - 1, radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderUpgradeTile(ctx, x, y, width, height, item) {
+        // Render upgrades in the SAME LAYOUT as marketplace items for consistency
+        const isDisabled = !item.canPurchase;
+        ctx.fillStyle = item.hovered && !isDisabled ? '#6b5a47' : '#3a2a1a';
+        ctx.fillRect(x, y, width, height);
+        
+        // Top highlight
+        ctx.fillStyle = item.hovered && !isDisabled ? '#8b7a67' : '#4a3a2a';
+        ctx.fillRect(x, y, width, 2);
+        
+        // Border
+        let borderColor = item.hovered && !isDisabled ? '#ffd700' : '#5a4a3a';
+        if (isDisabled) {
+            borderColor = '#5a4a4a';
+        }
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = item.hovered && !isDisabled ? 3 : 2;
+        ctx.strokeRect(x, y, width, height);
+        
+        // Icon - PROMINENT at top
+        const iconSize = 28;
+        if (item.icon) {
+            ctx.font = `bold ${iconSize}px Arial`;
+            ctx.fillStyle = isDisabled ? '#707070' : '#ffd700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(item.icon, x + width / 2, y + 6);
+        }
+        
+        // Item name - centered below icon
+        ctx.font = 'bold 11px Arial';
+        ctx.fillStyle = isDisabled ? '#8a8a8a' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        
+        const nameY = y + 38;
+        const maxCharsPerLine = 15;
+        if (item.name.length > maxCharsPerLine) {
+            const words = item.name.split(' ');
+            let line1 = '', line2 = '';
+            for (const word of words) {
+                if ((line1 + word).length <= maxCharsPerLine) {
+                    line1 += (line1 ? ' ' : '') + word;
+                } else {
+                    line2 += (line2 ? ' ' : '') + word;
+                }
+            }
+            ctx.fillText(line1, x + width / 2, nameY);
+            if (line2) {
+                ctx.fillText(line2, x + width / 2, nameY + 12);
+            }
+        } else {
+            ctx.fillText(item.name, x + width / 2, nameY);
+        }
+        
+        // ===== SCROLLABLE DESCRIPTION BOX =====
+        const descBoxStartY = nameY + 30;
+        const descBoxHeight = 50;
+        const textPadding = 4;
+        
+        // Description box background
+        ctx.fillStyle = '#2a2010';
+        ctx.fillRect(x + 4, descBoxStartY, width - 8, descBoxHeight);
+        
+        // Description box border
+        ctx.strokeStyle = item.hovered && !isDisabled ? '#8b7355' : '#6a5a4a';
+        ctx.lineWidth = item.hovered && !isDisabled ? 2 : 1;
+        ctx.strokeRect(x + 4, descBoxStartY, width - 8, descBoxHeight);
+        
+        // Initialize scroll state if not exists
+        if (!this.scrollableTiles.has(item.id)) {
+            this.scrollableTiles.set(item.id, { scrollOffset: 0, maxScroll: 0 });
+        }
+        
+        const scrollState = this.scrollableTiles.get(item.id);
+        
+        // Wrap description text
+        const charPerLine = Math.floor((width - 16) / 6);
+        const lines = this.wrapText(item.description, charPerLine);
+        const lineHeight = 11;
+        
+        // Calculate max scroll
+        const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
+        scrollState.maxScroll = Math.max(0, lines.length - maxVisibleLines);
+        
+        // Render visible portion of description text with clip
+        ctx.save();
+        ctx.beginPath();
+        // Reserve space on the right for scroll bar
+        const scrollBarWidth = scrollState.maxScroll > 0 ? 6 : 0;
+        ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
+        ctx.clip();
+        
+        ctx.font = '9px Arial';
+        ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        const startLine = Math.min(scrollState.scrollOffset, scrollState.maxScroll);
+        const textX = x + 8;
+        const textStartY = descBoxStartY + textPadding - (startLine * lineHeight);
+        
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
+        }
+        
+        ctx.restore();
+        
+        // Draw scroll bar if there's scrollable content
+        if (scrollState.maxScroll > 0) {
+            const scrollBarX = x + width - 8;
+            const scrollBarY = descBoxStartY + 2;
+            const scrollBarHeight = descBoxHeight - 4;
+            
+            // Background of scroll bar track
+            ctx.fillStyle = '#1a1010';
+            ctx.fillRect(scrollBarX, scrollBarY, 4, scrollBarHeight);
+            
+            // Calculate scroll thumb position and size
+            const thumbHeight = Math.max(8, (maxVisibleLines / lines.length) * (scrollBarHeight - 2));
+            const thumbY = scrollBarY + 1 + (scrollState.scrollOffset / scrollState.maxScroll) * (scrollBarHeight - thumbHeight - 2);
+            
+            // Draw scroll thumb
+            ctx.fillStyle = scrollState.maxScroll > 0 ? '#8b7355' : '#5a4a3a';
+            ctx.fillRect(scrollBarX + 0.5, thumbY, 3, thumbHeight);
+        }
+        
+        // ===== EFFECTS SECTION AT BOTTOM =====
+        const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
+        const effectBoxHeight = (height - 32) - (descBoxStartY + descBoxHeight + 2);
+        
+        // Effects header/content
+        if (item.effect) {
+            ctx.font = 'bold 10px Arial';
+            ctx.fillStyle = '#FFD700';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            
+            // Split effect text by newlines (multi-line bullet format)
+            const effectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            
+            const effectTextStartY = effectBoxStartY + 2;
+            const maxEffectLines = 3;
+            for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
+                const bulletText = '• ' + effectLines[i];
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 12));
+            }
+        }
+        
+        // Disabled overlay and message
+        if (isDisabled) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(x, y, width, height);
+            
+            ctx.font = '8px Arial';
+            ctx.fillStyle = '#ffaa00';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const displayMsg = item.requirementMsg || 'Not Available';
+            ctx.fillText(displayMsg, x + width / 2, y + height - 18);
+        }
+        
+        // Action button
+        const buttonWidth = width - 14;
+        const buttonHeight = 24;
+        const buttonX = x + 7;
+        const buttonY = y + height - 32;
+        
+        // Button beveled effect
+        ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? '#8b6f47' : '#5a4a3a');
+        ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Top highlight
+        ctx.fillStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#9b7f57' : '#6a5a4a');
+        ctx.fillRect(buttonX, buttonY, buttonWidth, 1);
+        
+        ctx.strokeStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#ffd700' : '#8b7355');
+        ctx.lineWidth = isDisabled ? 1 : (item.hovered ? 2 : 1);
+        ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        
+        // Render coin icon and price
+        ctx.font = 'bold 13px Arial';
+        ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        
+        // Draw coin icon and price text
+        const buttonCenterY = buttonY + buttonHeight / 2;
+        const coinRadius = 5;
+        const coinX = buttonX + buttonWidth / 2 - 12;
+        const priceTextX = buttonX + buttonWidth / 2 + 2;
+        this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius, 
+                                  isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
+        ctx.textAlign = 'left';
+        ctx.fillText(item.cost.toString(), priceTextX, buttonCenterY);
     }
 
     renderPaginationControls(ctx, panelX, y, panelWidth) {
