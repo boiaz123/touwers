@@ -294,12 +294,19 @@ export class GameplayState {
         // Apply consumable effects BEFORE UI initialization so buttons are unlocked from the start
         this.applyConsumableEffects();
         
+        // Unlock buildings based on purchased upgrades
+        const hasTrainingGearUpgrade = this.stateManager.upgradeSystem && this.stateManager.upgradeSystem.hasUpgrade('training-gear');
+        if (hasTrainingGearUpgrade) {
+            this.towerManager.unlockSystem.onTrainingGearUpgradePurchased();
+        }
+        
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
         
         this.setupEventListeners();
         this.uiManager.setupSpellUI(); // Setup spell UI through UIManager
         this.uiManager.updateUI(); // Initial UI update through UIManager
+        this.uiManager.updateUIAvailability(); // Update button visibility based on unlocks
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
         
         // CRITICAL: Ensure wave countdown container is visible for new level
@@ -1057,6 +1064,7 @@ export class GameplayState {
                     
                     this.uiManager.updateUI();
                     this.uiManager.updateButtonStates();
+                    this.uiManager.updateUIAvailability();
                     
                     this.selectedBuildingType = null;
                     document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));

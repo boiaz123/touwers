@@ -17,7 +17,7 @@ export class UnlockSystem {
         
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
-        this.unlockedBuildings = new Set(['forge', 'training']);
+        this.unlockedBuildings = new Set(['forge']);
         this.unlockedUpgrades = new Set();
         
         // New: Track gem mining research
@@ -93,6 +93,11 @@ export class UnlockSystem {
     onAcademyLevelThree() {
         this.superweaponUnlocked = true;
         this.unlockedBuildings.add('superweapon');
+    }
+    
+    // New: Method to unlock training grounds when training-gear upgrade is purchased
+    onTrainingGearUpgradePurchased() {
+        this.unlockedBuildings.add('training');
     }
     
     // New: Method to handle Training Grounds level upgrades
