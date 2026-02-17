@@ -177,11 +177,9 @@ export class MainMenu {
 
     async quitGame() {
         try {
-            console.log('MainMenu: quitGame called');
             
             // Trigger game shutdown cleanup first
             if (this.stateManager && this.stateManager.game && this.stateManager.game.shutdown) {
-                console.log('MainMenu: Calling game.shutdown()');
                 this.stateManager.game.shutdown();
             }
             
@@ -190,16 +188,12 @@ export class MainMenu {
             
             // Check if invoke is available
             if (invoke) {
-                console.log('MainMenu: invoke function available, calling close_app');
                 try {
                     const result = await invoke('close_app');
-                    console.log('MainMenu: invoke returned: ' + JSON.stringify(result));
                 } catch (invokeError) {
-                    console.log('MainMenu: invoke failed: ' + invokeError.message);
                     throw invokeError;
                 }
             } else {
-                console.log('MainMenu: invoke not available, cannot close app via Tauri');
                 // Fallback - attempt window.close() even though it will likely fail
                 window.close();
             }

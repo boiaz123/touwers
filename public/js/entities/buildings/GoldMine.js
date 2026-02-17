@@ -476,21 +476,14 @@ export class GoldMine extends Building {
         // Note: goldReady check is already done in collectGold() before calling this method
         // No need to check goldReady again here
         
-        //console.log('[GoldMine.collectGems] Starting gem collection');
-        
         // Randomized gem collection: 3-7 gems, each roll is random type
         const gemTypes = ['fire', 'water', 'air', 'earth'];
         const gemCount = 3 + Math.floor(Math.random() * 5); // Random 3-7 gems
         const collectedGems = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
-        
-        //console.log('[GoldMine.collectGems] Rolling for', gemCount, 'gems');
-        
         for (let i = 0; i < gemCount; i++) {
             const randomGem = gemTypes[Math.floor(Math.random() * gemTypes.length)];
             collectedGems[randomGem]++;
         }
-        
-        //console.log('[GoldMine.collectGems] Collected gems:', collectedGems);
         
         // Add floating text for each gem type collected with better formatting
         let offsetY = -25; // Start above the mine for better visibility
@@ -523,7 +516,6 @@ export class GoldMine extends Building {
                 maxLife: 2.0,
                 gemType: 'diamond'
             });
-            //console.log('[GoldMine.collectGems] Diamond bonus awarded!');
         }
         
         this.currentGemType = null; // Reset for next cycle
@@ -543,7 +535,6 @@ export class GoldMine extends Building {
         // Unlock gem mining if academy exists and has researched it (or in sandbox mode)
         if (academy) {
             this.gemMiningUnlocked = true;
-            console.log('[GoldMine] Gem mining unlocked via setAcademy');
         }
     }
     

@@ -70,7 +70,6 @@ export class BasicTower extends Tower {
             
             // Play attack sound
             if (this.audioManager) {
-                console.log('BasicTower: Playing basic-tower attack sound');
                 this.audioManager.playSFX('basic-tower');
             } else {
                 console.warn('BasicTower: audioManager not available for sound');

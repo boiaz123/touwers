@@ -42,8 +42,6 @@ export class AudioManager {
         
         // Load registries from MusicRegistry and SFXRegistry
         this.loadRegistries();
-        
-        // console.log('AudioManager: Initialized');
     }
     
     /**
@@ -60,7 +58,6 @@ export class AudioManager {
      */
     setMusicRegistry(registry) {
         this.musicRegistry = registry;
-        // console.log('AudioManager: Music registry loaded', Object.keys(this.musicRegistry));
     }
     
     /**
@@ -69,7 +66,6 @@ export class AudioManager {
      */
     setSFXRegistry(registry) {
         this.sfxRegistry = registry;
-        // console.log('AudioManager: SFX registry loaded', Object.keys(this.sfxRegistry));
     }
     
     /**
@@ -117,11 +113,9 @@ export class AudioManager {
             shouldLoop = false; // Don't use built-in looping in playlist mode
             // Create a bound handler so we can remove it later
             this.boundMusicEndedHandler = () => {
-                console.log('AudioManager: Track ended event fired');
                 this.playNextRandomTrackFromCategory();
             };
             this.musicElement.addEventListener('ended', this.boundMusicEndedHandler);
-            console.log(`AudioManager: Attached ended listener for playlist mode on track: ${trackName}`);
         }
         
         // Apply the loop setting
@@ -173,7 +167,6 @@ export class AudioManager {
             return false;
         }
         
-        console.log(`AudioManager: Available tracks for category '${category}':`, tracks);
         
         // Set up category looping mode
         this.musicPlaylistMode = true;
@@ -181,7 +174,6 @@ export class AudioManager {
         
         // Pick and play a random track
         const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-        console.log(`AudioManager: Selected random track from '${category}':`, randomTrack);
         return this.playMusic(randomTrack);
     }
     
@@ -206,14 +198,11 @@ export class AudioManager {
             return;
         }
         
-        console.log(`AudioManager: Current track ended, playing next from '${this.currentMusicCategory}'`);
-        console.log(`AudioManager: Available tracks:`, tracks);
         
         // Filter out the currently playing track to ensure we play a different one
         const differentTracks = tracks.filter(track => track !== this.currentMusicTrack);
         
         if (differentTracks.length === 0) {
-            console.log('AudioManager: Only one track in category, will replay it');
             // If only one track exists, replay it
             this.playMusic(tracks[0]);
             return;
@@ -221,7 +210,6 @@ export class AudioManager {
         
         // Pick a random track from the remaining options
         const randomTrack = differentTracks[Math.floor(Math.random() * differentTracks.length)];
-        console.log(`AudioManager: Selected next random track:`, randomTrack);
         this.playMusic(randomTrack);
     }
     
@@ -392,7 +380,6 @@ export class AudioManager {
         
         // Pick a random settlement track
         const randomTrack = settlementTracks[Math.floor(Math.random() * settlementTracks.length)];
-        console.log(`AudioManager: Playing random settlement track:`, randomTrack);
         
         // Do NOT enable playlist mode for settlement - just play the single track on loop
         this.musicPlaylistMode = false;
@@ -419,13 +406,11 @@ export class AudioManager {
         
         if (differentTracks.length === 0) {
             // Only one track available, play it anyway
-            console.log('AudioManager: Only one settlement track available, will play it');
             return this.playRandomSettlementTheme();
         }
         
         // Pick a random different track
         const randomTrack = differentTracks[Math.floor(Math.random() * differentTracks.length)];
-        console.log(`AudioManager: Playing different settlement track:`, randomTrack);
         
         // Do NOT enable playlist mode - just play the single track on loop
         this.musicPlaylistMode = false;

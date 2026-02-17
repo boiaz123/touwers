@@ -29,7 +29,6 @@ export class SaveSystem {
             if (!localStorage.getItem(key)) {
                 // Slot file doesn't exist, create empty (null) slot
                 localStorage.setItem(key, JSON.stringify(null));
-                console.log('SaveSystem: Initialized empty save slot', i);
             }
         }
     }
@@ -121,7 +120,6 @@ export class SaveSystem {
 
         try {
             localStorage.setItem(key, JSON.stringify(saveFile));
-            console.log('SaveSystem: Successfully saved settlement data to slot', slotNumber);
             return true;
         } catch (error) {
             console.error('SaveSystem: Failed to save settlement data to slot', slotNumber, ':', error);
@@ -144,7 +142,6 @@ export class SaveSystem {
         const key = this.getSaveSlotKey(slotNumber);
         try {
             localStorage.setItem(key, JSON.stringify(null));
-            console.log('SaveSystem: Wiped save slot', slotNumber);
             return true;
         } catch (error) {
             console.error('SaveSystem: Failed to wipe save slot', slotNumber, ':', error);

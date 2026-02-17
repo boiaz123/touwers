@@ -113,16 +113,13 @@ export class LevelBase {
         // Try static levelMetadata first (most reliable)
         if (this.constructor && this.constructor.levelMetadata && this.constructor.levelMetadata.campaign) {
             const campaign = this.constructor.levelMetadata.campaign.toLowerCase();
-            console.log(`getCampaign (from static): ${this.constructor.name} -> ${campaign}`);
             return campaign;
         }
         // Fall back to instance property
         if (this.campaign && typeof this.campaign === 'string') {
-            console.log(`getCampaign (from instance): ${this.constructor.name} -> ${this.campaign}`);
             return this.campaign.toLowerCase();
         }
         // Final default
-        console.log(`getCampaign (default): ${this.constructor.name} -> forest`);
         return 'forest';
     }
     
@@ -220,7 +217,6 @@ export class LevelBase {
         }
 
         if (this.constructor.name !== 'ForestLevel1' && this.constructor.name !== 'LevelBase') {
-            console.log('Level initialized:', this.constructor.name, 'campaign:', this.campaign, 'terrainElements:', this.terrainElements?.length || 0);
         }
         
         // Prevent infinite loops by checking if already initializing
@@ -425,7 +421,6 @@ export class LevelBase {
             return;
         }
 
-        console.log(`[${this.constructor.name}] Marking ${this.terrainElements.length} terrain elements for collision`);
 
         this.terrainElements.forEach((element, idx) => {
             const gridX = element.gridX;
@@ -471,7 +466,6 @@ export class LevelBase {
             }
         });
         
-        console.log(`[${this.constructor.name}] Total occupied cells: ${this.occupiedCells.size}`);
     }
     
     isValidGridPosition(gridX, gridY) {
@@ -484,11 +478,9 @@ export class LevelBase {
             for (let y = gridY; y < gridY + this.towerSize; y++) {
                 const cellKey = `${x},${y}`;
                 if (!this.isValidGridPosition(x, y)) {
-                    console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Position (${x},${y}) invalid (grid is ${this.gridWidth}x${this.gridHeight})`);
                     return false;
                 }
                 if (this.occupiedCells.has(cellKey)) {
-                    console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Position (${x},${y}) blocked! occupiedCells has ${this.occupiedCells.size} total cells`);
                     return false;
                 }
             }
@@ -496,7 +488,6 @@ export class LevelBase {
         
         // Also check if there's already a tower at this position
         if (towerManager && towerManager.isTowerPositionOccupied(gridX, gridY)) {
-            console.log(`[${this.constructor.name}] canPlaceTower(${gridX},${gridY}): Tower already exists here`);
             return false;
         }
 
@@ -1630,7 +1621,6 @@ export class LevelBase {
             // Load the real Castle class and create instance
             import('../buildings/Castle.js').then(module => {
                 this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
-                console.log('LevelBase: Castle loaded successfully');
                 resolve();
             }).catch(err => {
                 console.error('Level: Could not load Castle:', err);
@@ -1968,7 +1958,6 @@ export class LevelBase {
         
         // Log only once per level to avoid console spam
         if (!this._renderedVegetationLogged) {
-            console.log(`renderVegetation: Using campaign "${campaign}" for level ${this.constructor.name}`);
             this._renderedVegetationLogged = true;
         }
         

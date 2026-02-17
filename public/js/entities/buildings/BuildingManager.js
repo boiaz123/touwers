@@ -59,9 +59,6 @@ export class BuildingManager {
         
         // Check if this is a free placement from marketplace
         const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, false) || false;
-        if (isFree) {
-            console.log(`BuildingManager.placeBuilding: '${type}' is FREE from marketplace`);
-        }
         if (isFree || this.gameState.spend(buildingType.cost)) {
             // Deduct additional costs
             if (type === 'superweapon') {

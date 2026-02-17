@@ -210,7 +210,6 @@ export class StartScreen {
         try {
             // Helper to log both to console and localStorage
             const log = (msg) => {
-                console.log(msg);
                 // Also store in localStorage as backup
                 try {
                     let logs = localStorage.getItem('touwers_quit_logs') || '';

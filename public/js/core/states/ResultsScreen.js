@@ -130,7 +130,6 @@ export class ResultsScreen {
         this.phaseDuration.loot = acquiredLoot.length / itemsPerSecond;
 
         // Setup buttons
-        console.log('ResultsScreen.show() - Setting up buttons for type:', type);
         if (type === 'levelComplete') {
             this.buttons = [
                 { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
@@ -142,7 +141,6 @@ export class ResultsScreen {
                 { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
             ];
         }
-        console.log('ResultsScreen.show() - Buttons set:', this.buttons);
     }
 
     /**
@@ -151,7 +149,6 @@ export class ResultsScreen {
     execute(action) {
         // Trim action string in case there's extra whitespace
         action = String(action).trim();
-        console.log('ResultsScreen.execute() called with action:', action, '(type:', typeof action, ', length:', action.length, ')');
         this.isShowing = false;
         
         // Stop music
@@ -170,14 +167,12 @@ export class ResultsScreen {
         // Execute action
         switch (action) {
             case 'settlement':
-                console.log('Going to settlement');
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
                 this.stateManager.changeState('settlementHub');
                 break;
             case 'nextLevel':
-                console.log('Going to next level');
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
@@ -187,11 +182,9 @@ export class ResultsScreen {
                 this.stateManager.changeState('levelSelect');
                 break;
             case 'retry':
-                console.log('Retrying level');
                 this.stateManager.changeState('game');
                 break;
             case 'levelSelect':
-                console.log('Going to level select');
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
@@ -275,17 +268,14 @@ export class ResultsScreen {
             // Victory animation complete - move to countup
             this.animationPhase = 'countup';
             this.phaseTime = 0;
-            console.log('Phase transition: victory -> countup');
         } else if (this.animationPhase === 'countup' && this.phaseTime >= this.phaseDuration.countup) {
             this.animationPhase = 'loot';
             this.phaseTime = 0;
             this.lootAnimationIndex = 0;
-            console.log('Phase transition: countup -> loot, buttons are:', JSON.stringify(this.buttons));
         } else if (this.animationPhase === 'loot' && this.phaseTime >= this.phaseDuration.loot) {
             this.animationPhase = 'buttons';
             this.phaseTime = 0;
             // Don't reset lootAnimationTime - it continues for rendering
-            console.log('Phase transition: loot -> buttons, buttons are:', JSON.stringify(this.buttons));
         }
 
         // Track cumulative loot animation time (continues even after phase transition)
@@ -390,13 +380,10 @@ export class ResultsScreen {
         // Allow button clicks during buttons phase (normal results) or defeat phase
         if (this.animationPhase !== 'buttons' && this.animationPhase !== 'defeat') return;
 
-        console.log('handleClick - checking buttons, current phase:', this.animationPhase, 'buttons count:', this.buttons.length);
         this.buttons.forEach((button, index) => {
             const pos = this.getButtonPosition(index);
-            console.log(`Button ${index} (${button.action}): pos=`, pos, `click=(${x},${y})`);
             if (x >= pos.x && x <= pos.x + pos.width &&
                 y >= pos.y && y <= pos.y + pos.height) {
-                console.log(`Clicked button: ${button.action}`);
                 this.execute(button.action);
             }
         });
@@ -1078,10 +1065,8 @@ export class ResultsScreen {
             startX = modalX + (this.modalWidth - totalButtonWidth) / 2;
         }
 
-        console.log('renderButtons - button count:', this.buttons.length, 'positions:');
         this.buttons.forEach((button, index) => {
             const x = startX + index * (this.buttonWidth + this.buttonGap);
-            console.log(`Button ${index} (${button.action}): x=${x}, y=${buttonY}, w=${this.buttonWidth}, h=${this.buttonHeight}`);
             
             // Button background
             const isSelected = index === this.selectedButtonIndex;

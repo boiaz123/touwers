@@ -274,7 +274,6 @@ export class OptionsMenu {
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
             // TODO: Open Game Producer page when implemented
-            console.log('Visit Game Producer page - coming soon!');
             return;
         }
     }

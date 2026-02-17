@@ -159,8 +159,6 @@ export class LoadGame {
 
                 const saveData = SaveSystem.getSave(slotNum);
 
-                console.log('LoadGame: Clicked slot', slotNum);
-                console.log('LoadGame: Save data:', saveData);
 
                 if (saveData) {
                     this.stateManager.currentSaveSlot = slotNum;
@@ -168,10 +166,8 @@ export class LoadGame {
                     
                     // All saves are now settlement-only (no mid-game saves)
                     // Always go to settlement hub to continue playing
-                    console.log('LoadGame: Loading save from slot', slotNum, ' - going to settlement hub');
                     this.stateManager.changeState('settlementHub');
                 } else {
-                    console.log('LoadGame: No save data found for slot', slotNum);
                 }
             }
         });

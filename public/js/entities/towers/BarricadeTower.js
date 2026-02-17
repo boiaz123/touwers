@@ -156,7 +156,6 @@ export class BarricadeTower extends Tower {
     createSmokeZone(x, y) {
         // Play impact sound when barrel hits
         if (this.audioManager) {
-            console.log('BarricadeTower: Playing barricade-tower impact sound');
             this.audioManager.playSFX('barricade-tower');
         }
         

@@ -688,7 +688,6 @@ export class UIManager {
         // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
         // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
         if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
-            console.log('UIManager: Rebuilding spell buttons. Available spells:', availableSpells.length, 'forceRebuild:', !!this.forceSpellUIRebuild);
             spellButtonsList.innerHTML = '';
             
             // Create a button for each unlocked spell
@@ -703,17 +702,13 @@ export class UIManager {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('UIManager: Spell button clicked:', spell.id, 'cooldown:', spell.currentCooldown);
                     // Prevent spell casting when game is paused
                     if (this.gameplayState.isPaused) {
-                        console.log('UIManager: Game is paused, spell blocked');
                         return;
                     }
                     if (spell.currentCooldown === 0) {
-                        console.log('UIManager: Activating spell targeting for:', spell.id);
                         this.gameplayState.activateSpellTargeting(spell.id);
                     } else {
-                        console.log('UIManager: Spell is on cooldown:', spell.currentCooldown);
                     }
                 });
                 
@@ -3145,11 +3140,11 @@ export class UIManager {
         // SIMPLE: Only update timer and progress bar values in the existing menu
         const panel = document.getElementById('goldmine-panel');
         if (!panel || panel.style.display === 'none') {
-            console.log('[Timer Update] Panel not visible');
+
             return; // Menu not visible, nothing to update
         }
 
-        console.log('[Timer Update] Updating...');
+
 
         // Calculate current values
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
@@ -3161,9 +3156,9 @@ export class UIManager {
         const progressBar = panel.querySelector('#goldmine-progress-bar');
         if (progressBar) {
             progressBar.style.width = Math.min(100, progressPercent) + '%';
-            console.log('[Timer Update] Progress bar:', progressPercent + '%');
+
         } else {
-            console.log('[Timer Update] Progress bar element not found');
+
         }
 
         // 2. Update timer text
@@ -3171,9 +3166,9 @@ export class UIManager {
         if (timerDiv) {
             timerDiv.textContent = readyStatus;
             timerDiv.style.color = readyColor;
-            console.log('[Timer Update] Timer text:', readyStatus);
+
         } else {
-            console.log('[Timer Update] Timer element not found');
+
         }
     }
 
@@ -3635,7 +3630,7 @@ export class UIManager {
                 }
                 const quality = btn.getAttribute('data-quality');
                 // Placeholder for graphics quality setting
-                console.log('Graphics quality set to:', quality);
+
             });
 
             btn.addEventListener('mouseenter', () => {

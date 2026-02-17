@@ -86,9 +86,6 @@ export class TowerManager {
         
         // Check if this is a free placement from marketplace
         const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
-        if (isFree) {
-            console.log(`TowerManager.placeTower: '${type}' is FREE from marketplace`);
-        }
         if (isFree || this.gameState.spend(towerType.cost)) {
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
             
@@ -131,7 +128,6 @@ export class TowerManager {
         
         const soundName = soundMap[type];
         if (soundName) {
-            console.log(`TowerManager: Playing build sound '${soundName}' for tower type '${type}'`);
             this.audioManager.playSFX(soundName);
         }
     }
@@ -154,7 +150,6 @@ export class TowerManager {
         
         const soundName = soundMap[tower.constructor.name];
         if (soundName) {
-            console.log(`TowerManager: Playing selection sound '${soundName}' for ${tower.constructor.name}`);
             this.audioManager.playSFX(soundName);
         } else {
             console.warn(`TowerManager: No sound mapped for tower type ${tower.constructor.name}`);
@@ -803,7 +798,6 @@ export class TowerManager {
                 return buildingResult;
             } else if (typeof buildingResult === 'object' && (buildingResult.fire !== undefined || buildingResult.diamond !== undefined)) {
                 // Gem collection from gold mine
-                //console.log('[TowerManager] Passing gem collection to GameplayState:', buildingResult);
                 return buildingResult;
             }
         }

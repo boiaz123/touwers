@@ -182,8 +182,6 @@ export class GameplayState {
         // All saves are now settlement-only, levels always start fresh
         const isMidGameResume = false;
         
-        console.log('GameplayState: Entering gameplay state');
-        console.log('GameplayState: Starting level fresh (no mid-game saves)');
         
         // Always start fresh - no mid-game restoration
         // Normal level start - reset game state
@@ -250,7 +248,6 @@ export class GameplayState {
         if (this.level.castleLoadPromise) {
             try {
                 await this.level.castleLoadPromise;
-                console.log('GameplayState: Castle fully loaded');
             } catch (error) {
                 console.warn('GameplayState: Castle load failed, using fallback:', error);
             }
@@ -259,8 +256,6 @@ export class GameplayState {
         // Now that level is initialized, set maxWavesForLevel from level.maxWaves
         if (!this.isSandbox) {
             this.maxWavesForLevel = this.level?.maxWaves || 10;
-            console.log('GameplayState: Level maxWaves property:', this.level?.maxWaves);
-            console.log('GameplayState: Level has', this.maxWavesForLevel, 'waves');
         }
         
         // Create new enemy manager with the properly initialized path
@@ -347,19 +342,11 @@ export class GameplayState {
         this.freeBuildingPlacements = {};
         this.freeTowerPlacements = {};
         
-        console.log('GameplayState: applyConsumableEffects - checking for consumables');
-        console.log('GameplayState: Marketplace consumables:', {
-            forge: marketplace.getConsumableCount('forge-materials'),
-            training: marketplace.getConsumableCount('training-materials'),
-            magic: marketplace.getConsumableCount('magic-tower-flatpack')
-        });
-        
         // Check if forge materials are available for free placement
         if (marketplace.hasFreePlacement('forge-materials')) {
             this.freeBuildingPlacements['forge'] = true;
             // Unlock the forge building so the button appears
             this.towerManager.unlockSystem.unlockedBuildings.add('forge');
-            console.log('✓ Forge materials available - forge unlocked and free placement enabled');
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         }
         
@@ -370,7 +357,6 @@ export class GameplayState {
             this.freeBuildingPlacements['training'] = true;
             // Unlock the training grounds building so the button appears
             this.towerManager.unlockSystem.unlockedBuildings.add('training');
-            console.log('✓ Training materials available and training-gear upgrade owned - training grounds unlocked and free placement enabled');
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         }
         
@@ -379,17 +365,13 @@ export class GameplayState {
             this.freeTowerPlacements['magic'] = true;
             // Unlock the magic tower so the button appears (just like forge and training)
             this.towerManager.unlockSystem.unlockedTowers.add('magic');
-            console.log('✓ Magic tower flatpack available - magic tower unlocked and free placement enabled');
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         } else {
-            console.log('  Magic tower flatpack NOT available (hasFreePlacement returned false)');
-            console.log(`  Flatpack count: ${marketplace.getConsumableCount('magic-tower-flatpack')}`);
         }
         
         // Apply loot multiplier effects to enemies
         // Rabbit's Foot: doubles normal loot drop chance for this level
         if (marketplace.getConsumableCount('rabbits-foot') > 0) {
-            console.log('✓ Rabbit\'s Foot active - doubling normal loot drop chance');
             // Mark marketplace so enemies can check when they spawn
             marketplace.rabbitFootActive = true;
             // Also apply to already-spawned enemies
@@ -410,7 +392,6 @@ export class GameplayState {
         
         // Strange Talisman: drops 2 rare items instead of 1
         if (marketplace.getConsumableCount('strange-talisman') > 0) {
-            console.log('✓ Strange Talisman active - rare loot will drop 2 items');
             this.applyTalisman = true;
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
         } else {
@@ -436,20 +417,17 @@ export class GameplayState {
         // Called by TowerManager/BuildingManager to check if placement should be free
         // Consumables are already marked as used in resetForNewLevel(), so just check the flags
         if (isTower && this.freeTowerPlacements && this.freeTowerPlacements[type]) {
-            console.log(`GameplayState: Free tower placement used for '${type}'`);
             this.freeTowerPlacements[type] = false; // Mark as used this placement
             
             // For magic tower: remove from unlockedTowers ONLY if academy hasn't built it
             // This makes it disappear after flatpack is used, unless academy unlocked it permanently
             if (type === 'magic' && !this.towerManager.unlockSystem.magicTowerUnlockedByAcademy) {
                 this.towerManager.unlockSystem.unlockedTowers.delete('magic');
-                console.log('  Magic tower free placement used - tower removed (academy not built)');
             }
             // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
             return true;
         }
         if (!isTower && this.freeBuildingPlacements && this.freeBuildingPlacements[type]) {
-            console.log(`GameplayState: Free building placement used for '${type}'`);
             this.freeBuildingPlacements[type] = false; // Mark as used this placement
             // NOTE: Consumable already marked as used in resetForNewLevel(), don't call again
             return true;
@@ -484,7 +462,6 @@ export class GameplayState {
                     y: lootDrop.y - 10   // Slightly up
                 });
                 
-                console.log('Strange Talisman effect: Rare loot dropped 2 separate bags');
             } else {
                 // Normal processing
                 processedDrops.push(lootDrop);
@@ -575,14 +552,12 @@ export class GameplayState {
     }
 
     exit(levelCompleted = false) {
-        console.log('GameplayState.exit() called');
         
         // Clear reference to GameplayState
         this.stateManager.gameplayState = null;
         
         // Restore settlement gold to stateManager before leaving
         if (this.settlementGoldBackup !== undefined) {
-            console.log(`  Restoring settlement gold from ${this.stateManager.playerGold} to ${this.settlementGoldBackup}`);
             this.stateManager.playerGold = this.settlementGoldBackup;
         }
         
@@ -593,12 +568,10 @@ export class GameplayState {
                                           this.stateManager.marketplaceSystem.consumablesToCommit.size > 0;
             
             if (hasConsumablesToCommit) {
-                console.log('  Calling commitUsedConsumables() for early quit or defeat...');
                 this.stateManager.marketplaceSystem.commitUsedConsumables();
                 
                 // Save the updated marketplace state (with consumed items) to the current save slot
                 if (this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
-                    console.log('  Saving updated marketplace state to save file');
                     this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
                     
                     // Also save statistics
@@ -609,7 +582,6 @@ export class GameplayState {
                     SaveSystem.saveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
                 }
             } else {
-                console.log('  No consumables to commit - already consumed in completeLevel() or no level was played');
             }
         } else {
             console.warn('  WARNING: No marketplace system available!');
@@ -736,7 +708,6 @@ export class GameplayState {
     activateSpellTargeting(spellId) {
         this.selectedSpell = spellId;
         this.stateManager.canvas.style.cursor = 'crosshair';
-        console.log('GameplayState: Activated spell targeting for spell:', spellId);
         
         // Deselect all towers and buildings during spell targeting
         if (this.towerManager) {
@@ -748,14 +719,12 @@ export class GameplayState {
         
         // Add temporary click handler for spell targeting
         this.spellTargetHandler = (e) => {
-            console.log('GameplayState: Spell target clicked at:', e.clientX, e.clientY);
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const scaleX = this.stateManager.canvas.width / rect.width;
             const scaleY = this.stateManager.canvas.height / rect.height;
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
             
-            console.log('GameplayState: Casting spell at position:', x, y);
             this.castSpellAtPosition(this.selectedSpell, x, y);
             // Note: cancelSpellTargeting() is called at the end of castSpellAtPosition()
         };
@@ -765,7 +734,6 @@ export class GameplayState {
         // Allow right-click to cancel
         this.spellCancelHandler = (e) => {
             e.preventDefault();
-            console.log('GameplayState: Spell targeting cancelled');
             this.cancelSpellTargeting();
         };
         this.stateManager.canvas.addEventListener('contextmenu', this.spellCancelHandler, { once: true });
@@ -786,8 +754,6 @@ export class GameplayState {
     }
     
     castSpellAtPosition(spellId, x, y) {
-        console.log('GameplayState: castSpellAtPosition called for spell:', spellId, 'at position:', x, y);
-        console.log('GameplayState: this.superWeaponLab exists:', !!this.superWeaponLab);
         
         if (!this.superWeaponLab) {
             console.error('GameplayState: No SuperWeaponLab available for spell casting!');
@@ -795,7 +761,6 @@ export class GameplayState {
         }
         
         const result = this.superWeaponLab.castSpell(spellId, this.enemyManager.enemies, x, y);
-        console.log('GameplayState: castSpell result:', result);
         if (!result) {
             console.warn('GameplayState: Spell cast failed or on cooldown');
             return;
@@ -1208,7 +1173,6 @@ export class GameplayState {
         // Display notification (you can enhance this with better UI)
         if (gemTexts.length > 0) {
             // For now, we'll just log it - the floating text on the mine shows the collection
-            //console.log('Gems collected:', gemTexts.join(', '));
         }
     }
     
@@ -1281,11 +1245,9 @@ export class GameplayState {
     }
     
     startWave() {
-        console.log('startWave() called for wave', this.gameState.wave, '(maxWaves:', this.maxWavesForLevel, ')');
         
         // Check if we've exceeded max waves for campaign levels
         if (!this.isSandbox && this.gameState.wave > this.maxWavesForLevel) {
-            console.log('Wave', this.gameState.wave, 'exceeds maxWaves', this.maxWavesForLevel, '- completing level');
             this.completeLevel();
             return;
         }
@@ -1299,12 +1261,10 @@ export class GameplayState {
         } else {
             // Campaign mode: traditional wave spawning
             const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
-            console.log('startWave: Got waveConfig:', waveConfig);
             
             if (waveConfig && waveConfig.enemyCount > 0) {
                 // Track total enemies spawned across all waves
                 this.totalEnemiesSpawned += waveConfig.enemyCount;
-                console.log(`Wave ${this.gameState.wave}: Spawning ${waveConfig.enemyCount} enemies (total spawned: ${this.totalEnemiesSpawned})`);
                 
                 if (waveConfig.wavePattern) {
                     // Use custom pattern from level
@@ -1344,10 +1304,8 @@ export class GameplayState {
     }
     
     completeLevel() {
-        console.log('completeLevel() called');
         if (this.isSandbox) {
             // Sandbox mode doesn't end, just continue
-            console.log('Sandbox mode - not completing');
             return;
         }
 
@@ -1358,7 +1316,6 @@ export class GameplayState {
             // CRITICAL: Commit (consume) marketplace items BEFORE saving
             // This ensures consumables are removed from inventory after level completes
             if (this.stateManager.marketplaceSystem) {
-                console.log('completeLevel: Committing used consumables before save');
                 
                 // Count items consumed before committing
                 const consumedCount = this.stateManager.marketplaceSystem.consumablesToCommit.size;
@@ -1702,7 +1659,6 @@ export class GameplayState {
                 // Activate the boon - revive castle
                 this.stateManager.marketplaceSystem.useFrogKingBaneBoon();
                 this.level.castle.revive();
-                console.log('Frog King\'s Bane activated! Castle revived.');
                 // Continue the game
             } else {
                 // No boon - game over

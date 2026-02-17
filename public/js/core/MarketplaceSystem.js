@@ -174,7 +174,6 @@ export class MarketplaceSystem {
                 const current = this.consumables.get(itemId) || 0;
                 if (current > 0) {
                     this.consumables.set(itemId, current - 1);
-                    console.log(`commitUsedConsumables: Consumed ${itemId}, new count: ${current - 1}`);
                 }
             }
         }

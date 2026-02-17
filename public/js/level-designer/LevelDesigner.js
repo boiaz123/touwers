@@ -2961,6 +2961,9 @@ export class LevelDesigner {
         const maxWaves = document.getElementById('maxWaves').value;
         const campaignTheme = document.getElementById('campaignTheme').value;
 
+        // Capitalize campaign name for class naming (forest -> Forest, mountain -> Mountain, etc.)
+        const capitalizedCampaign = campaignTheme.charAt(0).toUpperCase() + campaignTheme.slice(1);
+
         // Get visual config
         const visualConfig = {
             grassColors: {
@@ -3008,9 +3011,10 @@ export class LevelDesigner {
               }).join('\n')
             : '            // Add terrain elements using the designer';
 
+        const className = `${capitalizedCampaign}Level${levelNumber}`;
         const code = `import { LevelBase } from '../LevelBase.js';
 
-export class Level${levelNumber} extends LevelBase {
+export class ${className} extends LevelBase {
     static levelMetadata = {
         name: '${levelName}',
         difficulty: '${difficulty}',
@@ -3021,10 +3025,10 @@ export class Level${levelNumber} extends LevelBase {
     constructor() {
         super();
         // Derive instance properties from static metadata
-        this.levelName = Level${levelNumber}.levelMetadata.name;
-        this.levelNumber = Level${levelNumber}.levelMetadata.order;
-        this.difficulty = Level${levelNumber}.levelMetadata.difficulty;
-        this.campaign = Level${levelNumber}.levelMetadata.campaign;
+        this.levelName = ${className}.levelMetadata.name;
+        this.levelNumber = ${className}.levelMetadata.order;
+        this.difficulty = ${className}.levelMetadata.difficulty;
+        this.campaign = ${className}.levelMetadata.campaign;
         this.maxWaves = ${maxWaves};
         
         // Customize visuals

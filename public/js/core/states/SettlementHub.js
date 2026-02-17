@@ -175,17 +175,14 @@ export class SettlementHub {
             
             // If a player manually selected music from the library, keep playing it (don't interrupt)
             if (isManualMusic) {
-                console.log('SettlementHub: Keeping manually selected music playing');
                 // Leave it as is - don't change tracks
             }
             // If settlement music is already playing, keep it
             else if (settlementTracks.includes(currentTrack)) {
-                console.log('SettlementHub: Keeping current settlement music playing');
                 // Leave it as is - don't restart
             }
             // Otherwise, start a new settlement theme
             else {
-                console.log('SettlementHub: Playing new settlement theme');
                 this.stateManager.audioManager.playRandomSettlementTheme();
             }
         }
@@ -3512,7 +3509,6 @@ class UpgradesMenu {
         const items = [];
         const inventory = this.stateManager.playerInventory || [];
         
-        console.log('Building sell items from playerInventory:', inventory);
         
         // Create items from inventory
         for (const inventoryItem of inventory) {
@@ -3535,7 +3531,6 @@ class UpgradesMenu {
             });
         }
         
-        console.log('Built sell items:', items);
         return items;
     }
 
@@ -3543,7 +3538,6 @@ class UpgradesMenu {
         // Use LootRegistry for authoritative loot data
         const lootInfo = LootRegistry.getLootType(lootId);
         if (lootInfo) {
-            console.log('Found loot in registry for', lootId, ':', lootInfo.name);
             return {
                 name: lootInfo.name,
                 description: lootInfo.description || `A ${lootInfo.rarity || 'common'} treasure from fallen enemies.`,
@@ -3929,13 +3923,11 @@ class UpgradesMenu {
             // Handle both marketplace items and upgrades (upgrades are now a category in buy tab)
             if (!item.canPurchase) {
                 if (item.requirementMsg) {
-                    console.log('Cannot purchase item. ' + item.requirementMsg);
                 }
                 return;
             }
             
             if (this.playerGold < item.cost) {
-                console.log('Not enough gold to purchase:', item.name, '. Need:', item.cost, 'Have:', this.playerGold);
                 return;
             }
             
@@ -3947,7 +3939,6 @@ class UpgradesMenu {
             if (item.type === 'upgrade') {
                 // Purchase upgrade to upgrade system
                 this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
-                console.log('Purchased upgrade:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
                 
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('upgrade');
@@ -3959,10 +3950,8 @@ class UpgradesMenu {
                 // Handle Intel pack purchases - unlock corresponding enemy intel
                 if (item.category === 'intel') {
                     this.stateManager.marketplaceSystem.unlockEnemyIntel(item.id);
-                    console.log(`Unlocked enemy intel from: ${item.name}`);
                 }
                 
-                console.log('Purchased item:', item.name, 'for', item.cost, 'gold. Remaining gold:', this.playerGold);
                 
                 if (this.stateManager.audioManager) {
                     // Use upgrade sound for buying in marketplace
@@ -4006,7 +3995,6 @@ class UpgradesMenu {
             this.sellItems = this.buildSellItems();
             this.currentPage = 0;
             
-            console.log('Sold item:', item.name, 'for', item.sellPrice, 'gold. Total gold:', this.playerGold);
             
             if (this.stateManager.audioManager) {
                 // Use LootCollect sound for selling (as per user request)
@@ -5131,11 +5119,9 @@ class ManageSettlementMenu {
 
     async quitTouwers() {
         try {
-            console.log('SettlementHub: quitTouwers called');
             
             // Trigger game shutdown cleanup first
             if (this.stateManager && this.stateManager.game && this.stateManager.game.shutdown) {
-                console.log('SettlementHub: Calling game.shutdown()');
                 this.stateManager.game.shutdown();
             }
             
@@ -5144,16 +5130,12 @@ class ManageSettlementMenu {
             
             // Check if invoke is available
             if (invoke) {
-                console.log('SettlementHub: invoke function available, calling close_app');
                 try {
                     const result = await invoke('close_app');
-                    console.log('SettlementHub: invoke returned: ' + JSON.stringify(result));
                 } catch (invokeError) {
-                    console.log('SettlementHub: invoke failed: ' + invokeError.message);
                     throw invokeError;
                 }
             } else {
-                console.log('SettlementHub: invoke not available, cannot close app via Tauri');
                 // Fallback - attempt window.close() even though it will likely fail
                 window.close();
             }
@@ -5764,7 +5746,6 @@ class ArcaneLibraryMenu {
 
         // Play the selected music track on loop
         if (this.stateManager.audioManager) {
-            console.log(`ArcaneLibraryMenu: Playing selected music track: ${music.musicId}`);
             this.stateManager.audioManager.playMusic(music.musicId, false);
             // Mark that we're in manual music selection mode (not auto settlement theme)
             this.stateManager.audioManager.isManualMusicSelection = true;
