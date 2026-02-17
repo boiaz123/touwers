@@ -386,50 +386,29 @@ export class BaseEnemy {
     }
 
     /**
-     * Get random normal loot ID for this enemy
+     * Get random normal loot ID for this enemy (from brown bag)
      * Can be overridden by subclasses for different loot tables
      */
     getDroppedLoot() {
-        // Common loot items
-        const commonLoot = [
-            'iron-sword', 'iron-axe', 'wooden-bow', 'leather-helm', 
-            'leather-chest', 'gauntlets', 'steel-boots', 'ancient-coin'
-        ];
-        // Uncommon loot items (30% chance)
-        const uncommonLoot = [
-            'steel-sword', 'battle-axe', 'longbow', 'iron-helm', 
-            'iron-chest', 'steel-boots', 'ancient-coin'
-        ];
-        // Rare loot items (5% chance)
-        const rareLoot = [
-            'longsword', 'great-axe', 'elven-bow', 'dragon-helm', 
-            'mithril-chest', 'gold-ring', 'gem-cluster'
-        ];
-        // Epic loot items (1% chance)
-        const epicLoot = [
-            'enchanted-blade', 'dragon-helm', 'ruby-amulet', 'crystal-orb'
+        // Normal loot items that drop from brown/common loot bag
+        const normalLoot = [
+            'copper-coin', 'frog-talisman', 'iron-dagger', 'emerald-shard',
+            'silver-brooch', 'sapphire-crystal', 'leather-purse', 'bronze-medallion',
+            'ruby-fragment', 'wooden-amulet'
         ];
 
-        const rand = Math.random();
-        if (rand < 0.01) {
-            return epicLoot[Math.floor(Math.random() * epicLoot.length)];
-        } else if (rand < 0.06) {
-            return rareLoot[Math.floor(Math.random() * rareLoot.length)];
-        } else if (rand < 0.36) {
-            return uncommonLoot[Math.floor(Math.random() * uncommonLoot.length)];
-        } else {
-            return commonLoot[Math.floor(Math.random() * commonLoot.length)];
-        }
+        return normalLoot[Math.floor(Math.random() * normalLoot.length)];
     }
 
     /**
-     * Get random rare loot ID - separate tier from normal drops
-     * Returns high-value legendary items
+     * Get random rare loot ID - drops from purple/rare loot bag
+     * Returns rare loot items
      */
     getDroppedRareLoot() {
+        // Rare loot items that drop from purple/rare loot bag
         const rareLoot = [
-            'excalibur', 'dragon-scales', 'phoenix-tear', 'cursed-ring',
-            'void-gem', 'shadow-cloak', 'holy-relic'
+            'dragon-eye', 'frog-crown', 'enchanted-longsword', 'moonstone-gem',
+            'frog-totem', 'void-shard'
         ];
         return rareLoot[Math.floor(Math.random() * rareLoot.length)];
     }

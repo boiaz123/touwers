@@ -1,267 +1,140 @@
 /**
  * LootRegistry - Central registry for all loot types
  * Defines loot items with names, descriptions, types, and selling values
+ * Two rarity levels: normal (brown bag) and rare (purple bag)
  */
 export class LootRegistry {
     static #registry = {
-        // Swords & Blades
-        'iron-sword': {
-            name: 'Iron Sword',
-            type: 'sword',
-            rarity: 'common',
+        // ============ NORMAL LOOT (Brown Bag) ============
+        'copper-coin': {
+            name: 'Copper Coin',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 25,
+            description: 'An old copper coin from distant lands',
+            emblem: '🪙'
+        },
+        'frog-talisman': {
+            name: 'Frog Talisman',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 35,
+            description: 'A small frog charm for good luck',
+            emblem: '🐸'
+        },
+        'iron-dagger': {
+            name: 'Iron Dagger',
+            type: 'weapon',
+            rarity: 'normal',
+            sellValue: 40,
+            description: 'A sturdy iron dagger with a leather grip',
+            emblem: '🗡️'
+        },
+        'emerald-shard': {
+            name: 'Emerald Shard',
+            type: 'gem',
+            rarity: 'normal',
             sellValue: 50,
-            description: 'A sturdy iron blade',
-            emblem: '⚔'
+            description: 'A fragment of precious emerald stone',
+            emblem: '💚'
         },
-        'steel-sword': {
-            name: 'Steel Sword',
-            type: 'sword',
-            rarity: 'uncommon',
-            sellValue: 100,
-            description: 'A well-crafted steel sword',
-            emblem: '⚔'
+        'silver-brooch': {
+            name: 'Silver Brooch',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 45,
+            description: 'An ornate silver brooch of fine craftsmanship',
+            emblem: '◇'
         },
-        'longsword': {
-            name: 'Longsword',
-            type: 'sword',
+        'sapphire-crystal': {
+            name: 'Sapphire Crystal',
+            type: 'gem',
+            rarity: 'normal',
+            sellValue: 55,
+            description: 'A brilliant blue sapphire crystal',
+            emblem: '💙'
+        },
+        'leather-purse': {
+            name: 'Leather Purse',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 30,
+            description: 'A worn leather pouch, well-used but sturdy',
+            emblem: '👜'
+        },
+        'bronze-medallion': {
+            name: 'Bronze Medallion',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 48,
+            description: 'An ancient bronze medallion with strange markings',
+            emblem: '🎖️'
+        },
+        'ruby-fragment': {
+            name: 'Ruby Fragment',
+            type: 'gem',
+            rarity: 'normal',
+            sellValue: 52,
+            description: 'A deep red ruby shard, quite valuable',
+            emblem: '❤️'
+        },
+        'wooden-amulet': {
+            name: 'Wooden Amulet',
+            type: 'treasure',
+            rarity: 'normal',
+            sellValue: 28,
+            description: 'A frog-carved wooden amulet for protection',
+            emblem: '🌿'
+        },
+
+        // ============ RARE LOOT (Purple Bag) ============
+        'dragon-eye': {
+            name: 'Dragon\'s Eye',
+            type: 'gem',
+            rarity: 'rare',
+            sellValue: 180,
+            description: 'A legendary gemstone that glows like a dragon\'s gaze',
+            emblem: '🔴'
+        },
+        'frog-crown': {
+            name: 'Frog King\'s Crown',
+            type: 'treasure',
             rarity: 'rare',
             sellValue: 200,
-            description: 'A mighty longsword',
-            emblem: '⚔'
-        },
-        'enchanted-blade': {
-            name: 'Enchanted Blade',
-            type: 'sword',
-            rarity: 'epic',
-            sellValue: 400,
-            description: 'A magically enhanced sword',
-            emblem: '✨'
-        },
-        'excalibur': {
-            name: 'Excalibur',
-            type: 'sword',
-            rarity: 'legendary',
-            sellValue: 750,
-            description: 'The legendary blade of kings',
+            description: 'A tiny ornate crown fit for royalty of the amphibian world',
             emblem: '👑'
         },
-        
-        // Axes & Blunt Weapons
-        'iron-axe': {
-            name: 'Iron Axe',
-            type: 'weapon',
-            rarity: 'common',
-            sellValue: 60,
-            description: 'A heavy iron axe',
-            emblem: '🪓'
-        },
-        'battle-axe': {
-            name: 'Battle Axe',
-            type: 'weapon',
-            rarity: 'uncommon',
-            sellValue: 120,
-            description: 'A warrior\'s battle axe',
-            emblem: '🪓'
-        },
-        'great-axe': {
-            name: 'Great Axe',
+        'enchanted-longsword': {
+            name: 'Enchanted Longsword',
             type: 'weapon',
             rarity: 'rare',
             sellValue: 220,
-            description: 'A massive two-handed axe',
-            emblem: '🪓'
+            description: 'A magnificent blade shimmering with ancient magic',
+            emblem: '⚔️'
         },
-        'warhammer': {
-            name: 'Warhammer',
-            type: 'weapon',
+        'moonstone-gem': {
+            name: 'Moonstone Gem',
+            type: 'gem',
             rarity: 'rare',
             sellValue: 210,
-            description: 'A devastating warhammer',
-            emblem: '🔨'
+            description: 'A lustrous gem that captures moonlight',
+            emblem: '🌙'
         },
-        
-        // Bows & Ranged
-        'wooden-bow': {
-            name: 'Wooden Bow',
-            type: 'weapon',
-            rarity: 'common',
-            sellValue: 40,
-            description: 'A simple wooden bow',
-            emblem: '🏹'
-        },
-        'longbow': {
-            name: 'Longbow',
-            type: 'weapon',
-            rarity: 'uncommon',
-            sellValue: 110,
-            description: 'A powerful longbow',
-            emblem: '🏹'
-        },
-        'elven-bow': {
-            name: 'Elven Bow',
-            type: 'weapon',
-            rarity: 'rare',
-            sellValue: 190,
-            description: 'Crafted by master elves',
-            emblem: '🏹'
-        },
-        
-        // Armor Pieces
-        'leather-helm': {
-            name: 'Leather Helm',
-            type: 'armor',
-            rarity: 'common',
-            sellValue: 45,
-            description: 'A leather-bound helmet',
-            emblem: '🪖'
-        },
-        'iron-helm': {
-            name: 'Iron Helm',
-            type: 'armor',
-            rarity: 'uncommon',
-            sellValue: 95,
-            description: 'A sturdy iron helmet',
-            emblem: '🪖'
-        },
-        'dragon-helm': {
-            name: 'Dragon Helm',
-            type: 'armor',
-            rarity: 'epic',
-            sellValue: 380,
-            description: 'Forged from dragon scales',
-            emblem: '🐉'
-        },
-        'leather-chest': {
-            name: 'Leather Chest Plate',
-            type: 'armor',
-            rarity: 'common',
-            sellValue: 70,
-            description: 'Leather body armor',
-            emblem: '🛡'
-        },
-        'iron-chest': {
-            name: 'Iron Chest Plate',
-            type: 'armor',
-            rarity: 'uncommon',
-            sellValue: 140,
-            description: 'Iron plate body armor',
-            emblem: '🛡'
-        },
-        'mithril-chest': {
-            name: 'Mithril Chest Plate',
-            type: 'armor',
-            rarity: 'rare',
-            sellValue: 280,
-            description: 'Legendary mithril plate',
-            emblem: '⚡'
-        },
-        'gauntlets': {
-            name: 'Iron Gauntlets',
-            type: 'armor',
-            rarity: 'uncommon',
-            sellValue: 85,
-            description: 'Iron hand protection',
-            emblem: '👊'
-        },
-        'steel-boots': {
-            name: 'Steel Boots',
-            type: 'armor',
-            rarity: 'uncommon',
-            sellValue: 75,
-            description: 'Reinforced steel footwear',
-            emblem: '👢'
-        },
-        
-        // Special Items & Treasures
-        'gold-ring': {
-            name: 'Gold Ring',
+        'frog-totem': {
+            name: 'Frog Totem',
             type: 'treasure',
             rarity: 'rare',
-            sellValue: 250,
-            description: 'A precious gold ring',
-            emblem: '💍'
+            sellValue: 185,
+            description: 'A sacred totem carved in the shape of a leaping frog',
+            emblem: '🐸'
         },
-        'ruby-amulet': {
-            name: 'Ruby Amulet',
-            type: 'treasure',
-            rarity: 'epic',
-            sellValue: 350,
-            description: 'An amulet set with rubies',
-            emblem: '💎'
-        },
-        'crystal-orb': {
-            name: 'Crystal Orb',
-            type: 'treasure',
-            rarity: 'epic',
-            sellValue: 360,
-            description: 'A magical crystal orb',
+        'void-shard': {
+            name: 'Void Shard',
+            type: 'gem',
+            rarity: 'rare',
+            sellValue: 225,
+            description: 'A mysterious dark crystal from the depths of the void',
             emblem: '🔮'
-        },
-        'ancient-coin': {
-            name: 'Ancient Coin',
-            type: 'treasure',
-            rarity: 'uncommon',
-            sellValue: 130,
-            description: 'A coin from ages past',
-            emblem: '🪙'
-        },
-        'gem-cluster': {
-            name: 'Gem Cluster',
-            type: 'treasure',
-            rarity: 'rare',
-            sellValue: 270,
-            description: 'A cluster of precious gems',
-            emblem: '💎'
-        },
-
-        // Legendary Rare Loot Items
-        'dragon-scales': {
-            name: 'Dragon Scales',
-            type: 'treasure',
-            rarity: 'legendary',
-            sellValue: 800,
-            description: 'Scales from an ancient dragon',
-            emblem: '🐉'
-        },
-        'phoenix-tear': {
-            name: 'Phoenix Tear',
-            type: 'treasure',
-            rarity: 'legendary',
-            sellValue: 900,
-            description: 'A tear from a mythical phoenix',
-            emblem: '🔥'
-        },
-        'cursed-ring': {
-            name: 'Cursed Ring',
-            type: 'treasure',
-            rarity: 'legendary',
-            sellValue: 850,
-            description: 'A ring cursed with dark magic',
-            emblem: '⚫'
-        },
-        'void-gem': {
-            name: 'Void Gem',
-            type: 'treasure',
-            rarity: 'legendary',
-            sellValue: 920,
-            description: 'A gem from the void itself',
-            emblem: '🌑'
-        },
-        'shadow-cloak': {
-            name: 'Shadow Cloak',
-            type: 'armor',
-            rarity: 'legendary',
-            sellValue: 1000,
-            description: 'A cloak woven from pure shadow',
-            emblem: '👻'
-        },
-        'holy-relic': {
-            name: 'Holy Relic',
-            type: 'treasure',
-            rarity: 'legendary',
-            sellValue: 1100,
-            description: 'An ancient relic blessed by gods',
-            emblem: '✨'
         }
     };
 
@@ -281,12 +154,18 @@ export class LootRegistry {
 
     /**
      * Get random loot type (weighted by rarity)
+     * Returns a normal loot item or rare loot item based on probability
      */
     static getRandomLoot() {
-        const types = this.getAllLootTypes();
-        // Higher chance for common items, lower for epic
-        const lootId = types[Math.floor(Math.random() * types.length)];
-        return lootId;
+        const normalLoot = this.getLootByRarity('normal');
+        const rareLoot = this.getLootByRarity('rare');
+        
+        // 85% chance for normal loot, 15% chance for rare
+        const isRare = Math.random() < 0.15;
+        const pool = isRare ? rareLoot : normalLoot;
+        
+        const lootId = pool[Math.floor(Math.random() * pool.length)];
+        return { lootId, isRare };
     }
 
     /**
