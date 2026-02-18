@@ -308,6 +308,8 @@ export class TowerManager {
                     const newLab = this.buildingManager.buildings[this.buildingManager.buildings.length - 1];
                     if (newLab && newLab.constructor.name === 'SuperWeaponLab') {
                         newLab.setAcademy(academy);
+                        newLab.unlockSystem = this.unlockSystem; // Set unlock system reference
+                        newLab.upgradeSystem = this.stateManager?.upgradeSystem; // Set upgrade system reference
                     }
                 }
             }
@@ -789,6 +791,9 @@ export class TowerManager {
                 // New: Handle super weapon menu
                 return buildingResult;
             } else if (buildingResult.type === 'training_menu') {
+                return buildingResult;
+            } else if (buildingResult.type === 'diamond_press_menu') {
+                // Handle diamond press menu
                 return buildingResult;
             } else if (buildingResult.type === 'goldmine_menu') {
                 // Handle gold mine menu

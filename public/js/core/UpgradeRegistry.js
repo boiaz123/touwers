@@ -53,6 +53,14 @@ export class UpgradeRegistry {
             icon: '💎',
             category: 'mining',
             effect: 'Increases diamond drop rate from mines'
+        },
+        'diamond-press-unlock': {
+            name: 'Diamond Press Unlock',
+            description: 'Unlocked when Super Weapon Lab reaches level 2',
+            cost: 0,
+            icon: '💠',
+            category: 'building',
+            effect: 'Unlocks Diamond Press building'
         }
     };
 

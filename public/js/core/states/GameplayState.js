@@ -708,7 +708,12 @@ export class GameplayState {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
         
-        const size = this.selectedBuildingType ? 4 : 2;
+        let size = 2; // Default tower size
+        if (this.selectedBuildingType) {
+            // Get building size from registry
+            const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
+            size = buildingType?.size || 4;
+        }
         this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
     }
     
@@ -1026,11 +1031,15 @@ export class GameplayState {
         } else if (this.selectedBuildingType) {
             const { gridX, gridY } = this.level.screenToGrid(x, y);
             
-            if (this.level.canPlaceBuilding(gridX, gridY, 4, this.towerManager)) {
-                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, 4);
+            // Get the actual building size from registry instead of hardcoding 4
+            const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
+            const buildingSize = buildingType ? buildingType.size : 4;
+            
+            if (this.level.canPlaceBuilding(gridX, gridY, buildingSize, this.towerManager)) {
+                const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, buildingSize);
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
-                    this.level.placeBuilding(gridX, gridY, 4);
+                    this.level.placeBuilding(gridX, gridY, buildingSize);
                     
                     // Play building placement SFX
                     if (this.stateManager.audioManager) {
@@ -1122,6 +1131,9 @@ export class GameplayState {
                 return;
             } else if (clickResult.type === 'superweapon_menu') {
                 this.uiManager.showSuperWeaponMenu(clickResult);
+                return;
+            } else if (clickResult.type === 'diamond_press_menu') {
+                this.uiManager.showDiamondPressMenu(clickResult);
                 return;
             } else if (clickResult.type === 'training_menu') {
                 this.uiManager.showTrainingGroundsMenu(clickResult);

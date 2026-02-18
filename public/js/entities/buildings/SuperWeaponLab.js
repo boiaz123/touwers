@@ -5,6 +5,8 @@ export class SuperWeaponLab extends Building {
         super(x, y, gridX, gridY, 4);
         this.isSelected = false;
         this.academy = null; // Reference to Magic Academy
+        this.unlockSystem = null; // Reference to UnlockSystem for building unlocks
+        this.upgradeSystem = null; // Reference to UpgradeSystem for marketplace upgrades
         
         // Building upgrade system - starts at level 1 on build
         this.labLevel = 1;
@@ -861,8 +863,8 @@ export class SuperWeaponLab extends Building {
         // Dynamic descriptions based on level
         switch(nextLevel) {
             case 2:
-                description = 'Unlock Combination Tower Power-up Upgrades and Frozen Nova spell.';
-                nextUnlock = 'Unlocks: Frozen Nova + Combination Tower upgrades';
+                description = 'Unlock Combination Tower Power-up Upgrades, Frozen Nova spell, and Diamond Press building.';
+                nextUnlock = 'Unlocks: Frozen Nova + Combination Tower upgrades + Diamond Press building';
                 break;
             case 3:
                 description = 'Unlock Meteor Strike spell. Reduce all spell cooldowns by 20%.';
@@ -927,6 +929,14 @@ export class SuperWeaponLab extends Building {
         // Unlock spells based on new level (max lab level is 4)
         if (this.labLevel >= 2) {
             this.spells.frostNova.unlocked = true;
+            // Unlock Diamond Press building via UnlockSystem if available
+            if (this.unlockSystem) {
+                this.unlockSystem.onSuperweaponLabLevelTwo();
+            }
+            // Also unlock the diamond-press-unlock upgrade
+            if (this.upgradeSystem) {
+                this.upgradeSystem.purchaseUpgrade('diamond-press-unlock');
+            }
         }
         if (this.labLevel >= 3) {
             this.spells.meteorStrike.unlocked = true;

@@ -95,6 +95,11 @@ export class UnlockSystem {
         this.unlockedBuildings.add('superweapon');
     }
     
+    // New: Method to unlock diamond press when superweapon lab reaches level 2
+    onSuperweaponLabLevelTwo() {
+        this.unlockedBuildings.add('diamond-press');
+    }
+    
     // New: Method to unlock training grounds when training-gear upgrade is purchased
     onTrainingGearUpgradePurchased() {
         this.unlockedBuildings.add('training');
@@ -285,6 +290,9 @@ export class UnlockSystem {
         }
         if (type === 'superweapon' && this.superweaponCount >= 1) {
             return false; // Only 1 superweapon lab allowed
+        }
+        if (type === 'diamond-press' && !this.unlockedBuildings.has('diamond-press')) {
+            return false; // Only unlocked at Super Weapon Lab level 2
         }
         return this.unlockedBuildings.has(type);
     }

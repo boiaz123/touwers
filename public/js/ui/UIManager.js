@@ -1401,7 +1401,8 @@ export class UIManager {
             'training-panel',
             'castle-panel',
             'basic-tower-panel',
-            'goldmine-panel'
+            'goldmine-panel',
+            'diamond-press-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -1422,7 +1423,8 @@ export class UIManager {
             'training-panel',
             'castle-panel',
             'basic-tower-panel',
-            'goldmine-panel'
+            'goldmine-panel',
+            'diamond-press-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -3131,6 +3133,135 @@ export class UIManager {
             };
         }
         
+        // Show the panel
+        panel.style.display = 'flex';
+        panel.classList.remove('closing');
+    }
+
+    showDiamondPressMenu(menuData) {
+        // Close other panels to prevent stacking
+        this.closeOtherPanelsImmediate('diamond-press-panel');
+
+        const panel = document.getElementById('diamond-press-panel');
+        if (!panel) {
+            console.error('UIManager: Diamond Press panel not found');
+            return;
+        }
+
+        // Get the academy for gem counts
+        const academy = this.towerManager.buildingManager.buildings.find(b =>
+            b.constructor.name === 'MagicAcademy'
+        );
+
+        // Get current gem counts
+        const fire = academy ? (academy.gems.fire || 0) : 0;
+        const water = academy ? (academy.gems.water || 0) : 0;
+        const air = academy ? (academy.gems.air || 0) : 0;
+        const earth = academy ? (academy.gems.earth || 0) : 0;
+        const diamond = academy ? (academy.gems.diamond || 0) : 0;
+
+        // Check if exchange is possible
+        const canExchange = fire >= 1 && water >= 1 && air >= 1 && earth >= 1;
+
+        // Build the menu HTML
+        let contentHTML = `
+            <div style="padding: 0.85rem; color: #ddd;">
+                <div class="upgrade-category-header" style="padding: 0 0 0.6rem 0; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 0.6rem;">
+                    💎 Gem Exchange System
+                </div>
+
+                <div style="background: rgba(0, 0, 0, 0.3); padding: 0.6rem; border-radius: 6px; margin-bottom: 0.8rem;">
+                    <div style="font-size: 0.9rem; margin-bottom: 0.4rem; color: #aaa;">Exchange 1 of each elemental gem for 1 diamond</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.85rem;">
+                        <div style="text-align: center; padding: 0.4rem; background: rgba(255, 100, 0, 0.2); border-radius: 4px; border: 1px solid rgba(255, 100, 0, 0.4);">
+                            🔥 Fire: <span style="color: ${fire >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${fire}</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.4rem; background: rgba(100, 150, 255, 0.2); border-radius: 4px; border: 1px solid rgba(100, 150, 255, 0.4);">
+                            💧 Water: <span style="color: ${water >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${water}</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.4rem; background: rgba(200, 200, 255, 0.2); border-radius: 4px; border: 1px solid rgba(200, 200, 255, 0.4);">
+                            💨 Air: <span style="color: ${air >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${air}</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.4rem; background: rgba(100, 200, 100, 0.2); border-radius: 4px; border: 1px solid rgba(100, 200, 100, 0.4);">
+                            🌍 Earth: <span style="color: ${earth >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${earth}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; padding: 0.6rem; background: rgba(100, 200, 255, 0.2); border-radius: 6px; margin-bottom: 0.8rem; border: 1px solid rgba(100, 200, 255, 0.4);">
+                    <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.3rem;">Current Diamonds</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #64c8ff;">💎 ${diamond}</div>
+                </div>
+
+                <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.6rem; font-size: 1rem; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${!canExchange ? 'disabled' : ''}>
+                    ${canExchange ? 'Exchange for Diamond' : 'Need 1 of each gem'}
+                </button>
+
+                <div style="padding: 0.6rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="upgrade-button sell-building-btn" style="background: #ff4444; flex: 1; padding: 0.4rem; margin: 0;">
+                        💰 Sell Press
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Update panel title and content
+        const titleElement = panel.querySelector('.panel-title');
+        if (titleElement) titleElement.textContent = '💎 Diamond Press';
+
+        const contentContainer = panel.querySelector('#diamond-press-panel-content');
+        if (contentContainer) {
+            contentContainer.innerHTML = contentHTML;
+        }
+
+        // Setup button click handlers
+        const exchangeBtn = panel.querySelector('#exchange-gems-btn');
+        if (exchangeBtn && canExchange) {
+            exchangeBtn.addEventListener('click', () => {
+                if (academy && fire >= 1 && water >= 1 && air >= 1 && earth >= 1) {
+                    // Deduct gems from academy
+                    academy.gems.fire -= 1;
+                    academy.gems.water -= 1;
+                    academy.gems.air -= 1;
+                    academy.gems.earth -= 1;
+
+                    // Add diamond
+                    academy.gems.diamond = (academy.gems.diamond || 0) + 1;
+
+                    // Play sound effect
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
+                    }
+
+                    // Show floating text on press
+                    if (menuData.diamondPress) {
+                        menuData.diamondPress.exchangeGems({ fire, water, air, earth });
+                    }
+
+                    // Update UI and menu
+                    this.updateUI();
+                    this.showDiamondPressMenu(menuData);
+                }
+            });
+        }
+
+        // Setup sell button
+        const sellBtn = panel.querySelector('.sell-building-btn');
+        if (sellBtn) {
+            sellBtn.addEventListener('click', () => {
+                this.towerManager.sellBuilding(menuData.diamondPress);
+                this.updateUI();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('diamond-press-panel');
+            });
+        }
+
+        // Setup close button
+        const closeBtn = panel.querySelector('.panel-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closePanelWithAnimation('diamond-press-panel'), { once: true });
+        }
+
         // Show the panel
         panel.style.display = 'flex';
         panel.classList.remove('closing');
