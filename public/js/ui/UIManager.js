@@ -1069,119 +1069,174 @@ export class UIManager {
             return;
         }
         
-        // Build upgraded HTML with better visual structure
+        // Build upgraded HTML with professional header + upgrades layout
         let contentHTML = '';
         
-        // Forge Level Section - Special styling
-        if (forgeData.forgeUpgrade) {
+        // BUILD HEADER SECTION - Professional top panel with forge stats
+        if (forgeData.forgeUpgrade || forgeData.forge) {
             const forgeUpgrade = forgeData.forgeUpgrade;
-            const isMaxed = forgeUpgrade.level >= forgeUpgrade.maxLevel;
-            const canAfford = forgeUpgrade.cost && this.gameState.gold >= forgeUpgrade.cost;
+            const forge = forgeData.forge;
+            const isMaxed = forge && forge.forgeLevel >= forge.maxForgeLevel;
+            const canAfford = forgeUpgrade && forgeUpgrade.cost && this.gameState.gold >= forgeUpgrade.cost;
+            
+            // Build effects list based on active upgrades
+            let effectsList = [];
+            
+            if (forge.upgrades.basic.level > 0) {
+                effectsList.push(`⚔️ Basic: +${forge.upgrades.basic.level * 8}`);
+            }
+            
+            if (forge.upgrades.archer.level > 0) {
+                effectsList.push(`🏹 Archer: +${forge.upgrades.archer.level * 8}`);
+            }
+            
+            if (forge.upgrades.barricade_effectiveness.level > 0) {
+                const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
+                const duration = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
+                effectsList.push(`🛡️ Barricade: ${capacity} (${duration.toFixed(1)}s)`);
+            }
+            
+            if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
+                let poisonDamage = 0;
+                const poisonEffects = [1, 2, 2, 3, 5];
+                for (let i = 0; i < forge.upgrades.poison.level && i < poisonEffects.length; i++) {
+                    poisonDamage += poisonEffects[i];
+                }
+                effectsList.push(`☠️ Poison: +${poisonDamage}`);
+            }
+            
+            if (forge.forgeLevel >= 3 && forge.upgrades.cannon.level > 0) {
+                effectsList.push(`💥 Cannon: +${forge.upgrades.cannon.level * 10}`);
+            }
+            
+            // Calculate forge-level benefits
+            const goldMineCount = forge.forgeLevel >= 5 ? 4 : (forge.forgeLevel >= 3 ? 3 : 1);
+            const incomeMultiplier = forge.getMineIncomeMultiplier();
             
             contentHTML += `
-                <div class="upgrade-category forge-level-upgrade">
-                    <div class="panel-upgrade-item forge-level-upgrade ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${forgeUpgrade.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${forgeUpgrade.name}</div>
-                                <div class="upgrade-description">${forgeUpgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    Level: ${forgeUpgrade.level}/${forgeUpgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(forgeUpgrade.level / forgeUpgrade.maxLevel) * 100}%"></div>
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${forgeUpgrade.nextUnlock}</div>
-                            </div>
+                <div class="forge-panel-header">
+                    <div class="forge-icon-display">🔨</div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Tower Forge</div>
+                            <div class="forge-level-badge">Level ${forge.forgeLevel}/${forge.maxForgeLevel}</div>
                         </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${forgeUpgrade.cost}`}
+                        <div class="forge-level-bar">
+                            <div class="forge-level-bar-fill" style="width: ${(forge.forgeLevel / forge.maxForgeLevel) * 100}%"></div>
+                        </div>
+                        <div class="forge-effects-row">
+                            ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
+                        </div>
+                        <div class="forge-benefits-list">
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Gold Mines:</span>
+                                <span class="forge-benefit-value">${goldMineCount}</span>
                             </div>
-                            <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="${forgeUpgrade.id}" 
-                                    data-forge-level="true"
-                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade Forge'}
-                            </button>
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Income:</span>
+                                <span class="forge-benefit-value">x${incomeMultiplier.toFixed(1)}</span>
+                            </div>
                         </div>
                     </div>
+                    <button class="forge-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
+                            data-upgrade="${forgeUpgrade ? forgeUpgrade.id : 'forge_level'}" 
+                            data-forge-level="true"
+                            title="${forgeUpgrade ? forgeUpgrade.description : 'Upgrade the forge'}"
+                            ${!isMaxed && !canAfford ? 'disabled' : ''}>
+                        ${isMaxed ? 'MAXED' : 'UPGRADE'}<br><span style="font-size: 0.7rem;">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '$ ' + forgeUpgrade.cost : '—')}</span>
+                    </button>
                 </div>
             `;
         }
         
-        // Tower Upgrades Section - Organized by availability
+        // BUILD TOWER UPGRADES SECTION - Compact list
         if (forgeData.upgrades && forgeData.upgrades.length > 0) {
-            contentHTML += `<div class="upgrade-category">
-                <div class="upgrade-category-header">Tower Upgrades</div>`;
+            contentHTML += `<div class="upgrade-category compact-upgrades">
+                <div class="upgrade-category-header">⚙️ TOWER ENHANCEMENTS</div>`;
+            
+            // Define base tower stats
+            const baseTowerStats = {
+                'basic': { damage: 20 },
+                'archer': { damage: 15 },
+                'barricade_effectiveness': { capacity: 4 },
+                'poison': { damage: 18 },
+                'cannon': { damage: 40, radius: 35 },
+                'reinforce_wall': { health: 300 }
+            };
             
             forgeData.upgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const forge = forgeData.forge;
                 
-                // Calculate what the stats WILL BE after upgrade
-                let currentEffect = '';
-                let nextLevelEffect = '';
-                let buttonText = '';
+                let currentValue = '';
+                let nextValue = '';
                 
-                if (upgrade.id === 'basic' || upgrade.id === 'archer') {
-                    currentEffect = `Current Damage: +${upgrade.level * 8}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 8}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 8})`;
+                if (upgrade.id === 'basic') {
+                    const baseDmg = baseTowerStats.basic.damage;
+                    const currentBonus = forge.upgrades.basic.level * 8;
+                    const nextBonus = (forge.upgrades.basic.level + 1) * 8;
+                    currentValue = `${baseDmg + currentBonus}`;
+                    nextValue = `${baseDmg + nextBonus}`;
+                } else if (upgrade.id === 'archer') {
+                    const baseDmg = baseTowerStats.archer.damage;
+                    const baseArmorPierce = 0;
+                    const currentDmgBonus = forge.upgrades.archer.level * 8;
+                    const nextDmgBonus = (forge.upgrades.archer.level + 1) * 8;
+                    const currentPierce = baseArmorPierce + (forge.upgrades.archer.level * 5);
+                    const nextPierce = baseArmorPierce + ((forge.upgrades.archer.level + 1) * 5);
+                    currentValue = `${baseDmg + currentDmgBonus} (+${currentPierce}%)`;
+                    nextValue = `${baseDmg + nextDmgBonus} (+${nextPierce}%)`;
                 } else if (upgrade.id === 'barricade_effectiveness') {
-                    const currentCapacity = 4 + Math.round(upgrade.level * 1.8);
-                    const nextCapacity = 4 + Math.round((upgrade.level + 1) * 1.8);
-                    const currentDuration = (4 + upgrade.level * 1.0).toFixed(1);
-                    const nextDuration = (4 + (upgrade.level + 1) * 1.0).toFixed(1);
-                    currentEffect = `Currently: ${currentCapacity} enemies for ${currentDuration}s`;
-                    nextLevelEffect = `After Upgrade: ${nextCapacity} enemies for ${nextDuration}s`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade to Level ${upgrade.level + 1}`;
-                } else if (upgrade.id === 'archer_armor_pierce') {
-                    currentEffect = `Current Armor Pierce: +${upgrade.level * 5}%`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}%`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5}%)`;
+                    const baseCapacity = baseTowerStats.barricade_effectiveness.capacity;
+                    const currentCapacity = baseCapacity + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
+                    const nextCapacity = baseCapacity + Math.round((forge.upgrades.barricade_effectiveness.level + 1) * 1.8);
+                    const baseDuration = 4; // Base slow duration in seconds
+                    const currentDuration = baseDuration + forge.upgrades.barricade_effectiveness.level * 1.0;
+                    const nextDuration = baseDuration + (forge.upgrades.barricade_effectiveness.level + 1) * 1.0;
+                    currentValue = `${currentCapacity} (${currentDuration.toFixed(1)}s)`;
+                    nextValue = `${nextCapacity} (${nextDuration.toFixed(1)}s)`;
                 } else if (upgrade.id === 'poison') {
-                    currentEffect = `Current Poison: +${upgrade.level * 5}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 5}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 5})`;
+                    const baseDmg = baseTowerStats.poison.damage;
+                    const currentBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
+                    const nextBonus = this.calculatePoisonBonus(forge.upgrades.poison.level + 1);
+                    currentValue = `${baseDmg + currentBonus}`;
+                    nextValue = `${baseDmg + nextBonus}`;
                 } else if (upgrade.id === 'cannon') {
-                    currentEffect = `Current Damage: +${upgrade.level * 10}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 10}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 10})`;
+                    const baseDmg = baseTowerStats.cannon.damage;
+                    const baseRadius = baseTowerStats.cannon.radius;
+                    const currentDmgBonus = forge.upgrades.cannon.level * 10;
+                    const nextDmgBonus = (forge.upgrades.cannon.level + 1) * 10;
+                    const currentRadius = baseRadius + (forge.upgrades.cannon.level * 5);
+                    const nextRadius = baseRadius + ((forge.upgrades.cannon.level + 1) * 5);
+                    currentValue = `${baseDmg + currentDmgBonus} (R${currentRadius})`;
+                    nextValue = `${baseDmg + nextDmgBonus} (R${nextRadius})`;
                 } else if (upgrade.id === 'reinforce_wall') {
-                    currentEffect = `Current Health: +${upgrade.level * 50}`;
-                    nextLevelEffect = `After Upgrade: +${(upgrade.level + 1) * 50}`;
-                    buttonText = isMaxed ? 'MAX' : `Upgrade (→ +${(upgrade.level + 1) * 50})`;
+                    const baseHealth = baseTowerStats.reinforce_wall.health;
+                    const currentBonus = forge.upgrades.poison ? forge.upgrades.poison.level * 50 : 0;
+                    const nextBonus = forge.upgrades.poison ? (forge.upgrades.poison.level + 1) * 50 : 50;
+                    currentValue = `${baseHealth + currentBonus}`;
+                    nextValue = `${baseHealth + nextBonus}`;
                 }
                 
                 contentHTML += `
-                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${upgrade.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${upgrade.name}</div>
-                                <div class="upgrade-description">${upgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    Level: ${upgrade.level}/${upgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
-                                    </div>
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="compact-upgrade-left">
+                            <span class="compact-upgrade-icon">${upgrade.icon}</span>
+                            <div class="compact-upgrade-info">
+                                <div class="compact-upgrade-name">${upgrade.name}</div>
+                                <div class="compact-upgrade-values">
+                                    <span class="current-value">${currentValue}</span>
+                                    ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
                                 </div>
-                                ${currentEffect ? `<div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${currentEffect}</div>` : ''}
-                                ${nextLevelEffect && !isMaxed ? `<div style="font-size: 0.8rem; color: #FFD700; margin-top: 0.2rem;">${nextLevelEffect}</div>` : ''}
                             </div>
                         </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${upgrade.cost}`}
-                            </div>
-                            <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="${upgrade.id}" 
-                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${buttonText}
-                            </button>
-                        </div>
+                        <button class="compact-upgrade-btn panel-upgrade-btn" 
+                                data-upgrade="${upgrade.id}" 
+                                title="${upgrade.description || ''}"
+                                ${isMaxed || !canAfford ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : (upgrade.cost ? `$${upgrade.cost}` : '—')}
+                        </button>
                     </div>
                 `;
             });
@@ -1209,6 +1264,15 @@ export class UIManager {
         this.setupForgePanelListeners(forgeData, unlockSystem);
     }
 
+    calculatePoisonBonus(level) {
+        const poisonEffects = [1, 2, 2, 3, 5];
+        let total = 0;
+        for (let i = 0; i < level && i < poisonEffects.length; i++) {
+            total += poisonEffects[i];
+        }
+        return total;
+    }
+
     setupForgePanelListeners(forgeData, unlockSystem) {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
@@ -1224,8 +1288,8 @@ export class UIManager {
         // Upgrade buttons
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const upgradeId = e.target.dataset.upgrade;
-                const isForgeLevel = e.target.dataset.forgeLevel === 'true';
+                const upgradeId = e.currentTarget.dataset.upgrade;
+                const isForgeLevel = e.currentTarget.dataset.forgeLevel === 'true';
                 
                 if (isForgeLevel) {
                     // Handle forge level upgrade

@@ -1046,7 +1046,7 @@ export class TowerForge extends Building {
         // Barricade Effectiveness - increases both capacity and duration
         options.push({
             id: 'barricade_effectiveness',
-            name: 'Barricade Tower - Rubble Effectiveness',
+            name: 'Barricade Tower Upgrade',
             description: `Increases enemies slowed per rubble and slow duration`,
             level: this.upgrades.barricade_effectiveness.level,
             maxLevel: 5, // Always allow up to 5 levels
@@ -1099,35 +1099,37 @@ export class TowerForge extends Building {
     }
     
     getForgeUpgradeOption() {
-        if (this.forgeLevel >= this.maxForgeLevel) {
-            return null;
-        }
-        
-        const nextLevel = this.forgeLevel + 1;
-        let description = "Upgrade the forge itself to unlock new towers and improve mine income.";
+        // Always return forge upgrade info, even when maxed
+        const isMaxed = this.forgeLevel >= this.maxForgeLevel;
+        const nextLevel = isMaxed ? this.forgeLevel : this.forgeLevel + 1;
+        let description = "Upgrade the forge to unlock new towers, improve upgrades and improve mine income.";
         let nextUnlock = "";
         
-        switch(nextLevel) {
-            case 2:
-                nextUnlock = "Unlocks: Poison Archer Tower + Poison Upgrades + 2x Mine Income";
-                break;
-            case 3:
-                nextUnlock = "Unlocks: Trebuchet Tower + Explosive Upgrades + 2 Gold Mines + 2.5x Mine Income";
-                break;
-            case 4:
-                nextUnlock = "Unlocks: Magic Academy Building + 3x Mine Income";
-                break;
-            case 5:
-                nextUnlock = "Unlocks: 3rd Gold Mine + 3.5x Mine Income";
-                break;
-            default:
-                nextUnlock = "Max Level Reached";
-                break;
+        if (isMaxed) {
+            nextUnlock = "✓ MAX LEVEL - All available upgrades unlocked!";
+        } else {
+            switch(nextLevel) {
+                case 2:
+                    nextUnlock = "Unlocks: Poison Archer Tower and doubles Mine income";
+                    break;
+                case 3:
+                    nextUnlock = "Unlocks: Trebuchet Tower, an additional Gold Mine and 2.5x Mine Income";
+                    break;
+                case 4:
+                    nextUnlock = "Unlocks: Magic Academy Building and 3x Mine Income";
+                    break;
+                case 5:
+                    nextUnlock = "Unlocks: Additional Gold Mine and 3.5x Mine Income";
+                    break;
+                default:
+                    nextUnlock = "Max Level Reached";
+                    break;
+            }
         }
         
         return {
             id: 'forge_level',
-            name: `Forge Level ${nextLevel}`,
+            name: isMaxed ? `Forge Level ${this.forgeLevel} - MAXED` : `Forge Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.forgeLevel,
