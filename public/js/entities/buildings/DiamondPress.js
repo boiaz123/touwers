@@ -194,12 +194,11 @@ export class DiamondPress extends Building {
             ctx.stroke();
         }
         
-        // Top hydraulic piston/pressing plate - animated with subtle motion
-        // Reduced stroke for more robust appearance
+        // Top hydraulic piston/pressing plate - animated with motion that hits the bottom
         const strokeIntensity = Math.sin(this.animationTime * 2.2) * 0.5 + 0.5; // Slower animation (2.2 instead of 3.5)
         const plateThickness = size * 0.08;
-        const pressStroke = (strokeIntensity * 0.15 - 0.075) * size; // Reduced stroke (0.15 instead of 0.3)
-        const plateY = chamberTop + size * 0.10 + pressStroke;
+        const pressStroke = (strokeIntensity * 0.30 - 0.15) * size; // Larger stroke for proper compression
+        const plateY = chamberTop + size * 0.18 + pressStroke; // Start lower, finish much lower
         
         // Piston rod guide (surrounds the rod)
         ctx.fillStyle = '#2a3a4a';
@@ -402,8 +401,8 @@ export class DiamondPress extends Building {
     }
 
     exchangeGems(gemCounts) {
-        // Check if player has 1 of each elemental gem
-        if (gemCounts.fire >= 1 && gemCounts.water >= 1 && gemCounts.air >= 1 && gemCounts.earth >= 1) {
+        // Check if player has 3 of each elemental gem
+        if (gemCounts.fire >= 3 && gemCounts.water >= 3 && gemCounts.air >= 3 && gemCounts.earth >= 3) {
             this.floatingTexts.push({
                 x: this.x,
                 y: this.y - 40,
@@ -432,7 +431,7 @@ export class DiamondPress extends Building {
         return {
             name: 'Diamond Press',
             description: 'Exchanges elemental gems for diamonds',
-            effect: '3 elemental gems → 1 diamond',
+            effect: '3 of each gem → 1 diamond',
             size: '2x2',
             cost: 500,
             unlocker: 'SuperWeapon Lab (Level 2)'

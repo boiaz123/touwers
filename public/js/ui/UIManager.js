@@ -3161,45 +3161,49 @@ export class UIManager {
         const diamond = academy ? (academy.gems.diamond || 0) : 0;
 
         // Check if exchange is possible
-        const canExchange = fire >= 1 && water >= 1 && air >= 1 && earth >= 1;
+        const canExchange = fire >= 3 && water >= 3 && air >= 3 && earth >= 3;
 
         // Build the menu HTML
         let contentHTML = `
-            <div style="padding: 0.85rem; color: #ddd;">
-                <div class="upgrade-category-header" style="padding: 0 0 0.6rem 0; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 0.6rem;">
-                    💎 Gem Exchange System
+            <div style="padding: 0.85rem; color: #ddd; display: flex; flex-direction: column; gap: 0.6rem;">
+                <div class="upgrade-category-header" style="padding: 0 0 0.6rem 0; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin: 0; font-size: 1.1rem; text-align: center;">
+                    💎 Gem Exchange
                 </div>
 
-                <div style="background: rgba(0, 0, 0, 0.3); padding: 0.6rem; border-radius: 6px; margin-bottom: 0.8rem;">
-                    <div style="font-size: 0.9rem; margin-bottom: 0.4rem; color: #aaa;">Exchange 1 of each elemental gem for 1 diamond</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.85rem;">
-                        <div style="text-align: center; padding: 0.4rem; background: rgba(255, 100, 0, 0.2); border-radius: 4px; border: 1px solid rgba(255, 100, 0, 0.4);">
-                            🔥 Fire: <span style="color: ${fire >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${fire}</span>
+                <div style="background: rgba(0, 0, 0, 0.4); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(150, 150, 150, 0.2); text-align: center;">
+                    <div style="font-size: 0.8rem; color: #bbb; margin-bottom: 0.4rem; letter-spacing: 0.5px;">Required Gems</div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; font-size: 0.75rem;">
+                        <div style="padding: 0.45rem 0.2rem; background: rgba(255, 100, 0, 0.35); border: 1px solid rgba(255, 100, 0, 0.5); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">🔥</div>
+                            <div style="color: ${fire >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${fire}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
                         </div>
-                        <div style="text-align: center; padding: 0.4rem; background: rgba(100, 150, 255, 0.2); border-radius: 4px; border: 1px solid rgba(100, 150, 255, 0.4);">
-                            💧 Water: <span style="color: ${water >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${water}</span>
+                        <div style="padding: 0.45rem 0.2rem; background: rgba(100, 150, 255, 0.35); border: 1px solid rgba(100, 150, 255, 0.5); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">💧</div>
+                            <div style="color: ${water >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${water}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
                         </div>
-                        <div style="text-align: center; padding: 0.4rem; background: rgba(200, 200, 255, 0.2); border-radius: 4px; border: 1px solid rgba(200, 200, 255, 0.4);">
-                            💨 Air: <span style="color: ${air >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${air}</span>
+                        <div style="padding: 0.45rem 0.2rem; background: rgba(200, 200, 255, 0.35); border: 1px solid rgba(200, 200, 255, 0.5); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">💨</div>
+                            <div style="color: ${air >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${air}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
                         </div>
-                        <div style="text-align: center; padding: 0.4rem; background: rgba(100, 200, 100, 0.2); border-radius: 4px; border: 1px solid rgba(100, 200, 100, 0.4);">
-                            🌍 Earth: <span style="color: ${earth >= 1 ? '#FFD700' : '#999'}; font-weight: bold;">${earth}</span>
+                        <div style="padding: 0.45rem 0.2rem; background: rgba(100, 200, 100, 0.35); border: 1px solid rgba(100, 200, 100, 0.5); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">🌍</div>
+                            <div style="color: ${earth >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${earth}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
                         </div>
                     </div>
                 </div>
 
-                <div style="text-align: center; padding: 0.6rem; background: rgba(100, 200, 255, 0.2); border-radius: 6px; margin-bottom: 0.8rem; border: 1px solid rgba(100, 200, 255, 0.4);">
-                    <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 0.3rem;">Current Diamonds</div>
-                    <div style="font-size: 1.3rem; font-weight: bold; color: #64c8ff;">💎 ${diamond}</div>
+                <div style="background: rgba(100, 200, 255, 0.25); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(100, 200, 255, 0.4); text-align: center;">
+                    <div style="font-size: 0.8rem; color: #bbb; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Output</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #64dfff;">💎 ${diamond}</div>
                 </div>
 
-                <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.6rem; font-size: 1rem; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${!canExchange ? 'disabled' : ''}>
-                    ${canExchange ? 'Exchange for Diamond' : 'Need 1 of each gem'}
+                <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.65rem; font-size: 0.95rem; font-weight: 600; margin: 0.2rem 0 0 0; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${!canExchange ? 'disabled' : ''}>
+                    ${canExchange ? '⚙️ Exchange for Diamond' : '⛔ Need 3 of each gem'}
                 </button>
 
-                <div style="padding: 0.6rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 0.8rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                    <button class="upgrade-button sell-building-btn" style="background: #ff4444; flex: 1; padding: 0.4rem; margin: 0;">
-                        💰 Sell Press
+                <div style="padding: 0.5rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 0.4rem;">
+                    <button class="upgrade-button sell-building-btn" style="background: rgba(255, 50, 50, 0.6); flex: 1; padding: 0.5rem; margin: 0; font-size: 0.9rem; font-weight: 600; border: 1px solid rgba(255, 50, 50, 0.4);">
+                        💰 Sell
                     </button>
                 </div>
             </div>
@@ -3218,12 +3222,12 @@ export class UIManager {
         const exchangeBtn = panel.querySelector('#exchange-gems-btn');
         if (exchangeBtn && canExchange) {
             exchangeBtn.addEventListener('click', () => {
-                if (academy && fire >= 1 && water >= 1 && air >= 1 && earth >= 1) {
+                if (academy && fire >= 3 && water >= 3 && air >= 3 && earth >= 3) {
                     // Deduct gems from academy
-                    academy.gems.fire -= 1;
-                    academy.gems.water -= 1;
-                    academy.gems.air -= 1;
-                    academy.gems.earth -= 1;
+                    academy.gems.fire -= 3;
+                    academy.gems.water -= 3;
+                    academy.gems.air -= 3;
+                    academy.gems.earth -= 3;
 
                     // Add diamond
                     academy.gems.diamond = (academy.gems.diamond || 0) + 1;
