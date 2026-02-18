@@ -1081,11 +1081,11 @@ export class TowerForge extends Building {
             });
         }
         
-        // Cannon Tower - available from forge level 3+
+        // Trebuchet Tower - available from forge level 3+
         if (this.forgeLevel >= 3) {
             options.push({
                 id: 'cannon',
-                name: 'Cannon Tower Upgrade',
+                name: 'Trebuchet Tower Upgrade',
                 description: `+${this.upgrades.cannon.damageEffect} damage & +${this.upgrades.cannon.radiusEffect} blast radius per level`,
                 level: this.upgrades.cannon.level,
                 maxLevel: this.forgeLevel, // Capped at forge level

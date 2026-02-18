@@ -1106,44 +1106,49 @@ export class UIManager {
             }
             
             if (forge.forgeLevel >= 3 && forge.upgrades.cannon.level > 0) {
-                effectsList.push(`💥 Cannon: +${forge.upgrades.cannon.level * 10}`);
+                effectsList.push(`💥 Trebuchet: +${forge.upgrades.cannon.level * 10}`);
             }
             
             // Calculate forge-level benefits
-            const goldMineCount = forge.forgeLevel >= 5 ? 4 : (forge.forgeLevel >= 3 ? 3 : 1);
+            const goldMineCount = forge.forgeLevel >= 5 ? 3 : (forge.forgeLevel >= 3 ? 3 : 1);
             const incomeMultiplier = forge.getMineIncomeMultiplier();
             
             contentHTML += `
                 <div class="forge-panel-header">
-                    <div class="forge-icon-display">🔨</div>
-                    <div class="forge-info-wrapper">
-                        <div class="forge-title-row">
-                            <div class="forge-name">Tower Forge</div>
-                            <div class="forge-level-badge">Level ${forge.forgeLevel}/${forge.maxForgeLevel}</div>
-                        </div>
-                        <div class="forge-level-bar">
-                            <div class="forge-level-bar-fill" style="width: ${(forge.forgeLevel / forge.maxForgeLevel) * 100}%"></div>
-                        </div>
-                        <div class="forge-effects-row">
-                            ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
-                        </div>
-                        <div class="forge-benefits-list">
-                            <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Gold Mines:</span>
-                                <span class="forge-benefit-value">${goldMineCount}</span>
+                    <div class="forge-header-top">
+                        <div class="forge-icon-display">🔨</div>
+                        <div class="forge-info-wrapper">
+                            <div class="forge-title-row">
+                                <div class="forge-name">Tower Forge</div>
+                                <div class="forge-level-badge">Level ${forge.forgeLevel}/${forge.maxForgeLevel}</div>
                             </div>
-                            <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Income:</span>
-                                <span class="forge-benefit-value">x${incomeMultiplier.toFixed(1)}</span>
+                            <div class="forge-level-bar">
+                                <div class="forge-level-bar-fill" style="width: ${(forge.forgeLevel / forge.maxForgeLevel) * 100}%"></div>
+                            </div>
+                            <div class="forge-effects-row">
+                                ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
+                            </div>
+                            <div class="forge-benefits-list">
+                                <div class="forge-benefit-item">
+                                    <span class="forge-benefit-label">Gold Mines:</span>
+                                    <span class="forge-benefit-value">${goldMineCount}</span>
+                                </div>
+                                <div class="forge-benefit-item">
+                                    <span class="forge-benefit-label">Income:</span>
+                                    <span class="forge-benefit-value">x${incomeMultiplier.toFixed(1)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <button class="forge-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
+                    <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                             data-upgrade="${forgeUpgrade ? forgeUpgrade.id : 'forge_level'}" 
                             data-forge-level="true"
-                            title="${forgeUpgrade ? forgeUpgrade.description : 'Upgrade the forge'}"
-                            ${!isMaxed && !canAfford ? 'disabled' : ''}>
-                        ${isMaxed ? 'MAXED' : 'UPGRADE'}<br><span style="font-size: 0.7rem;">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '$ ' + forgeUpgrade.cost : '—')}</span>
+                            ${!isMaxed && !canAfford ? 'disabled' : ''}
+                            ${isMaxed ? 'disabled' : ''}>
+                        <div class="forge-upgrade-btn-content">
+                            ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">FORGE UPGRADE</span>'}
+                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '$ ' + forgeUpgrade.cost : '—')}</span>
+                        </div>
                     </button>
                 </div>
             `;
@@ -1211,6 +1216,7 @@ export class UIManager {
                     const nextRadius = baseRadius + ((forge.upgrades.cannon.level + 1) * 5);
                     currentValue = `${baseDmg + currentDmgBonus} (R${currentRadius})`;
                     nextValue = `${baseDmg + nextDmgBonus} (R${nextRadius})`;
+                    upgrade.name = 'Trebuchet Tower Upgrade';
                 } else if (upgrade.id === 'reinforce_wall') {
                     const baseHealth = baseTowerStats.reinforce_wall.health;
                     const currentBonus = forge.upgrades.poison ? forge.upgrades.poison.level * 50 : 0;
@@ -1220,7 +1226,7 @@ export class UIManager {
                 }
                 
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
                         <div class="compact-upgrade-left">
                             <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
@@ -1233,7 +1239,6 @@ export class UIManager {
                         </div>
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
-                                title="${upgrade.description || ''}"
                                 ${isMaxed || !canAfford ? 'disabled' : ''}>
                             ${isMaxed ? 'MAX' : (upgrade.cost ? `$${upgrade.cost}` : '—')}
                         </button>
@@ -1343,6 +1348,107 @@ export class UIManager {
                 }
             });
         });
+        
+        // Upgrade hover info listeners
+        panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
+            const upgradeId = item.dataset.upgradeId;
+            const upgrade = forgeData.upgrades.find(u => u.id === upgradeId);
+            
+            item.addEventListener('mouseenter', () => {
+                if (!upgrade || !upgrade.description) return;
+                
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-forge-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${upgrade.name}</div>
+                    <div class="info-description">${upgrade.description}</div>
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const itemRect = item.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                
+                // Position to the left of item
+                let left = itemRect.left - menuWidth - 15;
+                let top = itemRect.top;
+                
+                // Adjust if menu goes off screen
+                if (left < 10) {
+                    left = itemRect.right + 15;
+                }
+                
+                if (top + menu.offsetHeight > window.innerHeight) {
+                    top = window.innerHeight - menu.offsetHeight - 10;
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        });
+        
+        // Forge level upgrade button hover
+        const forgeLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
+        if (forgeLevelBtn && forgeData.forgeUpgrade) {
+            forgeLevelBtn.addEventListener('mouseenter', () => {
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-forge-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${forgeData.forgeUpgrade.name}</div>
+                    <div class="info-description">${forgeData.forgeUpgrade.description}</div>
+                    ${forgeData.forgeUpgrade.nextUnlock ? `<div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${forgeData.forgeUpgrade.nextUnlock}</div>` : ''}
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const btnRect = forgeLevelBtn.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Priority: Position to the left with good clearance from the panel
+                let left = panelRect.left - menuWidth - 30;
+                let top = btnRect.top;
+                
+                // If not enough space to the left, try above
+                if (left < 10) {
+                    left = Math.max(10, panelRect.left - menuWidth - 10);
+                    top = btnRect.top - menuHeight - 10;
+                }
+                
+                // Adjust if menu goes off bottom
+                if (top + menuHeight > window.innerHeight) {
+                    top = Math.max(10, btnRect.top - menuHeight - 10);
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            forgeLevelBtn.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        }
         
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-building-btn');
