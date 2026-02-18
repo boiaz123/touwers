@@ -1789,6 +1789,18 @@ body {
     font-size: 0.65rem;
 }
 
+.compact-upgrade-description {
+    font-size: 0.6rem;
+    color: rgba(180, 140, 80, 0.8);
+    display: none;
+    line-height: 1.2;
+    margin-top: 0.2rem;
+}
+
+.compact-upgrade-item:hover .compact-upgrade-description {
+    display: block;
+}
+
 .compact-upgrade-btn {
     padding: 0.3rem 0.4rem;
     background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;

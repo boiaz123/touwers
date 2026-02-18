@@ -1062,26 +1062,19 @@ export class TrainingGrounds extends Building {
     }
     
     onClick() {
-        // Handle click event - open upgrade menu
         this.isSelected = true;
         return {
             type: 'training_menu',
             trainingGrounds: this,
-            rangeUpgrades: this.getRangeUpgradeOptions(),
-            towerUpgrades: this.getUpgradeOptions(),
+            upgrades: this.getUpgradeOptions(),
             trainingUpgrade: this.getTrainingLevelUpgradeOption()
         };
     }
     
-    /**
-     * Get available range upgrade options based on current training grounds level
-     * Each training grounds level unlocks the next upgrade level for all towers
-     * Note: PoisonArcherTower and BarricadeTower use fire rate upgrades instead
-     */
-    getRangeUpgradeOptions() {
+    getUpgradeOptions() {
         const options = [];
         
-        // Manned tower types for range upgrades (excludes Poison Archer and Barricade)
+        // Range upgrades for manned towers
         const towerTypes = [
             { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
             { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
@@ -1091,8 +1084,6 @@ export class TrainingGrounds extends Building {
         // Add range upgrade for each manned tower
         towerTypes.forEach(tower => {
             const upgrade = this.rangeUpgrades[tower.id];
-            
-            // Check if this upgrade level is unlocked (training level must be >= upgrade level + 1)
             const isUnlocked = this.trainingLevel > upgrade.level;
             
             options.push({
@@ -1102,48 +1093,78 @@ export class TrainingGrounds extends Building {
                 description: `Increase ${tower.name} range by ${upgrade.effect} pixels per level`,
                 level: upgrade.level,
                 maxLevel: upgrade.maxLevel,
+                baseCost: upgrade.baseCost,
                 cost: this.calculateRangeUpgradeCost(tower.id),
                 icon: tower.icon,
                 isUnlocked: isUnlocked
             });
         });
         
+        // Fire rate upgrades for special towers
+        const fireRateUpgrades = [
+            {
+                id: 'barricadeFireRate',
+                name: 'Barricade Tower Fire Rate Training',
+                description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
+                icon: '⚡'
+            },
+            {
+                id: 'poisonArcherTowerFireRate',
+                name: 'Poison Archer Tower Fire Rate Training',
+                description: `Increase Poison Archer Tower fire rate (0.8 → 1.2 per second at level 5)`,
+                icon: '☠️'
+            }
+        ];
+        
+        fireRateUpgrades.forEach(upgradeInfo => {
+            const upgrade = this.upgrades[upgradeInfo.id];
+            options.push({
+                id: upgradeInfo.id,
+                name: upgradeInfo.name,
+                description: upgradeInfo.description,
+                level: upgrade.level,
+                maxLevel: upgrade.maxLevel,
+                baseCost: upgrade.baseCost,
+                cost: this.calculateUpgradeCost(upgradeInfo.id),
+                icon: upgradeInfo.icon
+            });
+        });
+        
         return options;
     }
     
-    /**
-     * Get the training grounds level upgrade option
-     */
     getTrainingLevelUpgradeOption() {
-        if (this.trainingLevel >= this.maxTrainingLevel) {
-            return null;
-        }
-        
-        const nextLevel = this.trainingLevel + 1;
+        // Always return training upgrade info, even when maxed
+        const isMaxed = this.trainingLevel >= this.maxTrainingLevel;
+        const nextLevel = isMaxed ? this.trainingLevel : this.trainingLevel + 1;
         let description = "Upgrade the training grounds to unlock the next range training level for manned towers.";
         let nextUnlock = "";
         
-        switch(nextLevel) {
-            case 2:
-                nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
-                break;
-            case 3:
-                nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
-                break;
-            case 4:
-                nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers";
-                break;
-            case 5:
-                nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
-                break;
-            default:
-                nextUnlock = "Max Level Reached";
-                break;
+        if (isMaxed) {
+            nextUnlock = "✓ MAX LEVEL - All available upgrades unlocked!";
+        } else {
+            switch(nextLevel) {
+                case 2:
+                    nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
+                    break;
+                case 3:
+                    nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
+                    break;
+                case 4:
+                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers and Guard Posts";
+                    break;
+                case 5:
+                    nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
+                    break;
+                default:
+                    nextUnlock = "Max Level Reached";
+                    break;
+            }
         }
         
         return {
             id: 'training_level',
-            name: `Training Grounds Level ${nextLevel}`,
+            name: isMaxed ? `Training Grounds Level ${this.trainingLevel} - MAXED` : `Training Grounds Level ${nextLevel}`,
             description: description,
             nextUnlock: nextUnlock,
             level: this.trainingLevel,
@@ -1153,51 +1174,59 @@ export class TrainingGrounds extends Building {
         };
     }
     
-    /**
-     * Calculate cost for range upgrade
-     */
     calculateRangeUpgradeCost(towerType) {
         const upgrade = this.rangeUpgrades[towerType];
         if (upgrade.level >= upgrade.maxLevel) return null;
         return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
     }
     
-    /**
-     * Calculate cost for training grounds level upgrade
-     */
     calculateTrainingLevelCost() {
         if (this.trainingLevel >= this.maxTrainingLevel) return null;
         // Cost progression: 500, 1000, 1500, 2000
         return 500 * this.trainingLevel;
     }
     
-    /**
-     * Purchase a range upgrade for a specific tower type
-     */
-    purchaseRangeUpgrade(towerType, gameState) {
-        const upgrade = this.rangeUpgrades[towerType];
-        if (!upgrade) return false;
+    purchaseUpgrade(upgradeType, gameState) {
+        if (upgradeType === 'training_level') {
+            return this.purchaseTrainingLevelUpgrade(gameState);
+        }
         
-        // Check if upgrade level is unlocked by training grounds level
-        if (this.trainingLevel <= upgrade.level) {
+        // Handle range upgrades
+        if (upgradeType.startsWith('range_')) {
+            const towerType = upgradeType.substring(6); // Remove 'range_' prefix
+            const upgrade = this.rangeUpgrades[towerType];
+            if (!upgrade) return false;
+            
+            // Check if upgrade level is unlocked by training grounds level
+            if (this.trainingLevel <= upgrade.level) {
+                return false;
+            }
+            
+            const cost = this.calculateRangeUpgradeCost(towerType);
+            if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
+                return false;
+            }
+            
+            gameState.gold -= cost;
+            upgrade.level++;
+            this.notifyUpgradeChanged();
+            return true;
+        }
+        
+        // Handle fire rate upgrades
+        const upgrade = this.upgrades[upgradeType];
+        const cost = this.calculateUpgradeCost(upgradeType);
+        
+        if (!upgrade || !cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         
-        const cost = this.calculateRangeUpgradeCost(towerType);
-        
-        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
-            return false;
-        }
-        
-        gameState.spend(cost);
+        gameState.gold -= cost;
         upgrade.level++;
-        
+        this.notifyUpgradeChanged();
         return true;
     }
     
-    /**
-     * Purchase training grounds level upgrade
-     */
     purchaseTrainingLevelUpgrade(gameState) {
         if (this.trainingLevel >= this.maxTrainingLevel) {
             return false;
@@ -1209,7 +1238,7 @@ export class TrainingGrounds extends Building {
             return false;
         }
         
-        gameState.spend(cost);
+        gameState.gold -= cost;
         this.trainingLevel++;
         
         // Check for defender unlock at level 3
@@ -1234,9 +1263,27 @@ export class TrainingGrounds extends Building {
         return true;
     }
 
-    /**
-     * Get defender unlock/upgrade option if available
-     */
+    calculateUpgradeCost(upgradeType) {
+        const upgrade = this.upgrades[upgradeType];
+        if (upgrade.level >= upgrade.maxLevel) return null;
+        return Math.floor(upgrade.baseCost * Math.pow(1.4, upgrade.level));
+    }
+    
+    notifyUpgradeChanged() {
+        this.upgradesChanged = true;
+    }
+    
+    getUpgradeMultipliers() {
+        // Calculate range bonuses for manned towers
+        return {
+            archerTowerRangeBonus: this.rangeUpgrades.archerTower.level * this.rangeUpgrades.archerTower.effect,
+            basicTowerRangeBonus: this.rangeUpgrades.basicTower.level * this.rangeUpgrades.basicTower.effect,
+            cannonTowerRangeBonus: this.rangeUpgrades.cannonTower.level * this.rangeUpgrades.cannonTower.effect,
+            barricadeFireRateBonus: this.upgrades.barricadeFireRate.level * this.upgrades.barricadeFireRate.effect,
+            poisonArcherFireRateBonus: this.upgrades.poisonArcherTowerFireRate.level * this.upgrades.poisonArcherTowerFireRate.effect
+        };
+    }
+    
     getDefenderOption() {
         // Only show if training level 3+ and not already at max
         if (this.trainingLevel < 3) {
@@ -1279,16 +1326,13 @@ export class TrainingGrounds extends Building {
         return option;
     }
     
-    /**
-     * Purchase defender upgrade
-     */
     purchaseDefenderUpgrade(level, gameState) {
         if (level === 2 && this.trainingLevel >= 4 && this.defenderMaxLevel < 2) {
             const cost = 800;
             if (gameState.gold < cost) {
                 return false;
             }
-            gameState.spend(cost);
+            gameState.gold -= cost;
             this.defenderMaxLevel = 2;
             return true;
         }
@@ -1298,7 +1342,7 @@ export class TrainingGrounds extends Building {
             if (gameState.gold < cost) {
                 return false;
             }
-            gameState.spend(cost);
+            gameState.gold -= cost;
             this.defenderMaxLevel = 3;
             return true;
         }
@@ -1306,9 +1350,6 @@ export class TrainingGrounds extends Building {
         return false;
     }
 
-    /**
-     * Get guard post unlock option if available
-     */
     getGuardPostOption() {
         // Only show if training level 4+ and not already at max
         if (this.trainingLevel < 4) {
@@ -1329,60 +1370,18 @@ export class TrainingGrounds extends Building {
             maxBuildings: this.maxGuardPosts
         };
     }
-
-    getUpgradeOptions() {
-        // Return available fire rate upgrade options for specific towers
-        return [
-            {
-                id: 'barricadeFireRate',
-                name: 'Barricade Tower Fire Rate Training',
-                description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
-                level: this.upgrades.barricadeFireRate.level,
-                maxLevel: this.upgrades.barricadeFireRate.maxLevel,
-                cost: this.calculateUpgradeCost('barricadeFireRate'),
-                icon: '⚡'
-            },
-            {
-                id: 'poisonArcherTowerFireRate',
-                name: 'Poison Archer Tower Fire Rate Training',
-                description: `Increase Poison Archer Tower fire rate (0.8 → 1.2 per second at level 5)`,
-                level: this.upgrades.poisonArcherTowerFireRate.level,
-                maxLevel: this.upgrades.poisonArcherTowerFireRate.maxLevel,
-                cost: this.calculateUpgradeCost('poisonArcherTowerFireRate'),
-                icon: '☠️'
-            }
-        ];
-    }
     
-    calculateUpgradeCost(upgradeType) {
-        // Calculate the cost of a specific upgrade
-        const upgrade = this.upgrades[upgradeType];
-        if (upgrade.level >= upgrade.maxLevel) return null;
-        return Math.floor(upgrade.baseCost * Math.pow(1.4, upgrade.level));
-    }
-    
-    purchaseUpgrade(upgradeType, gameState) {
-        // Purchase an upgrade for the building
-        const upgrade = this.upgrades[upgradeType];
-        const cost = this.calculateUpgradeCost(upgradeType);
-        
-        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
-            return false;
-        }
-        
-        gameState.gold -= cost;
-        upgrade.level++;
-        
-        return true;
+    getTrainingLevel() {
+        return this.trainingLevel;
     }
     
     deselect() {
-        // Deselect the building
         this.isSelected = false;
     }
     
     applyEffect(buildingManager) {
-        // Apply the building's effects (e.g., combat bonuses)
+        // Apply the building's range and fire rate bonuses to towers
+        // The actual application is handled through the upgrade multipliers
     }
     
     static getInfo() {
