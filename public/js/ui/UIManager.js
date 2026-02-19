@@ -2900,15 +2900,15 @@ export class UIManager {
         let effectsList = [];
         
         if (trainingGrounds.rangeUpgrades.archerTower.level > 0) {
-            effectsList.push(`🏹 Archer: +${trainingGrounds.rangeUpgrades.archerTower.level * 15}px`);
+            effectsList.push(`🏹 Archer: +${trainingGrounds.rangeUpgrades.archerTower.level * 15}`);
         }
         
         if (trainingGrounds.rangeUpgrades.basicTower.level > 0) {
-            effectsList.push(`⚔️ Basic: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}px`);
+            effectsList.push(`⚔️ Basic: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
         }
         
         if (trainingGrounds.rangeUpgrades.cannonTower.level > 0) {
-            effectsList.push(`🔫 Cannon: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}px`);
+            effectsList.push(`🔫 Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
         }
         
         if (trainingGrounds.upgrades.barricadeFireRate.level > 0) {
@@ -2939,12 +2939,16 @@ export class UIManager {
                         </div>
                         <div class="forge-benefits-list">
                             <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Range Levels:</span>
-                                <span class="forge-benefit-value">${trainingGrounds.rangeUpgrades.archerTower.level}/5</span>
+                                <span class="forge-benefit-label">Max Defender Level:</span>
+                                <span class="forge-benefit-value">${trainingGrounds.defenderMaxLevel}</span>
                             </div>
                             <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Fire Rate Levels:</span>
-                                <span class="forge-benefit-value">${trainingGrounds.upgrades.barricadeFireRate.level}/5</span>
+                                <span class="forge-benefit-label">Guard Post:</span>
+                                <span class="forge-benefit-value">${trainingGrounds.guardPostUnlocked ? '✓ Unlocked' : '🔒 Locked'}</span>
+                            </div>
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Castle Defender:</span>
+                                <span class="forge-benefit-value">${trainingGrounds.defenderUnlocked ? '✓ Unlocked' : '🔒 Locked'}</span>
                             </div>
                         </div>
                     </div>
@@ -2981,9 +2985,9 @@ export class UIManager {
                     const effect = upgrade.effect || 15;
                     const currentRange = baseRange + (upgrade.level * effect);
                     const nextRange = baseRange + ((upgrade.level + 1) * effect);
-                    currentValue = `${currentRange}px`;
-                    nextValue = `${nextRange}px`;
-                    description = upgrade.description || `Increase ${upgrade.name} by ${effect}px per level`;
+                    currentValue = `${currentRange}`;
+                    nextValue = `${nextRange}`;
+                    description = upgrade.description || `Increase ${upgrade.name} by ${effect} per level`;
                 } else if (upgrade.id === 'barricadeFireRate') {
                     const currentRate = (0.2 + upgrade.level * 0.1).toFixed(1);
                     const nextRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
@@ -3114,6 +3118,107 @@ export class UIManager {
                 }
             });
         });
+        
+        // Upgrade hover info listeners
+        panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
+            const upgradeId = item.dataset.upgradeId;
+            const upgrade = trainingData.upgrades.find(u => u.id === upgradeId);
+            
+            item.addEventListener('mouseenter', () => {
+                if (!upgrade || !upgrade.description) return;
+                
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-forge-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${upgrade.name}</div>
+                    <div class="info-description">${upgrade.description}</div>
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const itemRect = item.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                
+                // Position to the left of item
+                let left = itemRect.left - menuWidth - 15;
+                let top = itemRect.top;
+                
+                // Adjust if menu goes off screen
+                if (left < 10) {
+                    left = itemRect.right + 15;
+                }
+                
+                if (top + menu.offsetHeight > window.innerHeight) {
+                    top = window.innerHeight - menu.offsetHeight - 10;
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        });
+        
+        // Training level upgrade button hover
+        const trainingLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
+        if (trainingLevelBtn && trainingData.trainingUpgrade) {
+            trainingLevelBtn.addEventListener('mouseenter', () => {
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-forge-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${trainingData.trainingUpgrade.name}</div>
+                    <div class="info-description">${trainingData.trainingUpgrade.description}</div>
+                    ${trainingData.trainingUpgrade.nextUnlock ? `<div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${trainingData.trainingUpgrade.nextUnlock}</div>` : ''}
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const btnRect = trainingLevelBtn.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Priority: Position to the left with good clearance from the panel
+                let left = panelRect.left - menuWidth - 30;
+                let top = btnRect.top;
+                
+                // If not enough space to the left, try above
+                if (left < 10) {
+                    left = Math.max(10, panelRect.left - menuWidth - 10);
+                    top = btnRect.top - menuHeight - 10;
+                }
+                
+                // Adjust if menu goes off bottom
+                if (top + menuHeight > window.innerHeight) {
+                    top = Math.max(10, btnRect.top - menuHeight - 10);
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            trainingLevelBtn.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        }
         
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-building-btn');

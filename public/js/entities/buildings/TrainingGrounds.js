@@ -1078,7 +1078,7 @@ export class TrainingGrounds extends Building {
         const towerTypes = [
             { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
             { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
-            { id: 'cannonTower', name: 'Cannon Tower', icon: '🔫' }
+            { id: 'cannonTower', name: 'Trebuchet Tower', icon: '🔫' }
         ];
         
         // Add range upgrade for each manned tower
@@ -1090,7 +1090,7 @@ export class TrainingGrounds extends Building {
                 id: `range_${tower.id}`,
                 towerType: tower.id,
                 name: `${tower.name} Range Training`,
-                description: `Increase ${tower.name} range by ${upgrade.effect} pixels per level`,
+                description: `Increase ${tower.name} range by ${upgrade.effect} per level`,
                 level: upgrade.level,
                 maxLevel: upgrade.maxLevel,
                 baseCost: upgrade.baseCost,
