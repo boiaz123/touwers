@@ -1626,125 +1626,139 @@ export class UIManager {
         }
         
         let contentHTML = '';
+        const academy = academyData.academy;
+        const academyUpgrade = academy.getAcademyUpgradeOption();
         
-        // Add academy building upgrades first
-        const academyUpgrade = academyData.academy.getAcademyUpgradeOption();
-        if (academyData.academy.academyLevel < academyData.academy.maxAcademyLevel) {
-            const isMaxed = academyData.academy.academyLevel >= academyData.academy.maxAcademyLevel;
-            const canAfford = academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
-            
-            contentHTML += `
-                <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${academyUpgrade.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${academyUpgrade.name}</div>
-                                <div class="upgrade-description">${academyUpgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    Level: ${academyUpgrade.level}/${academyUpgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(academyUpgrade.level / academyUpgrade.maxLevel) * 100}%"></div>
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.8rem; color: rgba(200, 180, 120, 0.9); margin-top: 0.3rem;">${academyUpgrade.nextUnlock}</div>
-                            </div>
+        // BUILD ACADEMY HEADER SECTION - Like forge header
+        const isMaxed = academy.academyLevel >= academy.maxAcademyLevel;
+        const canAfford = academyUpgrade && academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
+        
+        // Calculate academy effects badges
+        const effectsList = [];
+        if (academy.elementalUpgrades.fire.level > 0) {
+            effectsList.push(`🔥 Fire: +${academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus}`);
+        }
+        if (academy.elementalUpgrades.water.level > 0) {
+            effectsList.push(`💧 Water: +${(academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%`);
+        }
+        if (academy.elementalUpgrades.air.level > 0) {
+            effectsList.push(`💨 Air: +${academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange}px`);
+        }
+        if (academy.elementalUpgrades.earth.level > 0) {
+            effectsList.push(`🪨 Earth: +${academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing}`);
+        }
+        
+        // Build header with prominent academy upgrade button
+        contentHTML += `
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display">🎓</div>
+                        <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Magic Academy</div>
+                            <div class="forge-level-badge">Level ${academy.academyLevel}/${academy.maxAcademyLevel}</div>
                         </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : `$${academyUpgrade.cost}`}
+                        <div class="forge-level-bar">
+                            <div class="forge-level-bar-fill" style="width: ${(academy.academyLevel / academy.maxAcademyLevel) * 100}%"></div>
+                        </div>
+                        <div class="forge-effects-row">
+                            ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
+                        </div>
+                        <div class="forge-benefits-list">
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Magic Towers:</span>
+                                <span class="forge-benefit-value">${academy.academyLevel >= 2 ? '✓ Unlocked' : 'Level 1'}</span>
                             </div>
-                            <button class="upgrade-button panel-upgrade-btn" 
-                                    data-upgrade="academy_upgrade" 
-                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
-                            </button>
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Super Weapon:</span>
+                                <span class="forge-benefit-value">${academy.academyLevel >= 3 ? '✓ Available' : 'Level 3'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
+                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
+                        data-upgrade="academy_upgrade" 
+                        data-forge-level="true"
+                        ${!isMaxed && !canAfford ? 'disabled' : ''}
+                        ${isMaxed ? 'disabled' : ''}>
+                    <div class="forge-upgrade-btn-content">
+                        ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
+                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '$ ' + academyUpgrade.cost : '—')}</span>
+                    </div>
+                </button>
+            </div>
+        `;
         
-        // Add elemental upgrades section
+        // BUILD ELEMENTAL UPGRADES SECTION - Compact list like tower enhancements
         if (academyData.upgrades && academyData.upgrades.length > 0) {
-            contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Elemental & Research</div>`;
+            const elementalUpgrades = academyData.upgrades.filter(u => !u.isAcademyUpgrade);
             
-            academyData.upgrades.forEach(upgrade => {
-                if (upgrade.isAcademyUpgrade) return;
+            if (elementalUpgrades.length > 0) {
+                contentHTML += `<div class="upgrade-category compact-upgrades">
+                    <div class="upgrade-category-header">✨ ELEMENTAL MASTERIES</div>`;
                 
-                let isDisabled = false;
-                let costDisplay = '';
-                let canAfford = false;
-                
-                // Handle combination spell unlocks
-                if (upgrade.isCombinationUnlock) {
-                    let allGemsAvailable = true;
-                    const gemCosts = [];
-                    const gemIcons = {
-                        fire: '🔥',
-                        water: '💧',
-                        air: '💨',
-                        earth: '🪨'
-                    };
+                elementalUpgrades.forEach(upgrade => {
+                    const isMaxed = upgrade.level >= upgrade.maxLevel;
+                    const gemCount = academy.gems[upgrade.gemType] || 0;
+                    const canUpgrade = upgrade.cost && gemCount >= upgrade.cost;
                     
-                    for (const [gemType, amount] of Object.entries(upgrade.cost)) {
-                        const gemCount = academyData.academy.gems[gemType] || 0;
-                        const icon = gemIcons[gemType] || gemType[0];
-                        gemCosts.push(`${icon}${amount}`);
-                        if (gemCount < amount) {
-                            allGemsAvailable = false;
-                        }
+                    // Current and next values for elemental upgrades
+                    let currentValue = '';
+                    let nextValue = '';
+                    
+                    if (upgrade.id === 'fire') {
+                        const currentBonus = academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus;
+                        const nextBonus = (academy.elementalUpgrades.fire.level + 1) * academy.elementalUpgrades.fire.damageBonus;
+                        currentValue = `+${currentBonus} dmg`;
+                        nextValue = `+${nextBonus} dmg`;
+                    } else if (upgrade.id === 'water') {
+                        const currentBonus = (academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
+                        const nextBonus = ((academy.elementalUpgrades.water.level + 1) * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
+                        currentValue = `+${currentBonus}%`;
+                        nextValue = `+${nextBonus}%`;
+                    } else if (upgrade.id === 'air') {
+                        const currentBonus = academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange;
+                        const nextBonus = (academy.elementalUpgrades.air.level + 1) * academy.elementalUpgrades.air.chainRange;
+                        currentValue = `+${currentBonus}px`;
+                        nextValue = `+${nextBonus}px`;
+                    } else if (upgrade.id === 'earth') {
+                        const currentBonus = academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing;
+                        const nextBonus = (academy.elementalUpgrades.earth.level + 1) * academy.elementalUpgrades.earth.armorPiercing;
+                        currentValue = `+${currentBonus}`;
+                        nextValue = `+${nextBonus}`;
                     }
                     
-                    isDisabled = !allGemsAvailable;
-                    costDisplay = gemCosts.join(' + ');
-                    canAfford = allGemsAvailable;
-                } else if (upgrade.isResearch) {
-                    canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
-                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
-                    costDisplay = upgrade.cost ? `$${upgrade.cost}` : 'MAX';
-                } else {
-                    const gemCount = academyData.academy.gems[upgrade.gemType] || 0;
-                    canAfford = upgrade.cost && gemCount >= upgrade.cost;
-                    isDisabled = !canAfford || upgrade.level >= upgrade.maxLevel;
-                    costDisplay = upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : 'MAX';
-                }
-                
-                const isMaxed = upgrade.level >= upgrade.maxLevel;
-                
-                contentHTML += `
-                    <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${upgrade.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${upgrade.name}</div>
-                                <div class="upgrade-description">${upgrade.description}</div>
-                                <div class="upgrade-level-display">
-                                    ${upgrade.isCombinationUnlock ? 'Investment' : 'Level'}: ${upgrade.level}/${upgrade.maxLevel}
-                                    <div class="upgrade-level-bar">
-                                        <div class="upgrade-level-bar-fill" style="width: ${(upgrade.level / upgrade.maxLevel) * 100}%"></div>
+                    contentHTML += `
+                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
+                            <div class="compact-upgrade-left">
+                                <span class="compact-upgrade-icon">${upgrade.icon}</span>
+                                <div class="compact-upgrade-info">
+                                    <div class="compact-upgrade-name">${upgrade.name}</div>
+                                    <div class="compact-upgrade-values">
+                                        <span class="current-value">${currentValue}</span>
+                                        ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : costDisplay}
-                            </div>
-                            <button class="upgrade-button panel-upgrade-btn" 
+                            <button class="compact-upgrade-btn panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
-                                    ${isDisabled ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (upgrade.isCombinationUnlock ? 'Unlock' : 'Upgrade')}
+                                    ${isMaxed || !canUpgrade ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : '—')}
                             </button>
                         </div>
-                    </div>
-                `;
-            });
-            
-            contentHTML += `</div>`;
+                    `;
+                });
+                
+                contentHTML += `</div>`;
+            }
         }
         
-        // Add sell button for academy
+        // Add sell button for academy (in footer)
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; flex: 1; margin: 0;">
@@ -1775,9 +1789,11 @@ export class UIManager {
         // Setup button listeners
         panel.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const upgradeId = e.target.dataset.upgrade;
+                const upgradeId = e.currentTarget.dataset.upgrade;
+                const isAcademyLevel = e.currentTarget.dataset.forgeLevel === 'true';
                 
-                if (upgradeId === 'academy_upgrade') {
+                if (isAcademyLevel) {
+                    // Handle academy level upgrade
                     if (academyData.academy.purchaseAcademyUpgrade(this.gameState)) {
                         // Play upgrade SFX
                         if (this.stateManager.audioManager) {
@@ -1788,32 +1804,20 @@ export class UIManager {
                         if (newLevel === 3) {
                             this.towerManager.getUnlockSystem().onAcademyLevelThree();
                         }
-                        this.updateUI();
-                        this.updateUIAvailability();
-                        this.showAcademyUpgradeMenu({
-                            type: 'academy_menu',
-                            academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
-                        });
-                    }
-                } else if (upgradeId.startsWith('unlock_')) {
-                    const result = academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState);
-                    if (result && result.success) {
-                        // Play upgrade SFX
-                        if (this.stateManager.audioManager) {
-                            this.stateManager.audioManager.playSFX('upgrade');
-                        }
                         
-                        this.towerManager.getUnlockSystem().onCombinationSpellUnlocked(result.spellId);
                         this.updateUI();
                         this.updateUIAvailability();
+                        
+                        // Refresh the panel (with skipSFX flag to prevent building sound from playing)
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                            upgrades: academyData.academy.getElementalUpgradeOptions(),
+                            skipSFX: true
                         });
                     }
                 } else {
+                    // Handle elemental upgrades
                     if (academyData.academy.purchaseElementalUpgrade(upgradeId, this.gameState)) {
                         // Play upgrade SFX
                         if (this.stateManager.audioManager) {
@@ -1821,14 +1825,67 @@ export class UIManager {
                         }
                         
                         this.updateUI();
+                        
+                        // Refresh the panel (with skipSFX flag to prevent building sound from playing)
                         this.showAcademyUpgradeMenu({
                             type: 'academy_menu',
                             academy: academyData.academy,
-                            upgrades: academyData.academy.getElementalUpgradeOptions()
+                            upgrades: academyData.academy.getElementalUpgradeOptions(),
+                            skipSFX: true
                         });
                     }
                 }
             }, { once: true });
+        });
+        
+        // Add hover info listeners for elemental upgrades (like forge)
+        panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
+            const upgradeId = item.dataset.upgradeId;
+            const upgrade = academyData.upgrades.find(u => u.id === upgradeId);
+            
+            item.addEventListener('mouseenter', () => {
+                if (!upgrade || !upgrade.description) return;
+                
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-academy-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-academy-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${upgrade.name}</div>
+                    <div class="info-description">${upgrade.description}</div>
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const itemRect = item.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                
+                // Position to the left of item
+                let left = itemRect.left - menuWidth - 15;
+                let top = itemRect.top;
+                
+                // Adjust if menu goes off screen
+                if (left < 10) {
+                    left = itemRect.right + 15;
+                }
+                
+                if (top + menu.offsetHeight > window.innerHeight) {
+                    top = window.innerHeight - menu.offsetHeight - 10;
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
         });
         
         // Add sell button listener
