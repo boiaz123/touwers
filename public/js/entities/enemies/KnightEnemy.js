@@ -2,7 +2,7 @@ import { BaseEnemy } from './BaseEnemy.js';
 
 export class KnightEnemy extends BaseEnemy {
     static BASE_STATS = {
-        health: 160,
+        health: 1500,
         speed: 40,
         armour: 8,
         magicResistance: -0.2
