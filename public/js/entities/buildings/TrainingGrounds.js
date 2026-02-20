@@ -1118,6 +1118,8 @@ export class TrainingGrounds extends Building {
         
         fireRateUpgrades.forEach(upgradeInfo => {
             const upgrade = this.upgrades[upgradeInfo.id];
+            const isUnlocked = this.trainingLevel > upgrade.level;
+            
             options.push({
                 id: upgradeInfo.id,
                 name: upgradeInfo.name,
@@ -1126,7 +1128,8 @@ export class TrainingGrounds extends Building {
                 maxLevel: upgrade.maxLevel,
                 baseCost: upgrade.baseCost,
                 cost: this.calculateUpgradeCost(upgradeInfo.id),
-                icon: upgradeInfo.icon
+                icon: upgradeInfo.icon,
+                isUnlocked: isUnlocked
             });
         });
         
@@ -1217,7 +1220,14 @@ export class TrainingGrounds extends Building {
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
         
-        if (!upgrade || !cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
+        if (!upgrade) return false;
+        
+        // Check if upgrade level is unlocked by training grounds level
+        if (this.trainingLevel <= upgrade.level) {
+            return false;
+        }
+        
+        if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;
         }
         

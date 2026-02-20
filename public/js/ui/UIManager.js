@@ -1116,7 +1116,7 @@ export class UIManager {
             contentHTML += `
                 <div class="forge-panel-header">
                     <div class="forge-header-top">
-                        <div class="forge-icon-display">🔨</div>
+                        <div class="forge-icon-display"><img src="assets/buildings/forge.png" alt="Tower Forge" style="width: 100%; height: 100%; object-fit: contain;"></div>
                         <div class="forge-info-wrapper">
                             <div class="forge-title-row">
                                 <div class="forge-name">Tower Forge</div>
@@ -2925,7 +2925,7 @@ export class UIManager {
         let contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
-                    <div class="forge-icon-display">🏛️</div>
+                    <div class="forge-icon-display"><img src="assets/buildings/training.png" alt="Training Grounds" style="width: 100%; height: 100%; object-fit: contain;"></div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
                             <div class="forge-name">Training Grounds</div>
@@ -2965,8 +2965,8 @@ export class UIManager {
                 </button>
             </div>
         `;
-        
-        // Add tower training upgrades section - Compact list
+
+        // BUILD TOWER UPGRADES SECTION - Compact list
         if (trainingData.upgrades && trainingData.upgrades.length > 0) {
             contentHTML += `<div class="upgrade-category compact-upgrades">
                 <div class="upgrade-category-header">⚙️ TOWER TRAINING</div>`;
@@ -2974,44 +2974,34 @@ export class UIManager {
             trainingData.upgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const isLocked = upgrade.isUnlocked === false;
                 
                 let currentValue = '';
                 let nextValue = '';
-                let description = '';
                 
-                if (upgrade.id.startsWith('range_')) {
+                // Calculate current and next values based on upgrade type
+                if (upgrade.id && upgrade.id.startsWith('range_')) {
                     // Range upgrades
-                    const baseRange = 150;
-                    const effect = upgrade.effect || 15;
-                    const currentRange = baseRange + (upgrade.level * effect);
-                    const nextRange = baseRange + ((upgrade.level + 1) * effect);
-                    currentValue = `${currentRange}`;
-                    nextValue = `${nextRange}`;
-                    description = upgrade.description || `Increase ${upgrade.name} by ${effect} per level`;
+                    const currentRange = upgrade.level * 15;
+                    const nextRange = (upgrade.level + 1) * 15;
+                    currentValue = `+${currentRange} range`;
+                    nextValue = `+${nextRange} range`;
                 } else if (upgrade.id === 'barricadeFireRate') {
+                    // Barricade fire rate
                     const currentRate = (0.2 + upgrade.level * 0.1).toFixed(1);
                     const nextRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
                     currentValue = `${currentRate}/sec`;
                     nextValue = `${nextRate}/sec`;
-                    description = 'Barricade Tower barrel rolling speed';
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
+                    // Poison archer fire rate
                     const currentRate = (0.8 + upgrade.level * 0.08).toFixed(2);
                     const nextRate = (0.8 + (upgrade.level + 1) * 0.08).toFixed(2);
                     currentValue = `${currentRate}/sec`;
                     nextValue = `${nextRate}/sec`;
-                    description = 'Poison Archer Tower fire rate';
-                }
-                
-                const isUnlocked = upgrade.isUnlocked !== false;
-                const isDisabled = isMaxed || !canAfford || !isUnlocked;
-                
-                if (!isUnlocked) {
-                    currentValue = 'LOCKED';
-                    nextValue = '';
                 }
                 
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : (!isUnlocked ? 'locked' : '')}" data-upgrade-id="${upgrade.id}" title="${description}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}">
                         <div class="compact-upgrade-left">
                             <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
@@ -3020,13 +3010,12 @@ export class UIManager {
                                     <span class="current-value">${currentValue}</span>
                                     ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
                                 </div>
-                                <div class="compact-upgrade-description">${description}</div>
                             </div>
                         </div>
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
-                                ${isDisabled ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : !isUnlocked ? 'LOCKED' : (upgrade.cost ? `$${upgrade.cost}` : '—')}
+                                ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `$${upgrade.cost}` : '—'))}
                         </button>
                     </div>
                 `;

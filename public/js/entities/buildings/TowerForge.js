@@ -1049,7 +1049,7 @@ export class TowerForge extends Building {
             name: 'Barricade Tower Upgrade',
             description: `Increases enemies slowed per rubble and slow duration`,
             level: this.upgrades.barricade_effectiveness.level,
-            maxLevel: 5, // Always allow up to 5 levels
+            maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.barricade_effectiveness.baseCost,
             cost: this.calculateUpgradeCost('barricade_effectiveness'),
             icon: '🛡️'
