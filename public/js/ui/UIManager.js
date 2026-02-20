@@ -23,6 +23,47 @@ export class UIManager {
         // Music player - created if Musical Equipment upgrade is purchased
         this.musicPlayer = null;
         this.initializeMusicPlayerIfUnlocked();
+        
+        // Prevent browser context menus on all panels
+        this.setupPanelContextMenuHandlers();
+    }
+
+    setupPanelContextMenuHandlers() {
+        // All sidebar and UI container IDs that should not show browser context menus
+        const uiContainerIds = [
+            // Main UI containers
+            'stats-bar', 'speed-controls-top', 'tower-sidebar', 'game-area',
+            'speed-controls-group', 'stats', 'tower-grid', 'building-section',
+            'tower-info-box', 'control-buttons-section',
+            // Panel IDs
+            'forge-panel', 'academy-panel', 'magic-tower-panel', 'combination-tower-panel',
+            'superweapon-panel', 'diamond-press-panel', 'training-panel', 'goldmine-panel',
+            'castle-panel', 'guard-post-panel', 'basic-tower-panel',
+            // Wave countdown and spell buttons
+            'wave-countdown-container', 'spell-buttons-container', 'next-wave-btn'
+        ];
+        
+        uiContainerIds.forEach(containerId => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                // Prevent context menu on this element and all children
+                container.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, true); // Use capture phase to catch all nested events
+            }
+        });
+        
+        // Also add global handler for dynamically created elements in tower-sidebar
+        const sidebarElements = ['.tower-btn', '.building-btn', '.control-btn', '.speed-circle', '.stat'];
+        sidebarElements.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                element.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, true);
+            });
+        });
     }
 
     initializeMusicPlayerIfUnlocked() {
@@ -1152,7 +1193,6 @@ export class UIManager {
                     <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                             data-upgrade="${forgeUpgrade ? forgeUpgrade.id : 'forge_level'}" 
                             data-forge-level="true"
-                            title="${forgeUpgrade ? (forgeUpgrade.description + '\n\n' + forgeUpgrade.nextUnlock) : ''}"
                             ${!isMaxed && !canAfford ? 'disabled' : ''}
                             ${isMaxed ? 'disabled' : ''}>
                         <div class="forge-upgrade-btn-content">
@@ -3080,7 +3120,6 @@ export class UIManager {
                 <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                         data-upgrade="${trainingUpgrade ? trainingUpgrade.id : 'training_level'}" 
                         data-training-level="true"
-                        title="${trainingUpgrade ? (trainingUpgrade.description + '\n\n' + trainingUpgrade.nextUnlock) : ''}"
                         ${!isMaxed && !canAfford ? 'disabled' : ''}
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
