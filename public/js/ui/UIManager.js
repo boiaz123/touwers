@@ -1116,7 +1116,12 @@ export class UIManager {
             contentHTML += `
                 <div class="forge-panel-header">
                     <div class="forge-header-top">
-                        <div class="forge-icon-display"><img src="assets/buildings/forge.png" alt="Tower Forge" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                            <div class="forge-icon-display"><img src="assets/buildings/forge.png" alt="Tower Forge" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                            <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                                Sell
+                            </button>
+                        </div>
                         <div class="forge-info-wrapper">
                             <div class="forge-title-row">
                                 <div class="forge-name">Tower Forge</div>
@@ -1248,15 +1253,6 @@ export class UIManager {
             
             contentHTML += `</div>`;
         }
-        
-        // Add sell button for forge
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Forge
-                </button>
-            </div>
-        `;
         
         // Update container
         upgradesContainer.innerHTML = contentHTML;
@@ -2925,7 +2921,12 @@ export class UIManager {
         let contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
-                    <div class="forge-icon-display"><img src="assets/buildings/training.png" alt="Training Grounds" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/buildings/training.png" alt="Training Grounds" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-building-btn" data-building-id="training" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
                             <div class="forge-name">Training Grounds</div>
@@ -3023,15 +3024,6 @@ export class UIManager {
             
             contentHTML += `</div>`;
         }
-        
-        // Add sell button
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-building-btn" data-building-id="training" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Training Grounds
-                </button>
-            </div>
-        `;
         
         // Update container
         upgradesContainer.innerHTML = contentHTML;

@@ -791,6 +791,11 @@ export class TowerManager {
                 // New: Handle super weapon menu
                 return buildingResult;
             } else if (buildingResult.type === 'training_menu') {
+                buildingResult.unlockSystem = this.unlockSystem;
+                // Also set it on the building instance for filtering logic
+                buildingResult.trainingGrounds.unlockSystem = this.unlockSystem;
+                // Recompute upgrades now that unlockSystem is set
+                buildingResult.upgrades = buildingResult.trainingGrounds.getUpgradeOptions();
                 return buildingResult;
             } else if (buildingResult.type === 'diamond_press_menu') {
                 // Handle diamond press menu

@@ -4,6 +4,7 @@ export class TrainingGrounds extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.isSelected = false;
+        this.unlockSystem = null; // Will be set by TowerManager when clicked
         
         // Training Grounds building level - starts at 1 when built
         this.trainingLevel = 1;
@@ -1074,15 +1075,23 @@ export class TrainingGrounds extends Building {
     getUpgradeOptions() {
         const options = [];
         
-        // Range upgrades for manned towers
+        // Range upgrades for manned towers - map tower registry names to upgrade keys
         const towerTypes = [
-            { id: 'archerTower', name: 'Archer Tower', icon: '🏹' },
-            { id: 'basicTower', name: 'Basic Tower', icon: '⚔️' },
-            { id: 'cannonTower', name: 'Trebuchet Tower', icon: '🔫' }
+            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '🏹' },
+            { id: 'basicTower', registryId: 'basic', name: 'Basic Tower', icon: '⚔️' },
+            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '🔫' }
         ];
         
-        // Add range upgrade for each manned tower
+        // Add range upgrade for each manned tower - but only if the tower is unlocked
         towerTypes.forEach(tower => {
+            // Check if this tower type is unlocked
+            const isTowerUnlocked = this.unlockSystem && this.unlockSystem.unlockedTowers.has(tower.registryId);
+            
+            // Only show the upgrade if the tower is unlocked
+            if (!isTowerUnlocked) {
+                return; // Skip this tower
+            }
+            
             const upgrade = this.rangeUpgrades[tower.id];
             const isUnlocked = this.trainingLevel > upgrade.level;
             
@@ -1100,16 +1109,18 @@ export class TrainingGrounds extends Building {
             });
         });
         
-        // Fire rate upgrades for special towers
+        // Fire rate upgrades for special towers - map tower registry names
         const fireRateUpgrades = [
             {
                 id: 'barricadeFireRate',
+                registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
                 icon: '⚡'
             },
             {
                 id: 'poisonArcherTowerFireRate',
+                registryId: 'poison',
                 name: 'Poison Archer Tower Fire Rate Training',
                 description: `Increase Poison Archer Tower fire rate (0.8 → 1.2 per second at level 5)`,
                 icon: '☠️'
@@ -1117,6 +1128,14 @@ export class TrainingGrounds extends Building {
         ];
         
         fireRateUpgrades.forEach(upgradeInfo => {
+            // Check if this tower type is unlocked
+            const isTowerUnlocked = this.unlockSystem && this.unlockSystem.unlockedTowers.has(upgradeInfo.registryId);
+            
+            // Only show the upgrade if the tower is unlocked
+            if (!isTowerUnlocked) {
+                return; // Skip this tower
+            }
+            
             const upgrade = this.upgrades[upgradeInfo.id];
             const isUnlocked = this.trainingLevel > upgrade.level;
             
