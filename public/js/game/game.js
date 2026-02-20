@@ -243,6 +243,80 @@ export class Game {
             this.canvas.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
+
+            // ============ KEYBOARD SHORTCUTS ============
+            window.addEventListener('keydown', (e) => {
+                try {
+                    // Only handle shortcuts during gameplay
+                    if (!this.stateManager || !this.stateManager.currentState) return;
+                    
+                    const currentState = this.stateManager.currentState;
+                    const gameplayState = currentState.gameplayState || currentState;
+                    
+                    // Check if this is a GameplayState (has gameState and towerManager)
+                    const isGameplay = gameplayState && gameplayState.gameState && gameplayState.towerManager;
+                    
+                    if (!isGameplay) return; // Not in gameplay, don't handle shortcuts
+                    
+                    const uiManager = currentState.uiManager || gameplayState.uiManager;
+                    
+                    switch (e.key.toUpperCase()) {
+                        // Speed controls: 1, 2, 3
+                        case '1':
+                            e.preventDefault();
+                            gameplayState.setGameSpeed(1.0);
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            gameplayState.setGameSpeed(2.0);
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            gameplayState.setGameSpeed(3.0);
+                            break;
+                        
+                        // Pause: P
+                        case 'P':
+                            e.preventDefault();
+                            if (uiManager && uiManager.togglePauseGame) {
+                                uiManager.togglePauseGame();
+                            }
+                            break;
+                        
+                        // Close menus: ESC
+                        case 'ESCAPE':
+                            e.preventDefault();
+                            if (uiManager) {
+                                // Close all panels
+                                if (uiManager.closeAllPanels) {
+                                    uiManager.closeAllPanels();
+                                }
+                                // Close pause menu if open
+                                if (uiManager.closePauseMenu) {
+                                    const pauseMenuModal = document.getElementById('pause-menu-modal');
+                                    if (pauseMenuModal && pauseMenuModal.classList.contains('show')) {
+                                        uiManager.closePauseMenu();
+                                    }
+                                }
+                            }
+                            break;
+                        
+                        // Next wave: SPACE
+                        case ' ':
+                            e.preventDefault();
+                            if (gameplayState.skipWaveCooldown) {
+                                // Play button click SFX
+                                if (this.audioManager) {
+                                    this.audioManager.playSFX('button-click');
+                                }
+                                gameplayState.skipWaveCooldown();
+                            }
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Game: Error handling keyboard shortcut:', error);
+                }
+            });
             
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);
