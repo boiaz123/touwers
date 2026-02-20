@@ -1853,6 +1853,224 @@ body {
     text-shadow: none;
 }
 
+/* Spell Bar Items - Main Tower Spells */
+.spell-bars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.spell-bar-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.45rem 0.55rem;
+    background: linear-gradient(135deg, rgba(51, 51, 51, 0.9), rgba(34, 34, 34, 0.9));
+    border: 1px solid rgba(85, 85, 85, 0.8);
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.spell-bar-item:hover:not(.maxed):not(.locked) {
+    border-color: var(--primary-gold);
+    background: linear-gradient(135deg, rgba(64, 64, 64, 0.95), rgba(42, 42, 42, 0.95));
+    box-shadow: 0 3px 10px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.spell-bar-item.maxed {
+    opacity: 0.55;
+    border-color: rgba(100, 100, 100, 0.5);
+}
+
+.spell-bar-item.locked {
+    opacity: 0.45;
+    border-color: rgba(255, 107, 107, 0.3);
+}
+
+.spell-bar-content {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    flex: 1;
+}
+
+.spell-bar-item .spell-icon {
+    font-size: 1.1rem;
+    min-width: 1.2rem;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+
+.spell-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.spell-bar-item .spell-name {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: var(--primary-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    line-height: 1.1;
+}
+
+.spell-upgrade-btn {
+    padding: 0.3rem 0.35rem;
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
+    color: var(--primary-gold-light) !important;
+    border: 1px solid #d4af37 !important;
+    border-radius: 0.2rem;
+    font-size: 0.65rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    min-width: 40px;
+    line-height: 1;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spell-upgrade-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
+    border-color: #ffe700 !important;
+    color: #ffe700 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+}
+
+.spell-upgrade-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.spell-upgrade-btn:disabled {
+    background: linear-gradient(135deg, rgba(50, 50, 50, 0.8) 0%, rgba(34, 34, 34, 0.8) 100%) !important;
+    color: rgba(150, 150, 150, 0.6) !important;
+    border-color: rgba(100, 100, 100, 0.5) !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    text-shadow: none;
+}
+
+/* Compact Spell Upgrade Section - Own distinct box */
+.spell-upgrades-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    background: linear-gradient(135deg, rgba(40, 35, 25, 0.8), rgba(30, 25, 15, 0.8));
+    border: 2px solid rgba(180, 140, 80, 0.4);
+    border-radius: 0.3rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(180, 140, 80, 0.15);
+    margin-bottom: 0.3rem;
+}
+
+.spell-section-header {
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: var(--primary-gold);
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    margin-bottom: 0.2rem;
+}
+
+.compact-spell-bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.35rem 0.4rem;
+    background: linear-gradient(135deg, rgba(50, 45, 35, 0.9), rgba(40, 35, 25, 0.9));
+    border: 1px solid rgba(140, 110, 60, 0.5);
+    border-radius: 0.2rem;
+    transition: all 0.2s ease;
+}
+
+.compact-spell-bar:hover:not(.maxed) {
+    border-color: var(--primary-gold);
+    background: linear-gradient(135deg, rgba(60, 55, 45, 0.95), rgba(50, 45, 35, 0.95));
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.15);
+}
+
+.compact-spell-bar.maxed {
+    opacity: 0.5;
+    border-color: rgba(100, 100, 100, 0.3);
+}
+
+.compact-spell-info {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 100px;
+}
+
+.compact-spell-icon {
+    font-size: 1rem;
+    min-width: 1rem;
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.6));
+}
+
+.compact-spell-name {
+    font-size: 0.65rem;
+    font-weight: bold;
+    color: var(--primary-gold-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1px;
+    white-space: nowrap;
+}
+
+.compact-spell-progress-wrapper {
+    flex: 1;
+    min-width: 80px;
+}
+
+.compact-spell-upgrade-btn {
+    padding: 0.25rem 0.3rem;
+    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
+    color: var(--primary-gold-light) !important;
+    border: 1px solid #d4af37 !important;
+    border-radius: 0.15rem;
+    font-size: 0.6rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 30px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    padding: 0 !important;
+}
+
+.compact-spell-upgrade-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
+    border-color: #ffe700 !important;
+    color: #ffe700 !important;
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.3);
+}
+
+.compact-spell-upgrade-btn:disabled {
+    background: linear-gradient(135deg, rgba(50, 50, 50, 0.8) 0%, rgba(34, 34, 34, 0.8) 100%) !important;
+    color: rgba(150, 150, 150, 0.5) !important;
+    border-color: rgba(100, 100, 100, 0.4) !important;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .forge-upgrade-cost {
     font-size: 0.7rem;
     font-weight: bold;
