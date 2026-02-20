@@ -1106,7 +1106,7 @@ export class TowerForge extends Building {
         let nextUnlock = "";
         
         if (isMaxed) {
-            nextUnlock = "✓ MAX LEVEL - All available upgrades unlocked!";
+            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nMagic Academy Unlocked";
         } else {
             switch(nextLevel) {
                 case 2:
@@ -1119,7 +1119,7 @@ export class TowerForge extends Building {
                     nextUnlock = "Unlocks: Magic Academy Building and 3x Mine Income";
                     break;
                 case 5:
-                    nextUnlock = "Unlocks: Additional Gold Mine and 3.5x Mine Income";
+                    nextUnlock = "Unlocks: Additional Gold Mine, Magic Academy and 3.5x Mine Income\nMagic Academy now available to build (Maximum Level)";
                     break;
                 default:
                     nextUnlock = "Max Level Reached";

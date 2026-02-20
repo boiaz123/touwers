@@ -1142,12 +1142,17 @@ export class UIManager {
                                     <span class="forge-benefit-label">Income:</span>
                                     <span class="forge-benefit-value">x${incomeMultiplier.toFixed(1)}</span>
                                 </div>
+                                ${forge.forgeLevel >= 4 ? `<div class="forge-benefit-item">
+                                    <span class="forge-benefit-label">Magic Academy:</span>
+                                    <span class="forge-benefit-value">Unlocked</span>
+                                </div>` : ''}
                             </div>
                         </div>
                     </div>
                     <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                             data-upgrade="${forgeUpgrade ? forgeUpgrade.id : 'forge_level'}" 
                             data-forge-level="true"
+                            title="${forgeUpgrade ? (forgeUpgrade.description + '\n\n' + forgeUpgrade.nextUnlock) : ''}"
                             ${!isMaxed && !canAfford ? 'disabled' : ''}
                             ${isMaxed ? 'disabled' : ''}>
                         <div class="forge-upgrade-btn-content">
@@ -1671,13 +1676,13 @@ export class UIManager {
                         </div>
                         <div class="forge-benefits-list">
                             <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Magic Towers:</span>
-                                <span class="forge-benefit-value">${academy.academyLevel >= 2 ? '✓ Unlocked' : 'Level 1'}</span>
+                                <span class="forge-benefit-label">Gem Mining:</span>
+                                <span class="forge-benefit-value">Unlocked</span>
                             </div>
-                            <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Super Weapon:</span>
-                                <span class="forge-benefit-value">${academy.academyLevel >= 3 ? '✓ Available' : 'Level 3'}</span>
-                            </div>
+                            ${academy.academyLevel >= 3 ? `<div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Super Weapon Lab:</span>
+                                <span class="forge-benefit-value">Available</span>
+                            </div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -1838,6 +1843,59 @@ export class UIManager {
             }, { once: true });
         });
         
+        // Add hover info listener for main academy upgrade button
+        const academyUpgradeBtn = panel.querySelector('.forge-level-upgrade-btn');
+        if (academyUpgradeBtn && academyUpgrade) {
+            academyUpgradeBtn.addEventListener('mouseenter', () => {
+                if (!academyUpgrade || !academyUpgrade.description) return;
+                
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-academy-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-academy-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${academyUpgrade.name}</div>
+                    <div class="info-description">${academyUpgrade.description}</div>
+                    <div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${academyUpgrade.nextUnlock}</div>
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu - same as forge, to the left of the panel
+                const btnRect = academyUpgradeBtn.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Priority: Position to the left with good clearance from the panel
+                let left = panelRect.left - menuWidth - 30;
+                let top = btnRect.top;
+                
+                // If not enough space to the left, try above
+                if (left < 10) {
+                    left = Math.max(10, panelRect.left - menuWidth - 10);
+                    top = btnRect.top - menuHeight - 10;
+                }
+                
+                // Adjust if menu goes off bottom
+                if (top + menuHeight > window.innerHeight) {
+                    top = Math.max(10, btnRect.top - menuHeight - 10);
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            academyUpgradeBtn.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        }
+        
         // Add hover info listeners for elemental upgrades (like forge)
         panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
             const upgradeId = item.dataset.upgradeId;
@@ -1883,6 +1941,14 @@ export class UIManager {
             });
             
             item.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
+        });
+        
+        // Also clear tooltips when hovering over any button to avoid multiple tooltips showing
+        panel.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mouseleave', () => {
                 const tooltips = document.querySelectorAll('[data-academy-tooltip]');
                 tooltips.forEach(tooltip => tooltip.remove());
             });
@@ -3000,20 +3066,21 @@ export class UIManager {
                                 <span class="forge-benefit-label">Max Defender Level:</span>
                                 <span class="forge-benefit-value">${trainingGrounds.defenderMaxLevel}</span>
                             </div>
-                            <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Guard Post:</span>
-                                <span class="forge-benefit-value">${trainingGrounds.guardPostUnlocked ? '✓ Unlocked' : '🔒 Locked'}</span>
-                            </div>
-                            <div class="forge-benefit-item">
+                            ${trainingGrounds.defenderUnlocked ? `<div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Castle Defender:</span>
-                                <span class="forge-benefit-value">${trainingGrounds.defenderUnlocked ? '✓ Unlocked' : '🔒 Locked'}</span>
-                            </div>
+                                <span class="forge-benefit-value">Unlocked (Level ${trainingGrounds.defenderMaxLevel})</span>
+                            </div>` : ''}
+                            ${trainingGrounds.guardPostUnlocked ? `<div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Guard Post:</span>
+                                <span class="forge-benefit-value">Unlocked</span>
+                            </div>` : ''}
                         </div>
                     </div>
                 </div>
                 <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                         data-upgrade="${trainingUpgrade ? trainingUpgrade.id : 'training_level'}" 
                         data-training-level="true"
+                        title="${trainingUpgrade ? (trainingUpgrade.description + '\n\n' + trainingUpgrade.nextUnlock) : ''}"
                         ${!isMaxed && !canAfford ? 'disabled' : ''}
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">

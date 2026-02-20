@@ -1159,24 +1159,24 @@ export class TrainingGrounds extends Building {
         // Always return training upgrade info, even when maxed
         const isMaxed = this.trainingLevel >= this.maxTrainingLevel;
         const nextLevel = isMaxed ? this.trainingLevel : this.trainingLevel + 1;
-        let description = "Upgrade the training grounds to unlock the next range training level for manned towers.";
+        let description = "Upgrade the training grounds to unlock the next range training level for manned towers and unlock elite units.";
         let nextUnlock = "";
         
         if (isMaxed) {
-            nextUnlock = "✓ MAX LEVEL - All available upgrades unlocked!";
+            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nCastle Defender Level 3 Unlocked\nGuard Posts Unlocked";
         } else {
             switch(nextLevel) {
                 case 2:
                     nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
                     break;
                 case 3:
-                    nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers";
+                    nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers\nCastle Defender Level 1 Unlocked (hire elite knights)";
                     break;
                 case 4:
-                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers and Guard Posts";
+                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers\nCastle Defender Level 2 Unlocked (medium armor)\nGuard Posts Buildable (place on path)";
                     break;
                 case 5:
-                    nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers (Maximum)";
+                    nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers\nCastle Defender Level 3 Unlocked (heavy tank)\nMaximum Training Level";
                     break;
                 default:
                     nextUnlock = "Max Level Reached";
