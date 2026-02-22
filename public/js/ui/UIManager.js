@@ -2565,14 +2565,7 @@ export class UIManager {
                         <div class="forge-level-bar">
                             <div class="forge-level-bar-fill" style="width: ${(superWeaponLab.labLevel / superWeaponLab.maxLabLevel) * 100}%"></div>
                         </div>
-                        <div class="forge-effects-row">
-                            ${effectsList.slice(0, 4).map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
-                        </div>
                         <div class="forge-benefits-list">
-                            <div class="forge-benefit-item">
-                                <span class="forge-benefit-label">Spells Unlocked:</span>
-                                <span class="forge-benefit-value">${unlockedSpellCount}/${totalSpellCount}</span>
-                            </div>
                             <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Combination Tower:</span>
                                 <span class="forge-benefit-value">${superWeaponLab.labLevel >= 1 ? 'Unlocked' : 'Locked'}</span>
@@ -2580,23 +2573,9 @@ export class UIManager {
                         </div>
                     </div>
                 </div>
-                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn spell-icon-hover ${isMaxed ? 'maxed' : ''}" 
+                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
                         data-upgrade="${labUpgrade ? labUpgrade.id : 'lab_upgrade'}" 
                         data-lab-level="true"
-                        data-tooltip="${(() => {
-                            let tooltip = '<div style=\"font-weight: bold; margin-bottom: 0.3rem;\">LAB UPGRADE</div>';
-                            if (labUpgrade) {
-                                tooltip += '<div style=\"font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;\">';
-                                if (superWeaponLab.labLevel === 1) tooltip += 'Unlock Frozen Nova spell<br/>Unlock Diamond Press building';
-                                if (superWeaponLab.labLevel === 2) tooltip += 'Unlock Meteor Strike spell';
-                                if (superWeaponLab.labLevel === 3) tooltip += 'Unlock Chain Lightning spell<br/>Unlock spell upgrades';
-                                tooltip += '</div>';
-                                tooltip += '<div style=\"border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;\">';
-                                tooltip += '<div>Cost: <span style=\"color: #FFD700;\">$ ' + labUpgrade.cost + ' + 💎' + (labUpgrade.diamondCost || 0) + '</span></div>';
-                                tooltip += '</div>';
-                            }
-                            return tooltip;
-                        })()}"
                         ${!isMaxed && !canAfford ? 'disabled' : ''}
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
@@ -2683,24 +2662,38 @@ export class UIManager {
             
             combinationUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.upgradeLevel >= upgrade.maxUpgradeLevel;
-                const canAfford = upgrade.goldCost && this.gameState.gold >= upgrade.goldCost;
+                const canAfford = upgrade.canAfford;
                 
                 // Build tooltip for combination spell hover info
                 let comboTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
                 comboTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${upgrade.description || ''}</div>`;
                 comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-                comboTooltip += `<div>Current Level: <span style="color: #FFD700;">${upgrade.upgradeLevel}</span></div>`;
+                comboTooltip += `<div>Current Level: <span style="color: #FFD700;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</span></div>`;
                 if (!isMaxed) {
-                    comboTooltip += `<div style="color: #aaffaa; margin-top: 0.3rem;">Next upgrade adds additional power to combo effects</div>`;
+                    comboTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${upgrade.upgradeLevel + 1}:</div>`;
+                    for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
+                        const gemEmojiMap = { fire: '🔥', water: '💧', air: '☁️', earth: '🪨' };
+                        comboTooltip += `<div>${gemEmojiMap[gemType]} ${gemType.charAt(0).toUpperCase() + gemType.slice(1)}: ${cost}</div>`;
+                    }
+                    comboTooltip += `<div style="color: #aaffaa; margin-top: 0.3rem;">Next upgrade adds more power</div>`;
                 }
                 comboTooltip += `</div>`;
                 
                 const progressPercent = (upgrade.upgradeLevel / upgrade.maxUpgradeLevel) * 100;
                 
+                // Build gem cost display
+                let gemCostDisplay = '';
+                for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
+                    const gemEmojiMap = { fire: '🔥', water: '💧', air: '☁️', earth: '🪨' };
+                    const hasGem = (menuData.academy && (menuData.academy.gems[gemType] || 0) >= cost);
+                    const style = hasGem ? 'color: #aaffaa;' : 'color: #ff9999;';
+                    gemCostDisplay += `<div style="font-size: 0.7rem; ${style};">${gemEmojiMap[gemType]} ${cost}</div>`;
+                }
+                
                 contentHTML += `
                     <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
                         <div class="compact-upgrade-left">
-                            <span class="compact-upgrade-icon spell-icon-hover" data-tooltip="${comboTooltip.replace(/"/g, '&quot;')}">${upgrade.icon}</span>
+                            <span class="compact-upgrade-icon" style="cursor: help;" data-combo-tooltip="${comboTooltip.replace(/"/g, '&quot;')}">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
                                 <div class="compact-upgrade-name">${upgrade.name}</div>
                                 <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
@@ -2709,10 +2702,14 @@ export class UIManager {
                                 <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</div>
                             </div>
                         </div>
-                        <button class="compact-upgrade-btn panel-upgrade-btn" 
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
+                            ${!isMaxed ? gemCostDisplay : '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>'}
+                        </div>
+                        <button class="compact-upgrade-btn panel-upgrade-btn combo-upgrade-btn" 
                                 data-combo-spell="${upgrade.id}" 
+                                data-combo-tooltip="${comboTooltip.replace(/"/g, '&quot;')}"
                                 ${isMaxed || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : `$${upgrade.goldCost || 50}`}
+                            ${isMaxed ? 'MAX' : 'Upgrade'}
                         </button>
                     </div>
                 `;
@@ -2813,6 +2810,85 @@ export class UIManager {
         
         setupSpellTooltips();
         
+        // Setup combination spell hover tooltips (for both icons and buttons)
+        const setupComboTooltips = () => {
+            const comboElements = upgradesContainer.querySelectorAll('[data-combo-tooltip]');
+            
+            comboElements.forEach(element => {
+                let tooltipTimeout;
+                
+                element.addEventListener('mouseenter', (e) => {
+                    clearTimeout(tooltipTimeout);
+                    
+                    // Remove existing tooltips first
+                    const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    existingTooltips.forEach(tooltip => tooltip.remove());
+                    
+                    const tooltipHTML = element.dataset.comboTooltip;
+                    if (!tooltipHTML) return;
+                    
+                    // Create tooltip element
+                    const tooltip = document.createElement('div');
+                    tooltip.setAttribute('data-panel-tooltip', 'true');
+                    tooltip.innerHTML = tooltipHTML;
+                    tooltip.style.cssText = `
+                        position: fixed;
+                        background: rgba(10, 10, 20, 0.95);
+                        border: 2px solid #FFD700;
+                        border-radius: 6px;
+                        padding: 0.8rem;
+                        font-size: 0.75rem;
+                        color: #ddd;
+                        max-width: 250px;
+                        z-index: 10001;
+                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                        pointer-events: auto;
+                    `;
+                    
+                    document.body.appendChild(tooltip);
+                    
+                    const panel = document.getElementById('superweapon-panel');
+                    const panelRect = panel.getBoundingClientRect();
+                    const rect = element.getBoundingClientRect();
+                    
+                    let leftPos = panelRect.left - tooltip.offsetWidth - 10;
+                    if (leftPos < 10) {
+                        leftPos = rect.right + 10;
+                    }
+                    
+                    tooltip.style.left = leftPos + 'px';
+                    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                    
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    if (tooltipRect.bottom > window.innerHeight) {
+                        tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                    }
+                    if (tooltipRect.top < 0) {
+                        tooltip.style.top = '10px';
+                    }
+                    
+                    tooltip.addEventListener('mouseenter', () => {
+                        clearTimeout(tooltipTimeout);
+                    });
+                    
+                    tooltip.addEventListener('mouseleave', () => {
+                        tooltipTimeout = setTimeout(() => {
+                            tooltip.remove();
+                        }, 100);
+                    });
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    tooltipTimeout = setTimeout(() => {
+                        const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                        activeTooltips.forEach(tooltip => tooltip.remove());
+                    }, 100);
+                });
+            });
+        };
+        
+        setupComboTooltips();
+        
         // Setup event listeners
         this.setupSuperWeaponPanelListeners(menuData);
     }
@@ -2860,26 +2936,48 @@ export class UIManager {
                     this.showSuperWeaponMenu(menuData);
                 }
             } else if (btn.dataset.comboSpell) {
-                // Combination spell upgrade
+                // Combination spell upgrade - uses elemental gems
                 const spellId = btn.dataset.comboSpell;
-                const goldCost = 50;
                 const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
-                if (spell && this.gameState.gold >= goldCost && spell.upgradeLevel < spell.maxUpgradeLevel) {
-                    this.gameState.spend(goldCost);
-                    spell.upgradeLevel++;
-                    
-                    // Refresh all combination towers to apply the new upgrades
-                    this.towerManager.towers.forEach(tower => {
-                        if (tower.constructor.name === 'CombinationTower') {
-                            this.towerManager.applyTowerBonuses(tower);
-                        }
-                    });
-                    
-                    if (this.stateManager.audioManager) {
-                        this.stateManager.audioManager.playSFX('upgrade');
+                
+                if (spell && spell.upgradeLevel < spell.maxUpgradeLevel && menuData.academy) {
+                    // Get the gem requirements for the next upgrade
+                    const nextLevel = spell.upgradeLevel + 1;
+                    const gemsRequired = {};
+                    for (const [gemType, baseCost] of Object.entries(spell.gems)) {
+                        gemsRequired[gemType] = baseCost * nextLevel;
                     }
-                    this.updateUI();
-                    this.showSuperWeaponMenu(menuData);
+                    
+                    // Check if player has enough gems
+                    let canAfford = true;
+                    for (const [gemType, cost] of Object.entries(gemsRequired)) {
+                        if ((menuData.academy.gems[gemType] || 0) < cost) {
+                            canAfford = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canAfford) {
+                        // Deduct gems
+                        for (const [gemType, cost] of Object.entries(gemsRequired)) {
+                            menuData.academy.gems[gemType] -= cost;
+                        }
+                        
+                        spell.upgradeLevel++;
+                        
+                        // Refresh all combination towers to apply the new upgrades
+                        this.towerManager.towers.forEach(tower => {
+                            if (tower.constructor.name === 'CombinationTower') {
+                                this.towerManager.applyTowerBonuses(tower);
+                            }
+                        });
+                        
+                        if (this.stateManager.audioManager) {
+                            this.stateManager.audioManager.playSFX('upgrade');
+                        }
+                        this.updateUI();
+                        this.showSuperWeaponMenu(menuData);
+                    }
                 }
             }
         };
@@ -2897,6 +2995,58 @@ export class UIManager {
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('superweapon-panel');
             }, { once: true });
+        }
+
+        // Lab level upgrade button hover
+        const labLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
+        const labUpgrade = menuData.building.getLabUpgradeOption();
+        if (labLevelBtn && labUpgrade) {
+            labLevelBtn.addEventListener('mouseenter', () => {
+                // Clear existing tooltips
+                const existingTooltips = document.querySelectorAll('[data-superweapon-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+                
+                // Create hover menu
+                const menu = document.createElement('div');
+                menu.className = 'building-info-menu';
+                menu.setAttribute('data-superweapon-tooltip', 'true');
+                menu.innerHTML = `
+                    <div class="info-title">${labUpgrade.name}</div>
+                    <div class="info-description">${labUpgrade.description}</div>
+                    ${labUpgrade.nextUnlock ? `<div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${labUpgrade.nextUnlock}</div>` : ''}
+                `;
+                
+                document.body.appendChild(menu);
+                
+                // Position the menu
+                const btnRect = labLevelBtn.getBoundingClientRect();
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Priority: Position to the left with good clearance from the panel
+                let left = panelRect.left - menuWidth - 30;
+                let top = btnRect.top;
+                
+                // If not enough space to the left, try above
+                if (left < 10) {
+                    left = Math.max(10, panelRect.left - menuWidth - 10);
+                    top = btnRect.top - menuHeight - 10;
+                }
+                
+                // Adjust if menu goes off bottom
+                if (top + menuHeight > window.innerHeight) {
+                    top = Math.max(10, btnRect.top - menuHeight - 10);
+                }
+                
+                menu.style.left = left + 'px';
+                menu.style.top = top + 'px';
+            });
+            
+            labLevelBtn.addEventListener('mouseleave', () => {
+                const tooltips = document.querySelectorAll('[data-superweapon-tooltip]');
+                tooltips.forEach(tooltip => tooltip.remove());
+            });
         }
     }
 

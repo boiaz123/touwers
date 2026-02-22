@@ -73,7 +73,7 @@ export class SuperWeaponLab extends Building {
             }
         };
         
-        // Combination spells system - max 5 upgrade levels per spell
+        // Combination spells system - max 5 upgrade levels per spell, uses elemental gems
         this.combinationSpells = [
             {
                 id: 'steam',
@@ -82,7 +82,7 @@ export class SuperWeaponLab extends Building {
                 description: 'Fire + Water: Burn + Slow',
                 upgradeLevel: 0,  // 0-5 upgrades
                 maxUpgradeLevel: 5,
-                upgradesCost: 50  // Cost per upgrade level
+                gems: { fire: 1, water: 1 }  // Required gems for each upgrade level
             },
             {
                 id: 'magma',
@@ -91,7 +91,7 @@ export class SuperWeaponLab extends Building {
                 description: 'Fire + Earth: Burn + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
-                upgradesCost: 50
+                gems: { fire: 1, earth: 1 }
             },
             {
                 id: 'tempest',
@@ -100,7 +100,7 @@ export class SuperWeaponLab extends Building {
                 description: 'Air + Water: Chain + Slow',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
-                upgradesCost: 50
+                gems: { air: 1, water: 1 }
             },
             {
                 id: 'meteor',
@@ -109,7 +109,7 @@ export class SuperWeaponLab extends Building {
                 description: 'Air + Earth: Chain + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
-                upgradesCost: 50
+                gems: { air: 1, earth: 1 }
             }
         ];
         
@@ -133,6 +133,23 @@ export class SuperWeaponLab extends Building {
                 floatOffset: Math.random() * Math.PI * 2,
                 symbol: ['✧', '◇', '❋', '✦', '◈', '❂'][i]
             });
+        }
+        
+        // Synchronize spell states based on current lab level
+        this.syncSpellUnlocks();
+    }
+    
+    // Synchronize spell unlock states based on current lab level
+    syncSpellUnlocks() {
+        // Unlock spells based on lab level
+        if (this.labLevel >= 2) {
+            this.spells.frostNova.unlocked = true;
+        }
+        if (this.labLevel >= 3) {
+            this.spells.meteorStrike.unlocked = true;
+        }
+        if (this.labLevel >= 4) {
+            this.spells.chainLightning.unlocked = true;
         }
     }
     
@@ -926,9 +943,11 @@ export class SuperWeaponLab extends Building {
         
         this.labLevel++;
         
-        // Unlock spells based on new level (max lab level is 4)
-        if (this.labLevel >= 2) {
-            this.spells.frostNova.unlocked = true;
+        // Synchronize spell unlocks based on new level
+        this.syncSpellUnlocks();
+        
+        // Special unlock behaviors for specific levels
+        if (this.labLevel === 2) {
             // Unlock Diamond Press building via UnlockSystem if available
             if (this.unlockSystem) {
                 this.unlockSystem.onSuperweaponLabLevelTwo();
@@ -937,12 +956,6 @@ export class SuperWeaponLab extends Building {
             if (this.upgradeSystem) {
                 this.upgradeSystem.purchaseUpgrade('diamond-press-unlock');
             }
-        }
-        if (this.labLevel >= 3) {
-            this.spells.meteorStrike.unlocked = true;
-        }
-        if (this.labLevel >= 4) {
-            this.spells.chainLightning.unlocked = true;
         }
         
         return true;
@@ -1101,8 +1114,27 @@ export class SuperWeaponLab extends Building {
         if (this.labLevel >= 2) {
             // Return combination spell upgrade options (max 5 levels each)
             this.combinationSpells.forEach(spell => {
-                const goldCost = spell.upgragesCost; // Gold cost per upgrade
-                const canAfford = spell.upgradeLevel < spell.maxUpgradeLevel;
+                // Calculate gem costs - increases with each upgrade level
+                const gemsRequired = {};
+                const nextLevel = spell.upgradeLevel + 1;
+                
+                // Gems required scale with upgrade level (1, 2, 3, 4, 5)
+                for (const [gemType, baseCost] of Object.entries(spell.gems)) {
+                    gemsRequired[gemType] = baseCost * nextLevel;
+                }
+                
+                // Check if player can afford this upgrade
+                let canAfford = spell.upgradeLevel < spell.maxUpgradeLevel;
+                if (canAfford && academy) {
+                    for (const [gemType, cost] of Object.entries(gemsRequired)) {
+                        if ((academy.gems[gemType] || 0) < cost) {
+                            canAfford = false;
+                            break;
+                        }
+                    }
+                } else if (spell.upgradeLevel >= spell.maxUpgradeLevel) {
+                    canAfford = false;
+                }
                 
                 options.push({
                     id: spell.id,
@@ -1111,7 +1143,7 @@ export class SuperWeaponLab extends Building {
                     description: spell.description,
                     upgradeLevel: spell.upgradeLevel,
                     maxUpgradeLevel: spell.maxUpgradeLevel,
-                    goldCost: goldCost,
+                    gemsRequired: gemsRequired,
                     canAfford: canAfford,
                     type: 'comboSpellUpgrade'
                 });
