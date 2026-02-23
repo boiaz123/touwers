@@ -47,29 +47,72 @@ export class BasicTower extends Tower {
         
         // Update flying rocks
         this.rocks = this.rocks.filter(rock => {
+            const oldX = rock.x;
+            const oldY = rock.y;
+            
             rock.x += rock.vx * deltaTime;
             rock.y += rock.vy * deltaTime;
             rock.vy += 200 * deltaTime;
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
+            // Use swept collision detection for fast-moving rocks
+            // Check if rock's path passes near target (prevents missing at high speeds)
+            const collisionRadius = Math.max(15, Math.hypot(rock.vx, rock.vy) * deltaTime * 0.5);
+            
             // Check if rock hits target (alive or dead) or fallback position
             if (rock.target) {
-                // Always check distance to target's current position (works for alive and dead enemies)
+                // Check distance to target's current position (works for alive and dead enemies)
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
-                if (dist <= 15) {
+                if (dist <= collisionRadius) {
+                    return false;
+                }
+                // Also check if the projectile path passed near the target (swept collision)
+                const targetX = rock.target.x;
+                const targetY = rock.target.y;
+                const segmentDist = this.distanceToSegment(targetX, targetY, oldX, oldY, rock.x, rock.y);
+                if (segmentDist <= collisionRadius) {
                     return false;
                 }
             } else if (rock.fallbackX != null) {
                 // If target is completely gone, use fallback position
                 const dist = Math.hypot(rock.x - rock.fallbackX, rock.y - rock.fallbackY);
-                if (dist <= 15) {
+                if (dist <= collisionRadius) {
+                    return false;
+                }
+                // Also check if the projectile path passed near the fallback position (swept collision)
+                const segmentDist = this.distanceToSegment(rock.fallbackX, rock.fallbackY, oldX, oldY, rock.x, rock.y);
+                if (segmentDist <= collisionRadius) {
                     return false;
                 }
             }
             
             return rock.life > 0;
         });
+    }
+    
+    /**
+     * Calculate the shortest distance from a point to a line segment
+     * Used for swept collision detection of projectiles
+     */
+    distanceToSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        
+        if (lenSq === 0) {
+            // Segment is a point
+            return Math.hypot(px - x1, py - y1);
+        }
+        
+        // Project point onto line segment
+        let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        
+        const closestX = x1 + t * dx;
+        const closestY = y1 + t * dy;
+        
+        return Math.hypot(px - closestX, py - closestY);
     }
     
     shoot() {

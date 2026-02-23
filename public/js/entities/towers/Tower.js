@@ -47,36 +47,44 @@ export class Tower {
     /**
      * Predict where an enemy will be at a given time
      * Used for accurate tower shooting at moving targets
+     * Accounts for enemy movement along path at various game speeds
      */
     predictEnemyPosition(enemy, projectileSpeed) {
         if (!enemy) return null;
         
-        // If enemy has no velocity, return current position
-        if (!enemy.vx && !enemy.vy) {
+        // Enemies move along a path, calculate their velocity based on path and speed
+        let velocityX = 0;
+        let velocityY = 0;
+        
+        if (enemy.path && enemy.currentPathIndex < enemy.path.length - 1) {
+            const currentPos = enemy.path[enemy.currentPathIndex];
+            const nextPos = enemy.path[enemy.currentPathIndex + 1];
+            
+            const dx = nextPos.x - currentPos.x;
+            const dy = nextPos.y - currentPos.y;
+            const distance = Math.hypot(dx, dy);
+            
+            if (distance > 0) {
+                // Velocity is enemy.speed in the direction of the next waypoint
+                const direction = enemy.speed / distance;
+                velocityX = dx * direction;
+                velocityY = dy * direction;
+            }
+        }
+        
+        // If no velocity calculated, return current position
+        const enemySpeed = Math.hypot(velocityX, velocityY);
+        if (enemySpeed === 0) {
             return { x: enemy.x, y: enemy.y };
         }
         
-        // Calculate the time it will take for projectile to reach enemy
-        // Using distance = sqrt((targetX - x)^2 + (targetY - y)^2) = speed * time
-        // This is an iterative approximation
-        let predictedX = enemy.x;
-        let predictedY = enemy.y;
-        
-        // Simple prediction: assume enemy continues in current direction
-        // Get approximate velocity from enemy movement
-        const dx = (enemy.vx || 0);
-        const dy = (enemy.vy || 0);
-        const enemySpeed = Math.hypot(dx, dy);
-        
-        // Distance from tower to enemy
+        // Calculate time for projectile to reach enemy at current distance
         const distToEnemy = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-        
-        // Time for projectile to reach
         const timeToReach = distToEnemy / Math.max(projectileSpeed, 1);
         
-        // Where the enemy will be by then
-        predictedX = enemy.x + dx * timeToReach;
-        predictedY = enemy.y + dy * timeToReach;
+        // Predict where enemy will be after timeToReach seconds
+        const predictedX = enemy.x + velocityX * timeToReach;
+        const predictedY = enemy.y + velocityY * timeToReach;
         
         return { x: predictedX, y: predictedY };
     }
