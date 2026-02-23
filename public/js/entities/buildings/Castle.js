@@ -126,9 +126,6 @@ export class Castle {
         // Draw crenellations on top of wall
         this.drawCrenellations(ctx);
         
-        // Draw flags on towers
-        this.drawFlags(ctx);
-        
         ctx.restore();
         
         // Draw health bar above castle (world space, not translated)
