@@ -1493,45 +1493,50 @@ export class GameplayState {
             this.defendersCacheNeedsUpdate = true;
         }
         
-        if (this.defendersCacheNeedsUpdate && this.enemyManager && this.enemyManager.enemies && this.towerManager) {
-            // Cache guard post defenders once
-            if (!this.guardPostDefenderCache) {
-                this.guardPostDefenderCache = [];
-            }
+        // ALWAYS rebuild the guard post cache - defenders can be hired/fired anytime
+        // Initialize cache if needed
+        if (!this.guardPostDefenderCache) {
             this.guardPostDefenderCache = [];
-            
-            if (guardPostTowers && guardPostTowers.length > 0) {
-                guardPostTowers.forEach(tower => {
-                    const defender = tower.getDefender();
-                    if (defender) {
-                        this.guardPostDefenderCache.push({
-                            defender: defender,
-                            waypoint: tower.getDefenderWaypoint(),
-                            tower: tower
-                        });
-                    }
-                });
-            }
-            
-            // Register defenders on all enemies once
+        }
+        this.guardPostDefenderCache = [];
+        
+        // Build current cache of all active guard post defenders
+        if (guardPostTowers && guardPostTowers.length > 0) {
+            guardPostTowers.forEach(tower => {
+                const defender = tower.getDefender();
+                if (defender) {
+                    this.guardPostDefenderCache.push({
+                        defender: defender,
+                        waypoint: tower.getDefenderWaypoint(),
+                        tower: tower,
+                        pathIndex: tower.pathIndex
+                    });
+                }
+            });
+        }
+        
+        // ALWAYS ensure all enemies have access to the current guard post cache
+        // This is critical so newly spawned enemies get the cache immediately
+        if (this.enemyManager && this.enemyManager.enemies) {
             this.enemyManager.enemies.forEach((enemy) => {
+                // Ensure enemy has pathDefenders array
                 if (!enemy.pathDefenders) {
                     enemy.pathDefenders = [];
                 }
-                // Only add if not already added
+                
+                // Always assign the current cache (even if empty) to all enemies
+                enemy.guardPostCache = this.guardPostDefenderCache;
+                
+                // Update pathDefenders list to include all active defenders
                 this.guardPostDefenderCache.forEach(cache => {
                     if (!enemy.pathDefenders.includes(cache.defender)) {
                         enemy.pathDefenders.push(cache.defender);
                     }
                 });
-                
-                if (!enemy.defenderWaypoint && this.guardPostDefenderCache.length > 0) {
-                    enemy.defenderWaypoint = this.guardPostDefenderCache[0].waypoint;
-                }
             });
-            
-            this.defendersCacheNeedsUpdate = false;
         }
+        
+        this.defendersCacheNeedsUpdate = false;
         
         // UPDATE DEFENDERS FIRST
         // Update castle defender
@@ -1600,8 +1605,6 @@ export class GameplayState {
                         enemy.defenderTarget = null;
                         enemy.reachedEnd = false; // Resume moving
                     }
-                    // Clear the waypoint reference
-                    enemy.defenderWaypoint = null;
                 }
             }
             
@@ -1633,21 +1636,34 @@ export class GameplayState {
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
                 enemy.attackDefender(enemy.defenderTarget, adjustedDeltaTime);
             } else if (enemy.reachedEnd) {
-                // Enemy has reached end of path - either at a path defender waypoint or castle
+                // Enemy has reached end of path - check what's ahead of them
                 let targetDefender = null;
                 
-                // PATH DEFENDER LOGIC: If there's a defenderWaypoint, engage path defenders there
-                if (enemy.defenderWaypoint && enemy.pathDefenders && enemy.pathDefenders.length > 0) {
-                    // Find first alive path defender in the list
-                    for (let defender of enemy.pathDefenders) {
-                        if (!defender.isDead()) {
-                            targetDefender = defender;
-                            break;
+                // PATH DEFENDER LOGIC: Find the next alive guard post defender ahead of this enemy
+                if (enemy.guardPostCache && enemy.guardPostCache.length > 0 && this.level && this.level.path) {
+                    // Find the closest alive guard post ahead of the enemy's current position on the path
+                    let nextGuardPostDefender = null;
+                    let closestDefenderDistance = Infinity;
+                    
+                    for (let cache of enemy.guardPostCache) {
+                        if (!cache.defender.isDead() && cache.waypoint) {
+                            // Calculate distance to this guard post
+                            const distance = Math.hypot(
+                                cache.waypoint.x - enemy.x,
+                                cache.waypoint.y - enemy.y
+                            );
+                            
+                            // Only engage with defenders ahead on the path
+                            // Check if waypoint is ahead by comparing path indices or distance
+                            if (distance < closestDefenderDistance && distance < 100) {
+                                closestDefenderDistance = distance;
+                                nextGuardPostDefender = cache.defender;
+                            }
                         }
                     }
                     
-                    if (targetDefender) {
-                        // Engage with path defender at waypoint
+                    if (nextGuardPostDefender) {
+                        targetDefender = nextGuardPostDefender;
                         enemy.isAttackingDefender = true;
                         enemy.defenderTarget = targetDefender;
                         enemy.isAttackingCastle = false;
@@ -1656,7 +1672,7 @@ export class GameplayState {
                     }
                 }
                 
-                // CASTLE DEFENDER LOGIC: If no path defender, engage castle defender if available
+                // CASTLE DEFENDER LOGIC: If no path defenders block, engage castle defender
                 if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
                     targetDefender = this.level.castle.defender;
                     enemy.isAttackingDefender = true;

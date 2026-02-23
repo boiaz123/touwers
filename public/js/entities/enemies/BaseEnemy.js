@@ -17,11 +17,11 @@ export class BaseEnemy {
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
         
-        // Defender waypoint - if set, enemy will stop here instead of reaching castle
-        this.defenderWaypoint = null;
-        
         // Path defenders (guard post defenders on the path)
         this.pathDefenders = [];
+        
+        // Guard post cache for dynamic waypoint detection
+        this.guardPostCache = null;
         
         // Attack properties - constant across all resolutions
         this.attackDamage = 5;
@@ -94,27 +94,29 @@ export class BaseEnemy {
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
-        // PATH DEFENDER LOGIC: Check if we're at a waypoint where a path defender is stationed
+        // PATH DEFENDER LOGIC: Check if there's a path defender ahead blocking the path
         // If so, engage with the defender instead of continuing to the castle
-        if (this.defenderWaypoint) {
-            const distanceToWaypoint = Math.hypot(
-                this.defenderWaypoint.x - this.x,
-                this.defenderWaypoint.y - this.y
-            );
-            
-
-            
-            // If we've reached the defender waypoint, engage with available path defender
-            if (distanceToWaypoint < 50) {
-
-                this.reachedEnd = true;
-                this.isAttackingCastle = false;
-                // Will be attacked by defender in GameplayState combat handling
-                return;
+        if (this.guardPostCache && this.guardPostCache.length > 0) {
+            // Check if any guard post defender is directly ahead and alive
+            for (let cache of this.guardPostCache) {
+                if (!cache.defender.isDead() && cache.waypoint) {
+                    const distanceToWaypoint = Math.hypot(
+                        cache.waypoint.x - this.x,
+                        cache.waypoint.y - this.y
+                    );
+                    
+                    // If we're close to a path defender, stop moving and prepare to engage
+                    if (distanceToWaypoint < 60) {
+                        this.reachedEnd = true;
+                        this.isAttackingCastle = false;
+                        // Will be attacked by defender in GameplayState combat handling
+                        return;
+                    }
+                }
             }
         }
         
-        // CASTLE DEFENDER LOGIC: Normal path following to reach the castle
+        // NORMAL PATH FOLLOWING: Continue to castle if no guard post blocks the way
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;

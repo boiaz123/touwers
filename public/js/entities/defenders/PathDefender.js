@@ -41,7 +41,7 @@ export class PathDefender extends DefenderBase {
         
         if (enemies && enemies.length > 0) {
             enemies.forEach(enemy => {
-                if (!enemy.isDead || !enemy.isDead()) {
+                if (!enemy.isDead()) {
                     const distance = Math.hypot(enemy.x - this.x, enemy.y - this.y);
                     if (distance < closestDistance) {
                         closestDistance = distance;
