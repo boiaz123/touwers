@@ -173,13 +173,8 @@ export class MainMenu {
             return;
         }
 
-        // While animating: don't handle clicks (except for the initial continue click)
-        if (this.transitionActive && this.transitionTime > 0) {
-            return;
-        }
-
-        // After smoke fades (transitionTime >= 1.8) OR buttons are already showing: handle button clicks
-        if (this.transitionTime >= 1.8 || (!this.transitionActive && this.showButtons)) {
+        // Handle button clicks as soon as buttons are visible, even during transition
+        if (this.showButtons) {
             for (let i = 0; i < this.buttons.length; i++) {
                 const button = this.buttons[i];
                 const pos = this.getButtonPosition(i);
