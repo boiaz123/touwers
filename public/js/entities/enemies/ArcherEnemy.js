@@ -349,16 +349,16 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.fillStyle = '#A0826D';
         ctx.beginPath();
         ctx.moveTo(0, -baseSize * 0.3);
-        ctx.quadraticCurveTo(baseSize * 1.0, -baseSize * 1.0, baseSize * 0.7, -baseSize * 1.4);
-        ctx.quadraticCurveTo(baseSize * 0.6, -baseSize * 1.3, baseSize * 0.2, -baseSize * 1.1);
+        ctx.quadraticCurveTo(-baseSize * 1.0, -baseSize * 1.0, -baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 0.6, -baseSize * 1.3, -baseSize * 0.2, -baseSize * 1.1);
         ctx.closePath();
         ctx.fill();
         
         // Lower limb
         ctx.beginPath();
         ctx.moveTo(0, baseSize * 0.3);
-        ctx.quadraticCurveTo(baseSize * 1.0, baseSize * 1.0, baseSize * 0.7, baseSize * 1.4);
-        ctx.quadraticCurveTo(baseSize * 0.6, baseSize * 1.3, baseSize * 0.2, baseSize * 1.1);
+        ctx.quadraticCurveTo(-baseSize * 1.0, baseSize * 1.0, -baseSize * 0.7, baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 0.6, baseSize * 1.3, -baseSize * 0.2, baseSize * 1.1);
         ctx.closePath();
         ctx.fill();
         
@@ -371,13 +371,13 @@ export class ArcherEnemy extends BaseEnemy {
         // Upper limb outline
         ctx.beginPath();
         ctx.moveTo(0, -baseSize * 0.3);
-        ctx.quadraticCurveTo(baseSize * 1.0, -baseSize * 1.0, baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 1.0, -baseSize * 1.0, -baseSize * 0.7, -baseSize * 1.4);
         ctx.stroke();
         
         // Lower limb outline
         ctx.beginPath();
         ctx.moveTo(0, baseSize * 0.3);
-        ctx.quadraticCurveTo(baseSize * 1.0, baseSize * 1.0, baseSize * 0.7, baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 1.0, baseSize * 1.0, -baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
         // Bowstring - tan/beige color, connecting the tips
@@ -388,8 +388,8 @@ export class ArcherEnemy extends BaseEnemy {
         
         // String from upper tip to lower tip - tight curve following bow shape
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.7, -baseSize * 1.4);
-        ctx.quadraticCurveTo(baseSize * 0.9, 0, baseSize * 0.7, baseSize * 1.4);
+        ctx.moveTo(-baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 0.9, 0, -baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
         // Bowstring highlight for depth
@@ -397,41 +397,41 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.lineWidth = baseSize * 0.08;
         
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.7, -baseSize * 1.4);
-        ctx.quadraticCurveTo(baseSize * 0.9, 0, baseSize * 0.7, baseSize * 1.4);
+        ctx.moveTo(-baseSize * 0.7, -baseSize * 1.4);
+        ctx.quadraticCurveTo(-baseSize * 0.9, 0, -baseSize * 0.7, baseSize * 1.4);
         ctx.stroke();
         
         // Nocking point (where arrow sits on string)
         ctx.fillStyle = '#C19A6B';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.strokeStyle = '#8B7500';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.75, 0, baseSize * 0.15, 0, Math.PI * 2);
         ctx.stroke();
         
         // Bow tips - reinforced nocks
         ctx.fillStyle = '#D4AF37';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
         
         // Tip outlines
         ctx.strokeStyle = '#8B7500';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.7, -baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.stroke();
         
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.7, baseSize * 1.4, baseSize * 0.18, 0, Math.PI * 2);
         ctx.stroke();
         
         ctx.restore();
