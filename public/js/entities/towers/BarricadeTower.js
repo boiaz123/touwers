@@ -49,9 +49,22 @@ export class BarricadeTower extends Tower {
             barrel.rotation += barrel.rotationSpeed * deltaTime;
             barrel.life -= deltaTime;
             
-            const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
+            // Determine target position - use target's current position (alive or dead), or fallback if gone
+            let targetX = barrel.targetX;
+            let targetY = barrel.targetY;
+            if (barrel.target) {
+                // Always use target's current position (works for alive and dead enemies)
+                targetX = barrel.target.x;
+                targetY = barrel.target.y;
+            } else if (barrel.fallbackX != null) {
+                // If target is completely gone, use fallback position
+                targetX = barrel.fallbackX;
+                targetY = barrel.fallbackY;
+            }
+            
+            const distanceToTarget = Math.hypot(barrel.x - targetX, barrel.y - targetY);
             if (barrel.life <= 0 || distanceToTarget < 20) {
-                this.createSmokeZone(barrel.targetX, barrel.targetY);
+                this.createSmokeZone(targetX, targetY);
                 return false;
             }
             return true;
@@ -141,7 +154,10 @@ export class BarricadeTower extends Tower {
                     life: barrelLife,
                     targetX: targetX,
                     targetY: targetY,
-                    size: 8
+                    size: 8,
+                    target: this.target,
+                    fallbackX: this.target.x,
+                    fallbackY: this.target.y
                 });
                 
                 setTimeout(() => {

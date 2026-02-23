@@ -117,8 +117,21 @@ export class PoisonArcherTower extends Tower {
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
+            // Determine target position - use target's current position (alive or dead), or fallback if gone
+            let targetX = arrow.targetX;
+            let targetY = arrow.targetY;
+            if (arrow.target) {
+                // Always use target's current position (works for alive and dead enemies)
+                targetX = arrow.target.x;
+                targetY = arrow.target.y;
+            } else if (arrow.fallbackX != null) {
+                // If target is completely gone, use fallback position
+                targetX = arrow.fallbackX;
+                targetY = arrow.fallbackY;
+            }
+            
             // Check if arrow hits target area (within 15px of target position)
-            if (arrow.life <= 0 || Math.hypot(arrow.x - arrow.targetX, arrow.y - arrow.targetY) < 15) {
+            if (arrow.life <= 0 || Math.hypot(arrow.x - targetX, arrow.y - targetY) < 15) {
                 // Only poison the intended target - find closest enemy to impact point
                 let hitTarget = null;
                 let minDist = 20; // Only hit if very close
@@ -221,7 +234,10 @@ export class PoisonArcherTower extends Tower {
                 rotation: Math.atan2(dy, dx),
                 life: distance / Math.max(arrowSpeed, 1) + 0.5,
                 targetX: predicted.x,
-                targetY: predicted.y
+                targetY: predicted.y,
+                target: this.target,
+                fallbackX: this.target.x,
+                fallbackY: this.target.y
             });
         }
     }

@@ -53,8 +53,16 @@ export class BasicTower extends Tower {
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
-            if (rock.target && !rock.target.isDead()) {
+            // Check if rock hits target (alive or dead) or fallback position
+            if (rock.target) {
+                // Always check distance to target's current position (works for alive and dead enemies)
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
+                if (dist <= 15) {
+                    return false;
+                }
+            } else if (rock.fallbackX != null) {
+                // If target is completely gone, use fallback position
+                const dist = Math.hypot(rock.x - rock.fallbackX, rock.y - rock.fallbackY);
                 if (dist <= 15) {
                     return false;
                 }
@@ -107,7 +115,9 @@ export class BasicTower extends Tower {
                     rotationSpeed: Math.random() * 10 + 5,
                     life: distance / Math.max(throwSpeed, 1) + 1,
                     size: Math.random() * 2 + 3,
-                    target: this.target
+                    target: this.target,
+                    fallbackX: this.target.x,
+                    fallbackY: this.target.y
                 });
             }
         }

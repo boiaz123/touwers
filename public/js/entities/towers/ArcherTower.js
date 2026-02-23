@@ -49,6 +49,21 @@ export class ArcherTower extends Tower {
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
+            // Check collision with target (alive or dead) or fallback position
+            if (arrow.target) {
+                // Always check distance to target's current position (works for alive and dead enemies)
+                const dist = Math.hypot(arrow.x - arrow.target.x, arrow.y - arrow.target.y);
+                if (dist <= 15) {
+                    return false;
+                }
+            } else if (arrow.fallbackX != null) {
+                // If target is completely gone, use fallback position
+                const dist = Math.hypot(arrow.x - arrow.fallbackX, arrow.y - arrow.fallbackY);
+                if (dist <= 15) {
+                    return false;
+                }
+            }
+            
             return arrow.life > 0;
         });
     }
@@ -103,8 +118,11 @@ export class ArcherTower extends Tower {
                 vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
                 vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
                 rotation: shooter.angle,
-                life: distance / Math.max(arrowSpeed, 1) + 0.5,
-                maxLife: distance / Math.max(arrowSpeed, 1) + 0.5
+                life: Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0),
+                maxLife: Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0),
+                target: this.target,
+                fallbackX: this.target.x,
+                fallbackY: this.target.y
             });
         }
     }

@@ -58,10 +58,23 @@ export class CannonTower extends Tower {
             fireball.life -= deltaTime;
             fireball.flameAnimation += deltaTime * 8;
             
+            // Determine impact position - use target's current position (alive or dead), or fallback if target is gone
+            let targetX = fireball.targetX;
+            let targetY = fireball.targetY;
+            if (fireball.target) {
+                // Always use target's current position (works for alive and dead enemies)
+                targetX = fireball.target.x;
+                targetY = fireball.target.y;
+            } else if (fireball.fallbackX != null) {
+                // If target is completely gone, use fallback position
+                targetX = fireball.fallbackX;
+                targetY = fireball.fallbackY;
+            }
+            
             if (fireball.life <= 0 || 
                 (fireball.life < fireball.maxLife * 0.5 && 
-                 Math.hypot(fireball.x - fireball.targetX, fireball.y - fireball.targetY) < 20)) {
-                this.explode(fireball.targetX, fireball.targetY, enemies);
+                 Math.hypot(fireball.x - targetX, fireball.y - targetY) < 20)) {
+                this.explode(targetX, targetY, enemies);
                 return false;
             }
             return true;
@@ -109,7 +122,10 @@ export class CannonTower extends Tower {
                 life: flightTime,
                 maxLife: flightTime,
                 targetX: predicted.x,
-                targetY: predicted.y
+                targetY: predicted.y,
+                target: this.target,
+                fallbackX: this.target.x,
+                fallbackY: this.target.y
             });
         }
     }
