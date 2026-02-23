@@ -1811,20 +1811,98 @@ export class GameplayState {
         if (!this.level || !this.towerManager || !this.enemyManager) {
             return; // Skip rendering if not fully initialized
         }
+        
+        // Render background terrain/level first
         this.level.render(ctx);
-        this.towerManager.render(ctx);
-        this.enemyManager.render(ctx);
         
-        // Render loot bags
-        this.lootManager.render(ctx);
+        // Collect all renderable entities (towers, buildings, enemies, loot, castle) 
+        // with their Y positions for unified depth sorting
+        const entities = [];
         
-        // Render castle on top of buildings/towers to ensure it appears in front
-        // This prevents buildings placed "behind" the castle from appearing on top of it
-        if (this.level.castle) {
-            this.level.castle.render(ctx);
+        // Add towers with render function
+        if (this.towerManager && this.towerManager.towers) {
+            this.towerManager.towers.forEach(tower => {
+                entities.push({
+                    y: tower.y,
+                    render: () => tower.render(ctx),
+                    type: 'tower'
+                });
+            });
         }
         
-        // Render defender if active
+        // Add buildings with render function
+        if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
+            this.towerManager.buildingManager.buildings.forEach(building => {
+                entities.push({
+                    y: building.y,
+                    render: () => {
+                        const cellSize = building.getCellSize(ctx);
+                        const buildingSize = cellSize * building.size;
+                        ctx.buildingManager = this.towerManager.buildingManager;
+                        building.render(ctx, buildingSize);
+                        delete ctx.buildingManager;
+                    },
+                    type: 'building'
+                });
+            });
+        }
+        
+        // Add enemies with render function
+        if (this.enemyManager && this.enemyManager.enemies) {
+            this.enemyManager.enemies.forEach(enemy => {
+                entities.push({
+                    y: enemy.y,
+                    render: () => {
+                        enemy.render(ctx);
+                        // Render splatters from this enemy
+                        if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                            for (let j = 0; j < enemy.hitSplatters.length; j++) {
+                                enemy.hitSplatters[j].render(ctx);
+                            }
+                        }
+                    },
+                    type: 'enemy'
+                });
+            });
+        }
+        
+        // Add loot bags with render function
+        if (this.lootManager) {
+            if (this.lootManager.lootBags) {
+                this.lootManager.lootBags.forEach(lootBag => {
+                    entities.push({
+                        y: lootBag.y,
+                        render: () => lootBag.render(ctx),
+                        type: 'loot'
+                    });
+                });
+            }
+        }
+        
+        // Add castle with render function
+        if (this.level.castle) {
+            entities.push({
+                y: this.level.castle.y,
+                render: () => this.level.castle.render(ctx),
+                type: 'castle'
+            });
+        }
+        
+        // Sort all entities by Y position for proper depth ordering (bottom-to-top perspective)
+        // Entities lower on screen (higher Y) are rendered last (on top)
+        entities.sort((a, b) => a.y - b.y);
+        
+        // Render all entities in sorted order
+        entities.forEach(entity => entity.render());
+        
+        // Render orphaned splatters from dead enemies
+        if (this.enemyManager && this.enemyManager.orphanedSplatters) {
+            for (let i = 0; i < this.enemyManager.orphanedSplatters.length; i++) {
+                this.enemyManager.orphanedSplatters[i].render(ctx);
+            }
+        }
+        
+        // Render defender if active (after all main entities)
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             this.level.castle.defender.render(ctx);
         }

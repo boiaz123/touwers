@@ -850,8 +850,12 @@ export class TowerManager {
     }
     
     render(ctx) {
-        // Render all towers
-        this.towers.forEach(tower => {
+        // Sort towers by Y position for proper depth ordering (bottom-to-top perspective)
+        // Entities lower on screen (higher Y) are rendered last (on top)
+        const sortedTowers = [...this.towers].sort((a, b) => a.y - b.y);
+        
+        // Render all towers in sorted order
+        sortedTowers.forEach(tower => {
             tower.render(ctx);
         });
         

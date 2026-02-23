@@ -235,10 +235,14 @@ export class EnemyManager {
     }
     
     render(ctx) {
+        // Sort enemies by Y position for proper depth ordering (bottom-to-top perspective)
+        // Entities lower on screen (higher Y) are rendered last (on top)
+        const sortedEnemies = [...this.enemies].sort((a, b) => a.y - b.y);
+        
         // OPTIMIZATION: Consolidate rendering into single loop
         // Render all enemies and their splatters in one pass
-        for (let i = 0; i < this.enemies.length; i++) {
-            const enemy = this.enemies[i];
+        for (let i = 0; i < sortedEnemies.length; i++) {
+            const enemy = sortedEnemies[i];
             enemy.render(ctx);
             
             // Render splatters from this enemy

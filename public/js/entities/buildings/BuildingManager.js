@@ -185,7 +185,11 @@ export class BuildingManager {
     }
     
     render(ctx) {
-        this.buildings.forEach(building => this.renderBuilding(ctx, building));
+        // Sort buildings by Y position for proper depth ordering (bottom-to-top perspective)
+        // Entities lower on screen (higher Y) are rendered last (on top)
+        const sortedBuildings = [...this.buildings].sort((a, b) => a.y - b.y);
+        
+        sortedBuildings.forEach(building => this.renderBuilding(ctx, building));
     }
     
     renderBuilding(ctx, building) {
