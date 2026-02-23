@@ -1538,7 +1538,14 @@ export class GameplayState {
         
         this.defendersCacheNeedsUpdate = false;
         
-        // UPDATE DEFENDERS FIRST
+        // FIRST: Update enemy positions (enemies move to defenders)
+        if (this.enemyManager) {
+            this.enemyManager.update(adjustedDeltaTime);
+            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
+        }
+        
+        // SECOND: Update defenders AFTER enemies have moved to them
+        // This ensures defenders see current enemy positions and can attack
         // Update castle defender
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             const defender = this.level.castle.defender;
@@ -1550,12 +1557,6 @@ export class GameplayState {
             for (let i = 0; i < guardPostTowers.length; i++) {
                 guardPostTowers[i].update(adjustedDeltaTime, this.enemyManager.enemies, this.gameState);
             }
-        }
-        
-        // THEN update enemy positions
-        if (this.enemyManager) {
-            this.enemyManager.update(adjustedDeltaTime);
-            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
         }
         
         // Update loot bags

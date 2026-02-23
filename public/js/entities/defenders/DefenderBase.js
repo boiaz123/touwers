@@ -24,7 +24,7 @@ export class DefenderBase {
         this.attackDamage = this.getAttackDamage();
         this.attackSpeed = this.getAttackSpeed();
         this.attackCooldown = 0;
-        this.attackRange = 50;
+        this.attackRange = 80; // Enemies stop at 60 units, so range must be at least 70-80 to guarantee engagement
         
         // Animation properties
         this.animationTime = 0;
