@@ -18,8 +18,8 @@ export class LevelDesigner {
         this.pathPoints = [];
         this.castlePosition = null;
         this.currentCampaign = 'forest'; // Track selected campaign
-        this.mode = 'path'; // 'path', 'castle', 'terrain'
-        this.terrainMode = null; // 'tree', 'rock', 'water' when in terrain mode
+        this.mode = null; // No default mode - user selects
+        this.terrainMode = null; // 'vegetation', 'rock', 'water' when in terrain mode
         this.waterMode = null; // 'river' or 'lake' when placing water
         this.waterSize = 2; // Size for lake mode
         this.waves = [];
@@ -28,8 +28,11 @@ export class LevelDesigner {
         this.hoveredGridCell = null; // For visual feedback during mouse movement
         this.pathLocked = false; // Whether path editing is finished
         
+        // Confirmation system
+        this.confirmationCallback = null;
+        
         // Enemies and towers for form
-        this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog'];
+        this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog', 'frogking'];
         
         // Initialize
         this.setupCanvas();
@@ -70,12 +73,20 @@ export class LevelDesigner {
 
         // Toolbar buttons
         document.getElementById('drawPathBtn').addEventListener('click', () => this.setMode('path'));
-        document.getElementById('placeCastleBtn').addEventListener('click', () => this.setMode('castle'));
         document.getElementById('undoBtn').addEventListener('click', () => this.undo());
-        document.getElementById('clearBtn').addEventListener('click', () => this.clearPath());
+        document.getElementById('clearBtn').addEventListener('click', () => this.onClearClick());
         document.getElementById('exportBtn').addEventListener('click', () => this.exportLevel());
-        document.getElementById('finishPathBtn')?.addEventListener('click', () => this.finishPath());
-        document.getElementById('finishRiverBtn')?.addEventListener('click', () => this.finishRiverConfirm());
+        document.getElementById('finishPathBtn')?.addEventListener('click', () => this.onFinishPathClick());
+        document.getElementById('finishRiverBtn')?.addEventListener('click', () => this.onFinishRiverClick());
+        
+        // Confirmation modal controls
+        document.getElementById('confirmationCancel')?.addEventListener('click', () => this.closeConfirmation());
+        document.getElementById('confirmationOk')?.addEventListener('click', () => {
+            if (this.confirmationCallback) {
+                this.confirmationCallback();
+            }
+            this.closeConfirmation();
+        });
 
         // Terrain buttons
         document.getElementById('drawVegetationBtn')?.addEventListener('click', () => this.setTerrainMode('vegetation'));
@@ -102,14 +113,12 @@ export class LevelDesigner {
         // Load level modal controls
         document.getElementById('loadLevelCloseBtn').addEventListener('click', () => this.closeLoadLevelModal());
         document.getElementById('loadLevelCancelBtn').addEventListener('click', () => this.closeLoadLevelModal());
-        document.getElementById('loadLevelConfirmBtn').addEventListener('click', () => {
-            const select = document.getElementById('levelSelect');
-            if (select.value) {
-                this.loadLevel(select.value);
-            } else {
-                alert('Please select a level to load');
-            }
-        });
+        
+        // Campaign selector change
+        document.getElementById('campaignSelect')?.addEventListener('change', (e) => this.onCampaignSelectChange(e));
+        
+        // Level confirm button
+        document.getElementById('loadLevelConfirmBtn').addEventListener('click', () => this.onLoadLevelConfirm());
 
         // Close load level modal on overlay click
         document.getElementById('loadLevelModal').addEventListener('click', (e) => {
@@ -166,22 +175,27 @@ export class LevelDesigner {
         this.terrainMode = null;
         
         document.getElementById('drawPathBtn').classList.toggle('active', newMode === 'path');
-        document.getElementById('placeCastleBtn').classList.toggle('active', newMode === 'castle');
-        document.getElementById('drawTreeBtn')?.classList.toggle('active', false);
+        document.getElementById('drawVegetationBtn')?.classList.toggle('active', false);
         document.getElementById('drawRockBtn')?.classList.toggle('active', false);
         document.getElementById('drawWaterBtn')?.classList.toggle('active', false);
         
         // Show/hide finish path button
-        const finishPathBtn = document.getElementById('finishPathBtn');
-        if (finishPathBtn) {
-            finishPathBtn.style.display = newMode === 'path' ? 'inline-block' : 'none';
+        const finishPathControl = document.getElementById('finishPathControl');
+        if (finishPathControl) {
+            finishPathControl.style.visibility = newMode === 'path' ? 'visible' : 'hidden';
+        }
+        
+        // Hide river finish when leaving terrain mode
+        const finishRiverControl = document.getElementById('finishRiverControl');
+        if (finishRiverControl) {
+            finishRiverControl.style.visibility = 'hidden';
         }
         
         const pathInfo = document.getElementById('pathInfo');
         if (newMode === 'path') {
             pathInfo.textContent = '🖌️ Click to add path points. Right-click to remove last point. Click "Finish Path" when done.';
         } else {
-            pathInfo.textContent = '🏰 Click on canvas to place castle.';
+            pathInfo.textContent = '📍 Select a tool mode.';
         }
     }
 
@@ -191,34 +205,31 @@ export class LevelDesigner {
         this.waterMode = null; // Reset water mode
         
         document.getElementById('drawPathBtn').classList.toggle('active', false);
-        document.getElementById('placeCastleBtn').classList.toggle('active', false);
         document.getElementById('drawVegetationBtn')?.classList.toggle('active', terrainType === 'vegetation');
         document.getElementById('drawRockBtn')?.classList.toggle('active', terrainType === 'rock');
         document.getElementById('drawWaterBtn')?.classList.toggle('active', terrainType === 'water');
         
-        // Hide finish path button when leaving path mode
-        const finishPathBtn = document.getElementById('finishPathBtn');
-        if (finishPathBtn) {
-            finishPathBtn.style.display = 'none';
+        // Hide all finish controls when entering terrain mode
+        const finishPathControl = document.getElementById('finishPathControl');
+        if (finishPathControl) {
+            finishPathControl.style.visibility = 'hidden';
+        }
+        const finishRiverControl = document.getElementById('finishRiverControl');
+        if (finishRiverControl) {
+            finishRiverControl.style.visibility = 'hidden';
         }
         
-        // Show water mode buttons when water is selected
-        const waterRiverBtn = document.getElementById('waterRiverBtn');
-        const waterLakeBtn = document.getElementById('waterLakeBtn');
+        // Show water controls when water is selected
+        const waterControls = document.getElementById('waterControls');
         if (terrainType === 'water') {
-            if (waterRiverBtn) waterRiverBtn.style.display = 'inline-block';
-            if (waterLakeBtn) waterLakeBtn.style.display = 'inline-block';
+            if (waterControls) waterControls.style.visibility = 'visible';
         } else {
-            if (waterRiverBtn) waterRiverBtn.style.display = 'none';
-            if (waterLakeBtn) waterLakeBtn.style.display = 'none';
-            // Hide finish river button if not in river mode
-            const finishRiverBtn = document.getElementById('finishRiverBtn');
-            if (finishRiverBtn) finishRiverBtn.style.display = 'none';
+            if (waterControls) waterControls.style.visibility = 'hidden';
         }
         
         const pathInfo = document.getElementById('pathInfo');
-        const names = { vegetation: '🌲 Vegetation (random variety)', rock: '🪨 Rocks (random variety)', water: '💧 Water' };
-        pathInfo.textContent = `🎨 Click to place ${names[terrainType]}. Right-click to erase.`;
+        const names = { vegetation: '🌲 Vegetation', rock: '🪨 Rocks', water: '💧 Water' };
+        pathInfo.textContent = `Click to place ${names[terrainType]}. Right-click to erase.`;
     }
 
     setWaterMode(mode) {
@@ -226,29 +237,15 @@ export class LevelDesigner {
         document.getElementById('waterRiverBtn')?.classList.toggle('active', mode === 'river');
         document.getElementById('waterLakeBtn')?.classList.toggle('active', mode === 'lake');
         
-        // Show/hide finish river button
-        const finishRiverBtn = document.getElementById('finishRiverBtn');
-        if (finishRiverBtn) {
-            finishRiverBtn.style.display = mode === 'river' ? 'inline-block' : 'none';
-        }
-        
-        // Show/hide water size slider
-        const sizeSlider = document.getElementById('waterSizeSlider');
-        const sizeLabel = document.getElementById('waterSizeLabel');
-        if (mode === 'lake') {
-            if (sizeSlider) sizeSlider.style.display = 'inline-block';
-            if (sizeLabel) {
-                sizeLabel.style.display = 'inline-block';
-                sizeLabel.textContent = `Size: ${this.waterSize.toFixed(1)}`;
-            }
-        } else {
-            if (sizeSlider) sizeSlider.style.display = 'none';
-            if (sizeLabel) sizeLabel.style.display = 'none';
+        // Show/hide finish river button only for river mode
+        const finishRiverControl = document.getElementById('finishRiverControl');
+        if (finishRiverControl) {
+            finishRiverControl.style.visibility = mode === 'river' ? 'visible' : 'hidden';
         }
         
         const pathInfo = document.getElementById('pathInfo');
         if (mode === 'river') {
-            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" button when done.';
+            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" when done.';
             if (!this.riverPoints) {
                 this.riverPoints = [];
             }
@@ -311,10 +308,6 @@ export class LevelDesigner {
             // Snap path points to grid
             const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
             this.pathPoints.push(snapped);
-        } else if (this.mode === 'castle') {
-            // Snap castle to grid
-            const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
-            this.castlePosition = snapped;
         } else if (this.mode === 'terrain' && this.terrainMode) {
             if (this.waterMode === 'river') {
                 // Add point to river (not snapped for smooth curves)
@@ -420,49 +413,53 @@ export class LevelDesigner {
 
     finishPath() {
         if (this.pathPoints.length < 2) {
-            alert('Path must have at least 2 points!');
+            this.showConfirmation(
+                'Invalid Path',
+                'Path must have at least 2 points! You currently have ' + this.pathPoints.length + ' point(s).',
+                () => {} // No action on confirm
+            );
             return;
         }
         
-        // Auto-connect path end to castle (automatically)
+        // Place castle at the end of the path
         const lastPathPoint = this.pathPoints[this.pathPoints.length - 1];
-        const castleX = this.castlePosition.gridX;
-        const castleY = this.castlePosition.gridY;
-        
-        // Only add castle connection if not already very close
-        const distance = Math.hypot(castleX - lastPathPoint.gridX, castleY - lastPathPoint.gridY);
-        if (distance > 1) {
-            this.pathPoints.push({
-                gridX: castleX,
-                gridY: castleY
-            });
-        }
+        this.castlePosition = {
+            gridX: lastPathPoint.gridX,
+            gridY: lastPathPoint.gridY
+        };
         
         // Lock path editing
         this.pathLocked = true;
-        this.mode = null;
+        this.mode = 'path'; // Keep in path mode, just locked
         this.terrainMode = null;
         
         // Hide finish path button
-        const finishPathBtn = document.getElementById('finishPathBtn');
-        if (finishPathBtn) {
-            finishPathBtn.style.display = 'none';
+        const finishPathControl = document.getElementById('finishPathControl');
+        if (finishPathControl) {
+            finishPathControl.style.visibility = 'hidden';
         }
         
-        // Deselect all mode buttons
+        // Deselect path mode button
         document.getElementById('drawPathBtn').classList.remove('active');
-        document.getElementById('placeCastleBtn').classList.remove('active');
         
         const pathInfo = document.getElementById('pathInfo');
-        pathInfo.textContent = '✓ Path finished! Path automatically connected to castle. You can now edit terrain or export.';
+        pathInfo.textContent = '✓ Path finished! Castle automatically placed at path end. You can now edit terrain or export.';
         
         this.updateGeneratedCode();
         this.render();
     }
-
-    finishRiverConfirm() {
+    
+    onFinishPathClick() {
+        this.finishPath();
+    }
+    
+    onFinishRiverClick() {
         if (!this.riverPoints || this.riverPoints.length < 2) {
-            alert('River must have at least 2 waypoints!');
+            this.showConfirmation(
+                'Invalid River',
+                'River must have at least 2 waypoints! You currently have ' + (this.riverPoints ? this.riverPoints.length : 0) + ' waypoint(s).',
+                () => {} // No action on confirm
+            );
             return;
         }
         
@@ -474,9 +471,9 @@ export class LevelDesigner {
         this.waterMode = null;
         
         // Hide finish river button
-        const finishRiverBtn = document.getElementById('finishRiverBtn');
-        if (finishRiverBtn) {
-            finishRiverBtn.style.display = 'none';
+        const finishRiverControl = document.getElementById('finishRiverControl');
+        if (finishRiverControl) {
+            finishRiverControl.style.visibility = 'hidden';
         }
         
         // Reset water mode buttons
@@ -488,6 +485,14 @@ export class LevelDesigner {
         this.updateGeneratedCode();
         this.render();
     }
+    
+    onClearClick() {
+        this.showConfirmation(
+            'Clear All Path Points',
+            'Are you sure you want to clear all path points? This cannot be undone.',
+            () => this.clearPath()
+        );
+    }
 
     undo() {
         if (this.pathPoints.length > 0) {
@@ -498,11 +503,44 @@ export class LevelDesigner {
     }
 
     clearPath() {
-        if (confirm('Clear all path points?')) {
-            this.pathPoints = [];
-            this.updateGeneratedCode();
-            this.render();
+        this.pathPoints = [];
+        this.pathLocked = false;
+        this.updateGeneratedCode();
+        this.render();
+    }
+
+    /**
+     * Shows a confirmation modal with the given title and message
+     * @param {string} title - The title of the confirmation dialog
+     * @param {string} message - The message to display
+     * @param {function} callback - Function to call if user confirms
+     */
+    showConfirmation(title, message, callback) {
+        this.confirmationCallback = callback;
+        
+        const modal = document.getElementById('confirmationModal');
+        const titleEl = document.getElementById('confirmationTitle');
+        const messageEl = document.getElementById('confirmationMessage');
+        
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        
+        if (modal) {
+            modal.classList.add('active');
+            // Focus OK button for better UX
+            document.getElementById('confirmationOk')?.focus();
         }
+    }
+
+    /**
+     * Closes the confirmation modal
+     */
+    closeConfirmation() {
+        const modal = document.getElementById('confirmationModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        this.confirmationCallback = null;
     }
 
     handleResize() {
@@ -732,11 +770,8 @@ export class LevelDesigner {
         // Draw castle
         this.drawCastle();
 
-        // Draw current mode indicator
-        this.drawModeIndicator();
-        
-        // Draw campaign terrain info overlay
-        this.drawTerrainInfoOverlay();
+        // Draw unified mode and terrain info overlay
+        this.drawModeOverlay();
     }
 
     drawBackground() {
@@ -754,45 +789,125 @@ export class LevelDesigner {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    drawTerrainInfoOverlay() {
-        // Show current terrain type being placed
-        if (this.mode !== 'terrain' || !this.terrainMode) return;
-
-        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
-        const terrainDefaults = theme.terrainDefaults;
+    drawModeOverlay() {
+        // Unified mode and terrain information overlay - consistent format across all modes
         
-        let terrainText = '';
-        let color = '';
-        
-        if (this.terrainMode === 'tree') {
-            terrainText = `🌲 Placing ${this.currentCampaign.toUpperCase()} Trees`;
-            color = terrainDefaults.treeColor;
-        } else if (this.terrainMode === 'rock') {
-            terrainText = `🪨 Placing ${this.currentCampaign.toUpperCase()} Rocks`;
-            color = terrainDefaults.rockColor;
-        } else if (this.terrainMode === 'water') {
-            terrainText = `💧 Placing Water (${this.waterMode || 'select mode'})`;
-            color = '#4a6ba6';
+        // No mode selected
+        if (this.mode === null) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.ctx.fillRect(10, 10, 280, 50);
+            
+            this.ctx.fillStyle = '#ffa500';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText('📋 Select a tool to begin', 15, 20);
+            
+            this.ctx.fillStyle = '#b0b0b0';
+            this.ctx.font = '11px Arial';
+            this.ctx.fillText('Choose Path, Terrain, or Water mode', 15, 38);
+            return;
         }
         
-        if (terrainText) {
-            // Semi-transparent background box for text
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.ctx.fillRect(10, 10, 280, 40);
+        // Path mode
+        if (this.mode === 'path') {
+            // Main mode label
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.ctx.fillRect(10, 10, 200, 40);
             
-            // Text
+            this.ctx.fillStyle = '#58c4dc';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText('🛤️ Mode: PATH', 15, 15);
+            
+            // Waypoint counter box (if editing)
+            if (this.pathPoints && !this.pathLocked) {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                this.ctx.fillRect(10, 55, 250, 70);
+                
+                this.ctx.fillStyle = '#58c4dc';
+                this.ctx.font = 'bold 14px Arial';
+                this.ctx.fillText(`Waypoints: ${this.pathPoints.length}`, 15, 60);
+                
+                this.ctx.fillStyle = '#90caf9';
+                this.ctx.font = '11px Arial';
+                this.ctx.fillText('Right-click to remove last', 15, 78);
+                this.ctx.fillText('Click "Finish Path" button when done', 15, 92);
+            }
+            return;
+        }
+        
+        // Terrain mode
+        if (this.mode === 'terrain' && this.terrainMode) {
+            const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
+            const terrainDefaults = theme.terrainDefaults;
+            
+            let modeIcon = '';
+            let modeLabel = '';
+            let modeColor = '';
+            let secondaryInfo = '';
+
+            if (this.terrainMode === 'vegetation') {
+                modeIcon = '🌲';
+                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Vegetation`;
+                modeColor = terrainDefaults.treeColor;
+            } else if (this.terrainMode === 'rock') {
+                modeIcon = '🪨';
+                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Rocks`;
+                modeColor = terrainDefaults.rockColor;
+            } else if (this.terrainMode === 'water') {
+                if (this.waterMode === 'river') {
+                    modeIcon = '🌊';
+                    modeLabel = 'Mode: RIVER';
+                    modeColor = '#1e90ff';
+                    secondaryInfo = `Waypoints: ${this.riverPoints ? this.riverPoints.length : 0}`;
+                } else if (this.waterMode === 'lake') {
+                    modeIcon = '💧';
+                    modeLabel = 'Mode: LAKES';
+                    modeColor = '#0277bd';
+                } else {
+                    modeIcon = '💧';
+                    modeLabel = 'Water Mode (select type)';
+                    modeColor = '#4a6ba6';
+                }
+            }
+            
+            // Main terrain label with icon
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.ctx.fillRect(10, 10, 300, 45);
+            
             this.ctx.fillStyle = '#ffffff';
             this.ctx.font = 'bold 14px Arial';
-            this.ctx.fillText(terrainText, 20, 32);
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText(`${modeIcon} ${modeLabel}`, 15, 15);
             
-            // Color preview circle
-            this.ctx.fillStyle = color;
-            this.ctx.beginPath();
-            this.ctx.arc(260, 28, 10, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#ffffff';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
+            // Color preview circle for terrain types
+            if (this.terrainMode !== 'water' || this.waterMode === 'lake') {
+                this.ctx.fillStyle = modeColor;
+                this.ctx.beginPath();
+                this.ctx.arc(285, 28, 10, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+            
+            // Secondary info box for water modes with waypoints
+            if (secondaryInfo) {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                this.ctx.fillRect(10, 60, 250, 70);
+                
+                this.ctx.fillStyle = modeColor;
+                this.ctx.font = 'bold 14px Arial';
+                this.ctx.fillText(secondaryInfo, 15, 65);
+                
+                this.ctx.fillStyle = '#90caf9';
+                this.ctx.font = '11px Arial';
+                this.ctx.fillText('Right-click to remove last', 15, 83);
+                this.ctx.fillText('Click "Finish River" button when done', 15, 97);
+            }
         }
     }
 
@@ -990,7 +1105,7 @@ export class LevelDesigner {
     }
 
     drawCastle() {
-        if (!this.castlePosition) return;
+        if (!this.castlePosition || !this.pathLocked) return;
 
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
@@ -2813,52 +2928,6 @@ export class LevelDesigner {
         this.ctx.fill();
     }
 
-    drawModeIndicator() {
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.fillRect(10, 10, 150, 30);
-
-        this.ctx.fillStyle = '#90caf9';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'top';
-        const modeText = this.terrainMode ? `${this.mode.toUpperCase()}: ${this.terrainMode.toUpperCase()}` : this.mode.toUpperCase();
-        this.ctx.fillText(`Mode: ${modeText}`, 15, 15);
-
-        // Draw path waypoint counter if in path editing mode
-        if (this.mode === 'path' && this.pathPoints && !this.pathLocked) {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.ctx.fillRect(10, 50, 250, 60);
-
-            this.ctx.fillStyle = '#58c4dc';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText(`Path Waypoints: ${this.pathPoints.length}`, 15, 55);
-
-            this.ctx.fillStyle = '#90caf9';
-            this.ctx.font = '11px Arial';
-            this.ctx.fillText('Right-click to remove last', 15, 72);
-            this.ctx.fillText('Click "Finish Path" button when done', 15, 85);
-        }
-
-        // Draw river waypoint counter if in river mode
-        if (this.mode === 'terrain' && this.waterMode === 'river' && this.riverPoints) {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            this.ctx.fillRect(10, 50, 250, 60);
-
-            this.ctx.fillStyle = '#1e90ff';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText(`River Waypoints: ${this.riverPoints.length}`, 15, 55);
-
-            this.ctx.fillStyle = '#90caf9';
-            this.ctx.font = '11px Arial';
-            this.ctx.fillText('Right-click to remove last', 15, 72);
-            this.ctx.fillText('Click "Finish River" button when done', 15, 85);
-        }
-    }
-
     drawRiversSmooth() {
         // Draw smooth river paths using line rendering for automatic corner smoothing
         // This creates smooth transitions where rivers meet at corners
@@ -3095,7 +3164,11 @@ ${pathCode}
 
     exportLevel() {
         if (this.pathPoints.length < 2) {
-            alert('Path must have at least 2 points!');
+            this.showConfirmation(
+                'Invalid Path',
+                'Path must have at least 2 points! You currently have ' + this.pathPoints.length + ' point(s).',
+                () => {} // No action on confirm
+            );
             return;
         }
 
@@ -3126,8 +3199,14 @@ ${pathCode}
         const modal = document.getElementById('loadLevelModal');
         modal.classList.add('active');
         
-        // Populate level select dropdown
-        this.populateLevelSelect();
+        // Populate campaign select dropdown first
+        this.populateCampaignSelect();
+        
+        // Clear level select
+        const levelSelect = document.getElementById('levelSelect');
+        while (levelSelect.options.length > 1) {
+            levelSelect.remove(1);
+        }
     }
 
     /**
@@ -3139,9 +3218,57 @@ ${pathCode}
     }
 
     /**
-     * Populate the level select dropdown with available levels
+     * Populate the campaign select dropdown
      */
-    async populateLevelSelect() {
+    populateCampaignSelect() {
+        const select = document.getElementById('campaignSelect');
+        if (!select) return;
+        
+        // Clear existing options except placeholder
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        // Define available campaigns
+        const campaigns = [
+            { value: 'Campaign1', label: 'Campaign 1 - Classic' },
+            { value: 'Campaign5', label: 'Campaign 5' },
+            { value: 'Forest', label: 'Forest Campaign' },
+            { value: 'Mountain', label: 'Mountain Campaign' },
+            { value: 'Desert', label: 'Desert Campaign' },
+            { value: 'Space', label: 'Space Campaign' }
+        ];
+
+        campaigns.forEach(campaign => {
+            const option = document.createElement('option');
+            option.value = campaign.value;
+            option.textContent = campaign.label;
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Handle campaign selection change
+     */
+    onCampaignSelectChange(event) {
+        const campaignName = event.target.value;
+        if (!campaignName) {
+            // Clear level select if no campaign chosen
+            const levelSelect = document.getElementById('levelSelect');
+            while (levelSelect.options.length > 1) {
+                levelSelect.remove(1);
+            }
+            return;
+        }
+        
+        // Populate levels for the selected campaign
+        this.populateLevelsForCampaign(campaignName);
+    }
+
+    /**
+     * Populate level select based on selected campaign
+     */
+    populateLevelsForCampaign(campaignName) {
         const select = document.getElementById('levelSelect');
         
         // Clear existing options except placeholder
@@ -3149,21 +3276,81 @@ ${pathCode}
             select.remove(1);
         }
 
-        // List of available levels - these are the Campaign1 levels
-        const availableLevels = [
-            { value: 'Campaign1.Level1', label: 'Level 1 - The King\'s Road' },
-            { value: 'Campaign1.Level2', label: 'Level 2 - The Dark Forest' },
-            { value: 'Campaign1.Level3', label: 'Level 3 - Mountain Pass' },
-            { value: 'Campaign1.Level4', label: 'Level 4 - Swamp Crossing' },
-            { value: 'Campaign1.Level5', label: 'Level 5 - Dragon\'s Lair' }
-        ];
+        // Level definitions per campaign
+        const levelsByCampaign = {
+            'Campaign1': [
+                { value: 'Campaign1.Level1', label: 'Level 1' },
+                { value: 'Campaign1.Level2', label: 'Level 2' },
+                { value: 'Campaign1.Level3', label: 'Level 3' },
+                { value: 'Campaign1.Level4', label: 'Level 4' },
+                { value: 'Campaign1.Level5', label: 'Level 5' }
+            ],
+            'Campaign5': [
+                { value: 'Campaign5.Level2', label: 'Level 2' },
+                { value: 'Campaign5.Level8', label: 'Level 8' },
+                { value: 'Campaign5.SandboxLevel', label: 'Sandbox Level' }
+            ],
+            'Forest': [
+                { value: 'Forest.ForestLevel1', label: 'Forest Level 1' },
+                { value: 'Forest.ForestLevel2', label: 'Forest Level 2' },
+                { value: 'Forest.ForestLevel3', label: 'Forest Level 3' },
+                { value: 'Forest.ForestLevel4', label: 'Forest Level 4' },
+                { value: 'Forest.ForestLevel5', label: 'Forest Level 5' }
+            ],
+            'Mountain': [
+                { value: 'Mountain.MountainLevel1', label: 'Mountain Level 1' },
+                { value: 'Mountain.MountainLevel2', label: 'Mountain Level 2' },
+                { value: 'Mountain.MountainLevel3', label: 'Mountain Level 3' },
+                { value: 'Mountain.MountainLevel4', label: 'Mountain Level 4' },
+                { value: 'Mountain.MountainLevel5', label: 'Mountain Level 5' },
+                { value: 'Mountain.MountainLevel6', label: 'Mountain Level 6' },
+                { value: 'Mountain.MountainLevel7', label: 'Mountain Level 7' },
+                { value: 'Mountain.MountainLevel8', label: 'Mountain Level 8' },
+                { value: 'Mountain.MountainLevel9', label: 'Mountain Level 9' },
+                { value: 'Mountain.MountainLevel10', label: 'Mountain Level 10' }
+            ],
+            'Desert': [
+                { value: 'Desert.DesertLevel1', label: 'Desert Level 1' },
+                { value: 'Desert.DesertLevel2', label: 'Desert Level 2' },
+                { value: 'Desert.DesertLevel3', label: 'Desert Level 3' },
+                { value: 'Desert.DesertLevel4', label: 'Desert Level 4' },
+                { value: 'Desert.DesertLevel5', label: 'Desert Level 5' },
+                { value: 'Desert.DesertLevel6', label: 'Desert Level 6' },
+                { value: 'Desert.DesertLevel7', label: 'Desert Level 7' },
+                { value: 'Desert.DesertLevel8', label: 'Desert Level 8' },
+                { value: 'Desert.DesertLevel9', label: 'Desert Level 9' },
+                { value: 'Desert.DesertLevel10', label: 'Desert Level 10' }
+            ],
+            'Space': [
+                { value: 'Space.SpaceLevel1', label: 'Space Level 1' },
+                { value: 'Space.SpaceLevel2', label: 'Space Level 2' }
+            ]
+        };
 
-        availableLevels.forEach(level => {
+        const levels = levelsByCampaign[campaignName] || [];
+        levels.forEach(level => {
             const option = document.createElement('option');
             option.value = level.value;
             option.textContent = level.label;
             select.appendChild(option);
         });
+    }
+
+    /**
+     * Handle the load level confirm button click
+     */
+    onLoadLevelConfirm() {
+        const levelSelect = document.getElementById('levelSelect');
+        if (!levelSelect.value) {
+            this.showConfirmation(
+                'No Level Selected',
+                'Please select a level to load.',
+                () => {} // No action on confirm
+            );
+            return;
+        }
+        
+        this.loadLevel(levelSelect.value);
     }
 
     /**
@@ -3235,6 +3422,15 @@ ${pathCode}
                         gridY: Math.round(point.y / cellSize)
                     }));
                     this.pathLocked = true;
+                    
+                    // Place castle at the end of the loaded path
+                    if (this.pathPoints.length > 0) {
+                        const lastPoint = this.pathPoints[this.pathPoints.length - 1];
+                        this.castlePosition = {
+                            gridX: lastPoint.gridX,
+                            gridY: lastPoint.gridY
+                        };
+                    }
                 }
             }
             

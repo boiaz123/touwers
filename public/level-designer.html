@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            min-width: 0;
         }
 
         .canvas-wrapper {
@@ -52,22 +53,52 @@
 
         .canvas-toolbar {
             display: flex;
-            gap: 10px;
+            gap: 4px;
             background: #2a2a2a;
-            padding: 10px;
+            padding: 6px;
             border-radius: 8px;
             border: 1px solid #444;
-            flex-wrap: wrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            min-height: 40px;
+            align-items: center;
+        }
+        
+        .canvas-toolbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        
+        .canvas-toolbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .canvas-toolbar::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 2px;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            white-space: nowrap;
+        }
+        
+        .toolbar-group-label {
+            font-size: 12px;
+            color: #90caf9;
+            font-weight: 600;
+            margin-left: 4px;
         }
 
         button {
-            padding: 8px 16px;
+            padding: 6px 12px;
             background: #0e639c;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             transition: background 0.2s;
         }
 
@@ -88,10 +119,11 @@
         }
 
         .form-section {
-            width: 350px;
+            width: 380px;
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             overflow-y: auto;
             padding-right: 10px;
         }
@@ -112,25 +144,25 @@
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 5px;
         }
 
         .form-group label {
             font-weight: 600;
-            font-size: 13px;
+            font-size: 12px;
             color: #90caf9;
         }
 
         .form-group input,
         .form-group select,
         .form-group textarea {
-            padding: 8px;
+            padding: 6px;
             background: #3a3a3a;
             color: #e0e0e0;
             border: 1px solid #444;
             border-radius: 4px;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .form-group input:focus,
@@ -142,16 +174,16 @@
         }
 
         .color-input {
-            height: 40px;
+            height: 32px;
             cursor: pointer;
         }
 
         .form-section-title {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
             color: #58c4dc;
-            margin-top: 10px;
-            padding-bottom: 8px;
+            margin-top: 8px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #444;
         }
 
@@ -237,9 +269,9 @@
         .output-section {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
-            padding-top: 15px;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
             border-top: 1px solid #444;
         }
 
@@ -247,10 +279,10 @@
             background: #1e1e1e;
             border: 1px solid #444;
             border-radius: 4px;
-            padding: 10px;
+            padding: 8px;
             font-family: 'Courier New', monospace;
-            font-size: 11px;
-            max-height: 150px;
+            font-size: 10px;
+            max-height: 120px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
@@ -268,10 +300,86 @@
         .path-info {
             background: #3a5731;
             color: #9ecf6f;
-            padding: 8px;
+            padding: 10px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 13px;
             text-align: center;
+            font-weight: 500;
+        }
+        
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1500;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .confirmation-modal.active {
+            display: flex;
+        }
+        
+        .confirmation-content {
+            background: #2a2a2a;
+            border: 2px solid #0e639c;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+        }
+        
+        .confirmation-title {
+            color: #58c4dc;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .confirmation-message {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .confirmation-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .confirmation-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .confirmation-buttons .confirm-cancel {
+            background: #444;
+            color: #e0e0e0;
+        }
+        
+        .confirmation-buttons .confirm-cancel:hover {
+            background: #555;
+        }
+        
+        .confirmation-buttons .confirm-ok {
+            background: #20a050;
+            color: white;
+        }
+        
+        .confirmation-buttons .confirm-ok:hover {
+            background: #2acc60;
         }
 
         .status-message {
@@ -517,26 +625,27 @@
         .waves-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            max-height: 250px;
-            min-height: 180px;
+            gap: 8px;
+            max-height: 200px;
+            min-height: 120px;
             overflow-y: auto;
-            padding: 10px 0;
+            padding: 8px 0;
         }
 
         .wave-card {
             background: #3a3a3a;
-            border-left: 4px solid #0e639c;
+            border-left: 3px solid #0e639c;
             border-radius: 4px;
-            padding: 15px;
+            padding: 10px;
             display: flex;
             justify-content: space-between;
             align-items: start;
+            gap: 8px;
         }
 
         .wave-card-info {
             flex: 1;
-            font-size: 13px;
+            font-size: 11px;
         }
 
         .wave-card-title {
@@ -560,8 +669,8 @@
         }
 
         .wave-card-actions button {
-            padding: 6px 10px;
-            font-size: 12px;
+            padding: 4px 8px;
+            font-size: 11px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -593,23 +702,43 @@
         <div class="canvas-section">
             <h1 style="font-size: 24px; color: #58c4dc;">Touwers Level Designer</h1>
             <div class="canvas-toolbar">
-                <button id="drawPathBtn" class="active">🖌️ Draw Path</button>
-                <button id="placeCastleBtn">🏰 Place Castle</button>
-                <button id="drawVegetationBtn">🌲 Place Vegetation</button>
-                <button id="drawRockBtn">🪨 Place Rocks</button>
-                <button id="drawWaterBtn">💧 Place Water</button>
-                <button id="waterRiverBtn" style="display: none; font-size: 12px;">🌊 River</button>
-                <button id="waterLakeBtn" style="display: none; font-size: 12px;">💧 Lake</button>
-                <input type="range" id="waterSizeSlider" style="display: none; width: 100px; vertical-align: middle; margin: 0 5px;" min="1" max="4" step="0.5" value="2">
-                <span id="waterSizeLabel" style="display: none; font-size: 12px; color: #90caf9; margin-left: 5px;"></span>
-                <button id="finishPathBtn" style="display: none; background: #20a050;">✓ Finish Path</button>
-                <button id="finishRiverBtn" style="display: none; background: #20a050;">✓ Finish River</button>
-                <button id="undoBtn">↶ Undo</button>
-                <button id="clearBtn" class="danger">🗑️ Clear Path</button>
-                <button id="loadLevelBtn">📂 Load Level</button>
-                <button id="exportBtn">📥 Export Level</button>
+                <div class="toolbar-group">
+                    <button id="drawPathBtn" class="active" title="Draw the enemy path">🖌️ Path</button>
+                </div>
+                
+                <div class="toolbar-group">
+                    <span class="toolbar-group-label">Terrain:</span>
+                    <button id="drawVegetationBtn" title="Place vegetation">🌲 Vegetation</button>
+                    <button id="drawRockBtn" title="Place rocks">🪨 Rocks</button>
+                    <button id="drawWaterBtn" title="Place water">💧 Water</button>
+                </div>
+                
+                <div class="toolbar-group" id="waterControls" style="visibility: hidden;">
+                    <span class="toolbar-group-label">Water:</span>
+                    <button id="waterRiverBtn" title="Draw rivers">🌊 River</button>
+                    <button id="waterLakeBtn" title="Place lakes">💧 Lake</button>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <input type="range" id="waterSizeSlider" style="width: 100px; vertical-align: middle;" min="1" max="4" step="0.5" value="2">
+                        <span id="waterSizeLabel" style="font-size: 12px; color: #90caf9; min-width: 35px;"></span>
+                    </div>
+                </div>
+                
+                <div class="toolbar-group" id="finishPathControl" style="visibility: hidden;">
+                    <button id="finishPathBtn" style="background: #20a050;" title="Confirm path">✓ Finish Path</button>
+                </div>
+                
+                <div class="toolbar-group" id="finishRiverControl" style="visibility: hidden;">
+                    <button id="finishRiverBtn" style="background: #20a050;" title="Confirm river">✓ Finish River</button>
+                </div>
+                
+                <div class="toolbar-group" style="margin-left: auto;">
+                    <button id="undoBtn" title="Remove last point">↶ Undo</button>
+                    <button id="clearBtn" class="danger" title="Clear all path points">🗑️ Clear</button>
+                    <button id="loadLevelBtn" title="Load existing level">📂 Load</button>
+                    <button id="exportBtn" title="Export level code">📥 Export</button>
+                </div>
             </div>
-            <div class="path-info" id="pathInfo">Click to add path points. Right-click to remove last point. Terrain: Left-click to place, right-click to erase.</div>
+            <div class="path-info" id="pathInfo">📍 Click to add path points. Right-click to remove last point. Finish path to auto-place castle.</div>
             <div class="canvas-wrapper">
                 <canvas id="designCanvas"></canvas>
             </div>
@@ -622,12 +751,11 @@
             <div class="form-group">
                 <label>Campaign Theme</label>
                 <select id="campaignTheme">
-                    <option value="forest">🌲 Forest (Lush Green)</option>
-                    <option value="mountain">⛰️ Mountain - Icy</option>
-                    <option value="desert">🏜️ Desert (Sandy)</option>
-                    <option value="space">🚀 Space (Alien World)</option>
+                    <option value="forest">🌲 Forest</option>
+                    <option value="mountain">⛰️ Mountain</option>
+                    <option value="desert">🏜️ Desert</option>
+                    <option value="space">🚀 Space</option>
                 </select>
-                <small style="color: #90caf9; margin-top: 5px; display: block;">Selecting a theme will apply its default colors and atmosphere</small>
             </div>
 
             <div class="form-group">
@@ -790,9 +918,16 @@
 
             <div class="modal-body">
                 <div class="modal-form-group">
-                    <label>Select Level to Load</label>
-                    <select id="levelSelect" style="padding: 8px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
-                        <option value="">-- Choose a level --</option>
+                    <label>Campaign</label>
+                    <select id="campaignSelect" style="padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
+                        <option value="">-- Choose campaign --</option>
+                    </select>
+                </div>
+                
+                <div class="modal-form-group">
+                    <label>Level</label>
+                    <select id="levelSelect" style="padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
+                        <option value="">-- Choose level --</option>
                     </select>
                 </div>
             </div>
@@ -800,6 +935,18 @@
             <div class="modal-buttons">
                 <button class="cancel-btn" id="loadLevelCancelBtn">Cancel</button>
                 <button class="save-btn" id="loadLevelConfirmBtn">Load</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="confirmation-modal" id="confirmationModal">
+        <div class="confirmation-content">
+            <div class="confirmation-title" id="confirmationTitle"></div>
+            <div class="confirmation-message" id="confirmationMessage"></div>
+            <div class="confirmation-buttons">
+                <button class="confirm-cancel" id="confirmationCancel">Cancel</button>
+                <button class="confirm-ok" id="confirmationOk">Confirm</button>
             </div>
         </div>
     </div>

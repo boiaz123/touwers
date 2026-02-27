@@ -904,7 +904,6 @@ export class Campaign5 extends CampaignBase {
         this.drawTowers(ctx);
         this.drawGate(ctx);
         this.drawCrenellations(ctx);
-        this.drawFlags(ctx);
         
         ctx.restore();
     }

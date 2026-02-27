@@ -75,7 +75,6 @@ export class SettlementBuildingVisuals {
         this.building.drawCastleBase(ctx);
         this.building.drawGate(ctx);
         this.building.drawCrenellations(ctx);
-        this.building.drawFlags(ctx);
         
         ctx.restore();
         
