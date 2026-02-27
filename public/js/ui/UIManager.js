@@ -29,41 +29,8 @@ export class UIManager {
     }
 
     setupPanelContextMenuHandlers() {
-        // All sidebar and UI container IDs that should not show browser context menus
-        const uiContainerIds = [
-            // Main UI containers
-            'stats-bar', 'speed-controls-top', 'tower-sidebar', 'game-area',
-            'speed-controls-group', 'stats', 'tower-grid', 'building-section',
-            'tower-info-box', 'control-buttons-section',
-            // Panel IDs
-            'forge-panel', 'academy-panel', 'magic-tower-panel', 'combination-tower-panel',
-            'superweapon-panel', 'diamond-press-panel', 'training-panel', 'goldmine-panel',
-            'castle-panel', 'guard-post-panel', 'basic-tower-panel',
-            // Wave countdown and spell buttons
-            'wave-countdown-container', 'spell-buttons-container', 'next-wave-btn'
-        ];
-        
-        uiContainerIds.forEach(containerId => {
-            const container = document.getElementById(containerId);
-            if (container) {
-                // Prevent context menu on this element and all children
-                container.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, true); // Use capture phase to catch all nested events
-            }
-        });
-        
-        // Also add global handler for dynamically created elements in tower-sidebar
-        const sidebarElements = ['.tower-btn', '.building-btn', '.control-btn', '.speed-circle', '.stat'];
-        sidebarElements.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
-                element.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, true);
-            });
-        });
+        // Context menu prevention is handled globally in game.js
+        // This is kept as a no-op for backwards compatibility
     }
 
     initializeMusicPlayerIfUnlocked() {
@@ -649,7 +616,7 @@ export class UIManager {
         }
         
         // Build cost string with additional resources
-        let costString = `$${info.cost}`;
+        let costString = `🪙${info.cost}`;
         if (buildingType === 'superweapon' && info.diamondCost) {
             costString += ` + 💎${info.diamondCost}`;
         }
@@ -996,8 +963,8 @@ export class UIManager {
     }
 
     /**
-     * Update active menu based on resource changes (called from GameplayState update loop)
-     * This ensures menus show real-time gold/gem availability and upgrade progress
+     * Update active menu based on resource changes and live timers (called from GameplayState update loop)
+     * Uses surgical DOM updates to avoid destroying event listeners or causing flicker.
      */
     updateActiveMenuIfNeeded(deltaTime) {
         if (!this.activeMenuType || !this.activeMenuData) {
@@ -1014,10 +981,22 @@ export class UIManager {
         // SPECIAL CASE: For goldmine, only update timer - NEVER recreate menu
         if (this.activeMenuType === 'goldmine' && this.activeMenuData.goldMine) {
             this.updateGoldMineTimerDisplay(this.activeMenuData.goldMine);
-            return; // STOP - don't recreate menu!
+            return;
         }
 
-        // Check if resources have changed
+        // Guard post needs constant refresh for cooldown timer and defender HP
+        if (this.activeMenuType === 'guard-post') {
+            this.updateGuardPostLive();
+            return;
+        }
+
+        // Castle needs constant refresh for defender cooldown/HP
+        if (this.activeMenuType === 'castle') {
+            this.updateCastleLive();
+            return;
+        }
+
+        // For all other menus, only update button affordability when resources change
         const currentGold = this.gameState.gold;
         const currentGems = this.towerManager.getGemStocks();
 
@@ -1040,42 +1019,207 @@ export class UIManager {
         this.lastGoldValue = currentGold;
         this.lastGemValues = { ...currentGems };
 
-        // OPTIMIZATION: Only update button states, don't recreate entire menu
-        // This prevents DOM flickering while still keeping buttons up-to-date
-        this.updateMenuButtonStates();
+        // Surgically update button states without recreating the DOM
+        this.updateMenuButtonAffordability();
     }
 
     /**
-     * Update only the button affordability in the active menu
-     * without recreating the entire menu (prevents flickering)
+     * Surgically update button disabled/enabled states and cost display classes
+     * without recreating the entire menu DOM (prevents flicker and keeps event listeners alive).
      */
-    updateMenuButtonStates() {
-        const upgradeButtons = document.querySelectorAll('.panel-upgrade-btn');
-        if (!upgradeButtons.length) return;
-
+    updateMenuButtonAffordability() {
         const currentGold = this.gameState.gold;
         const currentGems = this.towerManager.getGemStocks();
 
-        upgradeButtons.forEach(btn => {
-            const costText = btn.parentElement?.querySelector('.upgrade-cost-display');
-            if (!costText) return;
-
-            const costMatch = costText.textContent.match(/\$(\d+)/);
+        // Update compact upgrade buttons (forge, academy, training tower upgrades)
+        document.querySelectorAll('.compact-upgrade-btn').forEach(btn => {
+            if (btn.textContent.trim() === 'MAX' || btn.textContent.trim() === 'max') return;
+            const costMatch = btn.textContent.match(/(\d+)/);
             if (!costMatch) return;
-
             const cost = parseInt(costMatch[1]);
-            const canAfford = currentGold >= cost;
 
-            // Update button disabled state
-            if (btn.disabled && !btn.textContent.includes('MAX') && canAfford) {
+            // Determine if this is a gem cost (academy elemental upgrades) or gold
+            const item = btn.closest('.compact-upgrade-item');
+            const icon = item?.querySelector('.compact-upgrade-icon');
+            const isGemCost = icon && ['🔥', '💧', '💨', '🌍'].includes(icon.textContent.trim());
+
+            let canAfford = false;
+            if (isGemCost) {
+                const gemMap = { '🔥': 'fire', '💧': 'water', '💨': 'air', '🌍': 'earth' };
+                const gemType = gemMap[icon.textContent.trim()];
+                canAfford = gemType && (currentGems[gemType] || 0) >= cost;
+            } else {
+                canAfford = currentGold >= cost;
+            }
+
+            if (btn.disabled && canAfford) {
                 btn.disabled = false;
-                costText.classList.add('affordable');
-                costText.classList.remove('affordable');  // Toggle to trigger any CSS changes
-            } else if (!btn.disabled && !canAfford && !btn.textContent.includes('MAX')) {
+            } else if (!btn.disabled && !canAfford) {
                 btn.disabled = true;
-                costText.classList.remove('affordable');
             }
         });
+
+        // Update panel upgrade buttons (castle, guard-post hire, etc.)
+        document.querySelectorAll('.panel-upgrade-btn, .upgrade-button').forEach(btn => {
+            if (btn.classList.contains('compact-upgrade-btn')) return; // Already handled above
+            if (btn.textContent.includes('MAX') || btn.classList.contains('sell-building-btn') || btn.classList.contains('sell-tower-btn')) return;
+
+            const actionRow = btn.closest('.upgrade-action-row') || btn.closest('.panel-upgrade-item');
+            if (!actionRow) return;
+
+            const costDisplay = actionRow.querySelector('.upgrade-cost-display');
+            if (!costDisplay) return;
+
+            const costText = costDisplay.textContent;
+            const costMatch = costText.match(/(\d+)/);
+            if (!costMatch) return;
+            const cost = parseInt(costMatch[1]);
+
+            // Check if gem cost or gold cost
+            const isGemCost = costText.includes('🔥') || costText.includes('💧') || costText.includes('💨') || costText.includes('🌍') || costText.includes('💎');
+            let canAfford = false;
+            if (isGemCost) {
+                // For diamond costs, check diamond stock
+                if (costText.includes('💎')) {
+                    canAfford = (currentGems.diamond || 0) >= cost;
+                } else {
+                    canAfford = currentGold >= cost; // Fallback
+                }
+            } else {
+                canAfford = currentGold >= cost;
+            }
+
+            if (btn.disabled && canAfford) {
+                btn.disabled = false;
+                costDisplay.classList.add('affordable');
+                costDisplay.classList.remove('unaffordable');
+            } else if (!btn.disabled && !canAfford) {
+                btn.disabled = true;
+                costDisplay.classList.remove('affordable');
+            }
+        });
+
+        // Update forge/academy/training/superweapon level upgrade buttons
+        document.querySelectorAll('.forge-level-upgrade-btn').forEach(btn => {
+            if (btn.textContent.includes('MAX')) return;
+            const costEl = btn.querySelector('.btn-cost');
+            if (!costEl) return;
+            const costMatch = costEl.textContent.match(/(\d+)/);
+            if (!costMatch) return;
+            const cost = parseInt(costMatch[1]);
+
+            // Check if it also needs diamonds (superweapon lab)
+            const needsDiamonds = costEl.textContent.includes('💎');
+            let canAfford = currentGold >= cost;
+            if (needsDiamonds) {
+                const diamondMatch = costEl.textContent.match(/💎\s*(\d+)/);
+                if (diamondMatch) {
+                    canAfford = canAfford && (currentGems.diamond || 0) >= parseInt(diamondMatch[1]);
+                }
+            }
+
+            if (btn.disabled && canAfford) {
+                btn.disabled = false;
+            } else if (!btn.disabled && !canAfford) {
+                btn.disabled = true;
+            }
+        });
+
+        // Update diamond press exchange button
+        if (this.activeMenuType === 'diamond-press') {
+            const exchangeBtn = document.getElementById('exchange-gems-btn');
+            if (exchangeBtn) {
+                const canExchange = (currentGems.fire || 0) >= 3 && (currentGems.water || 0) >= 3 &&
+                                    (currentGems.air || 0) >= 3 && (currentGems.earth || 0) >= 3;
+                if (exchangeBtn.disabled && canExchange) {
+                    exchangeBtn.disabled = false;
+                    exchangeBtn.textContent = '⚙️ Exchange for Diamond';
+                    exchangeBtn.style.opacity = '1';
+                    exchangeBtn.style.cursor = '';
+                } else if (!exchangeBtn.disabled && !canExchange) {
+                    exchangeBtn.disabled = true;
+                    exchangeBtn.textContent = '⛔ Need 3 of each gem';
+                    exchangeBtn.style.opacity = '0.5';
+                    exchangeBtn.style.cursor = 'not-allowed';
+                }
+            }
+        }
+    }
+
+    /**
+     * Live update guard post menu - update cooldown timer and defender HP without re-rendering.
+     * Only does a full re-render when state transitions (e.g. cooldown finishes, defender dies).
+     */
+    updateGuardPostLive() {
+        const data = this.activeMenuData;
+        if (!data || !data.tower) return;
+        const tower = data.tower;
+
+        // Detect state transitions that need a full re-render
+        const hasDefender = tower.defender && !tower.defender.isDead();
+        const hasCooldown = !hasDefender && tower.defenderDeadCooldown > 0;
+        const canHire = !hasDefender && !hasCooldown;
+
+        const currentState = hasDefender ? 'active' : (hasCooldown ? 'cooldown' : 'hire');
+        if (this._guardPostState !== currentState) {
+            this._guardPostState = currentState;
+            this.showGuardPostMenu(data);
+            return;
+        }
+
+        // Surgical updates within current state
+        const gpPanel = document.getElementById('basic-tower-panel');
+        if (!gpPanel) return;
+
+        if (hasCooldown) {
+            const costDisplay = gpPanel.querySelector('.upgrade-cost-display');
+            if (costDisplay && costDisplay.style.color === 'rgb(255, 153, 153)') {
+                costDisplay.textContent = tower.defenderDeadCooldown.toFixed(1) + 's';
+            }
+        } else if (hasDefender) {
+            const costDisplay = gpPanel.querySelector('.upgrade-cost-display');
+            if (costDisplay && costDisplay.textContent.includes('HP')) {
+                costDisplay.textContent = `${tower.defender.health}/${tower.defender.maxHealth} HP`;
+            }
+        } else if (canHire) {
+            // Update hire button affordability
+            this.updateMenuButtonAffordability();
+        }
+    }
+
+    /**
+     * Live update castle menu - update defender section and upgrade affordability without re-rendering.
+     * Only does a full re-render when defender state transitions.
+     */
+    updateCastleLive() {
+        const data = this.activeMenuData;
+        if (!data || !data.castle) return;
+        const castle = data.castle;
+
+        // Check if defender state has changed (needs full re-render)
+        const hasDefender = castle.defender && !castle.defender.isDead();
+        const hasCooldown = castle.defenderDeadCooldown > 0;
+        const currentState = hasDefender ? 'active' : (hasCooldown ? 'cooldown' : 'hire');
+        if (this._castleDefenderState !== currentState) {
+            this._castleDefenderState = currentState;
+            this.showCastleUpgradeMenu(data);
+            return;
+        }
+
+        // Update castle health display
+        const panel = document.getElementById('castle-panel');
+        if (panel) {
+            const healthBar = panel.querySelector('.upgrade-level-bar-fill');
+            const healthText = panel.querySelector('.upgrade-level-display');
+            if (healthBar && healthText) {
+                const pct = (castle.health / castle.maxHealth) * 100;
+                healthBar.style.width = pct + '%';
+                healthText.innerHTML = `Health: ${castle.health}/${castle.maxHealth}<div class="upgrade-level-bar"><div class="upgrade-level-bar-fill" style="width: ${pct}%"></div></div>`;
+            }
+        }
+
+        // Update button affordability
+        this.updateMenuButtonAffordability();
     }
 
     // ============ UPGRADE MENUS ============
@@ -1197,7 +1341,7 @@ export class UIManager {
                             ${isMaxed ? 'disabled' : ''}>
                         <div class="forge-upgrade-btn-content">
                             ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">FORGE UPGRADE</span>'}
-                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '$ ' + forgeUpgrade.cost : '—')}</span>
+                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '🪙 ' + forgeUpgrade.cost : '—')}</span>
                         </div>
                     </button>
                 </div>
@@ -1328,7 +1472,7 @@ export class UIManager {
                         tooltipText += `<div>Damage: +10</div>`;
                         tooltipText += `<div>Blast Radius: +5px</div>`;
                     }
-                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">$${upgrade.cost}</span></div>`;
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">🪙${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
                 }
                 tooltipText += `</div>`;
@@ -1348,7 +1492,7 @@ export class UIManager {
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (upgrade.cost ? `$${upgrade.cost}` : '—')}
+                            ${isMaxed ? 'MAX' : (upgrade.cost ? `🪙${upgrade.cost}` : '—')}
                         </button>
                     </div>
                 `;
@@ -1475,7 +1619,7 @@ export class UIManager {
                     max-width: 250px;
                     z-index: 10001;
                     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                    pointer-events: auto;
+                    pointer-events: none;
                 `;
                 
                 document.body.appendChild(tooltip);
@@ -1499,23 +1643,11 @@ export class UIManager {
                 if (tooltipRect.top < 0) {
                     tooltip.style.top = '10px';
                 }
-                
-                tooltip.addEventListener('mouseenter', () => {
-                    clearTimeout(tooltipTimeout);
-                });
-                
-                tooltip.addEventListener('mouseleave', () => {
-                    tooltipTimeout = setTimeout(() => {
-                        tooltip.remove();
-                    }, 100);
-                });
             });
             
             item.addEventListener('mouseleave', () => {
-                tooltipTimeout = setTimeout(() => {
-                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    activeTooltips.forEach(tooltip => tooltip.remove());
-                }, 100);
+                const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                activeTooltips.forEach(tooltip => tooltip.remove());
             });
         });
         
@@ -1812,7 +1944,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '$ ' + academyUpgrade.cost : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '🪙 ' + academyUpgrade.cost : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -2079,7 +2211,7 @@ export class UIManager {
                     max-width: 250px;
                     z-index: 10001;
                     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                    pointer-events: auto;
+                    pointer-events: none;
                 `;
                 
                 document.body.appendChild(tooltip);
@@ -2103,23 +2235,11 @@ export class UIManager {
                 if (tooltipRect.top < 0) {
                     tooltip.style.top = '10px';
                 }
-                
-                tooltip.addEventListener('mouseenter', () => {
-                    clearTimeout(tooltipTimeout);
-                });
-                
-                tooltip.addEventListener('mouseleave', () => {
-                    tooltipTimeout = setTimeout(() => {
-                        tooltip.remove();
-                    }, 100);
-                });
             });
             
             item.addEventListener('mouseleave', () => {
-                tooltipTimeout = setTimeout(() => {
-                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    activeTooltips.forEach(tooltip => tooltip.remove());
-                }, 100);
+                const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                activeTooltips.forEach(tooltip => tooltip.remove());
             });
         });
         
@@ -2347,6 +2467,12 @@ export class UIManager {
         this.activeMenuData = towerData;
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
+
+        // Initialize guard post state tracker for live updates
+        const tower = towerData.tower;
+        const hasDefender = tower.defender && !tower.defender.isDead();
+        const hasCooldown = !hasDefender && tower.defenderDeadCooldown > 0;
+        this._guardPostState = hasDefender ? 'active' : (hasCooldown ? 'cooldown' : 'hire');
         
         const panel = document.getElementById('basic-tower-panel');
         if (!panel) {
@@ -2354,8 +2480,6 @@ export class UIManager {
             return;
         }
 
-
-        const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
         const gameState = towerData.gameState;
         const trainingGrounds = towerData.trainingGrounds;
@@ -2419,7 +2543,7 @@ export class UIManager {
                                     </div>
                                 </div>
                                 <div class="upgrade-action-row">
-                                    <div class="upgrade-cost-display">$${cost}</div>
+                                    <div class="upgrade-cost-display">🪙${cost}</div>
                                     <button class="upgrade-button hire-defender-btn" data-level="${level}" ${!canAfford ? 'disabled' : ''}>
                                         ${canAfford ? 'Hire' : 'Not Enough Gold'}
                                     </button>
@@ -2709,7 +2833,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">LAB UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + superWeaponLab.labLevel : (labUpgrade && labUpgrade.cost ? '$ ' + labUpgrade.cost + ' + 💎' + (labUpgrade.diamondCost || 0) : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + superWeaponLab.labLevel : (labUpgrade && labUpgrade.cost ? '🪙 ' + labUpgrade.cost + ' + 💎' + (labUpgrade.diamondCost || 0) : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -2887,7 +3011,7 @@ export class UIManager {
                         max-width: 250px;
                         z-index: 10001;
                         box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                        pointer-events: auto;
+                        pointer-events: none;
                     `;
                     
                     document.body.appendChild(tooltip);
@@ -2915,24 +3039,11 @@ export class UIManager {
                     if (tooltipRect.top < 0) {
                         tooltip.style.top = '10px';
                     }
-                    
-                    // Keep tooltip visible if hovering over it
-                    tooltip.addEventListener('mouseenter', () => {
-                        clearTimeout(tooltipTimeout);
-                    });
-                    
-                    tooltip.addEventListener('mouseleave', () => {
-                        tooltipTimeout = setTimeout(() => {
-                            tooltip.remove();
-                        }, 100);
-                    });
                 });
                 
                 icon.addEventListener('mouseleave', () => {
-                    tooltipTimeout = setTimeout(() => {
-                        const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                        activeTooltips.forEach(tooltip => tooltip.remove());
-                    }, 100);
+                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    activeTooltips.forEach(tooltip => tooltip.remove());
                 });
             });
         };
@@ -2971,7 +3082,7 @@ export class UIManager {
                         max-width: 250px;
                         z-index: 10001;
                         box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                        pointer-events: auto;
+                        pointer-events: none;
                     `;
                     
                     document.body.appendChild(tooltip);
@@ -2995,23 +3106,11 @@ export class UIManager {
                     if (tooltipRect.top < 0) {
                         tooltip.style.top = '10px';
                     }
-                    
-                    tooltip.addEventListener('mouseenter', () => {
-                        clearTimeout(tooltipTimeout);
-                    });
-                    
-                    tooltip.addEventListener('mouseleave', () => {
-                        tooltipTimeout = setTimeout(() => {
-                            tooltip.remove();
-                        }, 100);
-                    });
                 });
                 
                 element.addEventListener('mouseleave', () => {
-                    tooltipTimeout = setTimeout(() => {
-                        const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                        activeTooltips.forEach(tooltip => tooltip.remove());
-                    }, 100);
+                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    activeTooltips.forEach(tooltip => tooltip.remove());
                 });
             });
         };
@@ -3193,12 +3292,17 @@ export class UIManager {
         this.activeMenuData = castleData;
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
+
+        // Initialize castle defender state tracker for live updates
+        const castle = castleData.castle;
+        const hasDefender = castle.defender && !castle.defender.isDead();
+        const hasCooldown = castle.defenderDeadCooldown > 0;
+        this._castleDefenderState = hasDefender ? 'active' : (hasCooldown ? 'cooldown' : 'hire');
         
         // Castle upgrades menu - using panel-based system
         
         let contentHTML = '';
         
-        const castle = castleData.castle;
         const trainingGrounds = castleData.trainingGrounds;
         const forgeLevel = castleData.forgeLevel || 0;
         
@@ -3260,7 +3364,7 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : upgrade.cost ? `$${upgrade.cost}` : 'N/A'}
+                                ${isMaxed ? 'MAX' : upgrade.cost ? `🪙${upgrade.cost}` : 'N/A'}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-castle-upgrade="${upgrade.id}" 
@@ -3311,7 +3415,7 @@ export class UIManager {
                             </div>
                             <div class="upgrade-action-row">
                                 <div class="upgrade-cost-display ${canAfford ? 'affordable' : ''}">
-                                    $${option.cost}
+                                    🪙${option.cost}
                                 </div>
                                 <button class="upgrade-button panel-upgrade-btn" 
                                         data-defender-level="${option.level}" 
@@ -3465,7 +3569,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">TRAINING UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + trainingGrounds.trainingLevel : (trainingUpgrade && trainingUpgrade.cost ? '$ ' + trainingUpgrade.cost : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + trainingGrounds.trainingLevel : (trainingUpgrade && trainingUpgrade.cost ? '🪙 ' + trainingUpgrade.cost : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -3532,7 +3636,7 @@ export class UIManager {
                     } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                         tooltipText += `<div>Fire Rate: +0.08/sec</div>`;
                     }
-                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">$${upgrade.cost}</span></div>`;
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">🪙${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
                 } else if (isLocked) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
@@ -3557,7 +3661,7 @@ export class UIManager {
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `$${upgrade.cost}` : '\u2014'))}
+                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `🪙${upgrade.cost}` : '\u2014'))}
                         </button>
                     </div>
                 `;
@@ -3668,7 +3772,7 @@ export class UIManager {
                     max-width: 250px;
                     z-index: 10001;
                     box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                    pointer-events: auto;
+                    pointer-events: none;
                 `;
                 
                 document.body.appendChild(tooltip);
@@ -3692,23 +3796,11 @@ export class UIManager {
                 if (tooltipRect.top < 0) {
                     tooltip.style.top = '10px';
                 }
-                
-                tooltip.addEventListener('mouseenter', () => {
-                    clearTimeout(tooltipTimeout);
-                });
-                
-                tooltip.addEventListener('mouseleave', () => {
-                    tooltipTimeout = setTimeout(() => {
-                        tooltip.remove();
-                    }, 100);
-                });
             });
             
             item.addEventListener('mouseleave', () => {
-                tooltipTimeout = setTimeout(() => {
-                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    activeTooltips.forEach(tooltip => tooltip.remove());
-                }, 100);
+                const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                activeTooltips.forEach(tooltip => tooltip.remove());
             });
         });
         
@@ -3949,6 +4041,12 @@ export class UIManager {
     showDiamondPressMenu(menuData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('diamond-press-panel');
+
+        // Track this as the active menu for real-time updates
+        this.activeMenuType = 'diamond-press';
+        this.activeMenuData = menuData;
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
 
         const panel = document.getElementById('diamond-press-panel');
         if (!panel) {

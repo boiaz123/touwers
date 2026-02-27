@@ -239,78 +239,13 @@ export class Game {
                 }
             });
             
-            // Prevent right-click context menu on canvas
-            this.canvas.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-
-            // Add contextmenu prevention to game container (catches everything)
-            const gameContainer = document.getElementById('game-container');
-            if (gameContainer) {
-                gameContainer.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, true);
-            }
-
-            // Global context menu prevention for entire game UI
-            // This catches all right-click attempts in game containers
+            // Prevent right-click context menu everywhere in the game
+            // Single global handler catches all elements including dynamically created tooltips
             document.addEventListener('contextmenu', (e) => {
-                // List of container IDs that should prevent context menu
-                const gameUIContainers = [
-                    'game-container', 'game-area', 'stats-bar', 'tower-sidebar',
-                    'speed-controls-top', 'speed-controls-group', 'stats',
-                    'tower-grid', 'building-section', 'tower-info-box',
-                    'control-buttons-section', 'gameCanvas',
-                    'forge-panel', 'academy-panel', 'magic-tower-panel', 
-                    'combination-tower-panel', 'superweapon-panel', 'diamond-press-panel',
-                    'training-panel', 'goldmine-panel', 'castle-panel', 'guard-post-panel',
-                    'basic-tower-panel', 'wave-countdown-container', 'spell-buttons-container',
-                    'pause-menu-modal', 'ingame-options-modal', 'quit-warning-modal',
-                    'restart-warning-modal'
-                ];
-                
-                // Check if the click target or any parent is a game UI element
-                let target = e.target;
-                let isGameUIElement = false;
-                
-                // Walk up the DOM tree to find if we're inside a game UI element
-                while (target && target !== document.body) {
-                    if (target.id && gameUIContainers.includes(target.id)) {
-                        isGameUIElement = true;
-                        break;
-                    }
-                    // Also check for game UI button classes
-                    if (target.classList && (
-                        target.classList.contains('tower-btn') ||
-                        target.classList.contains('building-btn') ||
-                        target.classList.contains('control-btn') ||
-                        target.classList.contains('speed-circle') ||
-                        target.classList.contains('stat') ||
-                        target.classList.contains('panel-upgrade-btn') ||
-                        target.classList.contains('upgrade-button') ||
-                        target.classList.contains('spell-btn') ||
-                        target.classList.contains('panel-element-btn') ||
-                        target.classList.contains('compact-upgrade-item') ||
-                        target.classList.contains('pause-menu-btn') ||
-                        target.classList.contains('panel-close-btn') ||
-                        target.classList.contains('pause-menu-modal') ||
-                        target.classList.contains('pause-menu-content') ||
-                        target.classList.contains('pause-menu-overlay')
-                    )) {
-                        isGameUIElement = true;
-                        break;
-                    }
-                    target = target.parentElement;
-                }
-                
-                // Prevent context menu for all game UI elements
-                if (isGameUIElement) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-            }, true); // Use capture phase to intercept early
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, true);
 
             // ============ KEYBOARD SHORTCUTS ============
             window.addEventListener('keydown', (e) => {

@@ -608,10 +608,16 @@ export class GameplayState {
         // Clean up event listeners when leaving game state
         this.removeEventListeners();
         if (this.uiManager) {
+            this.uiManager.closeAllPanels();
+            this.uiManager.activeMenuType = null;
+            this.uiManager.activeMenuData = null;
             this.uiManager.removeUIEventListeners();
             this.uiManager.hideSpeedControls(); // Hide speed controls when leaving gameplay
             this.uiManager.resetGameSpeed(); // Reset speed to 1x when leaving
         }
+
+        // Remove any tooltips still attached to document body
+        document.querySelectorAll('[data-panel-tooltip]').forEach(t => t.remove());
         
         // Hide spell buttons when exiting gameplay
         const spellButtonsContainer = document.getElementById('spell-buttons-container');
