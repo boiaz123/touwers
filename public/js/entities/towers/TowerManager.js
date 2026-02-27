@@ -778,11 +778,6 @@ export class TowerManager {
         const buildingResult = this.buildingManager.handleClick(x, y, resolutionManager);
         if (buildingResult) {
             if (buildingResult.type === 'forge_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                // Add castle reference for reinforce_wall upgrade
-                if (this.level && this.level.castle) {
-                    buildingResult.castle = this.level.castle;
-                }
                 return buildingResult;
             } else if (buildingResult.type === 'academy_menu') {
                 buildingResult.unlockSystem = this.unlockSystem;

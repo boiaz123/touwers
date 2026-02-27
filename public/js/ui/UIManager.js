@@ -537,19 +537,106 @@ export class UIManager {
         // Clear existing menu
         this.clearTowerInfoMenu();
         
+        // Build rich tooltip content based on tower type
+        let statsHTML = '';
+        let specialHTML = '';
+        let unlockHTML = '';
+        
+        // Get unlock system for requirement info
+        const unlockSystem = this.towerManager.getUnlockSystem();
+        const isUnlocked = unlockSystem.canBuildTower(towerType);
+        
+        // Tower-specific detailed info
+        switch (towerType) {
+            case 'basic':
+                statsHTML = `
+                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Reliable starter tower. Upgradeable at Tower Forge.</div>';
+                break;
+            case 'archer':
+                statsHTML = `
+                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Fast-firing with long range. Gains armor piercing from Forge upgrades.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Tower Forge</div>';
+                break;
+            case 'cannon':
+                statsHTML = `
+                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Area of effect damage. Blast radius upgradeable at Forge.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 3</div>';
+                break;
+            case 'barricade':
+                statsHTML = `
+                    <div><span>🛡️ Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>👥 Base Capacity:</span> <span style="color: #FFD700;">4 enemies</span></div>
+                    <div><span>⏱️ Slow Duration:</span> <span style="color: #FFD700;">4.0s</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Rolls barrels creating rubble clouds that slow enemies. Capacity and duration upgrade at Forge.</div>';
+                break;
+            case 'poison':
+                statsHTML = `
+                    <div><span>☠️ DoT Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Creates toxic clouds dealing damage over time. DoT upgradeable at Forge.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 2</div>';
+                break;
+            case 'magic':
+                statsHTML = `
+                    <div><span>✨ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Select element: 🔥 Fire, 💧 Water, 💨 Air, 🌍 Earth. Bonuses from Magic Academy.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Magic Academy</div>';
+                break;
+            case 'guard-post':
+                statsHTML = `
+                    <div><span>🛡️ Type:</span> <span style="color: #FFD700;">Path Defender</span></div>
+                    <div><span>💰 Hire Cost:</span> <span style="color: #FFD700;">🪙100</span></div>
+                    <div><span>⏱️ Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Place on path to hire a defender that blocks and fights enemies. Defender levels upgrade at Training Grounds.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 4</div>';
+                break;
+            case 'combination':
+                statsHTML = `
+                    <div><span>⚡ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
+                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
+                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Casts powerful combination spells. Unlock spells by investing gems at the Magic Academy.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab</div>';
+                break;
+        }
+        
         // Create hover menu
         const menu = document.createElement('div');
         menu.className = 'building-info-menu';
         menu.id = 'tower-info-hover';
         menu.innerHTML = `
-            <div class="info-title">${info.name}</div>
+            <div class="info-title">${info.icon || '🏰'} ${info.name}</div>
             <div class="info-stats">
-                <div><span>Damage:</span> <span>${info.damage}</span></div>
-                <div><span>Range:</span> <span>${info.range}</span></div>
-                <div><span>Speed:</span> <span>${info.fireRate}</span></div>
+                ${statsHTML}
+                <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
+                    <span>💰 Cost:</span> <span style="color: #FFD700;">🪙${info.cost}</span>
+                </div>
             </div>
             <div class="info-description">${info.description}</div>
-            ${info.upgradeInfo ? `<div class="info-upgrade" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 215, 0, 0.3); color: #FFD700; font-size: 0.85rem;">${info.upgradeInfo}</div>` : ''}
+            ${specialHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.15); font-size: 0.78rem; line-height: 1.3;">${specialHTML}</div>` : ''}
+            ${unlockHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 100, 100, 0.3); font-size: 0.8rem;">${unlockHTML}</div>` : ''}
+            ${info.upgradeInfo ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.3); color: #FFD700; font-size: 0.8rem;">${info.upgradeInfo}</div>` : ''}
         `;
         
         document.body.appendChild(menu);
@@ -598,27 +685,112 @@ export class UIManager {
         // Clear existing menu
         this.clearBuildingInfoMenu();
         
-        // Check if building is disabled
-        let disabledNote = '';
-        if (buildingType === 'superweapon') {
-            const unlockSystem = this.towerManager.getUnlockSystem();
-            if (!unlockSystem.superweaponUnlocked) {
-                disabledNote = '<div style="color: #ff6b6b;">⚠️ Unlock at Academy Level 3</div>';
-            } else {
-                // Check for diamond cost
-                const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-                const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
-                const needsDiamonds = diamondCount < 5;
-                if (needsDiamonds) {
-                    disabledNote = `<div style="color: #ff9999;">⚠️ Requires 5 💎 (have ${diamondCount})</div>`;
-                }
-            }
-        }
+        // Get unlock system for requirement info
+        const unlockSystem = this.towerManager.getUnlockSystem();
         
-        // Build cost string with additional resources
+        // Build detailed stats and special info per building type
+        let statsHTML = '';
+        let specialHTML = '';
+        let unlockHTML = '';
         let costString = `🪙${info.cost}`;
-        if (buildingType === 'superweapon' && info.diamondCost) {
-            costString += ` + 💎${info.diamondCost}`;
+        
+        switch (buildingType) {
+            case 'forge':
+                statsHTML = `
+                    <div><span>🔨 Max Level:</span> <span style="color: #FFD700;">5</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                `;
+                specialHTML = `<div style="color: #aad4ff;">
+                    Core building that unlocks new towers and provides upgrade paths for all tower types.
+                    Also increases Gold Mine income and unlocks buildings at higher levels.
+                </div>`;
+                if (unlockSystem.forgeCount >= unlockSystem.maxForges) {
+                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                }
+                break;
+            case 'mine':
+                const incomeMultiplier = unlockSystem.getMineIncomeMultiplier();
+                const maxMines = unlockSystem.getMaxMines();
+                statsHTML = `
+                    <div><span>💰 Income:</span> <span style="color: #FFD700;">Gold every 30s</span></div>
+                    <div><span>📈 Forge Bonus:</span> <span style="color: #FFD700;">×${incomeMultiplier.toFixed(1)}</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">${maxMines} (Forge Level ${unlockSystem.forgeLevel})</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Produces gold periodically. Click to collect. Higher Forge levels increase income and max mine count.</div>';
+                if (!unlockSystem.unlockedBuildings.has('mine')) {
+                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Tower Forge</div>';
+                } else if (unlockSystem.mineCount >= maxMines) {
+                    unlockHTML = `<div style="color: #ff6b6b;">⚠️ Max mines reached (${maxMines})</div>`;
+                }
+                break;
+            case 'academy':
+                statsHTML = `
+                    <div><span>🔮 Max Level:</span> <span style="color: #FFD700;">3</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                `;
+                specialHTML = `<div style="color: #aad4ff;">
+                    Unlocks Magic Towers and elemental upgrades (🔥💧💨🌍).
+                    Higher levels unlock gem mining, combination spells, and the Super Weapon Lab.
+                </div>`;
+                if (!unlockSystem.unlockedBuildings.has('academy')) {
+                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 4</div>';
+                } else if (unlockSystem.academyCount >= 1) {
+                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                }
+                break;
+            case 'training':
+                statsHTML = `
+                    <div><span>🏋️ Max Level:</span> <span style="color: #FFD700;">5</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                `;
+                specialHTML = `<div style="color: #aad4ff;">
+                    Provides range upgrades for Archer, Basic, and Trebuchet towers.
+                    Also improves Barricade and Poison fire rates, and unlocks path defenders for Guard Posts.
+                </div>`;
+                if (!unlockSystem.unlockedBuildings.has('training')) {
+                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 3</div>';
+                } else if (unlockSystem.trainingGroundsCount >= 1) {
+                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                }
+                break;
+            case 'superweapon':
+                costString = `🪙${info.cost}`;
+                if (info.diamondCost) {
+                    costString += ` + 💎${info.diamondCost}`;
+                }
+                statsHTML = `
+                    <div><span>⚡ Max Level:</span> <span style="color: #FFD700;">4</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                `;
+                specialHTML = `<div style="color: #aad4ff;">
+                    Unlocks devastating area spells: Arcane Blast, Frost Nova, Inferno, Chain Lightning.
+                    Higher levels unlock more spells and enable spell upgrades.
+                </div>`;
+                if (!unlockSystem.superweaponUnlocked) {
+                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Academy Level 3</div>';
+                } else {
+                    const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
+                    const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
+                    if (diamondCount < 5) {
+                        unlockHTML = `<div style="color: #ff9999;">⚠️ Requires 5 💎 (have ${diamondCount})</div>`;
+                    }
+                }
+                break;
+            case 'diamond-press':
+                statsHTML = `
+                    <div><span>💎 Exchange:</span> <span style="color: #FFD700;">3 of each gem → 1 💎</span></div>
+                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                `;
+                specialHTML = '<div style="color: #aad4ff;">Converts elemental gems (🔥💧💨🌍) into diamonds used for Super Weapon Lab upgrades and spell enhancements.</div>';
+                if (!unlockSystem.unlockedBuildings.has('diamond-press')) {
+                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab Level 2</div>';
+                }
+                break;
         }
         
         // Create hover menu
@@ -628,12 +800,14 @@ export class UIManager {
         menu.innerHTML = `
             <div class="info-title">${info.name}</div>
             <div class="info-stats">
-                <div><span>Effect:</span> <span>${info.effect}</span></div>
-                <div><span>Size:</span> <span>${info.size}</span></div>
-                <div><span>Cost:</span> <span>${costString}</span></div>
+                ${statsHTML}
+                <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
+                    <span>💰 Cost:</span> <span style="color: #FFD700;">${costString}</span>
+                </div>
             </div>
             <div class="info-description">${info.description}</div>
-            ${disabledNote}
+            ${specialHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.15); font-size: 0.78rem; line-height: 1.3;">${specialHTML}</div>` : ''}
+            ${unlockHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 100, 100, 0.3); font-size: 0.8rem;">${unlockHTML}</div>` : ''}
         `;
         
         document.body.appendChild(menu);
@@ -1360,7 +1534,7 @@ export class UIManager {
                 'barricade_effectiveness': { capacity: 4 },
                 'poison': { damage: 18 },
                 'cannon': { damage: 40, radius: 35 },
-                'reinforce_wall': { health: 300 }
+
             };
             
             forgeData.upgrades.forEach(upgrade => {
@@ -1411,12 +1585,6 @@ export class UIManager {
                     currentValue = `${baseDmg + currentDmgBonus} (R${currentRadius})`;
                     nextValue = `${baseDmg + nextDmgBonus} (R${nextRadius})`;
                     upgrade.name = 'Trebuchet Tower Upgrade';
-                } else if (upgrade.id === 'reinforce_wall') {
-                    const baseHealth = baseTowerStats.reinforce_wall.health;
-                    const currentBonus = forge.upgrades.poison ? forge.upgrades.poison.level * 50 : 0;
-                    const nextBonus = forge.upgrades.poison ? (forge.upgrades.poison.level + 1) * 50 : 50;
-                    currentValue = `${baseHealth + currentBonus}`;
-                    nextValue = `${baseHealth + nextBonus}`;
                 }
                 
                 // Build detailed tooltip for hover info (SuperWeaponLab style)
@@ -1569,13 +1737,6 @@ export class UIManager {
                             this.stateManager.audioManager.playSFX('upgrade');
                         }
                         
-                        // Special handling for reinforce_wall upgrade - apply to castle
-                        if (upgradeId === 'reinforce_wall' && forgeData.castle) {
-                            const healthBonus = 50; // From TowerForge.upgrades['reinforce_wall'].effect
-                            forgeData.castle.maxHealth += healthBonus;
-                            forgeData.castle.health = Math.min(forgeData.castle.health + healthBonus, forgeData.castle.maxHealth);
-                        }
-                        
                         this.updateUI();
                         
                         // Refresh the panel (with skipSFX flag to prevent building sound from playing)
@@ -1584,7 +1745,6 @@ export class UIManager {
                             forge: forgeData.forge,
                             upgrades: forgeData.forge.getUpgradeOptions(),
                             forgeUpgrade: forgeData.forge.getForgeUpgradeOption(),
-                            castle: forgeData.castle,
                             skipSFX: true
                         });
                     }
@@ -2272,8 +2432,54 @@ export class UIManager {
         }
         
         
-        // Generate panel content with element selection
+        // Generate panel content with stats + element selection
         let contentHTML = '';
+        
+        // Add tower stats panel at the top
+        const tower = towerData.tower;
+        const dmg = Math.round(tower.damage);
+        const baseDmg = tower.originalDamage || 30;
+        const dmgBonus = dmg - baseDmg;
+        const bonuses = tower.elementalBonuses || {};
+        const currentEl = towerData.currentElement || tower.selectedElement || 'fire';
+        
+        // Build active element bonus info
+        let elementBonusHTML = '';
+        if (currentEl === 'fire' && bonuses.fire && bonuses.fire.damageBonus > 0) {
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🔥 Fire Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.fire.damageBonus} damage</span></div>`;
+        } else if (currentEl === 'water' && bonuses.water && bonuses.water.slowBonus > 0) {
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💧 Water Bonus: <span style="color: #FFD700; font-weight: bold;">+${(bonuses.water.slowBonus * 100).toFixed(0)}% slow</span></div>`;
+        } else if (currentEl === 'air' && bonuses.air && bonuses.air.chainRange > 0) {
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Air Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.air.chainRange} chain range</span></div>`;
+        } else if (currentEl === 'earth' && bonuses.earth && bonuses.earth.armorPiercing > 0) {
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🌍 Earth Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.earth.armorPiercing} armor pierce</span></div>`;
+        }
+        
+        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
+        
+        contentHTML += `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">✨</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Magic Tower</div>
+                            <div class="upgrade-description">Elemental tower with selectable damage types</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${dmgBonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${dmgBonus})</span>` : ''}</div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                ${elementBonusHTML}
+                ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes academy bonuses</div>' : ''}
+            </div>
+        `;
+        
+        // Element selection section header
+        contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Element</div></div>`;
         
         towerData.elements.forEach(element => {
             const isCurrent = element.id === towerData.currentElement;
@@ -2374,8 +2580,39 @@ export class UIManager {
         }
         
         
-        // Generate panel content with spell selection
+        // Generate panel content with stats + spell selection
         let contentHTML = '';
+        
+        // Add tower stats panel at the top
+        const tower = towerData.tower;
+        const dmg = Math.round(tower.damage);
+        const baseDmg = tower.originalDamage || 35;
+        const dmgBonus = dmg - baseDmg;
+        
+        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
+        
+        contentHTML += `
+            <div class="upgrade-category">
+                <div class="panel-upgrade-item">
+                    <div class="upgrade-header-row">
+                        <div class="upgrade-icon-section">⚡</div>
+                        <div class="upgrade-info-section">
+                            <div class="upgrade-name">Combination Tower</div>
+                            <div class="upgrade-description">Casts powerful combination spells</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${dmgBonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${dmgBonus})</span>` : ''}</div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes upgrade bonuses</div>' : ''}
+            </div>
+        `;
+        
+        // Spell selection section header
+        contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Spell</div></div>`;
         
         towerData.spells.forEach(spell => {
             const isCurrent = spell.id === towerData.currentSpell;
@@ -2638,37 +2875,116 @@ export class UIManager {
         this.activeMenuType = 'tower-stats';
         this.activeMenuData = towerData;
         
-        // Generic tower stats menu for any tower type
-        
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
+        const icon = towerInfo.icon || '🏰';
+        const name = towerInfo.name;
+        const description = towerInfo.description;
         
-        const stats = {
-            name: towerInfo.name,
-            damage: towerInfo.damage || tower.damage,
-            range: towerInfo.range || tower.range,
-            fireRate: towerInfo.fireRate || tower.fireRate,
-            description: towerInfo.description,
-            cost: towerInfo.cost,
-            icon: towerInfo.icon || '🏰'
-        };
+        // Build tower-type-specific stats using live (upgraded) values
+        let statsHTML = '';
+        const towerType = tower.constructor.name;
+        
+        // Check for upgrade indicators (compare live vs base)
+        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange || tower.fireRate !== tower.originalFireRate);
+        
+        switch (towerType) {
+            case 'BasicTower': {
+                const dmg = Math.round(tower.damage);
+                const baseDmg = tower.originalDamage || 20;
+                const bonus = dmg - baseDmg;
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 120) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 120))})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                `;
+                break;
+            }
+            case 'ArcherTower': {
+                const dmg = Math.round(tower.damage);
+                const baseDmg = tower.originalDamage || 15;
+                const bonus = dmg - baseDmg;
+                const pierce = tower.armorPiercingPercent || 0;
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 140) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 140))})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    ${pierce > 0 ? `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🛡️ Armor Pierce: <span style="color: #FFD700; font-weight: bold;">${pierce}%</span></div>` : ''}
+                `;
+                break;
+            }
+            case 'CannonTower': {
+                const dmg = Math.round(tower.damage);
+                const baseDmg = tower.originalDamage || 40;
+                const bonus = dmg - baseDmg;
+                const radius = tower.splashRadius || 35;
+                const baseRadius = tower.originalSplashRadius || 35;
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg} (AoE)</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💥 Blast Radius: <span style="color: #FFD700; font-weight: bold;">${radius}px</span>${radius !== baseRadius ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${radius - baseRadius})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 120) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 120))})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                `;
+                break;
+            }
+            case 'BarricadeTower': {
+                const capacity = tower.maxEnemiesSlowed || 4;
+                const duration = tower.slowDuration || 4.0;
+                const baseCapacity = tower.originalMaxEnemiesSlowed || 4;
+                const baseDuration = tower.originalSlowDuration || 4.0;
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🛡️ Effect: <span style="color: #FFD700; font-weight: bold;">Slows enemies</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">👥 Capacity: <span style="color: #FFD700; font-weight: bold;">${Math.round(capacity)}</span>${capacity !== baseCapacity ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(capacity - baseCapacity)})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⏱️ Duration: <span style="color: #FFD700; font-weight: bold;">${duration.toFixed(1)}s</span>${duration !== baseDuration ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${(duration - baseDuration).toFixed(1)}s)</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Deploy Rate: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                `;
+                break;
+            }
+            case 'PoisonArcherTower': {
+                const dmg = Math.round(tower.damage);
+                const baseDmg = tower.originalDamage || 18;
+                const bonus = dmg - baseDmg;
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">☠️ Direct Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🧪 Poison DoT: <span style="color: #FFD700; font-weight: bold;">Damage over time</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                `;
+                break;
+            }
+            default: {
+                // Fallback for any other tower type
+                statsHTML = `
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/sec' : tower.fireRate}</span></div>
+                `;
+                break;
+            }
+        }
+        
+        // Show upgrade status indicator
+        let upgradeNote = '';
+        if (hasUpgrades) {
+            upgradeNote = '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.3rem; text-align: right;">✦ Stats include forge & training upgrades</div>';
+        }
         
         let contentHTML = `
             <div class="upgrade-category">
                 <div class="panel-upgrade-item">
                     <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">${stats.icon}</div>
+                        <div class="upgrade-icon-section">${icon}</div>
                         <div class="upgrade-info-section">
-                            <div class="upgrade-name">${stats.name}</div>
-                            <div class="upgrade-description">${stats.description}</div>
+                            <div class="upgrade-name">${name}</div>
+                            <div class="upgrade-description">${description}</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${typeof stats.fireRate === 'number' ? stats.fireRate.toFixed(1) : stats.fireRate}</span></div>
+                ${statsHTML}
+                ${upgradeNote}
             </div>
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
@@ -2678,7 +2994,7 @@ export class UIManager {
         `;
         
         // Display in panel using the non-closing method so menu stays open when clicking towers
-        this.showPanelWithoutClosing('basic-tower-panel', `${stats.icon} Tower Stats`, contentHTML);
+        this.showPanelWithoutClosing('basic-tower-panel', `${icon} ${name}`, contentHTML);
         
         // Add sell button handler
         const sellBtn = document.getElementById(`sell-tower-btn-${tower.gridX}-${tower.gridY}`);
@@ -2693,69 +3009,8 @@ export class UIManager {
     }
 
     showBasicTowerStatsMenu(towerData) {
-        // Close other panels to prevent stacking
-        this.closeOtherPanelsImmediate('basic-tower-panel');
-        
-        // Set active menu type to keep towers selected
-        this.activeMenuType = 'basic-tower-stats';
-        this.activeMenuData = towerData;
-        
-        // Basic tower stats menu - using panel-based system
-        
-        
-        const tower = towerData.tower;
-        const stats = {
-            name: 'Basic Tower',
-            damage: tower.damage,
-            range: tower.range,
-            fireRate: tower.fireRate,
-            description: 'A reliable wooden watchtower with defenders hurling rocks.',
-            cost: tower.constructor.getInfo().cost
-        };
-        
-        let contentHTML = `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">🏹</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">${stats.name}</div>
-                            <div class="upgrade-description">${stats.description}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${stats.damage}</span></div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${stats.range}</span></div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Fire Rate: <span style="color: #FFD700; font-weight: bold;">${stats.fireRate}/sec</span></div>
-            </div>
-        `;
-        
-        // Display in panel with close button
-        this.showPanel('basic-tower-panel', '🏹 Tower Stats', contentHTML);
-        
-        // Add sell button to the panel's action row
-        const panel = document.getElementById('basic-tower-panel');
-        const panelContent = panel.querySelector('.panel-content');
-        
-        // Create sell button container
-        const sellContainer = document.createElement('div');
-        sellContainer.style.cssText = 'padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;';
-        sellContainer.innerHTML = `
-            <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                💰 Sell Tower
-            </button>
-        `;
-        panelContent.appendChild(sellContainer);
-        
-        // Add sell button handler
-        panel.querySelector('.sell-tower-btn').addEventListener('click', () => {
-            this.towerManager.sellTower(tower);
-            this.updateUI();
-            this.level.setPlacementPreview(0, 0, false);
-            this.closePanelWithAnimation('basic-tower-panel');
-        });
+        // Redirect to the unified tower stats menu
+        this.showTowerStatsMenu(towerData);
     }
 
     showSuperWeaponMenu(menuData) {
@@ -3331,13 +3586,8 @@ export class UIManager {
             </div>
         `;
         
-        // Add castle upgrade options
-        let castleUpgrades = castle.getUpgradeOptions().filter(u => u.id === 'fortification');
-        
-        // Add reinforcement upgrade if forge level is 5+
-        if (forgeLevel >= 5) {
-            castleUpgrades = castleUpgrades.concat(castle.getUpgradeOptions().filter(u => u.id === 'reinforce_wall'));
-        }
+        // Add castle upgrade options - only fortification (wall reinforcement is handled through TowerForge)
+        const castleUpgrades = castle.getUpgradeOptions().filter(u => u.id === 'fortification');
         
         if (castleUpgrades.length > 0) {
             contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Castle Upgrades</div>`;

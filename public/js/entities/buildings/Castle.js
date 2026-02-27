@@ -632,32 +632,12 @@ export class Castle {
             {
                 id: 'fortification',
                 name: 'Fortification',
-                description: `Strengthen castle walls to increase max health by ${50 * (this.fortificationLevel + 1)}`,
+                description: `Strengthen castle walls (+${50} max health)`,
                 level: this.fortificationLevel,
                 maxLevel: this.maxFortificationLevel,
                 cost: this.calculateFortificationCost(),
                 icon: '🛡️',
                 currentEffect: `Max Health: ${this.maxHealth}`
-            },
-            {
-                id: 'catapult',
-                name: 'Catapult Defense',
-                description: 'Deploy catapults to attack enemies before they reach the castle',
-                level: this.catapultLevel,
-                maxLevel: this.maxCatapultLevel,
-                cost: this.calculateCatapultCost(),
-                icon: '🎯',
-                currentEffect: this.catapultLevel > 0 ? `Level ${this.catapultLevel} Active` : 'Inactive'
-            },
-            {
-                id: 'reinforce_wall',
-                name: 'Castle Reinforcement',
-                description: `Increase Castle max health by 50 per level`,
-                level: this.reinforcementLevel,
-                maxLevel: this.maxReinforcementLevel,
-                cost: this.calculateReinforcementCost(),
-                icon: '🏰',
-                currentEffect: `Bonus Health: ${50 * this.reinforcementLevel}`
             }
         ];
         return options;
