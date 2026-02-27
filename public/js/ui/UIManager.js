@@ -1275,8 +1275,66 @@ export class UIManager {
                     nextValue = `${baseHealth + nextBonus}`;
                 }
                 
+                // Build detailed tooltip for hover info (SuperWeaponLab style)
+                let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
+                tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${upgrade.description}</div>`;
+                tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+                tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
+                
+                if (upgrade.id === 'basic') {
+                    const baseDmg = baseTowerStats.basic.damage;
+                    const curBonus = forge.upgrades.basic.level * 8;
+                    tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curBonus}</span></div>`;
+                } else if (upgrade.id === 'archer') {
+                    const baseDmg = baseTowerStats.archer.damage;
+                    const curDmg = forge.upgrades.archer.level * 8;
+                    const curPierce = forge.upgrades.archer.level * 5;
+                    tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
+                    tooltipText += `<div>🛡️ Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
+                } else if (upgrade.id === 'barricade_effectiveness') {
+                    const curCap = baseTowerStats.barricade_effectiveness.capacity + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
+                    const curDur = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
+                    tooltipText += `<div>👥 Enemies Slowed: <span style="color: #FFD700;">${curCap}</span></div>`;
+                    tooltipText += `<div>⏱️ Slow Duration: <span style="color: #FFD700;">${curDur.toFixed(1)}s</span></div>`;
+                } else if (upgrade.id === 'poison') {
+                    const baseDmg = baseTowerStats.poison.damage;
+                    const curBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
+                    tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curBonus}</span></div>`;
+                } else if (upgrade.id === 'cannon') {
+                    const baseDmg = baseTowerStats.cannon.damage;
+                    const baseRad = baseTowerStats.cannon.radius;
+                    const curDmg = forge.upgrades.cannon.level * 10;
+                    const curRad = forge.upgrades.cannon.level * 5;
+                    tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
+                    tooltipText += `<div>◯ Blast Radius: <span style="color: #FFD700;">${baseRad + curRad}px</span></div>`;
+                }
+                
+                if (!isMaxed) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                    tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
+                    if (upgrade.id === 'basic') {
+                        tooltipText += `<div>Damage: +8</div>`;
+                    } else if (upgrade.id === 'archer') {
+                        tooltipText += `<div>Damage: +8</div>`;
+                        tooltipText += `<div>Armor Pierce: +5%</div>`;
+                    } else if (upgrade.id === 'barricade_effectiveness') {
+                        tooltipText += `<div>Enemies Slowed: +~2</div>`;
+                        tooltipText += `<div>Slow Duration: +1.0s</div>`;
+                    } else if (upgrade.id === 'poison') {
+                        const poisonEffects = [1, 2, 2, 3, 5];
+                        const nextInc = poisonEffects[forge.upgrades.poison.level] || 0;
+                        tooltipText += `<div>Damage: +${nextInc}</div>`;
+                    } else if (upgrade.id === 'cannon') {
+                        tooltipText += `<div>Damage: +10</div>`;
+                        tooltipText += `<div>Blast Radius: +5px</div>`;
+                    }
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">$${upgrade.cost}</span></div>`;
+                    tooltipText += `</div>`;
+                }
+                tooltipText += `</div>`;
+                
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                         <div class="compact-upgrade-left">
                             <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
@@ -1390,53 +1448,74 @@ export class UIManager {
             });
         });
         
-        // Upgrade hover info listeners
+        // Upgrade hover info listeners (SuperWeaponLab style)
         panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
-            const upgradeId = item.dataset.upgradeId;
-            const upgrade = forgeData.upgrades.find(u => u.id === upgradeId);
+            let tooltipTimeout;
             
             item.addEventListener('mouseenter', () => {
-                if (!upgrade || !upgrade.description) return;
+                clearTimeout(tooltipTimeout);
                 
-                // Clear existing tooltips
-                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
                 existingTooltips.forEach(tooltip => tooltip.remove());
                 
-                // Create hover menu
-                const menu = document.createElement('div');
-                menu.className = 'building-info-menu';
-                menu.setAttribute('data-forge-tooltip', 'true');
-                menu.innerHTML = `
-                    <div class="info-title">${upgrade.name}</div>
-                    <div class="info-description">${upgrade.description}</div>
+                const tooltipHTML = item.dataset.tooltip;
+                if (!tooltipHTML) return;
+                
+                const tooltip = document.createElement('div');
+                tooltip.setAttribute('data-panel-tooltip', 'true');
+                tooltip.innerHTML = tooltipHTML;
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(10, 10, 20, 0.95);
+                    border: 2px solid #FFD700;
+                    border-radius: 6px;
+                    padding: 0.8rem;
+                    font-size: 0.75rem;
+                    color: #ddd;
+                    max-width: 250px;
+                    z-index: 10001;
+                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                    pointer-events: auto;
                 `;
                 
-                document.body.appendChild(menu);
+                document.body.appendChild(tooltip);
                 
-                // Position the menu
-                const itemRect = item.getBoundingClientRect();
-                const menuWidth = menu.offsetWidth;
+                const panelEl = document.getElementById('forge-panel');
+                const panelRect = panelEl.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
                 
-                // Position to the left of item
-                let left = itemRect.left - menuWidth - 15;
-                let top = itemRect.top;
-                
-                // Adjust if menu goes off screen
-                if (left < 10) {
-                    left = itemRect.right + 15;
+                let leftPos = panelRect.left - tooltip.offsetWidth - 10;
+                if (leftPos < 10) {
+                    leftPos = rect.right + 10;
                 }
                 
-                if (top + menu.offsetHeight > window.innerHeight) {
-                    top = window.innerHeight - menu.offsetHeight - 10;
+                tooltip.style.left = leftPos + 'px';
+                tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                
+                const tooltipRect = tooltip.getBoundingClientRect();
+                if (tooltipRect.bottom > window.innerHeight) {
+                    tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                }
+                if (tooltipRect.top < 0) {
+                    tooltip.style.top = '10px';
                 }
                 
-                menu.style.left = left + 'px';
-                menu.style.top = top + 'px';
+                tooltip.addEventListener('mouseenter', () => {
+                    clearTimeout(tooltipTimeout);
+                });
+                
+                tooltip.addEventListener('mouseleave', () => {
+                    tooltipTimeout = setTimeout(() => {
+                        tooltip.remove();
+                    }, 100);
+                });
             });
             
             item.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
+                tooltipTimeout = setTimeout(() => {
+                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    activeTooltips.forEach(tooltip => tooltip.remove());
+                }, 100);
             });
         });
         
@@ -1778,22 +1857,59 @@ export class UIManager {
                         nextValue = `+${nextBonus}`;
                     }
                     
+                    // Build detailed tooltip for hover info (SuperWeaponLab style)
+                    let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
+                    tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${upgrade.description}</div>`;
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+                    tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
+                    
+                    if (upgrade.id === 'fire') {
+                        const curBonus = academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus;
+                        tooltipText += `<div>\uD83D\uDD25 Damage Bonus: <span style="color: #FFD700;">+${curBonus}</span></div>`;
+                    } else if (upgrade.id === 'water') {
+                        const curBonus = (academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
+                        tooltipText += `<div>\uD83D\uDCA7 Slow Effect: <span style="color: #FFD700;">+${curBonus}%</span></div>`;
+                    } else if (upgrade.id === 'air') {
+                        const curBonus = academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange;
+                        tooltipText += `<div>\uD83D\uDCA8 Chain Range: <span style="color: #FFD700;">+${curBonus}px</span></div>`;
+                    } else if (upgrade.id === 'earth') {
+                        const curBonus = academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing;
+                        tooltipText += `<div>\uD83E\uDEA8 Armor Pierce: <span style="color: #FFD700;">+${curBonus}</span></div>`;
+                    }
+                    
+                    if (!isMaxed) {
+                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                        tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
+                        if (upgrade.id === 'fire') {
+                            tooltipText += `<div>Damage: +${academy.elementalUpgrades.fire.damageBonus}</div>`;
+                        } else if (upgrade.id === 'water') {
+                            tooltipText += `<div>Slow Effect: +${(academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%</div>`;
+                        } else if (upgrade.id === 'air') {
+                            tooltipText += `<div>Chain Range: +${academy.elementalUpgrades.air.chainRange}px</div>`;
+                        } else if (upgrade.id === 'earth') {
+                            tooltipText += `<div>Armor Pierce: +${academy.elementalUpgrades.earth.armorPiercing}</div>`;
+                        }
+                        if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">${upgrade.icon}${upgrade.cost}</span></div>`;
+                        tooltipText += `</div>`;
+                    }
+                    tooltipText += `</div>`;
+                    
                     contentHTML += `
-                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
+                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                             <div class="compact-upgrade-left">
                                 <span class="compact-upgrade-icon">${upgrade.icon}</span>
                                 <div class="compact-upgrade-info">
                                     <div class="compact-upgrade-name">${upgrade.name}</div>
                                     <div class="compact-upgrade-values">
                                         <span class="current-value">${currentValue}</span>
-                                        ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
+                                        ${!isMaxed && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
                                     </div>
                                 </div>
                             </div>
                             <button class="compact-upgrade-btn panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
                                     ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : '—')}
+                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : '\u2014')}
                             </button>
                         </div>
                     `;
@@ -1936,61 +2052,74 @@ export class UIManager {
             });
         }
         
-        // Add hover info listeners for elemental upgrades (like forge)
+        // Add hover info listeners for elemental upgrades (SuperWeaponLab style)
         panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
-            const upgradeId = item.dataset.upgradeId;
-            const upgrade = academyData.upgrades.find(u => u.id === upgradeId);
+            let tooltipTimeout;
             
             item.addEventListener('mouseenter', () => {
-                if (!upgrade || !upgrade.description) return;
+                clearTimeout(tooltipTimeout);
                 
-                // Clear existing tooltips
-                const existingTooltips = document.querySelectorAll('[data-academy-tooltip]');
+                const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
                 existingTooltips.forEach(tooltip => tooltip.remove());
                 
-                // Create hover menu
-                const menu = document.createElement('div');
-                menu.className = 'building-info-menu';
-                menu.setAttribute('data-academy-tooltip', 'true');
-                menu.innerHTML = `
-                    <div class="info-title">${upgrade.name}</div>
-                    <div class="info-description">${upgrade.description}</div>
+                const tooltipHTML = item.dataset.tooltip;
+                if (!tooltipHTML) return;
+                
+                const tooltip = document.createElement('div');
+                tooltip.setAttribute('data-panel-tooltip', 'true');
+                tooltip.innerHTML = tooltipHTML;
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(10, 10, 20, 0.95);
+                    border: 2px solid #FFD700;
+                    border-radius: 6px;
+                    padding: 0.8rem;
+                    font-size: 0.75rem;
+                    color: #ddd;
+                    max-width: 250px;
+                    z-index: 10001;
+                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                    pointer-events: auto;
                 `;
                 
-                document.body.appendChild(menu);
+                document.body.appendChild(tooltip);
                 
-                // Position the menu
-                const itemRect = item.getBoundingClientRect();
-                const menuWidth = menu.offsetWidth;
+                const panelEl = document.getElementById('academy-panel');
+                const panelRect = panelEl.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
                 
-                // Position to the left of item
-                let left = itemRect.left - menuWidth - 15;
-                let top = itemRect.top;
-                
-                // Adjust if menu goes off screen
-                if (left < 10) {
-                    left = itemRect.right + 15;
+                let leftPos = panelRect.left - tooltip.offsetWidth - 10;
+                if (leftPos < 10) {
+                    leftPos = rect.right + 10;
                 }
                 
-                if (top + menu.offsetHeight > window.innerHeight) {
-                    top = window.innerHeight - menu.offsetHeight - 10;
+                tooltip.style.left = leftPos + 'px';
+                tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                
+                const tooltipRect = tooltip.getBoundingClientRect();
+                if (tooltipRect.bottom > window.innerHeight) {
+                    tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                }
+                if (tooltipRect.top < 0) {
+                    tooltip.style.top = '10px';
                 }
                 
-                menu.style.left = left + 'px';
-                menu.style.top = top + 'px';
+                tooltip.addEventListener('mouseenter', () => {
+                    clearTimeout(tooltipTimeout);
+                });
+                
+                tooltip.addEventListener('mouseleave', () => {
+                    tooltipTimeout = setTimeout(() => {
+                        tooltip.remove();
+                    }, 100);
+                });
             });
             
             item.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
-            });
-        });
-        
-        // Also clear tooltips when hovering over any button to avoid multiple tooltips showing
-        panel.querySelectorAll('button').forEach(btn => {
-            btn.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
+                tooltipTimeout = setTimeout(() => {
+                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    activeTooltips.forEach(tooltip => tooltip.remove());
+                }, 100);
             });
         });
         
@@ -3376,22 +3505,59 @@ export class UIManager {
                     nextValue = `${nextRate}/sec`;
                 }
                 
+                // Build detailed tooltip for hover info (SuperWeaponLab style)
+                let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
+                tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${upgrade.description}</div>`;
+                tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+                tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
+                
+                if (upgrade.id && upgrade.id.startsWith('range_')) {
+                    const curRange = upgrade.level * 15;
+                    tooltipText += `<div>\uD83C\uDFAF Range Bonus: <span style="color: #FFD700;">+${curRange}px</span></div>`;
+                } else if (upgrade.id === 'barricadeFireRate') {
+                    const curRate = (0.2 + upgrade.level * 0.1).toFixed(1);
+                    tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
+                } else if (upgrade.id === 'poisonArcherTowerFireRate') {
+                    const curRate = (0.8 + upgrade.level * 0.08).toFixed(2);
+                    tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
+                }
+                
+                if (!isMaxed && !isLocked) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                    tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
+                    if (upgrade.id && upgrade.id.startsWith('range_')) {
+                        tooltipText += `<div>Range: +15px</div>`;
+                    } else if (upgrade.id === 'barricadeFireRate') {
+                        tooltipText += `<div>Fire Rate: +0.1/sec</div>`;
+                    } else if (upgrade.id === 'poisonArcherTowerFireRate') {
+                        tooltipText += `<div>Fire Rate: +0.08/sec</div>`;
+                    }
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">$${upgrade.cost}</span></div>`;
+                    tooltipText += `</div>`;
+                } else if (isLocked) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
+                    tooltipText += `<div style="font-weight: bold;">\uD83D\uDD12 Locked</div>`;
+                    tooltipText += `<div>Upgrade Training Grounds to unlock</div>`;
+                    tooltipText += `</div>`;
+                }
+                tooltipText += `</div>`;
+                
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                         <div class="compact-upgrade-left">
                             <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
                                 <div class="compact-upgrade-name">${upgrade.name}</div>
                                 <div class="compact-upgrade-values">
                                     <span class="current-value">${currentValue}</span>
-                                    ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
+                                    ${!isMaxed && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
                                 </div>
                             </div>
                         </div>
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `$${upgrade.cost}` : '—'))}
+                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `$${upgrade.cost}` : '\u2014'))}
                         </button>
                     </div>
                 `;
@@ -3475,53 +3641,74 @@ export class UIManager {
             });
         });
         
-        // Upgrade hover info listeners
+        // Upgrade hover info listeners (SuperWeaponLab style)
         panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
-            const upgradeId = item.dataset.upgradeId;
-            const upgrade = trainingData.upgrades.find(u => u.id === upgradeId);
+            let tooltipTimeout;
             
             item.addEventListener('mouseenter', () => {
-                if (!upgrade || !upgrade.description) return;
+                clearTimeout(tooltipTimeout);
                 
-                // Clear existing tooltips
-                const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
+                const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
                 existingTooltips.forEach(tooltip => tooltip.remove());
                 
-                // Create hover menu
-                const menu = document.createElement('div');
-                menu.className = 'building-info-menu';
-                menu.setAttribute('data-forge-tooltip', 'true');
-                menu.innerHTML = `
-                    <div class="info-title">${upgrade.name}</div>
-                    <div class="info-description">${upgrade.description}</div>
+                const tooltipHTML = item.dataset.tooltip;
+                if (!tooltipHTML) return;
+                
+                const tooltip = document.createElement('div');
+                tooltip.setAttribute('data-panel-tooltip', 'true');
+                tooltip.innerHTML = tooltipHTML;
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(10, 10, 20, 0.95);
+                    border: 2px solid #FFD700;
+                    border-radius: 6px;
+                    padding: 0.8rem;
+                    font-size: 0.75rem;
+                    color: #ddd;
+                    max-width: 250px;
+                    z-index: 10001;
+                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                    pointer-events: auto;
                 `;
                 
-                document.body.appendChild(menu);
+                document.body.appendChild(tooltip);
                 
-                // Position the menu
-                const itemRect = item.getBoundingClientRect();
-                const menuWidth = menu.offsetWidth;
+                const panelEl = document.getElementById('training-panel');
+                const panelRect = panelEl.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
                 
-                // Position to the left of item
-                let left = itemRect.left - menuWidth - 15;
-                let top = itemRect.top;
-                
-                // Adjust if menu goes off screen
-                if (left < 10) {
-                    left = itemRect.right + 15;
+                let leftPos = panelRect.left - tooltip.offsetWidth - 10;
+                if (leftPos < 10) {
+                    leftPos = rect.right + 10;
                 }
                 
-                if (top + menu.offsetHeight > window.innerHeight) {
-                    top = window.innerHeight - menu.offsetHeight - 10;
+                tooltip.style.left = leftPos + 'px';
+                tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+                
+                const tooltipRect = tooltip.getBoundingClientRect();
+                if (tooltipRect.bottom > window.innerHeight) {
+                    tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                }
+                if (tooltipRect.top < 0) {
+                    tooltip.style.top = '10px';
                 }
                 
-                menu.style.left = left + 'px';
-                menu.style.top = top + 'px';
+                tooltip.addEventListener('mouseenter', () => {
+                    clearTimeout(tooltipTimeout);
+                });
+                
+                tooltip.addEventListener('mouseleave', () => {
+                    tooltipTimeout = setTimeout(() => {
+                        tooltip.remove();
+                    }, 100);
+                });
             });
             
             item.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-forge-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
+                tooltipTimeout = setTimeout(() => {
+                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                    activeTooltips.forEach(tooltip => tooltip.remove());
+                }, 100);
             });
         });
         
