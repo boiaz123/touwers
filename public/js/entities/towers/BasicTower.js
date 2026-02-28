@@ -579,7 +579,7 @@ export class BasicTower extends Tower {
     
     static getInfo() {
         return {
-            name: 'Basic Tower',
+            name: 'Watch Tower',
             description: 'A reliable wooden watchtower with defenders hurling rocks.',
             damage: '20',
             range: '120',

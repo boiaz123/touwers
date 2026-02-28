@@ -73,34 +73,82 @@ body {
     background: linear-gradient(135deg, var(--stone-dark), #000);
 }
 
-/* ============ STATS BAR ============ */
+/* ============ STATS BAR - NATURAL WOODEN BEAM ============ */
 #stats-bar {
     display: flex;
     align-items: center;
     justify-content: flex-start;
     padding: max(0.75rem, 1.5vh) max(1.5rem, 3vw);
-    background: linear-gradient(180deg, rgba(42, 26, 15, 0.95) 0%, rgba(32, 16, 8, 0.95) 95%, #4a3a2f 100%);
-    border-bottom: 8px solid transparent;
-    border-image: linear-gradient(90deg, 
-        #2a1a0f 0%, 
-        #6b5540 20%, 
-        #8b6f47 35%, 
-        #7a6038 50%, 
-        #8b6f47 65%, 
-        #6b5540 80%, 
-        #2a1a0f 100%) 1;
+    background: 
+        /* Natural wood grain base - warmer tones with variation */
+        linear-gradient(180deg, 
+            rgba(95, 65, 35, 0.99) 0%, 
+            rgba(82, 52, 28, 0.99) 15%, 
+            rgba(70, 44, 22, 0.99) 35%, 
+            rgba(75, 48, 25, 0.99) 50%, 
+            rgba(65, 40, 20, 0.99) 65%, 
+            rgba(72, 46, 24, 0.99) 85%, 
+            rgba(55, 32, 15, 0.99) 100%);
+    background-image:
+        /* Natural wood knots */
+        radial-gradient(ellipse 12px 8px at 250px 55%, rgba(50, 28, 10, 0.5) 0%, rgba(60, 35, 15, 0.3) 40%, transparent 70%),
+        radial-gradient(ellipse 10px 6px at 720px 35%, rgba(45, 25, 10, 0.4) 0%, rgba(55, 32, 14, 0.25) 45%, transparent 70%),
+        radial-gradient(ellipse 8px 5px at 1180px 45%, rgba(48, 28, 12, 0.35) 0%, rgba(58, 34, 16, 0.2) 40%, transparent 65%),
+        /* Iron nail heads (subtle, not golden) */
+        radial-gradient(circle 2.5px at 150px 50%, rgba(80, 80, 85, 0.5) 1.5px, transparent 2.5px),
+        radial-gradient(circle 2.5px at 500px 50%, rgba(80, 80, 85, 0.5) 1.5px, transparent 2.5px),
+        radial-gradient(circle 2.5px at 850px 50%, rgba(80, 80, 85, 0.5) 1.5px, transparent 2.5px),
+        radial-gradient(circle 2.5px at 1200px 50%, rgba(80, 80, 85, 0.5) 1.5px, transparent 2.5px),
+        /* Organic horizontal wood grain - varying thickness and spacing */
+        repeating-linear-gradient(2deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.06) 3px,
+            rgba(0, 0, 0, 0.06) 4px,
+            transparent 4px,
+            transparent 8px,
+            rgba(0, 0, 0, 0.04) 8px,
+            rgba(0, 0, 0, 0.04) 9px,
+            transparent 9px,
+            transparent 14px),
+        /* Secondary grain layer at slight angle for realism */
+        repeating-linear-gradient(-1deg,
+            transparent 0px,
+            transparent 6px,
+            rgba(120, 80, 40, 0.06) 6px,
+            rgba(120, 80, 40, 0.06) 7px,
+            transparent 7px,
+            transparent 18px),
+        /* Natural color variation along the beam */
+        linear-gradient(90deg,
+            rgba(80, 55, 30, 0.99) 0%,
+            rgba(90, 60, 32, 0.99) 15%,
+            rgba(75, 48, 25, 0.99) 30%,
+            rgba(85, 58, 30, 0.99) 50%,
+            rgba(70, 44, 22, 0.99) 70%,
+            rgba(88, 60, 32, 0.99) 85%,
+            rgba(75, 50, 28, 0.99) 100%);
+    border-bottom: none;
+    border-image: none;
     box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.1), 
-        0 4px 8px rgba(0, 0, 0, 0.7),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.8),
-        0 8px 12px rgba(0, 0, 0, 0.9);
+        /* Natural top highlight from ambient light */
+        inset 0 2px 0 rgba(200, 160, 90, 0.15),
+        inset 0 4px 6px rgba(200, 160, 90, 0.06),
+        /* Bark-like dark bottom edge */
+        inset 0 -2px 4px rgba(20, 10, 2, 0.6),
+        inset 0 -5px 10px rgba(0, 0, 0, 0.3),
+        /* Heavy drop shadow underneath the beam */
+        0 6px 20px rgba(0, 0, 0, 0.85),
+        0 3px 6px rgba(0, 0, 0, 0.5);
     color: var(--text-primary);
     position: relative;
     font-family: 'Trebuchet MS', sans-serif;
     backdrop-filter: blur(4px);
     min-height: auto;
+    z-index: 10;
 }
 
+/* Carved wood molding underside - natural profile */
 #stats-bar::after {
     content: '';
     position: absolute;
@@ -108,47 +156,48 @@ body {
     left: 0;
     right: 0;
     height: 8px;
-    background: linear-gradient(90deg,
-        #2a1a0f 0%,
-        #5a4a3f 15%,
-        #7a6a5f 25%,
-        #6a5a4f 50%,
-        #7a6a5f 75%,
-        #5a4a3f 85%,
-        #2a1a0f 100%);
-    background-image: 
-        linear-gradient(90deg,
-            #2a1a0f 0%,
-            #5a4a3f 15%,
-            #7a6a5f 25%,
-            #6a5a4f 50%,
-            #7a6a5f 75%,
-            #5a4a3f 85%,
-            #2a1a0f 100%),
-        repeating-linear-gradient(90deg,
-            transparent 0px,
-            transparent 2px,
-            rgba(0, 0, 0, 0.3) 2px,
-            rgba(0, 0, 0, 0.3) 3px,
-            transparent 3px,
-            transparent 6px),
-        repeating-linear-gradient(0deg,
-            rgba(255, 255, 255, 0.08) 0px,
-            rgba(255, 255, 255, 0.08) 1px,
-            transparent 1px,
-            transparent 2px);
-    background-size: 100% 100%, 6px 100%, 100% 2px;
+    background: 
+        /* Subtle iron strip along edge */
+        linear-gradient(180deg,
+            rgba(90, 85, 78, 0.4) 0px,
+            rgba(70, 65, 58, 0.3) 1px,
+            /* Natural wood edge profile */
+            rgba(55, 35, 18, 0.99) 1px,
+            rgba(70, 45, 22, 0.99) 3px,
+            rgba(60, 38, 18, 0.99) 5px,
+            rgba(40, 22, 10, 0.99) 7px,
+            rgba(25, 14, 6, 0.99) 8px);
     box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.15),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.6),
-        0 2px 4px rgba(0, 0, 0, 0.8);
+        0 3px 10px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(120, 90, 50, 0.15);
     pointer-events: none;
+    z-index: 11;
+}
+
+/* Worn top edge of beam */
+#stats-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+        rgba(140, 100, 55, 0.08) 0%,
+        rgba(160, 120, 65, 0.18) 15%,
+        rgba(180, 140, 80, 0.22) 30%,
+        rgba(170, 130, 70, 0.2) 50%,
+        rgba(180, 140, 80, 0.22) 70%,
+        rgba(160, 120, 65, 0.18) 85%,
+        rgba(140, 100, 55, 0.08) 100%);
+    pointer-events: none;
+    z-index: 11;
 }
 
 #stats {
     display: flex;
     flex-wrap: wrap;
-    gap: clamp(2rem, 5vw, 4rem);
+    gap: clamp(1.5rem, 4vw, 3rem);
     font-size: clamp(0.9rem, 2vw, 1.1rem);
     font-weight: bold;
     align-items: center;
@@ -158,24 +207,79 @@ body {
     margin: 0 auto;
 }
 
+/* Medieval shield-style stat containers */
 .stat {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.25rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(212, 175, 55, 0.4);
+    gap: 0.35rem;
+    padding: 0.5rem 1.2rem 0.55rem;
+    /* Shield shape with pointed bottom */
+    border-radius: 4px 4px 4px 4px;
+    background: 
+        /* Iron-reinforced panel look */
+        linear-gradient(180deg,
+            rgba(55, 42, 28, 0.97) 0%,
+            rgba(42, 30, 18, 0.98) 40%,
+            rgba(35, 24, 14, 0.98) 70%,
+            rgba(30, 18, 10, 0.97) 100%);
+    /* Riveted iron frame border */
+    border: 2px solid rgba(100, 90, 75, 0.7);
+    outline: 1px solid rgba(0, 0, 0, 0.7);
+    outline-offset: 0px;
     white-space: nowrap;
     flex-direction: column;
+    position: relative;
+    box-shadow:
+        /* Metal rim highlight */
+        inset 0 1px 0 rgba(160, 140, 110, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        /* Embossed depth */
+        inset 1px 0 0 rgba(120, 100, 70, 0.1),
+        inset -1px 0 0 rgba(0, 0, 0, 0.3),
+        /* Hang shadow from beam */
+        0 3px 8px rgba(0, 0, 0, 0.7),
+        0 1px 2px rgba(0, 0, 0, 0.5);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Corner rivets on stat shields */
+.stat::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(140, 130, 110, 0.6) 0%, rgba(80, 75, 65, 0.4) 60%, transparent 70%);
+    box-shadow:
+        /* Top-right rivet */
+        calc(100% - 11px) 0 0 0 rgba(0, 0, 0, 0.15),
+        /* Bottom-left rivet */
+        0 calc(100% - 11px) 0 0 rgba(0, 0, 0, 0.15),
+        /* Bottom-right rivet */
+        calc(100% - 11px) calc(100% - 11px) 0 0 rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.stat:hover {
+    border-color: rgba(140, 120, 90, 0.85);
+    box-shadow:
+        inset 0 1px 0 rgba(180, 150, 100, 0.25),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+        0 3px 12px rgba(0, 0, 0, 0.8),
+        0 0 6px rgba(160, 130, 80, 0.1);
 }
 
 .stat-label {
-    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
-    color: var(--text-secondary);
+    font-size: clamp(0.55rem, 1.2vw, 0.7rem);
+    color: rgba(180, 155, 110, 0.8);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.8px;
     font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+    font-family: 'Trebuchet MS', serif;
 }
 
 /* Gold Display */
@@ -186,29 +290,53 @@ body {
     margin-top: 0.3rem;
 }
 
+/* Gold Coin - Medieval currency disc */
 .gold-coin {
-    width: 24px;
-    height: 24px;
-    background: radial-gradient(circle at 30% 30%, #FFE54C, #FFC107, #F57F17);
-    border: 2px solid #D4AF37;
+    width: 22px;
+    height: 22px;
+    background: radial-gradient(circle at 35% 35%, #FFE878, #FFC107 40%, #E6A800 70%, #CC8800 100%);
+    border: 2px solid #B8860B;
     border-radius: 50%;
     box-shadow: 
-        inset -1px -1px 3px rgba(0, 0, 0, 0.3),
-        0 2px 4px rgba(0, 0, 0, 0.5),
-        inset 1px 1px 2px rgba(255, 255, 255, 0.2);
+        inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+        inset 2px 2px 3px rgba(255, 255, 200, 0.25),
+        0 2px 4px rgba(0, 0, 0, 0.5);
     position: relative;
 }
 
+/* Embossed cross pattern - medieval coin design */
+.gold-coin::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    /* Cross shape via box-shadows */
+    background: transparent;
+    box-shadow:
+        /* Horizontal bar of cross */
+        -3px 0 0 0.5px rgba(184, 134, 11, 0.5),
+        3px 0 0 0.5px rgba(184, 134, 11, 0.5),
+        /* Vertical bar of cross */
+        0 -3px 0 0.5px rgba(184, 134, 11, 0.5),
+        0 3px 0 0.5px rgba(184, 134, 11, 0.5);
+    border-radius: 0;
+}
+
+/* Inner ring on coin */
 .gold-coin::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 6px;
-    height: 10px;
-    background: #D4AF37;
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(184, 134, 11, 0.4);
     border-radius: 50%;
+    background: transparent;
 }
 
 #gold {
@@ -216,62 +344,72 @@ body {
     font-size: clamp(0.95rem, 2vw, 1.15rem);
 }
 
-/* Gems Display */
+/* Gems Display - Medieval jewel rack */
 .gems-container {
     flex-direction: row !important;
 }
 
 .gems-display {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.35rem;
     align-items: center;
     margin-top: 0.3rem;
     flex-wrap: wrap;
 }
 
+/* Gem stones - set in iron bezels */
 .gem {
     width: 16px;
     height: 16px;
     position: relative;
-    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    /* Iron bezel ring around each gem */
+    outline: 1px solid rgba(80, 75, 65, 0.5);
+    outline-offset: 1px;
 }
 
-/* Fire Gem - Red/Orange diamond */
+/* Fire Gem - Red/Orange faceted jewel */
 .fire-gem {
-    background: linear-gradient(135deg, #FF6B00 0%, #FF4500 50%, #E60000 100%);
+    background: linear-gradient(135deg, #FF7A1A 0%, #FF4500 40%, #CC2200 100%);
     clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 50% 82%, 18% 100%, 0% 38%);
+    outline: none;
 }
 
-/* Water Gem - Blue crystal */
+/* Water Gem - Blue sapphire hexagon */
 .water-gem {
-    background: linear-gradient(135deg, #00D4FF 0%, #0099FF 50%, #004BB3 100%);
+    background: linear-gradient(135deg, #00D4FF 0%, #0088DD 50%, #004BB3 100%);
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    outline: none;
 }
 
-/* Air Gem - Light cyan/white star */
+/* Air Gem - Pale star crystal */
 .air-gem {
-    background: linear-gradient(135deg, #E0F7FF 0%, #99FFFF 50%, #4FFFFF 100%);
+    background: linear-gradient(135deg, #E8F8FF 0%, #AAFFFF 50%, #66EEFF 100%);
     clip-path: polygon(
         50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%
     );
+    outline: none;
 }
 
-/* Earth Gem - Brown/green octagon */
+/* Earth Gem - Rough-hewn amber octagon */
 .earth-gem {
-    background: linear-gradient(135deg, #8B6914 0%, #A0826D 50%, #6B5D1B 100%);
+    background: linear-gradient(135deg, #9B7420 0%, #B0926D 50%, #7B6D20 100%);
     clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+    outline: none;
 }
 
-/* Diamond Gem - Clear/white brilliant */
+/* Diamond Gem - Brilliant clear cut */
 .diamond-gem {
-    background: linear-gradient(135deg, #F0F8FF 0%, #E6E6FA 50%, #D3D3D3 100%);
+    background: linear-gradient(135deg, #F8FCFF 0%, #E6E6FA 40%, #C0C0D0 100%);
     clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    outline: none;
 }
 
 #gems-fire, #gems-water, #gems-air, #gems-earth, #gems-diamond {
-    color: var(--primary-gold-light);
+    color: rgba(220, 195, 150, 0.9);
     font-size: clamp(0.8rem, 1.5vw, 0.95rem);
     font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 /* Game area with canvas and sidebar */
@@ -302,7 +440,15 @@ body {
 /* ============ TOWER SIDEBAR - MEDIEVAL FORTRESS AESTHETIC ============ */
 #tower-sidebar {
     width: clamp(160px, 22%, 280px);
-    background: linear-gradient(135deg, rgba(42, 26, 15, 0.98) 0%, rgba(26, 15, 10, 0.98) 100%);
+    background: 
+        /* Subtle stone texture overlay */
+        repeating-linear-gradient(180deg,
+            rgba(0, 0, 0, 0) 0px,
+            rgba(0, 0, 0, 0) 3px,
+            rgba(0, 0, 0, 0.04) 3px,
+            rgba(0, 0, 0, 0.04) 4px),
+        /* Main wall gradient */
+        linear-gradient(135deg, rgba(42, 28, 18, 0.99) 0%, rgba(32, 20, 12, 0.99) 40%, rgba(26, 15, 10, 0.99) 100%);
     display: none;
     flex-direction: column;
     padding: 0;
@@ -310,66 +456,108 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     box-shadow: 
-        inset 2px 0 8px rgba(0, 0, 0, 0.8), 
-        0 0 10px rgba(0, 0, 0, 0.6);
+        inset 2px 0 10px rgba(0, 0, 0, 0.9), 
+        0 0 12px rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(2px);
     position: relative;
     height: 100%;
 }
 
+/* Stone pillar - left edge of sidebar */
 #tower-sidebar::before {
     content: '';
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 12px;
-    background: linear-gradient(90deg, #1a0f05 0%, #4a3a2f 10%, #5a4a3f 20%, #6a5a4f 35%, #7a6a5f 50%, #6a5a4f 65%, #5a4a3f 80%, #4a3a2f 90%, #1a0f05 100%);
+    width: 18px;
+    background: 
+        /* Left edge dark shadow */
+        linear-gradient(90deg,
+            rgba(8, 4, 2, 0.95) 0%,
+            rgba(55, 42, 32, 0.98) 10%,
+            rgba(75, 58, 42, 0.98) 25%,
+            rgba(90, 72, 52, 0.95) 45%,
+            rgba(85, 68, 48, 0.98) 55%,
+            rgba(70, 54, 38, 0.98) 75%,
+            rgba(50, 38, 25, 0.98) 90%,
+            rgba(30, 20, 12, 0.95) 100%);
     background-image: 
-        /* Main gradient for depth */
-        linear-gradient(90deg, 
-            #1a0f05 0%, #4a3a2f 10%, #5a4a3f 20%, #6a5a4f 35%, #7a6a5f 50%, 
-            #6a5a4f 65%, #5a4a3f 80%, #4a3a2f 90%, #1a0f05 100%),
-        /* Large stone blocks - cobblestones */
+        /* Stone block grid - horizontal mortar lines */
         repeating-linear-gradient(180deg,
-            rgba(60, 45, 35, 0.6) 0px,
-            rgba(60, 45, 35, 0.6) 16px,
-            rgba(50, 35, 25, 0.8) 16px,
-            rgba(50, 35, 25, 0.8) 32px),
-        /* Vertical mortar/grout lines */
-        repeating-linear-gradient(90deg,
             transparent 0px,
-            transparent 10px,
-            rgba(0, 0, 0, 0.5) 10px,
-            rgba(0, 0, 0, 0.5) 11px,
+            transparent 22px,
+            rgba(20, 12, 6, 0.9) 22px,
+            rgba(20, 12, 6, 0.9) 24px,
+            transparent 24px),
+        /* Vertical center groove for pillar effect */
+        linear-gradient(90deg,
+            transparent 0px,
+            transparent 7px,
+            rgba(0, 0, 0, 0.15) 7px,
+            rgba(0, 0, 0, 0.25) 9px,
+            rgba(0, 0, 0, 0.15) 11px,
             transparent 11px,
-            transparent 12px),
-        /* Stone texture scratches and cracks */
+            transparent 18px),
+        /* Highlight on left face */
+        linear-gradient(90deg,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(120, 95, 70, 0.4) 15%,
+            rgba(140, 112, 80, 0.3) 30%,
+            transparent 50%,
+            transparent 100%),
+        /* Subtle stone texture */
         repeating-linear-gradient(45deg,
             transparent 0px,
             transparent 2px,
-            rgba(0, 0, 0, 0.2) 2px,
-            rgba(0, 0, 0, 0.2) 3px),
-        /* Highlights for stone depth */
+            rgba(0, 0, 0, 0.08) 2px,
+            rgba(0, 0, 0, 0.08) 3px),
+        /* Stone color variation per block */
         repeating-linear-gradient(180deg,
-            rgba(255, 255, 255, 0.06) 0px,
-            rgba(255, 255, 255, 0.06) 1px,
-            transparent 1px,
-            transparent 8px),
-        /* Stone weathering effect */
-        repeating-linear-gradient(180deg,
-            transparent 0px,
-            transparent 8px,
-            rgba(139, 111, 78, 0.2) 8px,
-            rgba(139, 111, 78, 0.2) 9px);
-    background-size: 100% 100%, 100% 32px, 12px 100%, 3px 3px, 100% 8px, 100% 9px;
+            rgba(85, 68, 48, 0.6) 0px,
+            rgba(75, 58, 40, 0.6) 11px,
+            rgba(90, 72, 52, 0.6) 12px,
+            rgba(80, 62, 45, 0.6) 22px,
+            rgba(70, 55, 38, 0.6) 23px,
+            rgba(85, 68, 48, 0.6) 34px),
+        /* Base depth gradient */
+        linear-gradient(90deg, 
+            rgba(8, 4, 2, 0.95) 0%, 
+            rgba(55, 42, 32, 0.98) 10%, 
+            rgba(75, 58, 42, 0.98) 25%, 
+            rgba(90, 72, 52, 0.95) 45%, 
+            rgba(85, 68, 48, 0.98) 55%, 
+            rgba(70, 54, 38, 0.98) 75%, 
+            rgba(50, 38, 25, 0.98) 90%, 
+            rgba(30, 20, 12, 0.95) 100%);
+    background-size: 100% 24px, 18px 100%, 100% 100%, 3px 3px, 100% 34px, 100% 100%;
     pointer-events: none;
-    z-index: 0;
+    z-index: 2;
     box-shadow: 
-        inset 0 0 6px rgba(0, 0, 0, 0.9), 
-        inset 0 2px 4px rgba(255, 255, 255, 0.1),
-        1px 0 3px rgba(0, 0, 0, 0.8),
-        inset -1px 0 2px rgba(0, 0, 0, 0.6);
+        /* Deep inset shadow for 3D depth */
+        inset 0 0 8px rgba(0, 0, 0, 0.9), 
+        inset 0 2px 3px rgba(140, 112, 80, 0.15),
+        /* Right edge shadow cast onto sidebar */
+        2px 0 6px rgba(0, 0, 0, 0.7),
+        inset -2px 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Inner gold trim line on pillar's right edge */
+#tower-sidebar::after {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg,
+        rgba(212, 175, 55, 0.1) 0%,
+        rgba(212, 175, 55, 0.25) 5%,
+        rgba(212, 175, 55, 0.15) 50%,
+        rgba(212, 175, 55, 0.25) 95%,
+        rgba(212, 175, 55, 0.1) 100%);
+    pointer-events: none;
+    z-index: 3;
 }
 
 #tower-sidebar::-webkit-scrollbar {
@@ -393,7 +581,7 @@ body {
     grid-template-columns: repeat(3, 1fr);
     gap: clamp(0.2rem, 0.5vw, 0.4rem);
     margin-bottom: clamp(0.4rem, 0.8vh, 0.6rem);
-    padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.3rem, 0.8vw, 0.6rem) 0 clamp(0.8rem, 1.2vw, 1rem);
+    padding: clamp(1rem, 1.8vh, 1.4rem) clamp(0.3rem, 0.8vw, 0.6rem) 0 clamp(1.4rem, 1.8vw, 1.8rem);
 }
 
 /* ============ SPEED CONTROLS IN SIDEBAR ============ */
@@ -427,20 +615,29 @@ body {
 
 /* ============ WOODEN BEAM SEPARATOR ============ */
 .wooden-beam-separator {
-    height: 6px;
+    height: 8px;
     margin: clamp(0.2rem, 0.4vh, 0.3rem) 0;
-    background: linear-gradient(180deg, 
-        #5a4a3f 0%, 
-        #6b5a4f 25%, 
-        #5a4a3f 50%, 
-        #4a3a2f 75%, 
-        #3a2a1f 100%);
-    border-top: 2px solid rgba(212, 175, 55, 0.4);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+    background: 
+        /* Wood grain texture */
+        repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 4px,
+            rgba(0, 0, 0, 0.06) 4px,
+            rgba(0, 0, 0, 0.06) 5px),
+        /* Main beam gradient with round profile */
+        linear-gradient(180deg, 
+            rgba(42, 28, 15, 0.9) 0%, 
+            rgba(70, 52, 35, 0.95) 15%, 
+            rgba(85, 65, 42, 0.95) 35%, 
+            rgba(75, 55, 38, 0.95) 65%, 
+            rgba(55, 38, 22, 0.95) 85%, 
+            rgba(35, 22, 12, 0.9) 100%);
+    border-top: 1px solid rgba(212, 175, 55, 0.45);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.7);
     box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 2px 4px rgba(0, 0, 0, 0.5),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+        inset 0 1px 0 rgba(180, 140, 80, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 3px 6px rgba(0, 0, 0, 0.5);
     position: relative;
 }
 
@@ -470,7 +667,7 @@ body {
     margin-bottom: clamp(0.3rem, 0.6vh, 0.5rem);
     border-top: 2px solid rgba(139, 115, 85, 0.6);
     padding-top: clamp(0.3rem, 0.6vh, 0.5rem);
-    padding-left: clamp(0.8rem, 1.2vw, 1rem);
+    padding-left: clamp(1.4rem, 1.8vw, 1.8rem);
     padding-right: clamp(0.3rem, 0.8vw, 0.6rem);
     margin-top: clamp(0.2rem, 0.4vh, 0.3rem);
 }
@@ -496,10 +693,17 @@ body {
 /* ============ TOWER & BUILDING BUTTONS - MEDIEVAL STONE AESTHETIC ============ */
 .tower-btn, .building-btn {
     aspect-ratio: 1;
-    background: linear-gradient(145deg, rgba(74, 58, 47, 0.9) 0%, rgba(58, 42, 31, 0.9) 100%);
+    background: 
+        /* Subtle stone texture */
+        repeating-linear-gradient(135deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.03) 3px,
+            rgba(0, 0, 0, 0.03) 4px),
+        linear-gradient(145deg, rgba(74, 58, 47, 0.92) 0%, rgba(58, 42, 31, 0.92) 100%);
     color: var(--text-gold);
-    border: 3px solid var(--border-primary);
-    border-radius: 0.2rem;
+    border: 2px solid rgba(139, 111, 78, 0.7);
+    border-radius: 2px;
     cursor: pointer;
     font-size: clamp(0.4rem, 0.7vw, 0.55rem);
     font-family: 'Trebuchet MS', serif;
@@ -513,7 +717,10 @@ body {
     padding: 0;
     transition: all 0.15s ease;
     position: relative;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.6);
+    box-shadow: 
+        inset 0 1px 0 rgba(180, 140, 80, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.6);
     overflow: hidden;
 }
 
@@ -529,22 +736,35 @@ body {
 }
 
 .building-btn {
-    background: linear-gradient(145deg, rgba(58, 47, 74, 0.9) 0%, rgba(42, 31, 58, 0.9) 100%);
-    border-color: rgba(139, 115, 171, 0.8);
+    background: 
+        repeating-linear-gradient(135deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.03) 3px,
+            rgba(0, 0, 0, 0.03) 4px),
+        linear-gradient(145deg, rgba(58, 47, 74, 0.92) 0%, rgba(42, 31, 58, 0.92) 100%);
+    border-color: rgba(139, 115, 171, 0.7);
     color: rgba(227, 213, 255, 0.9);
 }
 
 .tower-btn:hover, .building-btn:hover {
     background: linear-gradient(145deg, rgba(90, 74, 63, 0.95) 0%, rgba(74, 58, 47, 0.95) 100%);
     border-color: var(--primary-gold);
-    transform: translateY(-2px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 6px 12px rgba(212, 175, 55, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 
+        inset 0 1px 0 rgba(212, 175, 55, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 4px 10px rgba(212, 175, 55, 0.25),
+        0 0 6px rgba(212, 175, 55, 0.1);
 }
 
 .building-btn:hover {
     background: linear-gradient(145deg, rgba(74, 63, 90, 0.95) 0%, rgba(58, 47, 74, 0.95) 100%);
     border-color: rgba(195, 132, 252, 0.9);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 6px 12px rgba(139, 92, 246, 0.3);
+    box-shadow: 
+        inset 0 1px 0 rgba(195, 132, 252, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 4px 10px rgba(139, 92, 246, 0.25);
 }
 
 .tower-btn.selected, .building-btn.selected {
@@ -600,22 +820,23 @@ body {
     left: 0;
 }
 
-/* Price box in bottom right corner */
+/* Price box - small iron cost plate */
 .btn-price-box {
     position: absolute;
     bottom: 0.4rem;
     right: 0.4rem;
-    background: rgba(0, 0, 0, 0.8);
-    border: 2px solid var(--primary-gold-light);
+    background: rgba(15, 10, 5, 0.88);
+    border: 1.5px solid rgba(140, 120, 85, 0.6);
     border-radius: 0.15rem;
     padding: clamp(0.12rem, 0.25vh, 0.18rem) clamp(0.2rem, 0.35vw, 0.28rem);
     font-size: clamp(0.32rem, 0.65vw, 0.45rem);
-    color: var(--primary-gold-light);
+    color: rgba(235, 210, 150, 0.95);
     font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
     pointer-events: none;
     z-index: 2;
     white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(120, 100, 70, 0.1), 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* ============ INFO PANEL ============ */
@@ -624,7 +845,7 @@ body {
     border-top: 2px solid rgba(139, 115, 85, 0.6);
     margin-top: clamp(0.4rem, 0.8vh, 0.6rem);
     padding-top: clamp(0.4rem, 0.8vh, 0.6rem);
-    padding-left: clamp(0.8rem, 1.2vw, 1rem);
+    padding-left: clamp(1.4rem, 1.8vw, 1.8rem);
     padding-right: clamp(0.3rem, 0.8vw, 0.6rem);
     flex: 1;
     flex-direction: column;
@@ -1164,18 +1385,25 @@ body {
 }
 
 /* ============ SPEED CONTROLS - TOP LEFT (IN STATS BAR) ============ */
+/* Speed Controls - Medieval command plate */
 #speed-controls-top {
     display: none;
     flex-direction: row;
     align-items: center;
     gap: clamp(0.75rem, 1.5vw, 1.5rem);
-    padding: clamp(0.5rem, 1vh, 0.75rem) clamp(0.75rem, 1.5vw, 1.25rem);
-    background: linear-gradient(135deg, rgba(42, 26, 15, 0.6) 0%, rgba(26, 15, 10, 0.6) 100%);
-    border: 2px solid rgba(212, 175, 55, 0.4);
-    border-radius: 0.5rem;
+    padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.75rem, 1.5vw, 1.25rem);
+    background: 
+        /* Iron-reinforced wooden panel */
+        linear-gradient(135deg, rgba(40, 28, 16, 0.85) 0%, rgba(30, 20, 10, 0.85) 100%);
+    border: 2px solid rgba(100, 90, 75, 0.5);
+    border-radius: 3px;
     margin-right: clamp(1rem, 2vw, 1.5rem);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        inset 0 1px 0 rgba(140, 110, 70, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
+    position: relative;
 }
 
 #speed-controls-top.visible {
@@ -1189,17 +1417,22 @@ body {
     gap: 0.42rem;
 }
 
+/* Pause button - Iron shield medallion */
 .speed-pause-btn {
     width: clamp(1.4rem, 2.8vw, 1.96rem);
     height: clamp(1.4rem, 2.8vw, 1.96rem);
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(42, 26, 15, 0.95), rgba(26, 15, 10, 0.95));
-    border: 2px solid var(--primary-gold);
-    color: var(--primary-gold-light);
+    background: 
+        radial-gradient(circle at 35% 35%, rgba(90, 80, 65, 0.95), rgba(55, 45, 35, 0.95) 60%, rgba(35, 28, 20, 0.95));
+    border: 2px solid rgba(120, 105, 85, 0.7);
+    color: rgba(200, 180, 140, 0.9);
     font-size: clamp(0.65rem, 1.3vw, 0.95rem);
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 0 12px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 
+        inset 0 1px 2px rgba(200, 180, 140, 0.15),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.4),
+        0 2px 6px rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1210,9 +1443,13 @@ body {
 }
 
 .speed-pause-btn:hover {
-    background: linear-gradient(135deg, rgba(58, 42, 31, 0.95), rgba(42, 26, 15, 0.95));
-    border-color: var(--primary-gold-light);
-    box-shadow: 0 0 18px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    background: 
+        radial-gradient(circle at 35% 35%, rgba(110, 95, 75, 0.95), rgba(70, 58, 42, 0.95) 60%, rgba(50, 40, 30, 0.95));
+    border-color: rgba(160, 140, 100, 0.8);
+    box-shadow: 
+        inset 0 1px 2px rgba(220, 200, 160, 0.2),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.6);
     transform: scale(1.06);
 }
 
@@ -1230,32 +1467,36 @@ body {
     line-height: 1;
 }
 
+/* Speed label - engraved text */
 .speed-label-top {
-    color: var(--primary-gold);
+    color: rgba(180, 155, 110, 0.7);
     font-size: clamp(0.49rem, 0.84vw, 0.595rem);
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
     white-space: nowrap;
+    font-family: 'Trebuchet MS', serif;
 }
 
+/* Speed button container - iron bracket */
 .speed-circle-container {
     display: flex;
     gap: 0.42rem;
     align-items: center;
     background: transparent;
-    border: 1px solid rgba(212, 175, 55, 0.25);
+    border: 1px solid rgba(100, 90, 75, 0.35);
     border-radius: 0.35rem;
     padding: clamp(0.35rem, 0.7vw, 0.5rem);
-    box-shadow: none;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
     backdrop-filter: none;
 }
 
+/* Speed circles - Iron shield medallions */
 .speed-circle {
     width: clamp(1.4rem, 2.8vw, 1.96rem);
     height: clamp(1.4rem, 2.8vw, 1.96rem);
-    border: 2px solid rgba(212, 175, 55, 0.5);
+    border: 2px solid rgba(100, 90, 75, 0.6);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1263,25 +1504,37 @@ body {
     cursor: pointer;
     font-weight: bold;
     font-size: clamp(0.63rem, 1.26vw, 0.84rem);
-    color: var(--text-gold);
-    background: linear-gradient(135deg, rgba(58, 42, 31, 0.7), rgba(42, 26, 15, 0.7));
+    color: rgba(180, 160, 120, 0.8);
+    background: 
+        radial-gradient(circle at 35% 35%, rgba(65, 55, 40, 0.8), rgba(40, 32, 22, 0.8));
     transition: all 0.2s ease;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.5);
+    box-shadow: 
+        inset 0 1px 0 rgba(160, 140, 100, 0.08),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.5);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .speed-circle:hover {
-    border-color: var(--primary-gold);
-    background: linear-gradient(135deg, rgba(74, 58, 47, 0.8), rgba(58, 42, 31, 0.8));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 8px rgba(212, 175, 55, 0.2);
+    border-color: rgba(140, 120, 90, 0.8);
+    background: 
+        radial-gradient(circle at 35% 35%, rgba(85, 70, 50, 0.85), rgba(55, 44, 30, 0.85));
+    box-shadow: 
+        inset 0 1px 0 rgba(180, 160, 120, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.5);
     transform: scale(1.05);
 }
 
+/* Active speed - heated iron glow */
 .speed-circle.active {
-    border-color: var(--primary-gold-light);
-    background: linear-gradient(135deg, rgba(139, 69, 19, 0.9), rgba(160, 82, 45, 0.9));
-    box-shadow: 0 0 16px rgba(212, 175, 55, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-    color: var(--primary-gold-light);
+    border-color: rgba(200, 140, 60, 0.8);
+    background: 
+        radial-gradient(circle at 35% 35%, rgba(120, 75, 30, 0.9), rgba(90, 55, 20, 0.9) 60%, rgba(70, 40, 15, 0.9));
+    box-shadow: 
+        inset 0 1px 2px rgba(255, 200, 120, 0.2),
+        0 0 8px rgba(180, 120, 40, 0.3),
+        0 2px 6px rgba(0, 0, 0, 0.5);
+    color: rgba(255, 220, 150, 0.95);
     transform: scale(1.08);
 }
 
@@ -2381,7 +2634,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     flex-direction: column;
     gap: clamp(0.3rem, 0.5vh, 0.5rem);
     margin-top: auto;
-    padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.5rem, 1.2vw, 0.8rem);
+    padding: clamp(0.4rem, 0.8vh, 0.6rem) clamp(0.5rem, 1.2vw, 0.8rem) clamp(0.4rem, 0.8vh, 0.6rem) clamp(1.4rem, 1.8vw, 1.8rem);
     position: relative;
     z-index: 1;
     border-top: 2px solid rgba(139, 115, 85, 0.6);

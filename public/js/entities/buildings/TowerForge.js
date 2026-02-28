@@ -1030,11 +1030,11 @@ export class TowerForge extends Building {
         // Forge Level 1 - Basic towers available (basic, archer, barricade)
         // Only show upgrades for towers that are unlocked
         
-        // Basic Tower - always available from forge level 1
+        // Watch Tower - always available from forge level 1
         options.push({
             id: 'basic',
-            name: 'Basic Tower Upgrade',
-            description: `Increase Basic Tower damage by ${this.upgrades.basic.effect} per level`,
+            name: 'Watch Tower Upgrade',
+            description: `Increase Watch Tower damage by ${this.upgrades.basic.effect} per level`,
             level: this.upgrades.basic.level,
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.basic.baseCost,
@@ -1052,7 +1052,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.barricade_effectiveness.baseCost,
             cost: this.calculateUpgradeCost('barricade_effectiveness'),
-            icon: '🛡️'
+            icon: '🪵'
         });
         
         // Archer Tower - available from forge level 1 (damage + armor piercing combined)

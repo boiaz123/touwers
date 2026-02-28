@@ -537,7 +537,7 @@ export class UIManager {
         // Clear existing menu
         this.clearTowerInfoMenu();
         
-        // Build rich tooltip content based on tower type
+        // Build rich tooltip content based on tower type using computed upgraded stats
         let statsHTML = '';
         let specialHTML = '';
         let unlockHTML = '';
@@ -546,57 +546,81 @@ export class UIManager {
         const unlockSystem = this.towerManager.getUnlockSystem();
         const isUnlocked = unlockSystem.canBuildTower(towerType);
         
+        // Use computed upgraded stats (numeric, accounts for all upgrades)
+        const s = info.upgradedStats;
+        
+        // Helper to show stat with optional base comparison
+        const statVal = (current, base, suffix = '') => {
+            const cur = typeof current === 'number' ? Math.round(current) : current;
+            const bas = typeof base === 'number' ? Math.round(base) : base;
+            if (cur !== bas && bas > 0) {
+                return `<span style="color: #FFD700;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7em;">(base: ${bas}${suffix})</span>`;
+            }
+            return `<span style="color: #FFD700;">${cur}${suffix}</span>`;
+        };
+        const statValDecimal = (current, base, suffix = '') => {
+            const cur = typeof current === 'number' ? current.toFixed(1) : current;
+            const bas = typeof base === 'number' ? base.toFixed(1) : base;
+            if (cur !== bas && parseFloat(bas) > 0) {
+                return `<span style="color: #FFD700;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7em;">(base: ${bas}${suffix})</span>`;
+            }
+            return `<span style="color: #FFD700;">${cur}${suffix}</span>`;
+        };
+        
         // Tower-specific detailed info
         switch (towerType) {
             case 'basic':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Reliable starter tower. Upgradeable at Tower Forge.</div>';
                 break;
             case 'archer':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    ${s.armorPiercing > 0 ? `<div><span>🛡️ Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Fast-firing with long range. Gains armor piercing from Forge upgrades.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Tower Forge</div>';
                 break;
             case 'cannon':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)} <span style="color: #c9a876;">(AoE)</span></div>
+                    <div><span>💥 Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 35, 'px')}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Area of effect damage. Blast radius upgradeable at Forge.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 3</div>';
                 break;
             case 'barricade':
                 statsHTML = `
-                    <div><span>🛡️ Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>👥 Base Capacity:</span> <span style="color: #FFD700;">4 enemies</span></div>
-                    <div><span>⏱️ Slow Duration:</span> <span style="color: #FFD700;">4.0s</span></div>
+                    <div><span>🪵 Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>👥 Capacity:</span> ${statVal(s.capacity, s.baseCapacity, ' enemies')}</div>
+                    <div><span>⏱️ Duration:</span> ${statValDecimal(s.duration, s.baseDuration, 's')}</div>
+                    <div><span>⚡ Deploy Rate:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Rolls barrels creating rubble clouds that slow enemies. Capacity and duration upgrade at Forge.</div>';
                 break;
             case 'poison':
                 statsHTML = `
-                    <div><span>☠️ DoT Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>☠️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Creates toxic clouds dealing damage over time. DoT upgradeable at Forge.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 2</div>';
                 break;
             case 'magic':
                 statsHTML = `
-                    <div><span>✨ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>✨ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Select element: 🔥 Fire, 💧 Water, 💨 Air, 🌍 Earth. Bonuses from Magic Academy.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Magic Academy</div>';
@@ -604,7 +628,7 @@ export class UIManager {
             case 'guard-post':
                 statsHTML = `
                     <div><span>🛡️ Type:</span> <span style="color: #FFD700;">Path Defender</span></div>
-                    <div><span>💰 Hire Cost:</span> <span style="color: #FFD700;">🪙100</span></div>
+                    <div><span>🪙 Hire Cost:</span> <span style="color: #FFD700;">🪙100</span></div>
                     <div><span>⏱️ Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Place on path to hire a defender that blocks and fights enemies. Defender levels upgrade at Training Grounds.</div>';
@@ -612,9 +636,9 @@ export class UIManager {
                 break;
             case 'combination':
                 statsHTML = `
-                    <div><span>⚡ Damage:</span> <span style="color: #FFD700;">${info.damage}</span></div>
-                    <div><span>🎯 Range:</span> <span style="color: #FFD700;">${info.range}</span></div>
-                    <div><span>⚡ Attack Speed:</span> <span style="color: #FFD700;">${info.fireRate}</span></div>
+                    <div><span>⚡ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Casts powerful combination spells. Unlock spells by investing gems at the Magic Academy.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab</div>';
@@ -630,13 +654,12 @@ export class UIManager {
             <div class="info-stats">
                 ${statsHTML}
                 <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
-                    <span>💰 Cost:</span> <span style="color: #FFD700;">🪙${info.cost}</span>
+                    <span>🪙 Cost:</span> <span style="color: #FFD700;">🪙${info.cost}</span>
                 </div>
             </div>
             <div class="info-description">${info.description}</div>
             ${specialHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.15); font-size: 0.78rem; line-height: 1.3;">${specialHTML}</div>` : ''}
             ${unlockHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 100, 100, 0.3); font-size: 0.8rem;">${unlockHTML}</div>` : ''}
-            ${info.upgradeInfo ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.3); color: #FFD700; font-size: 0.8rem;">${info.upgradeInfo}</div>` : ''}
         `;
         
         document.body.appendChild(menu);
@@ -713,7 +736,7 @@ export class UIManager {
                 const incomeMultiplier = unlockSystem.getMineIncomeMultiplier();
                 const maxMines = unlockSystem.getMaxMines();
                 statsHTML = `
-                    <div><span>💰 Income:</span> <span style="color: #FFD700;">Gold every 30s</span></div>
+                    <div><span>🪙 Income:</span> <span style="color: #FFD700;">Gold every 30s</span></div>
                     <div><span>📈 Forge Bonus:</span> <span style="color: #FFD700;">×${incomeMultiplier.toFixed(1)}</span></div>
                     <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">${maxMines} (Forge Level ${unlockSystem.forgeLevel})</span></div>
@@ -748,7 +771,7 @@ export class UIManager {
                     <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
-                    Provides range upgrades for Archer, Basic, and Trebuchet towers.
+                    Provides range upgrades for Archer, Watch, and Trebuchet towers.
                     Also improves Barricade and Poison fire rates, and unlocks path defenders for Guard Posts.
                 </div>`;
                 if (!unlockSystem.unlockedBuildings.has('training')) {
@@ -785,10 +808,13 @@ export class UIManager {
                 statsHTML = `
                     <div><span>💎 Exchange:</span> <span style="color: #FFD700;">3 of each gem → 1 💎</span></div>
                     <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Converts elemental gems (🔥💧💨🌍) into diamonds used for Super Weapon Lab upgrades and spell enhancements.</div>';
                 if (!unlockSystem.unlockedBuildings.has('diamond-press')) {
                     unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab Level 2</div>';
+                } else if (unlockSystem.diamondPressCount >= 1) {
+                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
                 }
                 break;
         }
@@ -802,7 +828,7 @@ export class UIManager {
             <div class="info-stats">
                 ${statsHTML}
                 <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
-                    <span>💰 Cost:</span> <span style="color: #FFD700;">${costString}</span>
+                    <span>🪙 Cost:</span> <span style="color: #FFD700;">${costString}</span>
                 </div>
             </div>
             <div class="info-description">${info.description}</div>
@@ -1452,7 +1478,7 @@ export class UIManager {
             if (forge.upgrades.barricade_effectiveness.level > 0) {
                 const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
                 const duration = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
-                effectsList.push(`🛡️ Barricade: ${capacity} (${duration.toFixed(1)}s)`);
+                effectsList.push(`🪵 Barricade: ${capacity} (${duration.toFixed(1)}s)`);
             }
             
             if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
@@ -2215,7 +2241,7 @@ export class UIManager {
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Academy
+                    🪙 Sell Academy
                 </button>
             </div>
         `;
@@ -2439,7 +2465,6 @@ export class UIManager {
         const tower = towerData.tower;
         const dmg = Math.round(tower.damage);
         const baseDmg = tower.originalDamage || 30;
-        const dmgBonus = dmg - baseDmg;
         const bonuses = tower.elementalBonuses || {};
         const currentEl = towerData.currentElement || tower.selectedElement || 'fire';
         
@@ -2457,6 +2482,10 @@ export class UIManager {
         
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
         
+        // Stat display with base value comparison
+        const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
+        const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
+        
         contentHTML += `
             <div class="upgrade-category">
                 <div class="panel-upgrade-item">
@@ -2470,8 +2499,8 @@ export class UIManager {
                 </div>
             </div>
             <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${dmgBonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${dmgBonus})</span>` : ''}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${dmgStr}</div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${rngStr}</div>
                 <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
                 ${elementBonusHTML}
                 ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes academy bonuses</div>' : ''}
@@ -2509,7 +2538,7 @@ export class UIManager {
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Tower
+                    🪙 Sell Tower
                 </button>
             </div>
         `;
@@ -2587,9 +2616,12 @@ export class UIManager {
         const tower = towerData.tower;
         const dmg = Math.round(tower.damage);
         const baseDmg = tower.originalDamage || 35;
-        const dmgBonus = dmg - baseDmg;
         
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
+        
+        // Stat display with base value comparison
+        const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
+        const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
         
         contentHTML += `
             <div class="upgrade-category">
@@ -2604,8 +2636,8 @@ export class UIManager {
                 </div>
             </div>
             <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${dmgBonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${dmgBonus})</span>` : ''}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${dmgStr}</div>
+                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${rngStr}</div>
                 <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
                 ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes upgrade bonuses</div>' : ''}
             </div>
@@ -2642,7 +2674,7 @@ export class UIManager {
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Tower
+                    🪙 Sell Tower
                 </button>
             </div>
         `;
@@ -2814,7 +2846,7 @@ export class UIManager {
         contentHTML += `
             <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Guard Post
+                    🪙 Sell Guard Post
                 </button>
             </div>
         `;
@@ -2888,42 +2920,51 @@ export class UIManager {
         // Check for upgrade indicators (compare live vs base)
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange || tower.fireRate !== tower.originalFireRate);
         
+        // Helper: show stat with base value if upgraded
+        const sv = (current, base, suffix = '') => {
+            const cur = Math.round(current);
+            const bas = Math.round(base);
+            if (cur !== bas && bas > 0) {
+                return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${bas}${suffix})</span>`;
+            }
+            return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span>`;
+        };
+        const svDec = (current, base, suffix = '') => {
+            const cur = current.toFixed(1);
+            const bas = base.toFixed(1);
+            if (cur !== bas && parseFloat(bas) > 0) {
+                return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${bas}${suffix})</span>`;
+            }
+            return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span>`;
+        };
+        
         switch (towerType) {
             case 'BasicTower': {
-                const dmg = Math.round(tower.damage);
-                const baseDmg = tower.originalDamage || 20;
-                const bonus = dmg - baseDmg;
                 statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 120) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 120))})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 20)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/sec')}</div>
                 `;
                 break;
             }
             case 'ArcherTower': {
-                const dmg = Math.round(tower.damage);
-                const baseDmg = tower.originalDamage || 15;
-                const bonus = dmg - baseDmg;
                 const pierce = tower.armorPiercingPercent || 0;
                 statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 140) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 140))})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 15)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 140)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/sec')}</div>
                     ${pierce > 0 ? `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🛡️ Armor Pierce: <span style="color: #FFD700; font-weight: bold;">${pierce}%</span></div>` : ''}
                 `;
                 break;
             }
             case 'CannonTower': {
-                const dmg = Math.round(tower.damage);
-                const baseDmg = tower.originalDamage || 40;
-                const bonus = dmg - baseDmg;
                 const radius = tower.splashRadius || 35;
                 const baseRadius = tower.originalSplashRadius || 35;
                 statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${dmg} (AoE)</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💥 Blast Radius: <span style="color: #FFD700; font-weight: bold;">${radius}px</span>${radius !== baseRadius ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${radius - baseRadius})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>${tower.range !== (tower.originalRange || 120) ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(tower.range - (tower.originalRange || 120))})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 40)} <span style="color: #c9a876;">(AoE)</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💥 Blast Radius: ${sv(radius, baseRadius, 'px')}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/sec')}</div>
                 `;
                 break;
             }
@@ -2933,28 +2974,24 @@ export class UIManager {
                 const baseCapacity = tower.originalMaxEnemiesSlowed || 4;
                 const baseDuration = tower.originalSlowDuration || 4.0;
                 statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🛡️ Effect: <span style="color: #FFD700; font-weight: bold;">Slows enemies</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">👥 Capacity: <span style="color: #FFD700; font-weight: bold;">${Math.round(capacity)}</span>${capacity !== baseCapacity ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${Math.round(capacity - baseCapacity)})</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⏱️ Duration: <span style="color: #FFD700; font-weight: bold;">${duration.toFixed(1)}s</span>${duration !== baseDuration ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${(duration - baseDuration).toFixed(1)}s)</span>` : ''}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Deploy Rate: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🪵 Effect: <span style="color: #FFD700; font-weight: bold;">Slows enemies</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">👥 Capacity: ${sv(capacity, baseCapacity)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⏱️ Duration: ${svDec(duration, baseDuration, 's')}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Deploy Rate: ${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/sec')}</div>
                 `;
                 break;
             }
             case 'PoisonArcherTower': {
-                const dmg = Math.round(tower.damage);
-                const baseDmg = tower.originalDamage || 18;
-                const bonus = dmg - baseDmg;
                 statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">☠️ Direct Damage: <span style="color: #FFD700; font-weight: bold;">${dmg}</span>${bonus > 0 ? `<span style="color: #aaffaa; font-size: 0.7rem;"> (+${bonus})</span>` : ''}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">☠️ Direct Damage: ${sv(tower.damage, tower.originalDamage || 18)}</div>
                     <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🧪 Poison DoT: <span style="color: #FFD700; font-weight: bold;">Damage over time</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 130)}</div>
+                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/sec')}</div>
                 `;
                 break;
             }
             default: {
-                // Fallback for any other tower type
                 statsHTML = `
                     <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span></div>
                     <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
@@ -2988,7 +3025,7 @@ export class UIManager {
             </div>
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                 <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Tower
+                    🪙 Sell Tower
                 </button>
             </div>
         `;
@@ -3758,16 +3795,16 @@ export class UIManager {
         }
         
         if (trainingGrounds.rangeUpgrades.basicTower.level > 0) {
-            effectsList.push(`⚔️ Basic: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
+            effectsList.push(`⚔️ Watch: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
         }
         
         if (trainingGrounds.rangeUpgrades.cannonTower.level > 0) {
-            effectsList.push(`🔫 Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
+            effectsList.push(`💥 Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
         }
         
         if (trainingGrounds.upgrades.barricadeFireRate.level > 0) {
             const fireRate = (0.2 + trainingGrounds.upgrades.barricadeFireRate.level * 0.1).toFixed(1);
-            effectsList.push(`🛡️ Barricade: ${fireRate}/sec`);
+            effectsList.push(`🪵 Barricade: ${fireRate}/sec`);
         }
         
         if (trainingGrounds.upgrades.poisonArcherTowerFireRate.level > 0) {
@@ -4155,7 +4192,7 @@ export class UIManager {
             return;
         }
         const incomeInfo = goldMine.getBaseIncome();
-        const modeIcon = goldMine.gemMode ? '💎' : '💰';
+        const modeIcon = goldMine.gemMode ? '💎' : '🪙';
         const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
         
         // Calculate progress information
@@ -4190,7 +4227,7 @@ export class UIManager {
         
         // Add gem mining toggle if gem mining is unlocked
         if (goldMine.gemMiningUnlocked) {
-            const toggleText = goldMine.gemMode ? '💰 Switch to Gold' : '💎 Switch to Gems';
+            const toggleText = goldMine.gemMode ? '🪙 Switch to Gold' : '💎 Switch to Gems';
             contentHTML += `
                 <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
                     <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#4169E1' : '#FFB800'}; flex: 1; margin: 0;">
@@ -4209,14 +4246,14 @@ export class UIManager {
         if (goldMine.goldReady) {
             contentHTML += `
                 <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
-                    💰 Collect Now
+                    🪙 Collect Now
                 </button>
             `;
         }
         
         contentHTML += `
                 <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; flex: 1; margin: 0;">
-                    💰 Sell Mine
+                    🪙 Sell Mine
                 </button>
             </div>
         `;
@@ -4320,46 +4357,56 @@ export class UIManager {
         const canExchange = fire >= 3 && water >= 3 && air >= 3 && earth >= 3;
 
         // Build the menu HTML
+        const sellRefund = Math.floor(500 * 0.7);
         let contentHTML = `
-            <div style="padding: 0.85rem; color: #ddd; display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="upgrade-category-header" style="padding: 0 0 0.6rem 0; color: #FFD700; font-weight: bold; border-bottom: 1px solid rgba(255, 215, 0, 0.3); margin: 0; font-size: 1.1rem; text-align: center;">
-                    💎 Gem Exchange
-                </div>
-
-                <div style="background: rgba(0, 0, 0, 0.4); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(150, 150, 150, 0.2); text-align: center;">
-                    <div style="font-size: 0.8rem; color: #bbb; margin-bottom: 0.4rem; letter-spacing: 0.5px;">Required Gems</div>
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; font-size: 0.75rem;">
-                        <div style="padding: 0.45rem 0.2rem; background: rgba(255, 100, 0, 0.35); border: 1px solid rgba(255, 100, 0, 0.5); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">🔥</div>
-                            <div style="color: ${fire >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${fire}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div class="forge-sell-btn-wrapper">
+                        <button class="upgrade-button sell-building-btn" style="background: rgba(255, 50, 50, 0.6); padding: 0.3rem 0.5rem; margin: 0; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(255, 50, 50, 0.4); white-space: nowrap;">
+                            🪙 Sell (${sellRefund})
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Diamond Press</div>
                         </div>
-                        <div style="padding: 0.45rem 0.2rem; background: rgba(100, 150, 255, 0.35); border: 1px solid rgba(100, 150, 255, 0.5); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">💧</div>
-                            <div style="color: ${water >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${water}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
-                        </div>
-                        <div style="padding: 0.45rem 0.2rem; background: rgba(200, 200, 255, 0.35); border: 1px solid rgba(200, 200, 255, 0.5); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">💨</div>
-                            <div style="color: ${air >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${air}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
-                        </div>
-                        <div style="padding: 0.45rem 0.2rem; background: rgba(100, 200, 100, 0.35); border: 1px solid rgba(100, 200, 100, 0.5); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 1rem; margin-bottom: 0.2rem;">🌍</div>
-                            <div style="color: ${earth >= 3 ? '#FFD700' : '#aaa'}; font-weight: bold; font-size: 0.9rem;">${earth}<span style="font-size: 0.75rem; color: #888;">/ 3</span></div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">💎 Diamonds: ${diamond}</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div style="background: rgba(100, 200, 255, 0.25); padding: 0.5rem; border-radius: 6px; border: 1px solid rgba(100, 200, 255, 0.4); text-align: center;">
-                    <div style="font-size: 0.8rem; color: #bbb; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Output</div>
-                    <div style="font-size: 1.5rem; font-weight: bold; color: #64dfff;">💎 ${diamond}</div>
-                </div>
+            <div class="upgrade-category">
+                <div class="upgrade-category-header">💎 Gem Exchange</div>
 
-                <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.65rem; font-size: 0.95rem; font-weight: 600; margin: 0.2rem 0 0 0; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${!canExchange ? 'disabled' : ''}>
-                    ${canExchange ? '⚙️ Exchange for Diamond' : '⛔ Need 3 of each gem'}
-                </button>
+                <div style="padding: 0.5rem 0.85rem;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-bottom: 0.5rem;">
+                        <div style="padding: 0.4rem 0.2rem; background: rgba(255, 100, 0, ${fire >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(255, 100, 0, ${fire >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">🔥</div>
+                            <div style="color: ${fire >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${fire}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
+                        </div>
+                        <div style="padding: 0.4rem 0.2rem; background: rgba(100, 150, 255, ${water >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(100, 150, 255, ${water >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">💧</div>
+                            <div style="color: ${water >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${water}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
+                        </div>
+                        <div style="padding: 0.4rem 0.2rem; background: rgba(200, 200, 255, ${air >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(200, 200, 255, ${air >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">💨</div>
+                            <div style="color: ${air >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${air}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
+                        </div>
+                        <div style="padding: 0.4rem 0.2rem; background: rgba(100, 200, 100, ${earth >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(100, 200, 100, ${earth >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
+                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">🌍</div>
+                            <div style="color: ${earth >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${earth}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
+                        </div>
+                    </div>
 
-                <div style="padding: 0.5rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 0.4rem;">
-                    <button class="upgrade-button sell-building-btn" style="background: rgba(255, 50, 50, 0.6); flex: 1; padding: 0.5rem; margin: 0; font-size: 0.9rem; font-weight: 600; border: 1px solid rgba(255, 50, 50, 0.4);">
-                        💰 Sell
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.4rem; margin-bottom: 0.5rem; background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.25); border-radius: 4px;">
+                        <span style="font-size: 0.8rem; color: #bbb;">3 each →</span>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #64dfff;">💎 1</span>
+                    </div>
+
+                    <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 600; margin: 0; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''};" ${!canExchange ? 'disabled' : ''}>
+                        ${canExchange ? '⚙️ Press Diamond' : '⛔ Need 3 of each gem'}
                     </button>
                 </div>
             </div>
@@ -4637,6 +4684,7 @@ export class UIManager {
                 academyCount: unlockSystem?.academyCount || 0,
                 trainingGroundsCount: unlockSystem?.trainingGroundsCount || 0,
                 superweaponCount: unlockSystem?.superweaponCount || 0,
+                diamondPressCount: unlockSystem?.diamondPressCount || 0,
                 guardPostCount: unlockSystem?.guardPostCount || 0,
                 maxGuardPosts: unlockSystem?.maxGuardPosts || 0,
                 superweaponUnlocked: unlockSystem?.superweaponUnlocked || false,

@@ -648,7 +648,7 @@ export class BarricadeTower extends Tower {
             range: '120 px',
             fireRate: '0.2',
             cost: 90,
-            icon: '🛡️'
+            icon: '🪵'
         };
     }
 }

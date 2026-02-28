@@ -6049,7 +6049,7 @@ class ArcaneLibraryMenu {
             { id: 'first-victory', name: 'First Victory', description: 'Win your first level', icon: '🏆', unlocked: false },
             { id: 'ten-victories', name: 'Victory Streak', description: 'Win 10 levels', icon: '⭐', unlocked: false },
             { id: 'fifty-kills', name: 'Deadly Force', description: 'Slay 50 enemies', icon: '⚔️', unlocked: false },
-            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '💰', unlocked: false },
+            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '🪙', unlocked: false },
             { id: 'collector', name: 'Collector', description: 'Sell 20 items', icon: '🎁', unlocked: false },
             { id: 'tower-master', name: 'Tower Master', description: 'Build 100 towers', icon: '🏰', unlocked: false }
         ];

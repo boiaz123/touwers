@@ -12,6 +12,7 @@ export class UnlockSystem {
         this.academyCount = 0;
         this.trainingGroundsCount = 0;
         this.superweaponCount = 0;
+        this.diamondPressCount = 0;
         this.guardPostCount = 0;
         this.maxGuardPosts = 0;
         
@@ -100,6 +101,14 @@ export class UnlockSystem {
         this.unlockedBuildings.add('diamond-press');
     }
     
+    onDiamondPressBuilt() {
+        if (this.diamondPressCount < 1) {
+            this.diamondPressCount++;
+            return true;
+        }
+        return false;
+    }
+    
     // New: Method to unlock training grounds when training-gear upgrade is purchased
     onTrainingGearUpgradePurchased() {
         this.unlockedBuildings.add('training');
@@ -174,6 +183,11 @@ export class UnlockSystem {
             case 'superweapon':
                 if (this.superweaponCount > 0) {
                     this.superweaponCount--;
+                }
+                break;
+            case 'diamond-press':
+                if (this.diamondPressCount > 0) {
+                    this.diamondPressCount--;
                 }
                 break;
             case 'guard-post':
@@ -293,6 +307,9 @@ export class UnlockSystem {
         }
         if (type === 'diamond-press' && !this.unlockedBuildings.has('diamond-press')) {
             return false; // Only unlocked at Super Weapon Lab level 2
+        }
+        if (type === 'diamond-press' && this.diamondPressCount >= 1) {
+            return false; // Only 1 diamond press allowed
         }
         return this.unlockedBuildings.has(type);
     }

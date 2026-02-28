@@ -527,7 +527,7 @@ export class CannonTower extends Tower {
             range: '120',
             fireRate: '0.4/sec',
             cost: 100,
-            icon: '🎯'
+            icon: '💥'
         };
     }
 }

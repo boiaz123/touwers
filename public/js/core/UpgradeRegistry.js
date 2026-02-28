@@ -24,7 +24,7 @@ export class UpgradeRegistry {
             name: 'Wooden Chest',
             description: 'Increase starting gold by 100',
             cost: 250,
-            icon: '💰',
+            icon: '🪙',
             category: 'gold',
             effect: 'Increases starting gold by 100'
         },

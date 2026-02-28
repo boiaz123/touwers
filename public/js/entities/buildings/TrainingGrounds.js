@@ -1078,8 +1078,8 @@ export class TrainingGrounds extends Building {
         // Range upgrades for manned towers - map tower registry names to upgrade keys
         const towerTypes = [
             { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '🏹' },
-            { id: 'basicTower', registryId: 'basic', name: 'Basic Tower', icon: '⚔️' },
-            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '🔫' }
+            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '⚔️' },
+            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '💥' }
         ];
         
         // Add range upgrade for each manned tower - but only if the tower is unlocked
@@ -1116,7 +1116,7 @@ export class TrainingGrounds extends Building {
                 registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.2 → 0.7 at level 5)`,
-                icon: '⚡'
+                icon: '🪵'
             },
             {
                 id: 'poisonArcherTowerFireRate',

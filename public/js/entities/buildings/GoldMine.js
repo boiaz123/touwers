@@ -958,7 +958,7 @@ export class GoldMine extends Building {
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
             // Show "READY" text when gold is ready
-            const readyText = this.gemMode ? '💎 READY' : '💰 READY';
+            const readyText = this.gemMode ? '💎 READY' : '🪙 READY';
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
