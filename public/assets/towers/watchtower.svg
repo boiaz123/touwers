@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Shadow -->
+  <ellipse cx="32" cy="62" rx="17" ry="2.5" fill="rgba(0,0,0,0.22)"/>
+
+  <!-- Foundation slab -->
+  <rect x="11" y="55" width="42" height="6" rx="2" fill="#4A3F2E"/>
+  <rect x="11" y="55" width="42" height="2.5" rx="2" fill="#5D5040" opacity="0.6"/>
+
+  <!-- Main tower body -->
+  <rect x="17" y="22" width="30" height="34" fill="#8B7355" rx="0.5"/>
+
+  <!-- Left light face -->
+  <rect x="17" y="22" width="6" height="34" fill="#A08B6A" rx="0.5" opacity="0.55"/>
+  <!-- Right shadow face -->
+  <rect x="41" y="22" width="6" height="34" fill="#5C4A30" rx="0.5" opacity="0.45"/>
+
+  <!-- Stone course mortar lines (horizontal) -->
+  <rect x="17" y="31" width="30" height="1" fill="#6B5A3E" opacity="0.55"/>
+  <rect x="17" y="40" width="30" height="1" fill="#6B5A3E" opacity="0.55"/>
+  <rect x="17" y="49" width="30" height="1" fill="#6B5A3E" opacity="0.55"/>
+
+  <!-- Vertical joints offset per course -->
+  <line x1="29" y1="22" x2="29" y2="31" stroke="#6B5A3E" stroke-width="0.7" opacity="0.5"/>
+  <line x1="23" y1="31" x2="23" y2="40" stroke="#6B5A3E" stroke-width="0.7" opacity="0.5"/>
+  <line x1="36" y1="31" x2="36" y2="40" stroke="#6B5A3E" stroke-width="0.7" opacity="0.5"/>
+  <line x1="27" y1="40" x2="27" y2="49" stroke="#6B5A3E" stroke-width="0.7" opacity="0.5"/>
+  <line x1="40" y1="40" x2="40" y2="49" stroke="#6B5A3E" stroke-width="0.7" opacity="0.5"/>
+
+  <!-- Battlement platform -->
+  <rect x="17" y="15" width="30" height="8" fill="#8B7355"/>
+  <rect x="17" y="15" width="6" height="8" fill="#A08B6A" opacity="0.5"/>
+
+  <!-- Merlons (battlements) -->
+  <rect x="17" y="7" width="8" height="9" rx="0.5" fill="#8B7355"/>
+  <rect x="29" y="7" width="8" height="9" rx="0.5" fill="#8B7355"/>
+  <rect x="40" y="7" width="7" height="9" rx="0.5" fill="#8B7355"/>
+
+  <!-- Merlon highlights -->
+  <rect x="17" y="7" width="2.5" height="9" fill="#A08B6A" opacity="0.45" rx="0.5"/>
+  <rect x="29" y="7" width="2.5" height="9" fill="#A08B6A" opacity="0.45" rx="0.5"/>
+  <rect x="40" y="7" width="2.5" height="9" fill="#A08B6A" opacity="0.45" rx="0.5"/>
+
+  <!-- Tower body outer stroke -->
+  <rect x="17" y="7" width="30" height="49" rx="0.5" fill="none" stroke="#5C4A30" stroke-width="1.5"/>
+
+  <!-- Merlon inner strokes (gaps) -->
+  <rect x="17" y="7" width="8" height="9" rx="0.5" fill="none" stroke="#5C4A30" stroke-width="1"/>
+  <rect x="29" y="7" width="8" height="9" rx="0.5" fill="none" stroke="#5C4A30" stroke-width="1"/>
+  <rect x="40" y="7" width="7" height="9" rx="0.5" fill="none" stroke="#5C4A30" stroke-width="1"/>
+
+  <!-- Battlement platform dividing line -->
+  <line x1="17" y1="22" x2="47" y2="22" stroke="#5C4A30" stroke-width="1"/>
+
+  <!-- Arrow cross slit: vertical bar -->
+  <rect x="29.5" y="26" width="5" height="18" rx="1" fill="#1A1209"/>
+  <!-- Arrow cross slit: horizontal bar -->
+  <rect x="24.5" y="32" width="15" height="5" rx="0.8" fill="#1A1209"/>
+
+  <!-- Torch on right merlon -->
+  <rect x="43.5" y="4.5" width="2.5" height="6" rx="0.5" fill="#5C4A30"/>
+  <!-- Torch flame outer glow -->
+  <ellipse cx="44.8" cy="3.5" rx="4" ry="5" fill="#F59E0B" opacity="0.5"/>
+  <!-- Flame mid -->
+  <ellipse cx="44.8" cy="3" rx="2.8" ry="4" fill="#F59E0B" opacity="0.9"/>
+  <!-- Flame inner bright -->
+  <ellipse cx="44.8" cy="2.5" rx="1.7" ry="2.8" fill="#FCD34D"/>
+  <!-- Flame core -->
+  <ellipse cx="44.8" cy="2" rx="0.9" ry="1.8" fill="#FEF9C3"/>
+</svg>

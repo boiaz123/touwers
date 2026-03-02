@@ -55,6 +55,29 @@ export class KnightEnemy extends BaseEnemy {
     
     update(deltaTime) {
         this.animationTime += deltaTime;
+        this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+        
+        // Don't move if attacking a defender (path or castle)
+        if (this.isAttackingDefender) {
+            return;
+        }
+        
+        // PATH DEFENDER LOGIC: Check if any guard post defender is ahead on the path
+        if (this.guardPostCache && this.guardPostCache.length > 0) {
+            for (let cache of this.guardPostCache) {
+                if (!cache.defender.isDead() && cache.waypoint) {
+                    const distanceToWaypoint = Math.hypot(
+                        cache.waypoint.x - this.x,
+                        cache.waypoint.y - this.y
+                    );
+                    if (distanceToWaypoint < 60) {
+                        this.reachedEnd = true;
+                        this.isAttackingCastle = false;
+                        return;
+                    }
+                }
+            }
+        }
         
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         

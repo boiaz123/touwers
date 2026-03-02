@@ -404,6 +404,16 @@ export class UIManager {
         if (restartWarningOverlay) {
             restartWarningOverlay.replaceWith(restartWarningOverlay.cloneNode(true));
         }
+
+        const quitCloseBtn = document.getElementById('quit-close-btn');
+        if (quitCloseBtn) {
+            quitCloseBtn.replaceWith(quitCloseBtn.cloneNode(true));
+        }
+
+        const restartCloseBtn = document.getElementById('restart-close-btn');
+        if (restartCloseBtn) {
+            restartCloseBtn.replaceWith(restartCloseBtn.cloneNode(true));
+        }
     }
 
     // ============ SPEED CONTROLS ============
@@ -1238,16 +1248,28 @@ export class UIManager {
             if (!costMatch) return;
             const cost = parseInt(costMatch[1]);
 
-            // Determine if this is a gem cost (academy elemental upgrades) or gold
+            // Determine gem type - prefer data-upgrade attribute (set on button), fall back to icon emoji
             const item = btn.closest('.compact-upgrade-item');
-            const icon = item?.querySelector('.compact-upgrade-icon');
-            const isGemCost = icon && ['🔥', '💧', '💨', '🌍'].includes(icon.textContent.trim());
+            const upgradeId = btn.dataset.upgrade || item?.dataset?.upgradeId;
+            const gemTypes = ['fire', 'water', 'air', 'earth'];
+
+            let isGemCost = gemTypes.includes(upgradeId);
+            let gemType = isGemCost ? upgradeId : null;
+
+            // Fallback: check icon emoji for any remaining emoji-based icons
+            if (!isGemCost) {
+                const icon = item?.querySelector('.compact-upgrade-icon');
+                const iconText = icon?.textContent.trim();
+                const gemMap = { '🔥': 'fire', '💧': 'water', '💨': 'air', '🌍': 'earth' };
+                if (iconText && gemMap[iconText]) {
+                    isGemCost = true;
+                    gemType = gemMap[iconText];
+                }
+            }
 
             let canAfford = false;
-            if (isGemCost) {
-                const gemMap = { '🔥': 'fire', '💧': 'water', '💨': 'air', '🌍': 'earth' };
-                const gemType = gemMap[icon.textContent.trim()];
-                canAfford = gemType && (currentGems[gemType] || 0) >= cost;
+            if (isGemCost && gemType) {
+                canAfford = (currentGems[gemType] || 0) >= cost;
             } else {
                 canAfford = currentGold >= cost;
             }
@@ -1715,6 +1737,24 @@ export class UIManager {
         return total;
     }
 
+    /**
+     * Returns inline HTML for a CSS-styled elemental gem (matches topbar gem style).
+     * @param {string} element - 'fire','water','air','earth','diamond'
+     * @param {string} size - CSS size string, default '14px'
+     */
+    getElementGemHTML(element, size = '14px') {
+        const gemClasses = {
+            fire: 'fire-gem',
+            water: 'water-gem',
+            air: 'air-gem',
+            earth: 'earth-gem',
+            diamond: 'diamond-gem'
+        };
+        const gemClass = gemClasses[element];
+        if (!gemClass) return '';
+        return `<div class="gem ${gemClass}" style="width:${size};height:${size};display:inline-block;flex-shrink:0;vertical-align:middle;margin:0 2px;"></div>`;
+    }
+
     setupForgePanelListeners(forgeData, unlockSystem) {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
@@ -2078,16 +2118,16 @@ export class UIManager {
         // Calculate academy effects badges
         const effectsList = [];
         if (academy.elementalUpgrades.fire.level > 0) {
-            effectsList.push(`🔥 Fire: +${academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus}`);
+            effectsList.push(`${this.getElementGemHTML('fire')} Fire: +${academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus}`);
         }
         if (academy.elementalUpgrades.water.level > 0) {
-            effectsList.push(`💧 Water: +${(academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%`);
+            effectsList.push(`${this.getElementGemHTML('water')} Water: +${(academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%`);
         }
         if (academy.elementalUpgrades.air.level > 0) {
-            effectsList.push(`💨 Air: +${academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange}px`);
+            effectsList.push(`${this.getElementGemHTML('air')} Air: +${academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange}px`);
         }
         if (academy.elementalUpgrades.earth.level > 0) {
-            effectsList.push(`🪨 Earth: +${academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing}`);
+            effectsList.push(`${this.getElementGemHTML('earth')} Earth: +${academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing}`);
         }
         
         // Build header with prominent academy upgrade button
@@ -2095,7 +2135,7 @@ export class UIManager {
             <div class="forge-panel-header">
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
-                        <div class="forge-icon-display">🎓</div>
+                        <div class="forge-icon-display"><img src="assets/buildings/academy.png" alt="Magic Academy" style="width: 100%; height: 100%; object-fit: contain;"></div>
                         <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
                             Sell
                         </button>
@@ -2215,7 +2255,7 @@ export class UIManager {
                     contentHTML += `
                         <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                             <div class="compact-upgrade-left">
-                                <span class="compact-upgrade-icon">${upgrade.icon}</span>
+                                <span class="compact-upgrade-icon">${this.getElementGemHTML(upgrade.id, '18px')}</span>
                                 <div class="compact-upgrade-info">
                                     <div class="compact-upgrade-name">${upgrade.name}</div>
                                     <div class="compact-upgrade-values">
@@ -2227,7 +2267,7 @@ export class UIManager {
                             <button class="compact-upgrade-btn panel-upgrade-btn" 
                                     data-upgrade="${upgrade.id}" 
                                     ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${upgrade.icon}${upgrade.cost}` : '\u2014')}
+                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${this.getElementGemHTML(upgrade.id, '11px')} ${upgrade.cost}` : '\u2014')}
                             </button>
                         </div>
                     `;
@@ -2236,15 +2276,6 @@ export class UIManager {
                 contentHTML += `</div>`;
             }
         }
-        
-        // Add sell button for academy (in footer)
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Academy
-                </button>
-            </div>
-        `;
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
@@ -2471,13 +2502,13 @@ export class UIManager {
         // Build active element bonus info
         let elementBonusHTML = '';
         if (currentEl === 'fire' && bonuses.fire && bonuses.fire.damageBonus > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🔥 Fire Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.fire.damageBonus} damage</span></div>`;
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('fire')} Fire Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.fire.damageBonus} damage</span></div>`;
         } else if (currentEl === 'water' && bonuses.water && bonuses.water.slowBonus > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💧 Water Bonus: <span style="color: #FFD700; font-weight: bold;">+${(bonuses.water.slowBonus * 100).toFixed(0)}% slow</span></div>`;
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('water')} Water Bonus: <span style="color: #FFD700; font-weight: bold;">+${(bonuses.water.slowBonus * 100).toFixed(0)}% slow</span></div>`;
         } else if (currentEl === 'air' && bonuses.air && bonuses.air.chainRange > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💨 Air Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.air.chainRange} chain range</span></div>`;
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('air')} Air Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.air.chainRange} chain range</span></div>`;
         } else if (currentEl === 'earth' && bonuses.earth && bonuses.earth.armorPiercing > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🌍 Earth Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.earth.armorPiercing} armor pierce</span></div>`;
+            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('earth')} Earth Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.earth.armorPiercing} armor pierce</span></div>`;
         }
         
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
@@ -2486,24 +2517,28 @@ export class UIManager {
         const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
         const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
         
-        contentHTML += `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">✨</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">Magic Tower</div>
-                            <div class="upgrade-description">Elemental tower with selectable damage types</div>
+        contentHTML = `
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/towers/magic.png" alt="Magic Tower" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Magic Tower</div>
                         </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">⚔️ ${dmgStr}</span>
+                            <span class="effect-badge">🎯 ${rngStr}</span>
+                            <span class="effect-badge">⚡ ${tower.fireRate.toFixed(1)}/s</span>
+                        </div>
+                        ${elementBonusHTML}
+                        ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes academy bonuses</div>' : ''}
                     </div>
                 </div>
-            </div>
-            <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${dmgStr}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${rngStr}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
-                ${elementBonusHTML}
-                ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes academy bonuses</div>' : ''}
             </div>
         `;
         
@@ -2516,7 +2551,7 @@ export class UIManager {
                 <div class="upgrade-category">
                     <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
                         <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${element.icon}</div>
+                            <div class="upgrade-icon-section" style="display:flex;align-items:center;justify-content:center;">${this.getElementGemHTML(element.id, '22px')}</div>
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">${element.name} Element</div>
                                 <div class="upgrade-description">${element.description}</div>
@@ -2533,15 +2568,6 @@ export class UIManager {
                 </div>
             `;
         });
-        
-        // Add sell button for tower
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Tower
-                </button>
-            </div>
-        `;
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
@@ -2623,23 +2649,27 @@ export class UIManager {
         const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
         const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
         
-        contentHTML += `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">⚡</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">Combination Tower</div>
-                            <div class="upgrade-description">Casts powerful combination spells</div>
+        contentHTML = `
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/towers/combination.png" alt="Combination Tower" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Combination Tower</div>
                         </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">⚔️ ${dmgStr}</span>
+                            <span class="effect-badge">🎯 ${rngStr}</span>
+                            <span class="effect-badge">⚡ ${tower.fireRate.toFixed(1)}/s</span>
+                        </div>
+                        ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>' : ''}
                     </div>
                 </div>
-            </div>
-            <div class="upgrade-category" style="padding: 0.5rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${dmgStr}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${rngStr}</div>
-                <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${tower.fireRate.toFixed(1)}/sec</span></div>
-                ${hasUpgrades ? '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.2rem; text-align: right;">✦ Includes upgrade bonuses</div>' : ''}
             </div>
         `;
         
@@ -2669,15 +2699,6 @@ export class UIManager {
                 </div>
             `;
         });
-        
-        // Add sell button for tower
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Tower
-                </button>
-            </div>
-        `;
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
@@ -2754,13 +2775,20 @@ export class UIManager {
         const trainingGrounds = towerData.trainingGrounds;
         
         let contentHTML = `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">${towerInfo.icon}</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">${towerInfo.name}</div>
-                            <div class="upgrade-description">${towerInfo.description}</div>
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/towers/guardian.png" alt="Guard Post" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">${towerInfo.name}</div>
+                        </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">${towerInfo.description}</span>
                         </div>
                     </div>
                 </div>
@@ -2841,15 +2869,6 @@ export class UIManager {
                 </div>
             `;
         }
-
-        // Add sell button
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="upgrade-button sell-tower-btn" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Guard Post
-                </button>
-            </div>
-        `;
 
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
@@ -3007,14 +3026,25 @@ export class UIManager {
             upgradeNote = '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.3rem; text-align: right;">✦ Stats include forge & training upgrades</div>';
         }
         
+        const towerImageMap = { 'BasicTower': 'watchtower', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison' };
+        const towerImgExt = towerType === 'BasicTower' ? 'svg' : 'png';
+        const towerImg = towerImageMap[towerType] || 'watchtower';
+
         let contentHTML = `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">${icon}</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">${name}</div>
-                            <div class="upgrade-description">${description}</div>
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/towers/${towerImg}.${towerImgExt}" alt="${name}" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">${name}</div>
+                        </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">${description}</span>
                         </div>
                     </div>
                 </div>
@@ -3022,11 +3052,6 @@ export class UIManager {
             <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
                 ${statsHTML}
                 ${upgradeNote}
-            </div>
-            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Tower
-                </button>
             </div>
         `;
         
@@ -3417,15 +3442,17 @@ export class UIManager {
         const panel = document.getElementById('superweapon-panel');
         if (!panel) return;
         
-        // Close button
+        // Close button - clone to remove all accumulated { once: true } listeners
         const closeBtn = panel.querySelector('.panel-close-btn');
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
+            const freshCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(freshCloseBtn, closeBtn);
+            freshCloseBtn.addEventListener('click', () => {
                 this.closePanelWithAnimation('superweapon-panel');
             }, { once: true });
         }
         
-        // Upgrade button handler
+        // Upgrade button handler - store on panel to prevent stacking
         const handleUpgradeClick = (e) => {
             const btn = e.target.closest('.panel-upgrade-btn');
             if (!btn || btn.disabled) return;
@@ -3502,9 +3529,12 @@ export class UIManager {
             }
         };
         
-        // Remove any previous handler and add fresh one
-        panel.removeEventListener('click', handleUpgradeClick);
-        panel.addEventListener('click', handleUpgradeClick);
+        // Remove any previous handler and add fresh one (using stored reference)
+        if (panel._upgradeClickHandler) {
+            panel.removeEventListener('click', panel._upgradeClickHandler);
+        }
+        panel._upgradeClickHandler = handleUpgradeClick;
+        panel.addEventListener('click', panel._upgradeClickHandler);
         
         // Sell button listener
         const sellBtn = panel.querySelector('.sell-building-btn');
@@ -3604,18 +3634,21 @@ export class UIManager {
         const healthPercent = (currentHealth / maxHealth) * 100;
         
         contentHTML += `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">🏰</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">Castle Wall</div>
-                            <div class="upgrade-description">Current condition of the castle defenses</div>
-                            <div class="upgrade-level-display">
-                                Health: ${currentHealth}/${maxHealth}
-                                <div class="upgrade-level-bar">
-                                    <div class="upgrade-level-bar-fill" style="width: ${healthPercent}%"></div>
-                                </div>
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display">🏰</div>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Castle</div>
+                        </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">❤️ ${currentHealth}/${maxHealth} HP</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem;">
+                            <div style="flex: 1; height: 8px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                <div style="height: 100%; width: ${healthPercent}%; background: linear-gradient(90deg, #ff4444, #ff9900);"></div>
                             </div>
                         </div>
                     </div>
@@ -4202,23 +4235,27 @@ export class UIManager {
         const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
         
         let contentHTML = `
-            <div class="upgrade-category">
-                <div class="panel-upgrade-item">
-                    <div class="upgrade-header-row">
-                        <div class="upgrade-icon-section">⛏️</div>
-                        <div class="upgrade-info-section">
-                            <div class="upgrade-name">Gold Mine</div>
-                            <div class="upgrade-description">${modeText} - ${incomeInfo}/cycle</div>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem;">
-                                <div style="font-size: 1.2rem; min-width: 2rem;">${modeIcon}</div>
-                                <div style="flex: 1;">
-                                    <div style="height: 16px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
-                                        <div id="goldmine-progress-bar" style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="goldmine-timer" style="font-size: 0.75rem; color: ${readyColor}; font-weight: bold; min-width: 3.5rem; text-align: right;">${readyStatus}</div>
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/buildings/mine.png" alt="Gold Mine" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
+                        </button>
+                    </div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Gold Mine</div>
+                        </div>
+                        <div class="forge-effects-row">
+                            <span class="effect-badge">${modeIcon} ${modeText}</span>
+                            <span class="effect-badge">💰 ${incomeInfo}/cycle</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem;">
+                            <div style="flex: 1; height: 12px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
+                                <div id="goldmine-progress-bar" style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFB800, #FFD700);"></div>
                             </div>
+                            <div id="goldmine-timer" style="font-size: 0.7rem; color: ${readyColor}; font-weight: bold; min-width: 3rem; text-align: right;">${readyStatus}</div>
                         </div>
                     </div>
                 </div>
@@ -4237,26 +4274,16 @@ export class UIManager {
             `;
         }
         
-        // Add collect and sell buttons
-        contentHTML += `
-            <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
-        `;
-        
-        // Add collect button if ready
+        // Add collect button section if ready
         if (goldMine.goldReady) {
             contentHTML += `
-                <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
-                    🪙 Collect Now
-                </button>
+                <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
+                        🪙 Collect Now
+                    </button>
+                </div>
             `;
         }
-        
-        contentHTML += `
-                <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; flex: 1; margin: 0;">
-                    🪙 Sell Mine
-                </button>
-            </div>
-        `;
         
         // Update panel title and content - set it directly, no fancy comparison
         const titleElement = panel.querySelector('.panel-title');
@@ -4361,9 +4388,10 @@ export class UIManager {
         let contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
-                    <div class="forge-sell-btn-wrapper">
-                        <button class="upgrade-button sell-building-btn" style="background: rgba(255, 50, 50, 0.6); padding: 0.3rem 0.5rem; margin: 0; font-size: 0.75rem; font-weight: 600; border: 1px solid rgba(255, 50, 50, 0.4); white-space: nowrap;">
-                            🪙 Sell (${sellRefund})
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
+                        <div class="forge-icon-display"><img src="assets/buildings/diamondpress.png" alt="Diamond Press" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <button class="upgrade-button sell-building-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
+                            Sell
                         </button>
                     </div>
                     <div class="forge-info-wrapper">
@@ -4383,19 +4411,19 @@ export class UIManager {
                 <div style="padding: 0.5rem 0.85rem;">
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-bottom: 0.5rem;">
                         <div style="padding: 0.4rem 0.2rem; background: rgba(255, 100, 0, ${fire >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(255, 100, 0, ${fire >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">🔥</div>
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.15rem;">${this.getElementGemHTML('fire', '16px')}</div>
                             <div style="color: ${fire >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${fire}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
                         </div>
                         <div style="padding: 0.4rem 0.2rem; background: rgba(100, 150, 255, ${water >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(100, 150, 255, ${water >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">💧</div>
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.15rem;">${this.getElementGemHTML('water', '16px')}</div>
                             <div style="color: ${water >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${water}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
                         </div>
                         <div style="padding: 0.4rem 0.2rem; background: rgba(200, 200, 255, ${air >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(200, 200, 255, ${air >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">💨</div>
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.15rem;">${this.getElementGemHTML('air', '16px')}</div>
                             <div style="color: ${air >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${air}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
                         </div>
                         <div style="padding: 0.4rem 0.2rem; background: rgba(100, 200, 100, ${earth >= 3 ? '0.25' : '0.1'}); border: 1px solid rgba(100, 200, 100, ${earth >= 3 ? '0.5' : '0.2'}); border-radius: 4px; text-align: center;">
-                            <div style="font-size: 0.9rem; margin-bottom: 0.15rem;">🌍</div>
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.15rem;">${this.getElementGemHTML('earth', '16px')}</div>
                             <div style="color: ${earth >= 3 ? '#FFD700' : '#888'}; font-weight: bold; font-size: 0.85rem;">${earth}<span style="font-size: 0.7rem; color: #666;">/3</span></div>
                         </div>
                     </div>
@@ -4888,6 +4916,17 @@ export class UIManager {
             });
         }
 
+        // New: ✕ close button for quit warning modal
+        const quitCloseBtn = document.getElementById('quit-close-btn');
+        if (quitCloseBtn) {
+            quitCloseBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelQuitLevel();
+            });
+        }
+
         // Setup restart warning modal listeners
         const restartConfirmBtn = document.getElementById('restart-confirm-btn');
         const restartCancelBtn = document.getElementById('restart-cancel-btn');
@@ -4913,6 +4952,17 @@ export class UIManager {
 
         if (restartWarningOverlay) {
             restartWarningOverlay.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.cancelRestartLevel();
+            });
+        }
+
+        // New: ✕ close button for restart warning modal
+        const restartCloseBtn = document.getElementById('restart-close-btn');
+        if (restartCloseBtn) {
+            restartCloseBtn.addEventListener('click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }

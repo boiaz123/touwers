@@ -172,6 +172,7 @@
     <div id="pause-menu-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="pause-menu-overlay"></div>
         <div class="pause-menu-content">
+            <button class="pause-menu-close-btn" id="resume-btn" title="Resume Game">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">Menu</div>
             </div>
@@ -179,7 +180,6 @@
                 <button id="restart-btn" class="pause-menu-btn restart-btn">Restart Level</button>
                 <button id="quit-btn" class="pause-menu-btn quit-btn">Quit Level</button>
                 <button id="options-btn" class="pause-menu-btn options-btn">Options</button>
-                <button id="resume-btn" class="pause-menu-btn resume-btn">Close</button>
             </div>
         </div>
     </div>
@@ -188,13 +188,11 @@
     <div id="ingame-options-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="ingame-options-overlay"></div>
         <div class="pause-menu-content">
+            <button class="pause-menu-close-btn" id="ingame-options-back-btn" title="Back">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">⚙ Options</div>
             </div>
             <div id="ingame-options-content" style="position: relative; z-index: 1;"></div>
-            <div class="pause-menu-buttons" style="margin-top: 2rem;">
-                <button id="ingame-options-back-btn" class="pause-menu-btn resume-btn">Back</button>
-            </div>
         </div>
     </div>
 
@@ -202,6 +200,7 @@
     <div id="quit-warning-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="quit-warning-overlay"></div>
         <div class="pause-menu-content">
+            <button class="pause-menu-close-btn" id="quit-close-btn" title="Cancel">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">⚠ Warning</div>
             </div>
@@ -220,6 +219,7 @@
     <div id="restart-warning-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="restart-warning-overlay"></div>
         <div class="pause-menu-content">
+            <button class="pause-menu-close-btn" id="restart-close-btn" title="Cancel">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">⚠ Warning</div>
             </div>

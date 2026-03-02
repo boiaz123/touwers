@@ -1826,31 +1826,82 @@ body {
 }
 
 .panel-close-btn {
-    background: linear-gradient(135deg, #d63031, #a03030);
-    color: white;
-    border: 2px solid #8B2323;
-    border-radius: 50%;
-    width: 2rem;
-    height: 2rem;
-    font-size: 1.2rem;
+    background: linear-gradient(135deg, rgba(72, 50, 20, 0.95), rgba(55, 38, 14, 0.95));
+    color: rgba(212, 175, 55, 0.92);
+    border: 2px solid rgba(212, 175, 55, 0.52);
+    border-radius: 3px;
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 1.25rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    line-height: 1;
 }
 
 .panel-close-btn:hover {
-    background: linear-gradient(135deg, #e84545, #c34242);
-    transform: scale(1.1);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, rgba(95, 70, 30, 0.98), rgba(78, 56, 22, 0.98));
+    border-color: var(--primary-gold-light);
+    color: var(--primary-gold-light);
+    transform: scale(1.08);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.65), 0 0 10px rgba(212, 175, 55, 0.28);
 }
 
 .panel-close-btn:active {
     transform: scale(0.95);
+}
+
+/* Medieval cross / close button for pause-menu modals - top-right corner */
+.pause-menu-close-btn {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    background: linear-gradient(135deg, rgba(72, 50, 20, 0.95), rgba(55, 38, 14, 0.95));
+    border: 2px solid rgba(212, 175, 55, 0.52);
+    border-radius: 3px;
+    color: rgba(212, 175, 55, 0.92);
+    font-size: 1.55rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    z-index: 10;
+    line-height: 1;
+}
+
+.pause-menu-close-btn:hover {
+    background: linear-gradient(135deg, rgba(95, 70, 30, 0.98), rgba(78, 56, 22, 0.98));
+    border-color: var(--primary-gold-light);
+    color: var(--primary-gold-light);
+    transform: scale(1.06);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(212, 175, 55, 0.3);
+}
+
+.pause-menu-close-btn:active {
+    transform: scale(0.94);
+}
+
+/* Small inline gem for menus/content areas */
+.gem-sm {
+    width: 13px;
+    height: 13px;
+    display: inline-block;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    vertical-align: middle;
+    margin: 0 2px;
 }
 
 .panel-content {
@@ -2159,6 +2210,9 @@ body {
     font-size: 1.1rem;
     min-width: 1.2rem;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .compact-upgrade-info {
