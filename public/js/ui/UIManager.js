@@ -2930,11 +2930,6 @@ export class UIManager {
         const towerInfo = tower.constructor.getInfo();
         const icon = towerInfo.icon || '🏰';
         const name = towerInfo.name;
-        const description = towerInfo.description;
-        
-        // Build tower-type-specific stats using live (upgraded) values
-        let statsHTML = '';
-        const towerType = tower.constructor.name;
         
         // Check for upgrade indicators (compare live vs base)
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange || tower.fireRate !== tower.originalFireRate);
@@ -2957,33 +2952,37 @@ export class UIManager {
             return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span>`;
         };
         
+        // Build stat badges for display
+        let statBadgesHTML = '';
+        const towerType = tower.constructor.name;
+        
         switch (towerType) {
             case 'BasicTower': {
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 20)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/sec')}</div>
+                statBadgesHTML = `
+                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 20)}</span>
+                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/s')}</span>
                 `;
                 break;
             }
             case 'ArcherTower': {
                 const pierce = tower.armorPiercingPercent || 0;
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 15)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 140)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/sec')}</div>
-                    ${pierce > 0 ? `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🛡️ Armor Pierce: <span style="color: #FFD700; font-weight: bold;">${pierce}%</span></div>` : ''}
+                statBadgesHTML = `
+                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 15)}</span>
+                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 140)}</span>
+                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/s')}</span>
+                    ${pierce > 0 ? `<span class="effect-badge">🛡️ ${pierce}%</span>` : ''}
                 `;
                 break;
             }
             case 'CannonTower': {
                 const radius = tower.splashRadius || 35;
                 const baseRadius = tower.originalSplashRadius || 35;
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: ${sv(tower.damage, tower.originalDamage || 40)} <span style="color: #c9a876;">(AoE)</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">💥 Blast Radius: ${sv(radius, baseRadius, 'px')}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/sec')}</div>
+                statBadgesHTML = `
+                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 40)}</span>
+                    <span class="effect-badge">💥 ${sv(radius, baseRadius, 'px')}</span>
+                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
                 `;
                 break;
             }
@@ -2992,29 +2991,27 @@ export class UIManager {
                 const duration = tower.slowDuration || 4.0;
                 const baseCapacity = tower.originalMaxEnemiesSlowed || 4;
                 const baseDuration = tower.originalSlowDuration || 4.0;
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🪵 Effect: <span style="color: #FFD700; font-weight: bold;">Slows enemies</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">👥 Capacity: ${sv(capacity, baseCapacity)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⏱️ Duration: ${svDec(duration, baseDuration, 's')}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 120)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Deploy Rate: ${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/sec')}</div>
+                statBadgesHTML = `
+                    <span class="effect-badge">👥 ${sv(capacity, baseCapacity)}</span>
+                    <span class="effect-badge">⏱️ ${svDec(duration, baseDuration, 's')}</span>
+                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/s')}</span>
                 `;
                 break;
             }
             case 'PoisonArcherTower': {
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">☠️ Direct Damage: ${sv(tower.damage, tower.originalDamage || 18)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🧪 Poison DoT: <span style="color: #FFD700; font-weight: bold;">Damage over time</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: ${sv(tower.range, tower.originalRange || 130)}</div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: ${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/sec')}</div>
+                statBadgesHTML = `
+                    <span class="effect-badge">☠️ ${sv(tower.damage, tower.originalDamage || 18)}</span>
+                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 130)}</span>
+                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/s')}</span>
                 `;
                 break;
             }
             default: {
-                statsHTML = `
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚔️ Damage: <span style="color: #FFD700; font-weight: bold;">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">🎯 Range: <span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span></div>
-                    <div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem;">⚡ Attack Speed: <span style="color: #FFD700; font-weight: bold;">${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/sec' : tower.fireRate}</span></div>
+                statBadgesHTML = `
+                    <span class="effect-badge">⚔️ ${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span>
+                    <span class="effect-badge">🎯 ${Math.round(tower.range)}</span>
+                    <span class="effect-badge">⚡ ${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/s' : tower.fireRate}</span>
                 `;
                 break;
             }
@@ -3023,18 +3020,17 @@ export class UIManager {
         // Show upgrade status indicator
         let upgradeNote = '';
         if (hasUpgrades) {
-            upgradeNote = '<div style="font-size: 0.7rem; color: #aaffaa; margin-top: 0.3rem; text-align: right;">✦ Stats include forge & training upgrades</div>';
+            upgradeNote = '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>';
         }
         
-        const towerImageMap = { 'BasicTower': 'watchtower', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison' };
-        const towerImgExt = towerType === 'BasicTower' ? 'svg' : 'png';
-        const towerImg = towerImageMap[towerType] || 'watchtower';
+        const towerImageMap = { 'BasicTower': 'basic', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison' };
+        const towerImg = towerImageMap[towerType] || 'basic';
 
         let contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
-                        <div class="forge-icon-display"><img src="assets/towers/${towerImg}.${towerImgExt}" alt="${name}" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                        <div class="forge-icon-display"><img src="assets/towers/${towerImg}.png" alt="${name}" style="width: 100%; height: 100%; object-fit: contain;"></div>
                         <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
                             Sell
                         </button>
@@ -3044,14 +3040,11 @@ export class UIManager {
                             <div class="forge-name">${name}</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">${description}</span>
+                            ${statBadgesHTML}
                         </div>
+                        ${hasUpgrades ? upgradeNote : ''}
                     </div>
                 </div>
-            </div>
-            <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
-                ${statsHTML}
-                ${upgradeNote}
             </div>
         `;
         
@@ -3485,9 +3478,16 @@ export class UIManager {
             } else if (btn.dataset.comboSpell) {
                 // Combination spell upgrade - uses elemental gems
                 const spellId = btn.dataset.comboSpell;
+                
+                // Find the academy reference (could be from menuData or from the building itself)
+                let academy = menuData.academy;
+                if (!academy && menuData.building.academy) {
+                    academy = menuData.building.academy;
+                }
+                
                 const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
                 
-                if (spell && spell.upgradeLevel < spell.maxUpgradeLevel && menuData.academy) {
+                if (spell && spell.upgradeLevel < spell.maxUpgradeLevel && academy) {
                     // Get the gem requirements for the next upgrade
                     const nextLevel = spell.upgradeLevel + 1;
                     const gemsRequired = {};
@@ -3498,7 +3498,7 @@ export class UIManager {
                     // Check if player has enough gems
                     let canAfford = true;
                     for (const [gemType, cost] of Object.entries(gemsRequired)) {
-                        if ((menuData.academy.gems[gemType] || 0) < cost) {
+                        if ((academy.gems[gemType] || 0) < cost) {
                             canAfford = false;
                             break;
                         }
@@ -3507,7 +3507,7 @@ export class UIManager {
                     if (canAfford) {
                         // Deduct gems
                         for (const [gemType, cost] of Object.entries(gemsRequired)) {
-                            menuData.academy.gems[gemType] -= cost;
+                            academy.gems[gemType] -= cost;
                         }
                         
                         spell.upgradeLevel++;

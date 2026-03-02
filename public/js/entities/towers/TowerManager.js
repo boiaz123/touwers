@@ -542,6 +542,11 @@ export class TowerManager {
         }
     }
     
+    // Apply academy upgrades to a specific tower (used when combination spell upgrades are purchased)
+    applyTowerBonuses(tower) {
+        this.applyAcademyUpgrades(tower);
+    }
+
     // New: Get gem stocks for UI display
     getGemStocks() {
         // Use cached academies if available

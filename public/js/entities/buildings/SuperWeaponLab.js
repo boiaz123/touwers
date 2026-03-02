@@ -1124,10 +1124,12 @@ export class SuperWeaponLab extends Building {
                 }
                 
                 // Check if player can afford this upgrade
+                // Use this.academy as fallback if academy parameter is not provided
+                const academyReference = academy || this.academy;
                 let canAfford = spell.upgradeLevel < spell.maxUpgradeLevel;
-                if (canAfford && academy) {
+                if (canAfford && academyReference) {
                     for (const [gemType, cost] of Object.entries(gemsRequired)) {
-                        if ((academy.gems[gemType] || 0) < cost) {
+                        if ((academyReference.gems[gemType] || 0) < cost) {
                             canAfford = false;
                             break;
                         }
