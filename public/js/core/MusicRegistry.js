@@ -167,8 +167,6 @@ export function initializeMusicRegistry() {
         }
     );
 
-    // Campaign 4 (Space) songs - fallback to Forest songs for now since SpaceSongs folder is empty
-    // TODO: Add actual space music tracks when available
     MusicRegistry.registerMusic(
         'campaign-4-battle-1',
         'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle.mp3',
@@ -182,6 +180,27 @@ export function initializeMusicRegistry() {
     MusicRegistry.registerMusic(
         'campaign-4-battle-2',
         'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-4-battle-3',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle3.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+
+    );
+
+        MusicRegistry.registerMusic(
+        'campaign-4-battle-4',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle4.mp3',
         {
             loop: true,
             category: 'campaign-4',
