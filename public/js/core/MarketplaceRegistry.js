@@ -45,7 +45,8 @@ export class MarketplaceRegistry {
             category: 'loot',
             type: 'consumable',
             effect: 'Enemies carrying Legendary loot will drop two bags in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-2'
         },
         'magic-tower-flatpack': {
             name: 'Magic Tower Flatpack',
@@ -55,7 +56,7 @@ export class MarketplaceRegistry {
             category: 'building',
             type: 'consumable',
             effect: 'Free Magic Tower in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
-            requirements: []
+            requirements: ['magic-academy-unlock']
         },
         'frog-king-bane': {
             name: 'The Frog King\'s Bane',
@@ -154,7 +155,8 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-2-battle-1',
             effect: 'Unlock mountain battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-2'
         },
         'music-desert-1': {
             name: 'Desert Battle - Sands of Time',
@@ -165,7 +167,8 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-3-battle-1',
             effect: 'Unlock desert battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-3'
         },
         'music-desert-2': {
             name: 'Desert Battle - Mirage',
@@ -176,7 +179,8 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-3-battle-2',
             effect: 'Unlock desert battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-3'
         },
         'music-victory': {
             name: 'Victory Fanfare',
@@ -209,7 +213,8 @@ export class MarketplaceRegistry {
             category: 'intel',
             type: 'consumable',
             effect: 'Unlock intel on common enemies',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-1'
         },
         'intel-pack-2': {
             name: 'Spy Report II',
@@ -219,7 +224,8 @@ export class MarketplaceRegistry {
             category: 'intel',
             type: 'consumable',
             effect: 'Unlock intel on knight enemies',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-2'
         },
         'intel-pack-3': {
             name: 'Spy Report III',
@@ -229,7 +235,8 @@ export class MarketplaceRegistry {
             category: 'intel',
             type: 'consumable',
             effect: 'Unlock intel on magical enemies',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-3'
         },
         'intel-pack-4': {
             name: 'Spy Report IV',
@@ -239,7 +246,8 @@ export class MarketplaceRegistry {
             category: 'intel',
             type: 'consumable',
             effect: 'Unlock intel on elemental enemies',
-            requirements: []
+            requirements: [],
+            campaignRequirement: 'campaign-4'
         }
     };
 

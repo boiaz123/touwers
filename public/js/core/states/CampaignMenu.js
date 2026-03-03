@@ -1,4 +1,13 @@
-import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+﻿import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+
+// Biome colours for each campaign card background
+const CAMPAIGN_BIOME = {
+    'campaign-1': { from: '#122a12', to: '#0a160a', accent: '#4a8c3f' },  // Woodland green
+    'campaign-2': { from: '#141e30', to: '#0a1020', accent: '#6a85b5' },  // Mountain blue-grey
+    'campaign-3': { from: '#2e1c06', to: '#180e03', accent: '#c9803a' },  // Desert amber
+    'campaign-4': { from: '#1b0a2e', to: '#0f0416', accent: '#8a44c8' },  // Frog King purple
+    'campaign-5': { from: '#1a1a1a', to: '#0f0f0f', accent: '#888888' },  // Sandbox neutral
+};
 
 export class CampaignMenu {
     constructor(stateManager) {
@@ -7,88 +16,62 @@ export class CampaignMenu {
         this.selectedCampaignId = null;
         this.hoveredCampaignId = null;
         this.hoveredStartButton = false;
-        
-        // Info panel state
-        this.infoPanelOpen = false;
-        this.infoPanelOpacity = 0;
-        this.infoPanelAnimSpeed = 0.08;
-        
-        // Layout configuration - 2-column grid on left, info panel on right (full height)
-        this.layout = {
-            leftPadding: 40,
-            topPadding: 140,
-            rightPadding: 40,
-            bottomPadding: 40,
-            campaignTileWidth: 380,
-            campaignTileHeight: 200,
-            campaignGapX: 30,
-            campaignGapY: 25,
-            campaignCols: 2,
-            infoPanelRightMargin: 40,
-            infoPanelTopMargin: 140
-        };
-        
-        // Exit button
         this.hoveredExitButton = false;
+
+        // Layout — large full-width cards left, compact info panel right
+        this.layout = {
+            leftPadding: 48,
+            topPadding: 118,
+            cardWidth: 1050,
+            cardHeight: 165,
+            cardGap: 12,
+            detailX: 1150,
+            detailRightPad: 40,
+            titleY: 56,
+        };
     }
     
     enter() {
-        // Hide game UI
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
-        
-        if (statsBar) {
-            statsBar.style.display = 'none';
-        }
-        if (sidebar) {
-            sidebar.style.display = 'none';
-        }
-        
-        // Load campaigns
-        this.campaigns = CampaignRegistry.getCampaignsOrdered();
-        
-        // Reset hover states
+        if (statsBar) statsBar.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+
+        // Always reload registry state from current save so lock flags are fresh
+        const saveData = this.stateManager.currentSaveData;
+        if (saveData) CampaignRegistry.loadFromSaveData(saveData);
+
+        // Only show campaigns the player has unlocked (filter out locked ones)
+        this.campaigns = CampaignRegistry.getCampaignsOrdered().filter(c => !c.locked);
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
-        
-        // Select first campaign by default
-        this.selectedCampaignId = this.campaigns.length > 0 ? this.campaigns[0].id : null;
-        this.infoPanelOpen = false;
-        this.infoPanelOpacity = 0;
-        
-        // Campaign menu should ONLY play settlement music, never the main theme
-        // This keeps the settlement song playing throughout settlement-related menus
+        this.hoveredStartButton = false;
+
+        // Pre-select first unlocked campaign
+        const firstUnlocked = this.campaigns.find(c => !c.locked);
+        this.selectedCampaignId = firstUnlocked ? firstUnlocked.id : null;
+
+        // Music
         if (this.stateManager.audioManager) {
-            const currentTrack = this.stateManager.audioManager.getCurrentTrack();
-            const settlementTracks = this.stateManager.audioManager.getSettlementTracks();
-            const isManualMusic = this.stateManager.audioManager.isManualMusicSelection;
-            
-            // If a player manually selected music from the library, keep playing it
-            if (isManualMusic) {
-                // Leave it as is - don't change tracks
-            }
-            // If settlement music is already playing, keep it
-            else if (settlementTracks.includes(currentTrack)) {
-                // Leave it as is - don't restart
-            }
-            // Otherwise, start new settlement music
-            else {
-                this.stateManager.audioManager.playRandomSettlementTheme();
+            const am = this.stateManager.audioManager;
+            const current = am.getCurrentTrack();
+            const settlementTracks = am.getSettlementTracks();
+            if (!am.isManualMusicSelection && !settlementTracks.includes(current)) {
+                am.playRandomSettlementTheme();
             }
         }
-        
+
         this.setupMouseListeners();
     }
-    
+
     exit() {
         this.removeMouseListeners();
     }
-    
+
     setupMouseListeners() {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling
             const scaleX = this.stateManager.canvas.width / rect.width;
             const scaleY = this.stateManager.canvas.height / rect.height;
             const x = (e.clientX - rect.left) * scaleX;
@@ -98,7 +81,7 @@ export class CampaignMenu {
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
-    
+
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
@@ -108,618 +91,593 @@ export class CampaignMenu {
         }
     }
 
-    /**
-     * Handle campaign selection and start
-     */
-    startCampaign() {
-        if (this.selectedCampaignId) {
-            // Play open campaign SFX
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.playSFX('open-campaign');
-            }
-            // Transition to campaign gameplay will happen next
-            this.stateManager.selectedCampaignId = this.selectedCampaignId;
-            this.stateManager.changeState('game');
-        }
-    }
-    
-    getCampaignSlotPosition(index) {
-        const { leftPadding, topPadding, campaignTileWidth, campaignTileHeight, campaignGapX, campaignGapY, campaignCols } = this.layout;
-        
-        const row = Math.floor(index / campaignCols);
-        const col = index % campaignCols;
-        
+    // â”€â”€ Hit testing helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    getCardBounds(index) {
+        const { leftPadding, topPadding, cardWidth, cardHeight, cardGap } = this.layout;
         return {
-            x: leftPadding + col * (campaignTileWidth + campaignGapX),
-            y: topPadding + row * (campaignTileHeight + campaignGapY),
-            width: campaignTileWidth,
-            height: campaignTileHeight
+            x: leftPadding,
+            y: topPadding + index * (cardHeight + cardGap),
+            width: cardWidth,
+            height: cardHeight,
         };
     }
-    
-    getInfoPanelBounds() {
+
+    getDetailPanelBounds() {
         const canvas = this.stateManager.canvas;
-        const { leftPadding, topPadding, infoPanelRightMargin, bottomPadding, campaignTileWidth, campaignGapX, campaignCols } = this.layout;
-        
-        // Info panel starts after campaigns on the left
-        const panelX = leftPadding + campaignCols * campaignTileWidth + (campaignCols - 1) * campaignGapX + 60;
-        const panelWidth = canvas.width - panelX - infoPanelRightMargin;
-        const panelHeight = canvas.height - topPadding - bottomPadding; // Full height with margins
-        
+        const { detailX, detailRightPad, topPadding } = this.layout;
+        const panelH = Math.min(520, canvas.height - topPadding - 50);
         return {
-            x: panelX,
+            x: detailX,
             y: topPadding,
-            width: panelWidth,
-            height: panelHeight
+            width: canvas.width - detailX - detailRightPad,
+            height: panelH,
         };
     }
-    
+
     getStartButtonBounds() {
-        const panel = this.getInfoPanelBounds();
-        const buttonHeight = 50;
-        const buttonWidth = panel.width - 40;
-        
+        const panel = this.getDetailPanelBounds();
+        const bh = 52;
+        const bw = Math.min(panel.width - 40, 320);
         return {
-            x: panel.x + 20,
-            y: panel.y + panel.height - buttonHeight - 20,
-            width: buttonWidth,
-            height: buttonHeight
+            x: panel.x + Math.floor((panel.width - bw) / 2),
+            y: panel.y + panel.height - bh - 20,
+            width: bw,
+            height: bh,
         };
     }
-    
+
     getExitButtonBounds() {
         return {
-            x: this.stateManager.canvas.width - 140,
-            y: 30,
-            width: 110,
-            height: 44
+            x: this.stateManager.canvas.width - 150,
+            y: 28,
+            width: 120,
+            height: 44,
         };
     }
-    
+
+    // â”€â”€ Input handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        // Account for CSS scaling
         const scaleX = this.stateManager.canvas.width / rect.width;
         const scaleY = this.stateManager.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-        
+
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
         this.hoveredStartButton = false;
-        
-        // Check exit button
-        const exitBtn = this.getExitButtonBounds();
-        if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
-            y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
+        let pointerCursor = false;
+
+        // Exit button
+        const exit = this.getExitButtonBounds();
+        if (this._inBounds(x, y, exit)) {
             this.hoveredExitButton = true;
+            pointerCursor = true;
         }
-        
-        // Check start button
-        const startBtn = this.getStartButtonBounds();
-        if (this.selectedCampaignId && 
-            x >= startBtn.x && x <= startBtn.x + startBtn.width &&
-            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
-            const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
-            if (selectedCampaign && !selectedCampaign.locked) {
-                this.hoveredStartButton = true;
-            }
-        }
-        
-        // Check campaign slots
+
+        // Campaign cards
         this.campaigns.forEach((campaign, index) => {
-            const pos = this.getCampaignSlotPosition(index);
-            if (x >= pos.x && x <= pos.x + pos.width &&
-                y >= pos.y && y <= pos.y + pos.height) {
+            const b = this.getCardBounds(index);
+            if (this._inBounds(x, y, b)) {
                 this.hoveredCampaignId = campaign.id;
+                if (!campaign.locked) pointerCursor = true;
             }
         });
-        
-        this.stateManager.canvas.style.cursor = 
-            (this.hoveredCampaignId && !CampaignRegistry.getCampaign(this.hoveredCampaignId)?.locked) || 
-            this.hoveredExitButton || 
-            this.hoveredStartButton ? 'pointer' : 'default';
+
+        // Start button
+        const startBtn = this.getStartButtonBounds();
+        const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+        if (sel && !sel.locked && this._inBounds(x, y, startBtn)) {
+            this.hoveredStartButton = true;
+            pointerCursor = true;
+        }
+
+        this.stateManager.canvas.style.cursor = pointerCursor ? 'pointer' : 'default';
     }
-    
+
     handleClick(x, y) {
-        // Check exit button
-        const exitBtn = this.getExitButtonBounds();
-        if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
-            y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
-            // Play button click SFX
-            if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.playSFX('button-click');
-            }
+        // Exit button
+        const exit = this.getExitButtonBounds();
+        if (this._inBounds(x, y, exit)) {
+            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
             this.stateManager.changeState('settlementHub');
             return;
         }
-        
-        // Check start button
+
+        // Start button
+        const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
         const startBtn = this.getStartButtonBounds();
-        if (this.selectedCampaignId && 
-            x >= startBtn.x && x <= startBtn.x + startBtn.width &&
-            y >= startBtn.y && y <= startBtn.y + startBtn.height) {
-            const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
-            if (selectedCampaign && !selectedCampaign.locked && selectedCampaign.class) {
-                // Play open campaign SFX
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('open-campaign');
-                }
-                const campaignState = new selectedCampaign.class(this.stateManager);
-                this.stateManager.addState('levelSelect', campaignState);
-                this.stateManager.changeState('levelSelect');
-            }
+        if (sel && !sel.locked && this._inBounds(x, y, startBtn)) {
+            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
+            const campaignState = new sel.class(this.stateManager);
+            this.stateManager.addState('levelSelect', campaignState);
+            this.stateManager.changeState('levelSelect');
             return;
         }
-        
-        // Check campaign clicks
+
+        // Campaign card clicks
         this.campaigns.forEach((campaign, index) => {
-            const pos = this.getCampaignSlotPosition(index);
-            if (x >= pos.x && x <= pos.x + pos.width &&
-                y >= pos.y && y <= pos.y + pos.height &&
-                !campaign.locked) {
-                // Play button click SFX
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('button-click');
+            const b = this.getCardBounds(index);
+            if (this._inBounds(x, y, b)) {
+                if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+                if (!campaign.locked) {
+                    this.selectedCampaignId = campaign.id;
                 }
-                // Select campaign to show info panel
-                this.selectedCampaignId = campaign.id;
-                this.infoPanelOpen = true;
             }
         });
     }
-    
+
+    _inBounds(x, y, b) {
+        return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+    }
+
+    // â”€â”€ Rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        
-        // Reset canvas shadow properties to prevent persistent glow effects
-        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+
+        ctx.shadowColor = 'rgba(0,0,0,0)';
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
         ctx.globalAlpha = 1;
-        
-        // Background
-        this.renderBackground(ctx, canvas);
-        
-        // Title
-        ctx.font = 'bold 52px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#d4af37';
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 2;
-        ctx.textBaseline = 'top';
-        ctx.fillText('CAMPAIGNS', canvas.width / 2, 50);
-        ctx.strokeText('CAMPAIGNS', canvas.width / 2, 50);
-        
-        // Render campaign slots
+
+        this._renderBackground(ctx, canvas);
+        this._renderTitle(ctx, canvas);
+
         this.campaigns.forEach((campaign, index) => {
-            this.renderCampaignSlot(ctx, campaign, index);
+            this._renderCard(ctx, campaign, index);
         });
-        
-        // Render info panel if a campaign is selected
-        if (this.selectedCampaignId) {
-            this.infoPanelOpacity = Math.min(1, this.infoPanelOpacity + this.infoPanelAnimSpeed);
-            const selectedCampaign = CampaignRegistry.getCampaign(this.selectedCampaignId);
-            if (selectedCampaign) {
-                this.renderInfoPanel(ctx, selectedCampaign, this.infoPanelOpacity);
-            }
-        } else {
-            this.infoPanelOpacity = Math.max(0, this.infoPanelOpacity - this.infoPanelAnimSpeed);
-        }
-        
-        // Render exit button
-        this.renderExitButton(ctx);
+
+        this._renderDetailPanel(ctx);
+        this._renderExitButton(ctx);
     }
-    
-    renderBackground(ctx, canvas) {
-        // Medieval background gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#2a1a0f');
-        gradient.addColorStop(1, '#1a0f0a');
-        ctx.fillStyle = gradient;
+
+    _renderBackground(ctx, canvas) {
+        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0, '#211408');
+        g.addColorStop(1, '#120a04');
+        ctx.fillStyle = g;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Subtle texture
-        ctx.fillStyle = 'rgba(212, 175, 55, 0.03)';
-        for (let i = 0; i < 300; i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            const size = Math.random() * 2;
-            ctx.fillRect(x, y, size, size);
+
+        // Subtle diagonal line texture
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.03)';
+        ctx.lineWidth = 1;
+        for (let i = -canvas.height; i < canvas.width; i += 40) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + canvas.height, canvas.height);
+            ctx.stroke();
         }
     }
-    
-    renderCampaignSlot(ctx, campaign, index) {
-        const pos = this.getCampaignSlotPosition(index);
+
+    _renderTitle(ctx, canvas) {
+        const { titleY, leftPadding, cardWidth } = this.layout;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        // Main title
+        ctx.font = 'bold 52px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText('CAMPAIGNS', leftPadding, titleY);
+        ctx.fillText('CAMPAIGNS', leftPadding, titleY);
+
+        // Gold rule under title
+        ctx.strokeStyle = '#6a501e';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(leftPadding, titleY + 34);
+        ctx.lineTo(leftPadding + cardWidth, titleY + 34);
+        ctx.stroke();
+    }
+
+    _renderCard(ctx, campaign, index) {
+        const b = this.getCardBounds(index);
         const isSelected = this.selectedCampaignId === campaign.id;
         const isHovered = this.hoveredCampaignId === campaign.id;
-        const isLocked = campaign.locked;
-        
-        // Card background
-        let bgColor = '#1a0f05';
-        let borderColor = '#664422';
-        let borderWidth = 2;
-        let shadowOpacity = 0.4;
-        
-        if (isLocked) {
-            bgColor = '#0f0f0f';
-            borderColor = '#333';
-            borderWidth = 1;
-            shadowOpacity = 0.2;
-        } else if (isSelected) {
-            bgColor = '#3a2a1a';
-            borderColor = '#ffd700';
-            borderWidth = 3;
-            shadowOpacity = 0.6;
-        } else if (isHovered) {
-            bgColor = '#2a1a0a';
-            borderColor = '#d4af37';
-            borderWidth = 2.5;
-            shadowOpacity = 0.5;
-        }
-        
-        // Shadow
-        ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
-        ctx.fillRect(pos.x + 4, pos.y + 4, pos.width, pos.height);
-        
-        // Card background
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
-        
-        // Border
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = borderWidth;
-        ctx.strokeRect(pos.x, pos.y, pos.width, pos.height);
-        
-        // Inner highlight
-        if (!isLocked) {
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(pos.x + 2, pos.y + 2, pos.width - 4, pos.height - 4);
-        }
-        
-        if (isLocked) {
-            // Locked state
-            ctx.font = 'bold 36px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#555';
-            ctx.fillText('🔒', pos.x + pos.width / 2, pos.y + pos.height / 2 - 30);
-            
-            ctx.font = '16px serif';
-            ctx.fillStyle = '#666';
-            ctx.textAlign = 'center';
-            ctx.fillText('Locked', pos.x + pos.width / 2, pos.y + pos.height / 2 + 20);
+        const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+
+        // Drop shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(b.x + 5, b.y + 5, b.width, b.height);
+
+        // Card background gradient
+        const bg = ctx.createLinearGradient(b.x, b.y, b.x + b.width * 0.6, b.y + b.height);
+        if (isSelected) {
+            bg.addColorStop(0, this._lighten(biome.from, 18));
+            bg.addColorStop(1, biome.from);
         } else {
-            // Campaign icon and name
-            ctx.font = '32px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(campaign.icon, pos.x + pos.width / 2, pos.y + 15);
-            
-            // Campaign name
-            ctx.font = 'bold 16px serif';
-            ctx.fillStyle = isSelected ? '#ffd700' : '#d4af37';
-            ctx.textBaseline = 'top';
-            ctx.fillText(campaign.name, pos.x + pos.width / 2, pos.y + 55);
-            
-            // Difficulty
-            ctx.font = '12px serif';
-            const diffColor = campaign.difficulty === 'Beginner' ? '#4CAF50' : 
-                            campaign.difficulty === 'Intermediate' ? '#FFC107' : 
-                            campaign.difficulty === 'Advanced' ? '#F44336' : 
-                            campaign.difficulty === 'Expert' ? '#9C27B0' : '#E91E63';
-            ctx.fillStyle = diffColor;
-            ctx.textAlign = 'center';
-            ctx.fillText(`● ${campaign.difficulty}`, pos.x + pos.width / 2, pos.y + 75);
-            
-            // Progress bar
-            const barWidth = pos.width - 30;
-            const barHeight = 10;
-            const barX = pos.x + 15;
-            const barY = pos.y + pos.height - 35;
-            
-            // Background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-            
-            // Progress
-            const progressColor = campaign.progress >= 100 ? '#4CAF50' : '#d4af37';
-            ctx.fillStyle = progressColor;
-            ctx.fillRect(barX, barY, barWidth * (campaign.progress / 100), barHeight);
-            
-            // Border
-            ctx.strokeStyle = '#8b7355';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
-            
-            // Progress text
-            ctx.font = 'bold 11px serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${Math.floor(campaign.progress)}%`, barX + barWidth / 2, barY + barHeight / 2);
+            bg.addColorStop(0, biome.from);
+            bg.addColorStop(1, biome.to);
         }
-    }
-    
-    renderInfoPanel(ctx, campaign, opacity) {
-        const panel = this.getInfoPanelBounds();
-        const startBtn = this.getStartButtonBounds();
-        
-        // Save context alpha
-        const globalAlpha = ctx.globalAlpha;
-        ctx.globalAlpha = opacity;
-        
-        // Background panel with gradient
-        const gradient = ctx.createLinearGradient(0, panel.y, 0, panel.y + panel.height);
-        gradient.addColorStop(0, 'rgba(26, 15, 5, 0.98)');
-        gradient.addColorStop(1, 'rgba(15, 10, 5, 0.98)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
-        
-        // Outer border
-        ctx.strokeStyle = '#d4af37';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(panel.x, panel.y, panel.width, panel.height);
-        
-        // Inner decorative border
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(panel.x + 2, panel.y + 2, panel.width - 4, panel.height - 4);
-        
-        const contentX = panel.x + 25;
-        const contentY = panel.y + 25;
-        const contentWidth = panel.width - 50;
-        const maxContentY = startBtn.y - 20; // Leave space for start button
-        
-        let currentY = contentY;
-        
-        // Campaign icon and name header
-        ctx.font = 'bold 24px serif';
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#d4af37';
-        ctx.textBaseline = 'top';
-        ctx.fillText(campaign.icon, contentX, currentY);
-        
-        ctx.font = 'bold 22px serif';
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText(campaign.name, contentX + 45, currentY + 2);
-        currentY += 50;
-        
-        // Difficulty and progress on same line
-        ctx.font = '12px serif';
-        const diffColor = campaign.difficulty === 'Beginner' ? '#4CAF50' : 
-                        campaign.difficulty === 'Intermediate' ? '#FFC107' : 
-                        campaign.difficulty === 'Advanced' ? '#F44336' : 
-                        campaign.difficulty === 'Expert' ? '#9C27B0' : '#E91E63';
-        ctx.fillStyle = diffColor;
-        const diffText = `Difficulty: ${campaign.difficulty}`;
-        ctx.fillText(diffText, contentX, currentY);
-        
-        // Progress bar below difficulty
-        currentY += 25;
-        const barWidth = contentWidth;
-        const barHeight = 10;
-        const barX = contentX;
-        const barY = currentY;
-        
-        // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-        
-        // Progress
-        const progressColor = campaign.progress >= 100 ? '#4CAF50' : '#d4af37';
-        ctx.fillStyle = progressColor;
-        ctx.fillRect(barX, barY, barWidth * (campaign.progress / 100), barHeight);
-        
+        ctx.fillStyle = bg;
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+
+        // Right-side dark fade overlay for readability
+        const fade = ctx.createLinearGradient(b.x + b.width * 0.55, b.y, b.x + b.width, b.y);
+        fade.addColorStop(0, 'rgba(0,0,0,0)');
+        fade.addColorStop(1, 'rgba(0,0,0,0.45)');
+        ctx.fillStyle = fade;
+        ctx.fillRect(b.x, b.y, b.width, b.height);
+
+        // Bottom progress bar strip (always rendered)
+        const stripH = 22;
+        const stripY = b.y + b.height - stripH;
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(b.x, stripY, b.width, stripH);
+
         // Border
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX, barY, barWidth, barHeight);
-        
-        // Progress text
-        ctx.font = 'bold 11px serif';
-        ctx.fillStyle = '#ffffff';
+        if (isSelected) {
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2.5;
+        } else if (isHovered) {
+            ctx.strokeStyle = biome.accent + 'dd';
+            ctx.lineWidth = 1.5;
+        } else {
+            ctx.strokeStyle = biome.accent + '66';
+            ctx.lineWidth = 1;
+        }
+        ctx.strokeRect(b.x, b.y, b.width, b.height);
+
+        // Left accent bar
+        ctx.fillStyle = isSelected ? '#ffd700' : biome.accent + 'dd';
+        ctx.fillRect(b.x, b.y, isSelected ? 5 : 3, b.height);
+
+        this._renderUnlockedCard(ctx, campaign, b, isSelected, biome);
+    }
+
+    _renderLockedCard(ctx, campaign, b) {
+        // No-op: locked cards are not displayed in the campaign list
+    }
+
+    _renderUnlockedCard(ctx, campaign, b, isSelected, biome) {
+        biome = biome || CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+        const iconX = b.x + 56;
+        const iconY = b.y + Math.floor((b.height - 22) / 2);
+
+        // Large campaign icon
+        ctx.font = '52px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${Math.floor(campaign.progress)}% Complete`, barX + barWidth / 2, barY + barHeight / 2);
-        currentY += 25;
-        
-        // Separator line
-        currentY += 10;
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(contentX, currentY);
-        ctx.lineTo(contentX + contentWidth, currentY);
-        ctx.stroke();
-        currentY += 15;
-        
-        // Story/Description
-        ctx.font = '12px serif';
-        ctx.fillStyle = '#d4af37';
+        ctx.fillText(campaign.icon, iconX, iconY);
+
+        // Campaign name
+        const textX = b.x + 110;
+        const nameY = b.y + 32;
+        ctx.font = `bold 22px serif`;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        ctx.fillText('Story', contentX, currentY);
-        currentY += 18;
-        
+        ctx.fillStyle = isSelected ? '#ffd700' : '#e8d49a';
+        ctx.fillText(campaign.name, textX, nameY);
+
+        // Difficulty dot + text
+        ctx.font = '13px serif';
+        ctx.fillStyle = this._difficultyColor(campaign.difficulty);
+        ctx.fillText(`\u25CF  ${campaign.difficulty}`, textX, nameY + 28);
+
+        // Level count (top right of card)
+        const levelsCompleted = Math.min(5, Math.round((campaign.progress / 100) * 5));
+        const lvlText = `${levelsCompleted} / 5 Levels`;
+        ctx.font = 'bold 13px serif';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#b09060';
+        ctx.fillText(lvlText, b.x + b.width - 18, nameY + 4);
+
+        // Progress bar inside the bottom strip
+        const stripH = 22;
+        const stripY = b.y + b.height - stripH;
+        const barPad = 110;
+        const barX = b.x + barPad;
+        const barW = b.width - barPad - 18;
+        const barH = 8;
+        const barY = stripY + Math.floor((stripH - barH) / 2);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(barX, barY, barW, barH);
+
+        if (campaign.progress > 0) {
+            const pg = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+            pg.addColorStop(0, biome.accent);
+            pg.addColorStop(1, '#d4af37');
+            ctx.fillStyle = pg;
+            ctx.fillRect(barX, barY, barW * (campaign.progress / 100), barH);
+        }
+        ctx.strokeStyle = biome.accent + '88';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // "Progress" label on left of strip
         ctx.font = '11px serif';
-        ctx.fillStyle = '#c9a876';
         ctx.textAlign = 'left';
-        
-        const maxWidth = contentWidth;
-        const words = campaign.story.split(' ');
-        let line = '';
-        let lineY = currentY;
-        
-        words.forEach(word => {
-            const testLine = line + (line ? ' ' : '') + word;
-            const metrics = ctx.measureText(testLine);
-            
-            if (metrics.width > maxWidth) {
-                ctx.fillText(line, contentX, lineY);
-                line = word;
-                lineY += 14;
-            } else {
-                line = testLine;
-            }
-        });
-        if (line) ctx.fillText(line, contentX, lineY);
-        lineY += 18;
-        
-        if (lineY >= maxContentY - 80) {
-            // Skip section if not enough space
-            ctx.globalAlpha = globalAlpha;
-            this.renderStartButton(ctx, campaign);
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#806040';
+        ctx.fillText('Progress', b.x + 14, stripY + stripH / 2);
+
+        // Small completion badge if 100%
+        if (campaign.progress >= 100) {
+            ctx.font = '11px serif';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#7edd6e';
+            ctx.fillText('\u2714 Complete', b.x + b.width - 18, stripY + stripH / 2);
+        }
+    }
+
+    _renderDetailPanel(ctx) {
+        const panel = this.getDetailPanelBounds();
+        const campaign = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+
+        // Panel background
+        const bg = ctx.createLinearGradient(panel.x, panel.y, panel.x, panel.y + panel.height);
+        bg.addColorStop(0, 'rgba(22, 14, 6, 0.97)');
+        bg.addColorStop(1, 'rgba(12, 7, 2, 0.97)');
+        ctx.fillStyle = bg;
+        ctx.fillRect(panel.x, panel.y, panel.width, panel.height);
+
+        // Outer border
+        ctx.strokeStyle = '#5a4020';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(panel.x, panel.y, panel.width, panel.height);
+
+        // Inner accent border
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(panel.x + 3, panel.y + 3, panel.width - 6, panel.height - 6);
+
+        if (!campaign) {
+            ctx.font = '15px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#5a4a3a';
+            ctx.fillText('Select a campaign to view details', panel.x + panel.width / 2, panel.y + panel.height / 2);
             return;
         }
-        
-        // Separator line
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(contentX, lineY);
-        ctx.lineTo(contentX + contentWidth, lineY);
-        ctx.stroke();
-        lineY += 15;
-        
-        // Rewards section
-        ctx.font = 'bold 12px serif';
-        ctx.fillStyle = '#ffd700';
+
+        this._renderDetailContent(ctx, campaign, panel);
+    }
+
+    _renderDetailContent(ctx, campaign, panel) {
+        const pad = 24;
+        const cx = panel.x + pad;
+        const cw = panel.width - pad * 2;
+        let cy = panel.y + pad;
+        const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        ctx.fillText('Rewards', contentX, lineY);
-        lineY += 18;
-        
-        ctx.font = '11px serif';
-        ctx.fillStyle = '#c9a876';
-        ctx.fillText(`Gold: ${campaign.rewards.gold}`, contentX + 15, lineY);
-        lineY += 14;
-        
-        ctx.fillText(`Experience: ${campaign.rewards.experience}`, contentX + 15, lineY);
-        lineY += 14;
-        
-        if (campaign.rewards.unlocks.length > 0) {
-            ctx.fillStyle = '#a8ff5e';
-            campaign.rewards.unlocks.forEach(unlock => {
-                ctx.fillText(`✦ ${unlock}`, contentX + 15, lineY);
-                lineY += 14;
-            });
+
+        // Icon + Name header
+        ctx.font = '36px serif';
+        ctx.fillText(campaign.icon, cx, cy);
+
+        ctx.font = 'bold 21px serif';
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(campaign.name, cx + 48, cy + 3);
+
+        ctx.font = '12px serif';
+        ctx.fillStyle = this._difficultyColor(campaign.difficulty);
+        ctx.fillText(`\u25CF ${campaign.difficulty}`, cx + 48, cy + 30);
+        cy += 56;
+
+        // Divider
+        this._drawDivider(ctx, cx, cy, cw, biome.accent);
+        cy += 12;
+
+        // Progress indicator
+        const levelsCompleted = Math.min(5, Math.round((campaign.progress / 100) * 5));
+        ctx.font = '12px serif';
+        ctx.fillStyle = '#a08040';
+        ctx.fillText(`Progress: ${levelsCompleted} / 5 levels`, cx, cy);
+        cy += 16;
+
+        const bh = 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(cx, cy, cw, bh);
+        if (campaign.progress > 0) {
+            const pg = ctx.createLinearGradient(cx, cy, cx + cw, cy);
+            pg.addColorStop(0, biome.accent);
+            pg.addColorStop(1, '#d4af37');
+            ctx.fillStyle = pg;
+            ctx.fillRect(cx, cy, cw * (campaign.progress / 100), bh);
         }
-        
-        // Restore context alpha
-        ctx.globalAlpha = globalAlpha;
-        
-        // Render start button at the bottom
-        this.renderStartButton(ctx, campaign);
+        ctx.strokeStyle = '#4a3010';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx, cy, cw, bh);
+        cy += bh + 14;
+
+        // Divider
+        this._drawDivider(ctx, cx, cy, cw, biome.accent);
+        cy += 12;
+
+        // Story — capped at 4 lines to keep the panel compact
+        ctx.font = 'bold 12px serif';
+        ctx.fillStyle = biome.accent;
+        ctx.fillText('\u2726  Story', cx, cy);
+        cy += 18;
+
+        ctx.font = '12px serif';
+        ctx.fillStyle = '#c9a876';
+        const storyText = campaign.story || 'A great adventure awaits...';
+        cy = this._wrapTextCapped(ctx, storyText, cx, cy, cw, 15, 4);
+        cy += 10;
+
+        // Start button
+        this._renderStartButton(ctx, campaign);
     }
-    
-    renderStartButton(ctx, campaign) {
+
+    _renderStartButton(ctx, campaign) {
         const btn = this.getStartButtonBounds();
         const isHovered = this.hoveredStartButton;
         const isLocked = campaign.locked;
-        
+
         if (isLocked) {
-            // Disabled state
-            const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
-            gradient.addColorStop(0, '#3a3a3a');
-            gradient.addColorStop(0.5, '#4a4a4a');
-            gradient.addColorStop(1, '#3a3a3a');
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = '#242424';
             ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
-            
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#3a3a3a';
+            ctx.lineWidth = 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
-            
-            ctx.font = 'bold 16px serif';
+            ctx.font = 'bold 15px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#666';
-            ctx.fillText('LOCKED', btn.x + btn.width / 2, btn.y + btn.height / 2);
+            ctx.fillStyle = '#555';
+            ctx.fillText('\uD83D\uDD12  LOCKED', btn.x + btn.width / 2, btn.y + btn.height / 2);
         } else {
-            // Enabled state
-            const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
+            const bg = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
             if (isHovered) {
-                gradient.addColorStop(0, '#d4af37');
-                gradient.addColorStop(0.5, '#e8c547');
-                gradient.addColorStop(1, '#d4af37');
+                bg.addColorStop(0, '#e8c547');
+                bg.addColorStop(0.5, '#ffd700');
+                bg.addColorStop(1, '#c8a020');
             } else {
-                gradient.addColorStop(0, '#8b7355');
-                gradient.addColorStop(0.5, '#a89968');
-                gradient.addColorStop(1, '#9a8960');
+                bg.addColorStop(0, '#a89050');
+                bg.addColorStop(0.5, '#c8aa60');
+                bg.addColorStop(1, '#907040');
             }
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = bg;
             ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
-            
-            // Inner shadow
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
             ctx.fillRect(btn.x, btn.y, btn.width, 2);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
             ctx.fillRect(btn.x, btn.y + btn.height - 3, btn.width, 3);
-            
-            // Border
-            ctx.strokeStyle = isHovered ? '#ffe700' : '#d4af37';
-            ctx.lineWidth = isHovered ? 2.5 : 2;
+
+            ctx.strokeStyle = isHovered ? '#ffe900' : '#d4af37';
+            ctx.lineWidth = isHovered ? 2.5 : 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
-            
-            // Text
-            ctx.font = 'bold 18px serif';
+
+            ctx.font = 'bold 17px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            ctx.fillText('START CAMPAIGN', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
-            ctx.fillStyle = isHovered ? '#000000' : '#1a0f05';
-            ctx.fillText('START CAMPAIGN', btn.x + btn.width / 2, btn.y + btn.height / 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.fillText('START CAMPAIGN  \u25B6', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+            ctx.fillStyle = isHovered ? '#000' : '#1a0f04';
+            ctx.fillText('START CAMPAIGN  \u25B6', btn.x + btn.width / 2, btn.y + btn.height / 2);
         }
     }
-    
-    renderExitButton(ctx) {
+
+    _renderExitButton(ctx) {
         const btn = this.getExitButtonBounds();
         const isHovered = this.hoveredExitButton;
-        
-        // Medieval button background
-        const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
+
+        const bg = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
         if (isHovered) {
-            gradient.addColorStop(0, '#8b7355');
-            gradient.addColorStop(0.5, '#a89968');
-            gradient.addColorStop(1, '#9a8960');
+            bg.addColorStop(0, '#7a6040');
+            bg.addColorStop(1, '#5a4030');
         } else {
-            gradient.addColorStop(0, '#5a4a3a');
-            gradient.addColorStop(0.5, '#7a6a5a');
-            gradient.addColorStop(1, '#6a5a4a');
+            bg.addColorStop(0, '#4a3828');
+            bg.addColorStop(1, '#352818');
         }
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = bg;
         ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
-        
-        // Inner shadow
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.fillRect(btn.x, btn.y, btn.width, 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(btn.x, btn.y, btn.width, 3);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
         ctx.fillRect(btn.x, btn.y + btn.height - 3, btn.width, 3);
-        
-        // Border
-        ctx.strokeStyle = isHovered ? '#ffd700' : '#d4af37';
-        ctx.lineWidth = isHovered ? 3 : 2;
+
+        ctx.strokeStyle = isHovered ? '#ffd700' : '#8b6a3a';
+        ctx.lineWidth = isHovered ? 2 : 1.5;
         ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
-        
-        ctx.strokeStyle = isHovered ? '#8b7355' : '#3a2a1f';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(btn.x + 1, btn.y + 1, btn.width - 2, btn.height - 2);
-        
-        // Text
+
         ctx.font = 'bold 14px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillText('EXIT', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillText('\u25C4  EXIT', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
         ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-        ctx.fillText('EXIT', btn.x + btn.width / 2, btn.y + btn.height / 2);
+        ctx.fillText('\u25C4  EXIT', btn.x + btn.width / 2, btn.y + btn.height / 2);
     }
-    
+
+    // â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    _drawDivider(ctx, x, y, width, color) {
+        ctx.strokeStyle = (color || '#6a501e') + '66';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + width, y);
+        ctx.stroke();
+    }
+
+    /** Word-wrap text with a maximum line count. Returns the Y position after the last line. */
+    _wrapTextCapped(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+        const words = text.split(' ');
+        let line = '';
+        let lineY = y;
+        let lineCount = 0;
+        for (const word of words) {
+            if (lineCount >= maxLines) break;
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width > maxWidth) {
+                ctx.fillText(line, x, lineY);
+                line = word;
+                lineY += lineHeight;
+                lineCount++;
+            } else {
+                line = test;
+            }
+        }
+        if (line && lineCount < maxLines) {
+            ctx.fillText(line, x, lineY);
+            lineY += lineHeight;
+        }
+        return lineY;
+    }
+
+    /** Word-wrap text. Returns the Y position after the last line. */
+    _wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let lineY = y;
+        for (const word of words) {
+            const test = line ? line + ' ' + word : word;
+            if (ctx.measureText(test).width > maxWidth) {
+                ctx.fillText(line, x, lineY);
+                line = word;
+                lineY += lineHeight;
+            } else {
+                line = test;
+            }
+        }
+        if (line) {
+            ctx.fillText(line, x, lineY);
+            lineY += lineHeight;
+        }
+        return lineY;
+    }
+
+    /** Return the name of the campaign that must be completed to unlock the given campaign. */
+    _getPrereqCampaignName(campaignId) {
+        const chain = CampaignRegistry.UNLOCK_CHAIN;
+        const prereqId = Object.keys(chain).find(k => chain[k] === campaignId);
+        if (!prereqId) return null;
+        const camp = CampaignRegistry.getCampaign(prereqId);
+        return camp ? camp.name : null;
+    }
+
+    _difficultyColor(difficulty) {
+        switch (difficulty) {
+            case 'Apprentice':   return '#4CAF50';
+            case 'Warrior':      return '#FFC107';
+            case 'Champion':     return '#FF7043';
+            case 'Legendary':    return '#AB47BC';
+            case 'Testing':      return '#78909C';
+            default:             return '#d4af37';
+        }
+    }
+
+    /** Lighten a hex colour by `amount` (0-255). */
+    _lighten(hex, amount) {
+        const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);
+        const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);
+        const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);
+        return `rgb(${r},${g},${b})`;
+    }
+
     update(deltaTime) {
-        // Animation updates if needed
+        // no per-frame logic needed
     }
 }
+

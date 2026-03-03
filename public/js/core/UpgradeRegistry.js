@@ -26,7 +26,8 @@ export class UpgradeRegistry {
             cost: 250,
             icon: '🪙',
             category: 'gold',
-            effect: 'Increases starting gold by 100'
+            effect: 'Increases starting gold by 100',
+            campaignRequirement: 'campaign-1'
         },
         'golden-chest': {
             name: 'Golden Chest',
@@ -35,7 +36,8 @@ export class UpgradeRegistry {
             icon: '👑',
             category: 'gold',
             effect: 'Increases starting gold by 100',
-            prerequisite: 'wooden-chest'
+            prerequisite: 'wooden-chest',
+            campaignRequirement: 'campaign-2'
         },
         'platinum-chest': {
             name: 'Platinum Chest',
@@ -44,7 +46,8 @@ export class UpgradeRegistry {
             icon: '⭐',
             category: 'gold',
             effect: 'Increases starting gold by 100',
-            prerequisite: 'golden-chest'
+            prerequisite: 'golden-chest',
+            campaignRequirement: 'campaign-3'
         },
         'diamond-pickaxe': {
             name: 'Diamond Pickaxe',
@@ -61,6 +64,24 @@ export class UpgradeRegistry {
             icon: '💠',
             category: 'building',
             effect: 'Unlocks Diamond Press building'
+        },
+        'magic-academy-unlock': {
+            name: 'Academy Blueprints',
+            description: 'Ancient schematics reveal the art of constructing a Magic Academy — a tower of arcane scholarship that unlocks elemental magic towers and gem research. Available after completing The Verdant Woodlands.',
+            cost: 1500,
+            icon: '📜',
+            category: 'building',
+            effect: 'Permanently unlocks the Magic Academy building',
+            campaignRequirement: 'campaign-2'
+        },
+        'superweapon-lab-unlock': {
+            name: 'Super Weapon Lab Plans',
+            description: 'Schematics for a formidable weapons laboratory capable of producing devastating combination spells and experimental ordnance. Available after conquering The Ironstone Mountains.',
+            cost: 2500,
+            icon: '⚗️',
+            category: 'building',
+            effect: 'Permanently unlocks the Super Weapon Lab building',
+            campaignRequirement: 'campaign-3'
         }
     };
 

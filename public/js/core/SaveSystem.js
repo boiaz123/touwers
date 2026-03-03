@@ -99,6 +99,8 @@ export class SaveSystem {
             lastPlayedLevel: settlementData.lastPlayedLevel || 'level1',
             unlockedLevels: settlementData.unlockedLevels || ['level1'],
             completedLevels: settlementData.completedLevels || [],
+            completedCampaigns: settlementData.completedCampaigns || [],
+            unlockedCampaigns: settlementData.unlockedCampaigns || ['campaign-1', 'campaign-5'],
             // Unlock system state (persistent unlocks across levels)
             unlockSystem: settlementData.unlockSystem || {
                 forgeLevel: 0,
@@ -200,6 +202,8 @@ export class SaveSystem {
             lastPlayedLevel: updateData.lastPlayedLevel !== undefined ? updateData.lastPlayedLevel : (existingSave?.lastPlayedLevel || 'level1'),
             unlockedLevels: updateData.unlockedLevels !== undefined ? updateData.unlockedLevels : (existingSave?.unlockedLevels || ['level1']),
             completedLevels: updateData.completedLevels !== undefined ? updateData.completedLevels : (existingSave?.completedLevels || []),
+            completedCampaigns: updateData.completedCampaigns !== undefined ? updateData.completedCampaigns : (existingSave?.completedCampaigns || []),
+            unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1', 'campaign-5']),
             unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || {
                 forgeLevel: 0,
                 hasForge: false,
@@ -332,6 +336,8 @@ export class SaveSystem {
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
             completedLevels: [],
+            completedCampaigns: [],
+            unlockedCampaigns: ['campaign-1', 'campaign-5'],
             unlockSystem: {
                 forgeLevel: 0,
                 hasForge: false,
@@ -408,5 +414,53 @@ export class SaveSystem {
             completedLevels.push(levelId);
         }
         return completedLevels;
+    }
+
+    /**
+     * Mark a campaign as completed
+     * @param {string} campaignId - Campaign ID to mark as completed (e.g. 'campaign-1')
+     * @param {Array} completedCampaigns - Current array of completed campaign IDs
+     * @returns {Array} - Updated completed campaigns array
+     */
+    static markCampaignCompleted(campaignId, completedCampaigns) {
+        if (!completedCampaigns.includes(campaignId)) {
+            completedCampaigns.push(campaignId);
+        }
+        return completedCampaigns;
+    }
+
+    /**
+     * Unlock a campaign in an unlockedCampaigns array
+     * @param {string} campaignId - Campaign ID to unlock
+     * @param {Array} unlockedCampaigns - Current array of unlocked campaign IDs
+     * @returns {Array} - Updated unlocked campaigns array
+     */
+    static unlockCampaign(campaignId, unlockedCampaigns) {
+        if (!unlockedCampaigns.includes(campaignId)) {
+            unlockedCampaigns.push(campaignId);
+        }
+        return unlockedCampaigns;
+    }
+
+    /**
+     * Check if a campaign is completed
+     * @param {string} campaignId - Campaign ID to check
+     * @param {Array} completedCampaigns - Array of completed campaign IDs
+     * @returns {boolean}
+     */
+    static isCampaignCompleted(campaignId, completedCampaigns) {
+        return Array.isArray(completedCampaigns) && completedCampaigns.includes(campaignId);
+    }
+
+    /**
+     * Check if a campaign is unlocked
+     * @param {string} campaignId - Campaign ID to check
+     * @param {Array} unlockedCampaigns - Array of unlocked campaign IDs
+     * @returns {boolean}
+     */
+    static isCampaignUnlocked(campaignId, unlockedCampaigns) {
+        const defaults = ['campaign-1', 'campaign-5'];
+        if (defaults.includes(campaignId)) return true;
+        return Array.isArray(unlockedCampaigns) && unlockedCampaigns.includes(campaignId);
     }
 }

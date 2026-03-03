@@ -10,6 +10,7 @@ import { SaveSystem } from '../SaveSystem.js';
 import { PerformanceMonitor } from '../PerformanceMonitor.js';
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
+import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 
 export class GameplayState {
     constructor(stateManager) {
@@ -299,6 +300,19 @@ export class GameplayState {
         if (hasTrainingGearUpgrade) {
             this.towerManager.unlockSystem.onTrainingGearUpgradePurchased();
         }
+
+        // Unlock Magic Academy if player has purchased the blueprint upgrade (requires Campaign 1 cleared)
+        if (this.stateManager.upgradeSystem && this.stateManager.upgradeSystem.hasUpgrade('magic-academy-unlock')) {
+            this.towerManager.unlockSystem.onMagicAcademyUnlockPurchased();
+        }
+
+        // Unlock Super Weapon Lab if player has purchased the plans upgrade (requires Campaign 2 cleared)
+        if (this.stateManager.upgradeSystem && this.stateManager.upgradeSystem.hasUpgrade('superweapon-lab-unlock')) {
+            this.towerManager.unlockSystem.onSuperweaponLabUnlockPurchased();
+        }
+
+        // Apply campaign-specific loot drop rates to the enemy manager
+        this.enemyManager.campaignLootConfig = this.getCampaignLootConfig(this.currentCampaignId);
         
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
@@ -331,6 +345,21 @@ export class GameplayState {
         this.lastRealTimestamp = performance.now() / 1000;
     }
     
+    /**
+     * Return campaign-specific base loot drop config.
+     * normalChance and rareChance are the per-enemy drop probabilities.
+     */
+    getCampaignLootConfig(campaignId) {
+        switch (campaignId) {
+            case 'campaign-1': return { normalChance: 0.10, rareChance: 0.0 };   // Woodlands: normal only
+            case 'campaign-2': return { normalChance: 0.10, rareChance: 0.025 }; // Mountains: base rare rate
+            case 'campaign-3': return { normalChance: 0.15, rareChance: 0.04 };  // Desert: more abundant
+            case 'campaign-4': return { normalChance: 0.20, rareChance: 0.05 };  // Frog King: double rates
+            case 'campaign-5': return { normalChance: 0.20, rareChance: 0.05 };  // Testing: max rates
+            default:           return { normalChance: 0.10, rareChance: 0.025 };
+        }
+    }
+
     applyConsumableEffects() {
         // Initialize marketplace system for this level
         if (this.stateManager.marketplaceSystem) {
@@ -1389,6 +1418,31 @@ export class GameplayState {
             
             // Update last played level
             saveData.lastPlayedLevel = this.currentLevel;
+
+            // --- Campaign completion detection ---
+            // level5 is the last level in any campaign
+            const isLastLevel = (this.currentLevel === 'level5') && !this.isSandbox;
+            if (isLastLevel && this.currentCampaignId) {
+                if (!saveData.completedCampaigns) saveData.completedCampaigns = [];
+                if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1', 'campaign-5'];
+
+                // Mark campaign as completed
+                saveData.completedCampaigns = SaveSystem.markCampaignCompleted(
+                    this.currentCampaignId, saveData.completedCampaigns
+                );
+
+                // Unlock the next campaign in the chain
+                const nextCampaignId = CampaignRegistry.unlockNextCampaign(this.currentCampaignId);
+                if (nextCampaignId) {
+                    saveData.unlockedCampaigns = SaveSystem.unlockCampaign(
+                        nextCampaignId, saveData.unlockedCampaigns
+                    );
+                }
+
+                // Signal to SettlementHub that a campaign was just completed
+                this.stateManager.justCompletedCampaignId = this.currentCampaignId;
+            }
+            // --- End campaign completion ---
             
             // Clear mid-game state since level is complete
             saveData.isMidGameSave = false;
@@ -1401,6 +1455,7 @@ export class GameplayState {
         }
 
         // Show custom results screen with statistics
+        const isLastLevel2 = (this.currentLevel === 'level5') && !this.isSandbox;
         this.resultsScreen.show('levelComplete', {
             level: this.currentLevel,
             wavesCompleted: this.maxWavesForLevel,
@@ -1408,7 +1463,8 @@ export class GameplayState {
             gold: this.gameState.gold,
             enemiesSlain: this.totalEnemiesSpawned, // Use total enemies spawned (all killed to win)
             goldEarned: this.goldEarnedThisLevel,
-            currentGold: this.gameState.gold
+            currentGold: this.gameState.gold,
+            noNextLevel: isLastLevel2
         }, this.lootManager.getCollectedLoot(), this.lootManager);
     }
     

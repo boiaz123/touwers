@@ -133,6 +133,12 @@ export class EnemyManager {
                 );
                 
                 if (enemy) {
+                    // Apply campaign-specific base loot rates (set by GameplayState based on current campaign)
+                    if (this.campaignLootConfig) {
+                        enemy.lootDropChance = this.campaignLootConfig.normalChance;
+                        enemy.rareLootDropChance = this.campaignLootConfig.rareChance;
+                    }
+
                     // Apply Rabbit's Foot modifier if active in marketplace
                     if (this.marketplaceSystem && this.marketplaceSystem.rabbitFootActive) {
                         if (enemy.lootDropChance !== undefined) {

@@ -13,6 +13,7 @@ import { MarketplaceSystem } from '../MarketplaceSystem.js';
 import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
 import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
 import { SirFrogerty } from '../../ui/SirFrogerty.js';
+import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -156,13 +157,29 @@ export class SettlementHub {
         // Remember which save slot is loaded
         this.lastLoadedSaveSlot = this.stateManager.currentSaveSlot;
 
+        // Refresh CampaignRegistry lock/unlock state from saved data
+        CampaignRegistry.loadFromSaveData(currentSaveData);
+
+        // Ensure Sir Frogerty instance exists (shared across all visits)
+        if (!this.sirFrogerty) {
+            this.sirFrogerty = new SirFrogerty(this.stateManager);
+        }
+
         // Show Sir Frogerty's intro dialogue when starting a brand-new game
         const isNewGame = this.stateManager.previousState === 'saveSlotSelection';
         if (isNewGame) {
-            if (!this.sirFrogerty) {
-                this.sirFrogerty = new SirFrogerty(this.stateManager);
-            }
             this.sirFrogerty.show();
+        }
+
+        // Show Sir Frogerty campaign-completion dialogue when returning from a completed campaign
+        const justCompletedCampaign = this.stateManager.justCompletedCampaignId;
+        if (justCompletedCampaign && !isNewGame) {
+            const completionPages = this.getCampaignCompletionPages(justCompletedCampaign);
+            if (completionPages) {
+                this.sirFrogerty.showWithPages(completionPages);
+            }
+            // Clear the flag so it only fires once
+            this.stateManager.justCompletedCampaignId = null;
         }
         
         // Reset all popup hover states
@@ -540,6 +557,121 @@ export class SettlementHub {
 
     closePopup() {
         this.activePopup = null;
+    }
+
+    /**
+     * Returns Sir Frogerty dialogue pages for a given campaign completion event.
+     * @param {string} campaignId
+     * @returns {Array<{title:string,lines:string[]}>|null}
+     */
+    getCampaignCompletionPages(campaignId) {
+        switch (campaignId) {
+            case 'campaign-1':
+                return [
+                    {
+                        title: 'The Woodlands Are Saved!',
+                        lines: [
+                            'Magnificent, Commander! The Verdant Woodlands stand!',
+                            "Thine enemies hath retreated — for now. But mine",
+                            "royal nose doth detect a foul whiff upon the breeze:",
+                            "more of mine former king's soldiers approach from the",
+                            "mountains. Fear not — thou art now stronger than ever!",
+                        ]
+                    },
+                    {
+                        title: 'New Paths Open Before Thee!',
+                        lines: [
+                            "The Ironstone Mountains now lie within thy reach!",
+                            "Head to the Campaign Map and challenge those peaks.",
+                            '',
+                            "Also: mine schematics for the grand Magic Academy",
+                            "are now available to purchase in the Upgrades shop!",
+                            "A worthy investment, I assure thee. *ribbit*",
+                        ]
+                    }
+                ];
+
+            case 'campaign-2':
+                return [
+                    {
+                        title: 'The Mountains Are Yours!',
+                        lines: [
+                            "By the great lily pad! Thou hath conquered the peaks!",
+                            "The cold winds carry the scent of sand and ancient dust —",
+                            "the Scorching Sands await thee beyond the passes.",
+                            '',
+                            "Each victory hath grown thy renown, Commander.",
+                            "The realm speaks thy name in hushed, awed tones.",
+                        ]
+                    },
+                    {
+                        title: 'Powerful New Weapons Await!',
+                        lines: [
+                            "The Super Weapon Lab Plans are now for sale!",
+                            "Purchase them in the Upgrades shop to unlock",
+                            "the most devastating ordnance the realm hath seen.",
+                            '',
+                            "Also, the Strange Talisman may now be found in the",
+                            "Marketplace — tis most useful for rare loot. *ribbit*",
+                        ]
+                    }
+                ];
+
+            case 'campaign-3':
+                return [
+                    {
+                        title: 'The Sands Are Crossed!',
+                        lines: [
+                            "Thou FOUND it, Commander! The artifact of legend!",
+                            "Its power thrums even as I speak… I confess,",
+                            "even I — thine most distinguished adviser — feel",
+                            "a shiver of awe. These frogs are not of this world.",
+                            '',
+                            "And mine former king… hath noticed thee. Prepare.",
+                        ]
+                    },
+                    {
+                        title: 'The Final Frontier!',
+                        lines: [
+                            "The Frog King's Domain is now accessible!",
+                            "I need not tell thee that this shall be the",
+                            "most dangerous campaign thou hath faced.",
+                            '',
+                            "Stock up well at the Marketplace, Commander.",
+                            "And keep mine counsel close. *nervous ribbit*",
+                        ]
+                    }
+                ];
+
+            case 'campaign-4':
+                return [
+                    {
+                        title: 'VICTORY! The King Is Defeated!',
+                        lines: [
+                            "I… I cannot believe mine own eyes. Thou hath",
+                            "done it, Commander. The Frog King falleth!",
+                            "His domain crumbles, the rifts seal shut, and",
+                            "his armies lay down their arms across every realm.",
+                            '',
+                            "I, Sir Frogerty, weep tears of absolute joy.",
+                        ]
+                    },
+                    {
+                        title: 'A Legend Is Born!',
+                        lines: [
+                            "History shall remember this day, Commander.",
+                            "Thou hath saved not one realm, but ALL realms —",
+                            "including mine slimy homeland. I owe thee a debt",
+                            "that no amount of advice can ever repay.",
+                            '',
+                            "Until the next adventure... *celebratory ribbit*",
+                        ]
+                    }
+                ];
+
+            default:
+                return null;
+        }
     }
 
     update(deltaTime) {
@@ -3418,8 +3550,20 @@ class UpgradesMenu {
     buildBuyItems() {
         const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
         const marketplaceSystem = this.stateManager.marketplaceSystem || { hasUsedConsumable: () => false, isBoonActive: () => false, getConsumableCount: () => 0 };
+        const unlockedCampaigns = this.stateManager.currentSaveData?.unlockedCampaigns || ['campaign-1', 'campaign-5'];
         
         const items = [];
+        
+        // Helper: get the name of the campaign that must be completed to unlock a required campaign id
+        const getUnlockPrereqName = (reqId) => {
+            const chain = CampaignRegistry.UNLOCK_CHAIN;
+            const prereqId = Object.keys(chain).find(k => chain[k] === reqId);
+            if (prereqId) {
+                const camp = CampaignRegistry.getCampaign(prereqId);
+                return camp ? camp.name : 'a previous campaign';
+            }
+            return 'a previous campaign';
+        };
         
         // Add marketplace items from registry
         const allItems = MarketplaceRegistry.getAllItemIds();
@@ -3430,6 +3574,17 @@ class UpgradesMenu {
             
             let canPurchase = MarketplaceRegistry.canPurchase(itemId, upgradeSystem, marketplaceSystem);
             let requirementMsg = MarketplaceRegistry.getRequirementMessage(itemId, upgradeSystem, marketplaceSystem);
+            
+            // Check campaign requirement — hide the item entirely if not yet unlocked
+            if (itemData.campaignRequirement && !unlockedCampaigns.includes(itemData.campaignRequirement)) {
+                continue;
+            }
+
+            // Hide items whose upgrade prerequisites are not yet met
+            if (itemData.requirements && itemData.requirements.length > 0) {
+                const unmet = itemData.requirements.some(req => !upgradeSystem.hasUpgrade(req));
+                if (unmet) continue;
+            }
             
             // Special check: if it's a music item and player already has it, mark as unavailable
             // Music items should only be purchased once
@@ -3460,8 +3615,11 @@ class UpgradesMenu {
             }
             
             // Combine loot and boon into consumable category
+            // Also move building-type consumables (forge materials, flatpacks, etc.) to consumable tab
             let category = itemData.category;
             if (category === 'loot' || category === 'boon') {
+                category = 'consumable';
+            } else if (category === 'building' && itemData.type === 'consumable') {
                 category = 'consumable';
             }
             
@@ -3504,7 +3662,8 @@ class UpgradesMenu {
                 description: 'Increase starting gold by 100',
                 cost: 250,
                 icon: '📦',
-                category: 'upgrade'
+                category: 'upgrade',
+                campaignRequirement: 'campaign-1'
             },
             {
                 id: 'golden-chest',
@@ -3513,7 +3672,8 @@ class UpgradesMenu {
                 cost: 400,
                 icon: '🪙',
                 category: 'upgrade',
-                prerequisite: 'wooden-chest'
+                prerequisite: 'wooden-chest',
+                campaignRequirement: 'campaign-2'
             },
             {
                 id: 'platinum-chest',
@@ -3522,7 +3682,8 @@ class UpgradesMenu {
                 cost: 600,
                 icon: '💎',
                 category: 'upgrade',
-                prerequisite: 'golden-chest'
+                prerequisite: 'golden-chest',
+                campaignRequirement: 'campaign-3'
             },
             {
                 id: 'diamond-pickaxe',
@@ -3531,6 +3692,24 @@ class UpgradesMenu {
                 cost: 800,
                 icon: '⛏️',
                 category: 'upgrade'
+            },
+            {
+                id: 'magic-academy-unlock',
+                name: 'Academy Blueprints',
+                description: 'Unlocks the ability to build the Magic Academy in levels',
+                cost: 1500,
+                icon: '📜',
+                category: 'upgrade',
+                campaignRequirement: 'campaign-2'
+            },
+            {
+                id: 'superweapon-lab-unlock',
+                name: 'Super Weapon Lab Plans',
+                description: 'Unlocks the ability to build the Super Weapon Lab in levels',
+                cost: 2500,
+                icon: '⚗️',
+                category: 'upgrade',
+                campaignRequirement: 'campaign-3'
             }
         ];
         
@@ -3543,6 +3722,11 @@ class UpgradesMenu {
             if (upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
                 canPurchase = false;
                 requirementMsg = `Requires: ${upgradeData.find(u => u.id === upgrade.prerequisite)?.name}`;
+            }
+            
+            // Check campaign requirement — hide the upgrade entirely if not yet unlocked
+            if (!isPurchased && upgrade.campaignRequirement && !unlockedCampaigns.includes(upgrade.campaignRequirement)) {
+                continue;
             }
             
             // If already purchased, set requirement message to "Purchased"
@@ -5534,10 +5718,10 @@ class ManageSettlementMenu {
             { label: 'QUIT TOUWERS', action: 'quitTouwers', hovered: false },
             { label: 'CLOSE', action: 'close', hovered: false },
         ];
-        this.buttonWidth = 220;
-        this.buttonHeight = 48;
-        this.buttonMarginTop = 40;
-        this.buttonGap = 12;
+        this.buttonWidth = 300;
+        this.buttonHeight = 52;
+        this.buttonMarginTop = 52;
+        this.buttonGap = 10;
     }
 
     open() {

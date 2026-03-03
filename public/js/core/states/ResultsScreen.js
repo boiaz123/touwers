@@ -131,10 +131,17 @@ export class ResultsScreen {
 
         // Setup buttons
         if (type === 'levelComplete') {
-            this.buttons = [
-                { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
-                { label: 'NEXT LEVEL', action: 'nextLevel' }
-            ];
+            if (data.noNextLevel) {
+                // Last level of campaign - only return to settlement
+                this.buttons = [
+                    { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
+                ];
+            } else {
+                this.buttons = [
+                    { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
+                    { label: 'NEXT LEVEL', action: 'nextLevel' }
+                ];
+            }
         } else {
             this.buttons = [
                 { label: 'RETRY', action: 'retry' },

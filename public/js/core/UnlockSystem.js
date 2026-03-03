@@ -113,6 +113,17 @@ export class UnlockSystem {
     onTrainingGearUpgradePurchased() {
         this.unlockedBuildings.add('training');
     }
+
+    // Unlock Magic Academy via the purchased 'magic-academy-unlock' upgrade (available after Campaign 1)
+    onMagicAcademyUnlockPurchased() {
+        this.unlockedBuildings.add('academy');
+    }
+
+    // Unlock Super Weapon Lab via the purchased 'superweapon-lab-unlock' upgrade (available after Campaign 2)
+    onSuperweaponLabUnlockPurchased() {
+        this.superweaponUnlocked = true;
+        this.unlockedBuildings.add('superweapon');
+    }
     
     // New: Method to handle Training Grounds level upgrades
     onTrainingGroundsUpgraded(newLevel) {
@@ -254,8 +265,8 @@ export class UnlockSystem {
                 break;
                 
             case 4:
-                // Forge level 4 unlocks
-                this.unlockedBuildings.add('academy');
+                // Forge level 4 no longer auto-unlocks the Academy.
+                // The Magic Academy requires the 'magic-academy-unlock' upgrade (unlocks after Campaign 1).
                 break;
                 
             case 5:

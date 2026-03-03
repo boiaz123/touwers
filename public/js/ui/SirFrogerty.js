@@ -128,8 +128,24 @@ export class SirFrogerty {
         this._clickCooldown     = 0;
     }
 
+    /**
+     * Show Sir Frogerty with a custom set of pages instead of the default intro pages.
+     * @param {Array<{title: string, lines: string[]}>} pages
+     */
+    showWithPages(pages) {
+        // Temporarily replace the pages list, keeping the original backed up
+        this._savedPages = this.pages;
+        this.pages = pages;
+        this.show();
+    }
+
     hide() {
         this.visible = false;
+        // Restore original pages if we were showing a custom set
+        if (this._savedPages) {
+            this.pages = this._savedPages;
+            this._savedPages = null;
+        }
     }
 
     // ─── Update ──────────────────────────────────────────────────────────────
