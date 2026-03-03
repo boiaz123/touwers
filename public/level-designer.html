@@ -738,7 +738,7 @@
                     <button id="exportBtn" title="Export level code">📥 Export</button>
                 </div>
             </div>
-            <div class="path-info" id="pathInfo">📍 Click to add path points. Right-click to remove last point. Finish path to auto-place castle.</div>
+            <div class="path-info" id="pathInfo">�️ Path mode active — Click to place waypoints. Castle auto-previews at endpoint. Click "Finish Path" to lock the path.</div>
             <div class="canvas-wrapper">
                 <canvas id="designCanvas"></canvas>
             </div>
@@ -783,65 +783,70 @@
                 <input type="number" id="maxWaves" value="10" min="1" max="50">
             </div>
 
-            <div class="form-section-title">Visual Settings</div>
+            <div class="form-section-title">Visual Settings <span style="font-size:11px;font-weight:normal;color:#6aafcf;margin-left:8px;">— live preview updates on change</span></div>
 
+            <p style="font-size:11px;color:#888;margin:0 0 10px 0;">These settings control how the background looks in-game. Changes are reflected in the canvas immediately.</p>
+
+            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Background Gradient (top → bottom)</div>
             <div class="grid-display">
                 <div class="form-group">
                     <label>Grass Top Color</label>
-                    <input type="color" class="color-input" id="grassTopColor" value="#2a2a3a">
+                    <input type="color" class="color-input" id="grassTopColor" value="#4a6741">
                 </div>
                 <div class="form-group">
                     <label>Grass Upper Color</label>
-                    <input type="color" class="color-input" id="grassUpperColor" value="#3a3a4a">
+                    <input type="color" class="color-input" id="grassUpperColor" value="#5a7751">
                 </div>
                 <div class="form-group">
                     <label>Grass Lower Color</label>
-                    <input type="color" class="color-input" id="grassLowerColor" value="#4a4a5a">
+                    <input type="color" class="color-input" id="grassLowerColor" value="#6a8761">
                 </div>
                 <div class="form-group">
                     <label>Grass Bottom Color</label>
-                    <input type="color" class="color-input" id="grassBottomColor" value="#1a1a2a">
+                    <input type="color" class="color-input" id="grassBottomColor" value="#3a5731">
                 </div>
             </div>
 
+            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Path &amp; Edge Decoration Colors</div>
             <div class="grid-display">
                 <div class="form-group">
                     <label>Path Color</label>
-                    <input type="color" class="color-input" id="pathColor" value="#6b6b5b">
+                    <input type="color" class="color-input" id="pathColor" value="#8b7355">
                 </div>
                 <div class="form-group">
                     <label>Bush Color</label>
-                    <input type="color" class="color-input" id="bushColor" value="#0f3f0f">
+                    <input type="color" class="color-input" id="bushColor" value="#1f6f1f">
                 </div>
                 <div class="form-group">
                     <label>Rock Color</label>
-                    <input type="color" class="color-input" id="rockColor" value="#666666">
+                    <input type="color" class="color-input" id="rockColor" value="#807f80">
                 </div>
                 <div class="form-group">
                     <label>Edge Grass Color</label>
-                    <input type="color" class="color-input" id="edgeGrassColor" value="#1a6a1a">
+                    <input type="color" class="color-input" id="edgeGrassColor" value="#2e8b2e">
                 </div>
             </div>
 
+            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Decoration Density</div>
             <div class="grid-display">
                 <div class="form-group">
                     <label>Grass Patch Density</label>
                     <select id="grassDensity">
-                        <option value="3000">Very Sparse</option>
-                        <option value="7000">Sparse</option>
+                        <option value="25000">Very Sparse</option>
+                        <option value="18000">Sparse</option>
                         <option value="12000" selected>Normal</option>
-                        <option value="18000">Dense</option>
-                        <option value="25000">Very Dense</option>
+                        <option value="7000">Dense</option>
+                        <option value="3000">Very Dense</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Flower Density</label>
                     <select id="flowerDensity">
-                        <option value="10000">Very Sparse</option>
-                        <option value="25000">Sparse</option>
+                        <option value="120000">Very Sparse</option>
+                        <option value="80000">Sparse</option>
                         <option value="50000" selected>Normal</option>
-                        <option value="80000">Dense</option>
-                        <option value="120000">Very Dense</option>
+                        <option value="25000">Dense</option>
+                        <option value="10000">Very Dense</option>
                     </select>
                 </div>
             </div>

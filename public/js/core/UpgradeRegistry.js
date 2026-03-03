@@ -51,11 +51,12 @@ export class UpgradeRegistry {
         },
         'diamond-pickaxe': {
             name: 'Diamond Pickaxe',
-            description: 'Increase gem mining chance in gold mines',
+            description: 'Increase gem mining chance in gold mines. Requires a Magic Academy to be unlocked first.',
             cost: 800,
             icon: '💎',
             category: 'mining',
-            effect: 'Increases diamond drop rate from mines'
+            effect: 'Increases diamond drop rate from mines',
+            prerequisite: 'magic-academy-unlock'
         },
         'diamond-press-unlock': {
             name: 'Diamond Press Unlock',

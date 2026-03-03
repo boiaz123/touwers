@@ -3646,7 +3646,7 @@ class UpgradesMenu {
                 description: 'Unlocks the ability to build Training Grounds in levels',
                 cost: 500,
                 icon: '⚔️',
-                category: 'upgrade'
+                category: 'building'
             },
             {
                 id: 'musical-equipment',

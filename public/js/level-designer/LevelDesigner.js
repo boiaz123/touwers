@@ -18,7 +18,7 @@ export class LevelDesigner {
         this.pathPoints = [];
         this.castlePosition = null;
         this.currentCampaign = 'forest'; // Track selected campaign
-        this.mode = null; // No default mode - user selects
+        this.mode = 'path'; // Start in path mode, ready to draw immediately
         this.terrainMode = null; // 'vegetation', 'rock', 'water' when in terrain mode
         this.waterMode = null; // 'river' or 'lake' when placing water
         this.waterSize = 2; // Size for lake mode
@@ -27,6 +27,20 @@ export class LevelDesigner {
         this.currentEditingWaveId = null;
         this.hoveredGridCell = null; // For visual feedback during mouse movement
         this.pathLocked = false; // Whether path editing is finished
+        this.riverPaths = []; // Array of completed river waypoint arrays
+        this.currentMouseGridPos = null; // Current mouse grid position for coordinate display
+        
+        // Decoration cache for in-game style background preview
+        this.designerGrassPatches = [];
+        this.designerDirtPatches = [];
+        this.designerFlowers = [];
+        this.designerDecorationsGenerated = false;
+        
+        // Path texture cache (invalidated when path changes)
+        this.designerPathTexture = [];
+        this.designerPathLeaves = [];
+        this.designerPathTextureGenerated = false;
+        this.designerPathHash = '';
         
         // Confirmation system
         this.confirmationCallback = null;
@@ -38,8 +52,11 @@ export class LevelDesigner {
         this.setupCanvas();
         this.setupEventListeners();
         this.setupFormHandlers();
+        // Apply the initial campaign theme to the form so color pickers show correct defaults
+        CampaignThemeConfig.applyThemeToForm(this.currentCampaign);
         this.updateTerrainButtonsForCampaign(); // Set initial terrain button visibility
         this.createDefaultWave();
+        this.setMode('path'); // Initialize UI into path mode
         this.render();
     }
 
@@ -137,6 +154,8 @@ export class LevelDesigner {
                 CampaignThemeConfig.applyThemeToForm(this.currentCampaign);
                 this.updateTerrainButtonsForCampaign();
                 this.updateGeneratedCode();
+                this.designerDecorationsGenerated = false;
+                this.render();
             });
         }
 
@@ -167,6 +186,21 @@ export class LevelDesigner {
         // Input listeners for path info
         document.querySelectorAll('input, select').forEach(el => {
             el.addEventListener('change', () => this.render());
+        });
+
+        // Color picker live preview — fires during drag for instant visual feedback
+        document.querySelectorAll('.color-input').forEach(input => {
+            input.addEventListener('input', () => this.render());
+        });
+
+        // Density changes require regenerating the decoration cache
+        ['grassDensity', 'flowerDensity'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => {
+                    this.designerDecorationsGenerated = false;
+                });
+            }
         });
     }
 
@@ -245,10 +279,8 @@ export class LevelDesigner {
         
         const pathInfo = document.getElementById('pathInfo');
         if (mode === 'river') {
-            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" when done.';
-            if (!this.riverPoints) {
-                this.riverPoints = [];
-            }
+            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" when done. Right-click (no active points) to remove last saved river.';
+            this.riverPoints = []; // Always start fresh when entering river mode
         } else if (mode === 'lake') {
             pathInfo.textContent = `💧 Click to place circular lakes (size: ${this.waterSize.toFixed(1)}). Right-click to erase.`;
             this.riverPoints = [];
@@ -284,6 +316,7 @@ export class LevelDesigner {
 
         // Get raw grid coordinates
         const gridCoords = this.pixelToGrid(canvasX, canvasY);
+        this.currentMouseGridPos = gridCoords; // Track for coordinate display
         
         // Only snap for terrain and path modes
         if (this.mode === 'terrain' || (this.mode === 'path' && this.waterMode !== 'river') || this.mode === 'castle') {
@@ -341,9 +374,14 @@ export class LevelDesigner {
             this.updateGeneratedCode();
             this.render();
         } else if (this.mode === 'terrain') {
-            if (this.waterMode === 'river' && this.riverPoints && this.riverPoints.length > 0) {
-                // Remove last river waypoint on right-click
-                this.riverPoints.pop();
+            if (this.waterMode === 'river') {
+                if (this.riverPoints && this.riverPoints.length > 0) {
+                    // Remove last waypoint from current river being drawn
+                    this.riverPoints.pop();
+                } else if (this.riverPaths.length > 0) {
+                    // Remove the last completed river path
+                    this.riverPaths.pop();
+                }
             } else if (this.terrainElements.length > 0) {
                 this.terrainElements.pop();
             }
@@ -377,38 +415,10 @@ export class LevelDesigner {
     }
 
     finishRiver() {
-        // Convert river waypoints to water tiles along the path
+        // Store river as a waypoint array (not flattened to cells)
+        // Cells are generated only on export so the river remains editable
         if (!this.riverPoints || this.riverPoints.length < 2) return;
-        
-        // Store all river segments with direction information
-        for (let i = 0; i < this.riverPoints.length - 1; i++) {
-            const p1 = this.riverPoints[i];
-            const p2 = this.riverPoints[i + 1];
-            const distance = Math.hypot(p2.gridX - p1.gridX, p2.gridY - p1.gridY);
-            const steps = Math.ceil(distance);
-            
-            for (let step = 0; step <= steps; step++) {
-                const t = steps === 0 ? 0 : step / steps;
-                const x = p1.gridX + (p2.gridX - p1.gridX) * t;
-                const y = p1.gridY + (p2.gridY - p1.gridY) * t;
-                
-                // Calculate flow direction
-                const dx = p2.gridX - p1.gridX;
-                const dy = p2.gridY - p1.gridY;
-                const flowAngle = Math.atan2(dy, dx);
-                
-                // Add water tile marked as river type
-                const element = {
-                    type: 'water',
-                    waterType: 'river',
-                    gridX: Math.round(x),
-                    gridY: Math.round(y),
-                    size: 1.5,
-                    flowAngle: flowAngle
-                };
-                this.terrainElements.push(element);
-            }
-        }
+        this.riverPaths.push([...this.riverPoints]);
     }
 
     finishPath() {
@@ -463,12 +473,11 @@ export class LevelDesigner {
             return;
         }
         
-        // Convert river waypoints to terrain elements
+        // Store river as a path (waypoints only — cells are generated on export)
         this.finishRiver();
         
-        // Clear river waypoints and reset to water mode
+        // Clear current river waypoints and keep in water mode for another river
         this.riverPoints = [];
-        this.waterMode = null;
         
         // Hide finish river button
         const finishRiverControl = document.getElementById('finishRiverControl');
@@ -476,11 +485,12 @@ export class LevelDesigner {
             finishRiverControl.style.visibility = 'hidden';
         }
         
-        // Reset water mode buttons
+        // Reset river mode button
         document.getElementById('waterRiverBtn')?.classList.remove('active');
+        this.waterMode = null;
         
         const pathInfo = document.getElementById('pathInfo');
-        pathInfo.textContent = '💧 Water - Click to place circular lakes (size: ' + this.waterSize.toFixed(1) + '). Right-click to erase.';
+        pathInfo.textContent = `✓ River saved (${this.riverPaths.length} river${this.riverPaths.length > 1 ? 's' : ''} total). Right-click to undo last river. Select River again to draw another.`;
         
         this.updateGeneratedCode();
         this.render();
@@ -545,6 +555,7 @@ export class LevelDesigner {
 
     handleResize() {
         this.setupCanvas();
+        this.designerDecorationsGenerated = false;
         this.render();
     }
 
@@ -775,10 +786,15 @@ export class LevelDesigner {
     }
 
     drawBackground() {
-        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
-        const config = theme.visualConfig;
+        // Read visual config from form inputs so changes reflect immediately in canvas
+        const config = this.getVisualConfigFromForm();
         
-        // Draw gradient background using grass colors
+        // Ensure decorations are generated (or regenerated after settings change)
+        if (!this.designerDecorationsGenerated) {
+            this.generateDesignerDecorations(config);
+        }
+        
+        // Base gradient background
         const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
         gradient.addColorStop(0, config.grassColors.top);
         gradient.addColorStop(0.3, config.grassColors.upper);
@@ -787,9 +803,268 @@ export class LevelDesigner {
         
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Dirt/ground texture patches
+        this.drawDesignerDirtPatches();
+        
+        // Grass patch clusters
+        this.drawDesignerGrassPatches();
+        
+        // Scattered flowers
+        this.drawDesignerFlowers();
+        
+        // Edge vignette — darker edges like in-game
+        const vW = Math.min(this.canvas.width * 0.07, 70);
+        const vH = Math.min(this.canvas.height * 0.09, 60);
+        
+        const leftG = this.ctx.createLinearGradient(0, 0, vW, 0);
+        leftG.addColorStop(0, 'rgba(0,0,0,0.45)');
+        leftG.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = leftG;
+        this.ctx.fillRect(0, 0, vW, this.canvas.height);
+        
+        const rightG = this.ctx.createLinearGradient(this.canvas.width, 0, this.canvas.width - vW, 0);
+        rightG.addColorStop(0, 'rgba(0,0,0,0.45)');
+        rightG.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = rightG;
+        this.ctx.fillRect(this.canvas.width - vW, 0, vW, this.canvas.height);
+        
+        const topG = this.ctx.createLinearGradient(0, 0, 0, vH);
+        topG.addColorStop(0, 'rgba(0,0,0,0.45)');
+        topG.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = topG;
+        this.ctx.fillRect(0, 0, this.canvas.width, vH);
+        
+        const botG = this.ctx.createLinearGradient(0, this.canvas.height, 0, this.canvas.height - vH);
+        botG.addColorStop(0, 'rgba(0,0,0,0.45)');
+        botG.addColorStop(1, 'rgba(0,0,0,0)');
+        this.ctx.fillStyle = botG;
+        this.ctx.fillRect(0, this.canvas.height - vH, this.canvas.width, vH);
+    }
+
+    /**
+     * Read visual config values from form inputs, falling back to campaign theme defaults.
+     * This ensures the canvas preview always reflects the current form settings.
+     */
+    getVisualConfigFromForm() {
+        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
+        const fb = theme.visualConfig;
+        const val = (id, def) => { const el = document.getElementById(id); return el ? el.value : def; };
+        const int = (id, def) => { const el = document.getElementById(id); return el ? parseInt(el.value) : def; };
+        return {
+            grassColors: {
+                top:    val('grassTopColor',   fb.grassColors.top),
+                upper:  val('grassUpperColor', fb.grassColors.upper),
+                lower:  val('grassLowerColor', fb.grassColors.lower),
+                bottom: val('grassBottomColor',fb.grassColors.bottom)
+            },
+            grassPatchDensity: int('grassDensity', fb.grassPatchDensity),
+            grassPatchSizeMin: fb.grassPatchSizeMin || 6,
+            grassPatchSizeMax: fb.grassPatchSizeMax || 18,
+            flowerDensity:  int('flowerDensity', fb.flowerDensity),
+            pathBaseColor:  val('pathColor',    fb.pathBaseColor),
+            edgeBushColor:  val('bushColor',    fb.edgeBushColor),
+            edgeRockColor:  val('rockColor',    fb.edgeRockColor),
+            edgeGrassColor: val('edgeGrassColor',fb.edgeGrassColor)
+        };
+    }
+
+    /**
+     * Pre-generate grass patches, dirt patches and flowers for the canvas preview.
+     * Called once per settings change; results are cached and reused across frames.
+     */
+    generateDesignerDecorations(config) {
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+        const sizeMin = config.grassPatchSizeMin || 6;
+        const sizeMax = config.grassPatchSizeMax || 18;
+
+        // --- Grass patches ---
+        this.designerGrassPatches = [];
+        const patchCount = Math.floor((cw * ch) / Math.max(config.grassPatchDensity, 1000));
+        for (let i = 0; i < patchCount; i++) {
+            let x, y;
+            if (Math.random() < 0.3 && this.designerGrassPatches.length > 0) {
+                const near = this.designerGrassPatches[Math.floor(Math.random() * this.designerGrassPatches.length)];
+                const angle = Math.random() * Math.PI * 2;
+                const dist  = Math.random() * 80;
+                x = Math.max(0, Math.min(cw, near.x + Math.cos(angle) * dist));
+                y = Math.max(0, Math.min(ch, near.y + Math.sin(angle) * dist));
+            } else {
+                x = Math.random() * cw;
+                y = Math.random() * ch;
+            }
+            this.designerGrassPatches.push({
+                x, y,
+                size:  Math.random() * (sizeMax - sizeMin) + sizeMin,
+                shade: Math.random() * 0.4 + 0.6,
+                type:  Math.floor(Math.random() * 3)
+            });
+        }
+
+        // --- Dirt/ground texture patches ---
+        this.designerDirtPatches = [];
+        const dirtCount = Math.floor(cw * ch / 15000);
+        for (let i = 0; i < dirtCount; i++) {
+            this.designerDirtPatches.push({
+                x:         Math.random() * cw,
+                y:         Math.random() * ch,
+                sizeX:     Math.random() * 55 + 30,
+                sizeY:     Math.random() * 38 + 20,
+                rotation:  Math.random() * Math.PI * 2,
+                type:      Math.floor(Math.random() * 4),
+                intensity: Math.random() * 0.14 + 0.06
+            });
+        }
+
+        // --- Flowers ---
+        this.designerFlowers = [];
+        const flowerCount = Math.floor(cw * ch / Math.max(config.flowerDensity, 1000));
+        for (let i = 0; i < flowerCount; i++) {
+            let x, y;
+            if (Math.random() < 0.4 && this.designerFlowers.length > 0) {
+                const near  = this.designerFlowers[Math.floor(Math.random() * this.designerFlowers.length)];
+                const angle = Math.random() * Math.PI * 2;
+                const dist  = Math.random() * 40;
+                x = Math.max(0, Math.min(cw, near.x + Math.cos(angle) * dist));
+                y = Math.max(0, Math.min(ch, near.y + Math.sin(angle) * dist));
+            } else {
+                x = Math.random() * cw;
+                y = Math.random() * ch;
+            }
+            const r = Math.random();
+            this.designerFlowers.push({ x, y, type: r < 0.33 ? 'yellow' : r < 0.66 ? 'white' : 'purple' });
+        }
+
+        this.designerDecorationsGenerated = true;
+    }
+
+    drawDesignerDirtPatches() {
+        const ctx = this.ctx;
+        this.designerDirtPatches.forEach(p => {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            switch (p.type) {
+                case 0: // Soil blob
+                    ctx.fillStyle = `rgba(92,64,51,${p.intensity})`;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.sizeX * 0.5, p.sizeY * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 1: // Moss
+                    ctx.fillStyle = `rgba(80,100,60,${p.intensity * 0.8})`;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.sizeX * 0.45, p.sizeY * 0.4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 2: // Clay / warm dirt
+                    ctx.fillStyle = `rgba(120,80,40,${p.intensity * 0.9})`;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, p.sizeX * 0.55, p.sizeY * 0.45, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 3: // Leaf litter
+                    ctx.fillStyle = `rgba(139,115,85,${p.intensity * 0.7})`;
+                    for (let i = 0; i < 5; i++) {
+                        const ox = (Math.sin(i * 1.7 + p.x * 0.008) - 0.5) * p.sizeX;
+                        const oy = (Math.cos(i * 1.7 + p.y * 0.008) - 0.5) * p.sizeY;
+                        ctx.beginPath();
+                        ctx.ellipse(ox, oy, 4 + Math.random() * 3, 2 + Math.random() * 2, Math.random() * Math.PI, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+            }
+            ctx.restore();
+        });
+    }
+
+    drawDesignerGrassPatches() {
+        const ctx = this.ctx;
+        this.designerGrassPatches.forEach(p => {
+            const alpha = p.shade * 0.55;
+            switch (p.type) {
+                case 0: // Round clump
+                    ctx.fillStyle = `rgba(34,139,34,${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 1: // Blade strands
+                    ctx.strokeStyle = `rgba(50,150,50,${alpha})`;
+                    ctx.lineWidth = 1;
+                    for (let j = 0; j < 3; j++) {
+                        const ox = (j - 1) * p.size * 0.3;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x + ox, p.y + p.size * 0.5);
+                        ctx.lineTo(p.x + ox, p.y - p.size * 0.5);
+                        ctx.stroke();
+                    }
+                    break;
+                case 2: // Clover
+                    ctx.fillStyle = `rgba(60,179,113,${alpha})`;
+                    for (let j = 0; j < 4; j++) {
+                        const angle = (j / 4) * Math.PI * 2;
+                        ctx.beginPath();
+                        ctx.arc(p.x + Math.cos(angle) * p.size * 0.3, p.y + Math.sin(angle) * p.size * 0.3, p.size * 0.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+            }
+        });
+    }
+
+    drawDesignerFlowers() {
+        const ctx = this.ctx;
+        this.designerFlowers.forEach(f => {
+            switch (f.type) {
+                case 'yellow':
+                    ctx.fillStyle = 'rgba(255,220,0,0.75)';
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'white':
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    for (let i = 0; i < 5; i++) {
+                        const a = (i / 5) * Math.PI * 2;
+                        ctx.beginPath();
+                        ctx.arc(f.x + Math.cos(a) * 1.5, f.y + Math.sin(a) * 1.5, 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.fillStyle = 'rgba(255,220,0,0.9)';
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'purple':
+                    ctx.fillStyle = 'rgba(147,112,219,0.65)';
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+            }
+        });
     }
 
     drawModeOverlay() {
+        // Always show grid coordinate readout (bottom-right corner)
+        if (this.currentMouseGridPos) {
+            const gx = this.currentMouseGridPos.gridX.toFixed(1);
+            const gy = this.currentMouseGridPos.gridY.toFixed(1);
+            const label = `x:${gx}  y:${gy}`;
+            const tw = 130;
+            const tx = this.canvas.width - tw - 8;
+            const ty = this.canvas.height - 26;
+            this.ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            this.ctx.fillRect(tx, ty, tw, 20);
+            this.ctx.fillStyle = '#90caf9';
+            this.ctx.font = '11px monospace';
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'top';
+            this.ctx.fillText(label, tx + 6, ty + 4);
+        }
+
         // Unified mode and terrain information overlay - consistent format across all modes
         
         // No mode selected
@@ -861,7 +1136,8 @@ export class LevelDesigner {
                     modeIcon = '🌊';
                     modeLabel = 'Mode: RIVER';
                     modeColor = '#1e90ff';
-                    secondaryInfo = `Waypoints: ${this.riverPoints ? this.riverPoints.length : 0}`;
+                    const pts = this.riverPoints ? this.riverPoints.length : 0;
+                    secondaryInfo = `Drawing: ${pts} pt${pts !== 1 ? 's' : ''} • ${this.riverPaths.length} saved`;
                 } else if (this.waterMode === 'lake') {
                     modeIcon = '💧';
                     modeLabel = 'Mode: LAKES';
@@ -914,7 +1190,7 @@ export class LevelDesigner {
     drawGrid() {
         this.ctx.strokeStyle = '#444444';
         this.ctx.lineWidth = 0.5;
-        this.ctx.globalAlpha = 0.2;
+        this.ctx.globalAlpha = 0.07;
 
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
@@ -963,100 +1239,391 @@ export class LevelDesigner {
     drawPath() {
         if (this.pathPoints.length === 0) return;
 
-        const cellWidthPixels = this.canvas.width / this.gridWidth;
-        const cellHeightPixels = this.canvas.height / this.gridHeight;
+        const cW = this.canvas.width / this.gridWidth;
+        const cH = this.canvas.height / this.gridHeight;
+        const config = this.getVisualConfigFromForm();
+        const pathColor = config.pathBaseColor;
+        const pathWidthPixels = Math.min(cW, cH) * 2.0; // 2 grid cells wide — matches in-game
 
-        if (this.pathLocked) {
-            // Draw smooth finished path (true game rendering)
-            this.drawPathSmooth(cellWidthPixels, cellHeightPixels);
-        } else {
-            // Draw editing mode: thin waypoint line like river editing
-            this.drawPathWaypoints(cellWidthPixels, cellHeightPixels);
-        }
-    }
-
-    drawPathSmooth(cellWidthPixels, cellHeightPixels) {
-        // Render the true smooth path as it appears in game
+        // Convert grid waypoints to canvas pixel coords
         const pixelPoints = this.pathPoints.map(p => ({
-            x: p.gridX * cellWidthPixels,
-            y: p.gridY * cellHeightPixels
+            x: p.gridX * cW,
+            y: p.gridY * cH
         }));
 
-        // Calculate path width to match river rendering (which is true to game)
-        const pixelSize = Math.min(cellWidthPixels, cellHeightPixels);
-        const pathWidth = pixelSize * 1.5;
-        
-        // Main path color with smooth rendering
-        this.ctx.strokeStyle = '#58c4dc';
-        this.ctx.lineWidth = pathWidth;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.globalAlpha = 0.9;
+        // Invalidate path texture cache when waypoints change
+        const hash = this.pathPoints.map(p => `${p.gridX.toFixed(2)},${p.gridY.toFixed(2)}`).join('|');
+        if (hash !== this.designerPathHash) {
+            this.designerPathHash = hash;
+            this.designerPathTextureGenerated = false;
+        }
+        if (!this.designerPathTextureGenerated) {
+            this.generateDesignerPathTexture(pixelPoints, pathWidthPixels, config);
+        }
 
-        this.ctx.beginPath();
-        this.ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
-        for (let i = 1; i < pixelPoints.length; i++) {
-            this.ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+        if (pixelPoints.length >= 2) {
+            const ctx = this.ctx;
+
+            // === Exact port of LevelBase.renderPath() === //
+
+            // Layer 1: Dark shadow base
+            ctx.strokeStyle = 'rgba(40,30,25,0.5)';
+            ctx.lineWidth = pathWidthPixels + 8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pixelPoints[0].x + 3, pixelPoints[0].y + 3);
+            for (let i = 1; i < pixelPoints.length; i++) ctx.lineTo(pixelPoints[i].x + 3, pixelPoints[i].y + 3);
+            ctx.stroke();
+
+            // Layer 2: Main dirt road
+            ctx.strokeStyle = pathColor;
+            ctx.lineWidth = pathWidthPixels;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
+            for (let i = 1; i < pixelPoints.length; i++) ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+            ctx.stroke();
+
+            // Layer 3: Lighter centre stripe (worn dirt)
+            const lighterColor = this.designerLightenHex(pathColor, 50);
+            ctx.strokeStyle = lighterColor;
+            ctx.lineWidth = pathWidthPixels * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
+            for (let i = 1; i < pixelPoints.length; i++) ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+            ctx.stroke();
+
+            // Layers 4 & 5: Wheel ruts
+            ctx.strokeStyle = 'rgba(120,100,80,0.3)';
+            ctx.lineWidth = pathWidthPixels * 0.12;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const dx0 = pixelPoints.length > 1 ? -(pixelPoints[1].y - pixelPoints[0].y) : 0;
+            const dy0 = pixelPoints.length > 1 ?  (pixelPoints[1].x - pixelPoints[0].x) : 0;
+            const len0 = Math.hypot(dx0, dy0);
+            const npx0 = len0 > 0 ? dx0 / len0 : 0;
+            const npy0 = len0 > 0 ? dy0 / len0 : 0;
+
+            for (const side of [1, -1]) {
+                ctx.beginPath();
+                ctx.moveTo(pixelPoints[0].x + npx0 * pathWidthPixels * 0.22 * side,
+                           pixelPoints[0].y + npy0 * pathWidthPixels * 0.22 * side);
+                for (let i = 1; i < pixelPoints.length; i++) {
+                    let spx = 0, spy = 0;
+                    if (i < pixelPoints.length - 1) {
+                        const sdx = pixelPoints[i + 1].x - pixelPoints[i - 1].x;
+                        const sdy = pixelPoints[i + 1].y - pixelPoints[i - 1].y;
+                        const slen = Math.hypot(sdx, sdy);
+                        spx = slen > 0 ? -sdy / slen : 0;
+                        spy = slen > 0 ?  sdx / slen : 0;
+                    } else {
+                        spx = npx0; spy = npy0;
+                    }
+                    ctx.lineTo(pixelPoints[i].x + spx * pathWidthPixels * 0.22 * side,
+                               pixelPoints[i].y + spy * pathWidthPixels * 0.22 * side);
+                }
+                ctx.stroke();
+            }
+
+            // Layer 6: Scattered pebbles (seeded, deterministic)
+            for (let i = 0; i < pixelPoints.length - 1; i++) {
+                const ps = pixelPoints[i], pe = pixelPoints[i + 1];
+                const sdx = pe.x - ps.x, sdy = pe.y - ps.y;
+                const dist = Math.hypot(sdx, sdy);
+                const stepSize = 35;
+                for (let d = 0; d < dist; d += stepSize) {
+                    const t = d / dist;
+                    const x = ps.x + sdx * t, y = ps.y + sdy * t;
+                    const seed = Math.floor(d / stepSize) + i * 100;
+                    const pebbleChance = Math.abs(Math.sin(seed * 0.5));
+                    if (pebbleChance > 0.65) {
+                        const ox = (Math.sin(seed * 0.3) - 0.5) * pathWidthPixels * 0.5;
+                        const oy = (Math.cos(seed * 0.4) - 0.5) * pathWidthPixels * 0.5;
+                        const sz = 1.5 + Math.abs(Math.sin(seed * 0.7)) * 2.5;
+                        const pc = this.designerHexToRgba(pathColor, 0.3 + Math.abs(Math.sin(seed)) * 0.2);
+                        ctx.fillStyle = `rgba(${Math.floor(pc.r*0.7)},${Math.floor(pc.g*0.7)},${Math.floor(pc.b*0.7)},${pc.a})`;
+                        ctx.beginPath();
+                        ctx.arc(x + ox, y + oy, sz, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Layer 7: Dust/wear marks at edges
+            for (let i = 0; i < pixelPoints.length - 1; i++) {
+                const ps = pixelPoints[i], pe = pixelPoints[i + 1];
+                const sdx = pe.x - ps.x, sdy = pe.y - ps.y;
+                const dist = Math.hypot(sdx, sdy);
+                const steps = Math.ceil(dist / 20);
+                const slen = Math.hypot(sdx, sdy);
+                const perpX = slen > 0 ? -sdy / slen : 0;
+                const perpY = slen > 0 ?  sdx / slen : 0;
+                for (let step = 0; step < steps; step++) {
+                    const t = step / steps;
+                    const x = ps.x + sdx * t, y = ps.y + sdy * t;
+                    const seed = Math.floor(x * 0.02) + Math.floor(y * 0.02) * 7;
+                    if (Math.abs(Math.sin(seed * 0.3)) > 0.7) {
+                        const dc = this.designerHexToRgba(pathColor, 0.15 + Math.abs(Math.sin(seed * 2)) * 0.1);
+                        ctx.fillStyle = `rgba(${Math.min(255,Math.floor(dc.r*1.3))},${Math.min(255,Math.floor(dc.g*1.3))},${Math.min(255,Math.floor(dc.b*1.3))},${dc.a})`;
+                        const eo = (Math.sin(seed * 2) > 0 ? 1 : -1) * pathWidthPixels * 0.48;
+                        ctx.beginPath();
+                        ctx.arc(x + perpX * eo, y + perpY * eo, 1.5 + Math.abs(Math.sin(seed * 1.5)), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
         }
-        this.ctx.stroke();
-        
-        // Add center highlight for depth (darker blue)
-        this.ctx.strokeStyle = '#2a8fa8';
-        this.ctx.lineWidth = pathWidth * 0.5;
-        this.ctx.globalAlpha = 0.6;
-        
-        this.ctx.beginPath();
-        this.ctx.moveTo(pixelPoints[0].x, pixelPoints[0].y);
-        for (let i = 1; i < pixelPoints.length; i++) {
-            this.ctx.lineTo(pixelPoints[i].x, pixelPoints[i].y);
+
+        // Path texture elements (dirt clumps, stones, leaves)
+        this.designerPathTexture.forEach(el => {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.translate(el.x, el.y);
+            ctx.rotate(el.rotation);
+            const alpha = el.shade * 0.7;
+            switch (el.type) {
+                case 0:
+                    ctx.fillStyle = `rgba(101,67,33,${alpha})`;
+                    ctx.beginPath(); ctx.ellipse(0, 0, el.size, el.size * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+                    break;
+                case 1:
+                    ctx.fillStyle = `rgba(194,178,128,${alpha})`;
+                    ctx.beginPath(); ctx.arc(0, 0, el.size * 0.5, 0, Math.PI * 2); ctx.fill();
+                    break;
+                case 2:
+                    ctx.fillStyle = `rgba(139,69,19,${alpha})`;
+                    ctx.fillRect(-el.size, -el.size * 0.3, el.size * 2, el.size * 0.6);
+                    break;
+                case 3:
+                    ctx.fillStyle = `rgba(128,128,128,${alpha})`;
+                    if (el.stoneShape) {
+                        ctx.beginPath();
+                        el.stoneShape.forEach((pt, idx) => idx === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
+                        ctx.closePath(); ctx.fill();
+                    }
+                    break;
+            }
+            ctx.restore();
+        });
+
+        // Path leaves
+        this.designerPathLeaves.forEach(leaf => {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.translate(leaf.x, leaf.y);
+            ctx.rotate(leaf.rotation);
+            ctx.fillStyle = leaf.color;
+            ctx.beginPath(); ctx.ellipse(0, 0, leaf.size, leaf.size * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(101,67,33,0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, -leaf.size * 0.6); ctx.lineTo(0, leaf.size * 0.6); ctx.stroke();
+            ctx.restore();
+        });
+
+        // Edge vegetation
+        if (pixelPoints.length >= 2) {
+            this.drawDesignerPathEdge(pixelPoints, pathWidthPixels, cW, cH, config);
         }
+
+        // START marker (designer helper — kept for usability)
+        const s = pixelPoints[0];
+        this.ctx.fillStyle = '#7ae881';
+        this.ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(s.x, s.y, 10, 0, Math.PI * 2);
+        this.ctx.fill();
         this.ctx.stroke();
-        
-        this.ctx.globalAlpha = 1;
+        this.ctx.fillStyle = '#000';
+        this.ctx.font = 'bold 10px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText('S', s.x, s.y);
+
+        // During editing — show numbered waypoint dots so the designer can see/edit points
+        if (!this.pathLocked) {
+            this.pathPoints.forEach((point, idx) => {
+                if (idx === 0) return;
+                const x = point.gridX * cW;
+                const y = point.gridY * cH;
+                const isLast = idx === this.pathPoints.length - 1;
+                this.ctx.fillStyle = isLast ? '#ffaa44' : 'rgba(255,255,255,0.75)';
+                this.ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+                this.ctx.lineWidth = 1.5;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+                this.ctx.fillStyle = '#000';
+                this.ctx.font = 'bold 8px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(idx + 1, x, y);
+            });
+        }
     }
 
-    drawPathWaypoints(cellWidthPixels, cellHeightPixels) {
-        // Draw thin waypoint line while editing (like river mode)
-        if (this.pathPoints.length < 1) return;
+    /**
+     * Generate path texture elements (dirt clumps, stones, leaves) for the designer canvas.
+     * Mirrors LevelBase.generatePathTexture() using canvas-pixel coords.
+     */
+    generateDesignerPathTexture(pixelPoints, pathWidthPixels, config) {
+        this.designerPathTexture = [];
+        this.designerPathLeaves = [];
 
-        // Only draw connecting line if we have 2+ points
-        if (this.pathPoints.length >= 2) {
-            this.ctx.strokeStyle = '#58c4dc';
-            this.ctx.lineWidth = 5;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.ctx.globalAlpha = 0.6;
-
-            this.ctx.beginPath();
-            const firstPoint = this.pathPoints[0];
-            this.ctx.moveTo(firstPoint.gridX * cellWidthPixels, firstPoint.gridY * cellHeightPixels);
-
-            for (let i = 1; i < this.pathPoints.length; i++) {
-                const point = this.pathPoints[i];
-                this.ctx.lineTo(point.gridX * cellWidthPixels, point.gridY * cellHeightPixels);
+        const spacing = 15; // same as LevelBase default pathTextureSpacing
+        for (let i = 0; i < pixelPoints.length - 1; i++) {
+            const start = pixelPoints[i], end = pixelPoints[i + 1];
+            const dist = Math.hypot(end.x - start.x, end.y - start.y);
+            const elements = Math.floor(dist / spacing);
+            for (let j = 0; j < elements; j++) {
+                const t = j / elements;
+                const bx = start.x + (end.x - start.x) * t;
+                const by = start.y + (end.y - start.y) * t;
+                const count = Math.random() < 0.6 ? 1 : 2;
+                for (let k = 0; k < count; k++) {
+                    const ox = (Math.random() - 0.5) * pathWidthPixels * 0.8;
+                    const oy = (Math.random() - 0.5) * pathWidthPixels * 0.8;
+                    const sz = Math.random() * 6 + 2;
+                    const shapeType = Math.floor(Math.random() * 4);
+                    let stoneShape = null;
+                    if (shapeType === 3) {
+                        const sides = 5 + Math.floor(Math.random() * 3);
+                        stoneShape = [];
+                        for (let s2 = 0; s2 < sides; s2++) {
+                            const angle = (s2 / sides) * Math.PI * 2;
+                            stoneShape.push({ x: Math.cos(angle) * sz * (0.7 + Math.random() * 0.3), y: Math.sin(angle) * sz * (0.7 + Math.random() * 0.3) });
+                        }
+                    }
+                    this.designerPathTexture.push({ x: bx + ox, y: by + oy, size: sz, type: shapeType, rotation: Math.random() * Math.PI * 2, shade: Math.random() * 0.5 + 0.5, stoneShape });
+                }
             }
-            this.ctx.stroke();
-            this.ctx.globalAlpha = 1;
         }
 
-        // Draw waypoints (including first point if only one exists)
-        this.pathPoints.forEach((point, idx) => {
-            const x = point.gridX * cellWidthPixels;
-            const y = point.gridY * cellHeightPixels;
+        const leafCount = Math.floor(pixelPoints.length * 0.8);
+        for (let i = 0; i < leafCount; i++) {
+            const idx = Math.floor(Math.random() * (pixelPoints.length - 1));
+            const t = Math.random();
+            const ps = pixelPoints[idx], pe = pixelPoints[idx + 1];
+            const x = ps.x + (pe.x - ps.x) * t + (Math.random() - 0.5) * pathWidthPixels * 0.6;
+            const y = ps.y + (pe.y - ps.y) * t + (Math.random() - 0.5) * pathWidthPixels * 0.6;
+            this.designerPathLeaves.push({
+                x, y,
+                size: Math.random() * 8 + 4,
+                rotation: Math.random() * Math.PI * 2,
+                color: Math.random() < 0.5 ? 'rgba(160,82,45,0.6)' : 'rgba(139,115,85,0.6)'
+            });
+        }
 
-            // Point circle with distinct colors
-            this.ctx.fillStyle = idx === 0 ? '#7ae881' : idx === this.pathPoints.length - 1 ? '#ff9999' : '#90caf9';
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, 8, 0, Math.PI * 2);
-            this.ctx.fill();
+        this.designerPathTextureGenerated = true;
+    }
 
-            // Index text
-            this.ctx.fillStyle = '#1e1e1e';
-            this.ctx.font = 'bold 11px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(idx + 1, x, y);
+    /**
+     * Draw edge vegetation along the path boundary.
+     * Mirrors LevelBase.renderPathEdge() using the designer coordinate system.
+     */
+    drawDesignerPathEdge(pixelPoints, pathWidthPixels, cW, cH, config) {
+        const ctx = this.ctx;
+        // Build a set of occupied path cells (grid coords)
+        const pathCells = new Set();
+        for (let i = 0; i < pixelPoints.length - 1; i++) {
+            const ps = pixelPoints[i], pe = pixelPoints[i + 1];
+            const dx = pe.x - ps.x, dy = pe.y - ps.y;
+            const dist = Math.hypot(dx, dy);
+            const steps = Math.ceil(dist / (cW / 2));
+            for (let step = 0; step <= steps; step++) {
+                const t = step / steps;
+                const gx = Math.floor((ps.x + dx * t) / cW);
+                const gy = Math.floor((ps.y + dy * t) / cH);
+                for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+                    const cx = gx + ox, cy = gy + oy;
+                    if (cx < 0 || cy < 0 || cx >= this.gridWidth || cy >= this.gridHeight) continue;
+                    const ccx = (cx + 0.5) * cW, ccy = (cy + 0.5) * cH;
+                    const pdx = pe.x - ps.x, pdy = pe.y - ps.y;
+                    const plen = Math.hypot(pdx, pdy);
+                    if (plen === 0) continue;
+                    const t2 = Math.max(0, Math.min(1, ((ccx - ps.x) * pdx + (ccy - ps.y) * pdy) / (plen * plen)));
+                    const clX = ps.x + t2 * pdx, clY = ps.y + t2 * pdy;
+                    if (Math.hypot(ccx - clX, ccy - clY) <= pathWidthPixels * 0.35) pathCells.add(`${cx},${cy}`);
+                }
+            }
+        }
+        // Find edge cells
+        const edgeCells = new Set();
+        pathCells.forEach(key => {
+            const [cx, cy] = key.split(',').map(Number);
+            for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                if (!pathCells.has(`${cx+dx},${cy+dy}`)) { edgeCells.add(key); return; }
+            }
         });
+        // Place vegetation on edge cells
+        const processed = new Set();
+        edgeCells.forEach(key => {
+            const [cx, cy] = key.split(',').map(Number);
+            const ck = `${Math.floor(cx/2)},${Math.floor(cy/2)}`;
+            if (processed.has(ck)) return;
+            const seed = (cx * 73856093) ^ (cy * 19349663);
+            if (Math.abs(Math.sin(seed * 0.007)) > 0.4) {
+                processed.add(ck);
+                const vx = (cx + 0.5) * cW + (Math.sin(seed * 0.01) - 0.5) * cW * 0.4;
+                const vy = (cy + 0.5) * cH + (Math.cos(seed * 0.015) - 0.5) * cH * 0.3;
+                const type = Math.floor(Math.abs(Math.sin(seed * 0.005)) * 3);
+                switch (type) {
+                    case 0: // Bush
+                        ctx.fillStyle = config.edgeBushColor;
+                        ctx.beginPath(); ctx.arc(vx, vy, 6, 0, Math.PI * 2); ctx.fill();
+                        ctx.fillStyle = config.edgeBushColor.replace('#', '#') + 'aa'; // slightly lighter
+                        ctx.fillStyle = 'rgba(40,160,40,0.7)';
+                        ctx.beginPath(); ctx.arc(vx - 4, vy - 3, 4, 0, Math.PI * 2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(vx + 4, vy - 3, 4, 0, Math.PI * 2); ctx.fill();
+                        break;
+                    case 1: // Rock
+                        ctx.fillStyle = config.edgeRockColor;
+                        ctx.beginPath(); ctx.arc(vx, vy, 5, 0, Math.PI * 2); ctx.fill();
+                        ctx.strokeStyle = '#696969'; ctx.lineWidth = 1; ctx.stroke();
+                        ctx.fillStyle = '#969696';
+                        ctx.beginPath(); ctx.arc(vx - 1.5, vy - 1.5, 2, 0, Math.PI * 2); ctx.fill();
+                        break;
+                    case 2: // Grass clumps
+                        ctx.strokeStyle = config.edgeGrassColor;
+                        ctx.lineWidth = 1.5;
+                        for (let j = 0; j < 5; j++) {
+                            const angle = (j / 5) * Math.PI * 2 + seed * 0.01;
+                            const len = 7 + Math.sin(seed * 0.02) * 2;
+                            ctx.beginPath();
+                            ctx.moveTo(vx, vy);
+                            ctx.lineTo(vx + Math.cos(angle) * len, vy + Math.sin(angle) * len);
+                            ctx.stroke();
+                        }
+                        if (Math.sin(seed * 0.005) > 0) {
+                            ctx.fillStyle = '#FFD700';
+                            ctx.beginPath(); ctx.arc(vx, vy, 2, 0, Math.PI * 2); ctx.fill();
+                        }
+                        break;
+                }
+            }
+        });
+    }
+
+    /** Lighten a hex colour by `amount` (0-255), returns rgba string. Mirrors LevelBase.lightenHexColor. */
+    designerLightenHex(color, amount) {
+        if (!color.startsWith('#')) return color;
+        const hex = color.replace('#', '');
+        const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
+        const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
+        const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
+        return `rgba(${r},${g},${b},0.6)`;
+    }
+
+    /** Convert hex colour to {r,g,b,a} object. Mirrors LevelBase.hexToRgba. */
+    designerHexToRgba(color, alpha) {
+        if (!color.startsWith('#')) return { r: 100, g: 100, b: 100, a: alpha };
+        const hex = color.replace('#', '');
+        return { r: parseInt(hex.substr(0, 2), 16), g: parseInt(hex.substr(2, 2), 16), b: parseInt(hex.substr(4, 2), 16), a: alpha };
     }
 
     drawRiverPoints() {
@@ -1105,33 +1672,88 @@ export class LevelDesigner {
     }
 
     drawCastle() {
+        const cW = this.canvas.width / this.gridWidth;
+        const cH = this.canvas.height / this.gridHeight;
+        const size = Math.min(cW, cH) * 2.8;
+
+        // Show semi-transparent preview at last path point during editing
+        if (!this.pathLocked && this.pathPoints.length > 0) {
+            const last = this.pathPoints[this.pathPoints.length - 1];
+            this._renderCastle(last.gridX * cW, last.gridY * cH, size, 0.38);
+            return;
+        }
+
         if (!this.castlePosition || !this.pathLocked) return;
+        this._renderCastle(
+            this.castlePosition.gridX * cW,
+            this.castlePosition.gridY * cH,
+            size,
+            1.0
+        );
+    }
 
-        const cellWidthPixels = this.canvas.width / this.gridWidth;
-        const cellHeightPixels = this.canvas.height / this.gridHeight;
+    _renderCastle(x, y, size, alpha) {
+        this.ctx.globalAlpha = alpha;
 
-        const x = this.castlePosition.gridX * cellWidthPixels;
-        const y = this.castlePosition.gridY * cellHeightPixels;
-        const size = Math.min(cellWidthPixels, cellHeightPixels) * 2.5;
-
-        // Castle body
-        this.ctx.fillStyle = '#b8860b';
+        // Body
+        this.ctx.fillStyle = '#c69c3a';
         this.ctx.fillRect(x - size / 2, y - size / 2, size, size);
 
-        // Castle towers
-        this.ctx.fillStyle = '#8b6914';
-        const towerSize = size / 4;
-        this.ctx.fillRect(x - size / 2, y - size / 2, towerSize, towerSize);
-        this.ctx.fillRect(x + size / 2 - towerSize, y - size / 2, towerSize, towerSize);
-        this.ctx.fillRect(x - size / 2, y + size / 2 - towerSize, towerSize, towerSize);
-        this.ctx.fillRect(x + size / 2 - towerSize, y + size / 2 - towerSize, towerSize, towerSize);
+        // Stone texture overlay
+        this.ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        for (let row = 0; row < 4; row++) {
+            for (let col = 0; col < 3; col++) {
+                const bx = x - size * 0.45 + col * size * 0.32;
+                const by = y - size * 0.4 + row * size * 0.22;
+                this.ctx.fillRect(bx, by, size * 0.28, size * 0.18);
+            }
+        }
 
-        // Label
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 12px Arial';
+        // Corner towers
+        this.ctx.fillStyle = '#a07828';
+        const tw = size * 0.28;
+        const corners = [
+            [x - size / 2, y - size / 2],
+            [x + size / 2 - tw, y - size / 2],
+            [x - size / 2, y + size / 2 - tw],
+            [x + size / 2 - tw, y + size / 2 - tw]
+        ];
+        corners.forEach(([cx, cy]) => {
+            this.ctx.fillRect(cx, cy, tw, tw);
+            // Tower top merlons
+            this.ctx.fillStyle = '#8a6010';
+            for (let m = 0; m < 3; m++) {
+                this.ctx.fillRect(cx + m * tw / 3, cy - tw * 0.18, tw * 0.25, tw * 0.18);
+            }
+            this.ctx.fillStyle = '#a07828';
+        });
+
+        // Gate arch
+        this.ctx.fillStyle = '#3a2000';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y + size * 0.08, size * 0.14, Math.PI, 0);
+        this.ctx.rect(x - size * 0.14, y + size * 0.08, size * 0.28, size * 0.25);
+        this.ctx.fill();
+
+        // Gate portcullis lines
+        this.ctx.strokeStyle = 'rgba(80,40,0,0.5)';
+        this.ctx.lineWidth = 1.5;
+        for (let i = 1; i <= 3; i++) {
+            const gx = x - size * 0.12 + i * size * 0.08;
+            this.ctx.beginPath();
+            this.ctx.moveTo(gx, y + size * 0.08);
+            this.ctx.lineTo(gx, y + size * 0.33);
+            this.ctx.stroke();
+        }
+
+        // Castle label
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = `bold ${Math.max(9, size * 0.13)}px Arial`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'top';
-        this.ctx.fillText('CASTLE', x, y + size / 2 + 8);
+        this.ctx.fillText('CASTLE', x, y + size / 2 + 5);
+
+        this.ctx.globalAlpha = 1;
     }
 
     drawTerrainElements() {
@@ -2929,91 +3551,46 @@ export class LevelDesigner {
     }
 
     drawRiversSmooth() {
-        // Draw smooth river paths using line rendering for automatic corner smoothing
-        // This creates smooth transitions where rivers meet at corners
-        if (!this.terrainElements) return;
+        // Draw from riverPaths (stored waypoint arrays) for smooth, editable rendering
+        const cW = this.canvas.width / this.gridWidth;
+        const cH = this.canvas.height / this.gridHeight;
+        const pixelSize = Math.min(cW, cH);
+        const riverWidthPixels = pixelSize * 1.8;
         
-        const cellWidthPixels = this.canvas.width / this.gridWidth;
-        const cellHeightPixels = this.canvas.height / this.gridHeight;
-        const pixelSize = Math.min(cellWidthPixels, cellHeightPixels);
-        
-        // Group river elements by connected segments
-        const riverSegments = [];
-        const processedIndices = new Set();
-        
-        for (let i = 0; i < this.terrainElements.length; i++) {
-            const elem = this.terrainElements[i];
-            if (elem.waterType !== 'river' || processedIndices.has(i)) continue;
-            
-            // Start a new river segment
-            const segment = [elem];
-            processedIndices.add(i);
-            
-            // Find connected river elements
-            let added = true;
-            while (added) {
-                added = false;
-                for (let j = 0; j < this.terrainElements.length; j++) {
-                    if (processedIndices.has(j)) continue;
-                    const candidate = this.terrainElements[j];
-                    if (candidate.waterType !== 'river') continue;
-                    
-                    // Check if connected to end of segment
-                    const lastElem = segment[segment.length - 1];
-                    const dist = Math.hypot(
-                        (candidate.gridX - lastElem.gridX) * cellWidthPixels,
-                        (candidate.gridY - lastElem.gridY) * cellHeightPixels
-                    );
-                    
-                    if (dist < pixelSize * 2.5) {
-                        segment.push(candidate);
-                        processedIndices.add(j);
-                        added = true;
-                    }
-                }
-            }
-            
-            riverSegments.push(segment);
-        }
-        
-        // Draw each river segment with smooth lines
-        riverSegments.forEach(segment => {
-            if (segment.length < 2) return;
-            
-            const path = segment.map(elem => ({
-                x: elem.gridX * cellWidthPixels + cellWidthPixels / 2,
-                y: elem.gridY * cellHeightPixels + cellHeightPixels / 2
+        this.riverPaths.forEach((waypoints, ridx) => {
+            if (waypoints.length < 2) return;
+            const path = waypoints.map(p => ({
+                x: p.gridX * cW,
+                y: p.gridY * cH
             }));
             
-            // Draw smooth river outline using line rendering
-            const riverWidthPixels = pixelSize * 1.5;
-            
-            // Main river color with smooth corners
-            this.ctx.strokeStyle = '#0277BD';
-            this.ctx.lineWidth = riverWidthPixels;
+            // River shadow
+            this.ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            this.ctx.lineWidth = riverWidthPixels + 4;
             this.ctx.lineCap = 'round';
             this.ctx.lineJoin = 'round';
-            this.ctx.globalAlpha = 0.85;
-            
             this.ctx.beginPath();
             this.ctx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-                this.ctx.lineTo(path[i].x, path[i].y);
-            }
+            for (let i = 1; i < path.length; i++) this.ctx.lineTo(path[i].x, path[i].y);
             this.ctx.stroke();
             
-            // Add center highlight for depth
-            this.ctx.strokeStyle = '#01579B';
-            this.ctx.lineWidth = riverWidthPixels * 0.6;
-            this.ctx.globalAlpha = 0.6;
-            
+            // Main river fill
+            this.ctx.strokeStyle = '#0277BD';
+            this.ctx.lineWidth = riverWidthPixels;
+            this.ctx.globalAlpha = 0.9;
             this.ctx.beginPath();
             this.ctx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-                this.ctx.lineTo(path[i].x, path[i].y);
-            }
+            for (let i = 1; i < path.length; i++) this.ctx.lineTo(path[i].x, path[i].y);
             this.ctx.stroke();
             
+            // Center highlight
+            this.ctx.strokeStyle = '#29B6F6';
+            this.ctx.lineWidth = riverWidthPixels * 0.4;
+            this.ctx.globalAlpha = 0.5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) this.ctx.lineTo(path[i].x, path[i].y);
+            this.ctx.stroke();
             this.ctx.globalAlpha = 1;
         });
     }
@@ -3067,15 +3644,42 @@ export class LevelDesigner {
             pattern: [${wave.pattern.map(e => `'${e}'`).join(', ')}] 
         }`).join('');
 
+        // Convert riverPaths to terrain cells for export (matching in-game format)
+        const riverElements = [];
+        this.riverPaths.forEach(waypoints => {
+            for (let i = 0; i < waypoints.length - 1; i++) {
+                const p1 = waypoints[i];
+                const p2 = waypoints[i + 1];
+                const distance = Math.hypot(p2.gridX - p1.gridX, p2.gridY - p1.gridY);
+                const steps = Math.ceil(distance);
+                for (let step = 0; step <= steps; step++) {
+                    const t = steps === 0 ? 0 : step / steps;
+                    const x = p1.gridX + (p2.gridX - p1.gridX) * t;
+                    const y = p1.gridY + (p2.gridY - p1.gridY) * t;
+                    const dx = p2.gridX - p1.gridX;
+                    const dy = p2.gridY - p1.gridY;
+                    riverElements.push({
+                        type: 'water',
+                        waterType: 'river',
+                        gridX: Math.round(x),
+                        gridY: Math.round(y),
+                        size: 1.5,
+                        flowAngle: Math.atan2(dy, dx)
+                    });
+                }
+            }
+        });
+        const allTerrainElements = [...riverElements, ...this.terrainElements];
+        
         // Generate terrain elements
-        const terrainCode = this.terrainElements.length > 0
-            ? this.terrainElements.map((element, idx) => {
+        const terrainCode = allTerrainElements.length > 0
+            ? allTerrainElements.map((element, idx) => {
                 let elementStr = `            { type: '${element.type}', gridX: ${element.gridX.toFixed(2)}, gridY: ${element.gridY.toFixed(2)}, size: ${element.size}`;
                 // Add waterType for water elements
                 if (element.type === 'water' && element.waterType) {
                     elementStr += `, waterType: '${element.waterType}'`;
                 }
-                elementStr += ` }${idx < this.terrainElements.length - 1 ? ',' : ''}`;
+                elementStr += ` }${idx < allTerrainElements.length - 1 ? ',' : ''}`;
                 return elementStr;
               }).join('\n')
             : '            // Add terrain elements using the designer';
@@ -3398,9 +4002,56 @@ ${pathCode}
                 if (config.flowerDensity) document.getElementById('flowerDensity').value = config.flowerDensity;
             }
             
-            // Load terrain elements
+            // Load terrain elements — separate river cells from other terrain
             if (level.terrainElements && Array.isArray(level.terrainElements)) {
-                this.terrainElements = JSON.parse(JSON.stringify(level.terrainElements));
+                const nonRiverElems = [];
+                const riverCells = [];
+                for (const elem of level.terrainElements) {
+                    if (elem.type === 'water' && elem.waterType === 'river') {
+                        riverCells.push(elem);
+                    } else {
+                        nonRiverElems.push(elem);
+                    }
+                }
+                this.terrainElements = JSON.parse(JSON.stringify(nonRiverElems));
+                
+                // Reconstruct riverPaths from connected river cell groups
+                // Cells are stored in path order so we group by connectivity
+                this.riverPaths = [];
+                if (riverCells.length > 0) {
+                    const processed = new Set();
+                    for (let i = 0; i < riverCells.length; i++) {
+                        if (processed.has(i)) continue;
+                        const segment = [riverCells[i]];
+                        processed.add(i);
+                        let added = true;
+                        while (added) {
+                            added = false;
+                            for (let j = 0; j < riverCells.length; j++) {
+                                if (processed.has(j)) continue;
+                                const last = segment[segment.length - 1];
+                                const cand = riverCells[j];
+                                const dist = Math.hypot(cand.gridX - last.gridX, cand.gridY - last.gridY);
+                                if (dist <= 2.5) {
+                                    segment.push(cand);
+                                    processed.add(j);
+                                    added = true;
+                                }
+                            }
+                        }
+                        // Convert cells to waypoints (deduplicated)
+                        const waypoints = [];
+                        segment.forEach(cell => {
+                            const last = waypoints[waypoints.length - 1];
+                            if (!last || last.gridX !== cell.gridX || last.gridY !== cell.gridY) {
+                                waypoints.push({ gridX: cell.gridX, gridY: cell.gridY });
+                            }
+                        });
+                        if (waypoints.length >= 2) {
+                            this.riverPaths.push(waypoints);
+                        }
+                    }
+                }
             }
             
             // Load path - the level.path is populated by the level's initialization
@@ -3483,6 +4134,7 @@ ${pathCode}
         this.pathPoints = [];
         this.pathLocked = false;
         this.terrainElements = [];
+        this.riverPaths = [];
         this.waves = [];
         this.castlePosition = {
             gridX: this.gridWidth - 2,
