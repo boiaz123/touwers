@@ -21,6 +21,9 @@ export class SirFrogerty {
         this.nextButtonHovered  = false;
         this.closeButtonHovered = false;
 
+        // Click debounce
+        this._clickCooldown = 0;
+
         // Frog idle animation
         this.frogBobOffset = 0;
         this.blinkTimer    = 0;
@@ -122,6 +125,7 @@ export class SirFrogerty {
         this.prevButtonHovered  = false;
         this.nextButtonHovered  = false;
         this.closeButtonHovered = false;
+        this._clickCooldown     = 0;
     }
 
     hide() {
@@ -134,6 +138,8 @@ export class SirFrogerty {
         if (!this.visible) return;
 
         this.animationTime += deltaTime;
+
+        if (this._clickCooldown > 0) this._clickCooldown -= deltaTime;
 
         if (this.isSliding && this.slideInProgress < 1) {
             this.slideInProgress = Math.min(1, this.slideInProgress + deltaTime * 2.8);
@@ -172,6 +178,10 @@ export class SirFrogerty {
         if (!this.visible) return false;
         const layout = this._getLayout(canvas);
         if (!this._inPanel(x, y, layout)) return false;
+
+        // Ignore clicks during cooldown to prevent double registration
+        if (this._clickCooldown > 0) return true;
+        this._clickCooldown = 0.4;
 
         const btns = this._getButtonBounds(layout);
 
@@ -537,7 +547,8 @@ export class SirFrogerty {
         ctx.restore();
 
         // Hat drawn BEFORE eyes so eyes appear in front
-        this._drawAdviserHat(ctx, 0, -122 * s, s);
+        // brimY = -56*s  (brim sits 9 units below head top at -65s)
+        this._drawAdviserHat(ctx, 0, -56 * s, s);
 
         // Googly eyes
         const eyeY  = -50 * s;
@@ -599,27 +610,40 @@ export class SirFrogerty {
         ctx.lineWidth   = 2.8 * s;
         ctx.stroke();
 
-        // Aristocratic moustache
+        // Aristocratic moustache — white, bold
         ctx.save();
-        ctx.strokeStyle = '#2a1200';
-        ctx.lineWidth   = 3.8 * s;
+        // Dark shadow pass for depth
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth   = 8 * s;
         ctx.lineCap     = 'round';
         ctx.beginPath();
         ctx.moveTo(-2 * s, -19 * s);
-        ctx.bezierCurveTo(-8 * s, -14 * s, -20 * s, -12 * s, -30 * s, -17 * s);
+        ctx.bezierCurveTo(-8 * s, -13 * s, -22 * s, -11 * s, -33 * s, -17 * s);
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(2 * s, -19 * s);
-        ctx.bezierCurveTo(8 * s, -14 * s, 20 * s, -12 * s, 30 * s, -17 * s);
+        ctx.bezierCurveTo(8 * s, -13 * s, 22 * s, -11 * s, 33 * s, -17 * s);
         ctx.stroke();
-        ctx.lineWidth = 2.5 * s;
+        // White main pass
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth   = 6 * s;
         ctx.beginPath();
-        ctx.moveTo(-30 * s, -17 * s);
-        ctx.quadraticCurveTo(-33 * s, -14 * s, -30 * s, -11 * s);
+        ctx.moveTo(-2 * s, -19 * s);
+        ctx.bezierCurveTo(-8 * s, -13 * s, -22 * s, -11 * s, -33 * s, -17 * s);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(30 * s, -17 * s);
-        ctx.quadraticCurveTo(33 * s, -14 * s, 30 * s, -11 * s);
+        ctx.moveTo(2 * s, -19 * s);
+        ctx.bezierCurveTo(8 * s, -13 * s, 22 * s, -11 * s, 33 * s, -17 * s);
+        ctx.stroke();
+        // Curled tips
+        ctx.lineWidth = 4.5 * s;
+        ctx.beginPath();
+        ctx.moveTo(-33 * s, -17 * s);
+        ctx.quadraticCurveTo(-37 * s, -12 * s, -33 * s, -8 * s);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(33 * s, -17 * s);
+        ctx.quadraticCurveTo(37 * s, -12 * s, 33 * s, -8 * s);
         ctx.stroke();
         ctx.restore();
 
@@ -747,66 +771,98 @@ export class SirFrogerty {
 
     // ─── Adviser's hat ───────────────────────────────────────────────────────
     //
-    // Context is translated to (cx, tipY+32s) then rotated slightly.
-    // Local coords: cone tip at (0,-48s), brim centre at (0,+30s).
+    // Hat sits on the head. Head centre=(0,-34s), semi-axes 40s×31s, top=-65s.
+    // _drawAdviserHat translates to (cx, tipY+brimHalfH) then draws:
+    //   brim at local y=0 (absolute = tipY + brimHalfH)
+    //   cone tip at local y=-78s
+    //
+    // We want the brim to sit at y=-56s (firmly inside head top at -65s).
+    //   → tipY = -56s - brimHalfH = -56s - 11s = -67s
+    // Call: this._drawAdviserHat(ctx, 0, -67 * s, s)
 
-    _drawAdviserHat(ctx, cx, tipY, s) {
+    _drawAdviserHat(ctx, cx, brimY, s) {
         ctx.save();
-        ctx.translate(cx, tipY + 32 * s);
-        ctx.rotate(-0.17);
+        ctx.translate(cx, brimY);
+        // Very slight lean for character — kept minimal so hat reads as
+        // naturally centred on the head.
+        ctx.rotate(-0.08);
+
+        const brimRx = 36 * s;  // wider than head so brim wraps
+        const brimRy = 11 * s;  // foreshortening gives perspective depth
+        const coneH  = 78 * s;  // cone tip is this far above brim centre
 
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur  = 8;
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur  = 10;
 
-        // Cone
+        // ── Back half of brim (drawn first, behind cone) ──
+        ctx.save();
         ctx.beginPath();
-        ctx.moveTo(0,       -48 * s);
-        ctx.lineTo(-28 * s,  30 * s);
-        ctx.lineTo( 28 * s,  30 * s);
-        ctx.closePath();
-        const hatGrad = ctx.createLinearGradient(-28 * s, 30 * s, 6 * s, -48 * s);
-        hatGrad.addColorStop(0,   '#0e0030');
-        hatGrad.addColorStop(0.5, '#220075');
-        hatGrad.addColorStop(1,   '#4520a0');
-        ctx.fillStyle   = hatGrad;
+        ctx.ellipse(0, 0, brimRx, brimRy, 0, Math.PI, Math.PI * 2);
+        const brimBackGrad = ctx.createLinearGradient(0, -brimRy, 0, 0);
+        brimBackGrad.addColorStop(0, '#300090');
+        brimBackGrad.addColorStop(1, '#0e0030');
+        ctx.fillStyle   = brimBackGrad;
         ctx.fill();
         ctx.strokeStyle = '#5535bb';
         ctx.lineWidth   = 1.5 * s;
         ctx.stroke();
+        ctx.restore();
 
-        // Brim
+        // ── Cone (drawn over back brim) ──
+        // Use bezier sides that curve outward slightly for a 3-D feel.
         ctx.beginPath();
-        ctx.ellipse(0, 30 * s, 34 * s, 11 * s, 0, 0, Math.PI * 2);
-        const brimGrad = ctx.createLinearGradient(-34 * s, 20 * s, 34 * s, 42 * s);
-        brimGrad.addColorStop(0,   '#10003c');
-        brimGrad.addColorStop(0.5, '#200070');
-        brimGrad.addColorStop(1,   '#0e0030');
-        ctx.fillStyle   = brimGrad;
+        ctx.moveTo(0, -coneH);
+        ctx.bezierCurveTo( 10 * s, -coneH * 0.5,  brimRx * 0.9,  -brimRy * 0.4,  brimRx,  0);
+        ctx.bezierCurveTo( brimRx * 0.3, brimRy * 0.2, -brimRx * 0.3, brimRy * 0.2, -brimRx, 0);
+        ctx.bezierCurveTo(-brimRx * 0.9, -brimRy * 0.4, -10 * s, -coneH * 0.5, 0, -coneH);
+        ctx.closePath();
+        const hatGrad = ctx.createLinearGradient(-brimRx, 0, brimRx * 0.4, -coneH);
+        hatGrad.addColorStop(0,   '#0e0030');
+        hatGrad.addColorStop(0.4, '#220075');
+        hatGrad.addColorStop(1,   '#4520a0');
+        ctx.fillStyle   = hatGrad;
         ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur  = 0;
         ctx.strokeStyle = '#5535bb';
         ctx.lineWidth   = 1.5 * s;
         ctx.stroke();
 
         ctx.restore();
 
-        // Gold band
+        // ── Front half of brim (drawn over cone base) ──
+        ctx.save();
         ctx.beginPath();
-        ctx.ellipse(0, 30 * s, 34 * s, 11 * s, 0, -0.1, Math.PI + 0.1);
+        ctx.ellipse(0, 0, brimRx, brimRy, 0, 0, Math.PI);
+        const brimFrontGrad = ctx.createLinearGradient(0, 0, 0, brimRy * 2);
+        brimFrontGrad.addColorStop(0,   '#320095');
+        brimFrontGrad.addColorStop(0.6, '#200070');
+        brimFrontGrad.addColorStop(1,   '#0e0030');
+        ctx.fillStyle   = brimFrontGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#5535bb';
+        ctx.lineWidth   = 1.5 * s;
+        ctx.stroke();
+        ctx.restore();
+
+        // ── Gold band just above brim ──
+        ctx.beginPath();
+        ctx.ellipse(0, -3 * s, brimRx * 0.78, brimRy * 0.75, 0, 0, Math.PI * 2);
         ctx.strokeStyle = '#e8c020';
-        ctx.lineWidth   = 3 * s;
+        ctx.lineWidth   = 3.5 * s;
         ctx.stroke();
 
-        // Stars on cone
+        // ── Stars on cone ──
         [
-            { x: -5  * s, y: -23 * s, r: 5.5 * s },
-            { x:  9  * s, y:   1 * s, r: 4.5 * s },
-            { x: -13 * s, y:  12 * s, r: 3.5 * s },
+            { x: -4  * s, y: -42 * s, r: 5.5 * s },
+            { x:  10 * s, y: -20 * s, r: 4.5 * s },
+            { x: -12 * s, y: -12 * s, r: 3.5 * s },
         ].forEach(sp => this._drawStar(ctx, sp.x, sp.y, sp.r, '#f8d420'));
 
-        // Jewel
+        // ── Jewel at band centre ──
         ctx.beginPath();
-        ctx.arc(0, 30 * s, 5 * s, 0, Math.PI * 2);
+        ctx.arc(0, -3 * s, 5 * s, 0, Math.PI * 2);
         ctx.fillStyle   = '#cc2244';
         ctx.fill();
         ctx.strokeStyle = '#ff6688';
