@@ -12,6 +12,7 @@ import { UpgradeRegistry } from '../UpgradeRegistry.js';
 import { MarketplaceSystem } from '../MarketplaceSystem.js';
 import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
 import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
+import { SirFrogerty } from '../../ui/SirFrogerty.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -63,6 +64,9 @@ export class SettlementHub {
         
         // Track settlement start time for playtime statistics
         this.settlementStartTime = 0;
+
+        // Sir Frogerty - the frog adviser
+        this.sirFrogerty = null;
     }
 
     enter() {
@@ -151,6 +155,15 @@ export class SettlementHub {
         
         // Remember which save slot is loaded
         this.lastLoadedSaveSlot = this.stateManager.currentSaveSlot;
+
+        // Show Sir Frogerty's intro dialogue when starting a brand-new game
+        const isNewGame = this.stateManager.previousState === 'saveSlotSelection';
+        if (isNewGame) {
+            if (!this.sirFrogerty) {
+                this.sirFrogerty = new SirFrogerty(this.stateManager);
+            }
+            this.sirFrogerty.show();
+        }
         
         // Reset all popup hover states
         if (this.upgradesPopup && this.upgradesPopup.tabButtons) {
@@ -437,11 +450,26 @@ export class SettlementHub {
                     }
                 }
             });
+            // Update Sir Frogerty button hovers
+            if (this.sirFrogerty) {
+                const overFrog = this.sirFrogerty.handleMouseMove(x, y, this.stateManager.canvas);
+                if (overFrog || this.sirFrogerty.prevButtonHovered || this.sirFrogerty.nextButtonHovered || this.sirFrogerty.closeButtonHovered) {
+                    this.stateManager.canvas.style.cursor = 'pointer';
+                    return;
+                }
+            }
             this.stateManager.canvas.style.cursor = isHoveringBuilding || this.activePopup ? 'pointer' : 'default';
         }
     }
 
     handleClick(x, y) {
+        // Sir Frogerty intercepts clicks first
+        if (this.sirFrogerty && this.sirFrogerty.visible && !this.activePopup) {
+            if (this.sirFrogerty.handleClick(x, y, this.stateManager.canvas)) {
+                return;
+            }
+        }
+
         // If popup is active, delegate click to popup
         if (this.activePopup === 'upgrades' && this.upgradesPopup) {
             this.upgradesPopup.handleClick(x, y);
@@ -531,6 +559,11 @@ export class SettlementHub {
             this.arcaneLibraryPopup.update(deltaTime);
         }
 
+        // Update Sir Frogerty adviser
+        if (this.sirFrogerty) {
+            this.sirFrogerty.update(deltaTime);
+        }
+
         // Update settlement buildings for animations
         this.settlementBuildings.forEach(item => {
             if (item.building && item.building.update) {
@@ -589,6 +622,11 @@ export class SettlementHub {
                 const fadeOpacity = (1 - this.fadeInOpacity) * 0.6; // Fade from 60% dark to transparent
                 ctx.fillStyle = `rgba(0, 0, 0, ${fadeOpacity})`;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Sir Frogerty adviser overlay (always on top)
+            if (this.sirFrogerty && !this.activePopup) {
+                this.sirFrogerty.render(ctx, canvas);
             }
 
             ctx.globalAlpha = 1;
