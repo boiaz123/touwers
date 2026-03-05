@@ -14,7 +14,7 @@ export class SpaceLevel1 extends LevelBase {
         this.levelNumber = SpaceLevel1.levelMetadata.order;
         this.difficulty = SpaceLevel1.levelMetadata.difficulty;
         this.campaign = SpaceLevel1.levelMetadata.campaign;
-        this.maxWaves = 14;
+        this.maxWaves = 1;
         
         this.setVisualConfig({
             grassColors: {
@@ -78,22 +78,19 @@ export class SpaceLevel1 extends LevelBase {
 
     getWaveConfig(wave) {
         const waveConfigs = [
-            { enemyCount: 16, enemyHealth_multiplier: 1, enemySpeed: 38, spawnInterval: 1.9, pattern: ['basic'] },
-            { enemyCount: 16, enemyHealth_multiplier: 1.1, enemySpeed: 38, spawnInterval: 1.8, pattern: ['villager'] },
-            { enemyCount: 22, enemyHealth_multiplier: 1.1, enemySpeed: 38, spawnInterval: 1.7, pattern: ['villager', 'basic'] },
-            { enemyCount: 12, enemyHealth_multiplier: 1, enemySpeed: 58, spawnInterval: 2.2, pattern: ['villager', 'basic'] },
-            { enemyCount: 18, enemyHealth_multiplier: 1.3, enemySpeed: 43, spawnInterval: 1.6, pattern: ['villager', 'basic'] },
-            { enemyCount: 10, enemyHealth_multiplier: 2.7, enemySpeed: 33, spawnInterval: 1.4, pattern: ['beefyenemy'] },
-            { enemyCount: 15, enemyHealth_multiplier: 2.7, enemySpeed: 33, spawnInterval: 1.4, pattern: ['beefyenemy'] },
-            { enemyCount: 50, enemyHealth_multiplier: 0.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['villager'] },
-            { enemyCount: 50, enemyHealth_multiplier: 0.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['villager', 'basic'] },
-            { enemyCount: 26, enemyHealth_multiplier: 0.9, enemySpeed: 48, spawnInterval: 1.2, pattern: ['villager', 'basic', 'beefyenemy'] },
-            { enemyCount: 30, enemyHealth_multiplier: 1.1, enemySpeed: 48, spawnInterval: 1.2, pattern: ['villager', 'basic', 'beefyenemy'] },
-            { enemyCount: 5, enemyHealth_multiplier: 20, enemySpeed: 30, spawnInterval: 1.8, pattern: ['beefyenemy'] },
-            { enemyCount: 50, enemyHealth_multiplier: 2.2, enemySpeed: 58, spawnInterval: 1.2, pattern: ['archer', 'villager'] },
-            { enemyCount: 1, enemyHealth_multiplier: 40, enemySpeed: 35, spawnInterval: 1, pattern: ['knight'] }
+            { enemyCount: 10, enemyHealth_multiplier: 1.0, enemySpeed: 35, spawnInterval: 1.5, pattern: ['villager'] },
+            // { enemyCount: 14, enemyHealth_multiplier: 1.1, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic'] },
+            // { enemyCount: 17, enemyHealth_multiplier: 1.2, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager'] },
+            // { enemyCount: 20, enemyHealth_multiplier: 1.3, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
+            // { enemyCount: 22, enemyHealth_multiplier: 1.4, enemySpeed: 42, spawnInterval: 1.3, pattern: ['archer', 'villager'] },
+            // { enemyCount: 24, enemyHealth_multiplier: 1.5, enemySpeed: 44, spawnInterval: 1.3, pattern: ['basic', 'villager', 'archer'] },
+            // { enemyCount: 26, enemyHealth_multiplier: 1.6, enemySpeed: 46, spawnInterval: 1.3, pattern: ['archer', 'basic', 'villager', 'archer'] },
+            // { enemyCount: 28, enemyHealth_multiplier: 1.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
+            // { enemyCount: 30, enemyHealth_multiplier: 1.8, enemySpeed: 50, spawnInterval: 1.1, pattern: ['archer', 'villager', 'basic', 'archer'] },
+            // { enemyCount: 1, enemyHealth_multiplier: 15, enemySpeed: 35, spawnInterval: 1.0, pattern: ['beefyenemy'] }
         ];
-
+        
         return (wave > 0 && wave <= waveConfigs.length) ? waveConfigs[wave - 1] : null;
     }
 }
+

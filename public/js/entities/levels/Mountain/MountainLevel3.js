@@ -8,7 +8,7 @@ export class MountainLevel3 extends LevelBase {
         this.levelNumber = MountainLevel3.levelMetadata.order;
         this.difficulty = MountainLevel3.levelMetadata.difficulty;
         this.campaign = MountainLevel3.levelMetadata.campaign;
-        this.maxWaves = 15;
+        this.maxWaves = 1;
         this.setVisualConfig({
             grassColors: { top: '#e8e8f0', upper: '#d8d8e0', lower: '#c8c8d0', bottom: '#b8b8c0' },
             grassPatchDensity: 12000,
@@ -50,13 +50,19 @@ export class MountainLevel3 extends LevelBase {
         this.path = pathInGridCoords.map(point => ({ x: Math.round(point.gridX * this.cellSize), y: Math.round(point.gridY * this.cellSize) }));
     }
     getWaveConfig(wave) {
-        const waveConfigs = Array(15).fill(null).map((_, i) => ({
-            enemyCount: 15 + i * 2,
-            enemyHealth_multiplier: 1 + i * 0.15,
-            enemySpeed: 35 + i * 2,
-            spawnInterval: Math.max(0.8, 2 - i * 0.1),
-            pattern: ['basic', 'villager', 'archer']
-        }));
+        const waveConfigs = [
+            { enemyCount: 10, enemyHealth_multiplier: 1.0, enemySpeed: 35, spawnInterval: 1.5, pattern: ['villager'] },
+            // { enemyCount: 14, enemyHealth_multiplier: 1.1, enemySpeed: 36, spawnInterval: 1.5, pattern: ['basic'] },
+            // { enemyCount: 17, enemyHealth_multiplier: 1.2, enemySpeed: 38, spawnInterval: 1.5, pattern: ['basic', 'villager'] },
+            // { enemyCount: 20, enemyHealth_multiplier: 1.3, enemySpeed: 40, spawnInterval: 1.5, pattern: ['basic', 'archer', 'villager'] },
+            // { enemyCount: 22, enemyHealth_multiplier: 1.4, enemySpeed: 42, spawnInterval: 1.3, pattern: ['archer', 'villager'] },
+            // { enemyCount: 24, enemyHealth_multiplier: 1.5, enemySpeed: 44, spawnInterval: 1.3, pattern: ['basic', 'villager', 'archer'] },
+            // { enemyCount: 26, enemyHealth_multiplier: 1.6, enemySpeed: 46, spawnInterval: 1.3, pattern: ['archer', 'basic', 'villager', 'archer'] },
+            // { enemyCount: 28, enemyHealth_multiplier: 1.7, enemySpeed: 48, spawnInterval: 1.2, pattern: ['archer', 'archer', 'basic', 'villager'] },
+            // { enemyCount: 30, enemyHealth_multiplier: 1.8, enemySpeed: 50, spawnInterval: 1.1, pattern: ['archer', 'villager', 'basic', 'archer'] },
+            // { enemyCount: 1, enemyHealth_multiplier: 15, enemySpeed: 35, spawnInterval: 1.0, pattern: ['beefyenemy'] }
+        ];
+        
         return (wave > 0 && wave <= waveConfigs.length) ? waveConfigs[wave - 1] : null;
     }
 }

@@ -11,6 +11,8 @@ import { MountainLevel7 } from '../levels/Mountain/MountainLevel7.js';
 import { MountainLevel8 } from '../levels/Mountain/MountainLevel8.js';
 import { MountainLevel9 } from '../levels/Mountain/MountainLevel9.js';
 import { MountainLevel10 } from '../levels/Mountain/MountainLevel10.js';
+import { MountainLevel11 } from '../levels/Mountain/MountainLevel11.js';
+import { MountainLevel12 } from '../levels/Mountain/MountainLevel12.js';
 
 /**
  * Campaign2: The Mountain Campaign
@@ -63,6 +65,8 @@ export class Campaign2 extends CampaignBase {
         registerLevel('level8', MountainLevel8);
         registerLevel('level9', MountainLevel9);
         registerLevel('level10', MountainLevel10);
+        registerLevel('level11', MountainLevel11);
+        registerLevel('level12', MountainLevel12);
     }
     
     enter() {

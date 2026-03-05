@@ -7,6 +7,13 @@ import { ForestLevel2 } from '../levels/Forest/ForestLevel2.js';
 import { ForestLevel3 } from '../levels/Forest/ForestLevel3.js';
 import { ForestLevel4 } from '../levels/Forest/ForestLevel4.js';
 import { ForestLevel5 } from '../levels/Forest/ForestLevel5.js';
+import { ForestLevel6 } from '../levels/Forest/ForestLevel6.js';
+import { ForestLevel7 } from '../levels/Forest/ForestLevel7.js';
+import { ForestLevel8 } from '../levels/Forest/ForestLevel8.js';
+import { ForestLevel9 } from '../levels/Forest/ForestLevel9.js';
+import { ForestLevel10 } from '../levels/Forest/ForestLevel10.js';
+import { ForestLevel11 } from '../levels/Forest/ForestLevel11.js';
+import { ForestLevel12 } from '../levels/Forest/ForestLevel12.js';
 
 /**
  * Campaign1: The Forest Campaign
@@ -56,6 +63,13 @@ export class Campaign1 extends CampaignBase {
         registerLevel('level3', ForestLevel3);
         registerLevel('level4', ForestLevel4);
         registerLevel('level5', ForestLevel5);
+        registerLevel('level6', ForestLevel6);
+        registerLevel('level7', ForestLevel7);
+        registerLevel('level8', ForestLevel8);
+        registerLevel('level9', ForestLevel9);
+        registerLevel('level10', ForestLevel10);
+        registerLevel('level11', ForestLevel11);
+        registerLevel('level12', ForestLevel12);
     }
     
     enter() {

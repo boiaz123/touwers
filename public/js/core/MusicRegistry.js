@@ -206,6 +206,28 @@ export function initializeMusicRegistry() {
             category: 'campaign-4',
             volume: 0.7
         }
+        
+    );
+
+        MusicRegistry.registerMusic(
+        'campaign-4-battle-5',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle5.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+
+    );
+
+            MusicRegistry.registerMusic(
+        'campaign-4-battle-6',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle6.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
     );
 
     // Campaign 5 (Level Testing/Sandbox) songs - use Forest songs as fallback
