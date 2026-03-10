@@ -343,13 +343,6 @@ export class DiamondPress extends Building {
         if (strokeIntensity > 0.75) {
             this.renderPressSparkles(ctx, centerX, plateY, size * 0.45, Math.max(0, strokeIntensity - 0.75) * 4.0);
         }
-        
-        // Selection highlight
-        if (this.isSelected) {
-            ctx.strokeStyle = '#ffff00';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(centerX - size / 2 - size * 0.08, centerY - size / 2.25, size * 1.16, size * 1.2);
-        }
     }
 
     renderPressSparkles(ctx, plateCenterX, plateY, plateWidth, intensity) {

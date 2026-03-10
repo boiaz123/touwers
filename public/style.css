@@ -581,7 +581,25 @@ body {
     grid-template-columns: repeat(3, 1fr);
     gap: clamp(0.2rem, 0.5vw, 0.4rem);
     margin-bottom: clamp(0.4rem, 0.8vh, 0.6rem);
-    padding: clamp(1rem, 1.8vh, 1.4rem) clamp(0.3rem, 0.8vw, 0.6rem) 0 clamp(1.4rem, 1.8vw, 1.8rem);
+}
+
+/* ============ TOWERS SECTION ============ */
+#tower-section {
+    padding-top: clamp(0.7rem, 1.2vh, 1rem);
+    padding-left: clamp(1.4rem, 1.8vw, 1.8rem);
+    padding-right: clamp(0.3rem, 0.8vw, 0.6rem);
+    margin-bottom: 0;
+}
+
+#tower-label {
+    color: var(--primary-gold);
+    font-size: clamp(0.5rem, 0.9vw, 0.65rem);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: clamp(0.2rem, 0.4vh, 0.3rem);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
 }
 
 /* ============ SPEED CONTROLS IN SIDEBAR ============ */

@@ -16,6 +16,10 @@ export class UnlockSystem {
         this.guardPostCount = 0;
         this.maxGuardPosts = 0;
         
+        // Flags for settlement upgrade purchases (gate in-game unlock progression)
+        this.magicAcademyUnlockPurchased = false;
+        this.superweaponLabUnlockPurchased = false;
+        
         // Base unlocks
         this.unlockedTowers = new Set(['basic', 'barricade']);
         this.unlockedBuildings = new Set(['forge']);
@@ -91,9 +95,12 @@ export class UnlockSystem {
     }
     
     // New: Method to unlock superweapon when academy reaches level 3
+    // Only unlocks if the player has purchased the superweapon-lab-unlock upgrade in the settlement
     onAcademyLevelThree() {
-        this.superweaponUnlocked = true;
-        this.unlockedBuildings.add('superweapon');
+        if (this.superweaponLabUnlockPurchased) {
+            this.superweaponUnlocked = true;
+            this.unlockedBuildings.add('superweapon');
+        }
     }
     
     // New: Method to unlock diamond press when superweapon lab reaches level 2
@@ -115,14 +122,15 @@ export class UnlockSystem {
     }
 
     // Unlock Magic Academy via the purchased 'magic-academy-unlock' upgrade (available after Campaign 1)
+    // Sets flag only - actual in-game unlock happens when forge reaches level 4
     onMagicAcademyUnlockPurchased() {
-        this.unlockedBuildings.add('academy');
+        this.magicAcademyUnlockPurchased = true;
     }
 
     // Unlock Super Weapon Lab via the purchased 'superweapon-lab-unlock' upgrade (available after Campaign 2)
+    // Sets flag only - actual in-game unlock happens when academy reaches level 3
     onSuperweaponLabUnlockPurchased() {
-        this.superweaponUnlocked = true;
-        this.unlockedBuildings.add('superweapon');
+        this.superweaponLabUnlockPurchased = true;
     }
     
     // New: Method to handle Training Grounds level upgrades
@@ -265,8 +273,10 @@ export class UnlockSystem {
                 break;
                 
             case 4:
-                // Forge level 4 no longer auto-unlocks the Academy.
-                // The Magic Academy requires the 'magic-academy-unlock' upgrade (unlocks after Campaign 1).
+                // Forge level 4 unlocks Academy IF the player has purchased the 'magic-academy-unlock' upgrade
+                if (this.magicAcademyUnlockPurchased) {
+                    this.unlockedBuildings.add('academy');
+                }
                 break;
                 
             case 5:
