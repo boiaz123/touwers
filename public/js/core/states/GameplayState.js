@@ -834,9 +834,13 @@ export class GameplayState {
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
+                        // Apply freeze (direct speed manipulation - affects all enemies including frogs)
                         enemy.freezeTimer = spell.freezeDuration;
                         enemy.originalSpeed = enemy.originalSpeed || enemy.speed;
                         enemy.speed = 0;
+                        // Apply ice damage for visual feedback (elemental frogs are immune to ice but still get frozen)
+                        const iceDamage = (spell.damage || 25) * (1 - dist / spell.radius * 0.5);
+                        enemy.takeDamage(iceDamage, 0, 'ice');
                     }
                 });
                 this.createSpellEffect('frostNova', x, y, spell);
@@ -853,7 +857,8 @@ export class GameplayState {
                             if (!enemy.isDead()) {
                                 const dist = Math.hypot(enemy.x - x, enemy.y - y);
                                 if (dist <= 80) {
-                                    enemy.takeDamage(spell.damage, 0, 'magic');
+                                    // Fire elemental damage - immune frogs (except AirFrog) take no damage but burn still applies via 'fire' ticks
+                                    enemy.takeDamage(spell.damage, 0, 'fire');
                                     enemy.burnTimer = spell.burnDuration;
                                     enemy.burnDamage = spell.burnDamage;
                                 }
@@ -872,7 +877,8 @@ export class GameplayState {
                 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
-                        enemy.takeDamage(spell.damage * Math.pow(0.8, index), 0, 'magic');
+                        // Electricity damage - elemental frogs are immune (only magic + their element passes through)
+                        enemy.takeDamage(spell.damage * Math.pow(0.8, index), 0, 'electricity');
                     }, index * 100);
                 });
                 this.createSpellEffect('chainLightning', x, y, spell, targets);

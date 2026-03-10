@@ -18,10 +18,10 @@ export class SuperWeaponLab extends Building {
                 id: 'arcaneBlast',
                 name: 'Arcane Blast',
                 icon: '💫',
-                description: 'Deals massive damage to all enemies',
+                description: 'Deals massive arcane damage to all enemies in radius (classless magic, not elemental)',
                 baseLevel: 1,  // Unlocked at lab level 1
-                upgradeLevel: 0,  // 0-100 using diamonds (at lab level 4+)
-                maxUpgradeLevel: 100,
+                upgradeLevel: 0,  // 0-50 using diamonds (at lab level 4+)
+                maxUpgradeLevel: 50,
                 damage: 150,
                 radius: 120,
                 cooldown: 30,
@@ -32,10 +32,11 @@ export class SuperWeaponLab extends Building {
                 id: 'frostNova',
                 name: 'Frozen Nova',
                 icon: '❄️',
-                description: 'Freezes all enemies for a duration',
+                description: 'Freezes all enemies for a duration and deals ice damage',
                 baseLevel: 2,  // Unlocked at lab level 2
                 upgradeLevel: 0,
-                maxUpgradeLevel: 100,
+                maxUpgradeLevel: 50,
+                damage: 25,
                 freezeDuration: 3,
                 radius: 150,
                 cooldown: 45,
@@ -46,10 +47,10 @@ export class SuperWeaponLab extends Building {
                 id: 'meteorStrike',
                 name: 'Meteor Strike',
                 icon: '☄️',
-                description: 'Calls down meteors that devastate enemies',
+                description: 'Calls down meteors dealing fire damage that devastates enemies',
                 baseLevel: 3,  // Unlocked at lab level 3
                 upgradeLevel: 0,
-                maxUpgradeLevel: 100,
+                maxUpgradeLevel: 50,
                 damage: 200,
                 burnDamage: 10,
                 burnDuration: 5,
@@ -61,10 +62,10 @@ export class SuperWeaponLab extends Building {
                 id: 'chainLightning',
                 name: 'Chain Lightning',
                 icon: '⚡',
-                description: 'Lightning that jumps between enemies',
+                description: 'Electricity that jumps between enemies',
                 baseLevel: 4,  // Unlocked at lab level 4
                 upgradeLevel: 0,
-                maxUpgradeLevel: 100,
+                maxUpgradeLevel: 50,
                 damage: 80,
                 chainCount: 5,
                 cooldown: 25,
@@ -996,12 +997,32 @@ export class SuperWeaponLab extends Building {
         // Increase upgrade level
         spell.upgradeLevel++;
         
-        // Apply upgrade effects - improve spell abilities, NOT cooldown
-        if (spell.damage) spell.damage *= 1.15;
-        if (spell.freezeDuration) spell.freezeDuration += 0.5;
-        if (spell.burnDamage) spell.burnDamage += 2;
-        if (spell.chainCount) spell.chainCount += 1;
-        if (spell.radius) spell.radius += 10;
+        // Apply balanced upgrade effects per level (max level 50)
+        // Flat increments ensure steady, non-exponential growth
+        switch(spell.id) {
+            case 'arcaneBlast':
+                spell.damage += 5;          // +5 dmg/level → +250 at max (total 400)
+                spell.radius += 2;          // +2 radius/level → +100 at max (total 220)
+                break;
+            case 'frostNova':
+                spell.damage += 2;          // +2 ice dmg/level → +100 at max (total 125)
+                spell.freezeDuration += 0.1; // +0.1s/level → +5s at max (total 8s)
+                spell.radius += 2;          // +2 radius/level → +100 at max (total 250)
+                break;
+            case 'meteorStrike':
+                spell.damage += 7;          // +7 fire dmg/level → +350 at max (total 550)
+                spell.burnDamage += 0.5;    // +0.5/level → +25 at max (total 35/s)
+                spell.radius += 2;          // +2 radius/level → +100 at max (total ~180)
+                break;
+            case 'chainLightning':
+                spell.damage += 3;          // +3 elec dmg/level → +150 at max (total 230)
+                spell.radius += 2;          // +2 radius/level → +100 at max
+                // +1 chain target every 5 levels → +10 chains at max (total 15)
+                if (spell.upgradeLevel % 5 === 0) {
+                    spell.chainCount += 1;
+                }
+                break;
+        }
         
         return true;
     }
@@ -1083,12 +1104,28 @@ export class SuperWeaponLab extends Building {
         gameState.spend(cost);
         spell.level++;
         
-        // Apply upgrade effects - improve spell abilities, NOT cooldown
-        if (spell.damage) spell.damage *= 1.15;
-        if (spell.freezeDuration) spell.freezeDuration += 0.5;
-        if (spell.burnDamage) spell.burnDamage += 2;
-        if (spell.chainCount) spell.chainCount += 1;
-        if (spell.radius) spell.radius += 10;
+        // Apply balanced upgrade effects (matching upgradeMainSpell formula)
+        switch(spell.id) {
+            case 'arcaneBlast':
+                spell.damage += 5;
+                spell.radius += 2;
+                break;
+            case 'frostNova':
+                spell.damage += 2;
+                spell.freezeDuration += 0.1;
+                spell.radius += 2;
+                break;
+            case 'meteorStrike':
+                spell.damage += 7;
+                spell.burnDamage += 0.5;
+                spell.radius += 2;
+                break;
+            case 'chainLightning':
+                spell.damage += 3;
+                spell.radius += 2;
+                if (spell.level % 5 === 0) spell.chainCount += 1;
+                break;
+        }
         
         return true;
     }

@@ -3173,16 +3173,32 @@ export class UIManager {
                 if (spell.burnDuration) tooltipText += `<div>🔥 Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
                 if (spell.chainCount) tooltipText += `<div>⚡ Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
                 tooltipText += `<div>⏱️ Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+                tooltipText += `<div style="font-size: 0.7rem; color: #aaa;">Level: <span style="color: #FFD700;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</span></div>`;
                 
-                // Show upgrade effects
+                // Show spell-specific per-level upgrade effects
                 if (!isMaxed) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                    tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
-                    if (spell.damage) tooltipText += `<div>Damage: +${(spell.damage * 0.15).toFixed(0)} (×1.15)</div>`;
-                    if (spell.freezeDuration) tooltipText += `<div>Freeze Duration: +0.5s</div>`;
-                    if (spell.burnDamage) tooltipText += `<div>Burn Damage: +2 per tick</div>`;
-                    if (spell.chainCount) tooltipText += `<div>Chain Targets: +1</div>`;
-                    if (spell.radius) tooltipText += `<div>Radius: +10px</div>`;
+                    tooltipText += `<div style="font-weight: bold;">Per Upgrade Level (+1 💎):</div>`;
+                    if (spell.id === 'arcaneBlast') {
+                        tooltipText += `<div>Magic Damage: +5</div>`;
+                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div style="color: #bb88ff;">Classless — damages all enemies</div>`;
+                    } else if (spell.id === 'frostNova') {
+                        tooltipText += `<div>Ice Damage: +2</div>`;
+                        tooltipText += `<div>Freeze Duration: +0.1s</div>`;
+                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div style="color: #88ddff;">Freeze always applies (ignores immunity)</div>`;
+                    } else if (spell.id === 'meteorStrike') {
+                        tooltipText += `<div>Fire Damage: +7</div>`;
+                        tooltipText += `<div>Burn (per tick): +0.5/s</div>`;
+                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div style="color: #ff8844;">Effective vs Air Frogs</div>`;
+                    } else if (spell.id === 'chainLightning') {
+                        tooltipText += `<div>Electricity Damage: +3</div>`;
+                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div>Chain Targets: +1 every 5 levels</div>`;
+                        tooltipText += `<div style="color: #ffff88;">Bypasses frogs (use vs normal enemies)</div>`;
+                    }
                     tooltipText += `</div>`;
                 }
                 

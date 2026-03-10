@@ -47,6 +47,8 @@ export class HitSplatter {
                 return 'rgb(100, 220, 255)'; // Bright ice blue for ice/frost
             case 'electricity':
                 return 'rgb(255, 255, 100)'; // Bright yellow for electricity
+            case 'magic':
+                return 'rgb(186, 85, 211)'; // Medium orchid for magic/arcane
             case 'physical':
             default:
                 return 'rgb(255, 255, 200)'; // Bright yellow-white for physical
@@ -69,6 +71,8 @@ export class HitSplatter {
             case 'poison':
                 return 'rgba(100, 255, 100, 0.6)';
             case 'arcane':
+                return 'rgba(186, 85, 211, 0.6)';
+            case 'magic':
                 return 'rgba(186, 85, 211, 0.6)';
             case 'ice':
                 return 'rgba(100, 220, 255, 0.6)';

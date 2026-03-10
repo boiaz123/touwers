@@ -123,8 +123,9 @@ export class AirFrogEnemy extends BaseEnemy {
     }
     
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
-        // Only take damage if it's fire damage
-        if (damageType !== 'fire') {
+        // Only take full elemental damage if it's fire damage (the weakness)
+        // Magic (arcane/classless) damage also passes through, reduced by magic resistance
+        if (damageType !== 'fire' && damageType !== 'magic') {
             return; // Immune to all other damage types
         }
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);

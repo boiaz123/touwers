@@ -123,8 +123,9 @@ export class FireFrogEnemy extends BaseEnemy {
     }
     
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
-        // Only take damage if it's water damage
-        if (damageType !== 'water') {
+        // Only take full elemental damage if it's water damage (the weakness)
+        // Magic (arcane/classless) damage also passes through, reduced by magic resistance
+        if (damageType !== 'water' && damageType !== 'magic') {
             return; // Immune to all other damage types
         }
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);

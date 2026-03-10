@@ -22,7 +22,7 @@ export class FrogKingEnemy extends BaseEnemy {
         'water': {
             skinColor: '#3498DB',
             crownColor: '#2980B9',
-            damageType: 'air',
+            damageType: 'earth',
             particleColor: 'rgba(52, 152, 219, '
         },
         'air': {
@@ -34,7 +34,7 @@ export class FrogKingEnemy extends BaseEnemy {
         'earth': {
             skinColor: '#8B6F47',
             crownColor: '#A0826D',
-            damageType: 'water',
+            damageType: 'air',
             particleColor: 'rgba(139, 111, 71, '
         }
     };
@@ -194,7 +194,8 @@ export class FrogKingEnemy extends BaseEnemy {
 
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         // Only take damage if it matches the current vulnerability
-        if (damageType !== this.vulnerableTo) {
+        // Magic (arcane/classless) damage also passes through, reduced by the high magic resistance
+        if (damageType !== this.vulnerableTo && damageType !== 'magic') {
             return; // Immune to other damage types
         }
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
