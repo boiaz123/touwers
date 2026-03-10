@@ -11,16 +11,12 @@ export class OptionsMenu {
         this.particleSystem = null;
         
         // Options state
-        this.musicVolume = 0.7; // Default 70%
-        this.sfxVolume = 1.0; // Default 100%
-        this.graphicsQuality = 'medium'; // low, medium, high
+        this.musicVolume = 0.7; // Will be overridden in enter() from AudioManager
+        this.sfxVolume = 1.0;   // Will be overridden in enter() from AudioManager
         
         // Button states
         this.buttons = {
             back: { hovered: false },
-            graphicsLow: { hovered: false },
-            graphicsMedium: { hovered: false },
-            graphicsHigh: { hovered: false },
             visitProducer: { hovered: false }
         };
         
@@ -47,6 +43,12 @@ export class OptionsMenu {
         this.titleOpacity = 0;
         this.contentOpacity = 0;
         this.backButtonHovered = false;
+
+        // Read current volumes from AudioManager so sliders show actual state
+        if (this.stateManager.audioManager) {
+            this.musicVolume = this.stateManager.audioManager.getMusicVolume();
+            this.sfxVolume   = this.stateManager.audioManager.getSFXVolume();
+        }
         
         // Initialize slider positions
         this.updateSliderPositions();
@@ -131,10 +133,10 @@ export class OptionsMenu {
         const startX = canvas.width / 2 - 100;
         
         this.musicVolumeSlider.x = startX;
-        this.musicVolumeSlider.y = canvas.height / 2 - 80;
+        this.musicVolumeSlider.y = canvas.height / 2 - 30;
         
         this.sfxVolumeSlider.x = startX;
-        this.sfxVolumeSlider.y = canvas.height / 2 - 20;
+        this.sfxVolumeSlider.y = canvas.height / 2 + 30;
     }
 
     getBackButtonPosition() {
@@ -161,34 +163,15 @@ export class OptionsMenu {
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
         
-        // Check graphics buttons
-        const graphicsButtonY = canvas.height / 2 + 50;
-        const graphicsButtonWidth = 80;
-        const graphicsGap = 20;
-        const graphicsStartX = centerX - (graphicsButtonWidth * 3 + graphicsGap * 2) / 2;
-        
-        const lowPos = { x: graphicsStartX, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        const mediumPos = { x: graphicsStartX + graphicsButtonWidth + graphicsGap, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        const highPos = { x: graphicsStartX + (graphicsButtonWidth + graphicsGap) * 2, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        
-        this.buttons.graphicsLow.hovered = x >= lowPos.x && x <= lowPos.x + lowPos.width &&
-                                           y >= lowPos.y && y <= lowPos.y + lowPos.height;
-        this.buttons.graphicsMedium.hovered = x >= mediumPos.x && x <= mediumPos.x + mediumPos.width &&
-                                              y >= mediumPos.y && y <= mediumPos.y + mediumPos.height;
-        this.buttons.graphicsHigh.hovered = x >= highPos.x && x <= highPos.x + highPos.width &&
-                                            y >= highPos.y && y <= highPos.y + highPos.height;
-        
         // Check producer button
-        const producerY = canvas.height / 2 + 140;
-        const producerWidth = 240;
+        const producerY = canvas.height / 2 + 100;
+        const producerWidth = 280;
         const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
         this.buttons.visitProducer.hovered = x >= producerPos.x && x <= producerPos.x + producerPos.width &&
                                              y >= producerPos.y && y <= producerPos.y + producerPos.height;
 
         this.stateManager.canvas.style.cursor = 
-            this.buttons.back.hovered || this.buttons.graphicsLow.hovered || 
-            this.buttons.graphicsMedium.hovered || this.buttons.graphicsHigh.hovered || 
-            this.buttons.visitProducer.hovered ? 'pointer' : 'default';
+            this.buttons.back.hovered || this.buttons.visitProducer.hovered ? 'pointer' : 'default';
     }
 
     handleMouseDown(x, y) {
@@ -244,36 +227,17 @@ export class OptionsMenu {
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
         
-        // Check graphics buttons
-        const graphicsButtonY = canvas.height / 2 + 50;
-        const graphicsButtonWidth = 80;
-        const graphicsGap = 20;
-        const graphicsStartX = centerX - (graphicsButtonWidth * 3 + graphicsGap * 2) / 2;
-        
-        const lowPos = { x: graphicsStartX, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        const mediumPos = { x: graphicsStartX + graphicsButtonWidth + graphicsGap, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        const highPos = { x: graphicsStartX + (graphicsButtonWidth + graphicsGap) * 2, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-        
-        if (x >= lowPos.x && x <= lowPos.x + lowPos.width && y >= lowPos.y && y <= lowPos.y + lowPos.height) {
-            this.graphicsQuality = 'low';
-            return;
-        }
-        if (x >= mediumPos.x && x <= mediumPos.x + mediumPos.width && y >= mediumPos.y && y <= mediumPos.y + mediumPos.height) {
-            this.graphicsQuality = 'medium';
-            return;
-        }
-        if (x >= highPos.x && x <= highPos.x + highPos.width && y >= highPos.y && y <= highPos.y + highPos.height) {
-            this.graphicsQuality = 'high';
-            return;
-        }
-        
         // Check producer button
-        const producerY = canvas.height / 2 + 140;
-        const producerWidth = 240;
+        const producerY = canvas.height / 2 + 100;
+        const producerWidth = 280;
         const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
-            // TODO: Open Game Producer page when implemented
+            if (typeof window !== 'undefined' && window.__TAURI__) {
+                window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
+            } else {
+                window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
+            }
             return;
         }
     }
@@ -319,16 +283,9 @@ export class OptionsMenu {
         
         ctx.fillRect(pos.x, adjustedY, pos.width, pos.height);
 
-        // Border with glow on hover
-        if (isHovered) {
-            ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
-            ctx.shadowBlur = 20;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-        }
-        
-        ctx.strokeStyle = (isSelected || isHovered) ? '#ffe700' : '#7a6038';
-        ctx.lineWidth = (isSelected || isHovered) ? 3 : 2;
+        // Border - no glow shadow
+        ctx.strokeStyle = (isSelected || isHovered) ? '#C8A84B' : 'rgba(130, 105, 55, 0.7)';
+        ctx.lineWidth = (isSelected || isHovered) ? 2 : 1.5;
         ctx.strokeRect(pos.x, adjustedY, pos.width, pos.height);
 
         // Top highlight
@@ -349,59 +306,58 @@ export class OptionsMenu {
         ctx.fillText(label, pos.x + pos.width / 2 + 1, adjustedY + pos.height / 2 + 1);
 
         // Main text
-        ctx.fillStyle = (isSelected || isHovered) ? '#ffe700' : '#d4af37';
+        ctx.fillStyle = (isSelected || isHovered) ? '#E8C96A' : '#B8954A';
         ctx.fillText(label, pos.x + pos.width / 2, adjustedY + pos.height / 2);
 
-        // Reset shadow properties
-        ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+        ctx.shadowColor = 'rgba(0,0,0,0)';
         ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
     }
 
     renderSlider(ctx, slider, value, label) {
-        const sliderHeight = 4;
-        const knobRadius = 10;
+        const sliderHeight = 5;
+        const knobRadius = 9;
         
         // Label
-        ctx.font = 'bold 16px serif';
-        ctx.fillStyle = '#c9a876';
+        ctx.font = '15px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(210, 195, 170, 0.9)';
         ctx.textAlign = 'right';
-        ctx.fillText(label, slider.x - 20, slider.y - 5);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, slider.x - 16, slider.y);
         
-        // Slider background
-        ctx.fillStyle = 'rgba(40, 30, 20, 0.8)';
-        ctx.fillRect(slider.x, slider.y - sliderHeight / 2, slider.width, sliderHeight);
-        
-        // Slider border
-        ctx.strokeStyle = '#7a6038';
+        // Track background
+        ctx.fillStyle = 'rgba(20, 18, 30, 0.85)';
+        ctx.strokeStyle = 'rgba(100, 90, 70, 0.7)';
         ctx.lineWidth = 1;
+        ctx.fillRect(slider.x, slider.y - sliderHeight / 2, slider.width, sliderHeight);
         ctx.strokeRect(slider.x, slider.y - sliderHeight / 2, slider.width, sliderHeight);
         
-        // Slider fill (progress)
-        ctx.fillStyle = '#d4af37';
-        ctx.fillRect(slider.x, slider.y - sliderHeight / 2, slider.width * value, sliderHeight);
+        // Filled portion
+        const fillW = slider.width * value;
+        if (fillW > 0) {
+            const fillGrad = ctx.createLinearGradient(slider.x, 0, slider.x + fillW, 0);
+            fillGrad.addColorStop(0, 'rgba(140, 105, 40, 0.9)');
+            fillGrad.addColorStop(1, 'rgba(200, 155, 55, 0.9)');
+            ctx.fillStyle = fillGrad;
+            ctx.fillRect(slider.x, slider.y - sliderHeight / 2, fillW, sliderHeight);
+        }
         
         // Knob
         const knobX = slider.x + slider.width * value;
-        ctx.fillStyle = '#ffe700';
+        ctx.fillStyle = '#C8A84B';
         ctx.beginPath();
         ctx.arc(knobX, slider.y, knobRadius, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Knob border
-        ctx.strokeStyle = '#d4af37';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(knobX, slider.y, knobRadius, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Value display
-        ctx.font = '14px serif';
-        ctx.fillStyle = '#d4af37';
+        // Percentage label
+        ctx.font = '13px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(200, 170, 100, 0.85)';
         ctx.textAlign = 'left';
-        const percentage = Math.round(value * 100);
-        ctx.fillText(`${percentage}%`, slider.x + slider.width + 20, slider.y + 5);
+        ctx.fillText(`${Math.round(value * 100)}%`, slider.x + slider.width + 14, slider.y);
     }
 
     render(ctx) {
@@ -409,101 +365,127 @@ export class OptionsMenu {
             const canvas = this.stateManager.canvas;
 
             if (!canvas || !canvas.width || !canvas.height) {
-                ctx.fillStyle = '#2a1a0f';
+                ctx.fillStyle = '#0E0C1A';
                 ctx.fillRect(0, 0, 800, 600);
                 return;
             }
 
-            // Reset shadow properties
-            ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+            ctx.shadowColor = 'rgba(0,0,0,0)';
             ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
 
-            // Background
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#2a1a0f');
-            gradient.addColorStop(1, '#1a0f0a');
-            ctx.fillStyle = gradient;
+            // ===== BACKGROUND =====
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#13111F');
+            bgGrad.addColorStop(1, '#0A0812');
+            ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Render particles from shared system
+
+            // Floating particles
             if (this.particleSystem) {
                 this.particleSystem.render(ctx);
             }
-            
-            // Semi-transparent panel overlay for menu content
-            ctx.globalAlpha = 0.3;
+
+            // Dark overlay
+            ctx.globalAlpha = 0.35;
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.globalAlpha = 1;
 
-            // Back button
+            // ===== PANEL =====
+            const panelW = 520;
+            const panelH = 380;
+            const panelX = canvas.width / 2 - panelW / 2;
+            const panelY = canvas.height / 2 - panelH / 2 + 30;
+
+            // Panel background
+            const panelGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
+            panelGrad.addColorStop(0, 'rgba(22, 20, 35, 0.97)');
+            panelGrad.addColorStop(1, 'rgba(12, 10, 22, 0.97)');
+            ctx.fillStyle = panelGrad;
+            ctx.fillRect(panelX, panelY, panelW, panelH);
+
+            // Panel border
+            ctx.strokeStyle = 'rgba(150, 120, 60, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+            // Corner marks
+            const cSize = 10;
+            ctx.strokeStyle = 'rgba(180, 145, 65, 0.8)';
+            ctx.lineWidth = 1.5;
+            for (const [cx2, cy2, sx, sy] of [
+                [panelX, panelY, 1, 1], [panelX + panelW, panelY, -1, 1],
+                [panelX, panelY + panelH, 1, -1], [panelX + panelW, panelY + panelH, -1, -1]
+            ]) {
+                ctx.beginPath();
+                ctx.moveTo(cx2 + sx * cSize, cy2);
+                ctx.lineTo(cx2, cy2);
+                ctx.lineTo(cx2, cy2 + sy * cSize);
+                ctx.stroke();
+            }
+
+            // ===== BACK BUTTON =====
             const backPos = this.getBackButtonPosition();
-            this.renderButton(ctx, backPos, 'BACK', this.buttons.back.hovered);
+            this.renderButton(ctx, backPos, '\u2190  BACK', this.buttons.back.hovered);
 
-            // Title
-            ctx.globalAlpha = Math.max(0.1, this.titleOpacity);
+            // ===== TITLE =====
+            ctx.globalAlpha = Math.max(0.05, this.titleOpacity);
+            ctx.font = 'bold 52px Georgia, serif';
             ctx.textAlign = 'center';
-            ctx.font = 'bold 64px serif';
-            ctx.fillStyle = '#d4af37';
-            ctx.strokeStyle = '#8b7355';
-            ctx.lineWidth = 2;
-            ctx.fillText('OPTIONS', canvas.width / 2, 100);
-            ctx.strokeText('OPTIONS', canvas.width / 2, 100);
+            ctx.textBaseline = 'alphabetic';
+            // shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillText('OPTIONS', canvas.width / 2 + 2, panelY - 18 + 2);
+            // main
+            ctx.fillStyle = '#C8A84B';
+            ctx.fillText('OPTIONS', canvas.width / 2, panelY - 18);
+            ctx.globalAlpha = 1;
 
-            // Content
+            // Divider under title
+            const divY = panelY + 28;
+            ctx.strokeStyle = 'rgba(150, 120, 60, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(panelX + 20, divY);
+            ctx.lineTo(panelX + panelW - 20, divY);
+            ctx.stroke();
+
+            // ===== CONTENT =====
             if (this.showContent) {
                 ctx.globalAlpha = this.contentOpacity;
 
                 const centerX = canvas.width / 2;
                 this.updateSliderPositions();
 
-                // Music Volume
-                ctx.font = '18px serif';
-                ctx.fillStyle = '#c9a876';
+                // Section label
+                ctx.font = '13px Arial, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('Audio Settings', centerX, canvas.height / 2 - 130);
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(180, 155, 100, 0.7)';
+                ctx.fillText('\u266a  AUDIO  \u266a', centerX, this.musicVolumeSlider.y - 52);
 
                 this.renderSlider(ctx, this.musicVolumeSlider, this.musicVolume, 'Music Volume');
                 this.renderSlider(ctx, this.sfxVolumeSlider, this.sfxVolume, 'Sound Effects');
 
-                // Graphics Quality
-                ctx.font = '18px serif';
-                ctx.fillStyle = '#c9a876';
-                ctx.textAlign = 'center';
-                ctx.fillText('Graphics Quality', centerX, canvas.height / 2 + 20);
-
-                const graphicsButtonY = canvas.height / 2 + 50;
-                const graphicsButtonWidth = 80;
-                const graphicsGap = 20;
-                const graphicsStartX = centerX - (graphicsButtonWidth * 3 + graphicsGap * 2) / 2;
-
-                const lowPos = { x: graphicsStartX, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-                const mediumPos = { x: graphicsStartX + graphicsButtonWidth + graphicsGap, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-                const highPos = { x: graphicsStartX + (graphicsButtonWidth + graphicsGap) * 2, y: graphicsButtonY, width: graphicsButtonWidth, height: 40 };
-
-                this.renderButton(ctx, lowPos, 'LOW', this.buttons.graphicsLow.hovered, this.graphicsQuality === 'low');
-                this.renderButton(ctx, mediumPos, 'MEDIUM', this.buttons.graphicsMedium.hovered, this.graphicsQuality === 'medium');
-                this.renderButton(ctx, highPos, 'HIGH', this.buttons.graphicsHigh.hovered, this.graphicsQuality === 'high');
+                // Divider
+                ctx.strokeStyle = 'rgba(120, 100, 55, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(panelX + 30, panelY + panelH - 82);
+                ctx.lineTo(panelX + panelW - 30, panelY + panelH - 82);
+                ctx.stroke();
 
                 // Producer button
-                const producerY = canvas.height / 2 + 140;
-                const producerWidth = 240;
-                const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
-                this.renderButton(ctx, producerPos, 'VISIT GAME PRODUCER PAGE', this.buttons.visitProducer.hovered);
+                const producerY = canvas.height / 2 + 100;
+                const producerWidth = 280;
+                const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 42 };
+                this.renderButton(ctx, producerPos, '\u2764  Support the Developer', this.buttons.visitProducer.hovered);
             }
 
             ctx.globalAlpha = 1;
 
         } catch (error) {
             console.error('OptionsMenu render error:', error);
-            ctx.fillStyle = '#2a1a0f';
-            ctx.fillRect(0, 0, ctx.canvas.width || 800, ctx.canvas.height || 600);
-            ctx.fillStyle = '#ff0000';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('OptionsMenu Error', (ctx.canvas.width || 800) / 2, (ctx.canvas.height || 600) / 2);
         }
     }
 }

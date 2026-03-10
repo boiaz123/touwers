@@ -4991,40 +4991,33 @@ export class UIManager {
         const content = document.getElementById('ingame-options-content');
         if (!content) return;
 
-        // Clear existing content
-        content.innerHTML = '';
+        // Read current volumes from AudioManager so sliders show correct state
+        const currentMusicVol = this.stateManager.audioManager
+            ? Math.round(this.stateManager.audioManager.getMusicVolume() * 100) : 70;
+        const currentSFXVol = this.stateManager.audioManager
+            ? Math.round(this.stateManager.audioManager.getSFXVolume() * 100) : 80;
 
-        // Create volume controls and other options
-        const optionsHTML = `
-            <div style="color: var(--primary-gold-light); font-family: Arial, sans-serif;">
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Music Volume</label>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <input type="range" id="music-volume-slider" min="0" max="100" value="70" style="flex: 1; cursor: pointer;">
-                        <span id="music-volume-display" style="width: 50px; text-align: right;">70%</span>
+        content.innerHTML = `
+            <div class="ingame-options-body">
+                <div class="ingame-options-row">
+                    <label class="ingame-options-label">Music Volume</label>
+                    <div class="ingame-options-slider-row">
+                        <input type="range" id="music-volume-slider" min="0" max="100" value="${currentMusicVol}" class="ingame-options-slider">
+                        <span id="music-volume-display" class="ingame-options-pct">${currentMusicVol}%</span>
                     </div>
                 </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">SFX Volume</label>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <input type="range" id="sfx-volume-slider" min="0" max="100" value="100" style="flex: 1; cursor: pointer;">
-                        <span id="sfx-volume-display" style="width: 50px; text-align: right;">100%</span>
+                <div class="ingame-options-row">
+                    <label class="ingame-options-label">Sound Effects</label>
+                    <div class="ingame-options-slider-row">
+                        <input type="range" id="sfx-volume-slider" min="0" max="100" value="${currentSFXVol}" class="ingame-options-slider">
+                        <span id="sfx-volume-display" class="ingame-options-pct">${currentSFXVol}%</span>
                     </div>
                 </div>
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Graphics Quality</label>
-                    <div style="display: flex; gap: 0.8rem;">
-                        <button id="graphics-low-btn" class="graphics-option-btn" data-quality="low" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">Low</button>
-                        <button id="graphics-med-btn" class="graphics-option-btn" data-quality="medium" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">Medium</button>
-                        <button id="graphics-high-btn" class="graphics-option-btn" data-quality="high" style="padding: 0.6rem 1rem; background: rgba(74, 58, 47, 0.95); border: 2px solid #d4af37; color: var(--primary-gold-light); cursor: pointer; border-radius: 0.3rem; font-weight: bold;">High</button>
-                    </div>
-                </div>
+                <div class="ingame-options-divider"></div>
+                <button id="ingame-support-btn" class="ingame-options-support-btn">\u2764\ufe0f  Support the Developer</button>
             </div>
         `;
 
-        content.innerHTML = optionsHTML;
-
-        // Setup slider handlers
         const musicSlider = document.getElementById('music-volume-slider');
         const sfxSlider = document.getElementById('sfx-volume-slider');
         const musicDisplay = document.getElementById('music-volume-display');
@@ -5050,31 +5043,18 @@ export class UIManager {
             });
         }
 
-        // Setup graphics quality buttons
-        const graphicsButtons = document.querySelectorAll('.graphics-option-btn');
-        graphicsButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
+        const supportBtn = document.getElementById('ingame-support-btn');
+        if (supportBtn) {
+            supportBtn.addEventListener('click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                const quality = btn.getAttribute('data-quality');
-                // Placeholder for graphics quality setting
-
+                if (typeof window !== 'undefined' && window.__TAURI__) {
+                    window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
+                } else {
+                    window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
+                }
             });
-
-            btn.addEventListener('mouseenter', () => {
-                btn.style.background = 'linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%)';
-                btn.style.borderColor = '#ffe700';
-                btn.style.color = '#ffe700';
-                btn.style.boxShadow = '0 0 20px rgba(212, 175, 55, 0.5)';
-            });
-
-            btn.addEventListener('mouseleave', () => {
-                btn.style.background = 'rgba(74, 58, 47, 0.95)';
-                btn.style.borderColor = '#d4af37';
-                btn.style.color = 'var(--primary-gold-light)';
-                btn.style.boxShadow = 'none';
-            });
-        });
+        }
     }
 }

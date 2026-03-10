@@ -19,9 +19,11 @@ export class AudioManager {
         this.musicPlaylistMode = false; // If true, plays random tracks from category
         this.boundMusicEndedHandler = null; // Store bound listener for proper removal
         
-        // Volume settings (0.0 - 1.0)
-        this.musicVolume = 0.7;
-        this.sfxVolume = 0.8;
+        // Volume settings (0.0 - 1.0) – loaded from localStorage if available
+        const _savedMusic = parseFloat(localStorage.getItem('touwers_musicVolume'));
+        const _savedSFX   = parseFloat(localStorage.getItem('touwers_sfxVolume'));
+        this.musicVolume = isNaN(_savedMusic) ? 0.7 : _savedMusic;
+        this.sfxVolume   = isNaN(_savedSFX)   ? 0.8 : _savedSFX;
         
         // Track metadata
         this.musicRegistry = {};
@@ -525,6 +527,7 @@ export class AudioManager {
         if (this.musicElement) {
             this.musicElement.volume = this.musicVolume;
         }
+        try { localStorage.setItem('touwers_musicVolume', String(this.musicVolume)); } catch(e) {}
     }
     
     /**
@@ -532,6 +535,7 @@ export class AudioManager {
      */
     setSFXVolume(volume) {
         this.sfxVolume = Math.max(0, Math.min(1, volume));
+        try { localStorage.setItem('touwers_sfxVolume', String(this.sfxVolume)); } catch(e) {}
     }
     
     /**

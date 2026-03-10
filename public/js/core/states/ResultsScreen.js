@@ -501,6 +501,11 @@ export class ResultsScreen {
             ctx.fillStyle = vignette;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+            // === STONE PILLARS (drawn before modal so modal overlaps pillar edges) ===
+            if (this.resultType === 'levelComplete') {
+                this.renderStonePillars(ctx, modalX, modalY);
+            }
+
             // === MODAL BACKGROUND (dark navy gradient) ===
             const modalGrad = ctx.createLinearGradient(modalX, modalY, modalX, modalY + this.modalHeight);
             modalGrad.addColorStop(0, '#1C1A2E');
@@ -509,38 +514,32 @@ export class ResultsScreen {
             ctx.fillStyle = modalGrad;
             ctx.fillRect(modalX, modalY, this.modalWidth, this.modalHeight);
 
-            // Outer glow border
-            ctx.save();
-            ctx.shadowColor = '#D4AF37';
-            ctx.shadowBlur = 18;
-            ctx.strokeStyle = '#D4AF37';
-            ctx.lineWidth = 2;
+            // Modal border - muted gold, no glow
+            ctx.strokeStyle = 'rgba(160, 130, 60, 0.75)';
+            ctx.lineWidth = 1.5;
             ctx.strokeRect(modalX, modalY, this.modalWidth, this.modalHeight);
-            ctx.restore();
 
             // Inner border inset
-            ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+            ctx.strokeStyle = 'rgba(140, 115, 50, 0.25)';
             ctx.lineWidth = 1;
-            ctx.strokeRect(modalX + 6, modalY + 6, this.modalWidth - 12, this.modalHeight - 12);
+            ctx.strokeRect(modalX + 5, modalY + 5, this.modalWidth - 10, this.modalHeight - 10);
 
-            // Corner diamond ornaments
-            const corners = [
-                [modalX, modalY],
-                [modalX + this.modalWidth, modalY],
-                [modalX, modalY + this.modalHeight],
-                [modalX + this.modalWidth, modalY + this.modalHeight]
-            ];
-            ctx.fillStyle = '#D4AF37';
-            for (const [cx2, cy2] of corners) {
-                ctx.save();
-                ctx.translate(cx2, cy2);
-                ctx.rotate(Math.PI / 4);
-                ctx.fillRect(-5, -5, 10, 10);
-                ctx.restore();
+            // Corner markers (small L-shaped marks, no diamonds)
+            const cMark = 12;
+            ctx.strokeStyle = 'rgba(180, 145, 60, 0.6)';
+            ctx.lineWidth = 1.5;
+            for (const [cx2, cy2, sx, sy] of [
+                [modalX, modalY, 1, 1], [modalX + this.modalWidth, modalY, -1, 1],
+                [modalX, modalY + this.modalHeight, 1, -1], [modalX + this.modalWidth, modalY + this.modalHeight, -1, -1]
+            ]) {
+                ctx.beginPath();
+                ctx.moveTo(cx2 + sx * cMark, cy2);
+                ctx.lineTo(cx2, cy2);
+                ctx.lineTo(cx2, cy2 + sy * cMark);
+                ctx.stroke();
             }
 
             // === CONTENT ===
-            this.renderTitle(ctx, modalX, modalY);
             this.renderStats(ctx, modalX, modalY);
 
             // Render loot once we're in the loot or buttons phase
@@ -551,6 +550,14 @@ export class ResultsScreen {
             // Render buttons from countup onwards (immediately visible)
             if (this.animationPhase === 'countup' || this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
                 this.renderButtons(ctx, modalX, modalY);
+            }
+
+            // === CLOTH BANNER (drawn last - on top of everything) ===
+            if (this.resultType === 'levelComplete') {
+                this.renderClothBanner(ctx, modalX, modalY);
+            } else {
+                // For gameOver (shouldn't normally reach here, but just in case)
+                this.renderResultsTitle(ctx, modalX, modalY);
             }
         }
 
@@ -1029,10 +1036,245 @@ export class ResultsScreen {
     }
 
     /**
+     * Render plain title bar for non-victory screens (e.g. game over)
+     */
+    renderResultsTitle(ctx, modalX, modalY) {
+        const headerH = 68;
+        const cx = modalX + this.modalWidth / 2;
+        const hGrad = ctx.createLinearGradient(modalX, modalY, modalX + this.modalWidth, modalY + headerH);
+        hGrad.addColorStop(0, 'rgba(60, 20, 20, 0.85)');
+        hGrad.addColorStop(0.5, 'rgba(100, 30, 30, 0.9)');
+        hGrad.addColorStop(1, 'rgba(60, 20, 20, 0.85)');
+        ctx.fillStyle = hGrad;
+        ctx.fillRect(modalX, modalY, this.modalWidth, headerH);
+        ctx.strokeStyle = '#A04040';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(modalX + 16, modalY + headerH - 1);
+        ctx.lineTo(modalX + this.modalWidth - 16, modalY + headerH - 1);
+        ctx.stroke();
+        ctx.font = 'bold 34px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillText('MISSION FAILED', cx + 2, modalY + headerH / 2 + 2);
+        ctx.fillStyle = '#FF6B6B';
+        ctx.fillText('MISSION FAILED', cx, modalY + headerH / 2);
+    }
+
+    /**
+     * Render stone pillars flanking the modal
+     */
+    renderStonePillars(ctx, modalX, modalY) {
+        const pillarW = 42;
+        const pillarAbove = 100;
+        const pillarTotalH = this.modalHeight + pillarAbove;
+        const leftPX = modalX - pillarW;
+        const rightPX = modalX + this.modalWidth;
+        const pillarTopY = modalY - pillarAbove;
+
+        this.drawStonePillar(ctx, leftPX, pillarTopY, pillarW, pillarTotalH);
+        this.drawStonePillar(ctx, rightPX, pillarTopY, pillarW, pillarTotalH);
+    }
+
+    /**
+     * Draw a single stone pillar at (x,y) with given width and height
+     */
+    drawStonePillar(ctx, x, y, w, h) {
+        const capH = 22;
+        const capX = x - 10;
+        const capW = w + 20;
+
+        // Pillar capital
+        const capGrad = ctx.createLinearGradient(capX, y, capX + capW, y);
+        capGrad.addColorStop(0, '#484440');
+        capGrad.addColorStop(0.4, '#7A7268');
+        capGrad.addColorStop(0.6, '#7A7268');
+        capGrad.addColorStop(1, '#484440');
+        ctx.fillStyle = capGrad;
+        ctx.fillRect(capX, y, capW, capH);
+
+        // Sub-capital groove
+        ctx.fillStyle = 'rgba(30, 28, 24, 0.7)';
+        ctx.fillRect(x - 5, y + capH, w + 10, 5);
+
+        // Pillar shaft
+        const shaftGrad = ctx.createLinearGradient(x, y + capH + 5, x + w, y + capH + 5);
+        shaftGrad.addColorStop(0, '#4A4640');
+        shaftGrad.addColorStop(0.15, '#6A6560');
+        shaftGrad.addColorStop(0.5, '#787068');
+        shaftGrad.addColorStop(0.85, '#5A5550');
+        shaftGrad.addColorStop(1, '#3A3830');
+        ctx.fillStyle = shaftGrad;
+        ctx.fillRect(x, y + capH + 5, w, h - capH - 5);
+
+        // Horizontal stone block lines
+        const blockH = 28;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(20, 18, 14, 0.65)';
+        ctx.lineWidth = 1;
+        for (let by = y + capH + 5 + blockH; by < y + h; by += blockH) {
+            ctx.beginPath();
+            ctx.moveTo(x, by);
+            ctx.lineTo(x + w, by);
+            ctx.stroke();
+            // Mortar highlight
+            ctx.strokeStyle = 'rgba(165, 150, 120, 0.12)';
+            ctx.beginPath();
+            ctx.moveTo(x, by + 1);
+            ctx.lineTo(x + w, by + 1);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(20, 18, 14, 0.65)';
+        }
+        ctx.restore();
+
+        // Left-edge highlight
+        ctx.fillStyle = 'rgba(220, 205, 175, 0.08)';
+        ctx.fillRect(x, y + capH + 5, 4, h - capH - 5);
+        // Right-edge shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillRect(x + w - 4, y + capH + 5, 4, h - capH - 5);
+
+        // Capital top border
+        ctx.strokeStyle = 'rgba(130, 115, 85, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(capX, y, capW, capH);
+    }
+
+    /**
+     * Render the cloth victory banner stretched between the two pillar tops
+     */
+    renderClothBanner(ctx, modalX, modalY) {
+        const pillarW = 42;
+        const pillarAbove = 100;
+        const leftCapRightEdge = modalX - pillarW + pillarW + 10;   // = modalX + 10
+        const rightCapLeftEdge = modalX + this.modalWidth - 10;
+        const bannerX = leftCapRightEdge;
+        const bannerW = rightCapLeftEdge - bannerX;
+        const bannerY = modalY - pillarAbove + 8;
+        const bannerH = 78;
+        const droop = 14;
+        const scallops = 4;
+
+        ctx.save();
+
+        // === Cloth shape path ===
+        ctx.beginPath();
+        // Top edge with slight natural sag
+        ctx.moveTo(bannerX, bannerY);
+        ctx.bezierCurveTo(
+            bannerX + bannerW * 0.33, bannerY + droop * 0.25,
+            bannerX + bannerW * 0.67, bannerY + droop * 0.25,
+            bannerX + bannerW, bannerY
+        );
+        // Right side
+        ctx.lineTo(bannerX + bannerW, bannerY + bannerH);
+        // Scalloped bottom
+        const scW = bannerW / scallops;
+        for (let i = scallops; i > 0; i--) {
+            const sx = bannerX + i * scW;
+            const ex = bannerX + (i - 1) * scW;
+            ctx.bezierCurveTo(
+                sx - scW * 0.25, bannerY + bannerH + droop,
+                ex + scW * 0.25, bannerY + bannerH + droop,
+                ex, bannerY + bannerH
+            );
+        }
+        ctx.lineTo(bannerX, bannerY);
+        ctx.closePath();
+
+        // Cloth fill - deep crimson
+        const clothGrad = ctx.createLinearGradient(bannerX, bannerY, bannerX, bannerY + bannerH + droop);
+        clothGrad.addColorStop(0, '#6B1515');
+        clothGrad.addColorStop(0.3, '#7E1D1D');
+        clothGrad.addColorStop(0.7, '#5A1010');
+        clothGrad.addColorStop(1, '#3E0A0A');
+        ctx.fillStyle = clothGrad;
+        ctx.fill();
+
+        // Side shadow overlays for fold depth
+        ctx.save();
+        ctx.clip();
+        const leftFold = ctx.createLinearGradient(bannerX, bannerY, bannerX + 30, bannerY);
+        leftFold.addColorStop(0, 'rgba(0,0,0,0.35)');
+        leftFold.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = leftFold;
+        ctx.fillRect(bannerX, bannerY, 30, bannerH + droop + 10);
+        const rightFold = ctx.createLinearGradient(bannerX + bannerW - 30, bannerY, bannerX + bannerW, bannerY);
+        rightFold.addColorStop(0, 'rgba(0,0,0,0)');
+        rightFold.addColorStop(1, 'rgba(0,0,0,0.35)');
+        ctx.fillStyle = rightFold;
+        ctx.fillRect(bannerX + bannerW - 30, bannerY, 30, bannerH + droop + 10);
+        ctx.restore();
+
+        // Gold border on cloth
+        ctx.strokeStyle = 'rgba(185, 150, 55, 0.65)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Top gold trim bar
+        ctx.strokeStyle = '#C8A84B';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(bannerX, bannerY);
+        ctx.bezierCurveTo(
+            bannerX + bannerW * 0.33, bannerY + droop * 0.25,
+            bannerX + bannerW * 0.67, bannerY + droop * 0.25,
+            bannerX + bannerW, bannerY
+        );
+        ctx.stroke();
+
+        // Gold fringe threads at scallop tips
+        ctx.strokeStyle = 'rgba(200, 168, 75, 0.7)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < scallops; i++) {
+            const tipX = bannerX + (i + 0.5) * scW;
+            const tipY = bannerY + bannerH + droop;
+            const fringeCount = 5;
+            for (let f = 0; f < fringeCount; f++) {
+                const fx = tipX + (f - (fringeCount - 1) / 2) * 4;
+                ctx.beginPath();
+                ctx.moveTo(fx, tipY - 4);
+                ctx.lineTo(fx, tipY + 8);
+                ctx.stroke();
+            }
+        }
+
+        // === VICTORY TEXT ===
+        const cx = bannerX + bannerW / 2;
+        const ty = bannerY + bannerH / 2 + 4;
+        ctx.font = 'bold 30px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Dark drop shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillText('You are Victorious', cx + 2, ty + 2);
+
+        // Subtle gold under-glow
+        ctx.shadowColor = 'rgba(220, 185, 80, 0.3)';
+        ctx.shadowBlur = 6;
+
+        // Main parchment text
+        ctx.fillStyle = '#F2DEB3';
+        ctx.fillText('You are Victorious', cx, ty);
+
+        ctx.shadowBlur = 0;
+
+        // Very subtle white highlight
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('You are Victorious', cx, ty - 2);
+        ctx.globalAlpha = 1;
+
+        ctx.restore();
+    }
+
+    /**
      * Render statistics with count-up animations - styled rows
      */
     renderStats(ctx, modalX, modalY) {
-        const sectionY = modalY + 76;
+        const sectionY = modalY + 32;
         const sectionH = 104;
         const rowH = 46;
         const colW = this.modalWidth / 2;
