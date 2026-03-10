@@ -600,7 +600,7 @@ export class UIManager {
             case 'cannon':
                 statsHTML = `
                     <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)} <span style="color: #c9a876;">(AoE)</span></div>
-                    <div><span>💥 Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 35, 'px')}</div>
+                    <div><span>💥 Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 50, 'px')}</div>
                     <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
@@ -619,7 +619,8 @@ export class UIManager {
                 break;
             case 'poison':
                 statsHTML = `
-                    <div><span>☠️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>🎯 Hit Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>☠️ Poison Tick:</span> ${statVal(s.poisonTickDamage || 8, s.basePoisonTickDamage || 8, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(20s duration)</span></div>
                     <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;

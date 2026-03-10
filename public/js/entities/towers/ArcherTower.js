@@ -3,9 +3,9 @@ import { Tower } from './Tower.js';
 export class ArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.range = 140;
-        this.damage = 15;
-        this.fireRate = 1.5;
+        this.range = 155;
+        this.damage = 20;
+        this.fireRate = 1.8;
         
         // Armor pierce upgrade - percentage of enemy armor to ignore
         // Each upgrade level = 5% armor piercing
@@ -409,11 +409,11 @@ export class ArcherTower extends Tower {
     static getInfo() {
         return {
             name: 'Archer Tower',
-            description: 'Fast-firing tower with good range but lower damage.',
-            damage: '15',
-            range: '140',
-            fireRate: '1.5/sec',
-            cost: 75,
+            description: 'Fast-firing tower with long range. Gains armor piercing through Forge upgrades.',
+            damage: '20',
+            range: '155',
+            fireRate: '1.8/sec',
+            cost: 90,
             icon: '🏹'
         };
     }

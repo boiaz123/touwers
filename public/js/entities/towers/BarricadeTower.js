@@ -4,7 +4,7 @@ export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 120;
-        this.fireRate = 0.1; // Higher base fire rate for multiple simultaneous slow zones
+        this.fireRate = 0.5; // Fires a barrel every 2 seconds
         
         this.defenders = [
             { angle: 0, pushAnimation: 0, hasBarrel: true },
@@ -132,23 +132,25 @@ export class BarricadeTower extends Tower {
                 defender.pushAnimation = 1;
                 defender.hasBarrel = false;
                 
-                // Aim at the target's current position
-                const targetX = this.target.x;
-                const targetY = this.target.y;
+                const rollSpeed = 200;
+                
+                // Predict where the target will be when the barrel arrives
+                const predicted = this.predictEnemyPosition(this.target, rollSpeed);
+                const targetX = predicted ? predicted.x : this.target.x;
+                const targetY = predicted ? predicted.y : this.target.y;
                 
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
                 const distance = Math.hypot(dx, dy);
-                const rollSpeed = 150;
                 
-                // Barrel travels exactly to the target position
-                const barrelLife = distance / rollSpeed;
+                // Barrel life is time to reach predicted target + small buffer
+                const barrelLife = distance / rollSpeed + 0.3;
                 
                 this.rollingBarrels.push({
                     x: this.x + Math.cos(defender.angle) * 25,
                     y: this.y + Math.sin(defender.angle) * 25,
-                    vx: (dx / distance) * rollSpeed,
-                    vy: (dy / distance) * rollSpeed,
+                    vx: distance > 0 ? (dx / distance) * rollSpeed : 0,
+                    vy: distance > 0 ? (dy / distance) * rollSpeed : 0,
                     rotation: 0,
                     rotationSpeed: 6,
                     life: barrelLife,
@@ -164,7 +166,7 @@ export class BarricadeTower extends Tower {
                     if (defender) {
                         defender.hasBarrel = true;
                     }
-                }, 3000 + Math.random() * 2000);
+                }, 1500 + Math.random() * 1000);
             }
         }
     }
@@ -646,7 +648,7 @@ export class BarricadeTower extends Tower {
             description: 'Defenders roll barrels to create rubble clouds that slow enemies. Multiple clouds can exist simultaneously.',
             damage: 'None',
             range: '120 px',
-            fireRate: '0.2',
+            fireRate: '0.5/sec',
             cost: 90,
             icon: '🪵'
         };

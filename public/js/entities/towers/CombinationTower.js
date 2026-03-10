@@ -3,9 +3,9 @@ import { Tower } from './Tower.js';
 export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.range = 110;
-        this.damage = 35;
-        this.fireRate = 0.7;
+        this.range = 140;
+        this.damage = 55;
+        this.fireRate = 0.9;
         
         // Combination spell system
         this.selectedSpell = null; // Will be set to first unlocked spell
@@ -108,7 +108,7 @@ export class CombinationTower extends Tower {
     }
     
     chainToNearbyEnemies(originalTarget, damage, damageType) {
-        const chainRange = 80;
+        const chainRange = 100;
         if (!this.enemies) return;
         
         this.enemies.forEach(enemy => {
@@ -770,11 +770,11 @@ export class CombinationTower extends Tower {
     static getInfo() {
         return {
             name: 'Combination Tower',
-            description: 'Advanced tower that casts combination spells. Requires Academy Level 1 and gem investments to unlock spells.',
-            damage: '35',
-            range: '110',
-            fireRate: '0.7/sec',
-            cost: 200,
+            description: 'Advanced tower that casts devastating combination spells. Requires Academy Level 1 and gem investments to unlock spells.',
+            damage: '55 + combination effects',
+            range: '140',
+            fireRate: '0.9/sec',
+            cost: 275,
             icon: '⚡'
         };
     }

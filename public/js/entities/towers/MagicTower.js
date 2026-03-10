@@ -3,9 +3,9 @@ import { Tower } from './Tower.js';
 export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.range = 110;
-        this.damage = 30;
-        this.fireRate = 0.8;
+        this.range = 130;
+        this.damage = 40;
+        this.fireRate = 1.0;
         
         // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
@@ -524,10 +524,10 @@ export class MagicTower extends Tower {
         return {
             name: 'Magic Tower',
             description: 'Elemental tower with selectable damage types. Requires Magic Academy.',
-            damage: '30 + elemental bonuses',
-            range: '110',
-            fireRate: '0.8/sec',
-            cost: 150,
+            damage: '40 + elemental bonuses',
+            range: '130',
+            fireRate: '1.0/sec',
+            cost: 175,
             icon: '✨'
         };
     }

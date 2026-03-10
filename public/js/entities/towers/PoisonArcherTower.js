@@ -4,8 +4,8 @@ export class PoisonArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 130;
-        this.damage = 18;
-        this.fireRate = 0.8;
+        this.damage = 10;
+        this.fireRate = 0.4;
         this.cooldown = 0;
         this.target = null;
         
@@ -185,7 +185,7 @@ export class PoisonArcherTower extends Tower {
     }
     
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
-        const basePoisonDamage = 1;
+        const basePoisonDamage = 8;
         const poisonDuration = 20.0;
         
         // Refresh poison if already applied, or create new poison effect
@@ -492,10 +492,10 @@ export class PoisonArcherTower extends Tower {
     static getInfo() {
         return {
             name: 'Poison Archer',
-            description: 'Ranger shoots poison arrows that create toxic clouds, dealing damage over time.',
-            damage: '0 direct + 4 DoT/sec',
+            description: 'Ranger shoots poison arrows that apply a powerful toxin, dealing heavy damage over time. Low fire rate but devastating sustained DPS.',
+            damage: '10 direct + 8 poison/2s',
             range: '130',
-            fireRate: '0.8/sec',
+            fireRate: '0.4/sec',
             cost: 120,
             icon: '🌿'
         };

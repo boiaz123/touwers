@@ -43,8 +43,8 @@ export class TowerForge extends Building {
             'archer': { level: 0, baseCost: 100, damageEffect: 8, pierceEffect: 5 },
             
             // Poison upgrades - available at forge level 2+
-            // Damage upgrades: +1, +2, +2, +3, +5 (cumulative: 1, 3, 5, 8, 13)
-            'poison': { level: 0, baseCost: 100, effect: [1, 2, 2, 3, 5] },
+            // Tick damage upgrades: +2, +3, +3, +4, +6 (cumulative: 2, 5, 8, 12, 18)
+            'poison': { level: 0, baseCost: 100, effect: [2, 3, 3, 4, 6] },
             
             // Cannon upgrades - available at forge level 3+
             'cannon': { level: 0, baseCost: 120, damageEffect: 10, radiusEffect: 5 }
@@ -1072,7 +1072,7 @@ export class TowerForge extends Building {
             options.push({
                 id: 'poison',
                 name: 'Poison Archer Tower Upgrade',
-                description: `Increase Poison Archer Tower base damage (cumulative: +1, +2, +2, +3, +5)`,
+                description: `Increase Poison Archer Tower poison tick damage (cumulative: +2, +5, +8, +12, +18)`,
                 level: this.upgrades.poison.level,
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.poison.baseCost,

@@ -625,9 +625,8 @@ export class TowerManager {
                 break;
                 
             case 'PoisonArcherTower':
-                if (multipliers.poisonDamageBonus > 0) {
-                    tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.poisonDamageBonus;
-                }
+                // Note: poisonDamageBonus applies only to poison tick damage (handled via towerForgeBonus parameter)
+                // tower.damage stays as the direct hit marker value; do NOT add poisonDamageBonus here
                 break;
                 
             case 'CannonTower':
@@ -635,7 +634,7 @@ export class TowerManager {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
                 }
                 if (multipliers.cannonRadiusBonus > 0) {
-                    tower.splashRadius = (tower.originalSplashRadius || 35) + multipliers.cannonRadiusBonus;
+                    tower.splashRadius = (tower.originalSplashRadius || 50) + multipliers.cannonRadiusBonus;
                 }
                 break;
         }
@@ -902,14 +901,16 @@ export class TowerManager {
         // Base stats per tower type (from constructors)
         const baseStats = {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
-            'archer':      { damage: 15,  range: 140, fireRate: 1.5 },
-            'cannon':      { damage: 40,  range: 120, fireRate: 0.4, splashRadius: 35 },
-            'barricade':   { damage: 0,   range: 120, fireRate: 0.1, capacity: 4, duration: 4.0 },
-            'poison':      { damage: 18,  range: 130, fireRate: 0.8 },
-            'magic':       { damage: 30,  range: 110, fireRate: 0.8 },
+            'archer':      { damage: 20,  range: 155, fireRate: 1.8 },
+            'cannon':      { damage: 70,  range: 155, fireRate: 0.4, splashRadius: 50 },
+            'barricade':   { damage: 0,   range: 120, fireRate: 0.5, capacity: 4, duration: 4.0 },
+            'poison':      { damage: 10,  range: 130, fireRate: 0.4 },
+            'magic':       { damage: 40,  range: 130, fireRate: 1.0 },
             'guard-post':  { damage: 0,   range: 0,   fireRate: 0 },
-            'combination': { damage: 35,  range: 110, fireRate: 0.7 }
+            'combination': { damage: 55,  range: 140, fireRate: 0.9 }
         };
+        
+        const BASE_POISON_TICK_DAMAGE = 8; // Base poison damage per tick (every 2s)
         
         const base = baseStats[type];
         if (!base) return null;
@@ -929,11 +930,11 @@ export class TowerManager {
             const m = this.cachedForges[0].getUpgradeMultipliers();
             
             // Map tower type to forge key
+            // NOTE: poison is NOT in forgeMap — its forge bonus applies to tick damage, handled separately below
             const forgeMap = {
                 'basic': { damageKey: 'basicDamageBonus' },
                 'archer': { damageKey: 'archerDamageBonus', armorPierceKey: 'archerArmorPierceBonus' },
                 'cannon': { damageKey: 'cannonDamageBonus', radiusKey: 'cannonRadiusBonus' },
-                'poison': { damageKey: 'poisonDamageBonus' },
                 'barricade': { capacityKey: 'barricadeCapacityBonus', durationKey: 'barricadeDurationBonus' }
             };
             
@@ -946,7 +947,7 @@ export class TowerManager {
                     result.armorPiercing = m[mapping.armorPierceKey];
                 }
                 if (mapping.radiusKey && m[mapping.radiusKey] > 0) {
-                    result.splashRadius = (base.splashRadius || 35) + m[mapping.radiusKey];
+                    result.splashRadius = (base.splashRadius || 50) + m[mapping.radiusKey];
                 }
                 if (mapping.capacityKey && m[mapping.capacityKey] > 0) {
                     result.capacity = base.capacity + m[mapping.capacityKey];
@@ -954,6 +955,18 @@ export class TowerManager {
                 if (mapping.durationKey && m[mapping.durationKey] > 0) {
                     result.duration = base.duration + m[mapping.durationKey];
                 }
+            }
+            
+            // Special case: poison tick damage is separate from direct hit damage
+            if (type === 'poison') {
+                result.poisonTickDamage = BASE_POISON_TICK_DAMAGE + (m.poisonDamageBonus || 0);
+                result.basePoisonTickDamage = BASE_POISON_TICK_DAMAGE;
+            }
+        } else {
+            // No forge: just base poison tick damage
+            if (type === 'poison') {
+                result.poisonTickDamage = BASE_POISON_TICK_DAMAGE;
+                result.basePoisonTickDamage = BASE_POISON_TICK_DAMAGE;
             }
         }
         

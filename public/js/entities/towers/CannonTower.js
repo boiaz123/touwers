@@ -3,10 +3,10 @@ import { Tower } from './Tower.js';
 export class CannonTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.range = 120;
-        this.damage = 40;
-        this.splashRadius = 35;
-        this.originalSplashRadius = 35; // Store original for upgrades
+        this.range = 155;
+        this.damage = 70;
+        this.splashRadius = 50;
+        this.originalSplashRadius = 50; // Store original for upgrades
         this.fireRate = 0.4;
         
         this.trebuchetAngle = 0;
@@ -522,11 +522,11 @@ export class CannonTower extends Tower {
     static getInfo() {
         return {
             name: 'Trebuchet Tower',
-            description: 'Robust stone tower with trebuchet that hurls accurate fireballs.',
-            damage: '40 (AoE)',
-            range: '120',
+            description: 'Powerful stone tower with a massive trebuchet. Deals heavy area damage at long range.',
+            damage: '70 (AoE)',
+            range: '155',
             fireRate: '0.4/sec',
-            cost: 100,
+            cost: 160,
             icon: '💥'
         };
     }
