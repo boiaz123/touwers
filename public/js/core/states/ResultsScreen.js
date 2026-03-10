@@ -37,7 +37,7 @@ export class ResultsScreen {
         this.animationPhase = 'victory'; // victory, countup, loot, buttons
         this.phaseTime = 0;
         this.phaseDuration = {
-            victory: 2.0,    // Sword clash VICTORY animation - 3 seconds
+            victory: 2.8,    // Sword clash + cinematic VICTORY text animation
             countup: 3.0,    // Slower score counting
             loot: 4.0,       // Slower loot reveal
             buttons: 0.5
@@ -139,7 +139,7 @@ export class ResultsScreen {
             } else {
                 this.buttons = [
                     { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
-                    { label: 'NEXT LEVEL', action: 'nextLevel' }
+                    { label: 'RETURN TO CAMPAIGN MAP', action: 'campaignMap' }
                 ];
             }
         } else {
@@ -179,13 +179,11 @@ export class ResultsScreen {
                 }
                 this.stateManager.changeState('settlementHub');
                 break;
+            case 'campaignMap':
             case 'nextLevel':
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playRandomSettlementTheme();
                 }
-                this.stateManager.selectedLevelInfo = {
-                    level: this.resultData.level + 1
-                };
                 this.stateManager.changeState('levelSelect');
                 break;
             case 'retry':
@@ -330,15 +328,54 @@ export class ResultsScreen {
     }
 
     /**
-     * Spawn loot reveal animation (no splash particles - effects on tiles)
+     * Spawn loot reveal animation with splash particles
      */
     spawnLootAnimation(index, isLegendary = false) {
         const lootId = this.acquiredLoot[index];
         if (!lootId) return;
 
-        // Play collect sound - all loot uses the normal loot-collect sound
+        // Play collect sound
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.playSFX('loot-collect');
+        }
+
+        // Calculate item's screen position for splash particles
+        const canvas = this.stateManager.canvas;
+        const modalX = (canvas.width - this.modalWidth) / 2;
+        const modalY = (canvas.height - this.modalHeight) / 2;
+        const startY = modalY + this.padding + 200;
+        const itemsPerRow = 5;
+        const itemsPerPage = 15;
+        const itemWidth = 130;
+        const itemHeight = 92;
+        const itemGap = 8;
+        const containerX = modalX + (this.modalWidth - (itemsPerRow * itemWidth + (itemsPerRow - 1) * itemGap)) / 2;
+        const pageItemIndex = index % itemsPerPage;
+        const row = Math.floor(pageItemIndex / itemsPerRow);
+        const col = pageItemIndex % itemsPerRow;
+        const cx = containerX + col * (itemWidth + itemGap) + itemWidth / 2;
+        const cy = startY + row * (itemHeight + itemGap) + itemHeight / 2;
+
+        // Spawn radial splash particles in rarity color
+        const lootInfo = LootRegistry.getLootType(lootId);
+        const rarityColor = this.getRarityColor(lootId);
+        const count = isLegendary ? 22 : (lootInfo?.rarity === 'epic' || lootInfo?.rarity === 'rare' ? 15 : 10);
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+            const speed = 70 + Math.random() * 110;
+            const life = 0.35 + Math.random() * 0.3;
+            this.particles.push({
+                x: cx,
+                y: cy,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 50,
+                gravity: 150,
+                life: life,
+                maxLife: life,
+                color: rarityColor,
+                size: 2 + Math.random() * 3
+            });
         }
     }
 
@@ -366,8 +403,8 @@ export class ResultsScreen {
     handleKeyPress(key) {
         if (!this.isShowing) return;
 
-        // Only allow button interactions during buttons phase
-        if (this.animationPhase !== 'buttons') return;
+        // Allow button interactions from countup phase onwards (not during victory animation)
+        if (this.animationPhase === 'victory') return;
 
         if (key === 'ArrowLeft') {
             this.selectedButtonIndex = Math.max(0, this.selectedButtonIndex - 1);
@@ -384,8 +421,8 @@ export class ResultsScreen {
     handleClick(x, y) {
         if (!this.isShowing) return;
         
-        // Allow button clicks during buttons phase (normal results) or defeat phase
-        if (this.animationPhase !== 'buttons' && this.animationPhase !== 'defeat') return;
+        // Allow button clicks from countup phase onwards, and on defeat screen
+        if (this.animationPhase === 'victory') return;
 
         this.buttons.forEach((button, index) => {
             const pos = this.getButtonPosition(index);
@@ -405,25 +442,27 @@ export class ResultsScreen {
         
         let buttonsStartX, buttonsY;
         
+        const bW = 220;
+        const bH = 48;
+        const bGap = 32;
+
         if (isDefeatScreen) {
-            // Center buttons on defeat screen
-            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-            buttonsStartX = (canvas.width - totalButtonWidth) / 2;
+            const tot = this.buttons.length * bW + (this.buttons.length - 1) * bGap;
+            buttonsStartX = (canvas.width - tot) / 2;
             buttonsY = canvas.height / 2 + 200;
         } else {
-            // Normal results screen button positioning
             const modalX = (canvas.width - this.modalWidth) / 2;
             const modalY = (canvas.height - this.modalHeight) / 2;
-            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-            buttonsStartX = modalX + (this.modalWidth - totalButtonWidth) / 2;
-            buttonsY = modalY + this.modalHeight - this.padding - this.buttonHeight;
+            const tot = this.buttons.length * bW + (this.buttons.length - 1) * bGap;
+            buttonsStartX = modalX + (this.modalWidth - tot) / 2;
+            buttonsY = modalY + this.modalHeight - this.padding - bH - 4;
         }
 
         return {
-            x: buttonsStartX + index * (this.buttonWidth + this.buttonGap),
+            x: buttonsStartX + index * (bW + bGap),
             y: buttonsY,
-            width: this.buttonWidth,
-            height: this.buttonHeight
+            width: bW,
+            height: bH
         };
     }
 
@@ -448,28 +487,69 @@ export class ResultsScreen {
         }
         // Draw results screen (stats and loot)
         else {
-            // Draw semi-transparent background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            // === BACKGROUND ===
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw modal background
-            ctx.fillStyle = '#2A2A2A';
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.fillRect(modalX, modalY, this.modalWidth, this.modalHeight);
-            ctx.strokeRect(modalX, modalY, this.modalWidth, this.modalHeight);
+            // Subtle vignette
+            const vignette = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.25,
+                canvas.width / 2, canvas.height / 2, canvas.height * 0.75
+            );
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Render stats and loot panel content
+            // === MODAL BACKGROUND (dark navy gradient) ===
+            const modalGrad = ctx.createLinearGradient(modalX, modalY, modalX, modalY + this.modalHeight);
+            modalGrad.addColorStop(0, '#1C1A2E');
+            modalGrad.addColorStop(0.5, '#18192A');
+            modalGrad.addColorStop(1, '#111120');
+            ctx.fillStyle = modalGrad;
+            ctx.fillRect(modalX, modalY, this.modalWidth, this.modalHeight);
+
+            // Outer glow border
+            ctx.save();
+            ctx.shadowColor = '#D4AF37';
+            ctx.shadowBlur = 18;
+            ctx.strokeStyle = '#D4AF37';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(modalX, modalY, this.modalWidth, this.modalHeight);
+            ctx.restore();
+
+            // Inner border inset
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(modalX + 6, modalY + 6, this.modalWidth - 12, this.modalHeight - 12);
+
+            // Corner diamond ornaments
+            const corners = [
+                [modalX, modalY],
+                [modalX + this.modalWidth, modalY],
+                [modalX, modalY + this.modalHeight],
+                [modalX + this.modalWidth, modalY + this.modalHeight]
+            ];
+            ctx.fillStyle = '#D4AF37';
+            for (const [cx2, cy2] of corners) {
+                ctx.save();
+                ctx.translate(cx2, cy2);
+                ctx.rotate(Math.PI / 4);
+                ctx.fillRect(-5, -5, 10, 10);
+                ctx.restore();
+            }
+
+            // === CONTENT ===
             this.renderTitle(ctx, modalX, modalY);
             this.renderStats(ctx, modalX, modalY);
-            
-            // Always render loot once we're in the loot or buttons phase
+
+            // Render loot once we're in the loot or buttons phase
             if (this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
                 this.renderLoot(ctx, modalX, modalY);
             }
-            
-            // Render buttons ONLY during buttons phase (not during loot to prevent flashing)
-            if (this.animationPhase === 'buttons') {
+
+            // Render buttons from countup onwards (immediately visible)
+            if (this.animationPhase === 'countup' || this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
                 this.renderButtons(ctx, modalX, modalY);
             }
         }
@@ -479,33 +559,62 @@ export class ResultsScreen {
     }
 
     /**
-     * Render victory animation - sword clash with VICTORY text bursting out
-     * Uses the exact sword clash animation from StartScreen for consistency
+     * Render victory animation - sword clash then cinematic VICTORY text reveal
      */
     renderVictoryAnimation(ctx, canvas) {
         const progress = this.phaseTime / this.phaseDuration.victory;
-        
-        // Animation phases: 0-0.45 = sword clash, 0.45-1.0 = victory text burst
-        const clashPhase = Math.min(progress / 0.45, 1.0);
-        const victoryPhase = Math.max((progress - 0.45) / 0.55, 0);
-        
+
+        // Split: 0-0.38 = sword clash, 0.38-1.0 = cinematic victory text
+        const clashPhase = Math.min(progress / 0.38, 1.0);
+        const victoryPhase = Math.max((progress - 0.38) / 0.62, 0);
+
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        
-        // Draw dark background overlay for contrast
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+
+        // Dark background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
         ctx.fillRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
-        
-        // === SWORD CLASH PHASE (0-0.45) ===
+
+        // Subtle golden radial glow in center
+        const bgGlow = ctx.createRadialGradient(0, 0, 20, 0, 0, 400);
+        bgGlow.addColorStop(0, 'rgba(180, 130, 20, 0.18)');
+        bgGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = bgGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 400, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === SWORD CLASH PHASE (0-0.38): full clash animation ===
         if (clashPhase < 1.0) {
             this.renderSwordClash(ctx, clashPhase);
         }
-        
-        // === VICTORY BURST PHASE (0.45-1.0) ===
-        if (victoryPhase > 0) {
-            this.renderVictoryBurst(ctx, victoryPhase);
+
+        // === SWORDS LINGER CROSSED IN BACKGROUND after clash ===
+        if (clashPhase >= 1.0 && victoryPhase < 1.0) {
+            const swordFade = Math.max(0, 1 - victoryPhase * 2.2) * 0.45;
+            if (swordFade > 0) {
+                // Left sword crossed
+                ctx.save();
+                ctx.globalAlpha = swordFade;
+                ctx.translate(-28, 30);
+                ctx.rotate(-Math.PI / 5);
+                this.drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.3);
+                ctx.restore();
+                // Right sword crossed
+                ctx.save();
+                ctx.globalAlpha = swordFade;
+                ctx.translate(28, 30);
+                ctx.rotate(Math.PI / 5);
+                this.drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.3);
+                ctx.restore();
+            }
         }
-        
+
+        // === VICTORY TEXT PHASE (0.38-1.0): cinematic slide-in ===
+        if (victoryPhase > 0) {
+            this.renderVictoryBurst(ctx, victoryPhase, canvas);
+        }
+
         ctx.restore();
     }
 
@@ -644,112 +753,141 @@ export class ResultsScreen {
     }
 
     /**
-     * Render VICTORY text bursting out from sword clash with medieval theming
+     * Render VICTORY text - cinematic drop from top with shockwave and embers
      */
-    renderVictoryBurst(ctx, progress) {
-        // Pop-in flash effect: quick scale with dopamine flash
-        const popDuration = 0.15; // 150ms pop-in effect
-        const popProgress = Math.min(progress / popDuration, 1);
-        
-        // Quick bounce/pop-in using cubic ease-out
-        const popScale = Math.pow(popProgress, 0.5) * (1 + (1 - popProgress) * 0.3);
-        
-        // After pop, smooth scale expansion
-        const expandProgress = Math.max(0, (progress - popDuration) / (1 - popDuration));
-        const expandScale = 1 + expandProgress * 0.3;
-        
-        // Combine pop and expand
-        const baseScale = popProgress < 1 ? popScale : expandScale;
-        const alpha = Math.min(progress * 2.5, 1);
-        
-        // === MEDIEVAL FLASH EFFECT ===
-        // Golden/bronze flash on initial pop (0-0.1s)
-        if (popProgress < 0.7) {
-            const flashAlpha = (1 - popProgress) * 0.4;
-            ctx.fillStyle = `rgba(212, 175, 55, ${flashAlpha})`; // Medieval bronze/gold
+    renderVictoryBurst(ctx, progress, canvas) {
+        // === PHASE 1 (0 - 0.4): Text drops from top with elastic ease ===
+        const dropDuration = 0.4;
+        const dropProgress = Math.min(progress / dropDuration, 1);
+
+        // Elastic ease-out: overshoots slightly then settles
+        const elasticEase = (t) => {
+            if (t <= 0) return 0;
+            if (t >= 1) return 1;
+            return Math.pow(2, -10 * t) * Math.sin((t - 0.075) * (2 * Math.PI) / 0.3) + 1;
+        };
+
+        const dropEased = elasticEase(dropProgress);
+        const dropStartY = -380;
+        const textY = dropStartY * (1 - dropEased); // moves from -380 to 0
+
+        // === PHASE 2 (0.32 - 0.55): Impact shockwave ===
+        const impactStart = 0.32;
+        if (progress > impactStart) {
+            const ip = Math.min((progress - impactStart) / 0.22, 1);
+
+            // Bright golden impact flash
+            const flashAlpha = Math.max(0, (1 - ip) * 0.55);
+            const flashGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 320);
+            flashGrad.addColorStop(0, `rgba(255, 255, 180, ${flashAlpha})`);
+            flashGrad.addColorStop(0.35, `rgba(255, 200, 0, ${flashAlpha * 0.6})`);
+            flashGrad.addColorStop(1, 'rgba(255, 140, 0, 0)');
+            ctx.fillStyle = flashGrad;
             ctx.beginPath();
-            ctx.arc(0, 0, 300 * popScale, 0, Math.PI * 2);
+            ctx.arc(0, 0, 340, 0, Math.PI * 2);
             ctx.fill();
-        }
-        
-        // Radiant glow burst with medieval colors
-        if (popProgress < 1) {
-            const burstAlpha = (1 - popProgress) * 0.3;
-            ctx.strokeStyle = `rgba(201, 169, 97, ${burstAlpha})`; // Muted gold
-            ctx.lineWidth = 3;
-            for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2;
-                const distance = 150 + popProgress * 100;
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(Math.cos(angle) * distance, Math.sin(angle) * distance);
-                ctx.stroke();
+
+            // Three expanding shockwave rings
+            for (let r = 0; r < 3; r++) {
+                const delay = r * 0.08;
+                const rp = Math.min(Math.max((progress - impactStart - delay) / 0.38, 0), 1);
+                if (rp > 0) {
+                    const ringAlpha = Math.max(0, (1 - rp) * 0.75);
+                    const ringRadius = rp * (180 + r * 70);
+                    ctx.strokeStyle = `rgba(212, 175, 55, ${ringAlpha})`;
+                    ctx.lineWidth = Math.max(0.5, 3 - r * 0.8);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            // Radial spark beams
+            const beamAlpha = Math.max(0, (1 - ip) * 0.55);
+            if (beamAlpha > 0.02) {
+                for (let i = 0; i < 18; i++) {
+                    const angle = (i / 18) * Math.PI * 2 + Math.PI / 18;
+                    const innerR = 70 * ip;
+                    const outerR = (130 + (i % 3) * 50) * ip;
+                    ctx.strokeStyle = i % 2 === 0
+                        ? `rgba(255, 215, 0, ${beamAlpha})`
+                        : `rgba(255, 165, 0, ${beamAlpha * 0.7})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
+                    ctx.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
+                    ctx.stroke();
+                }
             }
         }
-        
-        // Draw VICTORY text
+
+        // === DRAW VICTORY TEXT ===
         ctx.save();
-        ctx.scale(baseScale, baseScale);
-        ctx.globalAlpha = alpha;
-        
-        // Medieval-themed font with strong presence
-        ctx.font = 'bold 160px Georgia, serif';
+        ctx.translate(0, textY);
+
+        // Text becomes visible as it descends
+        const textAlpha = Math.min(dropProgress * 3.5, 1);
+
+        // Subtle scale pulse after landing (gentle breathing effect)
+        const postLand = Math.max((progress - dropDuration) / (1 - dropDuration), 0);
+        const pulseScale = 1 + Math.sin(postLand * Math.PI * 1.8) * 0.025;
+        ctx.scale(pulseScale, pulseScale);
+
+        ctx.font = 'bold 148px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
-        // Deep medieval glow layers (bronze/brown tones)
-        ctx.globalAlpha = alpha * 0.4;
-        for (let i = 30; i > 0; i -= 3) {
-            const glossAlpha = (30 - i) / 30 * 0.3;
-            ctx.fillStyle = `rgba(139, 115, 85, ${glossAlpha})`; // Deep brown shadow
+
+        // === GOLDEN GLOW HALO ===
+        ctx.globalAlpha = textAlpha * 0.45;
+        for (let i = 28; i > 0; i -= 5) {
+            ctx.strokeStyle = `rgba(255, 180, 0, ${(28 - i) / 28 * 0.18})`;
             ctx.lineWidth = i;
-            ctx.strokeText('VICTORY!!', 0, 0);
+            ctx.strokeText('VICTORY', 0, 0);
         }
-        
-        // Primary text - golden with medieval sheen
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#C9A961'; // Medieval muted gold
-        ctx.fillText('VICTORY!!', 0, 0);
-        
-        // Secondary outline for heraldic definition - darker bronze
-        ctx.strokeStyle = '#8B7355'; // Dark medieval brown
-        ctx.lineWidth = 3;
-        ctx.globalAlpha = alpha * 0.8;
-        ctx.strokeText('VICTORY!!', 0, 0);
-        
-        // Add shine/highlight on top half of text (heraldic effect)
-        ctx.globalAlpha = alpha * 0.3;
-        ctx.fillStyle = '#F5DEB3'; // Wheat/parchment color for shine
-        ctx.font = 'bold 160px Georgia, serif';
-        ctx.fillText('VICTORY!!', 0, -15);
-        
-        // Ornamental star burst around text (medieval heraldic stars)
-        ctx.globalAlpha = alpha;
-        const starCount = 16;
-        for (let i = 0; i < starCount; i++) {
-            const angle = (i / starCount) * Math.PI * 2 + progress * Math.PI * 2;
-            const baseDistance = 220;
-            const distance = baseDistance + Math.sin(progress * Math.PI * 3 + angle) * 40;
-            const sx = Math.cos(angle) * distance;
-            const sy = Math.sin(angle) * distance;
-            
-            // Medieval star colors: gold and bronze
-            const starVariant = i % 2;
-            let starColor;
-            if (starVariant === 0) {
-                starColor = '#D4AF37'; // Bright gold
-            } else {
-                starColor = '#8B7355'; // Bronze
-            }
-            
-            ctx.fillStyle = starColor;
-            ctx.globalAlpha = alpha * Math.max(0, Math.sin(progress * Math.PI + angle)) * 0.7;
-            
-            // Draw small medieval stars
-            this.drawMedievalStar(ctx, sx, sy, 8);
-        }
-        
+
+        // === DROP SHADOW ===
+        ctx.globalAlpha = textAlpha * 0.6;
+        ctx.fillStyle = 'rgba(60, 40, 0, 0.85)';
+        ctx.fillText('VICTORY', 4, 6);
+
+        // === MAIN TEXT - rich gold ===
+        ctx.globalAlpha = textAlpha;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('VICTORY', 0, 0);
+
+        // === METALLIC OUTLINE ===
+        ctx.strokeStyle = '#7A5C10';
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = textAlpha * 0.85;
+        ctx.strokeText('VICTORY', 0, 0);
+
+        // === TOP HIGHLIGHT - 3D metallic shine ===
+        ctx.globalAlpha = textAlpha * 0.35;
+        ctx.fillStyle = '#FFFDE7';
+        ctx.fillText('VICTORY', 0, -9);
+
         ctx.restore();
+
+        // === PHASE 3 (0.5 - 1.0): Orbiting embers ===
+        if (progress > 0.5) {
+            const emberPhase = (progress - 0.5) / 0.5;
+            const emberCount = 10;
+            for (let i = 0; i < emberCount; i++) {
+                const baseAngle = (i / emberCount) * Math.PI * 2;
+                const angle = baseAngle + progress * 1.4 + Math.sin(progress * 2.5 + i) * 0.3;
+                const orbit = 155 + Math.sin(progress * 3.5 + i * 1.3) * 22;
+                const ex = Math.cos(angle) * orbit;
+                const ey = Math.sin(angle) * orbit + textY * (1 - emberPhase);
+                const eAlpha = Math.max(0, 0.75 * Math.sin(emberPhase * Math.PI + i * 0.5));
+                if (eAlpha < 0.02) continue;
+                ctx.globalAlpha = eAlpha;
+                ctx.fillStyle = i % 3 === 0 ? '#FFD700' : (i % 3 === 1 ? '#FF8C00' : '#FFF176');
+                ctx.beginPath();
+                ctx.arc(ex, ey, 3 + (i % 3), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
     }
 
     /**
@@ -836,81 +974,168 @@ export class ResultsScreen {
     }
 
     /**
-     * Render title
+     * Render title - styled header band
      */
     renderTitle(ctx, modalX, modalY) {
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 40px Arial';
+        const headerH = 68;
+        const cx = modalX + this.modalWidth / 2;
+
+        // Header band gradient
+        const hGrad = ctx.createLinearGradient(modalX, modalY, modalX + this.modalWidth, modalY + headerH);
+        hGrad.addColorStop(0, 'rgba(60, 45, 5, 0.85)');
+        hGrad.addColorStop(0.5, 'rgba(110, 80, 10, 0.9)');
+        hGrad.addColorStop(1, 'rgba(60, 45, 5, 0.85)');
+        ctx.fillStyle = hGrad;
+        ctx.fillRect(modalX, modalY, this.modalWidth, headerH);
+
+        // Thin gold separator line at bottom of header
+        ctx.strokeStyle = '#D4AF37';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(modalX + 16, modalY + headerH - 1);
+        ctx.lineTo(modalX + this.modalWidth - 16, modalY + headerH - 1);
+        ctx.stroke();
+
+        // Small decorative diamonds on separator
+        const diamondPositions = [modalX + 80, cx, modalX + this.modalWidth - 80];
+        ctx.fillStyle = '#D4AF37';
+        for (const dx of diamondPositions) {
+            ctx.save();
+            ctx.translate(dx, modalY + headerH - 1);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillRect(-4, -4, 8, 8);
+            ctx.restore();
+        }
+
+        const titleText = this.resultType === 'levelComplete' ? 'LEVEL COMPLETE' : 'MISSION FAILED';
+        const titleColor = this.resultType === 'levelComplete' ? '#FFD700' : '#FF6B6B';
+
+        // Shadow
+        ctx.font = 'bold 34px Georgia, serif';
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(
-            this.resultType === 'levelComplete' ? 'LEVEL COMPLETE!' : 'MISSION FAILED',
-            modalX + this.modalWidth / 2,
-            modalY + this.padding
-        );
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillText(titleText, cx + 2, modalY + headerH / 2 + 2);
+
+        // Main title
+        ctx.fillStyle = titleColor;
+        ctx.fillText(titleText, cx, modalY + headerH / 2);
+
+        // Subtle highlight
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(titleText, cx, modalY + headerH / 2 - 3);
+        ctx.globalAlpha = 1;
     }
 
     /**
-     * Render statistics with count-up animations
+     * Render statistics with count-up animations - styled rows
      */
     renderStats(ctx, modalX, modalY) {
-        const startY = modalY + this.padding + 60;
-        const lineHeight = 50;
-        const leftX = modalX + this.padding + 50;
-        const rightX = modalX + this.modalWidth / 2 + 50;
+        const sectionY = modalY + 76;
+        const sectionH = 104;
+        const rowH = 46;
+        const colW = this.modalWidth / 2;
 
-        ctx.font = '18px Arial';
-        ctx.textBaseline = 'middle';
-        ctx.textAlign = 'left';
+        // Stats section background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.fillRect(modalX, sectionY, this.modalWidth, sectionH);
 
-        // Enemies slain
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Enemies Slain:', leftX, startY);
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(this.stats.displayEnemiesSlain.toString(), leftX + 200, startY);
+        // Bottom divider of stats section
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(modalX + 16, sectionY + sectionH);
+        ctx.lineTo(modalX + this.modalWidth - 16, sectionY + sectionH);
+        ctx.stroke();
 
-        // Gold earned
-        ctx.font = '18px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Gold Earned:', rightX, startY);
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(this.stats.displayGoldEarned.toString(), rightX + 150, startY);
-
-        // Gold remaining
-        ctx.font = '18px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Gold Remaining:', leftX, startY + lineHeight);
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(this.stats.displayGoldRemaining.toString(), leftX + 200, startY + lineHeight);
-
-        // Score (calculated from stats)
         const score = Math.floor(
             (this.stats.displayEnemiesSlain * 10) +
             (this.stats.displayGoldEarned * 0.5)
         );
-        ctx.font = '18px Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('Score:', rightX, startY + lineHeight);
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 24px Arial';
-        ctx.fillText(score.toString(), rightX + 150, startY + lineHeight);
+
+        const statsData = [
+            { label: '\u2694 Enemies Slain', value: this.stats.displayEnemiesSlain.toString(), col: 0, row: 0 },
+            { label: '\uD83D\uDC80 Score', value: score.toString(), col: 1, row: 0 },
+            { label: '\uD83D\uDCB0 Gold Earned', value: this.stats.displayGoldEarned.toString() + 'g', col: 0, row: 1 },
+            { label: '\uD83D\uDCB3 Gold Remaining', value: this.stats.displayGoldRemaining.toString() + 'g', col: 1, row: 1 }
+        ];
+
+        ctx.textBaseline = 'middle';
+        for (const stat of statsData) {
+            const cellX = modalX + stat.col * colW;
+            const cellY = sectionY + stat.row * rowH;
+
+            // Alternating row tint
+            if (stat.row % 2 === 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.fillRect(cellX, cellY, colW, rowH);
+            }
+
+            // Vertical divider between columns
+            if (stat.col === 1) {
+                ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cellX, cellY + 4);
+                ctx.lineTo(cellX, cellY + rowH - 4);
+                ctx.stroke();
+            }
+
+            const labelX = cellX + 22;
+            const midY = cellY + rowH / 2;
+
+            // Label
+            ctx.font = '15px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(200, 190, 170, 0.9)';
+            ctx.fillText(stat.label, labelX, midY);
+
+            // Value - right-aligned inside cell
+            ctx.font = 'bold 20px Georgia, serif';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText(stat.value, cellX + colW - 20, midY);
+        }
+
+        ctx.textAlign = 'left';
     }
 
     /**
      * Render loot items sequentially with pagination support
      */
     renderLoot(ctx, modalX, modalY) {
-        const startY = modalY + this.padding + 180;
+        // === SPOILS SECTION HEADER ===
+        const headerY = modalY + 186;
+        const cx = modalX + this.modalWidth / 2;
+
+        ctx.font = 'bold 13px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
+        ctx.fillText('\u2605  SPOILS OF WAR  \u2605', cx, headerY);
+
+        // Decorative lines flanking header
+        const textW = ctx.measureText('\u2605  SPOILS OF WAR  \u2605').width;
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(modalX + 20, headerY);
+        ctx.lineTo(cx - textW / 2 - 8, headerY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + textW / 2 + 8, headerY);
+        ctx.lineTo(modalX + this.modalWidth - 20, headerY);
+        ctx.stroke();
+
+        const startY = modalY + this.padding + 200;
         const itemsPerRow = 5;      // 5 items per row
         const itemsPerPage = 15;    // 3 rows x 5 items = 15 per page
         const itemWidth = 130;
-        const itemHeight = 90;
+        const itemHeight = 92;
         const itemGap = 8;
         const containerX = modalX + (this.modalWidth - (itemsPerRow * itemWidth + (itemsPerRow - 1) * itemGap)) / 2;
-        const maxHeight = modalY + this.modalHeight - this.padding - 60; // Leave space for buttons
+        const maxHeight = modalY + this.modalHeight - this.padding - 72; // Leave space for buttons
 
         ctx.font = '14px Arial';
         ctx.textAlign = 'center';
@@ -966,83 +1191,115 @@ export class ResultsScreen {
 
             // Item should be rendered - calculate animation
             const timeSinceReveal = lootTime - itemRevealTime;
-            const fadeDuration = 0.5; // Fade in over 0.5 seconds
-            let fadeProgress = Math.min(timeSinceReveal / fadeDuration, 1);
-            
-            // Ease-out cubic for smooth fade-in
-            fadeProgress = 1 - Math.pow(1 - fadeProgress, 3);
 
-            const alpha = fadeProgress;
+            // Elastic bounce-in scale (0 → 1.18 → 1.0)
+            const bounceDuration = 0.32;
+            const bounceT = Math.min(timeSinceReveal / bounceDuration, 1);
+            const bounceScale = bounceT >= 1 ? 1 : (
+                bounceT < 0.55
+                    ? (bounceT / 0.55) * 1.18          // overshoot to 1.18
+                    : 1.18 - (bounceT - 0.55) / 0.45 * 0.18  // settle back to 1.0
+            );
+
+            const alpha = Math.min(timeSinceReveal / 0.18, 1);
             const isRare = lootInfo && (lootInfo.rarity === 'rare' || lootInfo.rarity === 'epic' || lootInfo.rarity === 'legendary');
 
-            // Save context for transform - don't scale to avoid overlapping
+            // Save context - apply bounce scale centered on tile
             ctx.save();
-            ctx.translate(itemX, itemY);
+            ctx.translate(itemX + itemWidth / 2, itemY + itemHeight / 2);
+            ctx.scale(bounceScale, bounceScale);
+            ctx.translate(-itemWidth / 2, -itemHeight / 2);
             ctx.globalAlpha = alpha;
 
-            // Draw loot tile background
             const rarityColor = this.getRarityColor(lootId);
             const isLegendary = lootInfo && lootInfo.rarity === 'legendary';
-            
+
+            // === TILE BACKGROUND ===
+            const tileGrad = ctx.createLinearGradient(0, 0, 0, itemHeight);
+            tileGrad.addColorStop(0, 'rgba(30, 28, 50, 0.95)');
+            tileGrad.addColorStop(1, 'rgba(18, 16, 32, 0.98)');
+            ctx.fillStyle = tileGrad;
+            ctx.fillRect(0, 0, itemWidth, itemHeight);
+
+            // Rarity color tint overlay (subtle)
             ctx.fillStyle = rarityColor;
-            ctx.globalAlpha = 0.2 * alpha;
+            ctx.globalAlpha = 0.1 * alpha;
             ctx.fillRect(0, 0, itemWidth, itemHeight);
             ctx.globalAlpha = alpha;
 
-            // Draw border with flashy glow effect during fade-in
+            // === BORDER ===
             ctx.strokeStyle = rarityColor;
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 1.5;
             ctx.strokeRect(0, 0, itemWidth, itemHeight);
 
-            // Add colorful glow during entrance animation
-            if (fadeProgress < 1.0) {
-                // Pulsing outer glow during fade-in
-                const glowIntensity = Math.sin(fadeProgress * Math.PI) * 0.6;
+            // Entrance glow (during bounce)
+            if (bounceT < 1.0) {
+                const glowStr = Math.sin(bounceT * Math.PI) * 0.7;
+                ctx.save();
+                ctx.shadowColor = rarityColor;
+                ctx.shadowBlur = 14 * glowStr;
                 ctx.strokeStyle = rarityColor;
-                ctx.globalAlpha = alpha * glowIntensity * 0.5;
-                ctx.lineWidth = 3 + glowIntensity * 4;
-                ctx.strokeRect(-2 - glowIntensity * 3, -2 - glowIntensity * 3, itemWidth + 4 + glowIntensity * 6, itemHeight + 4 + glowIntensity * 6);
-                ctx.globalAlpha = alpha;
-            }
-
-            // Special glow for rare items
-            if (isRare && fadeProgress < 1.0) {
-                // Extra shimmer effect for rare items
-                const shimmerPhase = fadeProgress * Math.PI * 2;
-                ctx.strokeStyle = rarityColor;
-                ctx.globalAlpha = alpha * Math.abs(Math.sin(shimmerPhase)) * 0.6;
+                ctx.globalAlpha = alpha * glowStr * 0.8;
                 ctx.lineWidth = 2;
-                ctx.strokeRect(-6, -6, itemWidth + 12, itemHeight + 12);
+                ctx.strokeRect(-2, -2, itemWidth + 4, itemHeight + 4);
+                ctx.restore();
                 ctx.globalAlpha = alpha;
             }
 
-            // Draw static golden glow for legendary items
+            // Legendary extra golden shimmer
             if (isLegendary) {
-                ctx.strokeStyle = '#FFD700';
-                ctx.globalAlpha = 0.4 * alpha;
+                ctx.save();
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(-4, -4, itemWidth + 8, itemHeight + 8);
+                ctx.restore();
+            }
+
+            // Rare+ outer ring
+            if (isRare) {
+                ctx.strokeStyle = rarityColor;
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-5, -5, itemWidth + 10, itemHeight + 10);
                 ctx.globalAlpha = alpha;
             }
 
-            // Draw emblem
+            // === TOP COLOR BAR (rarity indicator) ===
             ctx.fillStyle = rarityColor;
-            ctx.font = 'bold 28px Arial';
-            ctx.fillText(lootInfo.emblem || '?', itemWidth / 2, 18);
+            ctx.globalAlpha = 0.55 * alpha;
+            ctx.fillRect(0, 0, itemWidth, 4);
+            ctx.globalAlpha = alpha;
 
-            // Draw name
-            ctx.fillStyle = '#FFFFFF';
+            // === EMBLEM ===
+            ctx.fillStyle = rarityColor;
+            ctx.font = 'bold 30px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(lootInfo.emblem || '?', itemWidth / 2, 24);
+
+            // === NAME ===
+            ctx.fillStyle = '#E8E0D0';
             ctx.font = '10px Arial';
-            const words = lootInfo.name.split(' ');
-            const textY = 40;
-            for (let j = 0; j < words.length; j++) {
-                ctx.fillText(words[j], itemWidth / 2, textY + j * 12);
+            const nameWords = lootInfo.name.split(' ');
+            const nameStartY = 44;
+            for (let j = 0; j < nameWords.length && j < 3; j++) {
+                ctx.fillText(nameWords[j], itemWidth / 2, nameStartY + j * 12);
             }
 
-            // Draw value
+            // === VALUE ===
             ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 11px Arial';
+            ctx.font = 'bold 11px Georgia, serif';
             ctx.fillText(`${lootInfo.sellValue}g`, itemWidth / 2, itemHeight - 8);
+
+            // Thin bottom separator
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.25)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(4, itemHeight - 18);
+            ctx.lineTo(itemWidth - 4, itemHeight - 18);
+            ctx.stroke();
 
             ctx.restore();
             globalCount++;
@@ -1051,46 +1308,78 @@ export class ResultsScreen {
     }
 
     /**
-     * Render buttons (appear after animations)
+     * Render buttons - styled with gradient and glow
      */
     renderButtons(ctx, modalX, modalY) {
-        // Determine button positioning based on whether we're on defeat or results screen
         const isDefeatScreen = this.animationPhase === 'defeat';
         const canvas = this.stateManager.canvas;
-        
+
         let buttonY, startX;
-        
+        const bW = 220;
+        const bH = 48;
+        const bGap = 32;
+
         if (isDefeatScreen) {
-            // Center buttons on the defeat screen
             buttonY = canvas.height / 2 + 200;
-            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-            startX = (canvas.width - totalButtonWidth) / 2;
+            const tot = this.buttons.length * bW + (this.buttons.length - 1) * bGap;
+            startX = (canvas.width - tot) / 2;
         } else {
-            // Normal results screen button positioning
-            buttonY = modalY + this.modalHeight - this.padding - this.buttonHeight;
-            const totalButtonWidth = this.buttons.length * this.buttonWidth + (this.buttons.length - 1) * this.buttonGap;
-            startX = modalX + (this.modalWidth - totalButtonWidth) / 2;
+            buttonY = modalY + this.modalHeight - this.padding - bH - 4;
+            const tot = this.buttons.length * bW + (this.buttons.length - 1) * bGap;
+            startX = modalX + (this.modalWidth - tot) / 2;
         }
 
         this.buttons.forEach((button, index) => {
-            const x = startX + index * (this.buttonWidth + this.buttonGap);
-            
-            // Button background
+            const x = startX + index * (bW + bGap);
             const isSelected = index === this.selectedButtonIndex;
-            ctx.fillStyle = isSelected ? '#FFD700' : '#4A4A4A';
-            ctx.fillRect(x, buttonY, this.buttonWidth, this.buttonHeight);
 
-            // Button border
-            ctx.strokeStyle = isSelected ? '#FFFFFF' : '#FFD700';
-            ctx.lineWidth = isSelected ? 3 : 2;
-            ctx.strokeRect(x, buttonY, this.buttonWidth, this.buttonHeight);
+            ctx.save();
 
-            // Button text
-            ctx.fillStyle = isSelected ? '#000000' : '#FFD700';
-            ctx.font = 'bold 14px Arial';
+            // Outer glow for selected
+            if (isSelected) {
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 14;
+            }
+
+            // Button gradient fill
+            const btnGrad = ctx.createLinearGradient(x, buttonY, x, buttonY + bH);
+            if (isSelected) {
+                btnGrad.addColorStop(0, '#FFF176');
+                btnGrad.addColorStop(0.45, '#FFD700');
+                btnGrad.addColorStop(1, '#B8860B');
+            } else {
+                btnGrad.addColorStop(0, '#3A3550');
+                btnGrad.addColorStop(0.5, '#2A2540');
+                btnGrad.addColorStop(1, '#1E1A30');
+            }
+            ctx.fillStyle = btnGrad;
+            ctx.fillRect(x, buttonY, bW, bH);
+
+            // Border
+            ctx.strokeStyle = isSelected ? '#FFFFFF' : 'rgba(212, 175, 55, 0.7)';
+            ctx.lineWidth = isSelected ? 2 : 1.5;
+            ctx.strokeRect(x, buttonY, bW, bH);
+
+            // Inner highlight line at top
+            ctx.strokeStyle = isSelected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + 3, buttonY + 2);
+            ctx.lineTo(x + bW - 3, buttonY + 2);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Text shadow
+            ctx.font = 'bold 13px Georgia, serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(button.label, x + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillText(button.label, x + bW / 2 + 1, buttonY + bH / 2 + 1);
+
+            // Button label
+            ctx.fillStyle = isSelected ? '#1A1200' : '#D4AF37';
+            ctx.fillText(button.label, x + bW / 2, buttonY + bH / 2);
         });
     }
 
@@ -1104,7 +1393,7 @@ export class ResultsScreen {
             ctx.globalAlpha = alpha;
             ctx.fillStyle = p.color;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.size !== undefined ? p.size : 3, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.globalAlpha = 1;
