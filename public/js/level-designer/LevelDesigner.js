@@ -28,7 +28,13 @@ export class LevelDesigner {
         this.hoveredGridCell = null; // For visual feedback during mouse movement
         this.pathLocked = false; // Whether path editing is finished
         this.riverPaths = []; // Array of completed river waypoint arrays
+        this.isDrawingRiver = false; // Freehand river drawing active
+        this.lastRiverDragPos = null; // Last auto-added waypoint during drag
+        this.terrainElementSize = 2.0; // Controlled by terrain size slider
         this.currentMouseGridPos = null; // Current mouse grid position for coordinate display
+        this.selectedTreeVariant = 0; // Which tree variant the picker has selected (0-3)
+        this.selectedRockVariant = 0; // Which rock variant the picker has selected (0-3)
+        this.backdropVariant = 0; // Currently selected backdrop variant (0-2)
         
         // Decoration cache for in-game style background preview
         this.designerGrassPatches = [];
@@ -48,6 +54,16 @@ export class LevelDesigner {
         // Enemies and towers for form
         this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog', 'frogking'];
         
+        // Wire variant picker buttons
+        for (let i = 0; i < 4; i++) {
+            document.getElementById(`variantBtn${i}`)?.addEventListener('click', () => {
+                if (this.terrainMode === 'vegetation') this.selectedTreeVariant = i;
+                else if (this.terrainMode === 'rock') this.selectedRockVariant = i;
+                this.updateVariantPicker();
+                this.render();
+            });
+        }
+
         // Initialize
         this.setupCanvas();
         this.setupEventListeners();
@@ -75,6 +91,8 @@ export class LevelDesigner {
 
     setupEventListeners() {
         // Canvas events
+        this.canvas.addEventListener('mousedown', (e) => this.handleCanvasMouseDown(e));
+        this.canvas.addEventListener('mouseup', (e) => this.handleCanvasMouseUp(e));
         this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
         this.canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
@@ -83,8 +101,10 @@ export class LevelDesigner {
         this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
         this.canvas.addEventListener('mouseleave', (e) => {
             this.hoveredGridCell = null;
+            this.isDrawingRiver = false;
             this.render();
         });
+        window.addEventListener('mouseup', () => { this.isDrawingRiver = false; this.lastRiverDragPos = null; });
         
         window.addEventListener('resize', () => this.handleResize());
 
@@ -118,7 +138,14 @@ export class LevelDesigner {
         document.getElementById('waterSizeSlider')?.addEventListener('input', (e) => {
             this.waterSize = parseFloat(e.target.value);
             const label = document.getElementById('waterSizeLabel');
-            if (label) label.textContent = `Size: ${this.waterSize.toFixed(1)}`;
+            if (label) label.textContent = this.waterSize.toFixed(1);
+        });
+
+        // Terrain size slider
+        document.getElementById('terrainSizeSlider')?.addEventListener('input', (e) => {
+            this.terrainElementSize = parseFloat(e.target.value);
+            const label = document.getElementById('terrainSizeLabel');
+            if (label) label.textContent = this.terrainElementSize.toFixed(1);
         });
 
         // Copy code button
@@ -216,20 +243,23 @@ export class LevelDesigner {
         // Show/hide finish path button
         const finishPathControl = document.getElementById('finishPathControl');
         if (finishPathControl) {
-            finishPathControl.style.visibility = newMode === 'path' ? 'visible' : 'hidden';
+            finishPathControl.style.display = newMode === 'path' ? 'flex' : 'none';
         }
         
-        // Hide river finish when leaving terrain mode
+        // Hide river finish and water controls when leaving terrain mode
         const finishRiverControl = document.getElementById('finishRiverControl');
         if (finishRiverControl) {
-            finishRiverControl.style.visibility = 'hidden';
+            finishRiverControl.style.display = 'none';
         }
+
+        const waterControls = document.getElementById('waterControls');
+        if (waterControls) waterControls.style.display = 'none';
         
         const pathInfo = document.getElementById('pathInfo');
         if (newMode === 'path') {
-            pathInfo.textContent = '🖌️ Click to add path points. Right-click to remove last point. Click "Finish Path" when done.';
+            pathInfo.textContent = 'Path mode -- Click to add waypoints. Right-click to remove last. Click "Finish Path" when done.';
         } else {
-            pathInfo.textContent = '📍 Select a tool mode.';
+            pathInfo.textContent = 'Select a tool mode from the toolbar.';
         }
     }
 
@@ -246,24 +276,39 @@ export class LevelDesigner {
         // Hide all finish controls when entering terrain mode
         const finishPathControl = document.getElementById('finishPathControl');
         if (finishPathControl) {
-            finishPathControl.style.visibility = 'hidden';
+            finishPathControl.style.display = 'none';
         }
         const finishRiverControl = document.getElementById('finishRiverControl');
         if (finishRiverControl) {
-            finishRiverControl.style.visibility = 'hidden';
+            finishRiverControl.style.display = 'none';
         }
         
         // Show water controls when water is selected
         const waterControls = document.getElementById('waterControls');
-        if (terrainType === 'water') {
-            if (waterControls) waterControls.style.visibility = 'visible';
-        } else {
-            if (waterControls) waterControls.style.visibility = 'hidden';
-        }
+        if (waterControls) waterControls.style.display = terrainType === 'water' ? 'flex' : 'none';
         
         const pathInfo = document.getElementById('pathInfo');
-        const names = { vegetation: '🌲 Vegetation', rock: '🪨 Rocks', water: '💧 Water' };
+        const names = { vegetation: 'Trees', rock: 'Rocks', water: 'Water' };
         pathInfo.textContent = `Click to place ${names[terrainType]}. Right-click to erase.`;
+        this.updateVariantPicker();
+    }
+
+    updateVariantPicker() {
+        const row = document.getElementById('variantPickerRow');
+        if (!row) return;
+        const isVeg = this.terrainMode === 'vegetation';
+        const isRock = this.terrainMode === 'rock';
+        if (!isVeg && !isRock) { row.style.display = 'none'; return; }
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '2px';
+        const activeVariant = isVeg ? this.selectedTreeVariant : this.selectedRockVariant;
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`variantBtn${i}`);
+            if (btn) btn.classList.toggle('active', i === activeVariant);
+        }
+        const lbl = document.getElementById('variantPickerLabel');
+        if (lbl) lbl.textContent = isVeg ? 'Tree' : 'Rock';
     }
 
     setWaterMode(mode) {
@@ -274,15 +319,15 @@ export class LevelDesigner {
         // Show/hide finish river button only for river mode
         const finishRiverControl = document.getElementById('finishRiverControl');
         if (finishRiverControl) {
-            finishRiverControl.style.visibility = mode === 'river' ? 'visible' : 'hidden';
+            finishRiverControl.style.display = mode === 'river' ? 'flex' : 'none';
         }
         
         const pathInfo = document.getElementById('pathInfo');
         if (mode === 'river') {
-            pathInfo.textContent = '🌊 Click to add river waypoints. Right-click to remove last waypoint. Click "Finish River" when done. Right-click (no active points) to remove last saved river.';
+            pathInfo.textContent = 'River mode -- Click and drag to draw freehand, or single-click for waypoints. Click "Finish River" when done.';
             this.riverPoints = []; // Always start fresh when entering river mode
         } else if (mode === 'lake') {
-            pathInfo.textContent = `💧 Click to place circular lakes (size: ${this.waterSize.toFixed(1)}). Right-click to erase.`;
+            pathInfo.textContent = `Lake mode -- Click to place circular lakes (size: ${this.waterSize.toFixed(1)}). Right-click to erase.`;
             this.riverPoints = [];
         }
     }
@@ -316,7 +361,11 @@ export class LevelDesigner {
 
         // Get raw grid coordinates
         const gridCoords = this.pixelToGrid(canvasX, canvasY);
-        this.currentMouseGridPos = gridCoords; // Track for coordinate display
+        this.currentMouseGridPos = gridCoords;
+
+        // Update DOM coordinate display
+        const coordEl = document.getElementById('coordDisplay');
+        if (coordEl) coordEl.textContent = `x: ${gridCoords.gridX.toFixed(1)}  y: ${gridCoords.gridY.toFixed(1)}`;
         
         // Only snap for terrain and path modes
         if (this.mode === 'terrain' || (this.mode === 'path' && this.waterMode !== 'river') || this.mode === 'castle') {
@@ -325,11 +374,28 @@ export class LevelDesigner {
             // For path and river, show the unsnapped position
             this.hoveredGridCell = gridCoords;
         }
+
+        // Freehand river drawing — add waypoints while mouse is held
+        if (this.isDrawingRiver && this.mode === 'terrain' && this.waterMode === 'river') {
+            if (this.lastRiverDragPos && this.riverPoints) {
+                const dist = Math.hypot(
+                    gridCoords.gridX - this.lastRiverDragPos.gridX,
+                    gridCoords.gridY - this.lastRiverDragPos.gridY
+                );
+                if (dist >= 0.4) {
+                    this.riverPoints.push({ gridX: gridCoords.gridX, gridY: gridCoords.gridY });
+                    this.lastRiverDragPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+                }
+            }
+        }
         
         this.render();
     }
 
     handleCanvasClick(e) {
+        // River mode is handled via mousedown + mousemove; skip click
+        if (this.mode === 'terrain' && this.waterMode === 'river') return;
+
         const rect = this.canvas.getBoundingClientRect();
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
@@ -368,6 +434,29 @@ export class LevelDesigner {
         this.render();
     }
 
+    handleCanvasMouseDown(e) {
+        if (e.button !== 0) return;
+        if (this.mode === 'terrain' && this.waterMode === 'river') {
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasX = e.clientX - rect.left;
+            const canvasY = e.clientY - rect.top;
+            const gridCoords = this.pixelToGrid(canvasX, canvasY);
+            if (!this.riverPoints) this.riverPoints = [];
+            this.riverPoints.push(gridCoords);
+            this.isDrawingRiver = true;
+            this.lastRiverDragPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+            this.updateGeneratedCode();
+            this.render();
+        }
+    }
+
+    handleCanvasMouseUp(e) {
+        if (this.isDrawingRiver) {
+            this.isDrawingRiver = false;
+            this.lastRiverDragPos = null;
+        }
+    }
+
     handleCanvasRightClick() {
         if (this.mode === 'path' && this.pathPoints.length > 0) {
             this.pathPoints.pop();
@@ -394,8 +483,8 @@ export class LevelDesigner {
         // Determine size based on type
         let size = customSize;
         if (size === null) {
-            if (type === 'vegetation') size = 2.0;
-            else if (type === 'rock') size = 1.5;
+            if (type === 'vegetation') size = this.terrainElementSize;
+            else if (type === 'rock') size = this.terrainElementSize;
             else if (type === 'water') size = 2;
         }
 
@@ -406,6 +495,10 @@ export class LevelDesigner {
             size
         };
         
+        // Persist selected variant so the game renders the exact chosen type
+        if (type === 'vegetation') element.variant = this.selectedTreeVariant;
+        else if (type === 'rock') element.variant = this.selectedRockVariant;
+
         // Add waterType if this is water
         if (type === 'water' && waterType) {
             element.waterType = waterType;
@@ -446,14 +539,14 @@ export class LevelDesigner {
         // Hide finish path button
         const finishPathControl = document.getElementById('finishPathControl');
         if (finishPathControl) {
-            finishPathControl.style.visibility = 'hidden';
+            finishPathControl.style.display = 'none';
         }
         
         // Deselect path mode button
         document.getElementById('drawPathBtn').classList.remove('active');
         
         const pathInfo = document.getElementById('pathInfo');
-        pathInfo.textContent = '✓ Path finished! Castle automatically placed at path end. You can now edit terrain or export.';
+        pathInfo.textContent = 'Path finished. Castle placed at path end. You can now add terrain and export.';
         
         this.updateGeneratedCode();
         this.render();
@@ -482,7 +575,7 @@ export class LevelDesigner {
         // Hide finish river button
         const finishRiverControl = document.getElementById('finishRiverControl');
         if (finishRiverControl) {
-            finishRiverControl.style.visibility = 'hidden';
+            finishRiverControl.style.display = 'none';
         }
         
         // Reset river mode button
@@ -490,7 +583,7 @@ export class LevelDesigner {
         this.waterMode = null;
         
         const pathInfo = document.getElementById('pathInfo');
-        pathInfo.textContent = `✓ River saved (${this.riverPaths.length} river${this.riverPaths.length > 1 ? 's' : ''} total). Right-click to undo last river. Select River again to draw another.`;
+        pathInfo.textContent = `River saved (${this.riverPaths.length} river${this.riverPaths.length > 1 ? 's' : ''} total). Select River again to draw another.`;
         
         this.updateGeneratedCode();
         this.render();
@@ -498,8 +591,8 @@ export class LevelDesigner {
     
     onClearClick() {
         this.showConfirmation(
-            'Clear All Path Points',
-            'Are you sure you want to clear all path points? This cannot be undone.',
+            'Clear All',
+            'Are you sure you want to clear the entire level? This cannot be undone.',
             () => this.clearPath()
         );
     }
@@ -515,6 +608,9 @@ export class LevelDesigner {
     clearPath() {
         this.pathPoints = [];
         this.pathLocked = false;
+        this.terrainElements = [];
+        this.riverPaths = [];
+        this.riverPoints = [];
         this.updateGeneratedCode();
         this.render();
     }
@@ -650,7 +746,7 @@ export class LevelDesigner {
 
         pattern.forEach((enemy, idx) => {
             const item = document.createElement('div');
-            item.className = 'modal-pattern-item';
+            item.className = 'pattern-item';
             item.innerHTML = `
                 <select onchange="window.levelDesigner.updateModalPattern(${idx}, this.value)">
                     ${this.enemies.map(e => `<option value="${e}" ${e === enemy ? 'selected' : ''}>${e}</option>`).join('')}
@@ -734,20 +830,13 @@ export class LevelDesigner {
             waveCard.innerHTML = `
                 <div class="wave-card-info">
                     <div class="wave-card-title">Wave ${wave.id}</div>
-                    <div class="wave-card-stats">
-                        <div class="wave-card-stat"><strong>Count:</strong> ${wave.enemyCount}</div>
-                        <div class="wave-card-stat"><strong>Health:</strong> ${wave.enemyHealthMultiplier.toFixed(2)}×</div>
-                        <div class="wave-card-stat"><strong>Speed:</strong> ${wave.enemySpeed}</div>
-                        <div class="wave-card-stat"><strong>Spawn:</strong> ${wave.spawnInterval.toFixed(2)}s</div>
-                        <div style="grid-column: 1/3; color: #90caf9; font-size: 11px; margin-top: 4px;">
-                            <strong>Pattern:</strong> ${patternStr}
-                        </div>
-                    </div>
+                    <div class="wave-card-meta">Count: ${wave.enemyCount} | Health: ${wave.enemyHealthMultiplier.toFixed(2)}x | Speed: ${wave.enemySpeed} | ${wave.spawnInterval.toFixed(2)}s</div>
+                    <div class="wave-card-meta" style="color:#90b890">Pattern: ${patternStr}</div>
                 </div>
                 <div class="wave-card-actions">
-                    <button class="edit-btn" onclick="window.levelDesigner.openWaveModal(${wave.id})">Edit</button>
-                    <button class="edit-btn" onclick="window.levelDesigner.duplicateWave(${wave.id})" title="Duplicate this wave">Duplicate</button>
-                    <button class="delete-btn" onclick="window.levelDesigner.removeWave(${wave.id})">Delete</button>
+                    <button onclick="window.levelDesigner.openWaveModal(${wave.id})" style="font-size:10px;padding:3px 7px">Edit</button>
+                    <button onclick="window.levelDesigner.duplicateWave(${wave.id})" style="font-size:10px;padding:3px 7px" title="Duplicate">Copy</button>
+                    <button onclick="window.levelDesigner.removeWave(${wave.id})" style="font-size:10px;padding:3px 7px;background:#c0392b">Del</button>
                 </div>
             `;
             container.appendChild(waveCard);
@@ -786,284 +875,155 @@ export class LevelDesigner {
     }
 
     drawBackground() {
-        // Read visual config from form inputs so changes reflect immediately in canvas
-        const config = this.getVisualConfigFromForm();
-        
-        // Ensure decorations are generated (or regenerated after settings change)
-        if (!this.designerDecorationsGenerated) {
-            this.generateDesignerDecorations(config);
+        const campaign = this.currentCampaign || 'forest';
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+
+        // Dispatch to the correct campaign backdrop
+        if (campaign === 'forest') {
+            this._drawForestBackground(ctx, w, h);
+        } else if (campaign === 'mountain') {
+            this._drawMountainBackground(ctx, w, h);
+        } else if (campaign === 'desert') {
+            this._drawDesertBackground(ctx, w, h);
+        } else {
+            this._drawSpaceBackground(ctx, w, h);
         }
-        
-        // Base gradient background
-        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        gradient.addColorStop(0, config.grassColors.top);
-        gradient.addColorStop(0.3, config.grassColors.upper);
-        gradient.addColorStop(0.7, config.grassColors.lower);
-        gradient.addColorStop(1, config.grassColors.bottom);
-        
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Dirt/ground texture patches
-        this.drawDesignerDirtPatches();
-        
-        // Grass patch clusters
-        this.drawDesignerGrassPatches();
-        
-        // Scattered flowers
-        this.drawDesignerFlowers();
-        
-        // Edge vignette — darker edges like in-game
-        const vW = Math.min(this.canvas.width * 0.07, 70);
-        const vH = Math.min(this.canvas.height * 0.09, 60);
-        
-        const leftG = this.ctx.createLinearGradient(0, 0, vW, 0);
-        leftG.addColorStop(0, 'rgba(0,0,0,0.45)');
-        leftG.addColorStop(1, 'rgba(0,0,0,0)');
-        this.ctx.fillStyle = leftG;
-        this.ctx.fillRect(0, 0, vW, this.canvas.height);
-        
-        const rightG = this.ctx.createLinearGradient(this.canvas.width, 0, this.canvas.width - vW, 0);
-        rightG.addColorStop(0, 'rgba(0,0,0,0.45)');
-        rightG.addColorStop(1, 'rgba(0,0,0,0)');
-        this.ctx.fillStyle = rightG;
-        this.ctx.fillRect(this.canvas.width - vW, 0, vW, this.canvas.height);
-        
-        const topG = this.ctx.createLinearGradient(0, 0, 0, vH);
-        topG.addColorStop(0, 'rgba(0,0,0,0.45)');
-        topG.addColorStop(1, 'rgba(0,0,0,0)');
-        this.ctx.fillStyle = topG;
-        this.ctx.fillRect(0, 0, this.canvas.width, vH);
-        
-        const botG = this.ctx.createLinearGradient(0, this.canvas.height, 0, this.canvas.height - vH);
-        botG.addColorStop(0, 'rgba(0,0,0,0.45)');
-        botG.addColorStop(1, 'rgba(0,0,0,0)');
-        this.ctx.fillStyle = botG;
-        this.ctx.fillRect(0, this.canvas.height - vH, this.canvas.width, vH);
+
+        // Edge vignette
+        const vW = Math.min(w * 0.07, 70);
+        const vH = Math.min(h * 0.09, 60);
+        for (const [x1, y1, x2, y2, rw, rh] of [
+            [0,0,vW,0,vW,h], [w,0,w-vW,0,vW,h],
+            [0,0,0,vH,w,vH], [0,h,0,h-vH,w,vH]
+        ]) {
+            const g = ctx.createLinearGradient(x1, y1, x2, y2);
+            g.addColorStop(0, 'rgba(0,0,0,0.45)');
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(Math.min(x1,x2), Math.min(y1,y2), rw, rh);
+        }
     }
 
-    /**
-     * Read visual config values from form inputs, falling back to campaign theme defaults.
-     * This ensures the canvas preview always reflects the current form settings.
-     */
-    getVisualConfigFromForm() {
-        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
-        const fb = theme.visualConfig;
-        const val = (id, def) => { const el = document.getElementById(id); return el ? el.value : def; };
-        const int = (id, def) => { const el = document.getElementById(id); return el ? parseInt(el.value) : def; };
-        return {
-            grassColors: {
-                top:    val('grassTopColor',   fb.grassColors.top),
-                upper:  val('grassUpperColor', fb.grassColors.upper),
-                lower:  val('grassLowerColor', fb.grassColors.lower),
-                bottom: val('grassBottomColor',fb.grassColors.bottom)
-            },
-            grassPatchDensity: int('grassDensity', fb.grassPatchDensity),
-            grassPatchSizeMin: fb.grassPatchSizeMin || 6,
-            grassPatchSizeMax: fb.grassPatchSizeMax || 18,
-            flowerDensity:  int('flowerDensity', fb.flowerDensity),
-            pathBaseColor:  val('pathColor',    fb.pathBaseColor),
-            edgeBushColor:  val('bushColor',    fb.edgeBushColor),
-            edgeRockColor:  val('rockColor',    fb.edgeRockColor),
-            edgeGrassColor: val('edgeGrassColor',fb.edgeGrassColor)
-        };
-    }
-
-    /**
-     * Pre-generate grass patches, dirt patches and flowers for the canvas preview.
-     * Called once per settings change; results are cached and reused across frames.
-     */
-    generateDesignerDecorations(config) {
-        const cw = this.canvas.width;
-        const ch = this.canvas.height;
-        const sizeMin = config.grassPatchSizeMin || 6;
-        const sizeMax = config.grassPatchSizeMax || 18;
-
-        // --- Grass patches ---
-        this.designerGrassPatches = [];
-        const patchCount = Math.floor((cw * ch) / Math.max(config.grassPatchDensity, 1000));
-        for (let i = 0; i < patchCount; i++) {
-            let x, y;
-            if (Math.random() < 0.3 && this.designerGrassPatches.length > 0) {
-                const near = this.designerGrassPatches[Math.floor(Math.random() * this.designerGrassPatches.length)];
-                const angle = Math.random() * Math.PI * 2;
-                const dist  = Math.random() * 80;
-                x = Math.max(0, Math.min(cw, near.x + Math.cos(angle) * dist));
-                y = Math.max(0, Math.min(ch, near.y + Math.sin(angle) * dist));
-            } else {
-                x = Math.random() * cw;
-                y = Math.random() * ch;
-            }
-            this.designerGrassPatches.push({
-                x, y,
-                size:  Math.random() * (sizeMax - sizeMin) + sizeMin,
-                shade: Math.random() * 0.4 + 0.6,
-                type:  Math.floor(Math.random() * 3)
-            });
-        }
-
-        // --- Dirt/ground texture patches ---
-        this.designerDirtPatches = [];
-        const dirtCount = Math.floor(cw * ch / 15000);
-        for (let i = 0; i < dirtCount; i++) {
-            this.designerDirtPatches.push({
-                x:         Math.random() * cw,
-                y:         Math.random() * ch,
-                sizeX:     Math.random() * 55 + 30,
-                sizeY:     Math.random() * 38 + 20,
-                rotation:  Math.random() * Math.PI * 2,
-                type:      Math.floor(Math.random() * 4),
-                intensity: Math.random() * 0.14 + 0.06
-            });
-        }
-
-        // --- Flowers ---
-        this.designerFlowers = [];
-        const flowerCount = Math.floor(cw * ch / Math.max(config.flowerDensity, 1000));
-        for (let i = 0; i < flowerCount; i++) {
-            let x, y;
-            if (Math.random() < 0.4 && this.designerFlowers.length > 0) {
-                const near  = this.designerFlowers[Math.floor(Math.random() * this.designerFlowers.length)];
-                const angle = Math.random() * Math.PI * 2;
-                const dist  = Math.random() * 40;
-                x = Math.max(0, Math.min(cw, near.x + Math.cos(angle) * dist));
-                y = Math.max(0, Math.min(ch, near.y + Math.sin(angle) * dist));
-            } else {
-                x = Math.random() * cw;
-                y = Math.random() * ch;
-            }
-            const r = Math.random();
-            this.designerFlowers.push({ x, y, type: r < 0.33 ? 'yellow' : r < 0.66 ? 'white' : 'purple' });
-        }
-
+    generateDesignerDecorations(campaign) {
         this.designerDecorationsGenerated = true;
     }
 
-    drawDesignerDirtPatches() {
-        const ctx = this.ctx;
-        this.designerDirtPatches.forEach(p => {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rotation);
-            switch (p.type) {
-                case 0: // Soil blob
-                    ctx.fillStyle = `rgba(92,64,51,${p.intensity})`;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, p.sizeX * 0.5, p.sizeY * 0.5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 1: // Moss
-                    ctx.fillStyle = `rgba(80,100,60,${p.intensity * 0.8})`;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, p.sizeX * 0.45, p.sizeY * 0.4, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 2: // Clay / warm dirt
-                    ctx.fillStyle = `rgba(120,80,40,${p.intensity * 0.9})`;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, p.sizeX * 0.55, p.sizeY * 0.45, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 3: // Leaf litter
-                    ctx.fillStyle = `rgba(139,115,85,${p.intensity * 0.7})`;
-                    for (let i = 0; i < 5; i++) {
-                        const ox = (Math.sin(i * 1.7 + p.x * 0.008) - 0.5) * p.sizeX;
-                        const oy = (Math.cos(i * 1.7 + p.y * 0.008) - 0.5) * p.sizeY;
-                        ctx.beginPath();
-                        ctx.ellipse(ox, oy, 4 + Math.random() * 3, 2 + Math.random() * 2, Math.random() * Math.PI, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    break;
-            }
-            ctx.restore();
+    _drawForestBackground(ctx, w, h) {
+        const v = this.backdropVariant ?? 0;
+        const bases = ['#1a3a08', '#203e10', '#162e0a'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        [[0.05,0.08,0.09,0.052],[0.21,0.04,0.08,0.046],[0.40,0.10,0.10,0.058],[0.60,0.06,0.09,0.050],
+         [0.78,0.12,0.11,0.062],[0.94,0.07,0.07,0.042],[0.12,0.28,0.10,0.056],[0.34,0.24,0.09,0.050],
+         [0.54,0.30,0.11,0.060],[0.75,0.26,0.08,0.046],[0.03,0.50,0.09,0.052],[0.26,0.47,0.10,0.056],
+         [0.48,0.54,0.09,0.050],[0.70,0.48,0.11,0.062],[0.90,0.54,0.08,0.046],[0.15,0.70,0.10,0.056],
+         [0.38,0.76,0.09,0.050],[0.60,0.68,0.11,0.060],[0.82,0.73,0.08,0.045],[0.06,0.88,0.09,0.052],
+         [0.30,0.86,0.10,0.056],[0.55,0.90,0.11,0.060],[0.76,0.86,0.09,0.050],[0.96,0.82,0.07,0.042]]
+        .forEach(([fx,fy,frx,fry]) => {
+            ctx.fillStyle = 'rgba(24,50,12,0.48)'; ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*frx, h*fry, fx*2.5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(16,40,8,0.36)'; ctx.beginPath(); ctx.ellipse(w*fx+w*frx*0.2, h*fy+h*fry*0.2, w*frx*0.58, h*fry*0.55, fx*1.8, 0, Math.PI*2); ctx.fill();
         });
+        if (v === 0) {
+            ctx.fillStyle = 'rgba(120,180,40,0.08)';
+            [[0.24,0.22],[0.52,0.38],[0.74,0.16],[0.14,0.62],[0.82,0.74]].forEach(([fx,fy]) => {
+                ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*0.06, h*0.04, 0.3, 0, Math.PI*2); ctx.fill(); });
+        }
+        if (v === 2) {
+            ctx.fillStyle = 'rgba(36,88,68,0.42)';
+            [[0.16,0.22,0.055],[0.42,0.16,0.060],[0.64,0.28,0.065],[0.82,0.18,0.052],[0.28,0.64,0.058],[0.54,0.72,0.062]]
+            .forEach(([fx,fy,fr]) => { ctx.beginPath(); ctx.ellipse(w*fx,h*fy,w*fr,h*fr*0.72,0.5,0,Math.PI*2); ctx.fill(); });
+        }
+        const vg = ctx.createLinearGradient(0,0,0,h);
+        vg.addColorStop(0, 'rgba(0,0,0,0.18)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
     }
 
-    drawDesignerGrassPatches() {
-        const ctx = this.ctx;
-        this.designerGrassPatches.forEach(p => {
-            const alpha = p.shade * 0.55;
-            switch (p.type) {
-                case 0: // Round clump
-                    ctx.fillStyle = `rgba(34,139,34,${alpha})`;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 1: // Blade strands
-                    ctx.strokeStyle = `rgba(50,150,50,${alpha})`;
-                    ctx.lineWidth = 1;
-                    for (let j = 0; j < 3; j++) {
-                        const ox = (j - 1) * p.size * 0.3;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x + ox, p.y + p.size * 0.5);
-                        ctx.lineTo(p.x + ox, p.y - p.size * 0.5);
-                        ctx.stroke();
-                    }
-                    break;
-                case 2: // Clover
-                    ctx.fillStyle = `rgba(60,179,113,${alpha})`;
-                    for (let j = 0; j < 4; j++) {
-                        const angle = (j / 4) * Math.PI * 2;
-                        ctx.beginPath();
-                        ctx.arc(p.x + Math.cos(angle) * p.size * 0.3, p.y + Math.sin(angle) * p.size * 0.3, p.size * 0.2, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    break;
-            }
+    _drawMountainBackground(ctx, w, h) {
+        const v = this.backdropVariant ?? 0;
+        const bases = ['#dce8f4', '#c8d8ec', '#ccdff2'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = 'rgba(210,228,248,0.55)';
+        [[0.06,0.08],[0.18,0.22],[0.40,0.14],[0.60,0.28],[0.80,0.12],[0.96,0.22],
+         [0.12,0.46],[0.34,0.60],[0.56,0.42],[0.78,0.58],[0.10,0.74],[0.36,0.80],
+         [0.62,0.66],[0.85,0.78],[0.04,0.88],[0.28,0.92],[0.52,0.84],[0.76,0.90],[0.94,0.82]]
+        .forEach(([fx,fy]) => {
+            const rw=w*(0.05+Math.abs(Math.sin(fx*11+fy*7))*0.06), rh=rw*(0.3+Math.abs(Math.sin(fx*17))*0.2);
+            ctx.beginPath(); ctx.ellipse(w*fx, h*fy, rw, rh, fx*3-1, 0, Math.PI*2); ctx.fill();
         });
+        const vg = ctx.createLinearGradient(0,0,0,h);
+        vg.addColorStop(0, 'rgba(0,0,0,0.12)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.16)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
     }
 
-    drawDesignerFlowers() {
-        const ctx = this.ctx;
-        this.designerFlowers.forEach(f => {
-            switch (f.type) {
-                case 'yellow':
-                    ctx.fillStyle = 'rgba(255,220,0,0.75)';
-                    ctx.beginPath();
-                    ctx.arc(f.x, f.y, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 'white':
-                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                    for (let i = 0; i < 5; i++) {
-                        const a = (i / 5) * Math.PI * 2;
-                        ctx.beginPath();
-                        ctx.arc(f.x + Math.cos(a) * 1.5, f.y + Math.sin(a) * 1.5, 1, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    ctx.fillStyle = 'rgba(255,220,0,0.9)';
-                    ctx.beginPath();
-                    ctx.arc(f.x, f.y, 1, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 'purple':
-                    ctx.fillStyle = 'rgba(147,112,219,0.65)';
-                    ctx.beginPath();
-                    ctx.arc(f.x, f.y, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
+    _drawDesertBackground(ctx, w, h) {
+        const v = this.backdropVariant ?? 0;
+        const bases = ['#d4a840', '#bc9230', '#c8a048'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        if (v !== 1) {
+            ctx.lineWidth = 0.9;
+            for (let ry = 0; ry < h; ry += 14) {
+                ctx.strokeStyle = 'rgba(184,138,42,0.12)';
+                ctx.beginPath();
+                for (let x = 0; x <= w; x += 4) {
+                    const y = ry + Math.sin(x*0.024+ry*0.038)*5;
+                    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                }
+                ctx.stroke();
             }
-        });
+        }
+        if (v === 1) {
+            ctx.fillStyle = 'rgba(156,110,38,0.50)';
+            [[0.08,0.12,0.012],[0.20,0.26,0.014],[0.40,0.18,0.011],[0.58,0.30,0.013],[0.70,0.14,0.012],
+             [0.84,0.24,0.015],[0.14,0.52,0.013],[0.32,0.44,0.011],[0.50,0.60,0.014],[0.68,0.48,0.012],
+             [0.87,0.56,0.011],[0.06,0.74,0.013],[0.26,0.68,0.012],[0.46,0.80,0.014],[0.66,0.72,0.011],
+             [0.86,0.78,0.013],[0.18,0.88,0.012],[0.38,0.84,0.011],[0.60,0.92,0.013],[0.80,0.86,0.012]]
+            .forEach(([fx,fy,pr]) => { ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*pr*1.6, h*pr, Math.sin(fx*31)*Math.PI, 0, Math.PI*2); ctx.fill(); });
+        }
+        const vg = ctx.createLinearGradient(0,0,0,h);
+        vg.addColorStop(0, 'rgba(0,0,0,0.14)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.18)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
     }
+
+    _drawSpaceBackground(ctx, w, h) {
+        const v = this.backdropVariant ?? 0;
+        const bases = ['#080218', '#0a0420', '#06021a'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        // Scattered dim stars
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        [[0.04,0.06],[0.15,0.12],[0.28,0.04],[0.38,0.18],[0.52,0.08],[0.64,0.14],[0.77,0.06],[0.88,0.16],[0.97,0.10],
+         [0.08,0.32],[0.22,0.26],[0.36,0.38],[0.50,0.28],[0.66,0.34],[0.80,0.24],[0.95,0.30],
+         [0.12,0.54],[0.26,0.48],[0.42,0.58],[0.58,0.50],[0.74,0.56],[0.90,0.44],
+         [0.06,0.70],[0.20,0.76],[0.34,0.66],[0.48,0.74],[0.62,0.68],[0.78,0.76],[0.92,0.68],
+         [0.10,0.88],[0.24,0.82],[0.40,0.90],[0.56,0.84],[0.72,0.92],[0.86,0.80]]
+        .forEach(([fx,fy]) => {
+            const r = w * (0.0010 + Math.abs(Math.sin(fx*37+fy*23)) * 0.0016);
+            ctx.beginPath(); ctx.arc(w*fx, h*fy, r, 0, Math.PI*2); ctx.fill();
+        });
+        // Color accent glow
+        const gc = v===0 ? ['rgba(255,90,10,', 0.06, 0.22] : v===1 ? ['rgba(140,30,255,', 0.05, 0.20] : ['rgba(20,200,80,', 0.07, 0.24];
+        [[0.16,0.18,0.12],[0.48,0.12,0.14],[0.76,0.22,0.10],[0.08,0.52,0.11],[0.36,0.60,0.13],[0.62,0.46,0.10],[0.88,0.56,0.12],[0.24,0.76,0.10],[0.58,0.80,0.12],[0.84,0.72,0.09]]
+        .forEach(([fx,fy,fr]) => {
+            const gg = ctx.createRadialGradient(w*fx, h*fy, 0, w*fx, h*fy, w*fr);
+            gg.addColorStop(0, gc[0]+gc[1]+')'); gg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*fr, h*fr*0.72, fx*2, 0, Math.PI*2); ctx.fill();
+        });
+        const vg = ctx.createLinearGradient(0,0,0,h);
+        vg.addColorStop(0, 'rgba(0,0,0,0.30)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
+    }
+    // Keep these method stubs since they may be referenced externally
+    getVisualConfigFromForm() {
+        const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
+        return theme ? theme.visualConfig : {};
+    }
+
+    drawDesignerDirtPatches() {}
+    drawDesignerGrassPatches() {}
+    drawDesignerFlowers() {}
 
     drawModeOverlay() {
-        // Always show grid coordinate readout (bottom-right corner)
-        if (this.currentMouseGridPos) {
-            const gx = this.currentMouseGridPos.gridX.toFixed(1);
-            const gy = this.currentMouseGridPos.gridY.toFixed(1);
-            const label = `x:${gx}  y:${gy}`;
-            const tw = 130;
-            const tx = this.canvas.width - tw - 8;
-            const ty = this.canvas.height - 26;
-            this.ctx.fillStyle = 'rgba(0,0,0,0.65)';
-            this.ctx.fillRect(tx, ty, tw, 20);
-            this.ctx.fillStyle = '#90caf9';
-            this.ctx.font = '11px monospace';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText(label, tx + 6, ty + 4);
-        }
+        // Coordinate display is handled by the DOM element (#coordDisplay)
 
         // Unified mode and terrain information overlay - consistent format across all modes
         
@@ -1118,33 +1078,27 @@ export class LevelDesigner {
             const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
             const terrainDefaults = theme.terrainDefaults;
             
-            let modeIcon = '';
             let modeLabel = '';
             let modeColor = '';
             let secondaryInfo = '';
 
             if (this.terrainMode === 'vegetation') {
-                modeIcon = '🌲';
-                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Vegetation`;
+                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Trees`;
                 modeColor = terrainDefaults.treeColor;
             } else if (this.terrainMode === 'rock') {
-                modeIcon = '🪨';
                 modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Rocks`;
                 modeColor = terrainDefaults.rockColor;
             } else if (this.terrainMode === 'water') {
                 if (this.waterMode === 'river') {
-                    modeIcon = '🌊';
                     modeLabel = 'Mode: RIVER';
                     modeColor = '#1e90ff';
                     const pts = this.riverPoints ? this.riverPoints.length : 0;
                     secondaryInfo = `Drawing: ${pts} pt${pts !== 1 ? 's' : ''} • ${this.riverPaths.length} saved`;
                 } else if (this.waterMode === 'lake') {
-                    modeIcon = '💧';
                     modeLabel = 'Mode: LAKES';
                     modeColor = '#0277bd';
                 } else {
-                    modeIcon = '💧';
-                    modeLabel = 'Water Mode (select type)';
+                    modeLabel = 'Water (select type)';
                     modeColor = '#4a6ba6';
                 }
             }
@@ -1157,7 +1111,7 @@ export class LevelDesigner {
             this.ctx.font = 'bold 14px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'top';
-            this.ctx.fillText(`${modeIcon} ${modeLabel}`, 15, 15);
+            this.ctx.fillText(modeLabel, 15, 15);
             
             // Color preview circle for terrain types
             if (this.terrainMode !== 'water' || this.waterMode === 'lake') {
@@ -1463,6 +1417,24 @@ export class LevelDesigner {
                 this.ctx.textBaseline = 'middle';
                 this.ctx.fillText(idx + 1, x, y);
             });
+
+            // Live preview: dashed line from last waypoint to cursor
+            if (this.pathPoints.length > 0 && this.currentMouseGridPos) {
+                const last = this.pathPoints[this.pathPoints.length - 1];
+                const lx = last.gridX * cW, ly = last.gridY * cH;
+                const mx = this.currentMouseGridPos.gridX * cW;
+                const my = this.currentMouseGridPos.gridY * cH;
+                this.ctx.setLineDash([8, 5]);
+                this.ctx.strokeStyle = 'rgba(88,196,220,0.70)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath(); this.ctx.moveTo(lx, ly); this.ctx.lineTo(mx, my); this.ctx.stroke();
+                this.ctx.setLineDash([]);
+                this.ctx.fillStyle = 'rgba(88,196,220,0.45)';
+                this.ctx.beginPath(); this.ctx.arc(mx, my, 8, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.strokeStyle = 'rgba(88,196,220,0.85)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath(); this.ctx.arc(mx, my, 8, 0, Math.PI * 2); this.ctx.stroke();
+            }
         }
     }
 
@@ -1767,10 +1739,10 @@ export class LevelDesigner {
 
             switch (element.type) {
                 case 'vegetation':
-                    this.drawVegetation(x, y, size);
+                    this.drawVegetation(x, y, size, element.variant);
                     break;
                 case 'rock':
-                    this.drawRock(x, y, size);
+                    this.drawRock(x, y, size, element.variant);
                     break;
                 case 'water':
                     if (element.waterType === 'river') {
@@ -1783,16 +1755,11 @@ export class LevelDesigner {
         });
     }
 
-    drawTree(x, y, size) {
-        // Get campaign-specific tree info and colors
+    drawTree(x, y, size, variant) {
         const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
         const primaryColor = terrainInfo.primaryColor;
         const accentColor = terrainInfo.accentColor;
-        
-        // Determine tree type based on campaign and x,y coordinates
-        const seed = Math.floor(x + y) % 4;
-        
-        // Use campaign-specific drawing methods
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x + y) % 4;
         switch(this.currentCampaign) {
             case 'mountain':
                 this.drawSnowPineTree(x, y, size, primaryColor, accentColor, seed);
@@ -1805,17 +1772,10 @@ export class LevelDesigner {
                 break;
             default: // forest
                 switch(seed) {
-                    case 0:
-                        this.drawTreeType1(x, y, size, primaryColor, accentColor);
-                        break;
-                    case 1:
-                        this.drawTreeType2(x, y, size, primaryColor, accentColor);
-                        break;
-                    case 2:
-                        this.drawTreeType3(x, y, size, primaryColor, accentColor);
-                        break;
-                    default:
-                        this.drawTreeType4(x, y, size, primaryColor, accentColor);
+                    case 0: this.drawTreeType1(x, y, size, primaryColor, accentColor); break;
+                    case 1: this.drawTreeType2(x, y, size, primaryColor, accentColor); break;
+                    case 2: this.drawTreeType3(x, y, size, primaryColor, accentColor); break;
+                    default: this.drawTreeType4(x, y, size, primaryColor, accentColor);
                 }
         }
     }
@@ -2116,16 +2076,11 @@ export class LevelDesigner {
         this.ctx.fill();
     }
 
-    drawRock(x, y, size) {
-        // Get campaign-specific rock info and colors
+    drawRock(x, y, size, variant) {
         const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
         const rockColor = terrainInfo.rockColor;
         const rockAccent = terrainInfo.rockAccent;
-        
-        // Determine rock type based on campaign and x,y coordinates
-        const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
-        
-        // Use campaign-specific drawing methods
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
         switch(this.currentCampaign) {
             case 'mountain':
                 this.drawSnowRock(x, y, size, rockColor, rockAccent, seed);
@@ -2138,17 +2093,10 @@ export class LevelDesigner {
                 break;
             default: // forest
                 switch(seed) {
-                    case 0:
-                        this.drawRockType1(x, y, size, rockColor, rockAccent);
-                        break;
-                    case 1:
-                        this.drawRockType2(x, y, size, rockColor, rockAccent);
-                        break;
-                    case 2:
-                        this.drawRockType3(x, y, size, rockColor, rockAccent);
-                        break;
-                    default:
-                        this.drawRockType4(x, y, size, rockColor, rockAccent);
+                    case 0: this.drawRockType1(x, y, size, rockColor, rockAccent); break;
+                    case 1: this.drawRockType2(x, y, size, rockColor, rockAccent); break;
+                    case 2: this.drawRockType3(x, y, size, rockColor, rockAccent); break;
+                    default: this.drawRockType4(x, y, size, rockColor, rockAccent);
                 }
         }
     }
@@ -2766,33 +2714,24 @@ export class LevelDesigner {
         // No cell-based rendering needed - smooth line rendering creates the complete visualization
     }
 
-    drawVegetation(x, y, size) {
-        // Draw campaign-specific vegetation with random variations
+    drawVegetation(x, y, size, variant) {
         if (this.currentCampaign === 'mountain') {
-            this.drawMountainVegetation(x, y, size);
+            this.drawMountainVegetation(x, y, size, variant);
         } else if (this.currentCampaign === 'space') {
-            this.drawSpaceVegetation(x, y, size);
+            this.drawSpaceVegetation(x, y, size, variant);
         } else if (this.currentCampaign === 'desert') {
-            this.drawDesertVegetation(x, y, size);
+            this.drawDesertVegetation(x, y, size, variant);
         } else {
-            // Forest - use regular tree drawing
-            this.drawTree(x, y, size);
+            this.drawTree(x, y, size, variant);
         }
     }
 
-    drawMountainVegetation(x, y, size) {
-        // Mountain pine trees with snow - 3 variations
-        const seed = Math.floor(x * 0.5 + y * 0.7) % 3;
-        
+    drawMountainVegetation(x, y, size, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 3 : Math.floor(x * 0.5 + y * 0.7) % 3;
         switch(seed) {
-            case 0:
-                this.drawMountainPine1(x, y, size);
-                break;
-            case 1:
-                this.drawMountainPine2(x, y, size);
-                break;
-            default:
-                this.drawMountainPine3(x, y, size);
+            case 0: this.drawMountainPine1(x, y, size); break;
+            case 1: this.drawMountainPine2(x, y, size); break;
+            default: this.drawMountainPine3(x, y, size);
         }
     }
 
@@ -2926,28 +2865,15 @@ export class LevelDesigner {
         this.ctx.fill();
     }
 
-    drawDesertVegetation(x, y, size) {
-        // Desert vegetation - cacti and bushes mix - 6 variations
-        const seed = Math.floor(x * 0.5 + y * 0.7) % 6;
-        
+    drawDesertVegetation(x, y, size, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(x * 0.5 + y * 0.7) % 6;
         switch(seed) {
-            case 0:
-                this.drawDesertCactusSaguaro(x, y, size);
-                break;
-            case 1:
-                this.drawDesertCactusBarrel(x, y, size);
-                break;
-            case 2:
-                this.drawDesertCactusPricklyPear(x, y, size);
-                break;
-            case 3:
-                this.drawDesertCactusColumnar(x, y, size);
-                break;
-            case 4:
-                this.drawDesertCactusCholla(x, y, size);
-                break;
-            default:
-                this.drawDesertBush(x, y, size);
+            case 0: this.drawDesertCactusSaguaro(x, y, size); break;
+            case 1: this.drawDesertCactusBarrel(x, y, size); break;
+            case 2: this.drawDesertCactusPricklyPear(x, y, size); break;
+            case 3: this.drawDesertCactusColumnar(x, y, size); break;
+            case 4: this.drawDesertCactusCholla(x, y, size); break;
+            default: this.drawDesertBush(x, y, size);
         }
     }
 
@@ -3334,25 +3260,14 @@ export class LevelDesigner {
         }
     }
 
-    drawSpaceVegetation(x, y, size) {
-        // Alien space vegetation - 5 weird abstract variations
-        const seed = Math.floor(x * 0.5 + y * 0.7) % 5;
-        
+    drawSpaceVegetation(x, y, size, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 5 : Math.floor(x * 0.5 + y * 0.7) % 5;
         switch(seed) {
-            case 0:
-                this.drawSpaceVortexPlant(x, y, size);
-                break;
-            case 1:
-                this.drawSpaceSpikeCoral(x, y, size);
-                break;
-            case 2:
-                this.drawSpaceFractalGrowth(x, y, size);
-                break;
-            case 3:
-                this.drawSpaceBiolumPlant(x, y, size);
-                break;
-            default:
-                this.drawSpaceAlienMushroom(x, y, size);
+            case 0: this.drawSpaceVortexPlant(x, y, size); break;
+            case 1: this.drawSpaceSpikeCoral(x, y, size); break;
+            case 2: this.drawSpaceFractalGrowth(x, y, size); break;
+            case 3: this.drawSpaceBiolumPlant(x, y, size); break;
+            default: this.drawSpaceAlienMushroom(x, y, size);
         }
     }
 
@@ -3612,12 +3527,6 @@ export class LevelDesigner {
 
         // Get visual config
         const visualConfig = {
-            grassColors: {
-                top: document.getElementById('grassTopColor').value,
-                upper: document.getElementById('grassUpperColor').value,
-                lower: document.getElementById('grassLowerColor').value,
-                bottom: document.getElementById('grassBottomColor').value
-            },
             grassPatchDensity: parseInt(document.getElementById('grassDensity').value),
             pathBaseColor: document.getElementById('pathColor').value,
             edgeBushColor: document.getElementById('bushColor').value,
@@ -3678,6 +3587,10 @@ export class LevelDesigner {
                 // Add waterType for water elements
                 if (element.type === 'water' && element.waterType) {
                     elementStr += `, waterType: '${element.waterType}'`;
+                }
+                // Add variant for vegetation and rock elements
+                if (element.variant !== undefined && element.variant !== null) {
+                    elementStr += `, variant: ${element.variant}`;
                 }
                 elementStr += ` }${idx < allTerrainElements.length - 1 ? ',' : ''}`;
                 return elementStr;
@@ -3759,7 +3672,7 @@ ${pathCode}
         const code = this.generateLevelCode();
         navigator.clipboard.writeText(code).then(() => {
             const statusMsg = document.getElementById('statusMessage');
-            statusMsg.innerHTML = '<div class="status-message success">✓ Code copied to clipboard!</div>';
+            statusMsg.innerHTML = '<div class="status-msg ok">Code copied to clipboard.</div>';
             setTimeout(() => {
                 statusMsg.innerHTML = '';
             }, 2000);
@@ -3790,7 +3703,7 @@ ${pathCode}
         document.body.removeChild(element);
 
         const statusMsg = document.getElementById('statusMessage');
-        statusMsg.innerHTML = `<div class="status-message success">✓ Exported as Level${levelNumber}.js</div>`;
+        statusMsg.innerHTML = `<div class="status-msg ok">Exported as Level${levelNumber}.js</div>`;
         setTimeout(() => {
             statusMsg.innerHTML = '';
         }, 3000);
@@ -3988,12 +3901,6 @@ ${pathCode}
             // Load visual configuration
             if (level.visualConfig) {
                 const config = level.visualConfig;
-                if (config.grassColors) {
-                    if (config.grassColors.top) document.getElementById('grassTopColor').value = config.grassColors.top;
-                    if (config.grassColors.upper) document.getElementById('grassUpperColor').value = config.grassColors.upper;
-                    if (config.grassColors.lower) document.getElementById('grassLowerColor').value = config.grassColors.lower;
-                    if (config.grassColors.bottom) document.getElementById('grassBottomColor').value = config.grassColors.bottom;
-                }
                 if (config.grassPatchDensity) document.getElementById('grassDensity').value = config.grassPatchDensity;
                 if (config.pathBaseColor) document.getElementById('pathColor').value = config.pathBaseColor;
                 if (config.edgeBushColor) document.getElementById('bushColor').value = config.edgeBushColor;
@@ -4112,7 +4019,7 @@ ${pathCode}
             // Close modal and show success message
             this.closeLoadLevelModal();
             const statusMsg = document.getElementById('statusMessage');
-            statusMsg.innerHTML = `<div class="status-message success">✓ Loaded ${modulePath}</div>`;
+            statusMsg.innerHTML = `<div class="status-msg ok">Loaded ${modulePath}</div>`;
             setTimeout(() => {
                 statusMsg.innerHTML = '';
             }, 3000);
@@ -4120,7 +4027,7 @@ ${pathCode}
         } catch (error) {
             console.error('Error loading level:', error);
             const statusMsg = document.getElementById('statusMessage');
-            statusMsg.innerHTML = `<div class="status-message error">✗ Error loading level: ${error.message}</div>`;
+            statusMsg.innerHTML = `<div class="status-msg err">Error loading level: ${error.message}</div>`;
             setTimeout(() => {
                 statusMsg.innerHTML = '';
             }, 3000);

@@ -1,973 +1,646 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Touwers Level Designer</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        :root {
+            --bg-dark:   #1a1a1a;
+            --bg-mid:    #222222;
+            --bg-panel:  #292929;
+            --bg-input:  #333333;
+            --border:    #3e3e3e;
+            --text:      #dedede;
+            --text-dim:  #888;
+            --label:     #7eb8e8;
+            --accent:    #0e639c;
+            --accent-h:  #1177bb;
+            --success:   #1e9448;
+            --danger:    #c0392b;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e1e1e;
-            color: #e0e0e0;
+            background: var(--bg-dark);
+            color: var(--text);
             display: flex;
             height: 100vh;
+            overflow: hidden;
         }
-
-        .container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-            gap: 20px;
-            padding: 20px;
-        }
-
+        .designer { display: flex; width: 100%; height: 100%; }
         .canvas-section {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 10px;
             min-width: 0;
+            background: var(--bg-dark);
+            border-right: 2px solid var(--border);
         }
-
-        .canvas-wrapper {
-            flex: 1;
-            position: relative;
-            background: #2a2a2a;
-            border: 2px solid #444;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            cursor: crosshair;
-        }
-
-        .canvas-toolbar {
-            display: flex;
-            gap: 4px;
-            background: #2a2a2a;
-            padding: 6px;
-            border-radius: 8px;
-            border: 1px solid #444;
-            overflow-x: auto;
-            overflow-y: hidden;
-            min-height: 40px;
-            align-items: center;
-        }
-        
-        .canvas-toolbar::-webkit-scrollbar {
-            height: 4px;
-        }
-        
-        .canvas-toolbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        .canvas-toolbar::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 2px;
-        }
-        
-        .toolbar-group {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            white-space: nowrap;
-        }
-        
-        .toolbar-group-label {
-            font-size: 12px;
-            color: #90caf9;
-            font-weight: 600;
-            margin-left: 4px;
-        }
-
-        button {
-            padding: 6px 12px;
-            background: #0e639c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background: #1177bb;
-        }
-
-        button.active {
-            background: #20a050;
-        }
-
-        button.danger {
-            background: #d93535;
-        }
-
-        button.danger:hover {
-            background: #ff4444;
-        }
-
-        .form-section {
-            width: 380px;
+        .settings-section {
+            width: 370px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
-            padding-right: 10px;
+            overflow: hidden;
+            background: var(--bg-mid);
         }
-
-        .form-section::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .form-section::-webkit-scrollbar-track {
-            background: #2a2a2a;
-        }
-
-        .form-section::-webkit-scrollbar-thumb {
-            background: #0e639c;
-            border-radius: 4px;
-        }
-
-        .form-group {
+        .designer-header {
             display: flex;
-            flex-direction: column;
-            gap: 5px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 12px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
         }
-
-        .form-group label {
+        .designer-header h1 { font-size: 16px; font-weight: 700; color: #58c4dc; }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            padding: 5px 8px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .tool-group { display: flex; gap: 2px; align-items: center; }
+        .tool-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+        .tool-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 2px; }
+        .tool-btn {
+            padding: 4px 9px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
             font-weight: 600;
-            font-size: 12px;
-            color: #90caf9;
+            transition: background 0.15s;
+            white-space: nowrap;
         }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            padding: 6px;
-            background: #3a3a3a;
-            color: #e0e0e0;
-            border: 1px solid #444;
-            border-radius: 4px;
+        .tool-btn:hover { background: #404040; border-color: #666; }
+        .tool-btn.active { background: var(--accent); border-color: #1488cc; color: #fff; }
+        .tool-btn.t-success { background: var(--success); border-color: #27ae60; color: #fff; }
+        .tool-btn.t-danger  { background: var(--danger); border-color: #e74c3c; color: #fff; }
+        .tool-btn.t-danger:hover  { background: #e74c3c; }
+        .tool-btn.t-success:hover { background: #27ae60; }
+        .slider-row { display: flex; align-items: center; gap: 4px; }
+        .slider-row label { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+        .slider-row input[type=range] { width: 75px; cursor: pointer; }
+        .slider-row .val { font-size: 10px; color: var(--label); min-width: 26px; }
+        .status-bar {
+            padding: 5px 10px;
+            background: #1c2a1c;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            color: #7ec86a;
+            min-height: 24px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .canvas-wrapper { flex: 1; position: relative; overflow: hidden; background: #111; }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        .coord-display {
+            position: absolute;
+            bottom: 5px;
+            right: 8px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.38);
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+        }
+        /* Panel tabs */
+        .panel-tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--bg-panel); }
+        .tab-btn {
+            flex: 1;
+            padding: 7px 4px;
+            background: transparent;
+            color: var(--text-dim);
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.15s, border-color 0.15s;
+            margin-bottom: -2px;
+        }
+        .tab-btn.active { color: #58c4dc; border-bottom-color: #58c4dc; }
+        .tab-panel { display: none; overflow-y: auto; flex: 1; padding: 10px 12px; }
+        .tab-panel.active { display: flex; flex-direction: column; gap: 9px; }
+        .tab-panel::-webkit-scrollbar { width: 5px; }
+        .tab-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        /* Form */
+        .sec-title {
+            font-size: 9px;
+            font-weight: 700;
+            color: #58c4dc;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #333;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .form-field { display: flex; flex-direction: column; gap: 3px; }
+        .form-field label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--label);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .form-field input,
+        .form-field select {
+            padding: 5px 6px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
             font-family: inherit;
             font-size: 12px;
         }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
+        .form-field input:focus, .form-field select:focus {
             outline: none;
-            border-color: #0e639c;
-            box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.2);
+            border-color: var(--accent);
         }
-
-        .color-input {
-            height: 32px;
+        .form-field input[type=color] { height: 27px; padding: 2px 3px; cursor: pointer; }
+        /* Details/summary for visual settings */
+        details.vis-cfg { border: 1px solid var(--border); border-radius: 3px; background: var(--bg-panel); }
+        details.vis-cfg summary {
+            padding: 5px 9px;
             cursor: pointer;
-        }
-
-        .form-section-title {
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 700;
-            color: #58c4dc;
-            margin-top: 8px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #444;
+            color: var(--label);
+            user-select: none;
+            list-style: none;
         }
-
-        .waves-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 10px;
-            background: #2a2a2a;
-            border-radius: 4px;
-        }
-
-        .wave-item {
-            padding: 10px;
-            background: #3a3a3a;
-            border-left: 3px solid #0e639c;
-            border-radius: 4px;
+        details.vis-cfg summary::-webkit-details-marker { display: none; }
+        details.vis-cfg summary::before { content: '[+] '; color: var(--text-dim); font-family: monospace; }
+        details.vis-cfg[open] summary::before { content: '[-] '; }
+        details.vis-cfg .dc { padding: 8px 9px; display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--border); }
+        .vis-sub { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; }
+        /* Buttons */
+        button {
+            padding: 5px 11px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
             font-size: 12px;
+            font-weight: 600;
+            transition: background 0.15s;
         }
-
-        .wave-item-header {
+        button:hover { background: var(--accent-h); }
+        button.btn-success { background: var(--success); }
+        button.btn-success:hover { background: #27ae60; }
+        button.btn-danger  { background: var(--danger); }
+        button.btn-danger:hover  { background: #e74c3c; }
+        button.btn-neutral { background: #444; color: var(--text); }
+        button.btn-neutral:hover { background: #555; }
+        button.btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--label); }
+        button.btn-outline:hover { background: rgba(14,99,156,0.15); }
+        /* Waves */
+        .waves-list { display: flex; flex-direction: column; gap: 5px; max-height: 230px; overflow-y: auto; }
+        .waves-list::-webkit-scrollbar { width: 5px; }
+        .waves-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .wave-card {
+            background: #2e2e2e;
+            border-left: 3px solid var(--accent);
+            border-radius: 3px;
+            padding: 6px 9px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .wave-item-title {
-            font-weight: 600;
-            color: #90caf9;
-        }
-
-        .wave-item-controls {
-            display: flex;
-            gap: 5px;
-        }
-
-        .wave-item-controls button {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .wave-form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .wave-form input {
-            padding: 6px;
-            background: #4a4a4a;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .enemy-pattern {
-            display: flex;
-            flex-direction: column;
             gap: 6px;
         }
-
-        .enemy-pattern-item {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-        }
-
-        .enemy-pattern-item select {
-            flex: 1;
-            padding: 4px;
-            font-size: 12px;
-        }
-
-        .enemy-pattern-item button {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .output-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #444;
-        }
-
+        .wave-card-info { flex: 1; }
+        .wave-card-title { font-size: 12px; font-weight: 700; color: #58c4dc; margin-bottom: 2px; }
+        .wave-card-meta { font-size: 10px; color: var(--text-dim); }
+        .wave-card-actions { display: flex; gap: 3px; }
+        /* Code output */
         .output-code {
-            background: #1e1e1e;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 8px;
+            background: #111;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 6px;
             font-family: 'Courier New', monospace;
-            font-size: 10px;
-            max-height: 120px;
+            font-size: 9px;
+            max-height: 150px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
+            color: #90b890;
         }
-
-        .info-box {
-            background: #264f78;
-            border-left: 3px solid #58c4dc;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .path-info {
-            background: #3a5731;
-            color: #9ecf6f;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 13px;
-            text-align: center;
-            font-weight: 500;
-        }
-        
-        .confirmation-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1500;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .confirmation-modal.active {
-            display: flex;
-        }
-        
-        .confirmation-content {
-            background: #2a2a2a;
-            border: 2px solid #0e639c;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
-        }
-        
-        .confirmation-title {
-            color: #58c4dc;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        .confirmation-message {
-            color: #e0e0e0;
-            font-size: 14px;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        
-        .confirmation-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-        
-        .confirmation-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-        
-        .confirmation-buttons .confirm-cancel {
-            background: #444;
-            color: #e0e0e0;
-        }
-        
-        .confirmation-buttons .confirm-cancel:hover {
-            background: #555;
-        }
-        
-        .confirmation-buttons .confirm-ok {
-            background: #20a050;
-            color: white;
-        }
-        
-        .confirmation-buttons .confirm-ok:hover {
-            background: #2acc60;
-        }
-
-        .status-message {
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            text-align: center;
-        }
-
-        .status-message.success {
-            background: #264a35;
-            color: #7ae881;
-        }
-
-        .status-message.error {
-            background: #5a3034;
-            color: #ff9999;
-        }
-
-        .grid-display {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            font-size: 12px;
-        }
-
-        .grid-item {
-            background: #2a2a2a;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #444;
-        }
-
-        .grid-item-label {
-            color: #90caf9;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .grid-item-value {
-            color: #e0e0e0;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* Modal Styles */
+        .status-msg { padding: 6px 9px; border-radius: 3px; font-size: 11px; text-align: center; }
+        .status-msg.ok  { background: #1a3020; color: #7ae860; }
+        .status-msg.err { background: #3a1818; color: #ff9090; }
+        /* Modal */
         .modal-overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
+            inset: 0;
+            background: rgba(0,0,0,0.78);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #2a2a2a;
-            border: 2px solid #0e639c;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--bg-panel);
+            border: 2px solid var(--accent);
+            border-radius: 6px;
+            padding: 22px;
+            max-width: 560px;
+            width: 92%;
             max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 10px 50px rgba(0,0,0,0.9);
         }
-
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #0e639c;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
         }
-
-        .modal-header h2 {
-            color: #58c4dc;
-            margin: 0;
-            font-size: 24px;
-        }
-
-        .modal-close-btn {
-            background: #5a3034;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 4px;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .modal-close-btn:hover {
-            background: #ff4444;
-        }
-
-        .modal-body {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .modal-form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .modal-form-group label {
-            font-weight: 600;
-            color: #90caf9;
-            font-size: 14px;
-        }
-
-        .modal-form-group input,
-        .modal-form-group select {
-            padding: 10px;
-            background: #3a3a3a;
-            color: #e0e0e0;
-            border: 1px solid #555;
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .modal-form-group input:focus,
-        .modal-form-group select:focus {
-            outline: none;
-            border-color: #0e639c;
-            box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.3);
-        }
-
-        .modal-enemy-pattern {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .modal-pattern-list {
-            background: #1e1e1e;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .modal-pattern-item {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            background: #2a2a2a;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #444;
-        }
-
-        .modal-pattern-item select {
-            flex: 1;
-            padding: 8px;
+        .modal-header h2 { font-size: 17px; color: #58c4dc; }
+        .modal-close { background: #383838; border: none; color: var(--text); width: 30px; height: 30px; border-radius: 3px; cursor: pointer; font-size: 16px; font-weight: 700; }
+        .modal-close:hover { background: var(--danger); color: #fff; }
+        .modal-body { display: flex; flex-direction: column; gap: 12px; }
+        .modal-field { display: flex; flex-direction: column; gap: 4px; }
+        .modal-field label { font-size: 11px; font-weight: 700; color: var(--label); }
+        .modal-field input, .modal-field select {
+            padding: 7px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 3px;
             font-size: 13px;
         }
-
-        .modal-pattern-item button {
-            padding: 6px 12px;
-            background: #d93535;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .modal-pattern-item button:hover {
-            background: #ff4444;
-        }
-
-        .modal-add-pattern-btn {
-            padding: 10px;
-            background: #1a4d7d;
-            color: #90caf9;
-            border: 1px dashed #0e639c;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-
-        .modal-add-pattern-btn:hover {
-            background: #0e639c;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #444;
-        }
-
-        .modal-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .modal-buttons .cancel-btn {
-            background: #444;
-            color: #e0e0e0;
-        }
-
-        .modal-buttons .cancel-btn:hover {
-            background: #555;
-        }
-
-        .modal-buttons .save-btn {
-            background: #20a050;
-            color: white;
-        }
-
-        .modal-buttons .save-btn:hover {
-            background: #2acc60;
-        }
-
-        .waves-list {
+        .pattern-list {
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 8px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            max-height: 200px;
-            min-height: 120px;
+            gap: 6px;
+            max-height: 180px;
             overflow-y: auto;
-            padding: 8px 0;
         }
-
-        .wave-card {
-            background: #3a3a3a;
-            border-left: 3px solid #0e639c;
-            border-radius: 4px;
-            padding: 10px;
+        .pattern-item { display: flex; gap: 7px; align-items: center; }
+        .pattern-item select { flex: 1; padding: 5px; font-size: 12px; }
+        .modal-footer {
             display: flex;
-            justify-content: space-between;
-            align-items: start;
-            gap: 8px;
+            gap: 7px;
+            justify-content: flex-end;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
         }
-
-        .wave-card-info {
-            flex: 1;
-            font-size: 11px;
-        }
-
-        .wave-card-title {
-            font-weight: 600;
-            color: #58c4dc;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .wave-card-stats {
-            display: none;
-        }
-
-        .wave-card-stat {
-            font-size: 12px;
-        }
-
-        .wave-card-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .wave-card-actions button {
-            padding: 4px 8px;
-            font-size: 11px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .wave-card-actions .edit-btn {
-            background: #0e639c;
-            color: white;
-        }
-
-        .wave-card-actions .edit-btn:hover {
-            background: #1177bb;
-        }
-
-        .wave-card-actions .delete-btn {
-            background: #d93535;
-            color: white;
-        }
-
-        .wave-card-actions .delete-btn:hover {
-            background: #ff4444;
+        .hint {
+            background: #19283a;
+            border-left: 3px solid #58c4dc;
+            padding: 6px 9px;
+            border-radius: 0 3px 3px 0;
+            font-size: 10px;
+            color: #8ab0cc;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Canvas Section -->
-        <div class="canvas-section">
-            <h1 style="font-size: 24px; color: #58c4dc;">Touwers Level Designer</h1>
-            <div class="canvas-toolbar">
-                <div class="toolbar-group">
-                    <button id="drawPathBtn" class="active" title="Draw the enemy path">🖌️ Path</button>
-                </div>
-                
-                <div class="toolbar-group">
-                    <span class="toolbar-group-label">Terrain:</span>
-                    <button id="drawVegetationBtn" title="Place vegetation">🌲 Vegetation</button>
-                    <button id="drawRockBtn" title="Place rocks">🪨 Rocks</button>
-                    <button id="drawWaterBtn" title="Place water">💧 Water</button>
-                </div>
-                
-                <div class="toolbar-group" id="waterControls" style="visibility: hidden;">
-                    <span class="toolbar-group-label">Water:</span>
-                    <button id="waterRiverBtn" title="Draw rivers">🌊 River</button>
-                    <button id="waterLakeBtn" title="Place lakes">💧 Lake</button>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <input type="range" id="waterSizeSlider" style="width: 100px; vertical-align: middle;" min="1" max="4" step="0.5" value="2">
-                        <span id="waterSizeLabel" style="font-size: 12px; color: #90caf9; min-width: 35px;"></span>
-                    </div>
-                </div>
-                
-                <div class="toolbar-group" id="finishPathControl" style="visibility: hidden;">
-                    <button id="finishPathBtn" style="background: #20a050;" title="Confirm path">✓ Finish Path</button>
-                </div>
-                
-                <div class="toolbar-group" id="finishRiverControl" style="visibility: hidden;">
-                    <button id="finishRiverBtn" style="background: #20a050;" title="Confirm river">✓ Finish River</button>
-                </div>
-                
-                <div class="toolbar-group" style="margin-left: auto;">
-                    <button id="undoBtn" title="Remove last point">↶ Undo</button>
-                    <button id="clearBtn" class="danger" title="Clear all path points">🗑️ Clear</button>
-                    <button id="loadLevelBtn" title="Load existing level">📂 Load</button>
-                    <button id="exportBtn" title="Export level code">📥 Export</button>
-                </div>
-            </div>
-            <div class="path-info" id="pathInfo">�️ Path mode active — Click to place waypoints. Castle auto-previews at endpoint. Click "Finish Path" to lock the path.</div>
-            <div class="canvas-wrapper">
-                <canvas id="designCanvas"></canvas>
+<div class="designer">
+
+    <!-- LEFT: Canvas section -->
+    <div class="canvas-section">
+        <div class="designer-header">
+            <h1>Touwers Level Designer</h1>
+            <div class="tool-group">
+                <button class="tool-btn" id="loadLevelBtn">Load Level</button>
+                <button class="tool-btn t-success" id="exportBtn">Export .js</button>
             </div>
         </div>
 
-        <!-- Form Section -->
-        <div class="form-section">
-            <h2 style="color: #58c4dc;">Level Configuration</h2>
+        <div class="toolbar">
+            <div class="tool-group">
+                <span class="tool-label">Draw</span>
+                <button class="tool-btn active" id="drawPathBtn" title="Place waypoints to define the enemy path [P]">Path</button>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group">
+                <span class="tool-label">Terrain</span>
+                <button class="tool-btn" id="drawVegetationBtn" title="Place trees and vegetation [V]">Trees</button>
+                <button class="tool-btn" id="drawRockBtn"       title="Place rocks and boulders [R]">Rocks</button>
+                <button class="tool-btn" id="drawWaterBtn"      title="Place water features [W]">Water</button>
+            </div>
+            <!-- Variant picker (visible when Trees or Rocks mode is active) -->
+            <div class="tool-group" id="variantPickerRow" style="display:none">
+                <div class="tool-sep"></div>
+                <span class="tool-label" id="variantPickerLabel">Type</span>
+                <button class="tool-btn" id="variantBtn0">1</button>
+                <button class="tool-btn" id="variantBtn1">2</button>
+                <button class="tool-btn" id="variantBtn2">3</button>
+                <button class="tool-btn" id="variantBtn3">4</button>
+            </div>
+            <!-- Water sub-tools (visible only when Water mode is active) -->
+            <div class="tool-group" id="waterControls" style="display:none">
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="waterRiverBtn" title="Draw a river — click and drag for freehand, or click individual waypoints">River</button>
+                <button class="tool-btn" id="waterLakeBtn"  title="Click to place a circular lake">Lake</button>
+                <div class="slider-row">
+                    <label>Width</label>
+                    <input type="range" id="waterSizeSlider" min="1" max="5" step="0.5" value="2">
+                    <span class="val" id="waterSizeLabel">2.0</span>
+                </div>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group">
+                <span class="tool-label">Size</span>
+                <div class="slider-row">
+                    <input type="range" id="terrainSizeSlider" min="1" max="4" step="0.5" value="2">
+                    <span class="val" id="terrainSizeLabel">2.0</span>
+                </div>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group" id="finishPathControl" style="display:none">
+                <button class="tool-btn t-success" id="finishPathBtn">Finish Path</button>
+            </div>
+            <div class="tool-group" id="finishRiverControl" style="display:none">
+                <button class="tool-btn t-success" id="finishRiverBtn">Finish River</button>
+            </div>
+            <div class="tool-sep"></div>
+            <div class="tool-group" style="margin-left:auto">
+                <button class="tool-btn" id="undoBtn" title="Undo last action [U]">Undo</button>
+                <button class="tool-btn t-danger" id="clearBtn" title="Clear all">Clear All</button>
+            </div>
+        </div>
 
-            <div class="form-group">
+        <div class="status-bar" id="pathInfo">Path mode — Click to add waypoints. Right-click to remove last. Click Finish Path when done.</div>
+
+        <div class="canvas-wrapper">
+            <canvas id="designCanvas"></canvas>
+            <div class="coord-display" id="coordDisplay">x: -- y: --</div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Settings panel -->
+    <div class="settings-section">
+        <div class="panel-tabs">
+            <button class="tab-btn active" data-tab="settings">Settings</button>
+            <button class="tab-btn" data-tab="waves">Waves</button>
+            <button class="tab-btn" data-tab="export">Export</button>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div class="tab-panel active" id="tab-settings">
+            <div class="sec-title">Level Info</div>
+
+            <div class="form-field">
                 <label>Campaign Theme</label>
                 <select id="campaignTheme">
-                    <option value="forest">🌲 Forest</option>
-                    <option value="mountain">⛰️ Mountain</option>
-                    <option value="desert">🏜️ Desert</option>
-                    <option value="space">🚀 Space</option>
+                    <option value="forest">Forest</option>
+                    <option value="mountain">Mountain</option>
+                    <option value="desert">Desert</option>
+                    <option value="space">Space</option>
                 </select>
             </div>
 
-            <div class="form-group">
-                <label>Level Name</label>
-                <input type="text" id="levelName" value="My Level" placeholder="e.g. The Dark Forest">
-            </div>
-
-            <div class="form-group">
-                <label>Level Number</label>
-                <input type="number" id="levelNumber" value="1" min="1" max="99">
-            </div>
-
-            <div class="form-group">
-                <label>Difficulty</label>
-                <select id="difficulty">
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                    <option value="Nightmare">Nightmare</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Max Waves</label>
-                <input type="number" id="maxWaves" value="10" min="1" max="50">
-            </div>
-
-            <div class="form-section-title">Visual Settings <span style="font-size:11px;font-weight:normal;color:#6aafcf;margin-left:8px;">— live preview updates on change</span></div>
-
-            <p style="font-size:11px;color:#888;margin:0 0 10px 0;">These settings control how the background looks in-game. Changes are reflected in the canvas immediately.</p>
-
-            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Background Gradient (top → bottom)</div>
-            <div class="grid-display">
-                <div class="form-group">
-                    <label>Grass Top Color</label>
-                    <input type="color" class="color-input" id="grassTopColor" value="#4a6741">
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Level Name</label>
+                    <input type="text" id="levelName" value="My Level" placeholder="The Dark Forest">
                 </div>
-                <div class="form-group">
-                    <label>Grass Upper Color</label>
-                    <input type="color" class="color-input" id="grassUpperColor" value="#5a7751">
-                </div>
-                <div class="form-group">
-                    <label>Grass Lower Color</label>
-                    <input type="color" class="color-input" id="grassLowerColor" value="#6a8761">
-                </div>
-                <div class="form-group">
-                    <label>Grass Bottom Color</label>
-                    <input type="color" class="color-input" id="grassBottomColor" value="#3a5731">
+                <div class="form-field">
+                    <label>Level Number</label>
+                    <input type="number" id="levelNumber" value="1" min="1" max="99">
                 </div>
             </div>
 
-            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Path &amp; Edge Decoration Colors</div>
-            <div class="grid-display">
-                <div class="form-group">
-                    <label>Path Color</label>
-                    <input type="color" class="color-input" id="pathColor" value="#8b7355">
-                </div>
-                <div class="form-group">
-                    <label>Bush Color</label>
-                    <input type="color" class="color-input" id="bushColor" value="#1f6f1f">
-                </div>
-                <div class="form-group">
-                    <label>Rock Color</label>
-                    <input type="color" class="color-input" id="rockColor" value="#807f80">
-                </div>
-                <div class="form-group">
-                    <label>Edge Grass Color</label>
-                    <input type="color" class="color-input" id="edgeGrassColor" value="#2e8b2e">
-                </div>
-            </div>
-
-            <div style="font-size:11px;color:#90caf9;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Decoration Density</div>
-            <div class="grid-display">
-                <div class="form-group">
-                    <label>Grass Patch Density</label>
-                    <select id="grassDensity">
-                        <option value="25000">Very Sparse</option>
-                        <option value="18000">Sparse</option>
-                        <option value="12000" selected>Normal</option>
-                        <option value="7000">Dense</option>
-                        <option value="3000">Very Dense</option>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Difficulty</label>
+                    <select id="difficulty">
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                        <option value="Nightmare">Nightmare</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Flower Density</label>
-                    <select id="flowerDensity">
-                        <option value="120000">Very Sparse</option>
-                        <option value="80000">Sparse</option>
-                        <option value="50000" selected>Normal</option>
-                        <option value="25000">Dense</option>
-                        <option value="10000">Very Dense</option>
-                    </select>
+                <div class="form-field">
+                    <label>Max Waves</label>
+                    <input type="number" id="maxWaves" value="10" min="1" max="50">
                 </div>
             </div>
 
-            <div class="form-section-title">Waves Configuration</div>
+            <details class="vis-cfg">
+                <summary>Visual Settings (live preview)</summary>
+                <div class="dc">
+                    <div class="vis-sub">Background Gradient</div>
+                    <div class="form-row">
+                        <div class="form-field"><label>Top</label>
+                            <input type="color" id="grassTopColor"    value="#4a6741" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Upper</label>
+                            <input type="color" id="grassUpperColor"  value="#5a7751" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Lower</label>
+                            <input type="color" id="grassLowerColor"  value="#6a8761" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Bottom</label>
+                            <input type="color" id="grassBottomColor" value="#3a5731" class="color-input">
+                        </div>
+                    </div>
 
-            <button id="addWaveBtn" style="margin-bottom: 10px;">+ Add Wave</button>
+                    <div class="vis-sub">Path &amp; Edge Colors</div>
+                    <div class="form-row">
+                        <div class="form-field"><label>Path</label>
+                            <input type="color" id="pathColor"       value="#8b7355" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Bush</label>
+                            <input type="color" id="bushColor"       value="#1f6f1f" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Rock</label>
+                            <input type="color" id="rockColor"       value="#807f80" class="color-input">
+                        </div>
+                        <div class="form-field"><label>Edge Grass</label>
+                            <input type="color" id="edgeGrassColor"  value="#2e8b2e" class="color-input">
+                        </div>
+                    </div>
 
-            <div class="waves-list" id="wavesList"></div>
-
-            <div class="output-section">
-                <button id="copyCodeBtn">📋 Copy Generated Code</button>
-                <div class="form-group">
-                    <label>Generated Level Class (Preview)</label>
-                    <div class="output-code" id="outputCode"></div>
-                </div>
-                <div id="statusMessage"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Wave Configuration Modal -->
-    <div class="modal-overlay" id="waveModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Add Wave</h2>
-                <button class="modal-close-btn" id="modalCloseBtn">✕</button>
-            </div>
-
-            <div class="modal-body">
-                <div class="modal-form-group">
-                    <label>Enemy Count</label>
-                    <input type="number" id="modalEnemyCount" min="1" value="5">
-                </div>
-
-                <div class="modal-form-group">
-                    <label>Health Multiplier</label>
-                    <input type="number" id="modalHealthMultiplier" min="0.1" step="0.1" value="1.0">
-                </div>
-
-                <div class="modal-form-group">
-                    <label>Enemy Speed (pixels/sec)</label>
-                    <input type="number" id="modalEnemySpeed" min="10" step="1" value="35">
-                </div>
-
-                <div class="modal-form-group">
-                    <label>Spawn Interval (seconds)</label>
-                    <input type="number" id="modalSpawnInterval" min="0.1" step="0.1" value="1.5">
-                </div>
-
-                <div class="modal-form-group">
-                    <label>Enemy Pattern</label>
-                    <div class="modal-enemy-pattern">
-                        <div class="modal-pattern-list" id="modalPatternList"></div>
-                        <button class="modal-add-pattern-btn" id="modalAddPatternBtn">+ Add Enemy to Pattern</button>
+                    <div class="vis-sub">Decoration Density</div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Grass Patches</label>
+                            <select id="grassDensity">
+                                <option value="25000">Very Sparse</option>
+                                <option value="18000">Sparse</option>
+                                <option value="12000" selected>Normal</option>
+                                <option value="7000">Dense</option>
+                                <option value="3000">Very Dense</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Flowers</label>
+                            <select id="flowerDensity">
+                                <option value="120000">Very Sparse</option>
+                                <option value="80000">Sparse</option>
+                                <option value="50000" selected>Normal</option>
+                                <option value="25000">Dense</option>
+                                <option value="10000">Very Dense</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="modal-buttons">
-                <button class="cancel-btn" id="modalCancelBtn">Cancel</button>
-                <button class="save-btn" id="modalSaveBtn">Save Wave</button>
+            <div class="hint">
+                Select a campaign theme to auto-fill the visual colors. Draw the enemy path first, then add terrain decorations.<br>
+                Keyboard shortcuts: P = Path, V = Trees, R = Rocks, W = Water, U = Undo
             </div>
+        </div>
+
+        <!-- WAVES TAB -->
+        <div class="tab-panel" id="tab-waves">
+            <div class="sec-title">Wave Configuration</div>
+            <button id="addWaveBtn" class="btn-outline" style="margin-bottom:6px;">+ Add Wave</button>
+            <div class="waves-list" id="wavesList"></div>
+        </div>
+
+        <!-- EXPORT TAB -->
+        <div class="tab-panel" id="tab-export">
+            <div class="sec-title">Generated Level Code</div>
+            <div style="display:flex; gap:6px; margin-bottom:8px;">
+                <button id="copyCodeBtn"  style="flex:1">Copy Code</button>
+                <button id="exportBtn2"   class="btn-success" style="flex:1">Download .js</button>
+            </div>
+            <div class="output-code" id="outputCode"></div>
+            <div id="statusMessage" style="margin-top:6px;"></div>
         </div>
     </div>
 
-    <!-- Load Level Modal -->
-    <div class="modal-overlay" id="loadLevelModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Load Level</h2>
-                <button class="modal-close-btn" id="loadLevelCloseBtn">✕</button>
-            </div>
+</div>
 
-            <div class="modal-body">
-                <div class="modal-form-group">
-                    <label>Campaign</label>
-                    <select id="campaignSelect" style="padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
-                        <option value="">-- Choose campaign --</option>
-                    </select>
+<!-- Wave modal -->
+<div class="modal-overlay" id="waveModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 id="modalTitle">Add Wave</h2>
+            <button class="modal-close" id="modalCloseBtn">x</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="modal-field"><label>Enemy Count</label>
+                    <input type="number" id="modalEnemyCount" min="1" value="5">
                 </div>
-                
-                <div class="modal-form-group">
-                    <label>Level</label>
-                    <select id="levelSelect" style="padding: 10px; background: #3a3a3a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; font-size: 14px;">
-                        <option value="">-- Choose level --</option>
-                    </select>
+                <div class="modal-field"><label>Health Multiplier</label>
+                    <input type="number" id="modalHealthMultiplier" min="0.1" step="0.1" value="1.0">
+                </div>
+                <div class="modal-field"><label>Speed (px/s)</label>
+                    <input type="number" id="modalEnemySpeed" min="10" step="1" value="35">
+                </div>
+                <div class="modal-field"><label>Spawn Interval (s)</label>
+                    <input type="number" id="modalSpawnInterval" min="0.1" step="0.1" value="1.5">
                 </div>
             </div>
-
-            <div class="modal-buttons">
-                <button class="cancel-btn" id="loadLevelCancelBtn">Cancel</button>
-                <button class="save-btn" id="loadLevelConfirmBtn">Load</button>
+            <div class="modal-field">
+                <label>Enemy Pattern</label>
+                <div class="pattern-list" id="modalPatternList"></div>
+                <button class="btn-outline" id="modalAddPatternBtn" style="margin-top:6px;">+ Add Enemy to Pattern</button>
             </div>
         </div>
-    </div>
-    
-    <!-- Confirmation Modal -->
-    <div class="confirmation-modal" id="confirmationModal">
-        <div class="confirmation-content">
-            <div class="confirmation-title" id="confirmationTitle"></div>
-            <div class="confirmation-message" id="confirmationMessage"></div>
-            <div class="confirmation-buttons">
-                <button class="confirm-cancel" id="confirmationCancel">Cancel</button>
-                <button class="confirm-ok" id="confirmationOk">Confirm</button>
-            </div>
+        <div class="modal-footer">
+            <button class="btn-neutral" id="modalCancelBtn">Cancel</button>
+            <button class="btn-success" id="modalSaveBtn">Save Wave</button>
         </div>
     </div>
+</div>
 
-    <script type="module">
-        import { LevelDesigner } from './js/level-designer/LevelDesigner.js';
-        
-        // Initialize the designer
-        const designer = new LevelDesigner('designCanvas', {
-            gridWidth: 60,
-            gridHeight: 33.75,
-            cellSize: 32
+<!-- Load level modal -->
+<div class="modal-overlay" id="loadLevelModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Load Existing Level</h2>
+            <button class="modal-close" id="loadLevelCloseBtn">x</button>
+        </div>
+        <div class="modal-body">
+            <div class="hint">Load an existing level as a starting point. Your current work will be replaced.</div>
+            <div class="modal-field">
+                <label>Campaign</label>
+                <select id="campaignSelect">
+                    <option value="">-- Choose campaign --</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label>Level</label>
+                <select id="levelSelect">
+                    <option value="">-- Choose level --</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-neutral" id="loadLevelCancelBtn">Cancel</button>
+            <button class="btn-success" id="loadLevelConfirmBtn">Load Level</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation modal -->
+<div class="modal-overlay" id="confirmationModal">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-header">
+            <h2 id="confirmationTitle">Confirm</h2>
+        </div>
+        <div class="modal-body">
+            <p id="confirmationMessage" style="font-size:13px; line-height:1.6; color:var(--text);"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-neutral" id="confirmationCancel">Cancel</button>
+            <button class="btn-success" id="confirmationOk">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { LevelDesigner } from './js/level-designer/LevelDesigner.js';
+
+    const designer = new LevelDesigner('designCanvas', {
+        gridWidth: 60,
+        gridHeight: 33.75,
+        cellSize: 32
+    });
+    window.levelDesigner = designer;
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            document.querySelectorAll('.panel-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tab)?.classList.add('active');
         });
+    });
 
-        // Store reference for global access
-        window.levelDesigner = designer;
-    </script>
+    // Secondary export button
+    document.getElementById('exportBtn2')?.addEventListener('click', () => designer.exportLevel());
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e => {
+        if (['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+        if (e.key === 'u' || e.key === 'U') designer.undo();
+        if (e.key === 'p' || e.key === 'P') designer.setMode('path');
+        if (e.key === 'v' || e.key === 'V') designer.setTerrainMode('vegetation');
+        if (e.key === 'r' || e.key === 'R') designer.setTerrainMode('rock');
+        if (e.key === 'w' || e.key === 'W') designer.setTerrainMode('water');
+        if (e.key === 'Escape') designer.setMode('path');
+    });
+</script>
 </body>
 </html>

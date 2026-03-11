@@ -5,13 +5,17 @@ When adding new code, follow the established architecture and patterns closely. 
 
 Don't create summary documents or any .md files other than this one.
 
-You do not have to test anything functionally, I will do that. Your job is to deliver code that fits the architecture and coding style. Make sure to check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app, do NOT deliver code with syntax errors.
+You do not have to test anything functionally, I will do that. Your job is to deliver code that fits the architecture and coding style. Make sure to check for syntax errors carefully, often you miss a comma or bracket and that breaks the whole app, do NOT deliver code with syntax errors. Do not run advanced code analysis tools, scripts or commands, just check for syntax errors by reading the file and make sure the code fits the existing style and patterns.
 
 When referencing files, use the full relative path from the project root, e.g. `public/js/entities/towers/CannonTower.js`.
 
 Never use emojis or visualizations that do not work on different types of OS, make everything code-based and custom.
 
 Do not keep adding code when existing logic is broken or already there, remove old code if you need to change something, do not add new code that duplicates existing logic. Always check for existing code before adding anything new.
+
+Do not ask for reading and scanning files in the project with weird scripts and commands, you can read everything directly from the project files. For example do not do stuff like this:
+const fs=require('fs'); try { new Function(fs.readFileSync('c:/Users/boiaz/AppDev/touwers/public/js/level-designer/LevelDesigner.js','utf8')); console.log('Syntax OK'); } catch(e) { console.log('Error:', e.message); }
+Just read the file and check for syntax errors by eye.
 
 ## Project Overview
 

@@ -39,6 +39,9 @@ export class LevelBase {
         this.backgroundCanvas = null; // Cache for pre-rendered background
         
         this.castle = null;
+
+        // Randomly select a backdrop variant once per level (0 = default, 1 = alt, 2 = alt2)
+        this.backdropVariant = Math.floor(Math.random() * 3);
         
         // Visual configuration - can be overridden by individual levels
         this.visualConfig = {
@@ -655,116 +658,34 @@ export class LevelBase {
                gridY >= 0 && gridY < this.gridHeight;
     }
     
+    /**
+     * Linear-congruential seeded RNG — deterministic, same seed always yields the same sequence.
+     * @param {number} seed - Integer seed value
+     * @returns {function} A no-argument function returning floats in [0, 1)
+     */
+    seededRng(seed) {
+        let s = seed >>> 0;
+        return () => {
+            s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+            return s / 4294967296;
+        };
+    }
+
     generateAllVisualElements(canvasWidth, canvasHeight) {
         if (this.visualElementsGenerated) return;
-        
-        // Generate grass patches - using config density
         this.grassPatches = [];
-        const patchCount = Math.floor((canvasWidth * canvasHeight) / this.visualConfig.grassPatchDensity);
-        for (let i = 0; i < patchCount; i++) {
-            // Add clustering - some patches appear near others
-            let x, y;
-            if (Math.random() < 0.3 && this.grassPatches.length > 0) {
-                // Cluster near existing patch
-                const nearPatch = this.grassPatches[Math.floor(Math.random() * this.grassPatches.length)];
-                const clusterRadius = 80;
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * clusterRadius;
-                x = Math.max(0, Math.min(canvasWidth, nearPatch.x + Math.cos(angle) * distance));
-                y = Math.max(0, Math.min(canvasHeight, nearPatch.y + Math.sin(angle) * distance));
-            } else {
-                // Random placement
-                x = Math.random() * canvasWidth;
-                y = Math.random() * canvasHeight;
-            }
-            
-            this.grassPatches.push({
-                x: x,
-                y: y,
-                size: Math.random() * (this.visualConfig.grassPatchSizeMax - this.visualConfig.grassPatchSizeMin) + this.visualConfig.grassPatchSizeMin,
-                shade: Math.random() * 0.4 + 0.6,
-                type: Math.floor(Math.random() * 3)
-            });
-        }
-        
-        // Generate natural ground texture patches (organic, not square)
         this.dirtPatches = [];
-        const groundTextureCount = Math.floor(canvasWidth * canvasHeight / 15000); // Natural distribution
-        for (let i = 0; i < groundTextureCount; i++) {
-            // Create more varied and organic texture distribution
-            const textureType = Math.floor(Math.random() * 5);
-            
-            // Different patch sizes based on texture type for more natural appearance
-            let sizeX, sizeY;
-            if (textureType === 0) {
-                // Soil patches - medium, organic
-                sizeX = Math.random() * 50 + 40;
-                sizeY = Math.random() * 35 + 30;
-            } else if (textureType === 1) {
-                // Moss - irregular shapes, smaller
-                sizeX = Math.random() * 35 + 20;
-                sizeY = Math.random() * 30 + 15;
-            } else if (textureType === 2) {
-                // Pebbles - scattered pattern, varied
-                sizeX = Math.random() * 40 + 25;
-                sizeY = Math.random() * 35 + 20;
-            } else if (textureType === 3) {
-                // Clay/mud - larger, flowing shapes
-                sizeX = Math.random() * 70 + 50;
-                sizeY = Math.random() * 45 + 35;
-            } else {
-                // Leaf litter - small, scattered
-                sizeX = Math.random() * 30 + 15;
-                sizeY = Math.random() * 25 + 12;
-            }
-            
-            this.dirtPatches.push({
-                x: Math.random() * canvasWidth,
-                y: Math.random() * canvasHeight,
-                sizeX: sizeX,
-                sizeY: sizeY,
-                rotation: Math.random() * Math.PI * 2,
-                textureType: textureType,
-                intensity: Math.random() * 0.35 + 0.15,
-                irregularity: Math.random() * 0.6 + 0.4 // How irregular/organic the patch is
-            });
-        }
-        
-        // Generate flowers - using config density
         this.flowers = [];
-        const flowerCount = Math.floor(canvasWidth * canvasHeight / this.visualConfig.flowerDensity);
-        for (let i = 0; i < flowerCount; i++) {
-            const flowerType = Math.random();
-            let x, y;
-            
-            // Create flower clusters
-            if (Math.random() < 0.4 && this.flowers.length > 0) {
-                const nearFlower = this.flowers[Math.floor(Math.random() * this.flowers.length)];
-                const clusterRadius = 40;
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * clusterRadius;
-                x = Math.max(0, Math.min(canvasWidth, nearFlower.x + Math.cos(angle) * distance));
-                y = Math.max(0, Math.min(canvasHeight, nearFlower.y + Math.sin(angle) * distance));
-            } else {
-                x = Math.random() * canvasWidth;
-                y = Math.random() * canvasHeight;
-            }
-            
-            this.flowers.push({
-                x: x,
-                y: y,
-                type: flowerType < 0.3 ? 'yellow' : (flowerType < 0.6 ? 'daisy' : 'purple'),
-                petals: flowerType >= 0.3 && flowerType < 0.6 ? this.generateDaisyPetals(x, y) : null
-            });
-        }
-        
+
         this.visualElementsGenerated = true;
     }
-    
-    generateDaisyPetals(centerX, centerY) {
+
+
+    generateDaisyPetals(centerX, centerY, rng = null) {
+        const r = rng || Math.random.bind(Math);
         const petals = [];
         for (let petal = 0; petal < 6; petal++) {
-            const angle = (petal / 6) * Math.PI * 2;
+            const angle = (petal / 6) * Math.PI * 2 + r() * 0.3;
             petals.push({
                 x: centerX + Math.cos(angle) * 3,
                 y: centerY + Math.sin(angle) * 3
@@ -776,11 +697,14 @@ export class LevelBase {
     generatePathTexture(canvasWidth, canvasHeight) {
         if (this.pathTextureGenerated) return;
         
+        // Deterministic seeded RNG — path texture is consistent per campaign
+        const campaignSeeds = { forest: 12345, mountain: 56789, desert: 90123, space: 34567 };
+        const rng = this.seededRng((campaignSeeds[this.campaign] || 12345) + 99999);
+        
         this.pathTexture = [];
         this.pathLeaves = [];
         const pathWidth = Math.max(40, Math.min(80, this.cellSize * 3));
         
-        // Generate texture elements along the path - using config spacing
         for (let i = 0; i < this.path.length - 1; i++) {
             const start = this.path[i];
             const end = this.path[i + 1];
@@ -792,65 +716,63 @@ export class LevelBase {
                 const baseX = start.x + (end.x - start.x) * t;
                 const baseY = start.y + (end.y - start.y) * t;
                 
-                // Generate fewer path elements with more natural distribution
-                const elementCount = Math.random() < 0.6 ? 1 : 2; // Reduced from always 3
+                const elementCount = rng() < 0.6 ? 1 : 2;
                 for (let k = 0; k < elementCount; k++) {
-                    const offsetX = (Math.random() - 0.5) * pathWidth * 0.8;
-                    const offsetY = (Math.random() - 0.5) * pathWidth * 0.8;
+                    const offsetX = (rng() - 0.5) * pathWidth * 0.8;
+                    const offsetY = (rng() - 0.5) * pathWidth * 0.8;
+                    const sz = rng() * 6 + 2;
+                    const shapeType = Math.floor(rng() * 4);
                     
                     this.pathTexture.push({
                         x: baseX + offsetX,
                         y: baseY + offsetY,
-                        size: Math.random() * 6 + 2, // Increased size variation
-                        type: Math.floor(Math.random() * 4),
-                        rotation: Math.random() * Math.PI * 2,
-                        shade: Math.random() * 0.5 + 0.5, // More variation in shading
-                        // Cache stone shape for type 3
-                        stoneShape: Math.floor(Math.random() * 4) === 3 ? this.generateStoneShape(Math.random() * 6 + 2) : null
+                        size: sz,
+                        type: shapeType,
+                        rotation: rng() * Math.PI * 2,
+                        shade: rng() * 0.5 + 0.5,
+                        stoneShape: shapeType === 3 ? this.generateStoneShape(sz, rng) : null
                     });
                 }
             }
         }
         
-        // Generate path leaves - REDUCED quantity and improved distribution
-        const leafCount = Math.floor(this.path.length * 0.8); // Reduced from 2 to 0.8
+        const leafCount = Math.floor(this.path.length * 0.8);
         for (let i = 0; i < leafCount; i++) {
-            const pathIndex = Math.floor(Math.random() * (this.path.length - 1));
-            const t = Math.random();
+            const pathIndex = Math.floor(rng() * (this.path.length - 1));
+            const t = rng();
             const start = this.path[pathIndex];
             const end = this.path[pathIndex + 1];
             
-            // Add some clustering to leaves
-            const clusterChance = Math.random() < 0.3 && this.pathLeaves.length > 0;
+            const clusterChance = rng() < 0.3 && this.pathLeaves.length > 0;
             let leafX, leafY;
             
             if (clusterChance) {
-                const nearLeaf = this.pathLeaves[Math.floor(Math.random() * this.pathLeaves.length)];
-                leafX = nearLeaf.x + (Math.random() - 0.5) * 30;
-                leafY = nearLeaf.y + (Math.random() - 0.5) * 30;
+                const nearLeaf = this.pathLeaves[Math.floor(rng() * this.pathLeaves.length)];
+                leafX = nearLeaf.x + (rng() - 0.5) * 30;
+                leafY = nearLeaf.y + (rng() - 0.5) * 30;
             } else {
-                leafX = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * pathWidth * 0.6;
-                leafY = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * pathWidth * 0.6;
+                leafX = start.x + (end.x - start.x) * t + (rng() - 0.5) * pathWidth * 0.6;
+                leafY = start.y + (end.y - start.y) * t + (rng() - 0.5) * pathWidth * 0.6;
             }
             
             this.pathLeaves.push({
                 x: leafX,
                 y: leafY,
-                size: Math.random() * 8 + 4, // Increased size variation
-                rotation: Math.random() * Math.PI * 2,
-                color: Math.random() < 0.5 ? 'rgba(160, 82, 45, 0.6)' : 'rgba(139, 115, 85, 0.6)'
+                size: rng() * 8 + 4,
+                rotation: rng() * Math.PI * 2,
+                color: rng() < 0.5 ? 'rgba(160, 82, 45, 0.6)' : 'rgba(139, 115, 85, 0.6)'
             });
         }
         
         this.pathTextureGenerated = true;
     }
     
-    generateStoneShape(size) {
-        const sides = 5 + Math.floor(Math.random() * 3);
+    generateStoneShape(size, rng = Math.random.bind(Math)) {
+        const sides = 5 + Math.floor(rng() * 3);
         const points = [];
         for (let i = 0; i < sides; i++) {
             const angle = (i / sides) * Math.PI * 2;
-            const radius = size * (0.7 + Math.random() * 0.3);
+            const radius = size * (0.7 + rng() * 0.3);
             points.push({
                 x: Math.cos(angle) * radius,
                 y: Math.sin(angle) * radius
@@ -874,197 +796,124 @@ export class LevelBase {
     }
     
     _renderBackgroundToCanvas(ctx) {
-        // Actual rendering logic moved here for one-time execution
         const canvas = ctx.canvas;
-        
-        // Generate all visual elements if not done yet
-        this.generateAllVisualElements(canvas.width, canvas.height);
-        
-        // Base grass color gradient - using config
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, this.visualConfig.grassColors.top);
-        gradient.addColorStop(0.3, this.visualConfig.grassColors.upper);
-        gradient.addColorStop(0.7, this.visualConfig.grassColors.lower);
-        gradient.addColorStop(1, this.visualConfig.grassColors.bottom);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Render cached dirt patches with improved textures
-        this.dirtPatches.forEach(patch => {
-            ctx.save();
-            ctx.translate(patch.x, patch.y);
-            ctx.rotate(patch.rotation);
-            
-            // Different ground texture types with organic appearance
-            switch (patch.textureType) {
-                case 0: // Soil - organic splotch with irregular edges
-                    ctx.fillStyle = `rgba(92, 64, 51, ${patch.intensity})`;
-                    // Create irregular blob shape instead of perfect ellipse
-                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX, patch.sizeY, patch.irregularity, 1);
-                    ctx.fill();
-                    
-                    // Add subtle inner variation
-                    ctx.fillStyle = `rgba(76, 51, 40, ${patch.intensity * 0.5})`;
-                    this.drawIrregularBlob(ctx, patch.sizeX * 0.2, patch.sizeY * 0.2, 
-                        patch.sizeX * 0.4, patch.sizeY * 0.3, patch.irregularity, 1);
-                    ctx.fill();
-                    break;
-                    
-                case 1: // Moss/algae - subtle greenish with natural spreading
-                    ctx.fillStyle = `rgba(80, 100, 60, ${patch.intensity * 0.7})`;
-                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX * 0.8, patch.sizeY * 0.8, 
-                        patch.irregularity * 1.2, 0.8);
-                    ctx.fill();
-                    
-                    // Add some darker moss spots
-                    ctx.fillStyle = `rgba(60, 80, 40, ${patch.intensity * 0.4})`;
-                    for (let i = 0; i < 3; i++) {
-                        const offsetX = (Math.sin(i * 1.3 + patch.x * 0.01) - 0.5) * patch.sizeX * 0.4;
-                        const offsetY = (Math.cos(i * 1.3 + patch.y * 0.01) - 0.5) * patch.sizeY * 0.3;
-                        this.drawIrregularBlob(ctx, offsetX, offsetY, patch.sizeX * 0.3, 
-                            patch.sizeY * 0.25, patch.irregularity, 0.7);
-                        ctx.fill();
-                    }
-                    break;
-                    
-                case 2: // Scattered pebbles - rocky terrain
-                    ctx.fillStyle = `rgba(110, 110, 110, ${patch.intensity})`;
-                    for (let i = 0; i < 8; i++) {
-                        const offsetX = (Math.sin(i * 2.1 + patch.x * 0.005) - 0.5) * patch.sizeX;
-                        const offsetY = (Math.cos(i * 2.1 + patch.y * 0.005) - 0.5) * patch.sizeY;
-                        const size = Math.random() * 5 + 3;
-                        ctx.beginPath();
-                        ctx.arc(offsetX, offsetY, size, 0, Math.PI * 2);
-                        ctx.fill();
-                        
-                        // Rock shadow
-                        ctx.fillStyle = `rgba(80, 80, 80, ${patch.intensity * 0.6})`;
-                        ctx.beginPath();
-                        ctx.arc(offsetX + 1, offsetY + 1, size * 0.6, 0, Math.PI * 2);
-                        ctx.fill();
-                        ctx.fillStyle = `rgba(110, 110, 110, ${patch.intensity})`;
-                    }
-                    break;
-                    
-                case 3: // Clay/dirt - warmer tone with flowing texture
-                    ctx.fillStyle = `rgba(120, 80, 40, ${patch.intensity * 0.8})`;
-                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX, patch.sizeY, 
-                        patch.irregularity * 0.9, 1);
-                    ctx.fill();
-                    
-                    // Add cracks/texture lines for clay appearance
-                    ctx.strokeStyle = `rgba(100, 60, 20, ${patch.intensity * 0.25})`;
-                    ctx.lineWidth = 0.8;
-                    const cracksCount = Math.floor(3 + patch.irregularity * 2);
-                    for (let i = 0; i < cracksCount; i++) {
-                        const startX = (Math.sin(i * 0.5 + patch.x * 0.02) - 0.5) * patch.sizeX * 0.8;
-                        const startY = (Math.cos(i * 0.5 + patch.y * 0.02) - 0.5) * patch.sizeY * 0.6;
-                        const endX = startX + (Math.sin(i * 1.3 + patch.x * 0.03) - 0.5) * patch.sizeX * 0.4;
-                        const endY = startY + (Math.cos(i * 1.3 + patch.y * 0.03) - 0.5) * patch.sizeY * 0.4;
-                        ctx.beginPath();
-                        ctx.moveTo(startX, startY);
-                        ctx.lineTo(endX, endY);
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 4: // Leaf litter - scattered autumn leaves
-                    ctx.fillStyle = `rgba(139, 115, 85, ${patch.intensity * 0.6})`;
-                    for (let i = 0; i < 6; i++) {
-                        const offsetX = (Math.sin(i * 1.7 + patch.x * 0.008) - 0.5) * patch.sizeX;
-                        const offsetY = (Math.cos(i * 1.7 + patch.y * 0.008) - 0.5) * patch.sizeY;
-                        const leafSize = Math.random() * 3 + 2;
-                        ctx.beginPath();
-                        ctx.ellipse(offsetX, offsetY, leafSize, leafSize * 0.6, 
-                            Math.random() * Math.PI, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    
-                    // Darker decomposed leaves
-                    ctx.fillStyle = `rgba(100, 80, 60, ${patch.intensity * 0.4})`;
-                    this.drawIrregularBlob(ctx, 0, 0, patch.sizeX * 0.6, patch.sizeY * 0.5, 
-                        patch.irregularity * 1.1, 0.6);
-                    ctx.fill();
-                    break;
-            }
-            
-            ctx.restore();
-        });
-        
-        // Render cached grass patches
-        this.grassPatches.forEach(patch => {
-            const alpha = patch.shade * 0.6;
-            
-            switch (patch.type) {
-                case 0: // Small grass clusters
-                    ctx.fillStyle = `rgba(34, 139, 34, ${alpha})`;
-                    ctx.beginPath();
-                    ctx.arc(patch.x, patch.y, patch.size * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                    
-                case 1: // Longer grass strands
-                    ctx.strokeStyle = `rgba(50, 150, 50, ${alpha})`;
-                    ctx.lineWidth = 1;
-                    for (let j = 0; j < 3; j++) {
-                        const offsetX = (j - 1) * patch.size * 0.3;
-                        const offsetY = (j - 1) * patch.size * 0.2;
-                        ctx.beginPath();
-                        ctx.moveTo(patch.x + offsetX, patch.y + offsetY + patch.size * 0.5);
-                        ctx.lineTo(patch.x + offsetX, patch.y + offsetY - patch.size * 0.5);
-                        ctx.stroke();
-                    }
-                    break;
-                    
-                case 2: // Clover-like patches
-                    ctx.fillStyle = `rgba(60, 179, 113, ${alpha})`;
-                    for (let j = 0; j < 4; j++) {
-                        const angle = (j / 4) * Math.PI * 2;
-                        const x = patch.x + Math.cos(angle) * patch.size * 0.3;
-                        const y = patch.y + Math.sin(angle) * patch.size * 0.3;
-                        ctx.beginPath();
-                        ctx.arc(x, y, patch.size * 0.2, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    break;
-            }
-        });
-        
-        // Render cached flowers
-        this.flowers.forEach(flower => {
-            switch (flower.type) {
-                case 'yellow':
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-                    ctx.beginPath();
-                    ctx.arc(flower.x, flower.y, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                    
-                case 'daisy':
-                    // White petals
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    flower.petals.forEach(petal => {
-                        ctx.beginPath();
-                        ctx.arc(petal.x, petal.y, 1, 0, Math.PI * 2);
-                        ctx.fill();
-                    });
-                    // Yellow center
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
-                    ctx.beginPath();
-                    ctx.arc(flower.x, flower.y, 1, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                    
-                case 'purple':
-                    ctx.fillStyle = 'rgba(147, 112, 219, 0.6)';
-                    ctx.beginPath();
-                    ctx.arc(flower.x, flower.y, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-            }
-        });
+        const campaign = this.getCampaign();
+
+        if (campaign === 'forest') {
+            this._renderForestBackdrop(ctx, canvas.width, canvas.height);
+        } else if (campaign === 'mountain') {
+            this._renderMountainBackdrop(ctx, canvas.width, canvas.height);
+        } else if (campaign === 'desert') {
+            this._renderDesertBackdrop(ctx, canvas.width, canvas.height);
+        } else {
+            // space / Frog King's Realm
+            this._renderSpaceBackdrop(ctx, canvas.width, canvas.height);
+        }
     }
-    
+
+    // --- FOREST BACKDROP (top-down ground view, 3 variants) ---
+    _renderForestBackdrop(ctx, w, h) {
+        const v = this.backdropVariant;
+        const bases = ['#1a3a08', '#203e10', '#162e0a'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        const bc = v===1 ? 'rgba(44,88,18,0.18)' : v===2 ? 'rgba(12,48,10,0.22)' : 'rgba(30,64,8,0.16)';
+        [[0.15,0.20,0.12],[0.45,0.12,0.10],[0.75,0.22,0.11],[0.10,0.55,0.09],
+         [0.40,0.62,0.13],[0.70,0.50,0.10],[0.25,0.80,0.11],[0.60,0.80,0.09],[0.88,0.70,0.10]]
+        .forEach(([fx,fy,fr]) => {
+            ctx.fillStyle = bc; ctx.beginPath();
+            ctx.ellipse(w*fx, h*fy, w*fr, h*fr*0.75, fx*2, 0, Math.PI*2); ctx.fill();
+        });
+        if (v === 0) {
+            ctx.fillStyle = 'rgba(88,52,10,0.45)';
+            [[0.08,0.14],[0.24,0.22],[0.44,0.16],[0.64,0.10],[0.82,0.20],
+             [0.14,0.50],[0.38,0.54],[0.60,0.44],[0.82,0.52],[0.22,0.74],[0.52,0.80],[0.74,0.68]]
+            .forEach(([fx,fy]) => { ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*0.010, h*0.006, fx*8, 0, Math.PI*2); ctx.fill(); });
+        } else if (v === 2) {
+            ctx.fillStyle = 'rgba(36,88,48,0.35)';
+            [[0.18,0.22,0.055],[0.48,0.16,0.050],[0.72,0.28,0.060],[0.30,0.65,0.055],[0.62,0.72,0.060]]
+            .forEach(([fx,fy,fr]) => { ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*fr, h*fr*0.70, 0.5, 0, Math.PI*2); ctx.fill(); });
+        }
+        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.30, w*0.5, h*0.5, Math.min(w,h)*0.72);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.30)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+    }
+
+    // --- MOUNTAIN / SNOW BACKDROP (top-down, 3 variants) ---
+    _renderMountainBackdrop(ctx, w, h) {
+        const v = this.backdropVariant;
+        const bases = ['#dce8f4', '#c8d8ec', '#ccdff2'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        [[0.18,0.20,0.16,0.038],[0.52,0.38,0.20,0.042],[0.34,0.62,0.14,0.034],
+         [0.76,0.54,0.18,0.040],[0.10,0.72,0.15,0.036],[0.64,0.80,0.16,0.038]]
+        .forEach(([fx,fy,drx,dry]) => {
+            const sg = ctx.createLinearGradient(w*(fx-drx*0.6), h*fy, w*(fx+drx*0.6), h*fy);
+            sg.addColorStop(0, 'rgba(255,255,255,0)');
+            sg.addColorStop(0.5, `rgba(255,255,255,${v===0?0.18:0.13})`);
+            sg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*drx, h*dry, 0.2, 0, Math.PI*2); ctx.fill();
+        });
+        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.28, w*0.5, h*0.5, Math.min(w,h)*0.70);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(28,48,72,0.22)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+    }
+
+    // --- DESERT BACKDROP (top-down, 3 variants) ---
+    _renderDesertBackdrop(ctx, w, h) {
+        const v = this.backdropVariant;
+        const bases = ['#d4a840', '#bc9230', '#c8a048'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        if (v !== 1) {
+            ctx.strokeStyle = 'rgba(164,118,28,0.12)'; ctx.lineWidth = 0.8;
+            for (let ry = 0; ry < h; ry += 18) {
+                ctx.beginPath();
+                for (let x = 0; x <= w; x += 5) { const y = ry + Math.sin(x*0.022 + ry*0.035)*4; x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y); }
+                ctx.stroke();
+            }
+        } else {
+            ctx.fillStyle = 'rgba(148,98,28,0.22)';
+            [[0.08,0.12],[0.24,0.08],[0.40,0.16],[0.58,0.10],[0.74,0.14],[0.90,0.08],
+             [0.14,0.36],[0.30,0.42],[0.50,0.38],[0.68,0.44],[0.84,0.38],[0.06,0.60],
+             [0.22,0.66],[0.44,0.62],[0.62,0.68],[0.80,0.64],[0.96,0.60],
+             [0.18,0.84],[0.38,0.80],[0.56,0.86],[0.76,0.82],[0.94,0.78]]
+            .forEach(([fx,fy]) => {
+                const pr = w*(0.003 + Math.abs(Math.sin(fx*17 + fy*11))*0.004);
+                ctx.beginPath(); ctx.ellipse(w*fx, h*fy, pr*1.5, pr, Math.sin(fx*8)*0.8, 0, Math.PI*2); ctx.fill();
+            });
+        }
+        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.28, w*0.5, h*0.5, Math.min(w,h)*0.70);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(80,50,10,0.26)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+    }
+
+    // --- SPACE / FROG KING BACKDROP (top-down, 3 variants) ---
+    _renderSpaceBackdrop(ctx, w, h) {
+        const v = this.backdropVariant;
+        const bases = ['#080218', '#0a0420', '#06021a'];
+        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = v===1 ? 'rgba(44,8,68,0.10)' : 'rgba(20,6,40,0.12)'; ctx.lineWidth = 0.7;
+        for (let i = -h*0.3; i < w+h; i += 28) {
+            ctx.beginPath();
+            for (let s = 0; s <= w+h; s += 8) {
+                const px = i + s*0.5 + Math.sin(s*0.04+i*0.02)*5;
+                const py = s*0.72 + Math.sin(s*0.03+i*0.015)*4;
+                s===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+            }
+            ctx.stroke();
+        }
+        const col = v===0 ? 'rgba(255,200,140,0.50)' : v===1 ? 'rgba(180,120,255,0.50)' : 'rgba(120,255,160,0.50)';
+        ctx.fillStyle = col;
+        [[0.06,0.08],[0.18,0.14],[0.32,0.06],[0.44,0.12],[0.58,0.08],[0.72,0.16],
+         [0.84,0.06],[0.94,0.12],[0.10,0.28],[0.26,0.24],[0.48,0.30],[0.64,0.22],
+         [0.80,0.28],[0.04,0.44],[0.22,0.40],[0.40,0.46],[0.60,0.38],[0.76,0.44],[0.92,0.40]]
+        .forEach(([sx,sy]) => { ctx.beginPath(); ctx.arc(w*sx, h*sy, 0.8, 0, Math.PI*2); ctx.fill(); });
+        const gc = v===0 ? 'rgba(255,80,10,' : v===1 ? 'rgba(140,30,240,' : 'rgba(20,200,80,';
+        const gg = ctx.createRadialGradient(w*0.5, h*0.5, 0, w*0.5, h*0.5, Math.min(w,h)*0.46);
+        gg.addColorStop(0, gc+'0.06)'); gg.addColorStop(1, gc+'0.0)');
+        ctx.fillStyle = gg; ctx.fillRect(0, 0, w, h);
+        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.20, w*0.5, h*0.5, Math.min(w,h)*0.70);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.48)');
+        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+    }
     drawCobblestoneBlock(ctx, x, y, width, height, seed) {
         // Draw a single cobblestone with realistic stone appearance
         const noise = Math.abs(Math.sin(seed * 0.1) * Math.cos(seed * 0.05));
@@ -1156,8 +1005,14 @@ export class LevelBase {
         // Generate path texture if needed
         this.generatePathTexture(ctx.canvas.width, ctx.canvas.height);
         
-        // Get path color from config, parse hex to RGB for transparency effects
-        const pathColor = this.visualConfig.pathBaseColor || '#8b7355';
+        // Derive path color from campaign theme
+        const _campaignPathColors = {
+            forest:   '#7a6444',
+            mountain: '#a09888',
+            desert:   '#b89850',
+            space:    '#4a3868'
+        };
+        const pathColor = _campaignPathColors[this.getCampaign()] || '#8b7355';
         
         // Draw smooth dirt road using canvas line rendering
         if (this.path && this.path.length >= 2) {
@@ -1541,18 +1396,27 @@ export class LevelBase {
             }
         });
         
-        // Render edge vegetation - using config colors
+        // Render edge vegetation — colors driven by campaign
+        const _camp = this.getCampaign();
+        const edgeColors = {
+            forest:   { bush: '#1a5a1a', bushAccent: '#2a8a2a', rock: '#7a7a7a', grass: '#228822' },
+            mountain: { bush: '#706050', bushAccent: '#a09080', rock: '#707880', grass: '#8a8070' },
+            desert:   { bush: '#9a7a35', bushAccent: '#c09a45', rock: '#b0a070', grass: '#a08840' },
+            space:    { bush: '#3a1a5a', bushAccent: '#7a30c0', rock: '#403060', grass: '#208060' }
+        };
+        const ec = edgeColors[_camp] || edgeColors.forest;
+
         edgeVegetation.forEach(veg => {
             const seed = veg.seed;
             
             switch (veg.type) {
                 case 0: // Small bushes
-                    ctx.fillStyle = this.visualConfig.edgeBushColor;
+                    ctx.fillStyle = ec.bush;
                     ctx.beginPath();
                     ctx.arc(veg.x, veg.y, 6, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    ctx.fillStyle = this.visualConfig.edgeBushAccentColor;
+                    ctx.fillStyle = ec.bushAccent;
                     ctx.beginPath();
                     ctx.arc(veg.x - 4, veg.y - 3, 4, 0, Math.PI * 2);
                     ctx.fill();
@@ -1562,24 +1426,23 @@ export class LevelBase {
                     break;
                     
                 case 1: // Rocks
-                    ctx.fillStyle = this.visualConfig.edgeRockColor;
+                    ctx.fillStyle = ec.rock;
                     ctx.beginPath();
                     ctx.arc(veg.x, veg.y, 5, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    ctx.strokeStyle = '#696969';
+                    ctx.strokeStyle = 'rgba(40, 35, 30, 0.5)';
                     ctx.lineWidth = 1;
                     ctx.stroke();
                     
-                    // Rock highlight
-                    ctx.fillStyle = '#969696';
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.3)';
                     ctx.beginPath();
                     ctx.arc(veg.x - 1.5, veg.y - 1.5, 2, 0, Math.PI * 2);
                     ctx.fill();
                     break;
                     
-                case 2: // Grass clumps and wildflowers
-                    ctx.strokeStyle = this.visualConfig.edgeGrassColor;
+                case 2: // Grass clumps and accents
+                    ctx.strokeStyle = ec.grass;
                     ctx.lineWidth = 1.5;
                     for (let j = 0; j < 5; j++) {
                         const angle = (j / 5) * Math.PI * 2 + (seed * 0.01);
@@ -1593,9 +1456,8 @@ export class LevelBase {
                         ctx.stroke();
                     }
                     
-                    // Small flower in center
                     if (Math.sin(seed * 0.005) > 0) {
-                        ctx.fillStyle = '#FFD700';
+                        ctx.fillStyle = _camp === 'space' ? 'rgba(120,220,160,0.8)' : '#FFD700';
                         ctx.beginPath();
                         ctx.arc(veg.x, veg.y, 2, 0, Math.PI * 2);
                         ctx.fill();
@@ -1895,10 +1757,10 @@ export class LevelBase {
 
             switch (element.type) {
                 case 'vegetation':
-                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
                     break;
                 case 'rock':
-                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
                     break;
                 case 'water':
                     if (element.waterType === 'river') {
@@ -1928,13 +1790,13 @@ export class LevelBase {
 
             switch (element.type) {
                 case 'vegetation':
-                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    this.renderVegetation(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
                     break;
                 case 'tree':
-                    this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    this.renderTree(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
                     break;
                 case 'rock':
-                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                    this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
                     break;
                 case 'cactus':
                     this.renderCactus(ctx, screenX, screenY, size, element.gridX, element.gridY);
@@ -1953,34 +1815,28 @@ export class LevelBase {
         });
     }
 
-    renderVegetation(ctx, x, y, size, gridX, gridY) {
+    renderVegetation(ctx, x, y, size, gridX, gridY, variant) {
         const campaign = this.getCampaign();
-        
-        // Log only once per level to avoid console spam
-        if (!this._renderedVegetationLogged) {
-            this._renderedVegetationLogged = true;
-        }
-        
         switch (campaign) {
             case 'desert':
-                this.renderDesertVegetation(ctx, x, y, size, gridX, gridY);
+                this.renderDesertVegetation(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'mountain':
-                this.renderMountainVegetation(ctx, x, y, size, gridX, gridY);
+                this.renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'space':
-                this.renderSpaceVegetation(ctx, x, y, size, gridX, gridY);
+                this.renderSpaceVegetation(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'forest':
             default:
-                this.renderTree(ctx, x, y, size, gridX, gridY);
+                this.renderTree(ctx, x, y, size, gridX, gridY, variant);
                 break;
         }
     }
 
-    renderDesertVegetation(ctx, x, y, size, gridX, gridY) {
+    renderDesertVegetation(ctx, x, y, size, gridX, gridY, variant) {
         const scaledSize = size * 1.5; // Scale up desert vegetation to match forest trees
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
+        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
         switch(seed) {
             case 0:
                 this.renderCactusSaguaro(ctx, x, y, scaledSize);
@@ -2528,9 +2384,9 @@ export class LevelBase {
         ctx.globalAlpha = 1;
     }
 
-    renderMountainVegetation(ctx, x, y, size, gridX, gridY) {
-        const scaledSize = size * 1.8;  // Increased from 1.4 for larger trees
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;  // Added extra variation
+    renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant) {
+        const scaledSize = size * 1.8;
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         switch(seed) {
             case 0:
                 this.renderMountainPineType1(ctx, x, y, scaledSize);
@@ -2547,9 +2403,9 @@ export class LevelBase {
         }
     }
 
-    renderSpaceVegetation(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 6;  // Increased from 5 to 6 for more variation
-        const scaledSize = size * 1.6;  // Increased from 1.3 for larger vegetation
+    renderSpaceVegetation(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
+        const scaledSize = size * 1.6;
         switch(seed) {
             case 0:
                 this.renderSpaceVortexPlant(ctx, x, y, scaledSize);
@@ -2879,48 +2735,42 @@ export class LevelBase {
     }
 
     renderMountainPineType2(ctx, x, y, size) {
-        // Medium pine, less snow
-        const trunkWidth = size * 0.18;
-        const trunkHeight = size * 0.4;
-
+        // Medium pine with layered tiers and flat snow on branch tips
+        const trunkW = size * 0.14;
         // Trunk
         ctx.fillStyle = '#704020';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-
-        // Main tree cone
-        ctx.fillStyle = '#2d5a3d';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.55);
-        ctx.lineTo(x + size * 0.35, y);
-        ctx.lineTo(x - size * 0.35, y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Darker accent
-        ctx.fillStyle = '#1a3d28';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.15, y - size * 0.3);
-        ctx.lineTo(x + size * 0.15, y - size * 0.3);
-        ctx.lineTo(x - size * 0.28, y + size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Light snow cap
-        ctx.fillStyle = '#f5f5f5';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.5, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Snow on edges
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        for (let i = 0; i < 2; i++) {
-            const angle = (i / 2) * Math.PI;
-            const px = x + Math.cos(angle - Math.PI / 2) * size * 0.25;
-            const py = y - size * 0.15;
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, size * 0.38);
+        // Three branch tiers (bottom to top)
+        const tiers = [
+            { cy: y - size*0.10, w: size*0.38, h: size*0.22 },
+            { cy: y - size*0.30, w: size*0.28, h: size*0.20 },
+            { cy: y - size*0.50, w: size*0.18, h: size*0.18 }
+        ];
+        tiers.forEach(t => {
+            ctx.fillStyle = '#2d5a3d';
             ctx.beginPath();
-            ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
-            ctx.fill();
-        }
+            ctx.moveTo(x, t.cy - t.h);
+            ctx.lineTo(x + t.w, t.cy + t.h * 0.1);
+            ctx.lineTo(x - t.w, t.cy + t.h * 0.1);
+            ctx.closePath(); ctx.fill();
+            // Shadow side
+            ctx.fillStyle = '#1a3d28';
+            ctx.beginPath();
+            ctx.moveTo(x, t.cy - t.h);
+            ctx.lineTo(x, t.cy + t.h * 0.1);
+            ctx.lineTo(x - t.w, t.cy + t.h * 0.1);
+            ctx.closePath(); ctx.fill();
+        });
+        // Flat snow cap on top tier
+        ctx.fillStyle = 'rgba(238,248,255,0.90)';
+        ctx.beginPath(); ctx.ellipse(x, tiers[2].cy - tiers[2].h*0.7, tiers[2].w*0.55, tiers[2].h*0.28, 0, 0, Math.PI*2); ctx.fill();
+        // Flat snow on lower branch tips
+        ctx.fillStyle = 'rgba(235,246,255,0.72)';
+        [[-tiers[0].w*0.78, tiers[0].cy+tiers[0].h*0.06, tiers[0].w*0.22, tiers[0].h*0.12],
+         [tiers[0].w*0.68, tiers[0].cy+tiers[0].h*0.06, tiers[0].w*0.22, tiers[0].h*0.12],
+         [-tiers[1].w*0.70, tiers[1].cy+tiers[1].h*0.06, tiers[1].w*0.20, tiers[1].h*0.11],
+         [tiers[1].w*0.60, tiers[1].cy+tiers[1].h*0.06, tiers[1].w*0.20, tiers[1].h*0.11]]
+        .forEach(([ox,oy,rw,rh]) => { ctx.beginPath(); ctx.ellipse(x+ox, oy, rw, rh, 0, 0, Math.PI*2); ctx.fill(); });
     }
 
     renderMountainPineType3(ctx, x, y, size) {
@@ -3100,8 +2950,8 @@ export class LevelBase {
         ctx.fill();
     }
 
-    renderTree(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX + gridY) % 6;
+    renderTree(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX + gridY) % 6;
         switch(seed) {
             case 0:
                 this.renderTreeType1(ctx, x, y, size);
@@ -3300,681 +3150,189 @@ export class LevelBase {
         ctx.fill();
     }
 
-    renderRock(ctx, x, y, size, gridX, gridY) {
+    renderRock(ctx, x, y, size, gridX, gridY, variant) {
         const campaign = this.getCampaign();
-        
         switch (campaign) {
             case 'desert':
-                this.renderDesertRock(ctx, x, y, size, gridX, gridY);
+                this.renderDesertRock(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'mountain':
-                this.renderMountainRock(ctx, x, y, size, gridX, gridY);
+                this.renderMountainRock(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'space':
-                this.renderSpaceRock(ctx, x, y, size, gridX, gridY);
+                this.renderSpaceRock(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'forest':
-            default:
-                // Forest/generic rocks
-                const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+            default: {
+                const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
                 switch(seed) {
-                    case 0:
-                        this.renderRockType1(ctx, x, y, size);
-                        break;
-                    case 1:
-                        this.renderRockType2(ctx, x, y, size);
-                        break;
-                    case 2:
-                        this.renderRockType3(ctx, x, y, size);
-                        break;
-                    default:
-                        this.renderRockType4(ctx, x, y, size);
+                    case 0: this.renderRockType1(ctx, x, y, size); break;
+                    case 1: this.renderRockType2(ctx, x, y, size); break;
+                    case 2: this.renderRockType3(ctx, x, y, size); break;
+                    default: this.renderRockType4(ctx, x, y, size);
                 }
                 break;
+            }
         }
     }
 
-    renderMountainRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 7;
+    renderMountainRock(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         switch(seed) {
-            case 0:
-                this.renderMountainRockSnowy(ctx, x, y, size);
-                break;
-            case 1:
-                this.renderMountainRockJagged(ctx, x, y, size);
-                break;
-            case 2:
-                this.renderMountainRockBoulder(ctx, x, y, size);
-                break;
-            case 3:
-                this.renderMountainRockSlab(ctx, x, y, size);
-                break;
-            case 4:
-                this.renderMountainRockClustered(ctx, x, y, size);
-                break;
-            case 5:
-                this.renderMountainRockIcy(ctx, x, y, size);
-                break;
-            default:
-                this.renderMountainRockPeaked(ctx, x, y, size);
+            case 0: this.renderMountainRock0(ctx, x, y, size); break;
+            case 1: this.renderMountainRock1(ctx, x, y, size); break;
+            case 2: this.renderMountainRock2(ctx, x, y, size); break;
+            default: this.renderMountainRock3(ctx, x, y, size);
         }
     }
 
-    renderMountainRockSnowy(ctx, x, y, size) {
-        // Layered snowy rock with strong contrast
-        ctx.fillStyle = '#6a6a6a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.1);
-        ctx.lineTo(x, y - size * 0.3);
-        ctx.lineTo(x + size * 0.32, y + size * 0.1);
-        ctx.lineTo(x + size * 0.28, y + size * 0.3);
-        ctx.lineTo(x - size * 0.28, y + size * 0.3);
-        ctx.closePath();
-        ctx.fill();
-
-        // Large snow cap - very bright
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.28, y - size * 0.08);
-        ctx.lineTo(x, y - size * 0.3);
-        ctx.lineTo(x + size * 0.28, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark shadow on right side
-        ctx.fillStyle = '#4a4a4a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.28, y + size * 0.1);
-        ctx.lineTo(x + size * 0.32, y + size * 0.1);
-        ctx.lineTo(x + size * 0.28, y + size * 0.3);
-        ctx.closePath();
-        ctx.fill();
-
-        // Snow shading beneath cap
-        ctx.fillStyle = '#d5d5d5';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.18, y + size * 0.05);
-        ctx.lineTo(x + size * 0.18, y + size * 0.05);
-        ctx.lineTo(x + size * 0.12, y + size * 0.15);
-        ctx.lineTo(x - size * 0.12, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
+    renderMountainRock0(ctx, x, y, size) {
+        // Rounded grey boulder with snow dusting on top
+        ctx.fillStyle = '#6a7880';
+        ctx.beginPath(); ctx.ellipse(x, y, size*0.32, size*0.26, 0.2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(40,50,60,0.50)';
+        ctx.beginPath(); ctx.ellipse(x+size*0.10, y+size*0.10, size*0.28, size*0.22, 0.2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(190,205,220,0.55)';
+        ctx.beginPath(); ctx.ellipse(x-size*0.10, y-size*0.10, size*0.16, size*0.12, 0.2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(240,248,255,0.82)';
+        ctx.beginPath(); ctx.ellipse(x-size*0.04, y-size*0.13, size*0.20, size*0.09, -0.1, 0, Math.PI*2); ctx.fill();
     }
 
-    renderMountainRockJagged(ctx, x, y, size) {
-        // Jagged peak with pronounced snow patches
-        const rockColor = '#5a5a5a';
-        const snowColor = '#ffffff';
-        
-        ctx.fillStyle = rockColor;
+    renderMountainRock1(ctx, x, y, size) {
+        // Flat angular slab with snow on top edge
+        const hw = size*0.34, hh = size*0.20;
+        ctx.fillStyle = '#586470';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.3, y + size * 0.15);
-        ctx.lineTo(x - size * 0.1, y - size * 0.25);
-        ctx.lineTo(x + size * 0.15, y - size * 0.2);
-        ctx.lineTo(x + size * 0.3, y + size * 0.2);
-        ctx.lineTo(x + size * 0.1, y + size * 0.28);
-        ctx.closePath();
-        ctx.fill();
-
-        // Large snow patches on left
-        ctx.fillStyle = snowColor;
+        ctx.moveTo(x-hw, y+hh*0.5);
+        ctx.lineTo(x-hw*0.7, y-hh);
+        ctx.lineTo(x+hw*0.7, y-hh*0.8);
+        ctx.lineTo(x+hw, y+hh*0.5);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#3a4550';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.28, y - size * 0.08);
-        ctx.lineTo(x - size * 0.08, y - size * 0.2);
-        ctx.lineTo(x - size * 0.12, y + size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-
-        // Snow patches on right - bright
-        ctx.fillStyle = '#e8e8e8';
+        ctx.moveTo(x+hw*0.7, y-hh*0.8); ctx.lineTo(x+hw, y+hh*0.5);
+        ctx.lineTo(x+hw*0.5, y+hh*0.5); ctx.lineTo(x+hw*0.4, y-hh*0.6);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(235,248,255,0.90)';
         ctx.beginPath();
-        ctx.moveTo(x + size * 0.05, y - size * 0.2);
-        ctx.lineTo(x + size * 0.2, y - size * 0.12);
-        ctx.lineTo(x + size * 0.15, y + size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark shadow in valley
-        ctx.fillStyle = '#3a3a3a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.1, y - size * 0.12);
-        ctx.lineTo(x + size * 0.08, y - size * 0.15);
-        ctx.lineTo(x, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(x-hw*0.8, y-hh*0.85); ctx.lineTo(x-hw*0.7, y-hh);
+        ctx.lineTo(x+hw*0.7, y-hh*0.8); ctx.lineTo(x+hw*0.6, y-hh*0.58);
+        ctx.closePath(); ctx.fill();
     }
 
-    renderMountainRockBoulder(ctx, x, y, size) {
-        // Round boulder with visible striations
-        ctx.fillStyle = '#7a7a7a';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.28, 0, Math.PI * 2);
-        ctx.fill();
+    renderMountainRock2(ctx, x, y, size) {
+        // Two overlapping boulders
+        const drawBoulder = (ox, oy, sw, sh, ang) => {
+            ctx.fillStyle = '#708090';
+            ctx.beginPath(); ctx.ellipse(x+ox, y+oy, sw, sh, ang, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(40,50,60,0.45)';
+            ctx.beginPath(); ctx.ellipse(x+ox+sw*0.28, y+oy+sh*0.28, sw*0.75, sh*0.75, ang, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(195,210,228,0.50)';
+            ctx.beginPath(); ctx.ellipse(x+ox-sw*0.22, y+oy-sh*0.22, sw*0.40, sh*0.38, ang, 0, Math.PI*2); ctx.fill();
+        };
+        drawBoulder(-size*0.14, size*0.05, size*0.22, size*0.18, -0.3);
+        drawBoulder(size*0.14, -size*0.04, size*0.18, size*0.15, 0.4);
+        ctx.fillStyle = 'rgba(240,248,255,0.75)';
+        ctx.beginPath(); ctx.ellipse(x-size*0.14, y-size*0.10, size*0.15, size*0.07, -0.2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x+size*0.14, y-size*0.14, size*0.12, size*0.06, 0.3, 0, Math.PI*2); ctx.fill();
+    }
 
-        // Deep striations
-        ctx.strokeStyle = '#4a4a4a';
-        ctx.lineWidth = 1.5;
-        for (let i = -3; i <= 3; i++) {
-            const offset = i * size * 0.08;
-            ctx.beginPath();
-            ctx.arc(x + offset, y, size * 0.28, 0, Math.PI * 2);
-            ctx.stroke();
+    renderMountainRock3(ctx, x, y, size) {
+        // Cluster of small stones with snow patches
+        [[-0.16,0.08,0.17,0.12,-0.2],[0.13,-0.06,0.15,0.10,0.3],[0.0,0.15,0.12,0.09,0.1],[-0.06,-0.12,0.11,0.08,-0.1]]
+        .forEach(([ox,oy,sw,sh,ang]) => {
+            ctx.fillStyle = '#6a7880';
+            ctx.beginPath(); ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, ang, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(40,52,62,0.40)';
+            ctx.beginPath(); ctx.ellipse(x+ox*size+sw*size*0.25, y+oy*size+sh*size*0.25, sw*size*0.65, sh*size*0.65, ang, 0, Math.PI*2); ctx.fill();
+        });
+        ctx.fillStyle = 'rgba(240,248,255,0.80)';
+        [[-0.16,-0.04,0.08,0.04],[0.13,-0.12,0.07,0.03],[0.0,0.06,0.08,0.035]]
+        .forEach(([ox,oy,sw,sh]) => { ctx.beginPath(); ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, 0, 0, Math.PI*2); ctx.fill(); });
+    }
+
+    renderDesertRock(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+        switch(seed) {
+            case 0: this.renderDesertRock0(ctx, x, y, size); break;
+            case 1: this.renderDesertRock1(ctx, x, y, size); break;
+            case 2: this.renderDesertRock2(ctx, x, y, size); break;
+            default: this.renderDesertRock3(ctx, x, y, size);
         }
-
-        // Bright highlight - upper left
-        ctx.fillStyle = '#ababab';
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        ctx.arc(x - size * 0.12, y - size * 0.18, size * 0.14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Dark shadow - lower right
-        ctx.fillStyle = '#4a4a4a';
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
     }
 
-    renderMountainRockSlab(ctx, x, y, size) {
-        // Flat slab with prominent snow layer
-        ctx.fillStyle = '#5a5a5a';
-        ctx.fillRect(x - size * 0.32, y - size * 0.1, size * 0.64, size * 0.3);
+    renderDesertRock0(ctx, x, y, size) {
+        // Smooth rounded sandstone boulder
+        ctx.fillStyle = '#c8944a';
+        ctx.beginPath(); ctx.ellipse(x, y, size*0.30, size*0.24, 0.15, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(90,55,12,0.50)';
+        ctx.beginPath(); ctx.ellipse(x+size*0.10, y+size*0.08, size*0.26, size*0.20, 0.15, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(228,182,112,0.65)';
+        ctx.beginPath(); ctx.ellipse(x-size*0.10, y-size*0.10, size*0.14, size*0.10, 0.15, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = 'rgba(100,65,18,0.28)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(x, y, size*0.30, size*0.24, 0.15, 0, Math.PI*2); ctx.stroke();
+    }
 
-        // Thick snow layer on top - very bright
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x - size * 0.32, y - size * 0.14, size * 0.64, size * 0.06);
-
-        // Snow shadows
-        ctx.fillStyle = '#d5d5d5';
-        ctx.fillRect(x - size * 0.32, y - size * 0.08, size * 0.64, size * 0.02);
-
-        // Rock edge highlight
-        ctx.fillStyle = '#7a7a7a';
-        ctx.fillRect(x - size * 0.32, y + size * 0.15, size * 0.64, size * 0.05);
-
-        // Rock details
-        ctx.strokeStyle = '#5a5a5a';
-        ctx.lineWidth = 1;
+    renderDesertRock1(ctx, x, y, size) {
+        // Layered sandstone slab with visible strata
+        const hw = size*0.32, hh = size*0.22;
+        ctx.fillStyle = '#b88540';
+        ctx.beginPath();
+        ctx.moveTo(x-hw, y+hh*0.6); ctx.lineTo(x-hw*0.8, y-hh*0.6);
+        ctx.lineTo(x+hw*0.8, y-hh*0.5); ctx.lineTo(x+hw, y+hh*0.6);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#8a6020'; ctx.lineWidth = 1.5;
         for (let i = 0; i < 3; i++) {
-            const py = y - size * 0.08 + i * size * 0.1;
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.32, py);
-            ctx.lineTo(x + size * 0.32, py);
-            ctx.stroke();
+            const ly = y - hh*0.35 + i * hh*0.48;
+            ctx.beginPath(); ctx.moveTo(x-hw*0.78, ly); ctx.lineTo(x+hw*0.78, ly+hh*0.04); ctx.stroke();
         }
+        ctx.fillStyle = 'rgba(208,162,86,0.62)';
+        ctx.beginPath();
+        ctx.moveTo(x-hw*0.8, y-hh*0.6); ctx.lineTo(x+hw*0.8, y-hh*0.5);
+        ctx.lineTo(x+hw*0.72, y-hh*0.22); ctx.lineTo(x-hw*0.7, y-hh*0.25);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(80,45,8,0.38)';
+        ctx.beginPath();
+        ctx.moveTo(x+hw*0.8, y-hh*0.5); ctx.lineTo(x+hw, y+hh*0.6);
+        ctx.lineTo(x+hw*0.6, y+hh*0.6); ctx.lineTo(x+hw*0.6, y-hh*0.32);
+        ctx.closePath(); ctx.fill();
     }
 
-    renderMountainRockClustered(ctx, x, y, size) {
-        // Clustered arrangement of small rocks
-        const clusters = [
-            {x: -0.2, y: 0.1, r: 0.18},
-            {x: 0.2, y: 0, r: 0.2},
-            {x: 0, y: 0.22, r: 0.15}
-        ];
+    renderDesertRock2(ctx, x, y, size) {
+        // Angular faceted sandstone rock
+        ctx.fillStyle = '#a87838';
+        ctx.beginPath();
+        ctx.moveTo(x-size*0.22, y-size*0.14); ctx.lineTo(x+size*0.16, y-size*0.22);
+        ctx.lineTo(x+size*0.28, y+size*0.06); ctx.lineTo(x+size*0.12, y+size*0.26);
+        ctx.lineTo(x-size*0.20, y+size*0.24); ctx.lineTo(x-size*0.30, y+size*0.04);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(210,162,80,0.60)';
+        ctx.beginPath();
+        ctx.moveTo(x-size*0.22, y-size*0.14); ctx.lineTo(x+size*0.16, y-size*0.22);
+        ctx.lineTo(x+size*0.05, y-size*0.04); ctx.lineTo(x-size*0.15, y-size*0.02);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(70,40,8,0.42)';
+        ctx.beginPath();
+        ctx.moveTo(x+size*0.12, y+size*0.26); ctx.lineTo(x-size*0.20, y+size*0.24);
+        ctx.lineTo(x-size*0.10, y+size*0.10); ctx.lineTo(x+size*0.08, y+size*0.12);
+        ctx.closePath(); ctx.fill();
+    }
 
-        ctx.fillStyle = '#8a8a8a';
-        clusters.forEach(cluster => {
-            ctx.beginPath();
-            ctx.arc(x + cluster.x * size, y + cluster.y * size, size * cluster.r, 0, Math.PI * 2);
-            ctx.fill();
+    renderDesertRock3(ctx, x, y, size) {
+        // Cluster of warm sandstone pebbles
+        [[-0.14,0.06,0.15,0.11,-0.2],[0.13,-0.05,0.13,0.09,0.3],[0.0,0.16,0.11,0.08,0.1]]
+        .forEach(([ox,oy,sw,sh,ang]) => {
+            ctx.fillStyle = '#c49048';
+            ctx.beginPath(); ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, ang, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(85,50,10,0.45)';
+            ctx.beginPath(); ctx.ellipse(x+ox*size+sw*size*0.25, y+oy*size+sh*size*0.25, sw*size*0.68, sh*size*0.68, ang, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(212,170,92,0.58)';
+            ctx.beginPath(); ctx.ellipse(x+ox*size-sw*size*0.20, y+oy*size-sh*size*0.22, sw*size*0.38, sh*size*0.32, ang, 0, Math.PI*2); ctx.fill();
         });
-
-        // Snow accents
-        ctx.fillStyle = 'rgba(240, 240, 240, 0.6)';
-        clusters.forEach(cluster => {
-            ctx.beginPath();
-            ctx.arc(x + cluster.x * size - size * 0.08, y + cluster.y * size - size * 0.08, size * cluster.r * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-        });
     }
 
-    renderMountainRockIcy(ctx, x, y, size) {
-        // Ice-covered jagged rock with glassy surfaces
-        // Dark rock body
-        ctx.fillStyle = '#4a5a6a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.18);
-        ctx.lineTo(x - size * 0.20, y - size * 0.30);
-        ctx.lineTo(x, y - size * 0.32);
-        ctx.lineTo(x + size * 0.22, y - size * 0.28);
-        ctx.lineTo(x + size * 0.32, y - size * 0.08);
-        ctx.lineTo(x + size * 0.34, y + size * 0.20);
-        ctx.lineTo(x + size * 0.12, y + size * 0.30);
-        ctx.lineTo(x - size * 0.1, y + size * 0.32);
-        ctx.closePath();
-        ctx.fill();
-
-        // Left shadowed face
-        ctx.fillStyle = '#2a3a4a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.18);
-        ctx.lineTo(x - size * 0.20, y - size * 0.30);
-        ctx.lineTo(x - size * 0.12, y - size * 0.20);
-        ctx.lineTo(x - size * 0.1, y + size * 0.32);
-        ctx.closePath();
-        ctx.fill();
-
-        // Ice coating - glossy bright areas
-        ctx.fillStyle = '#d5e8f5';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.18, y - size * 0.25);
-        ctx.lineTo(x, y - size * 0.32);
-        ctx.lineTo(x + size * 0.15, y - size * 0.20);
-        ctx.lineTo(x - size * 0.08, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-
-        // Right ice shine
-        ctx.fillStyle = 'rgba(200, 230, 255, 0.6)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.22, y - size * 0.28);
-        ctx.lineTo(x + size * 0.32, y - size * 0.08);
-        ctx.lineTo(x + size * 0.25, y - size * 0.10);
-        ctx.lineTo(x + size * 0.18, y - size * 0.22);
-        ctx.closePath();
-        ctx.fill();
-
-        // Ice crack details
-        ctx.strokeStyle = 'rgba(100, 150, 200, 0.5)';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.15, y - size * 0.18);
-        ctx.lineTo(x + size * 0.12, y + size * 0.15);
-        ctx.stroke();
-
-        // Sharp edge highlight
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.32, y - size * 0.08);
-        ctx.lineTo(x + size * 0.34, y + size * 0.20);
-        ctx.stroke();
-    }
-
-    renderMountainRockPeaked(ctx, x, y, size) {
-        // Sharp peaked formation with dramatic angles
-        ctx.fillStyle = '#7a7a8a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.28, y - size * 0.08);
-        ctx.lineTo(x + size * 0.32, y + size * 0.25);
-        ctx.lineTo(x, y + size * 0.32);
-        ctx.lineTo(x - size * 0.32, y + size * 0.25);
-        ctx.lineTo(x - size * 0.28, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Bright left peak facet
-        ctx.fillStyle = '#d5d5e5';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.38);
-        ctx.lineTo(x - size * 0.28, y - size * 0.08);
-        ctx.lineTo(x - size * 0.08, y - size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-
-        // Snow cap on peak
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Right facet darker
-        ctx.fillStyle = '#5a5a6a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.28, y - size * 0.08);
-        ctx.lineTo(x + size * 0.1, y - size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark shadow base
-        ctx.fillStyle = '#4a4a5a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.25);
-        ctx.lineTo(x + size * 0.32, y + size * 0.25);
-        ctx.lineTo(x + size * 0.2, y + size * 0.15);
-        ctx.lineTo(x - size * 0.2, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderDesertRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 7;
-        switch(seed) {
-            case 0:
-                this.renderDesertRockSmooth(ctx, x, y, size);
-                break;
-            case 1:
-                this.renderDesertRockLayered(ctx, x, y, size);
-                break;
-            case 2:
-                this.renderDesertRockWeathered(ctx, x, y, size);
-                break;
-            case 3:
-                this.renderDesertRockAngular(ctx, x, y, size);
-                break;
-            case 4:
-                this.renderDesertRockCrystal(ctx, x, y, size);
-                break;
-            case 5:
-                this.renderDesertRockRounded(ctx, x, y, size);
-                break;
-            default:
-                this.renderDesertRockJagged(ctx, x, y, size);
-        }
-    }
-
-    renderDesertRockSmooth(ctx, x, y, size) {
-        // Smooth rounded rock - polished appearance
-        ctx.fillStyle = '#d9a876';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Strong highlight - very smooth
-        ctx.fillStyle = '#f5d9b8';
-        ctx.globalAlpha = 0.8;
-        ctx.beginPath();
-        ctx.arc(x - size * 0.1, y - size * 0.15, size * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Deep shadow
-        ctx.fillStyle = '#7a6a4a';
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Rim highlight
-        ctx.strokeStyle = '#e5c9a8';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    }
-
-    renderDesertRockLayered(ctx, x, y, size) {
-        // Horizontally striated rock with strong layering
-        ctx.fillStyle = '#9a8a5a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.3, y - size * 0.2);
-        ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        ctx.lineTo(x + size * 0.28, y + size * 0.25);
-        ctx.lineTo(x - size * 0.28, y + size * 0.28);
-        ctx.closePath();
-        ctx.fill();
-
-        // Strong dark striation lines
-        ctx.strokeStyle = '#6a5a3a';
-        ctx.lineWidth = 2;
-        for (let i = -2; i <= 3; i++) {
-            const py = y - size * 0.1 + i * size * 0.12;
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.28, py);
-            ctx.lineTo(x + size * 0.28, py);
-            ctx.stroke();
-        }
-
-        // Alternating lighter stripes
-        ctx.strokeStyle = '#d9b89a';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.7;
-        for (let i = -1; i <= 3; i += 2) {
-            const py = y - size * 0.1 + i * size * 0.12;
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.28, py);
-            ctx.lineTo(x + size * 0.28, py);
-            ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-
-        // Highlight top edge
-        ctx.strokeStyle = '#e9d9a8';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.3, y - size * 0.2);
-        ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        ctx.stroke();
-    }
-
-    renderDesertRockWeathered(ctx, x, y, size) {
-        // Porous weathered rock with prominent holes
-        ctx.fillStyle = '#a8876a';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Deep weathering holes
-        ctx.fillStyle = '#3a2a0a';
-        const holes = [
-            {x: -0.12, y: -0.1, r: 0.1},
-            {x: 0.15, y: -0.05, r: 0.08},
-            {x: 0.08, y: 0.15, r: 0.09},
-            {x: -0.15, y: 0.12, r: 0.07},
-            {x: 0.02, y: 0, r: 0.06}
-        ];
-        holes.forEach(hole => {
-            ctx.beginPath();
-            ctx.arc(x + hole.x * size, y + hole.y * size, size * hole.r, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        // Rust/oxidation stains with better visibility
-        ctx.fillStyle = 'rgba(139, 69, 19, 0.6)';
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.15, y + size * 0.1, size * 0.12, size * 0.08, -Math.PI / 6, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(160, 82, 45, 0.5)';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.1, y - size * 0.15, size * 0.1, size * 0.06, Math.PI / 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Rim highlight
-        ctx.strokeStyle = '#c9a876';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    }
-
-    renderDesertRockAngular(ctx, x, y, size) {
-        // Angular faceted rock with dramatic contrast
-        ctx.fillStyle = '#8a7a5a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.25, y - size * 0.15);
-        ctx.lineTo(x + size * 0.2, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x + size * 0.15, y + size * 0.3);
-        ctx.lineTo(x - size * 0.2, y + size * 0.28);
-        ctx.lineTo(x - size * 0.32, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Bright facet - upper
-        ctx.fillStyle = '#e5c9a8';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.25, y - size * 0.15);
-        ctx.lineTo(x + size * 0.2, y - size * 0.25);
-        ctx.lineTo(x + size * 0.08, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Mid-tone facet - right side
-        ctx.fillStyle = '#b89a7a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.2, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x + size * 0.12, y - size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark facet shadow - lower
-        ctx.fillStyle = '#6a5a3a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x + size * 0.15, y + size * 0.3);
-        ctx.lineTo(x + size * 0.08, y + size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Very dark shadow - bottom left
-        ctx.fillStyle = '#4a3a1a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.2, y + size * 0.28);
-        ctx.lineTo(x + size * 0.15, y + size * 0.3);
-        ctx.lineTo(x - size * 0.1, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderDesertRockCrystal(ctx, x, y, size) {
-        // Multi-faceted crystal with strong shine
-        ctx.fillStyle = '#c9a98a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.3);
-        ctx.lineTo(x + size * 0.22, y - size * 0.08);
-        ctx.lineTo(x + size * 0.18, y + size * 0.28);
-        ctx.lineTo(x - size * 0.18, y + size * 0.28);
-        ctx.lineTo(x - size * 0.22, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Very bright left facet - crystal shine
-        ctx.fillStyle = '#f5e9d9';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.3);
-        ctx.lineTo(x + size * 0.22, y - size * 0.08);
-        ctx.lineTo(x + size * 0.02, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Mid-bright right facet
-        ctx.fillStyle = '#d9c9b0';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.3);
-        ctx.lineTo(x - size * 0.22, y - size * 0.08);
-        ctx.lineTo(x - size * 0.05, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark lower facet
-        ctx.fillStyle = '#8a7a5a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.18, y + size * 0.28);
-        ctx.lineTo(x + size * 0.18, y + size * 0.28);
-        ctx.lineTo(x + size * 0.02, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Very dark bottom shadow
-        ctx.fillStyle = '#5a4a2a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.18, y + size * 0.28);
-        ctx.lineTo(x + size * 0.18, y + size * 0.28);
-        ctx.lineTo(x + size * 0.08, y + size * 0.25);
-        ctx.closePath();
-        ctx.fill();
-        ctx.lineTo(x + size * 0.02, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderDesertRockRounded(ctx, x, y, size) {
-        // Smooth rounded boulder with warm orange tones
-        ctx.fillStyle = '#c99a6a';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Highlight - upper left
-        ctx.fillStyle = '#e5b88a';
-        ctx.globalAlpha = 0.75;
-        ctx.beginPath();
-        ctx.arc(x - size * 0.12, y - size * 0.18, size * 0.16, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Shadow - lower right
-        ctx.fillStyle = '#6a5a3a';
-        ctx.globalAlpha = 0.65;
-        ctx.beginPath();
-        ctx.arc(x + size * 0.15, y + size * 0.18, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // Subtle rim
-        ctx.strokeStyle = '#b89a6a';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.32, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-    }
-
-    renderDesertRockJagged(ctx, x, y, size) {
-        // Sharp angular rock with varied facets
-        ctx.fillStyle = '#9a7a4a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.28, y - size * 0.2);
-        ctx.lineTo(x + size * 0.15, y - size * 0.28);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x + size * 0.1, y + size * 0.32);
-        ctx.lineTo(x - size * 0.22, y + size * 0.3);
-        ctx.lineTo(x - size * 0.3, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Bright upper facet
-        ctx.fillStyle = '#d9b99a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.28, y - size * 0.2);
-        ctx.lineTo(x + size * 0.15, y - size * 0.28);
-        ctx.lineTo(x - size * 0.08, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-
-        // Mid-tone right facet
-        ctx.fillStyle = '#b59a7a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.15, y - size * 0.28);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x + size * 0.15, y - size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-
-        // Dark lower facet
-        ctx.fillStyle = '#5a4a2a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.1, y + size * 0.32);
-        ctx.lineTo(x - size * 0.22, y + size * 0.3);
-        ctx.lineTo(x + size * 0.05, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-
-        // Left shadow
-        ctx.fillStyle = '#6a5a3a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.22, y + size * 0.3);
-        ctx.lineTo(x - size * 0.3, y + size * 0.08);
-        ctx.lineTo(x - size * 0.1, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderSpaceRock(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
+    renderSpaceRock(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 5 : Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
         const scaledSize = size * 1.4;
         switch(seed) {
             case 0:
@@ -4029,11 +3387,19 @@ export class LevelBase {
         ctx.closePath();
         ctx.stroke();
 
-        // Void-like center
-        ctx.fillStyle = 'rgba(40, 20, 60, 0.8)';
+        // Highlight face (lighter face on top-left)
+        ctx.fillStyle = 'rgba(120, 88, 180, 0.55)';
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.15, 0, Math.PI * 2);
+        ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+        ctx.lineTo(x + points[1].x * size, y + points[1].y * size);
+        ctx.lineTo(x, y);
+        ctx.closePath();
         ctx.fill();
+        // Mineral veins
+        ctx.strokeStyle = 'rgba(180, 140, 255, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x - size*0.05, y - size*0.20); ctx.lineTo(x + size*0.12, y + size*0.15); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - size*0.18, y + size*0.05); ctx.lineTo(x + size*0.10, y - size*0.08); ctx.stroke();
     }
 
     renderSpaceRockSpiky(ctx, x, y, size) {
