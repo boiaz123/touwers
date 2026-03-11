@@ -281,7 +281,7 @@ export class DiamondPress extends Building {
         ctx.font = `bold ${Math.floor(size * 0.08)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🔥', centerX - size * 0.205, chamberTop - size * 0.05);
+        ctx.fillText('F', centerX - size * 0.205, chamberTop - size * 0.05);
         
         // Input hopper/funnel on top middle (Water element)
         ctx.fillStyle = 'rgba(100, 150, 255, 0.2)';
@@ -296,7 +296,7 @@ export class DiamondPress extends Building {
         ctx.lineWidth = 2.5;
         ctx.stroke();
         ctx.fillStyle = '#6496ff';
-        ctx.fillText('💧', centerX, chamberTop - size * 0.05);
+        ctx.fillText('W', centerX, chamberTop - size * 0.05);
         
         // Input hopper/funnel on top right (Air element)
         ctx.fillStyle = 'rgba(200, 200, 255, 0.2)';
@@ -311,7 +311,7 @@ export class DiamondPress extends Building {
         ctx.lineWidth = 2.5;
         ctx.stroke();
         ctx.fillStyle = '#c8c8ff';
-        ctx.fillText('💨', centerX + size * 0.205, chamberTop - size * 0.05);
+        ctx.fillText('A', centerX + size * 0.205, chamberTop - size * 0.05);
         
         // Output collection slot at bottom
         const outSlotY = chamberTop + chamberHeight + size * 0.08;
@@ -337,7 +337,8 @@ export class DiamondPress extends Building {
         ctx.font = `bold ${Math.floor(size * 0.14)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('💎', centerX + size * 0.14, outSlotY + size * 0.05);
+        ctx.fillStyle = '#64dfff';
+        ctx.fillText('◆', centerX + size * 0.14, outSlotY + size * 0.05);
         
         // Spark effects on pressing action - less frequent
         if (strokeIntensity > 0.75) {
@@ -399,7 +400,7 @@ export class DiamondPress extends Building {
             this.floatingTexts.push({
                 x: this.x,
                 y: this.y - 40,
-                text: '+1 💎',
+                text: '+1 ◆',
                 life: 1.5,
                 maxLife: 1.5
             });

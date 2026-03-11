@@ -29,7 +29,7 @@ export class MusicPlayer {
         container.innerHTML = `
             <div class="music-player">
                 <div class="music-player-header">
-                    <span class="music-player-title">🎵 Music Player</span>
+                    <span class="music-player-title">Music Player</span>
                     <button class="music-player-minimize-btn" title="Minimize">−</button>
                 </div>
                 <div class="music-player-content">
@@ -42,7 +42,7 @@ export class MusicPlayer {
                         <button class="music-player-btn music-player-next" title="Next Track">⏭</button>
                     </div>
                     <div class="music-player-volume">
-                        <span class="music-player-volume-label">🔊</span>
+                        <span class="music-player-volume-label">Vol</span>
                         <input type="range" class="music-player-volume-slider" min="0" max="100" value="70" title="Volume">
                     </div>
                 </div>

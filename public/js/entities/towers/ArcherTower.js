@@ -414,7 +414,7 @@ export class ArcherTower extends Tower {
             range: '155',
             fireRate: '1.8/sec',
             cost: 90,
-            icon: '🏹'
+            icon: ''
         };
     }
 }

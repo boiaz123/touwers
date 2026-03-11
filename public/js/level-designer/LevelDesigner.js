@@ -1076,7 +1076,7 @@ export class LevelDesigner {
             this.ctx.font = 'bold 14px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'top';
-            this.ctx.fillText('📋 Select a tool to begin', 15, 20);
+            this.ctx.fillText('[T] Select a tool to begin', 15, 20);
             
             this.ctx.fillStyle = '#b0b0b0';
             this.ctx.font = '11px Arial';
@@ -1094,7 +1094,7 @@ export class LevelDesigner {
             this.ctx.font = 'bold 14px Arial';
             this.ctx.textAlign = 'left';
             this.ctx.textBaseline = 'top';
-            this.ctx.fillText('🛤️ Mode: PATH', 15, 15);
+            this.ctx.fillText('>> Mode: PATH', 15, 15);
             
             // Waypoint counter box (if editing)
             if (this.pathPoints && !this.pathLocked) {

@@ -1001,11 +1001,18 @@ export class Campaign2 extends CampaignBase {
         ctx.globalAlpha = 1;
         
         // Lock icon
-        ctx.fillStyle = '#666';
-        ctx.font = 'bold 80px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔒', 0, 0);
+        ctx.fillStyle = '#777';
+        ctx.beginPath();
+        ctx.arc(0, -12, 18, Math.PI, 0, false);
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 10;
+        ctx.stroke();
+        ctx.fillRect(-22, -14, 44, 36);
+        ctx.fillStyle = '#444';
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-4, 4, 8, 12);
         
         ctx.restore();
     }

@@ -636,7 +636,7 @@ export class Castle {
                 level: this.fortificationLevel,
                 maxLevel: this.maxFortificationLevel,
                 cost: this.calculateFortificationCost(),
-                icon: '🛡️',
+                icon: '○',
                 currentEffect: `Max Health: ${this.maxHealth}`
             }
         ];
@@ -786,7 +786,7 @@ export class Castle {
                 description: `Your defender is actively protecting the castle (${this.defender.health}/${this.defender.maxHealth} HP)`,
                 type: 'defender_status',
                 canHire: false,
-                icon: '🛡️'
+                icon: '○'
             }];
         }
         
@@ -798,7 +798,7 @@ export class Castle {
                 description: `Your defender needs time to recover. Ready in ${this.defenderDeadCooldown.toFixed(1)}s`,
                 type: 'defender_status',
                 canHire: false,
-                icon: '🛡️'
+                icon: '○'
             }];
         }
         
@@ -810,7 +810,7 @@ export class Castle {
                 description: 'Upgrade Training Grounds to Level 3 to unlock the Defender system',
                 type: 'defender_status',
                 canHire: false,
-                icon: '🔒'
+                icon: '▪'
             }];
         }
         
@@ -823,7 +823,7 @@ export class Castle {
             level: 1,
             cost: this.calculateDefenderCost(1),
             canHire: true,
-            icon: '⚔️'
+            icon: '▸'
         });
         
         // Level 2 Defender if unlocked
@@ -836,7 +836,7 @@ export class Castle {
                 level: 2,
                 cost: this.calculateDefenderCost(2),
                 canHire: true,
-                icon: '⚔️'
+                icon: '▸'
             });
         }
         
@@ -850,7 +850,7 @@ export class Castle {
                 level: 3,
                 cost: this.calculateDefenderCost(3),
                 canHire: true,
-                icon: '⚔️'
+                icon: '▸'
             });
         }
         

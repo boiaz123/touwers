@@ -497,7 +497,7 @@ export class PoisonArcherTower extends Tower {
             range: '130',
             fireRate: '0.4/sec',
             cost: 120,
-            icon: '🌿'
+            icon: ''
         };
     }
 }

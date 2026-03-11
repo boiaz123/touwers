@@ -785,7 +785,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
-                icon: '🔥',
+                icon: '▲',
                 gemType: 'fire'
             },
             {
@@ -795,7 +795,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
-                icon: '💧',
+                icon: '▼',
                 gemType: 'water'
             },
             {
@@ -805,7 +805,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
-                icon: '💨',
+                icon: '▷',
                 gemType: 'air'
             },
             {
@@ -815,7 +815,7 @@ export class MagicAcademy extends Building {
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
-                icon: '🪨',
+                icon: '◀',
                 gemType: 'earth',
                 color: '#8B6F47'
             }
@@ -844,7 +844,7 @@ export class MagicAcademy extends Building {
                 level: this.academyLevel,
                 maxLevel: this.maxAcademyLevel,
                 cost: null,
-                icon: '🎓',
+                icon: '◈',
                 isAcademyUpgrade: true
             };
         }
@@ -870,7 +870,7 @@ export class MagicAcademy extends Building {
             level: this.academyLevel,
             maxLevel: this.maxAcademyLevel,
             cost: cost,
-            icon: '🎓',
+            icon: '◈',
             isAcademyUpgrade: true
         };
     }

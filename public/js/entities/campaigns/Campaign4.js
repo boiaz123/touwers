@@ -865,11 +865,18 @@ export class Campaign4 extends CampaignBase {
         ctx.beginPath();
         ctx.arc(0, 0, 25, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 30px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔒', 0, 2);
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.arc(0, -2, 7, Math.PI, 0, false);
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillRect(-9, -3, 18, 14);
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(0, 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-2, 3, 4, 5);
         
         ctx.restore();
     }

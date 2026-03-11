@@ -8,7 +8,7 @@ export class UpgradeRegistry {
             name: 'Training Gear',
             description: 'Unlocks the ability to build Training Grounds in levels',
             cost: 500,
-            icon: '🛡️',
+            icon: '◈',
             category: 'building',
             effect: 'Unlocks Training Grounds building'
         },
@@ -16,7 +16,7 @@ export class UpgradeRegistry {
             name: 'Musical Equipment',
             description: 'Adds a music player to the UI for settling ambiance',
             cost: 300,
-            icon: '🎼',
+            icon: '▹',
             category: 'ui',
             effect: 'Adds music player to gameplay UI'
         },
@@ -24,7 +24,7 @@ export class UpgradeRegistry {
             name: 'Wooden Chest',
             description: 'Increase starting gold by 100',
             cost: 250,
-            icon: '🪙',
+            icon: '◆',
             category: 'gold',
             effect: 'Increases starting gold by 100',
             campaignRequirement: 'campaign-1'
@@ -33,7 +33,7 @@ export class UpgradeRegistry {
             name: 'Golden Chest',
             description: 'Increase starting gold by another 100 (requires Wooden Chest)',
             cost: 400,
-            icon: '👑',
+            icon: '◎',
             category: 'gold',
             effect: 'Increases starting gold by 100',
             prerequisite: 'wooden-chest',
@@ -43,7 +43,7 @@ export class UpgradeRegistry {
             name: 'Platinum Chest',
             description: 'Increase starting gold by another 100 (requires Golden Chest)',
             cost: 600,
-            icon: '⭐',
+            icon: '●',
             category: 'gold',
             effect: 'Increases starting gold by 100',
             prerequisite: 'golden-chest',
@@ -53,7 +53,7 @@ export class UpgradeRegistry {
             name: 'Diamond Pickaxe',
             description: 'Increase gem mining chance in gold mines. Requires a Magic Academy to be unlocked first.',
             cost: 800,
-            icon: '💎',
+            icon: '◆',
             category: 'mining',
             effect: 'Increases diamond drop rate from mines',
             prerequisite: 'magic-academy-unlock'
@@ -62,7 +62,7 @@ export class UpgradeRegistry {
             name: 'Diamond Press Unlock',
             description: 'Unlocked when Super Weapon Lab reaches level 2',
             cost: 0,
-            icon: '💠',
+            icon: '◇',
             category: 'building',
             effect: 'Unlocks Diamond Press building'
         },
@@ -70,7 +70,7 @@ export class UpgradeRegistry {
             name: 'Academy Blueprints',
             description: 'Ancient schematics reveal the art of constructing a Magic Academy — a tower of arcane scholarship that unlocks elemental magic towers and gem research. Available after completing The Verdant Woodlands.',
             cost: 1500,
-            icon: '📜',
+            icon: '▹',
             category: 'building',
             effect: 'Permanently unlocks the Magic Academy building',
             campaignRequirement: 'campaign-2'
@@ -79,7 +79,7 @@ export class UpgradeRegistry {
             name: 'Super Weapon Lab Plans',
             description: 'Schematics for a formidable weapons laboratory capable of producing devastating combination spells and experimental ordnance. Available after conquering The Ironstone Mountains.',
             cost: 2500,
-            icon: '⚗️',
+            icon: '◈',
             category: 'building',
             effect: 'Permanently unlocks the Super Weapon Lab building',
             campaignRequirement: 'campaign-3'

@@ -1223,7 +1223,7 @@ export class GameplayState {
         // Create a visual popup showing the gems collected
         const gemTexts = [];
         const types = ['fire', 'water', 'air', 'earth', 'diamond'];
-        const icons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨', diamond: '💎' };
+        const icons = { fire: 'F', water: 'W', air: 'A', earth: 'E', diamond: '◆' };
         
         types.forEach(type => {
             if (gemsCollected[type] > 0) {
@@ -2039,21 +2039,21 @@ export class GameplayState {
                 borderColor = '#FF8C00';
                 bgColor = 'rgba(30, 15, 5, 0.95)';
                 textColor = '#FFD700';
-                icon = '👑';
+                icon = '';
                 text = 'The spirits of the woods protect you';
             } else if (boonId === 'strange-talisman') {
                 glowColor = '#9D4EDD';
                 borderColor = '#9D4EDD';
                 bgColor = 'rgba(15, 5, 30, 0.95)';
                 textColor = '#E0AAFF';
-                icon = '🔮';
+                icon = '';
                 text = 'Strange Talisman active';
             } else if (boonId === 'rabbits-foot') {
                 glowColor = '#FFD700';
                 borderColor = '#FFD700';
                 bgColor = 'rgba(30, 25, 0, 0.95)';
                 textColor = '#FFED4E';
-                icon = '🐾';
+                icon = '';
                 text = 'Rabbit\'s Foot active';
             } else {
                 continue;
@@ -2073,12 +2073,15 @@ export class GameplayState {
             ctx.fillStyle = bgColor;
             ctx.fillRect(startX, yPos, boxWidth, boxHeight);
             
-            // Icon
-            ctx.font = 'bold 18px Arial';
+            // Icon indicator (colored dot)
+            ctx.shadowBlur = 0;
             ctx.fillStyle = borderColor;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(icon, startX + 8, yPos + 22);
+            ctx.beginPath();
+            ctx.arc(startX + 13, yPos + 22, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
             
             // Text
             ctx.font = 'bold 11px Arial';

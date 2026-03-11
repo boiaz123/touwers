@@ -511,9 +511,22 @@ export class MagicTower extends Tower {
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
-        const elementIcons = { fire: '🔥', water: '💧', air: '💨', earth: '🪨' };
-        
-        ctx.fillText(elementIcons[this.selectedElement] || '✨', this.x, this.y + 2);
+        const elementColors = { fire: '#ff6633', water: '#3388ff', air: '#aaddff', earth: '#44aa44' };
+        const elementLabels = { fire: 'F', water: 'W', air: 'A', earth: 'E' };
+        const elColor = elementColors[this.selectedElement] || '#FFD700';
+        const elLabel = elementLabels[this.selectedElement] || 'M';
+        ctx.save();
+        ctx.fillStyle = elColor;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 7px Arial';
+        ctx.fillText(elLabel, this.x, this.y + 2);
+        ctx.restore();
         ctx.shadowBlur = 0;
         
         // Render attack radius circle if selected
@@ -528,7 +541,7 @@ export class MagicTower extends Tower {
             range: '130',
             fireRate: '1.0/sec',
             cost: 175,
-            icon: '✨'
+            icon: ''
         };
     }
 }

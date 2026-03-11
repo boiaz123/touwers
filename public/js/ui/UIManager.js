@@ -581,78 +581,78 @@ export class UIManager {
         switch (towerType) {
             case 'basic':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Reliable starter tower. Upgradeable at Tower Forge.</div>';
                 break;
             case 'archer':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
-                    ${s.armorPiercing > 0 ? `<div><span>🛡️ Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
+                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    ${s.armorPiercing > 0 ? `<div><span>Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Fast-firing with long range. Gains armor piercing from Forge upgrades.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Tower Forge</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Tower Forge</div>';
                 break;
             case 'cannon':
                 statsHTML = `
-                    <div><span>⚔️ Damage:</span> ${statVal(s.damage, s.baseDamage)} <span style="color: #c9a876;">(AoE)</span></div>
-                    <div><span>💥 Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 50, 'px')}</div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)} <span style="color: #c9a876;">(AoE)</span></div>
+                    <div><span>Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 50, 'px')}</div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Area of effect damage. Blast radius upgradeable at Forge.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 3</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
                 break;
             case 'barricade':
                 statsHTML = `
-                    <div><span>🪵 Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>👥 Capacity:</span> ${statVal(s.capacity, s.baseCapacity, ' enemies')}</div>
-                    <div><span>⏱️ Duration:</span> ${statValDecimal(s.duration, s.baseDuration, 's')}</div>
-                    <div><span>⚡ Deploy Rate:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Capacity:</span> ${statVal(s.capacity, s.baseCapacity, ' enemies')}</div>
+                    <div><span>Duration:</span> ${statValDecimal(s.duration, s.baseDuration, 's')}</div>
+                    <div><span>Deploy Rate:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Rolls barrels creating rubble clouds that slow enemies. Capacity and duration upgrade at Forge.</div>';
                 break;
             case 'poison':
                 statsHTML = `
-                    <div><span>🎯 Hit Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>☠️ Poison Tick:</span> ${statVal(s.poisonTickDamage || 8, s.basePoisonTickDamage || 8, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(20s duration)</span></div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Hit Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>Poison Tick:</span> ${statVal(s.poisonTickDamage || 8, s.basePoisonTickDamage || 8, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(20s duration)</span></div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Creates toxic clouds dealing damage over time. DoT upgradeable at Forge.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 2</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 2</div>';
                 break;
             case 'magic':
                 statsHTML = `
-                    <div><span>✨ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Select element: 🔥 Fire, 💧 Water, 💨 Air, 🌍 Earth. Bonuses from Magic Academy.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Magic Academy</div>';
+                specialHTML = '<div style="color: #aad4ff;">Select element: Fire, Water, Air, Earth. Bonuses from Magic Academy.</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Magic Academy</div>';
                 break;
             case 'guard-post':
                 statsHTML = `
-                    <div><span>🛡️ Type:</span> <span style="color: #FFD700;">Path Defender</span></div>
-                    <div><span>🪙 Hire Cost:</span> <span style="color: #FFD700;">🪙100</span></div>
-                    <div><span>⏱️ Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
+                    <div><span>Type:</span> <span style="color: #FFD700;">Path Defender</span></div>
+                    <div><span>Hire Cost:</span> <span style="color: #FFD700;"><span class="coin-xs"></span>100</span></div>
+                    <div><span>Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Place on path to hire a defender that blocks and fights enemies. Defender levels upgrade at Training Grounds.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 4</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
                 break;
             case 'combination':
                 statsHTML = `
-                    <div><span>⚡ Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>🎯 Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>⚡ Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Casts powerful combination spells. Unlock spells by investing gems at the Magic Academy.</div>';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab</div>';
                 break;
         }
         
@@ -661,11 +661,11 @@ export class UIManager {
         menu.className = 'building-info-menu';
         menu.id = 'tower-info-hover';
         menu.innerHTML = `
-            <div class="info-title">${info.icon || '🏰'} ${info.name}</div>
+            <div class="info-title">${info.icon || ''} ${info.name}</div>
             <div class="info-stats">
                 ${statsHTML}
                 <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
-                    <span>🪙 Cost:</span> <span style="color: #FFD700;">🪙${info.cost}</span>
+                    <span>Cost:</span> <span style="color: #FFD700;"><span class="coin-xs"></span>${info.cost}</span>
                 </div>
             </div>
             <div class="info-description">${info.description}</div>
@@ -726,106 +726,106 @@ export class UIManager {
         let statsHTML = '';
         let specialHTML = '';
         let unlockHTML = '';
-        let costString = `🪙${info.cost}`;
+        let costString = `<span class="coin-xs"></span>${info.cost}`;
         
         switch (buildingType) {
             case 'forge':
                 statsHTML = `
-                    <div><span>🔨 Max Level:</span> <span style="color: #FFD700;">5</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                    <div><span>Max Level:</span> <span style="color: #FFD700;">5</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
                     Core building that unlocks new towers and provides upgrade paths for all tower types.
                     Also increases Gold Mine income and unlocks buildings at higher levels.
                 </div>`;
                 if (unlockSystem.forgeCount >= unlockSystem.maxForges) {
-                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }
                 break;
             case 'mine':
                 const incomeMultiplier = unlockSystem.getMineIncomeMultiplier();
                 const maxMines = unlockSystem.getMaxMines();
                 statsHTML = `
-                    <div><span>🪙 Income:</span> <span style="color: #FFD700;">Gold every 30s</span></div>
-                    <div><span>📈 Forge Bonus:</span> <span style="color: #FFD700;">×${incomeMultiplier.toFixed(1)}</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">${maxMines} (Forge Level ${unlockSystem.forgeLevel})</span></div>
+                    <div><span>Income (<span class="coin-xs"></span>):</span> <span style="color: #FFD700;">Gold every 30s</span></div>
+                    <div><span>Forge Bonus:</span> <span style="color: #FFD700;">×${incomeMultiplier.toFixed(1)}</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">${maxMines} (Forge Level ${unlockSystem.forgeLevel})</span></div>
                 `;
                 specialHTML = '<div style="color: #aad4ff;">Produces gold periodically. Click to collect. Higher Forge levels increase income and max mine count.</div>';
                 if (!unlockSystem.unlockedBuildings.has('mine')) {
-                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Tower Forge</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Tower Forge</div>';
                 } else if (unlockSystem.mineCount >= maxMines) {
-                    unlockHTML = `<div style="color: #ff6b6b;">⚠️ Max mines reached (${maxMines})</div>`;
+                    unlockHTML = `<div style="color: #ff6b6b;">Max mines reached (${maxMines})</div>`;
                 }
                 break;
             case 'academy':
                 statsHTML = `
-                    <div><span>🔮 Max Level:</span> <span style="color: #FFD700;">3</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                    <div><span>Max Level:</span> <span style="color: #FFD700;">3</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
-                    Unlocks Magic Towers and elemental upgrades (🔥💧💨🌍).
+                    Unlocks Magic Towers and elemental upgrades (Fire/Water/Air/Earth).
                     Higher levels unlock gem mining, combination spells, and the Super Weapon Lab.
                 </div>`;
                 if (!unlockSystem.unlockedBuildings.has('academy')) {
-                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 4</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
                 } else if (unlockSystem.academyCount >= 1) {
-                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }
                 break;
             case 'training':
                 statsHTML = `
-                    <div><span>🏋️ Max Level:</span> <span style="color: #FFD700;">5</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                    <div><span>Max Level:</span> <span style="color: #FFD700;">5</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
                     Provides range upgrades for Archer, Watch, and Trebuchet towers.
                     Also improves Barricade and Poison fire rates, and unlocks path defenders for Guard Posts.
                 </div>`;
                 if (!unlockSystem.unlockedBuildings.has('training')) {
-                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Forge Level 3</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
                 } else if (unlockSystem.trainingGroundsCount >= 1) {
-                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }
                 break;
             case 'superweapon':
-                costString = `🪙${info.cost}`;
+                costString = `<span class="coin-xs"></span>${info.cost}`;
                 if (info.diamondCost) {
-                    costString += ` + 💎${info.diamondCost}`;
+                    costString += ` + ◆${info.diamondCost}`;
                 }
                 statsHTML = `
-                    <div><span>⚡ Max Level:</span> <span style="color: #FFD700;">4</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                    <div><span>Max Level:</span> <span style="color: #FFD700;">4</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
                     Unlocks devastating area spells: Arcane Blast, Frost Nova, Inferno, Chain Lightning.
                     Higher levels unlock more spells and enable spell upgrades.
                 </div>`;
                 if (!unlockSystem.superweaponUnlocked) {
-                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Academy Level 3</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Academy Level 3</div>';
                 } else {
                     const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                     const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
                     if (diamondCount < 5) {
-                        unlockHTML = `<div style="color: #ff9999;">⚠️ Requires 5 💎 (have ${diamondCount})</div>`;
+                        unlockHTML = `<div style="color: #ff9999;">Requires 5 ◆ (have ${diamondCount})</div>`;
                     }
                 }
                 break;
             case 'diamond-press':
                 statsHTML = `
-                    <div><span>💎 Exchange:</span> <span style="color: #FFD700;">3 of each gem → 1 💎</span></div>
-                    <div><span>📏 Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
-                    <div><span>🏗️ Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
+                    <div><span>Exchange:</span> <span style="color: #FFD700;">3 of each gem → 1 ◆</span></div>
+                    <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
+                    <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Converts elemental gems (🔥💧💨🌍) into diamonds used for Super Weapon Lab upgrades and spell enhancements.</div>';
+                specialHTML = '<div style="color: #aad4ff;">Converts elemental gems (Fire/Water/Air/Earth) into diamonds used for Super Weapon Lab upgrades and spell enhancements.</div>';
                 if (!unlockSystem.unlockedBuildings.has('diamond-press')) {
-                    unlockHTML = '<div style="color: #ff6b6b;">🔒 Requires: Super Weapon Lab Level 2</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab Level 2</div>';
                 } else if (unlockSystem.diamondPressCount >= 1) {
-                    unlockHTML = '<div style="color: #ff6b6b;">⚠️ Already built (limit 1)</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }
                 break;
         }
@@ -839,7 +839,7 @@ export class UIManager {
             <div class="info-stats">
                 ${statsHTML}
                 <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
-                    <span>🪙 Cost:</span> <span style="color: #FFD700;">${costString}</span>
+                    <span>Cost:</span> <span style="color: #FFD700;">${costString}</span>
                 </div>
             </div>
             <div class="info-description">${info.description}</div>
@@ -1299,11 +1299,11 @@ export class UIManager {
             const cost = parseInt(costMatch[1]);
 
             // Check if gem cost or gold cost
-            const isGemCost = costText.includes('🔥') || costText.includes('💧') || costText.includes('💨') || costText.includes('🌍') || costText.includes('💎');
+            const isGemCost = costText.includes('🔥') || costText.includes('💧') || costText.includes('💨') || costText.includes('🌍') || costText.includes('💎') || costText.includes('◆');
             let canAfford = false;
             if (isGemCost) {
                 // For diamond costs, check diamond stock
-                if (costText.includes('💎')) {
+                if (costText.includes('💎') || costText.includes('◆')) {
                     canAfford = (currentGems.diamond || 0) >= cost;
                 } else {
                     canAfford = currentGold >= cost; // Fallback
@@ -1332,10 +1332,10 @@ export class UIManager {
             const cost = parseInt(costMatch[1]);
 
             // Check if it also needs diamonds (superweapon lab)
-            const needsDiamonds = costEl.textContent.includes('💎');
+            const needsDiamonds = costEl.textContent.includes('◆') || costEl.textContent.includes('💎');
             let canAfford = currentGold >= cost;
             if (needsDiamonds) {
-                const diamondMatch = costEl.textContent.match(/💎\s*(\d+)/);
+                const diamondMatch = costEl.textContent.match(/[◆💎]\s*(\d+)/);
                 if (diamondMatch) {
                     canAfford = canAfford && (currentGems.diamond || 0) >= parseInt(diamondMatch[1]);
                 }
@@ -1356,12 +1356,12 @@ export class UIManager {
                                     (currentGems.air || 0) >= 3 && (currentGems.earth || 0) >= 3;
                 if (exchangeBtn.disabled && canExchange) {
                     exchangeBtn.disabled = false;
-                    exchangeBtn.textContent = '⚙️ Exchange for Diamond';
+                    exchangeBtn.textContent = 'Exchange for Diamond';
                     exchangeBtn.style.opacity = '1';
                     exchangeBtn.style.cursor = '';
                 } else if (!exchangeBtn.disabled && !canExchange) {
                     exchangeBtn.disabled = true;
-                    exchangeBtn.textContent = '⛔ Need 3 of each gem';
+                    exchangeBtn.textContent = 'Need 3 of each gem';
                     exchangeBtn.style.opacity = '0.5';
                     exchangeBtn.style.cursor = 'not-allowed';
                 }
@@ -1491,17 +1491,17 @@ export class UIManager {
             let effectsList = [];
             
             if (forge.upgrades.basic.level > 0) {
-                effectsList.push(`⚔️ Basic: +${forge.upgrades.basic.level * 8}`);
+                effectsList.push(`Basic: +${forge.upgrades.basic.level * 8}`);
             }
             
             if (forge.upgrades.archer.level > 0) {
-                effectsList.push(`🏹 Archer: +${forge.upgrades.archer.level * 8}`);
+                effectsList.push(`Archer: +${forge.upgrades.archer.level * 8}`);
             }
             
             if (forge.upgrades.barricade_effectiveness.level > 0) {
                 const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
                 const duration = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
-                effectsList.push(`🪵 Barricade: ${capacity} (${duration.toFixed(1)}s)`);
+                effectsList.push(`Barricade: ${capacity} (${duration.toFixed(1)}s)`);
             }
             
             if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
@@ -1510,11 +1510,11 @@ export class UIManager {
                 for (let i = 0; i < forge.upgrades.poison.level && i < poisonEffects.length; i++) {
                     poisonDamage += poisonEffects[i];
                 }
-                effectsList.push(`☠️ Poison: +${poisonDamage}`);
+                effectsList.push(`Poison: +${poisonDamage}`);
             }
             
             if (forge.forgeLevel >= 3 && forge.upgrades.cannon.level > 0) {
-                effectsList.push(`💥 Trebuchet: +${forge.upgrades.cannon.level * 10}`);
+                effectsList.push(`Trebuchet: +${forge.upgrades.cannon.level * 10}`);
             }
             
             // Calculate forge-level benefits
@@ -1564,7 +1564,7 @@ export class UIManager {
                             ${isMaxed ? 'disabled' : ''}>
                         <div class="forge-upgrade-btn-content">
                             ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">FORGE UPGRADE</span>'}
-                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '🪙 ' + forgeUpgrade.cost : '—')}</span>
+                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '<span class="coin-xs"></span> ' + forgeUpgrade.cost : '—')}</span>
                         </div>
                     </button>
                 </div>
@@ -1574,7 +1574,7 @@ export class UIManager {
         // BUILD TOWER UPGRADES SECTION - Compact list
         if (forgeData.upgrades && forgeData.upgrades.length > 0) {
             contentHTML += `<div class="upgrade-category compact-upgrades">
-                <div class="upgrade-category-header">⚙️ TOWER ENHANCEMENTS</div>`;
+                <div class="upgrade-category-header">TOWER ENHANCEMENTS</div>`;
             
             // Define base tower stats
             const baseTowerStats = {
@@ -1651,12 +1651,12 @@ export class UIManager {
                     const curDmg = forge.upgrades.archer.level * 8;
                     const curPierce = forge.upgrades.archer.level * 5;
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
-                    tooltipText += `<div>🛡️ Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
+                    tooltipText += `<div>Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
                 } else if (upgrade.id === 'barricade_effectiveness') {
                     const curCap = baseTowerStats.barricade_effectiveness.capacity + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
                     const curDur = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
-                    tooltipText += `<div>👥 Enemies Slowed: <span style="color: #FFD700;">${curCap}</span></div>`;
-                    tooltipText += `<div>⏱️ Slow Duration: <span style="color: #FFD700;">${curDur.toFixed(1)}s</span></div>`;
+                    tooltipText += `<div>Enemies Slowed: <span style="color: #FFD700;">${curCap}</span></div>`;
+                    tooltipText += `<div>Slow Duration: <span style="color: #FFD700;">${curDur.toFixed(1)}s</span></div>`;
                 } else if (upgrade.id === 'poison') {
                     const baseDmg = baseTowerStats.poison.damage;
                     const curBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
@@ -1689,7 +1689,7 @@ export class UIManager {
                         tooltipText += `<div>Damage: +10</div>`;
                         tooltipText += `<div>Blast Radius: +5px</div>`;
                     }
-                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">🪙${upgrade.cost}</span></div>`;
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
                 }
                 tooltipText += `</div>`;
@@ -1709,7 +1709,7 @@ export class UIManager {
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (upgrade.cost ? `🪙${upgrade.cost}` : '—')}
+                            ${isMaxed ? 'MAX' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '—')}
                         </button>
                     </div>
                 `;
@@ -2171,7 +2171,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '🪙 ' + academyUpgrade.cost : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -2183,7 +2183,7 @@ export class UIManager {
             
             if (elementalUpgrades.length > 0) {
                 contentHTML += `<div class="upgrade-category compact-upgrades">
-                    <div class="upgrade-category-header">✨ ELEMENTAL MASTERIES</div>`;
+                    <div class="upgrade-category-header">ELEMENTAL MASTERIES</div>`;
                 
                 elementalUpgrades.forEach(upgrade => {
                     const isMaxed = upgrade.level >= upgrade.maxLevel;
@@ -2280,7 +2280,7 @@ export class UIManager {
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '🎓 Magic Academy';
+        if (titleElement) titleElement.textContent = 'Magic Academy';
         
         const contentContainer = panel.querySelector('#academy-panel-upgrades') || panel.querySelector('.panel-content');
         if (contentContainer) {
@@ -2532,9 +2532,9 @@ export class UIManager {
                             <div class="forge-name">Magic Tower</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">⚔️ ${dmgStr}</span>
-                            <span class="effect-badge">🎯 ${rngStr}</span>
-                            <span class="effect-badge">⚡ ${tower.fireRate.toFixed(1)}/s</span>
+                            <span class="effect-badge">${dmgStr}</span>
+                            <span class="effect-badge">${rngStr}</span>
+                            <span class="effect-badge">${tower.fireRate.toFixed(1)}/s</span>
                         </div>
                         ${elementBonusHTML}
                         ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes academy bonuses</div>' : ''}
@@ -2572,7 +2572,7 @@ export class UIManager {
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '⚡ Magic Tower Elements';
+        if (titleElement) titleElement.textContent = 'Magic Tower Elements';
         
         const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
         if (contentContainer) {
@@ -2664,9 +2664,9 @@ export class UIManager {
                             <div class="forge-name">Combination Tower</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">⚔️ ${dmgStr}</span>
-                            <span class="effect-badge">🎯 ${rngStr}</span>
-                            <span class="effect-badge">⚡ ${tower.fireRate.toFixed(1)}/s</span>
+                            <span class="effect-badge">${dmgStr}</span>
+                            <span class="effect-badge">${rngStr}</span>
+                            <span class="effect-badge">${tower.fireRate.toFixed(1)}/s</span>
                         </div>
                         ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>' : ''}
                     </div>
@@ -2703,7 +2703,7 @@ export class UIManager {
         
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '✨ Combination Tower Spells';
+        if (titleElement) titleElement.textContent = 'Combination Tower Spells';
         
         const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
         if (contentContainer) {
@@ -2804,7 +2804,7 @@ export class UIManager {
                     <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
                         <div class="panel-upgrade-item">
                             <div class="upgrade-header-row">
-                                <div class="upgrade-icon-section">⏱️</div>
+                                <div class="upgrade-icon-section">CD</div>
                                 <div class="upgrade-info-section">
                                     <div class="upgrade-name">Defender Cooldown</div>
                                     <div class="upgrade-description">Wait before hiring another defender</div>
@@ -2834,14 +2834,14 @@ export class UIManager {
                         <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
                             <div class="panel-upgrade-item">
                                 <div class="upgrade-header-row">
-                                    <div class="upgrade-icon-section">🛡️</div>
+                                    <div class="upgrade-icon-section"> ◈ </div>
                                     <div class="upgrade-info-section">
                                         <div class="upgrade-name">Hire ${defenderLabels[level - 1]}</div>
                                         <div class="upgrade-description">${defenderDescriptions[level - 1]}</div>
                                     </div>
                                 </div>
                                 <div class="upgrade-action-row">
-                                    <div class="upgrade-cost-display">🪙${cost}</div>
+                                    <div class="upgrade-cost-display"><span class="coin-xs"></span>${cost}</div>
                                     <button class="upgrade-button hire-defender-btn" data-level="${level}" ${!canAfford ? 'disabled' : ''}>
                                         ${canAfford ? 'Hire' : 'Not Enough Gold'}
                                     </button>
@@ -2857,7 +2857,7 @@ export class UIManager {
                 <div class="upgrade-category" style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2);">
                     <div class="panel-upgrade-item">
                         <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">✅</div>
+                            <div class="upgrade-icon-section"> ✔ </div>
                             <div class="upgrade-info-section">
                                 <div class="upgrade-name">Defender Active (Level ${tower.defender.level})</div>
                                 <div class="upgrade-description">A defender is currently stationed here</div>
@@ -2873,7 +2873,7 @@ export class UIManager {
 
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '🛡️ Guard Post';
+        if (titleElement) titleElement.textContent = 'Guard Post';
 
         const contentContainer = panel.querySelector('[id$="-content"], [id$="-upgrades"]');
         if (contentContainer) {
@@ -2929,7 +2929,7 @@ export class UIManager {
         
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
-        const icon = towerInfo.icon || '🏰';
+        const icon = towerInfo.icon || '';
         const name = towerInfo.name;
         
         // Check for upgrade indicators (compare live vs base)
@@ -2960,19 +2960,19 @@ export class UIManager {
         switch (towerType) {
             case 'BasicTower': {
                 statBadgesHTML = `
-                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 20)}</span>
-                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/s')}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 20)}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/s')}</span>
                 `;
                 break;
             }
             case 'ArcherTower': {
                 const pierce = tower.armorPiercingPercent || 0;
                 statBadgesHTML = `
-                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 15)}</span>
-                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 140)}</span>
-                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/s')}</span>
-                    ${pierce > 0 ? `<span class="effect-badge">🛡️ ${pierce}%</span>` : ''}
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 15)}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 140)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/s')}</span>
+                    ${pierce > 0 ? `<span class="effect-badge">${pierce}%</span>` : ''}
                 `;
                 break;
             }
@@ -2980,10 +2980,10 @@ export class UIManager {
                 const radius = tower.splashRadius || 35;
                 const baseRadius = tower.originalSplashRadius || 35;
                 statBadgesHTML = `
-                    <span class="effect-badge">⚔️ ${sv(tower.damage, tower.originalDamage || 40)}</span>
-                    <span class="effect-badge">💥 ${sv(radius, baseRadius, 'px')}</span>
-                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 40)}</span>
+                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
                 `;
                 break;
             }
@@ -2993,26 +2993,26 @@ export class UIManager {
                 const baseCapacity = tower.originalMaxEnemiesSlowed || 4;
                 const baseDuration = tower.originalSlowDuration || 4.0;
                 statBadgesHTML = `
-                    <span class="effect-badge">👥 ${sv(capacity, baseCapacity)}</span>
-                    <span class="effect-badge">⏱️ ${svDec(duration, baseDuration, 's')}</span>
-                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/s')}</span>
+                    <span class="effect-badge">${sv(capacity, baseCapacity)}</span>
+                    <span class="effect-badge">${svDec(duration, baseDuration, 's')}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/s')}</span>
                 `;
                 break;
             }
             case 'PoisonArcherTower': {
                 statBadgesHTML = `
-                    <span class="effect-badge">☠️ ${sv(tower.damage, tower.originalDamage || 18)}</span>
-                    <span class="effect-badge">🎯 ${sv(tower.range, tower.originalRange || 130)}</span>
-                    <span class="effect-badge">⚡ ${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/s')}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 18)}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/s')}</span>
                 `;
                 break;
             }
             default: {
                 statBadgesHTML = `
-                    <span class="effect-badge">⚔️ ${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span>
-                    <span class="effect-badge">🎯 ${Math.round(tower.range)}</span>
-                    <span class="effect-badge">⚡ ${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/s' : tower.fireRate}</span>
+                    <span class="effect-badge">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span>
+                    <span class="effect-badge">${Math.round(tower.range)}</span>
+                    <span class="effect-badge">${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/s' : tower.fireRate}</span>
                 `;
                 break;
             }
@@ -3144,7 +3144,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">LAB UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + superWeaponLab.labLevel : (labUpgrade && labUpgrade.cost ? '🪙 ' + labUpgrade.cost + ' + 💎' + (labUpgrade.diamondCost || 0) : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + superWeaponLab.labLevel : (labUpgrade && labUpgrade.cost ? '<span class="coin-xs"></span> ' + labUpgrade.cost + ' + ◆' + (labUpgrade.diamondCost || 0) : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -3155,7 +3155,7 @@ export class UIManager {
         const unlockedMainSpells = mainSpells.filter(s => s.unlocked);
         if (unlockedMainSpells.length > 0) {
             contentHTML += `<div class="spell-upgrades-section">
-                <div class="spell-section-header">⚡ SPELL UPGRADES</div>
+                <div class="spell-section-header">SPELL UPGRADES</div>
                 <div class="spell-bars-container">`;
             
             unlockedMainSpells.forEach(spell => {
@@ -3170,16 +3170,16 @@ export class UIManager {
                 // Show current stats
                 if (spell.damage) tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${Math.floor(spell.damage)}</span></div>`;
                 if (spell.radius) tooltipText += `<div>◯ Radius: <span style="color: #FFD700;">${Math.floor(spell.radius)}px</span></div>`;
-                if (spell.freezeDuration) tooltipText += `<div>❄️ Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
-                if (spell.burnDuration) tooltipText += `<div>🔥 Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
-                if (spell.chainCount) tooltipText += `<div>⚡ Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
-                tooltipText += `<div>⏱️ Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+                if (spell.freezeDuration) tooltipText += `<div>Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
+                if (spell.burnDuration) tooltipText += `<div>Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
+                if (spell.chainCount) tooltipText += `<div>Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
+                tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
                 tooltipText += `<div style="font-size: 0.7rem; color: #aaa;">Level: <span style="color: #FFD700;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</span></div>`;
                 
                 // Show spell-specific per-level upgrade effects
                 if (!isMaxed) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                    tooltipText += `<div style="font-weight: bold;">Per Upgrade Level (+1 💎):</div>`;
+                    tooltipText += `<div style="font-weight: bold;">Per Upgrade Level (+1 ◆):</div>`;
                     if (spell.id === 'arcaneBlast') {
                         tooltipText += `<div>Magic Damage: +5</div>`;
                         tooltipText += `<div>Radius: +2px</div>`;
@@ -3238,7 +3238,7 @@ export class UIManager {
         if (superWeaponLab.labLevel >= 2) {
             const combinationUpgrades = superWeaponLab.getCombinationUpgradeOptions(menuData.academy);
             contentHTML += `<div class="upgrade-category compact-upgrades">
-                <div class="upgrade-category-header">🔮 COMBINATION SPELLS</div>`;
+                <div class="upgrade-category-header">COMBINATION SPELLS</div>`;
             
             combinationUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.upgradeLevel >= upgrade.maxUpgradeLevel;
@@ -3252,8 +3252,7 @@ export class UIManager {
                 if (!isMaxed) {
                     comboTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${upgrade.upgradeLevel + 1}:</div>`;
                     for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
-                        const gemEmojiMap = { fire: '🔥', water: '💧', air: '☁️', earth: '🪨' };
-                        comboTooltip += `<div>${gemEmojiMap[gemType]} ${gemType.charAt(0).toUpperCase() + gemType.slice(1)}: ${cost}</div>`;
+                        comboTooltip += `<div>${this.getElementGemHTML(gemType, '12px')} ${gemType.charAt(0).toUpperCase() + gemType.slice(1)}: ${cost}</div>`;
                     }
                     comboTooltip += `<div style="color: #aaffaa; margin-top: 0.3rem;">Next upgrade adds more power</div>`;
                 }
@@ -3264,10 +3263,9 @@ export class UIManager {
                 // Build gem cost display
                 let gemCostDisplay = '';
                 for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
-                    const gemEmojiMap = { fire: '🔥', water: '💧', air: '☁️', earth: '🪨' };
                     const hasGem = (menuData.academy && (menuData.academy.gems[gemType] || 0) >= cost);
                     const style = hasGem ? 'color: #aaffaa;' : 'color: #ff9999;';
-                    gemCostDisplay += `<div style="font-size: 0.7rem; ${style};">${gemEmojiMap[gemType]} ${cost}</div>`;
+                    gemCostDisplay += `<div style="font-size: 0.7rem; ${style};">${this.getElementGemHTML(gemType, '12px')} ${cost}</div>`;
                 }
                 
                 contentHTML += `
@@ -3654,14 +3652,14 @@ export class UIManager {
             <div class="forge-panel-header">
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
-                        <div class="forge-icon-display">🏰</div>
+                        <div class="forge-icon-display"></div>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
                             <div class="forge-name">Castle</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">❤️ ${currentHealth}/${maxHealth} HP</span>
+                            <span class="effect-badge">${currentHealth}/${maxHealth} HP</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem;">
                             <div style="flex: 1; height: 8px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
@@ -3701,7 +3699,7 @@ export class UIManager {
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : upgrade.cost ? `🪙${upgrade.cost}` : 'N/A'}
+                                ${isMaxed ? 'MAX' : upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : 'N/A'}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-castle-upgrade="${upgrade.id}" 
@@ -3752,7 +3750,7 @@ export class UIManager {
                             </div>
                             <div class="upgrade-action-row">
                                 <div class="upgrade-cost-display ${canAfford ? 'affordable' : ''}">
-                                    🪙${option.cost}
+                                    <span class="coin-xs"></span>${option.cost}
                                 </div>
                                 <button class="upgrade-button panel-upgrade-btn" 
                                         data-defender-level="${option.level}" 
@@ -3768,7 +3766,7 @@ export class UIManager {
             contentHTML += `</div>`;
         }
         
-        this.showPanelWithoutClosing('castle-panel', '🏰 Castle Upgrades', contentHTML);
+        this.showPanelWithoutClosing('castle-panel', 'Castle Upgrades', contentHTML);
         
         // Add event listeners for castle upgrades
         document.querySelectorAll('[data-castle-upgrade]').forEach(btn => {
@@ -3841,25 +3839,25 @@ export class UIManager {
         let effectsList = [];
         
         if (trainingGrounds.rangeUpgrades.archerTower.level > 0) {
-            effectsList.push(`🏹 Archer: +${trainingGrounds.rangeUpgrades.archerTower.level * 15}`);
+            effectsList.push(`Archer: +${trainingGrounds.rangeUpgrades.archerTower.level * 15}`);
         }
         
         if (trainingGrounds.rangeUpgrades.basicTower.level > 0) {
-            effectsList.push(`⚔️ Watch: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
+            effectsList.push(`Watch: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
         }
         
         if (trainingGrounds.rangeUpgrades.cannonTower.level > 0) {
-            effectsList.push(`💥 Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
+            effectsList.push(`Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
         }
         
         if (trainingGrounds.upgrades.barricadeFireRate.level > 0) {
             const fireRate = (0.2 + trainingGrounds.upgrades.barricadeFireRate.level * 0.1).toFixed(1);
-            effectsList.push(`🪵 Barricade: ${fireRate}/sec`);
+            effectsList.push(`Barricade: ${fireRate}/sec`);
         }
         
         if (trainingGrounds.upgrades.poisonArcherTowerFireRate.level > 0) {
             const fireRate = (0.8 + trainingGrounds.upgrades.poisonArcherTowerFireRate.level * 0.08).toFixed(2);
-            effectsList.push(`☠️ Poison: ${fireRate}/sec`);
+            effectsList.push(`Poison: ${fireRate}/sec`);
         }
         
         // Build HTML with professional header
@@ -3906,7 +3904,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">TRAINING UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + trainingGrounds.trainingLevel : (trainingUpgrade && trainingUpgrade.cost ? '🪙 ' + trainingUpgrade.cost : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + trainingGrounds.trainingLevel : (trainingUpgrade && trainingUpgrade.cost ? '<span class="coin-xs"></span> ' + trainingUpgrade.cost : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -3915,7 +3913,7 @@ export class UIManager {
         // BUILD TOWER UPGRADES SECTION - Compact list
         if (trainingData.upgrades && trainingData.upgrades.length > 0) {
             contentHTML += `<div class="upgrade-category compact-upgrades">
-                <div class="upgrade-category-header">⚙️ TOWER TRAINING</div>`;
+                <div class="upgrade-category-header">TOWER TRAINING</div>`;
             
             trainingData.upgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
@@ -3973,7 +3971,7 @@ export class UIManager {
                     } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                         tooltipText += `<div>Fire Rate: +0.08/sec</div>`;
                     }
-                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">🪙${upgrade.cost}</span></div>`;
+                    if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
                 } else if (isLocked) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
@@ -3998,7 +3996,7 @@ export class UIManager {
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `🪙${upgrade.cost}` : '\u2014'))}
+                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '\u2014'))}
                         </button>
                     </div>
                 `;
@@ -4242,13 +4240,13 @@ export class UIManager {
             return;
         }
         const incomeInfo = goldMine.getBaseIncome();
-        const modeIcon = goldMine.gemMode ? '💎' : '🪙';
+        const modeIcon = goldMine.gemMode ? '◆' : '<span class="coin-xs"></span>';
         const modeText = goldMine.gemMode ? 'Gem Mining' : 'Gold Mining';
         
         // Calculate progress information
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
         const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
-        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${Math.ceil(timeRemaining)}s`;
+        const readyStatus = goldMine.goldReady ? 'READY' : `${Math.ceil(timeRemaining)}s`;
         const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
         
         let contentHTML = `
@@ -4266,7 +4264,7 @@ export class UIManager {
                         </div>
                         <div class="forge-effects-row">
                             <span class="effect-badge">${modeIcon} ${modeText}</span>
-                            <span class="effect-badge">💰 ${incomeInfo}/cycle</span>
+                            <span class="effect-badge">${incomeInfo}/cycle</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem;">
                             <div style="flex: 1; height: 12px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
@@ -4281,7 +4279,7 @@ export class UIManager {
         
         // Add gem mining toggle if gem mining is unlocked
         if (goldMine.gemMiningUnlocked) {
-            const toggleText = goldMine.gemMode ? '🪙 Switch to Gold' : '💎 Switch to Gems';
+            const toggleText = goldMine.gemMode ? '<span class="coin-xs"></span> Switch to Gold' : '◆ Switch to Gems';
             contentHTML += `
                 <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem;">
                     <button class="upgrade-button toggle-mine-mode-btn" style="background: ${goldMine.gemMode ? '#4169E1' : '#FFB800'}; flex: 1; margin: 0;">
@@ -4296,7 +4294,7 @@ export class UIManager {
             contentHTML += `
                 <div style="padding: 0.6rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.2); display: flex; gap: 0.5rem; justify-content: flex-end;">
                     <button class="upgrade-button collect-gold-btn" style="background: #44aa44; flex: 1; margin: 0;">
-                        🪙 Collect Now
+                        <span class="coin-xs"></span> Collect Now
                     </button>
                 </div>
             `;
@@ -4304,7 +4302,7 @@ export class UIManager {
         
         // Update panel title and content - set it directly, no fancy comparison
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '⛏️ Gold Mine';
+        if (titleElement) titleElement.textContent = 'Gold Mine';
         
         const contentContainer = panel.querySelector('#goldmine-panel-content') || panel.querySelector('.panel-content');
         if (contentContainer) {
@@ -4416,14 +4414,14 @@ export class UIManager {
                             <div class="forge-name">Diamond Press</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">💎 Diamonds: ${diamond}</span>
+                            <span class="effect-badge">Diamonds: ${diamond}</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="upgrade-category">
-                <div class="upgrade-category-header">💎 Gem Exchange</div>
+                <div class="upgrade-category-header">Gem Exchange</div>
 
                 <div style="padding: 0.5rem 0.85rem;">
                     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem; margin-bottom: 0.5rem;">
@@ -4447,11 +4445,11 @@ export class UIManager {
 
                     <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.4rem; margin-bottom: 0.5rem; background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.25); border-radius: 4px;">
                         <span style="font-size: 0.8rem; color: #bbb;">3 each →</span>
-                        <span style="font-size: 1.2rem; font-weight: bold; color: #64dfff;">💎 1</span>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #64dfff;">◆ 1</span>
                     </div>
 
                     <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 600; margin: 0; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''};" ${!canExchange ? 'disabled' : ''}>
-                        ${canExchange ? '⚙️ Press Diamond' : '⛔ Need 3 of each gem'}
+                        ${canExchange ? 'Press Diamond' : 'Need 3 of each gem'}
                     </button>
                 </div>
             </div>
@@ -4459,7 +4457,7 @@ export class UIManager {
 
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
-        if (titleElement) titleElement.textContent = '💎 Diamond Press';
+        if (titleElement) titleElement.textContent = 'Diamond Press';
 
         const contentContainer = panel.querySelector('#diamond-press-panel-content');
         if (contentContainer) {
@@ -4532,7 +4530,7 @@ export class UIManager {
         // Calculate current values
         const progressPercent = (goldMine.currentProduction / goldMine.productionTime) * 100;
         const timeRemaining = Math.max(0, goldMine.productionTime - goldMine.currentProduction);
-        const readyStatus = goldMine.goldReady ? '✅ READY' : `⏳ ${Math.ceil(timeRemaining)}s`;
+        const readyStatus = goldMine.goldReady ? 'READY' : `${Math.ceil(timeRemaining)}s`;
         const readyColor = goldMine.goldReady ? '#4CAF50' : '#FFB800';
 
         // 1. Update progress bar

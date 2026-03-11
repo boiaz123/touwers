@@ -273,11 +273,21 @@ export class CampaignBase {
         ctx.stroke();
         
         if (isLocked) {
-            ctx.font = 'bold 20px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#666';
-            ctx.fillText('🔒', slot.x, slot.y);
+            ctx.save();
+            ctx.translate(slot.x, slot.y);
+            ctx.fillStyle = '#888';
+            ctx.beginPath();
+            ctx.arc(0, -4, 7, Math.PI, 0, false);
+            ctx.strokeStyle = '#aaa';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.fillRect(-9, -5, 18, 14);
+            ctx.fillStyle = '#555';
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(-2, 1, 4, 5);
+            ctx.restore();
         } else {
             ctx.font = 'bold 28px serif';
             ctx.textAlign = 'center';

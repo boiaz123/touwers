@@ -1236,12 +1236,33 @@ export class SettlementHub {
         ctx.fillStyle = 'rgba(30, 20, 10, 0.9)';
         ctx.fillRect(startX, startY, boxWidth, boxHeight);
         
-        // Icon
-        ctx.font = 'bold 18px Arial';
-        ctx.fillStyle = '#FF8C00';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('👑', startX + 8, startY + 22);
+        // Icon - drawn crown
+        (function(ctx, cx, cy, size) {
+            ctx.save();
+            const cw = size * 0.9, ch = size * 0.6;
+            const crownX = cx - cw / 2;
+            ctx.beginPath();
+            ctx.moveTo(crownX, cy + ch * 0.28);
+            ctx.lineTo(crownX, cy - ch * 0.38);
+            ctx.lineTo(crownX + cw * 0.22, cy);
+            ctx.lineTo(crownX + cw * 0.38, cy - ch);
+            ctx.lineTo(crownX + cw * 0.5, cy - ch * 0.26);
+            ctx.lineTo(crownX + cw * 0.62, cy - ch);
+            ctx.lineTo(crownX + cw * 0.78, cy);
+            ctx.lineTo(crownX + cw, cy - ch * 0.38);
+            ctx.lineTo(crownX + cw, cy + ch * 0.28);
+            ctx.closePath();
+            const cg = ctx.createLinearGradient(cx, cy - ch, cx, cy + ch * 0.28);
+            cg.addColorStop(0, '#FFE040'); cg.addColorStop(1, '#CC7000');
+            ctx.fillStyle = cg; ctx.fill();
+            ctx.strokeStyle = '#FF8C00'; ctx.lineWidth = 1; ctx.stroke();
+            [0.22, 0.5, 0.78].forEach((p, i) => {
+                ctx.beginPath();
+                ctx.arc(crownX + cw * p, cy - (i === 1 ? ch * 0.88 : ch * 0.72), size * 0.07, 0, Math.PI * 2);
+                ctx.fillStyle = i === 1 ? '#FF4040' : '#3060FF'; ctx.fill();
+            });
+            ctx.restore();
+        })(ctx, startX + 17, startY + 22, 18);
         
         // Text - unified single line: "The spirits of the woods protect you"
         ctx.font = 'bold 11px Arial';
@@ -3628,7 +3649,7 @@ class UpgradesMenu {
                 name: itemData.name,
                 description: itemData.description,
                 cost: itemData.cost,
-                icon: itemData.icon,
+                drawIcon: itemData.drawIcon,
                 category: category,
                 type: itemData.type,
                 effect: itemData.effect,
@@ -3645,7 +3666,24 @@ class UpgradesMenu {
                 name: 'Training Gear',
                 description: 'Unlocks the ability to build Training Grounds in levels',
                 cost: 500,
-                icon: '⚔️',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    [[-1, 1], [1, -1]].forEach(([dx]) => {
+                        ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.PI / 4 * dx);
+                        ctx.beginPath();
+                        ctx.moveTo(0, -size * 0.38); ctx.lineTo(size * 0.045, -size * 0.1); ctx.lineTo(-size * 0.045, -size * 0.1); ctx.closePath();
+                        const sg = ctx.createLinearGradient(-size * 0.045, 0, size * 0.045, 0);
+                        sg.addColorStop(0, '#888'); sg.addColorStop(0.5, '#eee'); sg.addColorStop(1, '#666');
+                        ctx.fillStyle = sg; ctx.fill(); ctx.strokeStyle = '#444'; ctx.lineWidth = 0.8; ctx.stroke();
+                        const gg = ctx.createLinearGradient(-size * 0.14, cy - size * 0.08, size * 0.14, cy);
+                        gg.addColorStop(0, '#B8860B'); gg.addColorStop(1, '#8B5E0A');
+                        ctx.fillStyle = gg; ctx.fillRect(-size * 0.14, -size * 0.08, size * 0.28, size * 0.06);
+                        ctx.strokeStyle = '#5A3808'; ctx.lineWidth = 0.8; ctx.strokeRect(-size * 0.14, -size * 0.08, size * 0.28, size * 0.06);
+                        ctx.fillStyle = '#5c3d1f'; ctx.fillRect(-size * 0.04, -size * 0.02, size * 0.08, size * 0.24);
+                        ctx.restore();
+                    });
+                    ctx.restore();
+                },
                 category: 'building'
             },
             {
@@ -3653,7 +3691,19 @@ class UpgradesMenu {
                 name: 'Musical Equipment',
                 description: 'Adds a music player to the UI for settling ambiance',
                 cost: 300,
-                icon: '🎵',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const nx = cx - size * 0.08, ny = cy - size * 0.1;
+                    ctx.fillStyle = '#FFD700'; ctx.strokeStyle = '#CC8800';
+                    ctx.beginPath(); ctx.ellipse(nx, ny + size * 0.28, size * 0.13, size * 0.09, -0.4, 0, Math.PI * 2);
+                    ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny + size * 0.23); ctx.lineTo(nx + size * 0.12, ny - size * 0.22);
+                    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = size * 0.04; ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny - size * 0.22);
+                    ctx.quadraticCurveTo(nx + size * 0.32, ny, nx + size * 0.22, ny + size * 0.14);
+                    ctx.stroke();
+                    ctx.restore();
+                },
                 category: 'upgrade'
             },
             {
@@ -3661,7 +3711,26 @@ class UpgradesMenu {
                 name: 'Wooden Chest',
                 description: 'Increase starting gold by 100',
                 cost: 250,
-                icon: '📦',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const w = size * 0.78, h = size * 0.58;
+                    const bx = cx - w / 2, by = cy - h * 0.4;
+                    const bg = ctx.createLinearGradient(cx, by + h * 0.32, cx, by + h);
+                    bg.addColorStop(0, '#a07040'); bg.addColorStop(1, '#5c3010');
+                    ctx.fillStyle = bg; ctx.fillRect(bx, by + h * 0.32, w, h * 0.68);
+                    ctx.strokeStyle = '#3a1e08'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by + h * 0.32, w, h * 0.68);
+                    const lg = ctx.createLinearGradient(cx, by, cx, by + h * 0.34);
+                    lg.addColorStop(0, '#c08850'); lg.addColorStop(1, '#7a4a20');
+                    ctx.fillStyle = lg; ctx.fillRect(bx, by, w, h * 0.34); ctx.strokeStyle = '#3a1e08'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, w, h * 0.34);
+                    ctx.beginPath(); ctx.moveTo(bx, by + h * 0.34); ctx.quadraticCurveTo(cx, by - h * 0.08, bx + w, by + h * 0.34);
+                    ctx.closePath(); ctx.fillStyle = lg; ctx.fill(); ctx.strokeStyle = '#3a1e08'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.2;
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.25, by + h * 0.34); ctx.lineTo(bx + w * 0.25, by + h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.75, by + h * 0.34); ctx.lineTo(bx + w * 0.75, by + h); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx, by + h * 0.32, size * 0.065, 0, Math.PI * 2);
+                    ctx.fillStyle = '#D4A020'; ctx.fill(); ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 0.8; ctx.stroke();
+                    ctx.restore();
+                },
                 category: 'upgrade',
                 campaignRequirement: 'campaign-1'
             },
@@ -3670,7 +3739,27 @@ class UpgradesMenu {
                 name: 'Golden Chest',
                 description: 'Increase starting gold by another 100',
                 cost: 400,
-                icon: '🪙',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const coinR = size * 0.22, coinH = size * 0.07;
+                    for (let i = 2; i >= 0; i--) {
+                        const oy = i * coinH * 1.5;
+                        const baseY = cy + size * 0.14 - oy;
+                        const eg = ctx.createLinearGradient(cx, baseY, cx, baseY + coinH);
+                        eg.addColorStop(0, '#E09000'); eg.addColorStop(1, '#A06000');
+                        ctx.fillStyle = eg;
+                        ctx.beginPath(); ctx.ellipse(cx, baseY + coinH * 0.5, coinR, coinH * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+                        const fg = ctx.createRadialGradient(cx - coinR * 0.25, baseY - coinH * 0.2, coinR * 0.05, cx, baseY, coinR);
+                        fg.addColorStop(0, '#FFE060'); fg.addColorStop(0.5, '#E09000'); fg.addColorStop(1, '#A06000');
+                        ctx.beginPath(); ctx.ellipse(cx, baseY, coinR, coinR * 0.38, 0, 0, Math.PI * 2);
+                        ctx.fillStyle = fg; ctx.fill(); ctx.strokeStyle = '#7A4800'; ctx.lineWidth = 1; ctx.stroke();
+                        if (i === 0) {
+                            ctx.beginPath(); ctx.ellipse(cx, baseY, coinR * 0.68, coinR * 0.26, 0, 0, Math.PI * 2);
+                            ctx.strokeStyle = 'rgba(122,72,0,0.4)'; ctx.lineWidth = 0.8; ctx.stroke();
+                        }
+                    }
+                    ctx.restore();
+                },
                 category: 'upgrade',
                 prerequisite: 'wooden-chest',
                 campaignRequirement: 'campaign-2'
@@ -3680,7 +3769,23 @@ class UpgradesMenu {
                 name: 'Platinum Chest',
                 description: 'Increase starting gold by another 100',
                 cost: 600,
-                icon: '💎',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx + size * 0.3, cy - size * 0.08);
+                    ctx.lineTo(cx, cy + size * 0.46); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.closePath();
+                    const g = ctx.createLinearGradient(cx, cy - size * 0.46, cx, cy + size * 0.46);
+                    g.addColorStop(0, '#E8E8FF'); g.addColorStop(0.35, '#A0A8D8'); g.addColorStop(1, '#5060A0');
+                    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#3848A0'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.strokeStyle = 'rgba(220,220,255,0.55)'; ctx.lineWidth = 0.8;
+                    ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx + size * 0.3, cy - size * 0.08); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx + size * 0.3, cy - size * 0.08); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx - size * 0.1, cy - size * 0.38); ctx.lineTo(cx, cy - size * 0.2); ctx.lineTo(cx - size * 0.2, cy - size * 0.04);
+                    ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.24)'; ctx.fill();
+                    ctx.restore();
+                },
                 category: 'upgrade',
                 prerequisite: 'golden-chest',
                 campaignRequirement: 'campaign-3'
@@ -3690,7 +3795,25 @@ class UpgradesMenu {
                 name: 'Diamond Pickaxe',
                 description: 'Increase gem mining chance in gold mines',
                 cost: 800,
-                icon: '⛏️',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 4);
+                    const hg = ctx.createLinearGradient(-size * 0.04, 0, size * 0.04, 0);
+                    hg.addColorStop(0, '#5c3d1f'); hg.addColorStop(0.5, '#8B5E30'); hg.addColorStop(1, '#3a2410');
+                    ctx.fillStyle = hg; ctx.fillRect(-size * 0.04, -size * 0.36, size * 0.08, size * 0.7);
+                    ctx.strokeStyle = '#2a1800'; ctx.lineWidth = 0.8; ctx.strokeRect(-size * 0.04, -size * 0.36, size * 0.08, size * 0.7);
+                    ctx.restore();
+                    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-Math.PI / 4);
+                    ctx.beginPath();
+                    ctx.moveTo(0, -size * 0.34); ctx.lineTo(-size * 0.24, -size * 0.14);
+                    ctx.lineTo(-size * 0.16, -size * 0.08); ctx.lineTo(-size * 0.02, -size * 0.2);
+                    ctx.lineTo(size * 0.14, -size * 0.32); ctx.closePath();
+                    const pg = ctx.createLinearGradient(-size * 0.24, 0, size * 0.14, 0);
+                    pg.addColorStop(0, '#88CCFF'); pg.addColorStop(0.5, '#EEEEFF'); pg.addColorStop(1, '#5588CC');
+                    ctx.fillStyle = pg; ctx.fill(); ctx.strokeStyle = '#2244AA'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.restore();
+                    ctx.restore();
+                },
                 category: 'upgrade'
             },
             {
@@ -3698,8 +3821,34 @@ class UpgradesMenu {
                 name: 'Academy Blueprints',
                 description: 'Unlocks the ability to build the Magic Academy in levels',
                 cost: 1500,
-                icon: '📜',
-                category: 'upgrade',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const sw = size * 0.58, sh = size * 0.68;
+                    const sx = cx - sw / 2, sy = cy - sh / 2, rr = size * 0.08;
+                    const sg = ctx.createLinearGradient(sx, sy, sx + sw, sy + sh);
+                    sg.addColorStop(0, '#F5E6B8'); sg.addColorStop(1, '#D4B870');
+                    ctx.fillStyle = sg;
+                    ctx.beginPath();
+                    ctx.moveTo(sx + rr, sy); ctx.lineTo(sx + sw - rr, sy);
+                    ctx.arcTo(sx + sw, sy, sx + sw, sy + rr, rr); ctx.lineTo(sx + sw, sy + sh - rr);
+                    ctx.arcTo(sx + sw, sy + sh, sx + sw - rr, sy + sh, rr); ctx.lineTo(sx + rr, sy + sh);
+                    ctx.arcTo(sx, sy + sh, sx, sy + sh - rr, rr); ctx.lineTo(sx, sy + rr);
+                    ctx.arcTo(sx, sy, sx + rr, sy, rr); ctx.closePath();
+                    ctx.fill(); ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.fillStyle = '#DDB858';
+                    ctx.fillRect(sx - size * 0.04, sy, sw + size * 0.08, sh * 0.13);
+                    ctx.fillRect(sx - size * 0.04, sy + sh - sh * 0.13, sw + size * 0.08, sh * 0.13);
+                    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1;
+                    ctx.strokeRect(sx - size * 0.04, sy, sw + size * 0.08, sh * 0.13);
+                    ctx.strokeRect(sx - size * 0.04, sy + sh - sh * 0.13, sw + size * 0.08, sh * 0.13);
+                    ctx.strokeStyle = 'rgba(100,70,20,0.5)'; ctx.lineWidth = 0.8;
+                    for (let i = 0; i < 3; i++) {
+                        const lineY = sy + sh * 0.23 + i * sh * 0.2;
+                        ctx.beginPath(); ctx.moveTo(sx + size * 0.06, lineY); ctx.lineTo(sx + sw - size * 0.06, lineY); ctx.stroke();
+                    }
+                    ctx.restore();
+                },
+                category: 'building',
                 campaignRequirement: 'campaign-2'
             },
             {
@@ -3707,8 +3856,34 @@ class UpgradesMenu {
                 name: 'Super Weapon Lab Plans',
                 description: 'Unlocks the ability to build the Super Weapon Lab in levels',
                 cost: 2500,
-                icon: '⚗️',
-                category: 'upgrade',
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const fx = cx - size * 0.14, fy = cy - size * 0.4, fw = size * 0.28;
+                    ctx.beginPath();
+                    ctx.moveTo(fx, fy); ctx.lineTo(fx + fw, fy);
+                    ctx.lineTo(fx + fw, fy + size * 0.3);
+                    ctx.lineTo(fx + fw + size * 0.22, fy + size * 0.86);
+                    ctx.lineTo(fx - size * 0.22, fy + size * 0.86);
+                    ctx.lineTo(fx, fy + size * 0.3); ctx.closePath();
+                    const bg = ctx.createLinearGradient(cx, fy, cx, fy + size * 0.86);
+                    bg.addColorStop(0, 'rgba(180,200,220,0.9)'); bg.addColorStop(0.4, 'rgba(100,180,220,0.7)'); bg.addColorStop(1, 'rgba(50,100,180,0.9)');
+                    ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = '#3060A0'; ctx.lineWidth = 1.5; ctx.stroke();
+                    const liqY = fy + size * 0.5;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(fx, fy); ctx.lineTo(fx + fw, fy); ctx.lineTo(fx + fw, fy + size * 0.3);
+                    ctx.lineTo(fx + fw + size * 0.22, fy + size * 0.86); ctx.lineTo(fx - size * 0.22, fy + size * 0.86);
+                    ctx.lineTo(fx, fy + size * 0.3); ctx.closePath(); ctx.clip();
+                    ctx.fillStyle = 'rgba(100,210,100,0.65)';
+                    ctx.fillRect(cx - size * 0.5, liqY, size, size * 0.5);
+                    ctx.restore();
+                    ctx.fillStyle = 'rgba(200,255,200,0.7)';
+                    [[cx - size * 0.04, liqY + size * 0.06], [cx + size * 0.08, liqY + size * 0.16], [cx, liqY + size * 0.28]].forEach(([bx, by]) => {
+                        ctx.beginPath(); ctx.arc(bx, by, size * 0.03, 0, Math.PI * 2); ctx.fill();
+                    });
+                    ctx.restore();
+                },
+                category: 'building',
                 campaignRequirement: 'campaign-3'
             }
         ];
@@ -3739,7 +3914,7 @@ class UpgradesMenu {
                 name: upgrade.name,
                 description: upgrade.description,
                 cost: upgrade.cost,
-                icon: upgrade.icon,
+                drawIcon: upgrade.drawIcon,
                 category: upgrade.category,
                 type: 'upgrade',
                 hovered: false,
@@ -3775,8 +3950,7 @@ class UpgradesMenu {
                 name: lootInfo.name,
                 description: lootInfo.description || `A valuable treasure. Sell for ${lootInfo.sellValue} gold.`,
                 sellPrice: lootInfo.sellValue,
-                icon: lootInfo.emblem || '💎',
-                emblem: lootInfo.emblem,
+                drawIcon: lootInfo.drawIcon,
                 rarity: lootInfo.rarity,
                 lootId: inventoryItem.lootId,
                 count: inventoryItem.count || 1,
@@ -3795,7 +3969,7 @@ class UpgradesMenu {
                 name: lootInfo.name,
                 description: lootInfo.description || `A ${lootInfo.rarity || 'common'} treasure from fallen enemies.`,
                 sellValue: lootInfo.sellValue,
-                emblem: lootInfo.emblem,
+                drawIcon: lootInfo.drawIcon,
                 rarity: lootInfo.rarity
             };
         }
@@ -3805,7 +3979,6 @@ class UpgradesMenu {
         return { 
             name: 'Unknown Item', 
             sellValue: 0,
-            emblem: '?',
             rarity: 'common'
         };
     }
@@ -4174,9 +4347,9 @@ class UpgradesMenu {
             
             // Check if click is within button bounds (not entire item)
             const buttonWidth = itemWidth - 14;
-            const buttonHeight = 18;
+            const buttonHeight = 24;
             const buttonX = itemX + 7;
-            const buttonY = itemY + itemHeight - 26;
+            const buttonY = itemY + itemHeight - 32;
             
             if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
                 if (this.stateManager.audioManager) {
@@ -4887,12 +5060,36 @@ class UpgradesMenu {
         const nameFontSize = isSellTab ? 12 : 11;
         
         // Icon
-        if (item.icon) {
+        if (typeof item.drawIcon === 'function') {
+            item.drawIcon(ctx, x + width / 2, y + 6 + iconSize * 0.5, iconSize);
+        } else if (item.icon) {
             ctx.font = `bold ${iconSize}px Arial`;
             ctx.fillStyle = isDisabled ? '#707070' : borderColor;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(item.icon, x + width / 2, y + 6);
+        }
+        
+        // Count badge (sell tab only) - shown in top-right corner of tile
+        if (isSellTab && item.count > 1) {
+            const badgeText = '\u00d7' + item.count;
+            ctx.font = 'bold 10px Arial';
+            const badgeW = ctx.measureText(badgeText).width + 8;
+            const badgeH = 14;
+            const badgeX = x + width - badgeW - 4;
+            const badgeY = y + 4;
+            // Badge background
+            ctx.fillStyle = item.rarity === 'rare' || item.rarity === 'epic' || item.rarity === 'legendary'
+                ? 'rgba(40, 20, 60, 0.9)' : 'rgba(20, 15, 10, 0.9)';
+            ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
+            // Badge text
+            ctx.fillStyle = '#ffd700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
         }
         
         // Item name
@@ -5022,40 +5219,33 @@ class UpgradesMenu {
             }
         }
         
-        // Count (for sell tab)
-        if (this.activeTab === 'sell' && item.count > 1) {
-            ctx.font = '8px Arial';
-            ctx.fillStyle = '#b89968';
-            ctx.textAlign = 'center';
-            ctx.fillText('x' + item.count, x + width / 2, effectBoxStartY + effectBoxHeight / 2);
-        }
-        
         // Disabled overlay - no message shown here, it will appear as floating text
         if (isDisabled) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.fillRect(x, y, width, height);
         }
         
-        // Action button - LARGER
+        // Action button
         const buttonWidth = width - 14;
         const buttonHeight = 24;
         const buttonX = x + 7;
         const buttonY = y + height - 32;
         
-        // Button beveled effect
-        ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? '#8b6f47' : '#5a4a3a');
+        // Sell tab uses a slightly different button color scheme (amber-green) to indicate receiving gold
+        const isSellButton = this.activeTab === 'sell';
+        ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? (isSellButton ? '#4a6b3a' : '#8b6f47') : (isSellButton ? '#2a4a1e' : '#5a4a3a'));
         ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
         // Top highlight
-        ctx.fillStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#9b7f57' : '#6a5a4a');
+        ctx.fillStyle = isDisabled ? '#5a5a5a' : (item.hovered ? (isSellButton ? '#5a7b4a' : '#9b7f57') : (isSellButton ? '#3a5a2e' : '#6a5a4a'));
         ctx.fillRect(buttonX, buttonY, buttonWidth, 1);
         
-        ctx.strokeStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#ffd700' : '#8b7355');
+        ctx.strokeStyle = isDisabled ? '#5a5a5a' : (item.hovered ? '#ffd700' : (isSellButton ? '#6a9a4a' : '#8b7355'));
         ctx.lineWidth = isDisabled ? 1 : (item.hovered ? 2 : 1);
         ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
         // For buy tab, show coin icon + price
-        // For sell tab, show coin icon + sell price
+        // For sell tab, show SELL label + coin icon + price
         let displayPrice = 0;
         if (this.activeTab === 'buy') {
             displayPrice = item.cost;
@@ -5063,21 +5253,39 @@ class UpgradesMenu {
             displayPrice = item.sellPrice;
         }
         
-        // Render coin icon and price - MUCH LARGER
-        ctx.font = 'bold 13px Arial';
-        ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        
-        // Draw larger coin icon and price text with better alignment
         const buttonCenterY = buttonY + buttonHeight / 2;
         const coinRadius = 5;
-        const coinX = buttonX + buttonWidth / 2 - 12;
-        const priceTextX = buttonX + buttonWidth / 2 + 2;
-        this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius, 
-                                  isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
-        ctx.textAlign = 'left';
-        ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
+        
+        if (isSellButton) {
+            // Sell button: "SELL" label on left, coin+price on right
+            const labelColor = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#a0cc80');
+            ctx.font = 'bold 9px Arial';
+            ctx.fillStyle = labelColor;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('SELL', buttonX + 6, buttonCenterY);
+            // Coin + price on right side
+            const coinX = buttonX + buttonWidth - 28;
+            const priceTextX = coinX + coinRadius + 3;
+            this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius,
+                                      isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
+            ctx.font = 'bold 11px Arial';
+            ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
+            ctx.textAlign = 'left';
+            ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
+        } else {
+            // Buy button: coin icon + price centered
+            ctx.font = 'bold 13px Arial';
+            ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const coinX = buttonX + buttonWidth / 2 - 12;
+            const priceTextX = buttonX + buttonWidth / 2 + 2;
+            this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius,
+                                      isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
+            ctx.textAlign = 'left';
+            ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
+        }
     }
 
     renderCoinIconInline(ctx, x, y, radius, color) {
@@ -5115,7 +5323,9 @@ class UpgradesMenu {
         
         // Icon - PROMINENT at top
         const iconSize = 28;
-        if (item.icon) {
+        if (typeof item.drawIcon === 'function') {
+            item.drawIcon(ctx, x + width / 2, y + 6 + iconSize * 0.5, iconSize);
+        } else if (item.icon) {
             ctx.font = `bold ${iconSize}px Arial`;
             ctx.fillStyle = isDisabled ? '#707070' : '#ffd700';
             ctx.textAlign = 'center';
@@ -6268,12 +6478,12 @@ class ArcaneLibraryMenu {
         
         // Achievements (placeholder achievements)
         this.achievements = [
-            { id: 'first-victory', name: 'First Victory', description: 'Win your first level', icon: '🏆', unlocked: false },
-            { id: 'ten-victories', name: 'Victory Streak', description: 'Win 10 levels', icon: '⭐', unlocked: false },
-            { id: 'fifty-kills', name: 'Deadly Force', description: 'Slay 50 enemies', icon: '⚔️', unlocked: false },
-            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '🪙', unlocked: false },
-            { id: 'collector', name: 'Collector', description: 'Sell 20 items', icon: '🎁', unlocked: false },
-            { id: 'tower-master', name: 'Tower Master', description: 'Build 100 towers', icon: '🏰', unlocked: false }
+            { id: 'first-victory', name: 'First Victory', description: 'Win your first level', icon: '●', unlocked: false },
+            { id: 'ten-victories', name: 'Victory Streak', description: 'Win 10 levels', icon: '●', unlocked: false },
+            { id: 'fifty-kills', name: 'Deadly Force', description: 'Slay 50 enemies', icon: '▸', unlocked: false },
+            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '◆', unlocked: false },
+            { id: 'collector', name: 'Collector', description: 'Sell 20 items', icon: '◈', unlocked: false },
+            { id: 'tower-master', name: 'Tower Master', description: 'Build 100 towers', icon: '■', unlocked: false }
         ];
         
         this.closeButtonHovered = false;
@@ -6846,12 +7056,29 @@ class ArcaneLibraryMenu {
             ctx.lineWidth = 2;
             ctx.strokeRect(itemX, itemY, itemSize, itemSize);
             
-            // Music icon
-            ctx.font = 'bold 30px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            // Music icon - drawn with canvas
+            ctx.save();
+            const ncx = itemX + itemSize / 2;
+            const ncy = itemY + itemSize / 3;
+            const ns = 14;
             ctx.fillStyle = '#d4af37';
-            ctx.fillText('🎵', itemX + itemSize / 2, itemY + itemSize / 3);
+            ctx.strokeStyle = '#c8960a';
+            ctx.beginPath();
+            ctx.ellipse(ncx - ns * 0.08, ncy + ns * 0.28, ns * 0.13, ns * 0.09, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ncx + ns * 0.05, ncy + ns * 0.2);
+            ctx.lineTo(ncx + ns * 0.05, ncy - ns * 0.28);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = ns * 0.04;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ncx + ns * 0.05, ncy - ns * 0.28);
+            ctx.quadraticCurveTo(ncx + ns * 0.35, ncy - ns * 0.05, ncx + ns * 0.22, ncy + ns * 0.12);
+            ctx.stroke();
+            ctx.restore();
             
             // Music title
             ctx.font = 'bold 10px Trebuchet MS, sans-serif';

@@ -17,7 +17,7 @@ export class SuperWeaponLab extends Building {
             arcaneBlast: {
                 id: 'arcaneBlast',
                 name: 'Arcane Blast',
-                icon: '💫',
+                icon: '◈',
                 description: 'Deals massive arcane damage to all enemies in radius (classless magic, not elemental)',
                 baseLevel: 1,  // Unlocked at lab level 1
                 upgradeLevel: 0,  // 0-50 using diamonds (at lab level 4+)
@@ -31,7 +31,7 @@ export class SuperWeaponLab extends Building {
             frostNova: {
                 id: 'frostNova',
                 name: 'Frozen Nova',
-                icon: '❄️',
+                icon: '◇',
                 description: 'Freezes all enemies for a duration and deals ice damage',
                 baseLevel: 2,  // Unlocked at lab level 2
                 upgradeLevel: 0,
@@ -46,7 +46,7 @@ export class SuperWeaponLab extends Building {
             meteorStrike: {
                 id: 'meteorStrike',
                 name: 'Meteor Strike',
-                icon: '☄️',
+                icon: '▲',
                 description: 'Calls down meteors dealing fire damage that devastates enemies',
                 baseLevel: 3,  // Unlocked at lab level 3
                 upgradeLevel: 0,
@@ -61,7 +61,7 @@ export class SuperWeaponLab extends Building {
             chainLightning: {
                 id: 'chainLightning',
                 name: 'Chain Lightning',
-                icon: '⚡',
+                icon: '▸',
                 description: 'Electricity that jumps between enemies',
                 baseLevel: 4,  // Unlocked at lab level 4
                 upgradeLevel: 0,
@@ -79,7 +79,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'steam',
                 name: 'Steam',
-                icon: '💨',
+                icon: '▷',
                 description: 'Fire + Water: Burn + Slow',
                 upgradeLevel: 0,  // 0-5 upgrades
                 maxUpgradeLevel: 5,
@@ -88,7 +88,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'magma',
                 name: 'Magma',
-                icon: '🌋',
+                icon: '◆',
                 description: 'Fire + Earth: Burn + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -97,7 +97,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'tempest',
                 name: 'Tempest',
-                icon: '⛈️',
+                icon: '▽',
                 description: 'Air + Water: Chain + Slow',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -106,7 +106,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'meteor',
                 name: 'Meteor',
-                icon: '☄️',
+                icon: '◉',
                 description: 'Air + Earth: Chain + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -906,7 +906,7 @@ export class SuperWeaponLab extends Building {
             maxLevel: this.maxLabLevel,
             cost: cost,
             diamondCost: 1,  // Each level upgrade requires 1 diamond
-            icon: '🗼'
+            icon: ''
         };
     }
     

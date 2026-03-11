@@ -26,12 +26,27 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi"],
+    "targets": ["nsis", "msi"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "Touwers",
+    "copyright": "Copyright © 2026 Touwers",
+    "shortDescription": "A strategic tower defense game",
+    "longDescription": "Touwers is a browser-based tower defense game featuring a grid-based tower placement system, wave-based enemy progression, and a resolution-agnostic architecture. Build towers, defend your castle, and conquer campaigns.",
+    "windows": {
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English"]
+      },
+      "wix": {
+        "language": "en-US",
+        "upgradeCode": "3A7F2E91-B04C-4D1A-9C88-A6F53D2E7B40"
+      }
+    }
   }
 }

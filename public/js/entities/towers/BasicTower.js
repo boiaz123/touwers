@@ -585,7 +585,7 @@ export class BasicTower extends Tower {
             range: '120',
             fireRate: '1.0/sec',
             cost: 50,
-            icon: '🗡️'
+            icon: ''
         };
     }
 }

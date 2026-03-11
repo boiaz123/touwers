@@ -407,7 +407,7 @@ export class GuardPost extends Tower {
             range: 'N/A',
             fireRate: 'N/A',
             cost: 150,
-            icon: '🛡️'
+            icon: ''
         };
     }
 }

@@ -1157,11 +1157,21 @@ export class Campaign5 extends CampaignBase {
         
         // Lock symbol overlay
         ctx.globalAlpha = 1;
-        ctx.font = 'bold 40px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#999';
-        ctx.fillText('🔒', 0, -50);
+        ctx.save();
+        ctx.translate(0, -50);
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.arc(0, -2, 8, Math.PI, 0, false);
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.fillRect(-10, -3, 20, 16);
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(0, 3, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-2.5, 5, 5, 6);
+        ctx.restore();
         
         ctx.restore();
     }

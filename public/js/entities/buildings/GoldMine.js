@@ -958,7 +958,7 @@ export class GoldMine extends Building {
             ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
         } else {
             // Show "READY" text when gold is ready
-            const readyText = this.gemMode ? '💎 READY' : '🪙 READY';
+            const readyText = this.gemMode ? '\u25C6 READY' : 'READY';
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
@@ -1007,7 +1007,23 @@ export class GoldMine extends Building {
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.gemMode ? '💎' : '⛏️', toggleX, toggleY);
+        if (this.gemMode) {
+            // Draw a diamond shape (◆ is geometric shape U+25C6, not emoji)
+            ctx.fillStyle = '#64dfff';
+            ctx.fillText('\u25C6', toggleX, toggleY);
+        } else {
+            // Draw a small gold coin circle
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(toggleX, toggleY, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#CC8800';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#996600';
+            ctx.font = 'bold 9px Arial';
+            ctx.fillText('G', toggleX, toggleY + 1);
+        }
         
         ctx.fillStyle = '#000';
         ctx.font = 'bold 8px Arial';

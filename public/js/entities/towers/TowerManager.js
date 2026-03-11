@@ -741,10 +741,10 @@ export class TowerManager {
                             type: 'magic_tower_menu',
                             tower: tower,
                             elements: [
-                                { id: 'fire', name: 'Fire', icon: '🔥', description: 'Burn damage over time' },
-                                { id: 'water', name: 'Water', icon: '💧', description: 'Slows and freezes enemies' },
-                                { id: 'air', name: 'Air', icon: '💨', description: 'Chains to nearby enemies' },
-                                { id: 'earth', name: 'Earth', icon: '🌍', description: 'Pierces armor' }
+                                { id: 'fire', name: 'Fire', icon: '▲', description: 'Burn damage over time' },
+                                { id: 'water', name: 'Water', icon: '▽', description: 'Slows and freezes enemies' },
+                                { id: 'air', name: 'Air', icon: '▷', description: 'Chains to nearby enemies' },
+                                { id: 'earth', name: 'Earth', icon: '◆', description: 'Pierces armor' }
                             ],
                             currentElement: tower.selectedElement
                         };

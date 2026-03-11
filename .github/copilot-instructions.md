@@ -9,6 +9,9 @@ You do not have to test anything functionally, I will do that. Your job is to de
 
 When referencing files, use the full relative path from the project root, e.g. `public/js/entities/towers/CannonTower.js`.
 
+Never use emojis or visualizations that do not work on different types of OS, make everything code-based and custom.
+
+Do not keep adding code when existing logic is broken or already there, remove old code if you need to change something, do not add new code that duplicates existing logic. Always check for existing code before adding anything new.
 
 ## Project Overview
 

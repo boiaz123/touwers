@@ -8,28 +8,28 @@ export class EnemyIntelRegistry {
         'basic': {
             name: 'Basic Enemy',
             description: 'The most common foot soldier encountered in battle.',
-            icon: '👤',
+            icon: 'U',
             stats: { health: 20, speed: 2, damage: 1 },
             abilities: ['Basic movement']
         },
         'archer': {
             name: 'Archer Enemy',
             description: 'Armed with a bow, attacks from range.',
-            icon: '🏹',
+            icon: 'A',
             stats: { health: 15, speed: 2.5, damage: 3 },
             abilities: ['Ranged attack', 'Fast movement']
         },
         'beefyenemy': {
             name: 'Beefy Enemy',
             description: 'A heavily muscled warrior with impressive durability.',
-            icon: '💪',
+            icon: 'S',
             stats: { health: 50, speed: 1, damage: 3 },
             abilities: ['High HP', 'Slow movement']
         },
         'villager': {
             name: 'Villager Enemy',
             description: 'An ordinary villager conscripted into service.',
-            icon: '👨',
+            icon: 'P',
             stats: { health: 10, speed: 1.5, damage: 1 },
             abilities: ['Basic movement']
         },
@@ -37,14 +37,14 @@ export class EnemyIntelRegistry {
         'knight': {
             name: 'Knight Enemy',
             description: 'A trained warrior in full armor.',
-            icon: '🛡️',
+            icon: 'D',
             stats: { health: 40, speed: 1.5, damage: 4 },
             abilities: ['Armor protection', 'Melee attack']
         },
         'shieldknight': {
             name: 'Shield Knight Enemy',
             description: 'A knight with an enchanted shield for additional protection.',
-            icon: '⚔️',
+            icon: '▸',
             stats: { health: 45, speed: 1.2, damage: 4 },
             abilities: ['Shield defense', 'Armor', 'Reduced damage']
         },
@@ -52,14 +52,14 @@ export class EnemyIntelRegistry {
         'mage': {
             name: 'Mage Enemy',
             description: 'A spellcaster wielding arcane magic.',
-            icon: '🧙',
+            icon: 'M',
             stats: { health: 25, speed: 2, damage: 4 },
             abilities: ['Spell casting', 'Magic damage']
         },
         'frog': {
             name: 'Frog Enemy',
             description: 'A magical frog creature.',
-            icon: '🐸',
+            icon: 'F',
             stats: { health: 30, speed: 2.5, damage: 2 },
             abilities: ['Jumping attack', 'Water affinity']
         },
@@ -67,28 +67,28 @@ export class EnemyIntelRegistry {
         'earthfrog': {
             name: 'Earth Frog Enemy',
             description: 'A frog infused with earth magic.',
-            icon: '🪨',
+            icon: 'R',
             stats: { health: 50, speed: 1.5, damage: 3 },
             abilities: ['Ground slam', 'Earth magic', 'High durability']
         },
         'waterfrog': {
             name: 'Water Frog Enemy',
             description: 'A frog infused with water magic.',
-            icon: '💧',
+            icon: 'W',
             stats: { health: 40, speed: 2.5, damage: 3 },
             abilities: ['Water spray', 'Water magic', 'Enhanced speed']
         },
         'firefrog': {
             name: 'Fire Frog Enemy',
             description: 'A frog infused with fire magic.',
-            icon: '🔥',
+            icon: 'F',
             stats: { health: 35, speed: 2, damage: 4 },
             abilities: ['Flame burst', 'Fire magic', 'High damage']
         },
         'airfrog': {
             name: 'Air Frog Enemy',
             description: 'A frog infused with air magic.',
-            icon: '💨',
+            icon: 'A',
             stats: { health: 30, speed: 3, damage: 3 },
             abilities: ['Wind gust', 'Air magic', 'Very fast']
         }

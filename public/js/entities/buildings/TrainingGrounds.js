@@ -1077,9 +1077,9 @@ export class TrainingGrounds extends Building {
         
         // Range upgrades for manned towers - map tower registry names to upgrade keys
         const towerTypes = [
-            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '🏹' },
-            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '⚔️' },
-            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '💥' }
+            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '▸' },
+            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '▸' },
+            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '◉' }
         ];
         
         // Add range upgrade for each manned tower - but only if the tower is unlocked
@@ -1116,14 +1116,14 @@ export class TrainingGrounds extends Building {
                 registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.5 → 1.0 at level 5)`,
-                icon: '🪵'
+                icon: '▪'
             },
             {
                 id: 'poisonArcherTowerFireRate',
                 registryId: 'poison',
                 name: 'Poison Archer Tower Fire Rate Training',
                 description: `Increase Poison Archer Tower fire rate (0.4 → 0.8 per second at level 5)`,
-                icon: '☠️'
+                icon: '◉'
             }
         ];
         
@@ -1192,7 +1192,7 @@ export class TrainingGrounds extends Building {
             level: this.trainingLevel,
             maxLevel: this.maxTrainingLevel,
             cost: this.calculateTrainingLevelCost(),
-            icon: '🏫'
+            icon: '◈'
         };
     }
     
@@ -1336,7 +1336,7 @@ export class TrainingGrounds extends Building {
                 type: 'defender_upgrade',
                 level: 2,
                 cost: 800,
-                icon: '🛡️'
+                icon: '○'
             };
         }
         // If training level 5, we can unlock level 3 defender
@@ -1348,7 +1348,7 @@ export class TrainingGrounds extends Building {
                 type: 'defender_upgrade',
                 level: 3,
                 cost: 1200,
-                icon: '🛡️'
+                icon: '○'
             };
         }
         
@@ -1395,7 +1395,7 @@ export class TrainingGrounds extends Building {
             description: 'Build a Guard Post tower on the path. Hire level 1 defenders to guard key locations.',
             type: 'guard_post',
             cost: 150,
-            icon: '🏚️',
+            icon: '▹',
             maxBuildings: this.maxGuardPosts
         };
     }

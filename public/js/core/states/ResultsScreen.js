@@ -1519,7 +1519,11 @@ export class ResultsScreen {
             ctx.font = 'bold 30px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(lootInfo.emblem || '?', itemWidth / 2, 24);
+            if (typeof lootInfo.drawIcon === 'function') {
+                lootInfo.drawIcon(ctx, itemWidth / 2, 24, 28);
+            } else {
+                ctx.fillText(lootInfo.emblem || '?', itemWidth / 2, 24);
+            }
 
             // === NAME ===
             ctx.fillStyle = '#E8E0D0';

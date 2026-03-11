@@ -1039,7 +1039,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.basic.baseCost,
             cost: this.calculateUpgradeCost('basic'),
-            icon: '⚔️'
+            icon: '▸'
         });
         
         // Barricade Tower - available from forge level 1
@@ -1052,7 +1052,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.barricade_effectiveness.baseCost,
             cost: this.calculateUpgradeCost('barricade_effectiveness'),
-            icon: '🪵'
+            icon: '▪'
         });
         
         // Archer Tower - available from forge level 1 (damage + armor piercing combined)
@@ -1064,7 +1064,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.archer.baseCost,
             cost: this.calculateUpgradeCost('archer'),
-            icon: '🏹'
+            icon: '▸'
         });
         
         // Poison Archer Tower - available from forge level 2+
@@ -1077,7 +1077,7 @@ export class TowerForge extends Building {
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.poison.baseCost,
                 cost: this.calculateUpgradeCost('poison'),
-                icon: '☠️'
+                icon: '◉'
             });
         }
         
@@ -1091,7 +1091,7 @@ export class TowerForge extends Building {
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.cannon.baseCost,
                 cost: this.calculateUpgradeCost('cannon'),
-                icon: '💥'
+                icon: '◉'
             });
         }
         
@@ -1135,7 +1135,7 @@ export class TowerForge extends Building {
             level: this.forgeLevel,
             maxLevel: this.maxForgeLevel,
             cost: this.calculateForgeUpgradeCost(),
-            icon: '🔨'
+            icon: '◆'
         };
     }
     

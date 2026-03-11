@@ -759,8 +759,22 @@ export class CombinationTower extends Tower {
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            const spellIcons = { steam: '💨', magma: '🌋', tempest: '⛈️', meteor: '☄️' };
-            ctx.fillText(spellIcons[this.selectedSpell] || '⚡', this.x, this.y + 2);
+            const spellColors = { steam: '#88ccff', magma: '#ff6600', tempest: '#ccccff', meteor: '#ffaa00' };
+            const spellLabels = { steam: 'S', magma: 'M', tempest: 'T', meteor: 'C' };
+            const spColor = spellColors[this.selectedSpell] || '#FFD700';
+            const spLabel = spellLabels[this.selectedSpell] || '*';
+            ctx.save();
+            ctx.fillStyle = spColor;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + 2, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 7px Arial';
+            ctx.fillText(spLabel, this.x, this.y + 2);
+            ctx.restore();
         }
         
         // Render attack radius circle if selected
@@ -775,7 +789,7 @@ export class CombinationTower extends Tower {
             range: '140',
             fireRate: '0.9/sec',
             cost: 275,
-            icon: '⚡'
+            icon: ''
         };
     }
 }

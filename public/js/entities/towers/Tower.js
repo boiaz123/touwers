@@ -160,7 +160,7 @@ export class Tower {
             name: 'Tower',
             description: 'Base tower',
             cost: 0,
-            icon: '🏰'
+            icon: ''
         };
     }
 }

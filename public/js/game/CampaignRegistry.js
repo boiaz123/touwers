@@ -34,7 +34,7 @@ export class CampaignRegistry {
                 id: 'campaign-1',
                 name: 'The Verdant Woodlands',
                 description: 'Defend the ancient woodland realm from an encroaching darkness.',
-                icon: '🌲',
+                icon: '▲',
                 difficulty: 'Apprentice',
                 class: campaignClasses.Campaign1,
                 rewards: {
@@ -52,7 +52,7 @@ export class CampaignRegistry {
                 id: 'campaign-2',
                 name: 'The Ironstone Mountains',
                 description: 'Brave the treacherous peaks to pursue the enemy to the desert beyond.',
-                icon: '⛰️',
+                icon: '▲',
                 difficulty: 'Warrior',
                 class: campaignClasses.Campaign2,
                 rewards: {
@@ -70,7 +70,7 @@ export class CampaignRegistry {
                 id: 'campaign-3',
                 name: 'The Scorching Sands',
                 description: 'Uncover the ancient artifact that holds the secret of the enemy.',
-                icon: '🏜️',
+                icon: '▼',
                 difficulty: 'Champion',
                 class: campaignClasses.Campaign3,
                 rewards: {
@@ -88,7 +88,7 @@ export class CampaignRegistry {
                 id: 'campaign-4',
                 name: "The Frog King's Domain",
                 description: 'Enter the otherworldly realm and face the Frog King himself.',
-                icon: '👑',
+                icon: '◎',
                 difficulty: 'Legendary',
                 class: campaignClasses.Campaign4,
                 rewards: {
@@ -106,7 +106,7 @@ export class CampaignRegistry {
                 id: 'campaign-5',
                 name: 'Level Testing Sandbox',
                 description: 'A sandbox for testing and experimentation — everything unlocked.',
-                icon: '🧪',
+                icon: '◈',
                 difficulty: 'Testing',
                 class: campaignClasses.Campaign5,
                 rewards: {
