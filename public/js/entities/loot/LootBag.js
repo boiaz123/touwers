@@ -30,7 +30,7 @@ export class LootBag {
         // Size and collision
         this.width = 28;
         this.height = 32;
-        this.radius = 14;
+        this.radius = 22; // Generous click radius for easier collection
         
         // Lifetime
         this.lifetime = 120; // Seconds the bag stays on ground (0 = infinite)

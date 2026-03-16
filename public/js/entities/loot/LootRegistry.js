@@ -189,42 +189,58 @@ export class LootRegistry {
                 ctx.restore();
             }
         },
-        'leather-purse': {
-            name: 'Leather Purse',
-            type: 'treasure',
+        'iron-sword': {
+            name: 'Iron Sword',
+            type: 'weapon',
             rarity: 'normal',
-            sellValue: 30,
-            description: 'A worn leather pouch, well-used but sturdy',
+            sellValue: 60,
+            description: 'A sturdy iron sword, standard equipment for foot soldiers',
             drawIcon(ctx, cx, cy, size) {
                 ctx.save();
-                const w = size * 0.76, h = size * 0.68;
-                const bx = cx - w / 2, by = cy - h * 0.28;
-                const rad = size * 0.16;
+                // Blade — long tapered triangle
                 ctx.beginPath();
-                ctx.moveTo(bx + rad, by);
-                ctx.lineTo(bx + w - rad, by);
-                ctx.arcTo(bx + w, by, bx + w, by + rad, rad);
-                ctx.lineTo(bx + w, by + h - rad);
-                ctx.arcTo(bx + w, by + h, bx + w - rad, by + h, rad);
-                ctx.lineTo(bx + rad, by + h);
-                ctx.arcTo(bx, by + h, bx, by + h - rad, rad);
-                ctx.lineTo(bx, by + rad);
-                ctx.arcTo(bx, by, bx + rad, by, rad);
+                ctx.moveTo(cx, cy - size * 0.48);
+                ctx.lineTo(cx + size * 0.09, cy + size * 0.16);
+                ctx.lineTo(cx - size * 0.09, cy + size * 0.16);
                 ctx.closePath();
-                const g = ctx.createLinearGradient(cx, by, cx, by + h);
-                g.addColorStop(0, '#b07848'); g.addColorStop(0.5, '#7a4e28'); g.addColorStop(1, '#4a2e10');
-                ctx.fillStyle = g; ctx.fill();
-                ctx.strokeStyle = '#3a1e08'; ctx.lineWidth = 1.5; ctx.stroke();
+                const bg = ctx.createLinearGradient(cx - size * 0.09, 0, cx + size * 0.09, 0);
+                bg.addColorStop(0, '#767676'); bg.addColorStop(0.45, '#D8D8D8'); bg.addColorStop(1, '#545454');
+                ctx.fillStyle = bg; ctx.fill();
+                ctx.strokeStyle = '#2A2A2A'; ctx.lineWidth = 1; ctx.stroke();
+                // Blade fuller (central groove)
+                ctx.strokeStyle = 'rgba(210,210,210,0.55)'; ctx.lineWidth = 0.7;
+                ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.38); ctx.lineTo(cx, cy + size * 0.07); ctx.stroke();
+                // Cross guard
+                const cg = ctx.createLinearGradient(cx - size * 0.24, cy + size * 0.14, cx + size * 0.24, cy + size * 0.14);
+                cg.addColorStop(0, '#8B5A10'); cg.addColorStop(0.5, '#D4901A'); cg.addColorStop(1, '#7A4808');
+                ctx.fillStyle = cg;
+                ctx.fillRect(cx - size * 0.24, cy + size * 0.14, size * 0.48, size * 0.1);
+                // Guard end caps (flared tips)
+                ctx.fillStyle = '#A06010';
+                ctx.beginPath(); ctx.arc(cx - size * 0.24, cy + size * 0.19, size * 0.065, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx + size * 0.24, cy + size * 0.19, size * 0.065, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#5A3000'; ctx.lineWidth = 0.8;
+                ctx.strokeRect(cx - size * 0.24, cy + size * 0.14, size * 0.48, size * 0.1);
+                // Handle
+                const hg = ctx.createLinearGradient(cx - size * 0.068, 0, cx + size * 0.068, 0);
+                hg.addColorStop(0, '#4a2a10'); hg.addColorStop(0.5, '#7A4B22'); hg.addColorStop(1, '#3a1a08');
+                ctx.fillStyle = hg;
+                ctx.fillRect(cx - size * 0.068, cy + size * 0.24, size * 0.136, size * 0.26);
+                ctx.strokeStyle = '#1e0f00'; ctx.lineWidth = 0.7;
+                ctx.strokeRect(cx - size * 0.068, cy + size * 0.24, size * 0.136, size * 0.26);
+                // Grip wrapping
+                ctx.strokeStyle = 'rgba(30,15,0,0.5)'; ctx.lineWidth = 0.8;
+                for (let i = 0; i < 3; i++) {
+                    const wy = cy + size * 0.27 + i * size * 0.07;
+                    ctx.beginPath(); ctx.moveTo(cx - size * 0.068, wy); ctx.lineTo(cx + size * 0.068, wy); ctx.stroke();
+                }
+                // Pommel
                 ctx.beginPath();
-                ctx.moveTo(bx + size * 0.08, by);
-                ctx.quadraticCurveTo(cx, by - size * 0.2, bx + w - size * 0.08, by);
-                ctx.strokeStyle = '#5a3818'; ctx.lineWidth = 1; ctx.stroke();
-                ctx.beginPath(); ctx.arc(cx, by - size * 0.1, size * 0.055, 0, Math.PI * 2);
-                ctx.fillStyle = '#B8860B'; ctx.fill();
-                ctx.strokeStyle = 'rgba(180,130,70,0.5)'; ctx.lineWidth = 0.8;
-                ctx.setLineDash([2, 2]);
-                ctx.beginPath(); ctx.moveTo(bx + size * 0.1, by + h - size * 0.12); ctx.lineTo(bx + w - size * 0.1, by + h - size * 0.12); ctx.stroke();
-                ctx.setLineDash([]);
+                ctx.arc(cx, cy + size * 0.5 - size * 0.065, size * 0.1, 0, Math.PI * 2);
+                const pg = ctx.createRadialGradient(cx - size * 0.03, cy + size * 0.43, 0, cx, cy + size * 0.435, size * 0.1);
+                pg.addColorStop(0, '#C89040'); pg.addColorStop(1, '#705010');
+                ctx.fillStyle = pg; ctx.fill();
+                ctx.strokeStyle = '#3a2000'; ctx.lineWidth = 0.8; ctx.stroke();
                 ctx.restore();
             }
         },

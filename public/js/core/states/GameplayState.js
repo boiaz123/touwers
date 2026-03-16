@@ -1484,6 +1484,7 @@ export class GameplayState {
             enemiesSlain: this.totalEnemiesSpawned, // Use total enemies spawned (all killed to win)
             goldEarned: this.goldEarnedThisLevel,
             currentGold: this.gameState.gold,
+            timeTaken: Math.round((Date.now() / 1000) - this.levelStartTime),
             noNextLevel: isLastLevel2
         }, this.lootManager.getCollectedLoot(), this.lootManager);
     }

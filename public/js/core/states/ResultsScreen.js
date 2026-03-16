@@ -119,9 +119,12 @@ export class ResultsScreen {
             enemiesSlain: data.enemiesSlain || 0,
             goldEarned: data.goldEarned || 0,
             goldRemaining: data.currentGold || 0,
+            timeTaken: data.timeTaken || 0,
             displayEnemiesSlain: 0,
             displayGoldEarned: 0,
-            displayGoldRemaining: 0
+            displayGoldRemaining: 0,
+            displayTimeTaken: 0,
+            displayScore: 0
         };
 
         // Calculate loot phase duration based on number of items (1 item per second)
@@ -294,18 +297,26 @@ export class ResultsScreen {
             this.stats.displayEnemiesSlain = Math.floor(this.stats.enemiesSlain * progress);
             this.stats.displayGoldEarned = Math.floor(this.stats.goldEarned * progress);
             this.stats.displayGoldRemaining = Math.floor(this.stats.goldRemaining * progress);
+            this.stats.displayTimeTaken = this.stats.timeTaken;
+            // Score counts up in the final 35% of countup — appears after other stats
+            const scoreDelay = 0.65;
+            const scoreProgress = Math.max(0, Math.min((progress - scoreDelay) / (1.0 - scoreDelay), 1));
+            const finalScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
+            this.stats.displayScore = Math.floor(finalScore * scoreProgress);
         } else if (this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
             this.stats.displayEnemiesSlain = this.stats.enemiesSlain;
             this.stats.displayGoldEarned = this.stats.goldEarned;
             this.stats.displayGoldRemaining = this.stats.goldRemaining;
+            this.stats.displayTimeTaken = this.stats.timeTaken;
+            this.stats.displayScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
         }
 
-        // Update loot animations - with stagger for pop-in effect
+        // Update loot animations - synced with lootAnimationTime to match renderLoot timing
         if (this.animationPhase === 'loot') {
-            const itemsPerSecond = 1.0; // Even slower reveal - matches renderLoot setting
-            const expectedIndex = Math.floor(this.phaseTime * itemsPerSecond);
-            
-            while (this.lootAnimationIndex < expectedIndex && this.lootAnimationIndex < this.acquiredLoot.length) {
+            const itemsPerSecond = 1.0;
+            const expectedIndex = Math.floor(this.lootAnimationTime * itemsPerSecond);
+
+            while (this.lootAnimationIndex <= expectedIndex && this.lootAnimationIndex < this.acquiredLoot.length) {
                 const lootId = this.acquiredLoot[this.lootAnimationIndex];
                 const lootInfo = LootRegistry.getLootType(lootId);
                 this.spawnLootAnimation(this.lootAnimationIndex, lootInfo?.rarity === 'legendary');
@@ -1291,16 +1302,36 @@ export class ResultsScreen {
         ctx.lineTo(modalX + this.modalWidth - 16, sectionY + sectionH);
         ctx.stroke();
 
-        const score = Math.floor(
-            (this.stats.displayEnemiesSlain * 10) +
-            (this.stats.displayGoldEarned * 0.5)
-        );
+        // Format time (MM:SS, no count-up — time is immediately visible)
+        const tSecs = Math.floor((this.stats.displayTimeTaken || 0) % 60);
+        const tMins = Math.floor((this.stats.displayTimeTaken || 0) / 60);
+        const timeStr = `${tMins}:${tSecs.toString().padStart(2, '0')}`;
 
         const statsData = [
-            { label: '\u2694 Enemies Slain', value: this.stats.displayEnemiesSlain.toString(), col: 0, row: 0 },
-            { label: '\uD83D\uDC80 Score', value: score.toString(), col: 1, row: 0 },
-            { label: '\uD83D\uDCB0 Gold Earned', value: this.stats.displayGoldEarned.toString() + 'g', col: 0, row: 1 },
-            { label: '\uD83D\uDCB3 Gold Remaining', value: this.stats.displayGoldRemaining.toString() + 'g', col: 1, row: 1 }
+            {
+                drawIcon: (cx, cy) => this._drawSkullIcon(ctx, cx, cy, 14),
+                label: 'Enemies Slain',
+                value: this.stats.displayEnemiesSlain.toString(),
+                col: 0, row: 0
+            },
+            {
+                drawIcon: (cx, cy) => this._drawHourglassIcon(ctx, cx, cy, 14),
+                label: 'Time Taken',
+                value: timeStr,
+                col: 1, row: 0
+            },
+            {
+                drawIcon: (cx, cy) => this._drawCoinStackIcon(ctx, cx, cy, 14, 3),
+                label: 'Gold Earned',
+                value: this.stats.displayGoldEarned.toString() + 'g',
+                col: 0, row: 1
+            },
+            {
+                drawIcon: (cx, cy) => this._drawCoinStackIcon(ctx, cx, cy, 14, 2),
+                label: 'Gold Remaining',
+                value: this.stats.displayGoldRemaining.toString() + 'g',
+                col: 1, row: 1
+            }
         ];
 
         ctx.textBaseline = 'middle';
@@ -1324,23 +1355,244 @@ export class ResultsScreen {
                 ctx.stroke();
             }
 
-            const labelX = cellX + 22;
+            const iconX = cellX + 14;
             const midY = cellY + rowH / 2;
 
+            // Draw custom icon
+            stat.drawIcon(iconX, midY);
+
             // Label
-            ctx.font = '15px Arial';
+            ctx.font = '14px Arial';
             ctx.textAlign = 'left';
             ctx.fillStyle = 'rgba(200, 190, 170, 0.9)';
-            ctx.fillText(stat.label, labelX, midY);
+            ctx.fillText(stat.label, iconX + 20, midY);
 
-            // Value - right-aligned inside cell
+            // Value — right-aligned inside cell
             ctx.font = 'bold 20px Georgia, serif';
             ctx.textAlign = 'right';
             ctx.fillStyle = '#FFD700';
             ctx.fillText(stat.value, cellX + colW - 20, midY);
         }
 
+        // === SCORE ROW — sits in the 50px gap between stats and SPOILS header ===
+        const scoreAreaY = sectionY + sectionH; // = modalY + 136
+        const scoreAreaH = 50;
+        const scoreCX = modalX + this.modalWidth / 2;
+        const scoreMidY = scoreAreaY + scoreAreaH / 2;
+
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.07)';
+        ctx.fillRect(modalX, scoreAreaY, this.modalWidth, scoreAreaH);
+
+        // Divider top of score area
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(modalX + 16, scoreAreaY);
+        ctx.lineTo(modalX + this.modalWidth - 16, scoreAreaY);
+        ctx.stroke();
+
+        const displayScore = this.stats.displayScore || 0;
+        const finalScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
+        const scoreRatio = finalScore > 0 ? displayScore / finalScore : 1;
+
+        // Crossed swords icon left of label
+        this._drawCrossedSwordsIcon(ctx, scoreCX - 160, scoreMidY, 18);
+
+        // SCORE label
+        ctx.font = 'bold 13px Arial';
         ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(210, 185, 120, 0.9)';
+        ctx.fillText('SCORE', scoreCX - 140, scoreMidY);
+
+        // Score value — counting up, with scale and glow building as it fills
+        ctx.save();
+        ctx.translate(scoreCX + 50, scoreMidY);
+        const scoreScale = 1.0 + scoreRatio * 0.14;
+        ctx.scale(scoreScale, scoreScale);
+        ctx.font = 'bold 28px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 3 + scoreRatio * 11;
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(displayScore.toString(), 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+
+        // Crossed swords icon right
+        this._drawCrossedSwordsIcon(ctx, scoreCX + 160, scoreMidY, 18);
+
+        ctx.textAlign = 'left';
+    }
+
+    _drawSkullIcon(ctx, cx, cy, size) {
+        ctx.save();
+        const r = size * 0.52;
+        // Skull dome
+        ctx.beginPath();
+        ctx.arc(cx, cy - r * 0.12, r, Math.PI, 0, false);
+        ctx.lineTo(cx + r * 0.78, cy + r * 0.42);
+        ctx.lineTo(cx - r * 0.78, cy + r * 0.42);
+        ctx.closePath();
+        const dg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.4, 0, cx, cy, r);
+        dg.addColorStop(0, '#EDE5CC');
+        dg.addColorStop(1, '#A89878');
+        ctx.fillStyle = dg;
+        ctx.fill();
+        ctx.strokeStyle = '#6A5438';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        // Eye sockets
+        for (const s of [-1, 1]) {
+            ctx.beginPath();
+            ctx.ellipse(cx + s * r * 0.32, cy - r * 0.09, r * 0.19, r * 0.22, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#1A0A00';
+            ctx.fill();
+        }
+        // Nose cavity
+        ctx.beginPath();
+        ctx.moveTo(cx, cy + r * 0.08);
+        ctx.lineTo(cx - r * 0.1, cy + r * 0.22);
+        ctx.lineTo(cx + r * 0.1, cy + r * 0.22);
+        ctx.closePath();
+        ctx.fillStyle = '#2A1800';
+        ctx.fill();
+        // Jaw rectangle
+        ctx.fillStyle = '#C8BEA8';
+        ctx.fillRect(cx - r * 0.56, cy + r * 0.38, r * 1.12, r * 0.26);
+        ctx.strokeStyle = '#6A5438';
+        ctx.lineWidth = 0.7;
+        ctx.strokeRect(cx - r * 0.56, cy + r * 0.38, r * 1.12, r * 0.26);
+        // Teeth gaps
+        for (let i = 1; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - r * 0.56 + i * r * 0.37, cy + r * 0.38);
+            ctx.lineTo(cx - r * 0.56 + i * r * 0.37, cy + r * 0.64);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    _drawHourglassIcon(ctx, cx, cy, size) {
+        ctx.save();
+        const hs = size * 0.44;
+        const neck = size * 0.09;
+        // Top triangle (sand running down)
+        ctx.beginPath();
+        ctx.moveTo(cx - hs, cy - hs);
+        ctx.lineTo(cx + hs, cy - hs);
+        ctx.lineTo(cx + neck, cy);
+        ctx.lineTo(cx - neck, cy);
+        ctx.closePath();
+        const tg = ctx.createLinearGradient(cx, cy - hs, cx, cy);
+        tg.addColorStop(0, '#C89828');
+        tg.addColorStop(1, '#8B6010');
+        ctx.fillStyle = tg;
+        ctx.fill();
+        ctx.strokeStyle = '#5A3808';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        // Bottom triangle (sand accumulated)
+        ctx.beginPath();
+        ctx.moveTo(cx - neck, cy);
+        ctx.lineTo(cx + neck, cy);
+        ctx.lineTo(cx + hs, cy + hs);
+        ctx.lineTo(cx - hs, cy + hs);
+        ctx.closePath();
+        const bg = ctx.createLinearGradient(cx, cy, cx, cy + hs);
+        bg.addColorStop(0, '#A07818');
+        bg.addColorStop(1, '#5A3808');
+        ctx.fillStyle = bg;
+        ctx.fill();
+        ctx.strokeStyle = '#5A3808';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        // Sand highlight in bottom
+        ctx.beginPath();
+        ctx.moveTo(cx - hs * 0.55, cy + hs);
+        ctx.lineTo(cx + hs * 0.55, cy + hs);
+        ctx.lineTo(cx + hs * 0.2, cy + hs * 0.55);
+        ctx.lineTo(cx - hs * 0.2, cy + hs * 0.55);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(240, 200, 80, 0.45)';
+        ctx.fill();
+        // Frame bars top and bottom
+        ctx.fillStyle = '#4A2C06';
+        ctx.fillRect(cx - hs - 1, cy - hs - 2, hs * 2 + 2, 3);
+        ctx.fillRect(cx - hs - 1, cy + hs - 1, hs * 2 + 2, 3);
+        ctx.restore();
+    }
+
+    _drawCoinStackIcon(ctx, cx, cy, size, count) {
+        ctx.save();
+        const rx = size * 0.44;
+        const ry = rx * 0.28;
+        const step = size * 0.2;
+        const baseY = cy + (count - 1) * step * 0.5;
+        for (let i = count - 1; i >= 0; i--) {
+            const coinY = baseY - i * step;
+            // Coin side (bottom edge darker strip for 3D look)
+            ctx.beginPath();
+            ctx.ellipse(cx, coinY + ry * 0.6, rx, ry * 0.55, 0, 0, Math.PI);
+            ctx.fillStyle = '#7A4A00';
+            ctx.fill();
+            // Coin face
+            ctx.beginPath();
+            ctx.ellipse(cx, coinY, rx, ry, 0, 0, Math.PI * 2);
+            const cg = ctx.createRadialGradient(cx - rx * 0.3, coinY - ry * 0.35, 0, cx, coinY, rx);
+            cg.addColorStop(0, '#FFE060');
+            cg.addColorStop(0.5, '#D4A020');
+            cg.addColorStop(1, '#7A4A00');
+            ctx.fillStyle = cg;
+            ctx.fill();
+            ctx.strokeStyle = '#5A3400';
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+            // Coin glint
+            ctx.beginPath();
+            ctx.ellipse(cx - rx * 0.22, coinY - ry * 0.25, rx * 0.28, ry * 0.28, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 245, 160, 0.4)';
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    _drawCrossedSwordsIcon(ctx, cx, cy, size) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        const bladeLen = size * 1.0;
+        const handleLen = size * 0.45;
+        const colors = ['#C8C8C8', '#D4AF37'];
+        const angles = [Math.PI * 0.28, -Math.PI * 0.28];
+        for (let i = 0; i < 2; i++) {
+            ctx.save();
+            ctx.rotate(angles[i]);
+            // Blade
+            ctx.beginPath();
+            ctx.moveTo(-bladeLen, -1.5);
+            ctx.lineTo(-bladeLen, 1.5);
+            ctx.lineTo(bladeLen * 0.12, 0.8);
+            ctx.lineTo(bladeLen * 0.16, 0);
+            ctx.lineTo(bladeLen * 0.12, -0.8);
+            ctx.closePath();
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(20,10,0,0.35)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+            // Guard
+            ctx.fillStyle = '#9B7120';
+            ctx.fillRect(-size * 0.12, -size * 0.22, size * 0.24, size * 0.44);
+            ctx.strokeStyle = '#5A3800';
+            ctx.lineWidth = 0.6;
+            ctx.strokeRect(-size * 0.12, -size * 0.22, size * 0.24, size * 0.44);
+            // Handle
+            ctx.fillStyle = '#4A2808';
+            ctx.fillRect(size * 0.12, -size * 0.08, handleLen, size * 0.16);
+            ctx.restore();
+        }
+        ctx.restore();
     }
 
     /**
@@ -1401,7 +1653,7 @@ export class ResultsScreen {
         for (let i = 0; i < this.acquiredLoot.length; i++) {
             const lootId = this.acquiredLoot[i];
             const lootInfo = LootRegistry.getLootType(lootId);
-            if (!lootInfo) continue;
+            if (!lootInfo) { globalCount++; continue; }
 
             // Calculate which page this item belongs to
             const pageNumber = Math.floor(globalCount / itemsPerPage);
