@@ -86,7 +86,7 @@ export class KnightEnemy extends BaseEnemy {
             return;
         }
         
-        const target = this.path[this.currentPathIndex + 1];
+        const target = this.getOffsetWaypointAt(this.currentPathIndex + 1) || this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;
             return;
@@ -100,8 +100,8 @@ export class KnightEnemy extends BaseEnemy {
         
         if (distance < reachThreshold) {
             this.currentPathIndex++;
-            this.x = target.x;
-            this.y = target.y;
+            const snapPos = this.getOffsetWaypointAt(this.currentPathIndex) || this.path[this.currentPathIndex];
+            if (snapPos) { this.x = snapPos.x; this.y = snapPos.y; }
             return;
         }
         

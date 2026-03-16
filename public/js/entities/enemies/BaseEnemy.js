@@ -39,14 +39,21 @@ export class BaseEnemy {
         // Random animation phase offset (0 to 2π) to desynchronize enemy animations
         this.animationPhaseOffset = Math.random() * Math.PI * 2;
         
-        // Path spreading: random lateral offset from the main path
-        // This prevents all enemies from walking in a straight line
-        // Range: ±30 pixels for consistent spreading within path bounds
-        this.pathOffsetAmount = (Math.random() - 0.5) * 60; // ±30 pixels offset
-        
-        // Only apply offset every N frames to reduce computation
-        this.offsetUpdateCounter = 0;
-        
+        // Path spreading: fixed random lateral offset so each enemy walks at a unique
+        // perpendicular distance from the path centre line (±16 px, well within path bounds)
+        this.pathOffsetAmount = (Math.random() - 0.5) * 32;
+
+        // Apply offset to spawn position using the direction of the first path segment
+        if (path && path.length >= 2) {
+            const spawnDx = path[1].x - path[0].x;
+            const spawnDy = path[1].y - path[0].y;
+            const spawnLen = Math.hypot(spawnDx, spawnDy);
+            if (spawnLen > 0) {
+                this.x += (-spawnDy / spawnLen) * this.pathOffsetAmount;
+                this.y += (spawnDx / spawnLen) * this.pathOffsetAmount;
+            }
+        }
+
         // Hit splatter effects
         this.hitSplatters = [];
     }
@@ -123,7 +130,7 @@ export class BaseEnemy {
             return;
         }
         
-        const target = this.path[this.currentPathIndex + 1];
+        const target = this.getOffsetWaypointAt(this.currentPathIndex + 1);
         if (!target) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
@@ -138,16 +145,10 @@ export class BaseEnemy {
         
         if (distance < reachThreshold) {
             this.currentPathIndex++;
-            // Apply lateral offset when reaching waypoint
-            const nextTarget = this.path[this.currentPathIndex];
-            if (nextTarget) {
-                this.x = nextTarget.x;
-                this.y = nextTarget.y;
-                // Apply offset perpendicular to path direction for next segment
-                this.applyPathOffset();
-            } else {
-                this.x = target.x;
-                this.y = target.y;
+            const snapPos = this.getOffsetWaypointAt(this.currentPathIndex);
+            if (snapPos) {
+                this.x = snapPos.x;
+                this.y = snapPos.y;
             }
             return;
         }
@@ -155,72 +156,35 @@ export class BaseEnemy {
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
-        
-        // Apply path offset more frequently for better spreading from start
-        this.offsetUpdateCounter++;
-        if (this.offsetUpdateCounter >= 2) {
-            this.applyPathOffset();
-            this.offsetUpdateCounter = 0;
-        }
     }
     
     /**
-     * Apply lateral offset perpendicular to path direction
-     * This spreads enemies across the path instead of keeping them in a line
+     * Returns the laterally-offset position for a given path waypoint index.
+     * Each enemy has a fixed pathOffsetAmount so they consistently spread
+     * across the path width without converging on the centre line.
      */
-    applyPathOffset() {
-        if (!this.path || this.currentPathIndex >= this.path.length - 1) return;
-        
-        const currentPos = this.path[this.currentPathIndex];
-        const nextPos = this.path[this.currentPathIndex + 1];
-        
-        // Calculate direction vector along path
-        const pathDx = nextPos.x - currentPos.x;
-        const pathDy = nextPos.y - currentPos.y;
-        const pathLength = Math.hypot(pathDx, pathDy);
-        
-        if (pathLength === 0) return;
-        
-        // Perpendicular vector (rotate 90 degrees)
-        const perpX = -pathDy / pathLength;
-        const perpY = pathDx / pathLength;
-        
-        // Calculate distance from path center (project position onto path segment)
-        const toCurrentDx = this.x - currentPos.x;
-        const toCurrentDy = this.y - currentPos.y;
-        const projectionLength = (toCurrentDx * pathDx + toCurrentDy * pathDy) / (pathLength * pathLength);
-        const projX = currentPos.x + projectionLength * pathDx;
-        const projY = currentPos.y + projectionLength * pathDy;
-        
-        // Distance from enemy to path center line
-        const distFromPath = Math.hypot(this.x - projX, this.y - projY);
-        
-        // Max allowed offset (path width is 60px total, so ±25px from center)
-        const maxOffset = 25;
-        
-        // If we're too far from path center, pull back toward it
-        if (distFromPath > maxOffset) {
-            // Calculate how much we're over the limit
-            const excess = distFromPath - maxOffset;
-            
-            // Direction from enemy to path center
-            const toCenterX = projX - this.x;
-            const toCenterY = projY - this.y;
-            const toCenterLen = Math.hypot(toCenterX, toCenterY);
-            
-            if (toCenterLen > 0) {
-                // Pull back toward center
-                const pullStrength = 0.08;
-                this.x += (toCenterX / toCenterLen) * excess * pullStrength;
-                this.y += (toCenterY / toCenterLen) * excess * pullStrength;
-            }
-        } else {
-            // We're within bounds, apply gentle spreading offset
-            // Use the initial random offset, but scale it based on distance from center
-            const spreadAmount = (this.pathOffsetAmount / 30) * (1 - (distFromPath / maxOffset) * 0.5);
-            this.x += perpX * spreadAmount * 0.02;
-            this.y += perpY * spreadAmount * 0.02;
+    getOffsetWaypointAt(index) {
+        if (!this.path || index < 0 || index >= this.path.length) return null;
+        const wp = this.path[index];
+        if (this.pathOffsetAmount === 0) return wp;
+
+        // Use the incoming segment direction to compute the perpendicular
+        if (index === 0) {
+            if (this.path.length < 2) return wp;
+            const next = this.path[1];
+            const dx = next.x - wp.x;
+            const dy = next.y - wp.y;
+            const len = Math.hypot(dx, dy);
+            if (len === 0) return wp;
+            return { x: wp.x + (-dy / len) * this.pathOffsetAmount, y: wp.y + (dx / len) * this.pathOffsetAmount };
         }
+
+        const prev = this.path[index - 1];
+        const dx = wp.x - prev.x;
+        const dy = wp.y - prev.y;
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return wp;
+        return { x: wp.x + (-dy / len) * this.pathOffsetAmount, y: wp.y + (dx / len) * this.pathOffsetAmount };
     }
     
     /**
