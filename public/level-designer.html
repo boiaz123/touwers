@@ -167,22 +167,7 @@
             border-color: var(--accent);
         }
         .form-field input[type=color] { height: 27px; padding: 2px 3px; cursor: pointer; }
-        /* Details/summary for visual settings */
-        details.vis-cfg { border: 1px solid var(--border); border-radius: 3px; background: var(--bg-panel); }
-        details.vis-cfg summary {
-            padding: 5px 9px;
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--label);
-            user-select: none;
-            list-style: none;
-        }
-        details.vis-cfg summary::-webkit-details-marker { display: none; }
-        details.vis-cfg summary::before { content: '[+] '; color: var(--text-dim); font-family: monospace; }
-        details.vis-cfg[open] summary::before { content: '[-] '; }
-        details.vis-cfg .dc { padding: 8px 9px; display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--border); }
-        .vis-sub { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.6px; }
+        /* Details/summary removed - no visual customization needed */
         /* Buttons */
         button {
             padding: 5px 11px;
@@ -439,70 +424,9 @@
                 </div>
             </div>
 
-            <details class="vis-cfg">
-                <summary>Visual Settings (live preview)</summary>
-                <div class="dc">
-                    <div class="vis-sub">Background Gradient</div>
-                    <div class="form-row">
-                        <div class="form-field"><label>Top</label>
-                            <input type="color" id="grassTopColor"    value="#4a6741" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Upper</label>
-                            <input type="color" id="grassUpperColor"  value="#5a7751" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Lower</label>
-                            <input type="color" id="grassLowerColor"  value="#6a8761" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Bottom</label>
-                            <input type="color" id="grassBottomColor" value="#3a5731" class="color-input">
-                        </div>
-                    </div>
-
-                    <div class="vis-sub">Path &amp; Edge Colors</div>
-                    <div class="form-row">
-                        <div class="form-field"><label>Path</label>
-                            <input type="color" id="pathColor"       value="#8b7355" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Bush</label>
-                            <input type="color" id="bushColor"       value="#1f6f1f" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Rock</label>
-                            <input type="color" id="rockColor"       value="#807f80" class="color-input">
-                        </div>
-                        <div class="form-field"><label>Edge Grass</label>
-                            <input type="color" id="edgeGrassColor"  value="#2e8b2e" class="color-input">
-                        </div>
-                    </div>
-
-                    <div class="vis-sub">Decoration Density</div>
-                    <div class="form-row">
-                        <div class="form-field">
-                            <label>Grass Patches</label>
-                            <select id="grassDensity">
-                                <option value="25000">Very Sparse</option>
-                                <option value="18000">Sparse</option>
-                                <option value="12000" selected>Normal</option>
-                                <option value="7000">Dense</option>
-                                <option value="3000">Very Dense</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label>Flowers</label>
-                            <select id="flowerDensity">
-                                <option value="120000">Very Sparse</option>
-                                <option value="80000">Sparse</option>
-                                <option value="50000" selected>Normal</option>
-                                <option value="25000">Dense</option>
-                                <option value="10000">Very Dense</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </details>
-
             <div class="hint">
-                Select a campaign theme to auto-fill the visual colors. Draw the enemy path first, then add terrain decorations.<br>
-                Keyboard shortcuts: P = Path, V = Trees, R = Rocks, W = Water, U = Undo
+                Select a campaign theme — backgrounds are automatically applied per theme. Draw the enemy path first, then add terrain decorations.<br>
+                Shortcuts: P&nbsp;=&nbsp;Path &nbsp; V&nbsp;=&nbsp;Trees &nbsp; R&nbsp;=&nbsp;Rocks &nbsp; W&nbsp;=&nbsp;Water &nbsp; U&nbsp;=&nbsp;Undo
             </div>
         </div>
 

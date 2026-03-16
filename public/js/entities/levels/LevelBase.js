@@ -27,54 +27,13 @@ export class LevelBase {
         // Terrain elements (trees, rocks, water) from level designer
         this.terrainElements = [];
         
-        // Cached visual elements - will be generated once
-        this.grassPatches = [];
-        this.grassGenerated = false;
+        // Path texture cache (generated once per path layout)
         this.pathTexture = [];
         this.pathTextureGenerated = false;
-        this.dirtPatches = [];
-        this.flowers = [];
         this.pathLeaves = [];
-        this.visualElementsGenerated = false;
         this.backgroundCanvas = null; // Cache for pre-rendered background
         
         this.castle = null;
-
-        // Randomly select a backdrop variant once per level (0 = default, 1 = alt, 2 = alt2)
-        this.backdropVariant = Math.floor(Math.random() * 3);
-        
-        // Visual configuration - can be overridden by individual levels
-        this.visualConfig = {
-            // Grass background
-            grassColors: {
-                top: '#4a6741',
-                upper: '#5a7751',
-                lower: '#6a8761',
-                bottom: '#3a5731'
-            },
-            grassPatchDensity: 8000, // pixels per patch
-            grassPatchSizeMin: 6,
-            grassPatchSizeMax: 18,
-            
-            // Dirt patches
-            dirtPatchCount: 8,
-            dirtPatchAlpha: 0.15,
-            
-            // Flowers
-            flowerDensity: 25000, // pixels per flower
-            
-            // Path visuals
-            pathBaseColor: '#8b7355',
-            pathTextureSpacing: 15, // pixels between texture elements
-            pathEdgeVegetationChance: 0.4,
-            
-            // Edge vegetation
-            edgeBushColor: '#1f6f1f',
-            edgeBushAccentColor: '#28a028',
-            edgeRockColor: '#807f80',
-            edgeGrassColor: '#2e8b2e'
-        };
-        
     }
     
     /**
@@ -126,17 +85,8 @@ export class LevelBase {
         return 'forest';
     }
     
-    // Method to update visual configuration for a level
-    setVisualConfig(updates) {
-        this.visualConfig = {
-            ...this.visualConfig,
-            ...updates,
-            grassColors: {
-                ...this.visualConfig.grassColors,
-                ...(updates.grassColors || {})
-            }
-        };
-    }
+    // No-op stub — visual config is now fixed per campaign theme
+    setVisualConfig(updates) {}
     
     /**
      * Build an enhanced path that includes guard post waypoints inserted at their positions
@@ -278,15 +228,8 @@ export class LevelBase {
             this.markPathCells();
             this.markTerrainCells();
             
-            // Reset visual element generation flags to regenerate for new canvas size
-            this.visualElementsGenerated = false;
+            // Reset path texture so it regenerates for new canvas dimensions
             this.pathTextureGenerated = false;
-            
-            // IMPORTANT: Also clear cached visual elements arrays so they get regenerated
-            // This fixes the issue where grass patches, dirt patches, etc. don't scale properly
-            this.grassPatches = [];
-            this.dirtPatches = [];
-            this.flowers = [];
             this.pathLeaves = [];
             
             // CRITICAL: Clear the cached background canvas so it gets rerendered with new visuals
@@ -671,14 +614,7 @@ export class LevelBase {
         };
     }
 
-    generateAllVisualElements(canvasWidth, canvasHeight) {
-        if (this.visualElementsGenerated) return;
-        this.grassPatches = [];
-        this.dirtPatches = [];
-        this.flowers = [];
-
-        this.visualElementsGenerated = true;
-    }
+    generateAllVisualElements(canvasWidth, canvasHeight) {}
 
 
     generateDaisyPetals(centerX, centerY, rng = null) {
@@ -709,7 +645,7 @@ export class LevelBase {
             const start = this.path[i];
             const end = this.path[i + 1];
             const distance = Math.hypot(end.x - start.x, end.y - start.y);
-            const elements = Math.floor(distance / this.visualConfig.pathTextureSpacing);
+            const elements = Math.floor(distance / 15);
             
             for (let j = 0; j < elements; j++) {
                 const t = j / elements;
@@ -811,108 +747,307 @@ export class LevelBase {
         }
     }
 
-    // --- FOREST BACKDROP (top-down ground view, 3 variants) ---
+    // --- FOREST BACKDROP: semi-top-down perspective, horizon at top ---
     _renderForestBackdrop(ctx, w, h) {
-        const v = this.backdropVariant;
-        const bases = ['#1a3a08', '#203e10', '#162e0a'];
-        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
-        const bc = v===1 ? 'rgba(44,88,18,0.18)' : v===2 ? 'rgba(12,48,10,0.22)' : 'rgba(30,64,8,0.16)';
-        [[0.15,0.20,0.12],[0.45,0.12,0.10],[0.75,0.22,0.11],[0.10,0.55,0.09],
-         [0.40,0.62,0.13],[0.70,0.50,0.10],[0.25,0.80,0.11],[0.60,0.80,0.09],[0.88,0.70,0.10]]
-        .forEach(([fx,fy,fr]) => {
-            ctx.fillStyle = bc; ctx.beginPath();
-            ctx.ellipse(w*fx, h*fy, w*fr, h*fr*0.75, fx*2, 0, Math.PI*2); ctx.fill();
-        });
-        if (v === 0) {
-            ctx.fillStyle = 'rgba(88,52,10,0.45)';
-            [[0.08,0.14],[0.24,0.22],[0.44,0.16],[0.64,0.10],[0.82,0.20],
-             [0.14,0.50],[0.38,0.54],[0.60,0.44],[0.82,0.52],[0.22,0.74],[0.52,0.80],[0.74,0.68]]
-            .forEach(([fx,fy]) => { ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*0.010, h*0.006, fx*8, 0, Math.PI*2); ctx.fill(); });
-        } else if (v === 2) {
-            ctx.fillStyle = 'rgba(36,88,48,0.35)';
-            [[0.18,0.22,0.055],[0.48,0.16,0.050],[0.72,0.28,0.060],[0.30,0.65,0.055],[0.62,0.72,0.060]]
-            .forEach(([fx,fy,fr]) => { ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*fr, h*fr*0.70, 0.5, 0, Math.PI*2); ctx.fill(); });
-        }
-        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.30, w*0.5, h*0.5, Math.min(w,h)*0.72);
-        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.30)');
-        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
-    }
+        // Full forest floor — top-down forced perspective, no sky or horizon
+        const ground = ctx.createLinearGradient(0, 0, 0, h);
+        ground.addColorStop(0,    '#2c6014');
+        ground.addColorStop(0.28, '#1e4a0a');
+        ground.addColorStop(0.62, '#153808');
+        ground.addColorStop(1,    '#0a2003');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
 
-    // --- MOUNTAIN / SNOW BACKDROP (top-down, 3 variants) ---
-    _renderMountainBackdrop(ctx, w, h) {
-        const v = this.backdropVariant;
-        const bases = ['#dce8f4', '#c8d8ec', '#ccdff2'];
-        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
-        [[0.18,0.20,0.16,0.038],[0.52,0.38,0.20,0.042],[0.34,0.62,0.14,0.034],
-         [0.76,0.54,0.18,0.040],[0.10,0.72,0.15,0.036],[0.64,0.80,0.16,0.038]]
-        .forEach(([fx,fy,drx,dry]) => {
-            const sg = ctx.createLinearGradient(w*(fx-drx*0.6), h*fy, w*(fx+drx*0.6), h*fy);
-            sg.addColorStop(0, 'rgba(255,255,255,0)');
-            sg.addColorStop(0.5, `rgba(255,255,255,${v===0?0.18:0.13})`);
-            sg.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(w*fx, h*fy, w*drx, h*dry, 0.2, 0, Math.PI*2); ctx.fill();
-        });
-        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.28, w*0.5, h*0.5, Math.min(w,h)*0.70);
-        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(28,48,72,0.22)');
-        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
-    }
-
-    // --- DESERT BACKDROP (top-down, 3 variants) ---
-    _renderDesertBackdrop(ctx, w, h) {
-        const v = this.backdropVariant;
-        const bases = ['#d4a840', '#bc9230', '#c8a048'];
-        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
-        if (v !== 1) {
-            ctx.strokeStyle = 'rgba(164,118,28,0.12)'; ctx.lineWidth = 0.8;
-            for (let ry = 0; ry < h; ry += 18) {
+        // Grass tufts — dense clusters of short upward blades
+        ctx.lineWidth = 1;
+        [[0.05,0.12,6],[0.12,0.22,5],[0.20,0.15,7],[0.30,0.08,6],[0.38,0.18,5],
+         [0.47,0.10,6],[0.55,0.20,7],[0.63,0.12,5],[0.72,0.22,6],[0.80,0.14,7],[0.88,0.08,5],[0.95,0.16,6],
+         [0.04,0.35,6],[0.14,0.42,5],[0.22,0.38,7],[0.33,0.45,6],[0.42,0.36,5],
+         [0.52,0.44,7],[0.61,0.38,6],[0.70,0.45,5],[0.78,0.36,7],[0.86,0.42,6],[0.94,0.38,5],
+         [0.08,0.62,7],[0.18,0.55,5],[0.28,0.65,6],[0.40,0.58,7],[0.50,0.62,5],
+         [0.60,0.55,6],[0.70,0.65,7],[0.80,0.58,5],[0.90,0.62,6],
+         [0.06,0.78,5],[0.16,0.82,6],[0.26,0.75,7],[0.38,0.80,5],[0.48,0.72,6],
+         [0.58,0.82,5],[0.68,0.75,7],[0.78,0.80,6],[0.88,0.72,5],[0.96,0.80,6]]
+        .forEach(([fx, fy, n]) => {
+            const gx = w * fx, gy = h * fy;
+            const bladeLen = h * (0.012 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.010);
+            for (let k = 0; k < n; k++) {
+                const bx = gx + (k - n * 0.5) * 3;
+                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.4;
+                const g = 100 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 50);
+                ctx.strokeStyle = `rgba(30,${g},10,0.55)`;
                 ctx.beginPath();
-                for (let x = 0; x <= w; x += 5) { const y = ry + Math.sin(x*0.022 + ry*0.035)*4; x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y); }
+                ctx.moveTo(bx, gy);
+                ctx.quadraticCurveTo(bx + lean * bladeLen, gy - bladeLen * 0.5, bx + lean * bladeLen * 1.4, gy - bladeLen);
                 ctx.stroke();
             }
-        } else {
-            ctx.fillStyle = 'rgba(148,98,28,0.22)';
-            [[0.08,0.12],[0.24,0.08],[0.40,0.16],[0.58,0.10],[0.74,0.14],[0.90,0.08],
-             [0.14,0.36],[0.30,0.42],[0.50,0.38],[0.68,0.44],[0.84,0.38],[0.06,0.60],
-             [0.22,0.66],[0.44,0.62],[0.62,0.68],[0.80,0.64],[0.96,0.60],
-             [0.18,0.84],[0.38,0.80],[0.56,0.86],[0.76,0.82],[0.94,0.78]]
-            .forEach(([fx,fy]) => {
-                const pr = w*(0.003 + Math.abs(Math.sin(fx*17 + fy*11))*0.004);
-                ctx.beginPath(); ctx.ellipse(w*fx, h*fy, pr*1.5, pr, Math.sin(fx*8)*0.8, 0, Math.PI*2); ctx.fill();
-            });
-        }
-        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.28, w*0.5, h*0.5, Math.min(w,h)*0.70);
-        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(80,50,10,0.26)');
-        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+        });
+
+        // Fallen leaf scatter — small elongated shapes in autumn browns/yellows
+        [[0.10,0.18,1.8],[0.24,0.26,1.5],[0.36,0.14,1.6],[0.46,0.24,2.0],[0.58,0.16,1.7],
+         [0.70,0.28,1.5],[0.82,0.18,1.8],[0.92,0.24,1.6],
+         [0.08,0.44,1.7],[0.20,0.52,2.0],[0.34,0.40,1.5],[0.48,0.48,1.8],[0.62,0.42,1.6],
+         [0.76,0.50,1.9],[0.88,0.44,1.5],
+         [0.12,0.68,1.8],[0.24,0.74,1.6],[0.40,0.62,2.0],[0.54,0.70,1.7],
+         [0.66,0.64,1.5],[0.78,0.72,1.8],[0.92,0.66,1.6]]
+        .forEach(([fx, fy, sz]) => {
+            const lx = w * fx, ly = h * fy;
+            const ang = Math.sin(fx * 23 + fy * 17) * Math.PI;
+            const r = Math.abs(Math.sin(fx * 31 + fy * 13));
+            const leafColor = r < 0.33 ? 'rgba(140,80,20,0.55)' : r < 0.66 ? 'rgba(160,100,30,0.50)' : 'rgba(180,130,40,0.48)';
+            ctx.fillStyle = leafColor;
+            ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang);
+            ctx.beginPath(); ctx.ellipse(0, 0, sz * 2.5, sz * 1.1, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = 'rgba(90,50,10,0.35)'; ctx.lineWidth = 0.6;
+            ctx.beginPath(); ctx.moveTo(-sz * 2, 0); ctx.lineTo(sz * 2, 0); ctx.stroke();
+            ctx.restore();
+        });
+
+        // Dirt patches — irregular ground-level earth marks
+        [[0.16,0.30,0.018],[0.44,0.12,0.015],[0.66,0.35,0.022],[0.84,0.20,0.016],
+         [0.10,0.58,0.020],[0.32,0.62,0.018],[0.56,0.68,0.015],[0.76,0.60,0.019],[0.92,0.74,0.017]]
+        .forEach(([fx, fy, fs]) => {
+            const dx = w * fx, dy = h * fy, ds = w * fs * 2.2;
+            const tone = Math.abs(Math.sin(fx * 19 + fy * 11));
+            const light = Math.floor(28 + tone * 14);
+            ctx.fillStyle = `rgba(${light},${Math.floor(light * 1.2)},${Math.floor(light * 0.2)},0.22)`;
+            ctx.beginPath();
+            const numPts = 7 + Math.floor(Math.abs(Math.sin(fx * 7 + fy * 5)) * 2);
+            for (let pi = 0; pi < numPts; pi++) {
+                const pang = pi / numPts * Math.PI * 2 + Math.sin(fx * 5 + pi * 2.3) * 0.45;
+                const pr = ds * (0.78 + Math.abs(Math.sin(fx * 13 + fy * 7 + pi * 1.1)) * 0.40);
+                pi === 0 ? ctx.moveTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58) :
+                           ctx.lineTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58);
+            }
+            ctx.closePath(); ctx.fill();
+        });
+
+        // Foreground shadow vignette
+        const vgn = ctx.createLinearGradient(0, h * 0.72, 0, h);
+        vgn.addColorStop(0, 'rgba(0,0,0,0)'); vgn.addColorStop(1, 'rgba(0,0,0,0.42)');
+        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.72, w, h * 0.28);
     }
 
-    // --- SPACE / FROG KING BACKDROP (top-down, 3 variants) ---
-    _renderSpaceBackdrop(ctx, w, h) {
-        const v = this.backdropVariant;
-        const bases = ['#080218', '#0a0420', '#06021a'];
-        ctx.fillStyle = bases[v]; ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = v===1 ? 'rgba(44,8,68,0.10)' : 'rgba(20,6,40,0.12)'; ctx.lineWidth = 0.7;
-        for (let i = -h*0.3; i < w+h; i += 28) {
-            ctx.beginPath();
-            for (let s = 0; s <= w+h; s += 8) {
-                const px = i + s*0.5 + Math.sin(s*0.04+i*0.02)*5;
-                const py = s*0.72 + Math.sin(s*0.03+i*0.015)*4;
-                s===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    // --- MOUNTAIN / SNOW BACKDROP: full snow field top-down, no sky ---
+    _renderMountainBackdrop(ctx, w, h) {
+        // Full snow/ice ground — bright and distant at top, shadowed/close at bottom
+        const ground = ctx.createLinearGradient(0, 0, 0, h);
+        ground.addColorStop(0,    '#eaf4fc');
+        ground.addColorStop(0.28, '#dce8f2');
+        ground.addColorStop(0.60, '#c8d8ea');
+        ground.addColorStop(1,    '#aec0d4');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
+
+        // Snow tufts — small clustered frost-blade bursts
+        ctx.lineWidth = 1;
+        [[0.05,0.12,5],[0.14,0.20,4],[0.22,0.14,6],[0.32,0.08,5],[0.40,0.18,4],
+         [0.50,0.10,5],[0.58,0.22,6],[0.66,0.12,4],[0.76,0.20,5],[0.84,0.14,6],[0.92,0.08,4],[0.96,0.18,5],
+         [0.04,0.34,5],[0.16,0.42,4],[0.24,0.36,6],[0.36,0.44,5],[0.44,0.36,4],
+         [0.54,0.44,6],[0.62,0.36,5],[0.72,0.44,4],[0.80,0.36,6],[0.88,0.42,5],[0.94,0.36,4],
+         [0.08,0.60,6],[0.20,0.54,4],[0.30,0.64,5],[0.42,0.58,6],[0.52,0.62,4],
+         [0.62,0.54,5],[0.72,0.64,6],[0.82,0.58,4],[0.92,0.62,5],
+         [0.06,0.76,4],[0.18,0.82,5],[0.28,0.74,6],[0.40,0.80,4],[0.50,0.72,5],
+         [0.60,0.80,4],[0.70,0.74,6],[0.80,0.78,5],[0.90,0.72,4],[0.96,0.80,5]]
+        .forEach(([fx, fy, n]) => {
+            const gx = w * fx, gy = h * fy;
+            const bLen = h * (0.008 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.007);
+            for (let k = 0; k < n; k++) {
+                const bx = gx + (k - n * 0.5) * 2.5;
+                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.3;
+                const bright = 210 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 40);
+                ctx.strokeStyle = `rgba(${bright},${bright},255,0.50)`;
+                ctx.beginPath();
+                ctx.moveTo(bx, gy);
+                ctx.quadraticCurveTo(bx + lean * bLen, gy - bLen * 0.5, bx + lean * bLen * 1.2, gy - bLen);
+                ctx.stroke();
             }
-            ctx.stroke();
+        });
+
+        // Snow sparkle glints — tiny cross marks scattered across the snow
+        ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1;
+        [[0.07,0.10],[0.18,0.06],[0.28,0.16],[0.40,0.08],[0.52,0.14],[0.64,0.06],[0.76,0.16],[0.88,0.09],[0.96,0.13],
+         [0.04,0.32],[0.15,0.40],[0.26,0.34],[0.38,0.42],[0.50,0.34],[0.62,0.42],[0.74,0.34],[0.86,0.40],[0.96,0.36],
+         [0.10,0.54],[0.22,0.58],[0.34,0.52],[0.46,0.60],[0.58,0.52],[0.70,0.58],[0.82,0.52],[0.92,0.56]]
+        .forEach(([fx, fy]) => {
+            const gx = w * fx, gy = h * fy;
+            const r = w * (0.003 + Math.abs(Math.sin(fx * 29 + fy * 17)) * 0.004);
+            ctx.beginPath(); ctx.moveTo(gx - r, gy); ctx.lineTo(gx + r, gy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(gx, gy - r); ctx.lineTo(gx, gy + r); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(gx - r*0.7, gy - r*0.7); ctx.lineTo(gx + r*0.7, gy + r*0.7); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(gx + r*0.7, gy - r*0.7); ctx.lineTo(gx - r*0.7, gy + r*0.7); ctx.stroke();
+        });
+
+        // Rock exposure patches — angular shapes
+        ctx.fillStyle = 'rgba(100,120,140,0.18)';
+        [[0.15,0.35],[0.40,0.28],[0.65,0.38],[0.85,0.30],[0.08,0.62],[0.35,0.70],[0.60,0.65],[0.80,0.72]]
+        .forEach(([fx, fy]) => {
+            const rx = w * fx, ry = h * fy;
+            const rs = w * (0.025 + Math.abs(Math.sin(fx * 17)) * 0.020);
+            ctx.beginPath();
+            ctx.moveTo(rx - rs, ry - rs * 0.3); ctx.lineTo(rx - rs * 0.4, ry - rs * 0.8);
+            ctx.lineTo(rx + rs * 0.6, ry - rs * 0.7); ctx.lineTo(rx + rs, ry + rs * 0.2);
+            ctx.lineTo(rx + rs * 0.3, ry + rs * 0.7); ctx.lineTo(rx - rs * 0.7, ry + rs * 0.5);
+            ctx.closePath(); ctx.fill();
+        });
+
+        // Frost crystal clusters — tiny radiating lines in ice-blue
+        ctx.strokeStyle = 'rgba(200,230,255,0.40)'; ctx.lineWidth = 0.8;
+        [[0.12,0.22],[0.30,0.18],[0.50,0.26],[0.68,0.20],[0.85,0.24],
+         [0.08,0.46],[0.28,0.50],[0.48,0.44],[0.65,0.50],[0.82,0.46]]
+        .forEach(([fx, fy]) => {
+            const fcx = w * fx, fcy = h * fy;
+            const flen = w * (0.012 + Math.abs(Math.sin(fx * 23 + fy * 13)) * 0.008);
+            for (let ray = 0; ray < 6; ray++) {
+                const ang = ray * Math.PI / 3 + Math.sin(fx * 7) * 0.3;
+                ctx.beginPath(); ctx.moveTo(fcx, fcy);
+                ctx.lineTo(fcx + Math.cos(ang) * flen, fcy + Math.sin(ang) * flen); ctx.stroke();
+            }
+        });
+
+        // Foreground shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
+        vgn.addColorStop(0, 'rgba(30,50,80,0)'); vgn.addColorStop(1, 'rgba(30,50,80,0.28)');
+        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
+    }
+
+    // --- DESERT BACKDROP: full sand ground top-down, no sky ---
+    _renderDesertBackdrop(ctx, w, h) {
+        // Full sand surface — warm gold at top (far), deep amber-brown at bottom (near)
+        const ground = ctx.createLinearGradient(0, 0, 0, h);
+        ground.addColorStop(0,    '#d4aa44');
+        ground.addColorStop(0.28, '#c89832');
+        ground.addColorStop(0.62, '#b88020');
+        ground.addColorStop(1,    '#9a6518');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
+
+        // Desert scrub tufts — sparse dry grass blades
+        ctx.lineWidth = 1;
+        [[0.06,0.14,3],[0.18,0.22,2],[0.30,0.12,3],[0.42,0.20,2],[0.54,0.14,3],
+         [0.66,0.22,2],[0.78,0.12,3],[0.90,0.20,2],
+         [0.08,0.38,3],[0.20,0.46,2],[0.34,0.40,3],[0.48,0.46,2],[0.60,0.40,3],
+         [0.72,0.46,2],[0.84,0.38,3],[0.94,0.44,2],
+         [0.04,0.62,3],[0.16,0.58,2],[0.28,0.66,3],[0.42,0.60,2],[0.56,0.64,3],
+         [0.70,0.58,2],[0.82,0.66,3],[0.94,0.60,2],
+         [0.10,0.80,2],[0.24,0.76,3],[0.38,0.82,2],[0.52,0.78,3],[0.66,0.74,2],[0.80,0.82,3],[0.92,0.76,2]]
+        .forEach(([fx, fy, n]) => {
+            const gx = w * fx, gy = h * fy;
+            const bLen = h * (0.014 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.012);
+            for (let k = 0; k < n; k++) {
+                const bx = gx + (k - n * 0.5) * 4;
+                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.5;
+                const tone = 80 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 40);
+                ctx.strokeStyle = `rgba(${tone + 40},${tone},15,0.48)`;
+                ctx.beginPath();
+                ctx.moveTo(bx, gy);
+                ctx.quadraticCurveTo(bx + lean * bLen, gy - bLen * 0.5, bx + lean * bLen * 1.4, gy - bLen);
+                ctx.stroke();
+            }
+        });
+
+        // Sand grain texture — tiny dots in varying sand tones
+        [[0.08,0.12],[0.15,0.20],[0.24,0.10],[0.32,0.28],[0.40,0.16],[0.48,0.24],
+         [0.56,0.12],[0.64,0.22],[0.72,0.14],[0.80,0.26],[0.88,0.12],[0.94,0.20],
+         [0.06,0.38],[0.14,0.44],[0.22,0.36],[0.30,0.50],[0.38,0.42],[0.46,0.48],
+         [0.54,0.38],[0.62,0.44],[0.70,0.36],[0.78,0.50],[0.86,0.38],[0.96,0.46],
+         [0.08,0.64],[0.18,0.70],[0.30,0.62],[0.42,0.68],[0.52,0.60],[0.62,0.70],
+         [0.72,0.64],[0.82,0.68],[0.92,0.62]]
+        .forEach(([fx, fy]) => {
+            const px = w * fx, py = h * fy;
+            const r = Math.abs(Math.sin(fx * 31 + fy * 19));
+            ctx.fillStyle = r < 0.5 ? 'rgba(200,150,50,0.20)' : 'rgba(120,75,15,0.18)';
+            const gs = w * (0.004 + r * 0.005);
+            ctx.beginPath(); ctx.arc(px, py, gs, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // Pebble/stone scatter as angular marks
+        ctx.fillStyle = 'rgba(110,70,15,0.16)';
+        [[0.08,0.22],[0.20,0.30],[0.36,0.18],[0.50,0.26],[0.65,0.20],[0.80,0.28],[0.94,0.15],
+         [0.12,0.45],[0.28,0.52],[0.45,0.48],[0.62,0.55],[0.78,0.45],[0.92,0.52],
+         [0.16,0.70],[0.34,0.65],[0.54,0.72],[0.72,0.68],[0.88,0.74]]
+        .forEach(([fx, fy]) => {
+            const px = w * fx, py = h * fy;
+            const ps = w * (0.007 + Math.abs(Math.sin(fx * 19.3 + fy * 11.7)) * 0.012);
+            ctx.beginPath();
+            ctx.moveTo(px - ps, py); ctx.lineTo(px - ps * 0.4, py - ps * 0.9);
+            ctx.lineTo(px + ps * 0.8, py - ps * 0.7); ctx.lineTo(px + ps, py + ps * 0.3);
+            ctx.lineTo(px, py + ps * 0.8); ctx.closePath(); ctx.fill();
+        });
+
+        // Foreground shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
+        vgn.addColorStop(0, 'rgba(60,30,0,0)'); vgn.addColorStop(1, 'rgba(60,30,0,0.38)');
+        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
+    }
+
+    // --- SPACE / FROG KING BACKDROP: alien surface top-down, no sky ---
+    _renderSpaceBackdrop(ctx, w, h) {
+        // Full alien ground — slightly lit at top (distant), dark at bottom (near)
+        const ground = ctx.createLinearGradient(0, 0, 0, h);
+        ground.addColorStop(0,    '#1a0840');
+        ground.addColorStop(0.30, '#140630');
+        ground.addColorStop(0.65, '#100422');
+        ground.addColorStop(1,    '#080118');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
+
+        // Alien bioluminescent tufts — short crystalline spike clusters
+        ctx.lineWidth = 1;
+        [[0.06,0.10,4],[0.16,0.18,3],[0.28,0.10,4],[0.40,0.16,3],[0.52,0.08,4],
+         [0.64,0.18,3],[0.76,0.10,4],[0.88,0.18,3],[0.96,0.10,4],
+         [0.04,0.34,3],[0.18,0.42,4],[0.30,0.36,3],[0.44,0.40,4],[0.56,0.34,3],
+         [0.68,0.42,4],[0.80,0.36,3],[0.90,0.40,4],
+         [0.06,0.60,4],[0.18,0.56,3],[0.30,0.64,4],[0.44,0.58,3],[0.56,0.62,4],
+         [0.68,0.56,3],[0.80,0.64,4],[0.92,0.58,3],
+         [0.10,0.80,3],[0.24,0.76,4],[0.38,0.82,3],[0.52,0.78,4],[0.66,0.74,3],[0.80,0.80,4],[0.94,0.76,3]]
+        .forEach(([fx, fy, n]) => {
+            const gx = w * fx, gy = h * fy;
+            const bLen = h * (0.010 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.009);
+            for (let k = 0; k < n; k++) {
+                const bx = gx + (k - n * 0.5) * 2;
+                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.25;
+                const c = Math.abs(Math.sin(fx * 13 + k * 3.1));
+                ctx.strokeStyle = c < 0.5 ? 'rgba(180,60,255,0.55)' : 'rgba(60,220,200,0.55)';
+                ctx.beginPath();
+                ctx.moveTo(bx, gy);
+                ctx.lineTo(bx + lean * bLen * 1.4, gy - bLen);
+                ctx.stroke();
+            }
+        });
+
+        // Hexagonal alien ground tile pattern — subtle geometric surface
+        ctx.strokeStyle = 'rgba(80,20,140,0.13)'; ctx.lineWidth = 0.8;
+        const hexR = w * 0.032;
+        const hexSqrt3 = hexR * Math.sqrt(3);
+        for (let col = 0; col < Math.ceil(w / (hexR * 1.5)) + 2; col++) {
+            for (let row = 0; row < Math.ceil(h / hexSqrt3) + 2; row++) {
+                const hx = col * hexR * 1.5 - hexR;
+                const hy = row * hexSqrt3 + (col % 2 === 0 ? 0 : hexSqrt3 * 0.5) - hexSqrt3;
+                ctx.beginPath();
+                for (let vi = 0; vi < 6; vi++) {
+                    const ang = vi * Math.PI / 3;
+                    const px = hx + hexR * Math.cos(ang), py = hy + hexR * Math.sin(ang);
+                    vi === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath(); ctx.stroke();
+            }
         }
-        const col = v===0 ? 'rgba(255,200,140,0.50)' : v===1 ? 'rgba(180,120,255,0.50)' : 'rgba(120,255,160,0.50)';
-        ctx.fillStyle = col;
-        [[0.06,0.08],[0.18,0.14],[0.32,0.06],[0.44,0.12],[0.58,0.08],[0.72,0.16],
-         [0.84,0.06],[0.94,0.12],[0.10,0.28],[0.26,0.24],[0.48,0.30],[0.64,0.22],
-         [0.80,0.28],[0.04,0.44],[0.22,0.40],[0.40,0.46],[0.60,0.38],[0.76,0.44],[0.92,0.40]]
-        .forEach(([sx,sy]) => { ctx.beginPath(); ctx.arc(w*sx, h*sy, 0.8, 0, Math.PI*2); ctx.fill(); });
-        const gc = v===0 ? 'rgba(255,80,10,' : v===1 ? 'rgba(140,30,240,' : 'rgba(20,200,80,';
-        const gg = ctx.createRadialGradient(w*0.5, h*0.5, 0, w*0.5, h*0.5, Math.min(w,h)*0.46);
-        gg.addColorStop(0, gc+'0.06)'); gg.addColorStop(1, gc+'0.0)');
-        ctx.fillStyle = gg; ctx.fillRect(0, 0, w, h);
-        const vig = ctx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.20, w*0.5, h*0.5, Math.min(w,h)*0.70);
-        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.48)');
-        ctx.fillStyle = vig; ctx.fillRect(0, 0, w, h);
+
+        // Bioluminescent surface dots
+        ctx.fillStyle = 'rgba(140,60,255,0.28)';
+        [[0.06,0.08],[0.18,0.14],[0.30,0.06],[0.42,0.16],[0.56,0.08],[0.68,0.18],[0.80,0.10],[0.92,0.14],
+         [0.10,0.36],[0.24,0.44],[0.40,0.38],[0.54,0.46],[0.70,0.38],[0.86,0.42],
+         [0.04,0.62],[0.20,0.68],[0.36,0.60],[0.52,0.66],[0.68,0.62],[0.84,0.66],[0.96,0.58]]
+        .forEach(([fx, fy]) => {
+            const dotR = w * (0.003 + Math.abs(Math.sin(fx * 29 + fy * 17)) * 0.004);
+            ctx.beginPath(); ctx.arc(w * fx, h * fy, dotR, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // Foreground vignette
+        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
+        vgn.addColorStop(0, 'rgba(0,0,0,0)'); vgn.addColorStop(1, 'rgba(0,0,0,0.48)');
+        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
     }
     drawCobblestoneBlock(ctx, x, y, width, height, seed) {
         // Draw a single cobblestone with realistic stone appearance
@@ -1028,162 +1163,36 @@ export class LevelBase {
             }
             ctx.stroke();
             
-            // Layer 2: Main dirt road color - from visualConfig
+            // Layer 2: Dark border edge — clearly defines path boundary
+            const bc = this.hexToRgba(pathColor, 1);
+            ctx.strokeStyle = `rgba(${Math.floor(bc.r * 0.52)},${Math.floor(bc.g * 0.52)},${Math.floor(bc.b * 0.52)},0.95)`;
+            ctx.lineWidth = pathWidthPixels + 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(this.path[0].x, this.path[0].y);
+            for (let i = 1; i < this.path.length; i++) {
+                ctx.lineTo(this.path[i].x, this.path[i].y);
+            }
+            ctx.stroke();
+
+            // Layer 3: Main road surface
             ctx.strokeStyle = pathColor;
             ctx.lineWidth = pathWidthPixels;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            
             ctx.beginPath();
             ctx.moveTo(this.path[0].x, this.path[0].y);
             for (let i = 1; i < this.path.length; i++) {
                 ctx.lineTo(this.path[i].x, this.path[i].y);
             }
             ctx.stroke();
-            
-            // Layer 3: Lighter center stripe - worn dirt from heavy use (lighten the path color)
+
+            // Layer 3 old lighter stripe removed — replaced by placeholder
             const lighterColor = this.lightenHexColor(pathColor, 50);
-            ctx.strokeStyle = lighterColor;
-            ctx.lineWidth = pathWidthPixels * 0.5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            ctx.beginPath();
-            ctx.moveTo(this.path[0].x, this.path[0].y);
-            for (let i = 1; i < this.path.length; i++) {
-                ctx.lineTo(this.path[i].x, this.path[i].y);
-            }
-            ctx.stroke();
-            
-            // Layer 4: Subtle wheel rut on left side
-            ctx.strokeStyle = 'rgba(120, 100, 80, 0.3)';
-            ctx.lineWidth = pathWidthPixels * 0.12;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            ctx.beginPath();
-            const perpX = this.path.length > 1 ? -(this.path[1].y - this.path[0].y) : 0;
-            const perpY = this.path.length > 1 ? (this.path[1].x - this.path[0].x) : 0;
-            const perpLen = Math.hypot(perpX, perpY);
-            const normPerpX = perpLen > 0 ? perpX / perpLen : 0;
-            const normPerpY = perpLen > 0 ? perpY / perpLen : 0;
-            
-            ctx.moveTo(this.path[0].x + normPerpX * pathWidthPixels * 0.22, 
-                      this.path[0].y + normPerpY * pathWidthPixels * 0.22);
-            for (let i = 1; i < this.path.length; i++) {
-                // Calculate perpendicular for this segment
-                let segPerpX = 0, segPerpY = 0;
-                if (i < this.path.length - 1) {
-                    const dx = this.path[i + 1].x - this.path[i - 1].x;
-                    const dy = this.path[i + 1].y - this.path[i - 1].y;
-                    const len = Math.hypot(dx, dy);
-                    segPerpX = len > 0 ? -dy / len : 0;
-                    segPerpY = len > 0 ? dx / len : 0;
-                } else {
-                    segPerpX = normPerpX;
-                    segPerpY = normPerpY;
-                }
-                ctx.lineTo(this.path[i].x + segPerpX * pathWidthPixels * 0.22, 
-                          this.path[i].y + segPerpY * pathWidthPixels * 0.22);
-            }
-            ctx.stroke();
-            
-            // Layer 5: Subtle wheel rut on right side
-            ctx.beginPath();
-            ctx.moveTo(this.path[0].x - normPerpX * pathWidthPixels * 0.22, 
-                      this.path[0].y - normPerpY * pathWidthPixels * 0.22);
-            for (let i = 1; i < this.path.length; i++) {
-                let segPerpX = 0, segPerpY = 0;
-                if (i < this.path.length - 1) {
-                    const dx = this.path[i + 1].x - this.path[i - 1].x;
-                    const dy = this.path[i + 1].y - this.path[i - 1].y;
-                    const len = Math.hypot(dx, dy);
-                    segPerpX = len > 0 ? -dy / len : 0;
-                    segPerpY = len > 0 ? dx / len : 0;
-                } else {
-                    segPerpX = normPerpX;
-                    segPerpY = normPerpY;
-                }
-                ctx.lineTo(this.path[i].x - segPerpX * pathWidthPixels * 0.22, 
-                          this.path[i].y - segPerpY * pathWidthPixels * 0.22);
-            }
-            ctx.stroke();
-            
-            // Layer 6: Scattered small stones and pebbles on the road - subtle
-            for (let i = 0; i < this.path.length - 1; i++) {
-                const start = this.path[i];
-                const end = this.path[i + 1];
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const dist = Math.hypot(dx, dy);
-                const stepSize = 35;
-                
-                for (let d = 0; d < dist; d += stepSize) {
-                    const t = d / dist;
-                    const x = start.x + dx * t;
-                    const y = start.y + dy * t;
-                    
-                    // Add scattered pebbles with seed-based pseudo-randomness
-                    const seed = Math.floor(d / stepSize) + i * 100;
-                    const pebbleChance = Math.abs(Math.sin(seed * 0.5));
-                    
-                    if (pebbleChance > 0.65) {
-                        const offsetX = (Math.sin(seed * 0.3) - 0.5) * pathWidthPixels * 0.5;
-                        const offsetY = (Math.cos(seed * 0.4) - 0.5) * pathWidthPixels * 0.5;
-                        const pebbleSize = 1.5 + Math.abs(Math.sin(seed * 0.7)) * 2.5;
-                        
-                        // Use darkened path color for pebbles
-                        const pebbleColor = this.hexToRgba(pathColor, 0.3 + Math.abs(Math.sin(seed)) * 0.2);
-                        const darkenedPebble = `rgba(${pebbleColor.r * 0.7}, ${pebbleColor.g * 0.7}, ${pebbleColor.b * 0.7}, ${pebbleColor.a})`;
-                        ctx.fillStyle = darkenedPebble;
-                        ctx.beginPath();
-                        ctx.arc(x + offsetX, y + offsetY, pebbleSize, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            }
-            
-            // Layer 7: Subtle dirt dust/wear marks at edges - very light
-            for (let i = 0; i < this.path.length - 1; i++) {
-                const start = this.path[i];
-                const end = this.path[i + 1];
-                const dx = end.x - start.x;
-                const dy = end.y - start.y;
-                const dist = Math.hypot(dx, dy);
-                const steps = Math.ceil(dist / 20);
-                
-                for (let step = 0; step < steps; step++) {
-                    const t = step / steps;
-                    const x = start.x + dx * t;
-                    const y = start.y + dy * t;
-                    
-                    // Calculate perpendicular at this point
-                    let perpX = 0, perpY = 0;
-                    if (i < this.path.length - 1) {
-                        const segDx = this.path[i + 1].x - this.path[i].x;
-                        const segDy = this.path[i + 1].y - this.path[i].y;
-                        const segLen = Math.hypot(segDx, segDy);
-                        perpX = segLen > 0 ? -segDy / segLen : 0;
-                        perpY = segLen > 0 ? segDx / segLen : 0;
-                    }
-                    
-                    // Add subtle dust at edges
-                    const seed = Math.floor(x * 0.02) + Math.floor(y * 0.02) * 7;
-                    const dustChance = Math.abs(Math.sin(seed * 0.3));
-                    
-                    if (dustChance > 0.7) {
-                        // Use lightened path color for dust
-                        const dustColor = this.hexToRgba(pathColor, 0.15 + Math.abs(Math.sin(seed * 2)) * 0.1);
-                        const lightenedDust = `rgba(${Math.min(255, dustColor.r * 1.3)}, ${Math.min(255, dustColor.g * 1.3)}, ${Math.min(255, dustColor.b * 1.3)}, ${dustColor.a})`;
-                        ctx.fillStyle = lightenedDust;
-                        const edgeOffset = (Math.sin(seed * 2) > 0 ? 1 : -1) * pathWidthPixels * 0.48;
-                        ctx.beginPath();
-                        ctx.arc(x + perpX * edgeOffset, y + perpY * edgeOffset, 
-                               1.5 + Math.abs(Math.sin(seed * 1.5)) * 1, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            }
+            // (lighter stripe removed — no scatter marks on path)
+            void lighterColor; // suppress unused var
+            // Layer 4 onwards removed — no wheel ruts, pebbles or dust
         }
         
         // Mark path cells for collision detection and tower blocking (internal tracking only)
@@ -1243,90 +1252,10 @@ export class LevelBase {
             }
         }
         
-        // Store pathCells for collision detection but don't render them
+        // Store pathCells for collision detection
         this.pathCells = pathCells;
-        
-        // Render path texture elements (dust, leaves, etc. on top)
-        this.pathTexture.forEach(element => {
-            ctx.save();
-            ctx.translate(element.x, element.y);
-            ctx.rotate(element.rotation);
-            
-            const alpha = element.shade * 0.7;
-            
-            switch (element.type) {
-                case 0: // Dirt clumps
-                    ctx.fillStyle = `rgba(101, 67, 33, ${alpha})`;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, element.size, element.size * 0.7, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                    
-                case 1: // Sand particles
-                    ctx.fillStyle = `rgba(194, 178, 128, ${alpha})`;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, element.size * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                    
-                case 2: // Wood chips
-                    ctx.fillStyle = `rgba(139, 69, 19, ${alpha})`;
-                    ctx.fillRect(-element.size, -element.size * 0.3, element.size * 2, element.size * 0.6);
-                    ctx.strokeStyle = `rgba(101, 67, 33, ${alpha * 0.8})`;
-                    ctx.lineWidth = 0.5;
-                    ctx.beginPath();
-                    ctx.moveTo(-element.size, 0);
-                    ctx.lineTo(element.size, 0);
-                    ctx.stroke();
-                    break;
-                    
-                case 3: // Small stones
-                    ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`;
-                    if (element.stoneShape) {
-                        ctx.beginPath();
-                        element.stoneShape.forEach((point, index) => {
-                            if (index === 0) {
-                                ctx.moveTo(point.x, point.y);
-                            } else {
-                                ctx.lineTo(point.x, point.y);
-                            }
-                        });
-                        ctx.closePath();
-                        ctx.fill();
-                        
-                        ctx.fillStyle = `rgba(160, 160, 160, ${alpha * 0.5})`;
-                        ctx.beginPath();
-                        ctx.arc(-element.size * 0.3, -element.size * 0.3, element.size * 0.3, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                    break;
-            }
-            
-            ctx.restore();
-        });
-        
-        // Render path leaves
-        this.pathLeaves.forEach(leaf => {
-            ctx.save();
-            ctx.translate(leaf.x, leaf.y);
-            ctx.rotate(leaf.rotation);
-            
-            ctx.fillStyle = leaf.color;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, leaf.size, leaf.size * 0.6, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, -leaf.size * 0.6);
-            ctx.lineTo(0, leaf.size * 0.6);
-            ctx.stroke();
-            
-            ctx.restore();
-        });
-        
-        // Draw inner path edge line and add edge vegetation
+
+        // Render path edge vegetation at the path boundaries
         this.renderPathEdge(ctx, this.pathCells);
     }
     
@@ -1374,7 +1303,7 @@ export class LevelBase {
             const seed = cellX * 73856093 ^ cellY * 19349663;
             const placementChance = Math.abs(Math.sin(seed * 0.007));
             
-            if (placementChance > this.visualConfig.pathEdgeVegetationChance) {
+            if (placementChance > 0.4) {
                 processedCells.add(cellKey);
                 
                 // Place vegetation in center of path edge cell
@@ -1457,7 +1386,11 @@ export class LevelBase {
                     }
                     
                     if (Math.sin(seed * 0.005) > 0) {
-                        ctx.fillStyle = _camp === 'space' ? 'rgba(120,220,160,0.8)' : '#FFD700';
+                        const dotColor = _camp === 'space' ? 'rgba(120,220,160,0.8)'
+                            : _camp === 'desert' ? 'rgba(175,138,48,0.52)'
+                            : _camp === 'mountain' ? 'rgba(220,228,255,0.55)'
+                            : 'rgba(195,175,75,0.50)';
+                        ctx.fillStyle = dotColor;
                         ctx.beginPath();
                         ctx.arc(veg.x, veg.y, 2, 0, Math.PI * 2);
                         ctx.fill();
@@ -1753,7 +1686,8 @@ export class LevelBase {
         this.terrainElements.forEach(element => {
             const screenX = element.gridX * this.cellSize;
             const screenY = element.gridY * this.cellSize;
-            const size = element.size * this.cellSize;
+            const baseSize = element.size * this.cellSize;
+            const size = element.type === 'water' ? baseSize : baseSize * 0.75;
 
             switch (element.type) {
                 case 'vegetation':
@@ -1786,7 +1720,8 @@ export class LevelBase {
 
             const screenX = element.gridX * this.cellSize;
             const screenY = element.gridY * this.cellSize;
-            const size = element.size * this.cellSize;
+            const baseSize = element.size * this.cellSize;
+            const size = element.type === 'water' ? baseSize : baseSize * 0.75;
 
             switch (element.type) {
                 case 'vegetation':
@@ -1835,7 +1770,7 @@ export class LevelBase {
     }
 
     renderDesertVegetation(ctx, x, y, size, gridX, gridY, variant) {
-        const scaledSize = size * 1.5; // Scale up desert vegetation to match forest trees
+        const scaledSize = size;
         const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
         switch(seed) {
             case 0:
@@ -1891,190 +1826,148 @@ export class LevelBase {
     }
 
     renderCactusSaguaro(ctx, x, y, size) {
-        // Classic saguaro cactus with branches and improved spines
-        const mainHeight = size * 0.55;
-        const mainWidth = size * 0.25;
-        
-        // Shadow base
-        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        // Desert saguaro — muted sage-green with natural desert coloring
+        const mainHeight = size * 0.58;
+        const mainWidth = size * 0.22;
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(60,30,10,0.28)';
         ctx.beginPath();
-        ctx.ellipse(x + 1, y + 2, mainWidth * 0.8, size * 0.15, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 1, y + 2, mainWidth * 0.9, size * 0.10, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Main body - tapered top
-        ctx.fillStyle = '#22c55e';
+
+        // Main trunk — muted gray-sage green
+        ctx.fillStyle = '#5a8440';
         ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.25, y);
-        ctx.lineTo(x - mainWidth * 0.25, y - mainHeight * 0.7);
-        ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.25, y - mainHeight * 0.7);
-        ctx.lineTo(x + mainWidth * 0.25, y);
+        ctx.moveTo(x - mainWidth * 0.26, y);
+        ctx.lineTo(x - mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.lineTo(x + mainWidth * 0.26, y);
         ctx.closePath();
         ctx.fill();
 
-        // Dark side with depth
-        ctx.fillStyle = '#15803d';
+        // Trunk shadow side
+        ctx.fillStyle = '#3d6030';
         ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.05, y);
-        ctx.lineTo(x + mainWidth * 0.05, y - mainHeight * 0.6);
-        ctx.quadraticCurveTo(x + mainWidth * 0.2, y - mainHeight * 0.8, x + mainWidth * 0.25, y - mainHeight * 0.7);
-        ctx.lineTo(x + mainWidth * 0.25, y);
+        ctx.moveTo(x + mainWidth * 0.04, y);
+        ctx.lineTo(x + mainWidth * 0.06, y - mainHeight * 0.65);
+        ctx.quadraticCurveTo(x + mainWidth * 0.18, y - mainHeight * 0.82, x + mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.lineTo(x + mainWidth * 0.26, y);
         ctx.closePath();
         ctx.fill();
 
-        // Left arm
-        ctx.fillStyle = '#22c55e';
+        // Left arm — curves upward naturally
+        ctx.fillStyle = '#5a8440';
         ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
-        ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.4, x - mainWidth * 0.7, y - mainHeight * 0.2);
-        ctx.quadraticCurveTo(x - mainWidth * 0.65, y - mainHeight * 0.05, x - mainWidth * 0.3, y - mainHeight * 0.1);
+        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
+        ctx.quadraticCurveTo(x - mainWidth * 0.70, y - mainHeight * 0.44, x - mainWidth * 0.74, y - mainHeight * 0.62);
+        ctx.quadraticCurveTo(x - mainWidth * 0.68, y - mainHeight * 0.80, x - mainWidth * 0.48, y - mainHeight * 0.80);
+        ctx.quadraticCurveTo(x - mainWidth * 0.32, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
         ctx.closePath();
         ctx.fill();
-        
-        // Left arm shadow
-        ctx.fillStyle = '#15803d';
+        ctx.fillStyle = '#3d6030';
         ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.25, y - mainHeight * 0.35);
-        ctx.quadraticCurveTo(x - mainWidth * 0.55, y - mainHeight * 0.35, x - mainWidth * 0.6, y - mainHeight * 0.25);
-        ctx.quadraticCurveTo(x - mainWidth * 0.5, y - mainHeight * 0.1, x - mainWidth * 0.3, y - mainHeight * 0.1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Right arm
-        ctx.fillStyle = '#22c55e';
-        ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
-        ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.35, x + mainWidth * 0.7, y - mainHeight * 0.15);
-        ctx.quadraticCurveTo(x + mainWidth * 0.65, y - mainHeight * 0.0, x + mainWidth * 0.3, y - mainHeight * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Right arm shadow
-        ctx.fillStyle = '#15803d';
-        ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.25, y - mainHeight * 0.3);
-        ctx.quadraticCurveTo(x + mainWidth * 0.55, y - mainHeight * 0.32, x + mainWidth * 0.6, y - mainHeight * 0.2);
-        ctx.quadraticCurveTo(x + mainWidth * 0.5, y - mainHeight * 0.05, x + mainWidth * 0.3, y - mainHeight * 0.08);
+        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
+        ctx.quadraticCurveTo(x - mainWidth * 0.56, y - mainHeight * 0.40, x - mainWidth * 0.60, y - mainHeight * 0.50);
+        ctx.quadraticCurveTo(x - mainWidth * 0.54, y - mainHeight * 0.68, x - mainWidth * 0.48, y - mainHeight * 0.80);
+        ctx.quadraticCurveTo(x - mainWidth * 0.38, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
         ctx.closePath();
         ctx.fill();
 
-        // Spine clusters - much more prominent with better distribution
-        ctx.fillStyle = '#166534';
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const height = y - mainHeight * (0.2 + 0.5 * Math.abs(Math.sin(angle)));
-            const distance = mainWidth * 0.35;
-            const px = x + Math.cos(angle) * distance;
-            const py = height;
-            
-            // Main spine
-            ctx.beginPath();
-            ctx.arc(px, py, 1.2, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Smaller spine cluster around main
-            for (let j = 0; j < 2; j++) {
-                const angle2 = angle + (j - 0.5) * 0.5;
-                const px2 = x + Math.cos(angle2) * distance * 0.85;
-                const py2 = height + (j - 0.5) * 2;
-                ctx.beginPath();
-                ctx.arc(px2, py2, 0.7, 0, Math.PI * 2);
-                ctx.fill();
-            }
+        // Right arm — curves upward naturally
+        ctx.fillStyle = '#5a8440';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
+        ctx.quadraticCurveTo(x + mainWidth * 0.68, y - mainHeight * 0.36, x + mainWidth * 0.72, y - mainHeight * 0.55);
+        ctx.quadraticCurveTo(x + mainWidth * 0.66, y - mainHeight * 0.74, x + mainWidth * 0.46, y - mainHeight * 0.74);
+        ctx.quadraticCurveTo(x + mainWidth * 0.30, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#3d6030';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
+        ctx.quadraticCurveTo(x + mainWidth * 0.52, y - mainHeight * 0.33, x + mainWidth * 0.56, y - mainHeight * 0.44);
+        ctx.quadraticCurveTo(x + mainWidth * 0.50, y - mainHeight * 0.64, x + mainWidth * 0.46, y - mainHeight * 0.74);
+        ctx.quadraticCurveTo(x + mainWidth * 0.32, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
+        ctx.closePath();
+        ctx.fill();
+
+        // Spine dots — light tan
+        ctx.fillStyle = '#c8b870';
+        for (let i = 0; i < 10; i++) {
+            const sy = y - mainHeight * (0.10 + 0.06 * i);
+            ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, sy, 1.2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, sy, 1.2, 0, Math.PI * 2); ctx.fill();
         }
-        
-        // Highlight stripe on main body
-        ctx.fillStyle = 'rgba(100, 200, 100, 0.3)';
-        ctx.fillRect(x - mainWidth * 0.12, y - mainHeight * 0.7, mainWidth * 0.12, mainHeight * 0.6);
-        
-        // Add base bushes for natural look
-        this.renderCactusBaseBushes(ctx, x, y, size * 0.7);
+
+        this.renderCactusBaseBushes(ctx, x, y, size * 0.65);
     }
 
     renderCactusBarrel(ctx, x, y, size) {
-        // Barrel cactus with improved ribbed structure and spines
-        const height = size * 0.5;
-        const width = size * 0.32;
-        
-        // Shadow base
-        ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
+        // Dry desert bush — gnarled woody branches with dried tips
+        const baseR = size * 0.16;
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(60,30,10,0.28)';
         ctx.beginPath();
-        ctx.ellipse(x + 2, y + 2, width * 0.35, height * 0.15, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 2, y + 3, baseR * 1.3, baseR * 0.45, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Main body - bulbous shape
-        ctx.fillStyle = '#22c55e';
+        // Woody base mound
+        ctx.fillStyle = '#4a3012';
         ctx.beginPath();
-        ctx.moveTo(x - width * 0.35, y - height * 0.2);
-        ctx.quadraticCurveTo(x - width * 0.42, y - height * 0.4, x, y - height * 0.5);
-        ctx.quadraticCurveTo(x + width * 0.42, y - height * 0.4, x + width * 0.35, y - height * 0.2);
-        ctx.quadraticCurveTo(x + width * 0.38, y, x + width * 0.35, y + height * 0.25);
-        ctx.quadraticCurveTo(x + width * 0.25, y + height * 0.4, x, y + height * 0.45);
-        ctx.quadraticCurveTo(x - width * 0.25, y + height * 0.4, x - width * 0.35, y + height * 0.25);
-        ctx.quadraticCurveTo(x - width * 0.38, y, x - width * 0.35, y - height * 0.2);
-        ctx.closePath();
+        ctx.ellipse(x, y, baseR, baseR * 0.52, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#6a4a1c';
+        ctx.beginPath();
+        ctx.ellipse(x - baseR * 0.16, y - baseR * 0.08, baseR * 0.72, baseR * 0.36, -0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Dark side
-        ctx.fillStyle = '#15803d';
-        ctx.beginPath();
-        ctx.moveTo(x + width * 0.08, y - height * 0.2);
-        ctx.quadraticCurveTo(x + width * 0.38, y - height * 0.35, x + width * 0.32, y - height * 0.43);
-        ctx.quadraticCurveTo(x + width * 0.15, y - height * 0.45, x + width * 0.08, y - height * 0.28);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.beginPath();
-        ctx.moveTo(x + width * 0.08, y + height * 0.05);
-        ctx.quadraticCurveTo(x + width * 0.35, y + height * 0.3, x + width * 0.3, y + height * 0.4);
-        ctx.quadraticCurveTo(x + width * 0.15, y + height * 0.42, x + width * 0.08, y + height * 0.1);
-        ctx.closePath();
-        ctx.fill();
-
-        // Horizontal ribs - more defined
-        ctx.strokeStyle = '#0f6b3d';
-        ctx.lineWidth = 1.2;
-        for (let i = 0; i < 6; i++) {
-            const py = y - height * 0.4 + (i * height * 0.16);
-            const ribWidth = width * (0.38 - Math.abs(i - 2.5) * 0.085);
+        // Dry twisted branches
+        const branches = [
+            { ang: -2.36, len: size * 0.38, lw: 2.4, bend: -0.40 },
+            { ang: -1.88, len: size * 0.42, lw: 2.2, bend: 0.30 },
+            { ang: -1.26, len: size * 0.36, lw: 2.0, bend: -0.22 },
+            { ang: -0.62, len: size * 0.30, lw: 1.8, bend: 0.35 },
+            { ang: -2.76, len: size * 0.32, lw: 2.0, bend: 0.24 },
+            { ang:  3.40, len: size * 0.34, lw: 2.0, bend: -0.28 },
+            { ang:  2.90, len: size * 0.38, lw: 2.2, bend: 0.32 }
+        ];
+        ctx.lineCap = 'round';
+        branches.forEach(b => {
+            const ex = x + Math.cos(b.ang) * b.len;
+            const ey = y + Math.sin(b.ang) * b.len;
+            const mx = x + Math.cos(b.ang + b.bend) * b.len * 0.52;
+            const my = y + Math.sin(b.ang + b.bend) * b.len * 0.52;
+            ctx.strokeStyle = '#7a5522';
+            ctx.lineWidth = b.lw;
             ctx.beginPath();
-            ctx.moveTo(x - ribWidth, py);
-            ctx.quadraticCurveTo(x, py - height * 0.015, x + ribWidth, py);
+            ctx.moveTo(x, y - baseR * 0.28);
+            ctx.quadraticCurveTo(mx, my, ex, ey);
             ctx.stroke();
-        }
-
-        // Spine clusters - much more prominent
-        ctx.fillStyle = '#166534';
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const radius = width * 0.32;
-            const px = x + Math.cos(angle) * radius;
-            const py = y - height * 0.1 + Math.sin(angle) * height * 0.2;
-            
-            // Main cluster spine
+            ctx.fillStyle = '#c4a040';
             ctx.beginPath();
-            ctx.arc(px, py, 1.3, 0, Math.PI * 2);
+            ctx.arc(ex, ey, b.lw * 1.5, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Surrounding spines
-            for (let j = 0; j < 3; j++) {
-                const angle2 = angle + (j - 1) * 0.4;
-                const px2 = x + Math.cos(angle2) * radius * 0.9;
-                const py2 = py + (j - 1) * 2;
-                ctx.beginPath();
-                ctx.arc(px2, py2, 0.8, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        
-        // Highlight
-        ctx.fillStyle = 'rgba(100, 200, 100, 0.4)';
-        ctx.beginPath();
-        ctx.ellipse(x - width * 0.15, y - height * 0.25, width * 0.18, height * 0.3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Add base bushes for natural look
-        this.renderCactusBaseBushes(ctx, x, y, size * 0.6);
+        });
+
+        // Sub-branches
+        branches.slice(0, 5).forEach(b => {
+            const bx = x + Math.cos(b.ang) * b.len * 0.58;
+            const by = y + Math.sin(b.ang) * b.len * 0.58;
+            const sAng = b.ang + (b.bend > 0 ? 0.55 : -0.55);
+            const sLen = b.len * 0.28;
+            ctx.strokeStyle = '#6a4520';
+            ctx.lineWidth = b.lw * 0.55;
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.lineTo(bx + Math.cos(sAng) * sLen, by + Math.sin(sAng) * sLen);
+            ctx.stroke();
+            ctx.fillStyle = '#a88030';
+            ctx.beginPath();
+            ctx.arc(bx + Math.cos(sAng) * sLen, by + Math.sin(sAng) * sLen, b.lw * 0.85, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 
     renderCactusPricklyPear(ctx, x, y, size) {
@@ -2321,8 +2214,8 @@ export class LevelBase {
     }
 
     renderDesertBush(ctx, x, y, size) {
-        // Dry desert bush - irregular organic shape, scaled up
-        const scaledSize = size * 1.3;
+        // Dry desert bush - irregular organic shape
+        const scaledSize = size;
         const radius = scaledSize * 0.28;
 
         // Main body with irregular outline
@@ -2385,7 +2278,7 @@ export class LevelBase {
     }
 
     renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant) {
-        const scaledSize = size * 1.8;
+        const scaledSize = size;
         const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         switch(seed) {
             case 0:
@@ -2405,7 +2298,7 @@ export class LevelBase {
 
     renderSpaceVegetation(ctx, x, y, size, gridX, gridY, variant) {
         const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX * 0.5 + gridY * 0.7) % 6;
-        const scaledSize = size * 1.6;
+        const scaledSize = size;
         switch(seed) {
             case 0:
                 this.renderSpaceVortexPlant(ctx, x, y, scaledSize);
@@ -3333,7 +3226,7 @@ export class LevelBase {
 
     renderSpaceRock(ctx, x, y, size, gridX, gridY, variant) {
         const seed = (variant !== undefined && variant !== null) ? variant % 5 : Math.floor(gridX * 0.5 + gridY * 0.7) % 5;
-        const scaledSize = size * 1.4;
+        const scaledSize = size;
         switch(seed) {
             case 0:
                 this.renderSpaceRockFractal(ctx, x, y, scaledSize);
@@ -3725,11 +3618,14 @@ export class LevelBase {
         ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
         ctx.fill();
         
-        // Darker overlay for form and depth
+        // Darker overlay for form and depth — clipped to rock boundary
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x, y, size * 0.38, 0, Math.PI * 2); ctx.clip();
         ctx.fillStyle = '#414141';
         ctx.beginPath();
         ctx.arc(x + size * 0.12, y + size * 0.12, size * 0.34, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         
         // Light highlights on upper portions
         ctx.fillStyle = '#9a9a9a';
