@@ -438,30 +438,73 @@ export class MagicTower extends Tower {
             ctx.stroke();
         }
         
-        // Tesla coil top sphere
+        // Tesla coil top elemental gem crystal (prism shape)
         const sphereRadius = coilWidth * 1.5;
         const sphereY = coilBaseY - coilHeight;
-        
-        ctx.fillStyle = '#A0A0A0';
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 2;
+        const gemRadius = sphereRadius * 1.6;
+
+        const solidGemColors = {
+            fire:  { gem: '#FF4400', inner: '#FF8855', glow: '#FF4400' },
+            water: { gem: '#0088FF', inner: '#55BBFF', glow: '#0088FF' },
+            air:   { gem: '#AADDFF', inner: '#EEFAFF', glow: '#88CCEE' },
+            earth: { gem: '#9B7040', inner: '#D4A857', glow: '#9B7040' }
+        };
+        const gemData = solidGemColors[this.selectedElement] || { gem: '#8B2BE2', inner: '#C070FF', glow: '#8B2BE2' };
+        const glowSize = 6 + this.crystalPulse * 14;
+        const cx = this.x;
+        const gw = gemRadius;
+        const gt = gemRadius * 1.15;
+        const gb = gemRadius * 0.65;
+
+        ctx.save();
+        ctx.shadowBlur = glowSize;
+        ctx.shadowColor = gemData.glow;
+        // Prism gem body
+        ctx.fillStyle = gemData.gem;
         ctx.beginPath();
-        ctx.arc(this.x, sphereY, sphereRadius, 0, Math.PI * 2);
+        ctx.moveTo(cx, sphereY - gt);
+        ctx.lineTo(cx + gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx + gw, sphereY);
+        ctx.lineTo(cx + gw * 0.45, sphereY + gb);
+        ctx.lineTo(cx - gw * 0.45, sphereY + gb);
+        ctx.lineTo(cx - gw, sphereY);
+        ctx.lineTo(cx - gw * 0.5, sphereY - gt * 0.35);
+        ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 1;
         ctx.stroke();
-        
-        // Tesla coil energy discharge points with elemental color
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const dischargeX = this.x + Math.cos(angle) * sphereRadius * 0.8;
-            const dischargeY = sphereY + Math.sin(angle) * sphereRadius * 0.8;
-            
-            const elementColor = this.getElementalColor();
-            ctx.fillStyle = elementColor + `${this.crystalPulse})`;
-            ctx.beginPath();
-            ctx.arc(dischargeX, dischargeY, 2, 0, Math.PI * 2);
-            ctx.fill();
-        }
+
+        // Upper table facet highlight
+        ctx.fillStyle = gemData.inner;
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath();
+        ctx.moveTo(cx, sphereY - gt * 0.85);
+        ctx.lineTo(cx + gw * 0.28, sphereY - gt * 0.25);
+        ctx.lineTo(cx - gw * 0.28, sphereY - gt * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Specular dot
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(cx - gw * 0.15, sphereY - gt * 0.55, gw * 0.11, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Facet lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx + gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx + gw * 0.45, sphereY + gb);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx - gw * 0.45, sphereY + gb);
+        ctx.stroke();
+        ctx.restore();
         
         // Floating runes around tower base (not coil)
         this.runePositions.forEach((rune, index) => {
@@ -522,30 +565,6 @@ export class MagicTower extends Tower {
                 ctx.stroke();
             });
         });
-        
-        // Element indicator with enhanced visibility when selected
-        const elementColors = { fire: '#FF4400', water: '#0088FF', air: '#00CCEE', earth: '#22BB00' };
-        const elementLabels = { fire: 'FI', water: 'WA', air: 'AI', earth: 'EA' };
-        const elColor = elementColors[this.selectedElement] || '#FFD700';
-        const elLabel = elementLabels[this.selectedElement] || 'M';
-        ctx.save();
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = elColor;
-        ctx.fillStyle = elColor;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y + 8, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 8px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(elLabel, this.x, this.y + 8);
-        ctx.restore();
-        ctx.shadowBlur = 0;
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

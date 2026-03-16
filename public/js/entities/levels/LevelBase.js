@@ -1712,6 +1712,7 @@ export class LevelBase {
             return;
         }
 
+        const campaign = this.getCampaign();
         this.terrainElements.forEach(element => {
             // Only render elements that match the type filters
             if (!typeFilters.includes(element.type)) {
@@ -1721,7 +1722,8 @@ export class LevelBase {
             const screenX = element.gridX * this.cellSize;
             const screenY = element.gridY * this.cellSize;
             const baseSize = element.size * this.cellSize;
-            const size = element.type === 'water' ? baseSize : baseSize * 0.75;
+            const sizeScale = (element.type !== 'water' && campaign !== 'forest') ? 1.5 : 0.75;
+            const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
             switch (element.type) {
                 case 'vegetation':
@@ -2214,9 +2216,8 @@ export class LevelBase {
     }
 
     renderDesertBush(ctx, x, y, size) {
-        // Dry desert bush - irregular organic shape
-        const scaledSize = size;
-        const radius = scaledSize * 0.28;
+        // Dry desert bush - irregular organic shape (matches LevelDesigner drawDesertBush)
+        const radius = size * 0.28;
 
         // Main body with irregular outline
         ctx.fillStyle = '#9d7c54';
@@ -2233,13 +2234,13 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
 
-        // Darker inner layer for depth - more pronounced
-        ctx.fillStyle = '#6a4c2f';
+        // Darker inner layer for depth
+        ctx.fillStyle = '#7a5c3f';
         ctx.beginPath();
         for (let i = 0; i < 12; i++) {
             const angle = (i / 12) * Math.PI * 2;
             const variation = Math.sin(angle * 3) * 0.08;
-            const r = radius * (0.45 + variation);
+            const r = radius * (0.5 + variation);
             const px = x + Math.cos(angle) * r;
             const py = y + Math.sin(angle) * r * 0.8;
             if (i === 0) ctx.moveTo(px, py);
@@ -2248,33 +2249,30 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
 
-        // Bright highlight for dimension
-        ctx.fillStyle = '#c9a878';
-        ctx.globalAlpha = 0.7;
+        // Highlight on top
+        ctx.fillStyle = '#bfa878';
         ctx.beginPath();
         ctx.moveTo(x - radius * 0.2, y - radius * 0.3);
-        ctx.quadraticCurveTo(x - radius * 0.05, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
+        ctx.quadraticCurveTo(x, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
         ctx.quadraticCurveTo(x + radius * 0.1, y - radius * 0.15, x - radius * 0.1, y - radius * 0.2);
         ctx.closePath();
         ctx.fill();
-        ctx.globalAlpha = 1;
 
-        // Subtle texture - light lines instead of prominent dots
-        ctx.strokeStyle = '#8a6a44';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.4;
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
+        // Branch structure - realistic twigs
+        ctx.strokeStyle = '#5c4630';
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
             const startX = x + Math.cos(angle) * radius * 0.2;
             const startY = y + Math.sin(angle) * radius * 0.15;
             const midX = x + Math.cos(angle) * radius * 0.65;
             const midY = y + Math.sin(angle) * radius * 0.6;
             ctx.beginPath();
             ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(midX, midY - scaledSize * 0.03, midX + Math.cos(angle + 0.3) * scaledSize * 0.05, midY + Math.sin(angle + 0.3) * scaledSize * 0.05);
+            ctx.quadraticCurveTo(midX, midY - size * 0.05, midX + Math.cos(angle + 0.3) * size * 0.08, midY + Math.sin(angle + 0.3) * size * 0.08);
             ctx.stroke();
         }
-        ctx.globalAlpha = 1;
     }
 
     renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant) {

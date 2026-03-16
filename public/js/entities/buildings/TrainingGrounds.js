@@ -1077,9 +1077,9 @@ export class TrainingGrounds extends Building {
         
         // Range upgrades for manned towers - map tower registry names to upgrade keys
         const towerTypes = [
-            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '▸' },
-            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '▸' },
-            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '◉' }
+            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },
+            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">' },
+            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">' }
         ];
         
         // Add range upgrade for each manned tower - but only if the tower is unlocked
@@ -1116,14 +1116,14 @@ export class TrainingGrounds extends Building {
                 registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.5 → 1.0 at level 5)`,
-                icon: '▪'
+                icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
             {
                 id: 'poisonArcherTowerFireRate',
                 registryId: 'poison',
                 name: 'Poison Archer Tower Fire Rate Training',
                 description: `Increase Poison Archer Tower fire rate (0.4 → 0.8 per second at level 5)`,
-                icon: '◉'
+                icon: '<img src="assets/towers/poison.png" class="upgrade-tower-icon">'
             }
         ];
         

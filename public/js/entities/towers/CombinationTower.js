@@ -773,29 +773,6 @@ export class CombinationTower extends Tower {
             }
         });
         
-        // Spell indicator
-        if (this.selectedSpell) {
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            const spellColors = { steam: '#88ccff', magma: '#ff6600', tempest: '#ccccff', meteor: '#ffaa00' };
-            const spellLabels = { steam: 'S', magma: 'M', tempest: 'T', meteor: 'C' };
-            const spColor = spellColors[this.selectedSpell] || '#FFD700';
-            const spLabel = spellLabels[this.selectedSpell] || '*';
-            ctx.save();
-            ctx.fillStyle = spColor;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y + 2, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 7px Arial';
-            ctx.fillText(spLabel, this.x, this.y + 2);
-            ctx.restore();
-        }
-        
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);
     }

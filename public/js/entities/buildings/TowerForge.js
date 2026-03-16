@@ -1039,7 +1039,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.basic.baseCost,
             cost: this.calculateUpgradeCost('basic'),
-            icon: '▸'
+            icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">'
         });
         
         // Barricade Tower - available from forge level 1
@@ -1052,7 +1052,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.barricade_effectiveness.baseCost,
             cost: this.calculateUpgradeCost('barricade_effectiveness'),
-            icon: '▪'
+            icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
         });
         
         // Archer Tower - available from forge level 1 (damage + armor piercing combined)
@@ -1064,7 +1064,7 @@ export class TowerForge extends Building {
             maxLevel: this.forgeLevel, // Capped at forge level
             baseCost: this.upgrades.archer.baseCost,
             cost: this.calculateUpgradeCost('archer'),
-            icon: '▸'
+            icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">'
         });
         
         // Poison Archer Tower - available from forge level 2+
@@ -1077,7 +1077,7 @@ export class TowerForge extends Building {
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.poison.baseCost,
                 cost: this.calculateUpgradeCost('poison'),
-                icon: '◉'
+                icon: '<img src="assets/towers/poison.png" class="upgrade-tower-icon">'
             });
         }
         
@@ -1091,7 +1091,7 @@ export class TowerForge extends Building {
                 maxLevel: this.forgeLevel, // Capped at forge level
                 baseCost: this.upgrades.cannon.baseCost,
                 cost: this.calculateUpgradeCost('cannon'),
-                icon: '◉'
+                icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">'
             });
         }
         
