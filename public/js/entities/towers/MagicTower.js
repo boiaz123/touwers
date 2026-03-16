@@ -4,8 +4,11 @@ export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 130;
-        this.damage = 40;
+        this.damage = 45;
         this.fireRate = 1.0;
+        this.originalRange = 130;
+        this.originalDamage = 45;
+        this.originalFireRate = 1.0;
         
         // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
@@ -243,7 +246,20 @@ export class MagicTower extends Tower {
     setElement(element) {
         if (['fire', 'water', 'air', 'earth'].includes(element)) {
             this.selectedElement = element;
-            
+
+            // Set per-element base damage and fire rate
+            const elementStats = {
+                fire:  { damage: 45, fireRate: 1.0 },
+                water: { damage: 30, fireRate: 1.2 },
+                air:   { damage: 25, fireRate: 1.0 },
+                earth: { damage: 60, fireRate: 0.7 }
+            };
+            const stats = elementStats[element];
+            this.damage = stats.damage;
+            this.fireRate = stats.fireRate;
+            this.originalDamage = stats.damage;
+            this.originalFireRate = stats.fireRate;
+
             // Update visual particles to match element
             this.updateElementalParticles();
         }
@@ -508,24 +524,26 @@ export class MagicTower extends Tower {
         });
         
         // Element indicator with enhanced visibility when selected
-        ctx.fillStyle = '#FFD700';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        const elementColors = { fire: '#ff6633', water: '#3388ff', air: '#aaddff', earth: '#44aa44' };
-        const elementLabels = { fire: 'F', water: 'W', air: 'A', earth: 'E' };
+        const elementColors = { fire: '#FF4400', water: '#0088FF', air: '#00CCEE', earth: '#22BB00' };
+        const elementLabels = { fire: 'FI', water: 'WA', air: 'AI', earth: 'EA' };
         const elColor = elementColors[this.selectedElement] || '#FFD700';
         const elLabel = elementLabels[this.selectedElement] || 'M';
         ctx.save();
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = elColor;
         ctx.fillStyle = elColor;
         ctx.beginPath();
-        ctx.arc(this.x, this.y + 2, 6, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y + 8, 10, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 7px Arial';
-        ctx.fillText(elLabel, this.x, this.y + 2);
+        ctx.font = 'bold 8px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(elLabel, this.x, this.y + 8);
         ctx.restore();
         ctx.shadowBlur = 0;
         

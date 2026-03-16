@@ -6,6 +6,7 @@ export class CombinationTower extends Tower {
         this.range = 140;
         this.damage = 55;
         this.fireRate = 0.9;
+        this.originalRange = 140;
         
         // Combination spell system
         this.selectedSpell = null; // Will be set to first unlocked spell
@@ -40,6 +41,23 @@ export class CombinationTower extends Tower {
         this.availableSpells = spells;
         if (spells.length > 0 && !this.selectedSpell) {
             this.selectedSpell = spells[0].id;
+            this._applySpellStats(spells[0].id);
+        }
+    }
+
+    _applySpellStats(spellId) {
+        const stats = {
+            steam:   { damage: 45, fireRate: 1.0 },
+            magma:   { damage: 70, fireRate: 0.7 },
+            tempest: { damage: 30, fireRate: 1.1 },
+            meteor:  { damage: 50, fireRate: 0.8 }
+        };
+        const s = stats[spellId];
+        if (s) {
+            this.damage = s.damage;
+            this.fireRate = s.fireRate;
+            this.originalDamage = s.damage;
+            this.originalFireRate = s.fireRate;
         }
     }
     
@@ -140,7 +158,7 @@ export class CombinationTower extends Tower {
                 switch(this.selectedSpell) {
                     case 'steam':
                         finalDamage += spell.damageBonus;
-                        this.target.takeDamage(finalDamage, 0, 'magic');
+                        this.target.takeDamage(finalDamage, 0, 'fire');
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -159,7 +177,7 @@ export class CombinationTower extends Tower {
                     case 'magma':
                         finalDamage += spell.damageBonus;
                         const piercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(piercingDamage, 100, 'magic'); // Magic damage with armor piercing
+                        this.target.takeDamage(piercingDamage, 100, 'earth'); // Earth damage with armor piercing
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -170,21 +188,21 @@ export class CombinationTower extends Tower {
                         break;
                         
                     case 'tempest':
-                        this.target.takeDamage(finalDamage, 0, 'magic');
+                        this.target.takeDamage(finalDamage, 0, 'air');
                         // Slow effect
                         const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
                         if (this.target.speed > 20) {
                             this.target.speed *= slowEffect;
                         }
                         // Chain to nearby enemies
-                        this.chainToNearbyEnemies(this.target, finalDamage, 'magic');
+                        this.chainToNearbyEnemies(this.target, finalDamage, 'air');
                         break;
                         
                     case 'meteor':
                         const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(meteorPiercingDamage, 100, 'magic'); // Magic damage with armor piercing
+                        this.target.takeDamage(meteorPiercingDamage, 100, 'earth'); // Earth damage with armor piercing
                         // Chain to nearby enemies (splash damage)
-                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'magic');
+                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
                         break;
                 }
                 
@@ -513,6 +531,7 @@ export class CombinationTower extends Tower {
     setSpell(spellId) {
         if (this.availableSpells.some(s => s.id === spellId)) {
             this.selectedSpell = spellId;
+            this._applySpellStats(spellId);
             return true;
         }
         return false;

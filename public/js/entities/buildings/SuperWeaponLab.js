@@ -17,7 +17,7 @@ export class SuperWeaponLab extends Building {
             arcaneBlast: {
                 id: 'arcaneBlast',
                 name: 'Arcane Blast',
-                icon: '◈',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="10,1 11.3,6.8 16.4,3.6 13.2,8.7 19,10 13.2,11.3 16.4,16.4 11.3,13.2 10,19 8.7,13.2 3.6,16.4 6.8,11.3 1,10 6.8,8.7 3.6,3.6 8.7,6.8" fill="currentColor"/></svg>',
                 description: 'Deals massive arcane damage to all enemies in radius (classless magic, not elemental)',
                 baseLevel: 1,  // Unlocked at lab level 1
                 upgradeLevel: 0,  // 0-50 using diamonds (at lab level 4+)
@@ -31,7 +31,7 @@ export class SuperWeaponLab extends Building {
             frostNova: {
                 id: 'frostNova',
                 name: 'Frozen Nova',
-                icon: '◇',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="10" y1="2" x2="10" y2="18"/><line x1="3.1" y1="14" x2="16.9" y2="6"/><line x1="3.1" y1="6" x2="16.9" y2="14"/><line x1="10" y1="4.5" x2="8" y2="7"/><line x1="10" y1="4.5" x2="12" y2="7"/><line x1="10" y1="15.5" x2="8" y2="13"/><line x1="10" y1="15.5" x2="12" y2="13"/></svg>',
                 description: 'Freezes all enemies for a duration and deals ice damage',
                 baseLevel: 2,  // Unlocked at lab level 2
                 upgradeLevel: 0,
@@ -46,7 +46,7 @@ export class SuperWeaponLab extends Building {
             meteorStrike: {
                 id: 'meteorStrike',
                 name: 'Meteor Strike',
-                icon: '▲',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="13" cy="13" r="4" fill="currentColor"/><line x1="10" y1="10" x2="5" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="11" x2="3" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="9" x2="8" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
                 description: 'Calls down meteors dealing fire damage that devastates enemies',
                 baseLevel: 3,  // Unlocked at lab level 3
                 upgradeLevel: 0,
@@ -61,7 +61,7 @@ export class SuperWeaponLab extends Building {
             chainLightning: {
                 id: 'chainLightning',
                 name: 'Chain Lightning',
-                icon: '▸',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1 5,11 10,11 8,19 15,9 10,9" fill="currentColor"/></svg>',
                 description: 'Electricity that jumps between enemies',
                 baseLevel: 4,  // Unlocked at lab level 4
                 upgradeLevel: 0,
@@ -79,7 +79,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'steam',
                 name: 'Steam',
-                icon: '▷',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 19 Q5 15.5 7 12.5 Q9 9.5 7 6.5 Q5 3.5 7 1"/><path d="M13 19 Q11 15.5 13 12.5 Q15 9.5 13 6.5 Q11 3.5 13 1"/></svg>',
                 description: 'Fire + Water: Burn + Slow',
                 upgradeLevel: 0,  // 0-5 upgrades
                 maxUpgradeLevel: 5,
@@ -88,7 +88,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'magma',
                 name: 'Magma',
-                icon: '◆',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M10 1 Q15.5 6 15.5 11.5 Q15.5 17.5 10 19 Q4.5 17.5 4.5 11.5 Q4.5 6 10 1Z" fill="currentColor"/></svg>',
                 description: 'Fire + Earth: Burn + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -97,7 +97,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'tempest',
                 name: 'Tempest',
-                icon: '▽',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"><path d="M10 10 Q13 5 17 8 Q20 12 16 15 Q12 18 8 16 Q4 14 4 10 Q4 6 8 3 Q13 0 18 4"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/></svg>',
                 description: 'Air + Water: Chain + Slow',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -106,7 +106,7 @@ export class SuperWeaponLab extends Building {
             {
                 id: 'meteor',
                 name: 'Meteor',
-                icon: '◉',
+                icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="3.5" fill="currentColor"/><circle cx="3" cy="5" r="1.5" fill="currentColor"/><circle cx="17" cy="5" r="1.5" fill="currentColor"/><circle cx="3" cy="15" r="1.5" fill="currentColor"/><circle cx="17" cy="15" r="1.5" fill="currentColor"/><line x1="6.5" y1="7" x2="7" y2="8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="7" x2="13" y2="8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="13" x2="7" y2="12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="13" x2="13" y2="12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
                 description: 'Air + Earth: Chain + Piercing',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 5,
@@ -567,11 +567,15 @@ export class SuperWeaponLab extends Building {
         ctx.stroke();
         
         // Spell icon burst
+        const canvasSymbols = {
+            arcaneBlast: '✦', frostNova: '✲', meteorStrike: '●',
+            chainLightning: '⚡', steam: '≋', magma: '◉', tempest: '◈', meteor: '✦'
+        };
         ctx.fillStyle = `rgba(255, 255, 255, ${ringAlpha})`;
         ctx.font = `${20 + progress * 20}px serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(spell.icon, this.x, crystalY - progress * 30);
+        ctx.fillText(canvasSymbols[spell.id] || '✦', this.x, crystalY - progress * 30);
     }
     
     // Create enhanced meteor strike effect with falling meteors
