@@ -387,11 +387,18 @@ export class SaveSystem {
      */
     static unlockNextLevel(levelId, unlockedLevels) {
         const levelMap = {
-            'level1': 'level2',
-            'level2': 'level3',
-            'level3': 'level4',
-            'level4': 'level5',
-            'level5': null,
+            'level1':  'level2',
+            'level2':  'level3',
+            'level3':  'level4',
+            'level4':  'level5',
+            'level5':  'level6',
+            'level6':  'level7',
+            'level7':  'level8',
+            'level8':  'level9',
+            'level9':  'level10',
+            'level10': 'level11',
+            'level11': 'level12',
+            'level12': null,
             'sandbox': null
         };
 

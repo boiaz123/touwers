@@ -1426,8 +1426,15 @@ export class GameplayState {
             saveData.lastPlayedLevel = this.currentLevel;
 
             // --- Campaign completion detection ---
-            // level5 is the last level in any campaign
-            const isLastLevel = (this.currentLevel === 'level5') && !this.isSandbox;
+            // Last level varies per campaign: Forest/Mountain = 12, Desert = 10, Space = 8
+            const campaignLastLevel = {
+                'campaign-1': 'level12',
+                'campaign-2': 'level12',
+                'campaign-3': 'level10',
+                'campaign-4': 'level8'
+            };
+            const lastLevelForCampaign = campaignLastLevel[this.currentCampaignId] || 'level12';
+            const isLastLevel = (this.currentLevel === lastLevelForCampaign) && !this.isSandbox;
             if (isLastLevel && this.currentCampaignId) {
                 if (!saveData.completedCampaigns) saveData.completedCampaigns = [];
                 if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1', 'campaign-5'];
@@ -1461,7 +1468,14 @@ export class GameplayState {
         }
 
         // Show custom results screen with statistics
-        const isLastLevel2 = (this.currentLevel === 'level5') && !this.isSandbox;
+        const campaignLastLevel2 = {
+            'campaign-1': 'level12',
+            'campaign-2': 'level12',
+            'campaign-3': 'level10',
+            'campaign-4': 'level8'
+        };
+        const lastLevelForCampaign2 = campaignLastLevel2[this.currentCampaignId] || 'level12';
+        const isLastLevel2 = (this.currentLevel === lastLevelForCampaign2) && !this.isSandbox;
         this.resultsScreen.show('levelComplete', {
             level: this.currentLevel,
             wavesCompleted: this.maxWavesForLevel,

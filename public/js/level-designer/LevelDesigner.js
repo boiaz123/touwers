@@ -883,14 +883,46 @@ export class LevelDesigner {
     }
 
     _drawForestBackground(ctx, w, h) {
-        // Full forest floor — top-down forced perspective, no sky or horizon
+        // Forest floor — top-down, earthy tones clearly distinct from tree foliage greens
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#2c6014');
-        ground.addColorStop(0.28, '#1e4a0a');
-        ground.addColorStop(0.62, '#153808');
-        ground.addColorStop(1,    '#0a2003');
-        ctx.fillStyle = ground; ctx.fillRect(0, 0, w, h);
-        // Grass tufts — dense clusters of short upward blades
+        ground.addColorStop(0,    '#2a4a14');
+        ground.addColorStop(0.30, '#1f3a0e');
+        ground.addColorStop(0.60, '#1a3010');
+        ground.addColorStop(1,    '#162c0e');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
+
+        // Ground variation patches — moss, bare soil, pine needle beds, damp earth
+        // Colors deliberately avoid the tree greens (#2d5016, #4a7c2c, #2E7D32, #43A047)
+        [
+            [0.10, 0.10, 0.10, 38, 58, 10, 0.32],   // olive moss — darker, more yellow
+            [0.32, 0.07, 0.08, 28, 20,  8, 0.28],   // bare dry earth
+            [0.56, 0.11, 0.09, 52, 42,  8, 0.26],   // pine needle ochre
+            [0.78, 0.09, 0.09, 34, 52, 10, 0.30],   // mossy ground
+            [0.16, 0.34, 0.09, 24, 16,  6, 0.24],   // dark bare soil
+            [0.44, 0.30, 0.10, 44, 38,  8, 0.26],   // mixed floor litter
+            [0.68, 0.36, 0.09, 56, 30,  8, 0.24],   // warm amber earth
+            [0.88, 0.28, 0.11, 32, 48, 10, 0.28],   // damp moss
+            [0.08, 0.56, 0.09, 34, 24,  8, 0.26],   // leaf litter shadow
+            [0.36, 0.54, 0.12, 28, 44, 10, 0.30],   // deep moss
+            [0.62, 0.58, 0.09, 22, 14,  6, 0.24],   // dark damp soil
+            [0.82, 0.50, 0.10, 48, 36,  8, 0.24],   // pine needle bed
+            [0.14, 0.76, 0.10, 30, 22,  8, 0.28],   // leaf litter warm
+            [0.48, 0.78, 0.09, 26, 40, 10, 0.26],   // moss patch
+            [0.74, 0.72, 0.11, 58, 26,  8, 0.22],   // warm sienna earth
+            [0.94, 0.68, 0.08, 30, 44, 10, 0.26],   // mossy edge
+        ].forEach(([fx, fy, fs, r, g, b, alpha]) => {
+            const px = w * fx, py = h * fy, rad = w * fs;
+            const pg = ctx.createRadialGradient(px, py, 0, px, py, rad);
+            pg.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+            pg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = pg;
+            ctx.beginPath();
+            ctx.ellipse(px, py, rad, rad * 0.62, Math.sin(fx * 4 + fy * 3) * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Grass tufts — muted olive/earthy tones, clearly below tree brightness
         ctx.lineWidth = 1;
         [[0.05,0.12,6],[0.12,0.22,5],[0.20,0.15,7],[0.30,0.08,6],[0.38,0.18,5],
          [0.47,0.10,6],[0.55,0.20,7],[0.63,0.12,5],[0.72,0.22,6],[0.80,0.14,7],[0.88,0.08,5],[0.95,0.16,6],
@@ -906,15 +938,25 @@ export class LevelDesigner {
             for (let k = 0; k < n; k++) {
                 const bx = gx + (k - n * 0.5) * 3;
                 const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.4;
-                const g = 100 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 50);
-                ctx.strokeStyle = `rgba(30,${g},10,0.55)`;
+                const vary = Math.abs(Math.sin(fy * 9 + k));
+                // Earthy palette: dark olive, warm ochre-green, muted brown-green
+                let strokeColor;
+                if (vary < 0.33) {
+                    strokeColor = `rgba(42,${Math.floor(68 + vary * 28)},8,0.52)`;
+                } else if (vary < 0.66) {
+                    strokeColor = `rgba(52,${Math.floor(58 + vary * 22)},6,0.48)`;
+                } else {
+                    strokeColor = `rgba(32,${Math.floor(78 + vary * 18)},10,0.50)`;
+                }
+                ctx.strokeStyle = strokeColor;
                 ctx.beginPath();
                 ctx.moveTo(bx, gy);
                 ctx.quadraticCurveTo(bx + lean * bladeLen, gy - bladeLen * 0.5, bx + lean * bladeLen * 1.4, gy - bladeLen);
                 ctx.stroke();
             }
         });
-        // Fallen leaf scatter
+
+        // Fallen leaf scatter — warm amber, rust, sienna, dark ochre
         [[0.10,0.18,1.8],[0.24,0.26,1.5],[0.36,0.14,1.6],[0.46,0.24,2.0],[0.58,0.16,1.7],
          [0.70,0.28,1.5],[0.82,0.18,1.8],[0.92,0.24,1.6],
          [0.08,0.44,1.7],[0.20,0.52,2.0],[0.34,0.40,1.5],[0.48,0.48,1.8],[0.62,0.42,1.6],
@@ -925,22 +967,29 @@ export class LevelDesigner {
             const lx = w * fx, ly = h * fy;
             const ang = Math.sin(fx * 23 + fy * 17) * Math.PI;
             const r = Math.abs(Math.sin(fx * 31 + fy * 13));
-            const leafColor = r < 0.33 ? 'rgba(140,80,20,0.55)' : r < 0.66 ? 'rgba(160,100,30,0.50)' : 'rgba(180,130,40,0.48)';
+            // Warm autumn tones: amber, rust, sienna, dark gold — deliberately non-green
+            const leafColor = r < 0.25  ? 'rgba(162,88,18,0.62)' :
+                              r < 0.50  ? 'rgba(148,62,14,0.58)' :
+                              r < 0.75  ? 'rgba(178,108,22,0.54)' :
+                                          'rgba(118,50,10,0.60)';
             ctx.fillStyle = leafColor;
             ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang);
             ctx.beginPath(); ctx.ellipse(0, 0, sz * 2.5, sz * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = 'rgba(90,50,10,0.35)'; ctx.lineWidth = 0.6;
+            ctx.strokeStyle = 'rgba(78,36,6,0.40)'; ctx.lineWidth = 0.6;
             ctx.beginPath(); ctx.moveTo(-sz * 2, 0); ctx.lineTo(sz * 2, 0); ctx.stroke();
             ctx.restore();
         });
-        // Dirt patches — irregular ground-level earth marks
+
+        // Dirt patches — warm sienna/brown, not green
         [[0.16,0.30,0.018],[0.44,0.12,0.015],[0.66,0.35,0.022],[0.84,0.20,0.016],
          [0.10,0.58,0.020],[0.32,0.62,0.018],[0.56,0.68,0.015],[0.76,0.60,0.019],[0.92,0.74,0.017]]
         .forEach(([fx, fy, fs]) => {
             const dx = w * fx, dy = h * fy, ds = w * fs * 2.2;
             const tone = Math.abs(Math.sin(fx * 19 + fy * 11));
-            const light = Math.floor(28 + tone * 14);
-            ctx.fillStyle = `rgba(${light},${Math.floor(light * 1.2)},${Math.floor(light * 0.2)},0.22)`;
+            const r = Math.floor(38 + tone * 22);
+            const g = Math.floor(26 + tone * 14);
+            const b = Math.floor(6 + tone * 6);
+            ctx.fillStyle = `rgba(${r},${g},${b},0.30)`;
             ctx.beginPath();
             const numPts = 7 + Math.floor(Math.abs(Math.sin(fx * 7 + fy * 5)) * 2);
             for (let pi = 0; pi < numPts; pi++) {
@@ -951,9 +1000,25 @@ export class LevelDesigner {
             }
             ctx.closePath(); ctx.fill();
         });
+
+        // Mossy bright spots — yellow-green tint distinct from tree greens
+        [[0.22,0.18,0.028],[0.65,0.25,0.024],[0.40,0.68,0.030],[0.85,0.58,0.022]]
+        .forEach(([fx, fy, fs]) => {
+            const mx = w * fx, my = h * fy, mr = w * fs;
+            const mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
+            mg.addColorStop(0, 'rgba(56,74,8,0.34)');
+            mg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = mg;
+            ctx.beginPath();
+            ctx.ellipse(mx, my, mr, mr * 0.68, Math.sin(fx * 6) * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
         const vgn = ctx.createLinearGradient(0, h * 0.72, 0, h);
-        vgn.addColorStop(0, 'rgba(0,0,0,0)'); vgn.addColorStop(1, 'rgba(0,0,0,0.42)');
-        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        vgn.addColorStop(0, 'rgba(0,0,0,0)');
+        vgn.addColorStop(1, 'rgba(0,0,0,0.08)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.72, w, h * 0.28);
     }
 
     _drawMountainBackground(ctx, w, h) {
@@ -4089,12 +4154,10 @@ ${pathCode}
 
         // Define available campaigns
         const campaigns = [
-            { value: 'Campaign1', label: 'Campaign 1 - Classic' },
-            { value: 'Campaign5', label: 'Campaign 5' },
-            { value: 'Forest', label: 'Forest Campaign' },
-            { value: 'Mountain', label: 'Mountain Campaign' },
-            { value: 'Desert', label: 'Desert Campaign' },
-            { value: 'Space', label: 'Space Campaign' }
+            { value: 'Forest',   label: 'Forest Campaign (12 levels)' },
+            { value: 'Mountain', label: 'Mountain Campaign (12 levels)' },
+            { value: 'Desert',   label: 'Desert Campaign (10 levels)' },
+            { value: 'Space',    label: 'Space Campaign (8 levels)' }
         ];
 
         campaigns.forEach(campaign => {
@@ -4136,53 +4199,22 @@ ${pathCode}
 
         // Level definitions per campaign
         const levelsByCampaign = {
-            'Campaign1': [
-                { value: 'Campaign1.Level1', label: 'Level 1' },
-                { value: 'Campaign1.Level2', label: 'Level 2' },
-                { value: 'Campaign1.Level3', label: 'Level 3' },
-                { value: 'Campaign1.Level4', label: 'Level 4' },
-                { value: 'Campaign1.Level5', label: 'Level 5' }
-            ],
-            'Campaign5': [
-                { value: 'Campaign5.Level2', label: 'Level 2' },
-                { value: 'Campaign5.Level8', label: 'Level 8' },
-                { value: 'Campaign5.SandboxLevel', label: 'Sandbox Level' }
-            ],
-            'Forest': [
-                { value: 'Forest.ForestLevel1', label: 'Forest Level 1' },
-                { value: 'Forest.ForestLevel2', label: 'Forest Level 2' },
-                { value: 'Forest.ForestLevel3', label: 'Forest Level 3' },
-                { value: 'Forest.ForestLevel4', label: 'Forest Level 4' },
-                { value: 'Forest.ForestLevel5', label: 'Forest Level 5' }
-            ],
-            'Mountain': [
-                { value: 'Mountain.MountainLevel1', label: 'Mountain Level 1' },
-                { value: 'Mountain.MountainLevel2', label: 'Mountain Level 2' },
-                { value: 'Mountain.MountainLevel3', label: 'Mountain Level 3' },
-                { value: 'Mountain.MountainLevel4', label: 'Mountain Level 4' },
-                { value: 'Mountain.MountainLevel5', label: 'Mountain Level 5' },
-                { value: 'Mountain.MountainLevel6', label: 'Mountain Level 6' },
-                { value: 'Mountain.MountainLevel7', label: 'Mountain Level 7' },
-                { value: 'Mountain.MountainLevel8', label: 'Mountain Level 8' },
-                { value: 'Mountain.MountainLevel9', label: 'Mountain Level 9' },
-                { value: 'Mountain.MountainLevel10', label: 'Mountain Level 10' }
-            ],
-            'Desert': [
-                { value: 'Desert.DesertLevel1', label: 'Desert Level 1' },
-                { value: 'Desert.DesertLevel2', label: 'Desert Level 2' },
-                { value: 'Desert.DesertLevel3', label: 'Desert Level 3' },
-                { value: 'Desert.DesertLevel4', label: 'Desert Level 4' },
-                { value: 'Desert.DesertLevel5', label: 'Desert Level 5' },
-                { value: 'Desert.DesertLevel6', label: 'Desert Level 6' },
-                { value: 'Desert.DesertLevel7', label: 'Desert Level 7' },
-                { value: 'Desert.DesertLevel8', label: 'Desert Level 8' },
-                { value: 'Desert.DesertLevel9', label: 'Desert Level 9' },
-                { value: 'Desert.DesertLevel10', label: 'Desert Level 10' }
-            ],
-            'Space': [
-                { value: 'Space.SpaceLevel1', label: 'Space Level 1' },
-                { value: 'Space.SpaceLevel2', label: 'Space Level 2' }
-            ]
+            'Forest': Array.from({ length: 12 }, (_, i) => ({
+                value: `Forest.ForestLevel${i + 1}`,
+                label: `Forest Level ${i + 1}`
+            })),
+            'Mountain': Array.from({ length: 12 }, (_, i) => ({
+                value: `Mountain.MountainLevel${i + 1}`,
+                label: `Mountain Level ${i + 1}`
+            })),
+            'Desert': Array.from({ length: 10 }, (_, i) => ({
+                value: `Desert.DesertLevel${i + 1}`,
+                label: `Desert Level ${i + 1}`
+            })),
+            'Space': Array.from({ length: 8 }, (_, i) => ({
+                value: `Space.SpaceLevel${i + 1}`,
+                label: `Space Level ${i + 1}`
+            }))
         };
 
         const levels = levelsByCampaign[campaignName] || [];
