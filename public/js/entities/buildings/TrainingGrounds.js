@@ -170,24 +170,25 @@ export class TrainingGrounds extends Building {
                 const targetScreenY = this.y + this.leftArcherLane.groundY - target.distance;
                 const archerScreenX = this.x + archer.x;
                 const archerScreenY = this.y + archer.y;
-                
-                const dx = targetScreenX - archerScreenX;
-                const dy = targetScreenY - archerScreenY;
+                const startX = archerScreenX + 8;
+                const startY = archerScreenY;
+                const dx = targetScreenX - startX;
+                const dy = targetScreenY - startY;
                 const distance = Math.hypot(dx, dy);
                 const speed = 150;
                 
                 this.trainingParticles.push({
-                    x: archerScreenX + 8,
-                    y: archerScreenY,
+                    x: startX,
+                    y: startY,
                     vx: (dx / distance) * speed,
                     vy: (dy / distance) * speed,
-                    life: (distance / speed) + 0.5,
-                    maxLife: (distance / speed) + 0.5,
+                    life: distance / speed + 0.1,
+                    maxLife: distance / speed + 0.1,
                     type: 'arrow',
                     size: 2,
                     targetX: targetScreenX,
                     targetY: targetScreenY,
-                    hitRadius: 6
+                    hitRadius: 8
                 });
             } else if (particleType === 1 && Math.random() > 0.3) {
                 // Arrow from right archer lane toward specific target
@@ -199,24 +200,25 @@ export class TrainingGrounds extends Building {
                 const targetScreenY = this.y + this.rightArcherLane.groundY - target.distance;
                 const archerScreenX = this.x + archer.x;
                 const archerScreenY = this.y + archer.y;
-                
-                const dx = targetScreenX - archerScreenX;
-                const dy = targetScreenY - archerScreenY;
+                const startX = archerScreenX - 8;
+                const startY = archerScreenY;
+                const dx = targetScreenX - startX;
+                const dy = targetScreenY - startY;
                 const distance = Math.hypot(dx, dy);
                 const speed = 150;
                 
                 this.trainingParticles.push({
-                    x: archerScreenX - 8,
-                    y: archerScreenY,
+                    x: startX,
+                    y: startY,
                     vx: (dx / distance) * speed,
                     vy: (dy / distance) * speed,
-                    life: (distance / speed) + 0.5,
-                    maxLife: (distance / speed) + 0.5,
+                    life: distance / speed + 0.1,
+                    maxLife: distance / speed + 0.1,
                     type: 'arrow',
                     size: 2,
                     targetX: targetScreenX,
                     targetY: targetScreenY,
-                    hitRadius: 6
+                    hitRadius: 8
                 });
             } else {
                 // Dust from sword fight
@@ -241,7 +243,8 @@ export class TrainingGrounds extends Building {
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
-            particle.vy += 120 * deltaTime;
+            // Only dust gets gravity; arrows fly straight to their target
+            if (particle.type === 'dust') particle.vy += 120 * deltaTime;
             
             // Check if arrow hit its target
             if (particle.type === 'arrow' && particle.targetX && particle.targetY) {

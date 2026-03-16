@@ -197,47 +197,49 @@ export class LootRegistry {
             description: 'A sturdy iron sword, standard equipment for foot soldiers',
             drawIcon(ctx, cx, cy, size) {
                 ctx.save();
-                // Blade — long tapered triangle
+                // Draw sword diagonally so it looks distinct from the upright dagger
+                ctx.translate(cx, cy);
+                ctx.rotate(Math.PI / 5.5); // ~33 degrees
+                // Blade — long narrow triangle, tip up
                 ctx.beginPath();
-                ctx.moveTo(cx, cy - size * 0.48);
-                ctx.lineTo(cx + size * 0.09, cy + size * 0.16);
-                ctx.lineTo(cx - size * 0.09, cy + size * 0.16);
+                ctx.moveTo(0, -size * 0.54);          // tip
+                ctx.lineTo(size * 0.075, size * 0.14); // right shoulder
+                ctx.lineTo(-size * 0.075, size * 0.14); // left shoulder
                 ctx.closePath();
-                const bg = ctx.createLinearGradient(cx - size * 0.09, 0, cx + size * 0.09, 0);
-                bg.addColorStop(0, '#767676'); bg.addColorStop(0.45, '#D8D8D8'); bg.addColorStop(1, '#545454');
+                const bg = ctx.createLinearGradient(-size * 0.075, 0, size * 0.075, 0);
+                bg.addColorStop(0, '#767676'); bg.addColorStop(0.45, '#E0E0E0'); bg.addColorStop(1, '#545454');
                 ctx.fillStyle = bg; ctx.fill();
                 ctx.strokeStyle = '#2A2A2A'; ctx.lineWidth = 1; ctx.stroke();
                 // Blade fuller (central groove)
-                ctx.strokeStyle = 'rgba(210,210,210,0.55)'; ctx.lineWidth = 0.7;
-                ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.38); ctx.lineTo(cx, cy + size * 0.07); ctx.stroke();
-                // Cross guard
-                const cg = ctx.createLinearGradient(cx - size * 0.24, cy + size * 0.14, cx + size * 0.24, cy + size * 0.14);
+                ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.7;
+                ctx.beginPath(); ctx.moveTo(0, -size * 0.44); ctx.lineTo(0, size * 0.06); ctx.stroke();
+                // Cross guard — noticeably wide
+                const cg = ctx.createLinearGradient(-size * 0.30, size * 0.14, size * 0.30, size * 0.14);
                 cg.addColorStop(0, '#8B5A10'); cg.addColorStop(0.5, '#D4901A'); cg.addColorStop(1, '#7A4808');
                 ctx.fillStyle = cg;
-                ctx.fillRect(cx - size * 0.24, cy + size * 0.14, size * 0.48, size * 0.1);
-                // Guard end caps (flared tips)
+                ctx.fillRect(-size * 0.30, size * 0.14, size * 0.60, size * 0.10);
                 ctx.fillStyle = '#A06010';
-                ctx.beginPath(); ctx.arc(cx - size * 0.24, cy + size * 0.19, size * 0.065, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(cx + size * 0.24, cy + size * 0.19, size * 0.065, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-size * 0.30, size * 0.19, size * 0.07, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(size * 0.30, size * 0.19, size * 0.07, 0, Math.PI * 2); ctx.fill();
                 ctx.strokeStyle = '#5A3000'; ctx.lineWidth = 0.8;
-                ctx.strokeRect(cx - size * 0.24, cy + size * 0.14, size * 0.48, size * 0.1);
+                ctx.strokeRect(-size * 0.30, size * 0.14, size * 0.60, size * 0.10);
                 // Handle
-                const hg = ctx.createLinearGradient(cx - size * 0.068, 0, cx + size * 0.068, 0);
+                const hg = ctx.createLinearGradient(-size * 0.07, 0, size * 0.07, 0);
                 hg.addColorStop(0, '#4a2a10'); hg.addColorStop(0.5, '#7A4B22'); hg.addColorStop(1, '#3a1a08');
                 ctx.fillStyle = hg;
-                ctx.fillRect(cx - size * 0.068, cy + size * 0.24, size * 0.136, size * 0.26);
+                ctx.fillRect(-size * 0.07, size * 0.24, size * 0.14, size * 0.24);
                 ctx.strokeStyle = '#1e0f00'; ctx.lineWidth = 0.7;
-                ctx.strokeRect(cx - size * 0.068, cy + size * 0.24, size * 0.136, size * 0.26);
-                // Grip wrapping
+                ctx.strokeRect(-size * 0.07, size * 0.24, size * 0.14, size * 0.24);
+                // Grip wrapping lines
                 ctx.strokeStyle = 'rgba(30,15,0,0.5)'; ctx.lineWidth = 0.8;
                 for (let i = 0; i < 3; i++) {
-                    const wy = cy + size * 0.27 + i * size * 0.07;
-                    ctx.beginPath(); ctx.moveTo(cx - size * 0.068, wy); ctx.lineTo(cx + size * 0.068, wy); ctx.stroke();
+                    const wy = size * 0.27 + i * size * 0.065;
+                    ctx.beginPath(); ctx.moveTo(-size * 0.07, wy); ctx.lineTo(size * 0.07, wy); ctx.stroke();
                 }
                 // Pommel
                 ctx.beginPath();
-                ctx.arc(cx, cy + size * 0.5 - size * 0.065, size * 0.1, 0, Math.PI * 2);
-                const pg = ctx.createRadialGradient(cx - size * 0.03, cy + size * 0.43, 0, cx, cy + size * 0.435, size * 0.1);
+                ctx.arc(0, size * 0.48 - size * 0.065, size * 0.10, 0, Math.PI * 2);
+                const pg = ctx.createRadialGradient(-size * 0.03, size * 0.42, 0, 0, size * 0.42, size * 0.10);
                 pg.addColorStop(0, '#C89040'); pg.addColorStop(1, '#705010');
                 ctx.fillStyle = pg; ctx.fill();
                 ctx.strokeStyle = '#3a2000'; ctx.lineWidth = 0.8; ctx.stroke();

@@ -68,6 +68,10 @@ export class SettlementHub {
 
         // Sir Frogerty - the frog adviser
         this.sirFrogerty = null;
+
+        // Bard character near the fountain
+        this.bardNoteAnim = 0;
+        this.bardHovered = false;
     }
 
     enter() {
@@ -475,7 +479,14 @@ export class SettlementHub {
                     return;
                 }
             }
-            this.stateManager.canvas.style.cursor = isHoveringBuilding || this.activePopup ? 'pointer' : 'default';
+            // Check bard hover (only if musical-equipment upgrade purchased)
+            const upgradeSystem = this.stateManager?.upgradeSystem;
+            const bardUnlocked = upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment');
+            const bardX = this.stateManager.canvas.width / 2 + 58;
+            const bardY = this.stateManager.canvas.height * 0.76 - 15;
+            const isHoveringBard = bardUnlocked && Math.hypot(x - bardX, y - bardY) < 22;
+            this.bardHovered = isHoveringBard;
+            this.stateManager.canvas.style.cursor = isHoveringBuilding || isHoveringBard || this.activePopup ? 'pointer' : 'default';
         }
     }
 
@@ -497,6 +508,18 @@ export class SettlementHub {
         } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
             this.arcaneLibraryPopup.handleClick(x, y);
             return;
+        }
+
+        // Check bard click (only if musical-equipment upgrade purchased)
+        const canvas = this.stateManager.canvas;
+        const bardUpgradeSystem = this.stateManager?.upgradeSystem;
+        if (bardUpgradeSystem && bardUpgradeSystem.hasUpgrade('musical-equipment')) {
+            const bardX = canvas.width / 2 + 58;
+            const bardY = canvas.height * 0.76 - 15;
+            if (Math.hypot(x - bardX, y - bardY) < 22) {
+                this.onBardClick();
+                return;
+            }
         }
 
         // Check settlement building clicks
@@ -557,6 +580,161 @@ export class SettlementHub {
 
     closePopup() {
         this.activePopup = null;
+    }
+
+    renderBard(ctx, x, y) {
+        ctx.save();
+        const t = this.bardNoteAnim;
+
+        // Hover highlight ring
+        if (this.bardHovered) {
+            ctx.beginPath();
+            ctx.arc(x, y + 4, 22, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.55)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Legs
+        ctx.fillStyle = '#5B3A8C';
+        ctx.fillRect(x - 5, y + 10, 4, 10);
+        ctx.fillRect(x + 1, y + 10, 4, 10);
+        // Boots
+        ctx.fillStyle = '#3B2510';
+        ctx.fillRect(x - 6, y + 18, 5, 4);
+        ctx.fillRect(x, y + 18, 5, 4);
+
+        // Tunic body (purple/gold)
+        const bodyGrad = ctx.createLinearGradient(x - 8, y, x + 8, y);
+        bodyGrad.addColorStop(0, '#7B4BB8');
+        bodyGrad.addColorStop(0.5, '#9B6DD8');
+        bodyGrad.addColorStop(1, '#7B4BB8');
+        ctx.fillStyle = bodyGrad;
+        ctx.fillRect(x - 8, y - 2, 16, 14);
+
+        // Gold belt
+        ctx.fillStyle = '#D4A020';
+        ctx.fillRect(x - 8, y + 10, 16, 3);
+
+        // Lute (the bard plays it with a gentle sway)
+        const luteAngle = Math.sin(t * 2.5) * 0.18;
+        ctx.save();
+        ctx.translate(x + 9, y + 4);
+        ctx.rotate(luteAngle);
+        // Lute body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#8B5A1A';
+        ctx.fill();
+        ctx.strokeStyle = '#5A3008';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        // Lute neck
+        ctx.fillStyle = '#A0722A';
+        ctx.fillRect(-1, -11, 2, 10);
+        // String
+        ctx.strokeStyle = '#D4D4D4';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(0, 5);
+        ctx.stroke();
+        ctx.restore();
+
+        // Arm holding lute
+        ctx.strokeStyle = '#9B6DD8';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x, y + 2);
+        ctx.lineTo(x + 9, y + 4);
+        ctx.stroke();
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(x, y - 9, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#F0C8A0';
+        ctx.fill();
+        ctx.strokeStyle = '#C8906A';
+        ctx.lineWidth = 0.75;
+        ctx.stroke();
+
+        // Jester hat (two-pronged, purple with gold tips)
+        ctx.fillStyle = '#6B3AA8';
+        // Hat brim
+        ctx.fillRect(x - 9, y - 14, 18, 4);
+        // Left prong
+        ctx.beginPath();
+        ctx.moveTo(x - 7, y - 14);
+        ctx.lineTo(x - 11, y - 26);
+        ctx.lineTo(x - 3, y - 14);
+        ctx.closePath();
+        ctx.fill();
+        // Right prong
+        ctx.beginPath();
+        ctx.moveTo(x + 3, y - 14);
+        ctx.lineTo(x + 11, y - 26);
+        ctx.lineTo(x + 7, y - 14);
+        ctx.closePath();
+        ctx.fill();
+        // Gold tips (bells)
+        ctx.beginPath();
+        ctx.arc(x - 11, y - 26, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFD700';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 11, y - 26, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Floating music note above head — pulses softly
+        const notePulse = 0.85 + 0.15 * Math.sin(t * 3);
+        const noteAlpha = 0.65 + 0.35 * Math.sin(t * 3 + 1);
+        const noteY = y - 36 + Math.sin(t * 2) * 3;
+        ctx.save();
+        ctx.globalAlpha = noteAlpha;
+        ctx.scale(notePulse, notePulse);
+        const nx = x / notePulse;
+        const ny = noteY / notePulse;
+        ctx.fillStyle = '#FFD700';
+        ctx.strokeStyle = '#C89000';
+        ctx.lineWidth = 1;
+        // Note head
+        ctx.beginPath();
+        ctx.ellipse(nx, ny + 4, 4, 3, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Note stem
+        ctx.beginPath();
+        ctx.moveTo(nx + 3.5, ny + 2);
+        ctx.lineTo(nx + 3.5, ny - 6);
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Note flag
+        ctx.beginPath();
+        ctx.moveTo(nx + 3.5, ny - 6);
+        ctx.quadraticCurveTo(nx + 8, ny - 4, nx + 6, ny - 1);
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+    }
+
+    onBardClick() {
+        const marketplaceSystem = this.stateManager?.marketplaceSystem;
+        const audioManager = this.stateManager?.audioManager;
+        if (!audioManager) return;
+        const musicItems = MarketplaceRegistry.getItemsByCategory('music');
+        const ownedTracks = Object.entries(musicItems)
+            .filter(([id]) => marketplaceSystem && marketplaceSystem.getConsumableCount(id) > 0)
+            .map(([, data]) => data.musicId)
+            .filter(id => id);
+        if (ownedTracks.length === 0) return;
+        const track = ownedTracks[Math.floor(Math.random() * ownedTracks.length)];
+        audioManager.isManualMusicSelection = true;
+        audioManager.playMusic(track, true);
     }
 
     /**
@@ -676,6 +854,7 @@ export class SettlementHub {
 
     update(deltaTime) {
         this.animationTime += deltaTime;
+        this.bardNoteAnim += deltaTime;
 
         // Fade-in overlay effect (professional 0.6 second fade)
         if (this.enableFadeInOverlay && this.fadeInOpacity < 1) {
@@ -1192,6 +1371,12 @@ export class SettlementHub {
 
         // Render settlement buildings (on top of paths)
         this.renderSettlementBuildings(ctx, canvas);
+
+        // Render bard character near the fountain (only if musical-equipment upgrade purchased)
+        const upgradeSystem = this.stateManager?.upgradeSystem;
+        if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
+            this.renderBard(ctx, centerX + 58, centerY - 15);
+        }
         
         // Render active boons
         this.renderActiveBoons(ctx, canvas);
@@ -2304,6 +2489,13 @@ export class SettlementHub {
         dummyPositions.forEach(dummy => {
             this.renderSettlementDummy(ctx, x, y, dummy.x, dummy.y, scale);
         });
+
+        // Render arrow/dust particles — scale transform maps unscaled particle coords to visual scale
+        ctx.save();
+        ctx.translate(x * (1 - scale), y * (1 - scale));
+        ctx.scale(scale, scale);
+        building.renderParticles(ctx);
+        ctx.restore();
     }
     
     renderSettlementTree(ctx, centerX, centerY, treeOffsetX, treeOffsetY, size, scale, idx) {
@@ -3689,19 +3881,30 @@ class UpgradesMenu {
             {
                 id: 'musical-equipment',
                 name: 'Musical Equipment',
-                description: 'Adds a music player to the UI for settling ambiance',
+                description: 'Places a Bard on the settlement square who plays your unlocked music when clicked',
                 cost: 300,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
-                    const nx = cx - size * 0.08, ny = cy - size * 0.1;
-                    ctx.fillStyle = '#FFD700'; ctx.strokeStyle = '#CC8800';
-                    ctx.beginPath(); ctx.ellipse(nx, ny + size * 0.28, size * 0.13, size * 0.09, -0.4, 0, Math.PI * 2);
-                    ctx.fill(); ctx.lineWidth = 1; ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny + size * 0.23); ctx.lineTo(nx + size * 0.12, ny - size * 0.22);
-                    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = size * 0.04; ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny - size * 0.22);
-                    ctx.quadraticCurveTo(nx + size * 0.32, ny, nx + size * 0.22, ny + size * 0.14);
-                    ctx.stroke();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(Math.PI / 5.5);
+                    // Lute body
+                    ctx.beginPath();
+                    ctx.ellipse(0, size * 0.08, size * 0.18, size * 0.24, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = '#8B5A1A'; ctx.fill();
+                    ctx.strokeStyle = '#5A3008'; ctx.lineWidth = 1; ctx.stroke();
+                    // Lute neck
+                    ctx.fillStyle = '#A0722A';
+                    ctx.fillRect(-size * 0.04, -size * 0.38, size * 0.08, size * 0.34);
+                    ctx.strokeStyle = '#5A3008'; ctx.lineWidth = 0.8;
+                    ctx.strokeRect(-size * 0.04, -size * 0.38, size * 0.08, size * 0.34);
+                    // String
+                    ctx.strokeStyle = '#D4D4D4'; ctx.lineWidth = 0.7;
+                    ctx.beginPath(); ctx.moveTo(0, -size * 0.36); ctx.lineTo(0, size * 0.28); ctx.stroke();
+                    // Music note floating
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath(); ctx.arc(size * 0.28, -size * 0.24, size * 0.08, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.2;
+                    ctx.beginPath(); ctx.moveTo(size * 0.355, -size * 0.24); ctx.lineTo(size * 0.355, -size * 0.44); ctx.stroke();
                     ctx.restore();
                 },
                 category: 'upgrade'

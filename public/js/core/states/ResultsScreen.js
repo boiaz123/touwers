@@ -354,7 +354,7 @@ export class ResultsScreen {
         const canvas = this.stateManager.canvas;
         const modalX = (canvas.width - this.modalWidth) / 2;
         const modalY = (canvas.height - this.modalHeight) / 2;
-        const startY = modalY + this.padding + 200;
+        const startY = modalY + this.padding + 214;
         const itemsPerRow = 5;
         const itemsPerPage = 15;
         const itemWidth = 130;
@@ -1374,54 +1374,78 @@ export class ResultsScreen {
             ctx.fillText(stat.value, cellX + colW - 20, midY);
         }
 
-        // === SCORE ROW — sits in the 50px gap between stats and SPOILS header ===
-        const scoreAreaY = sectionY + sectionH; // = modalY + 136
+        // === SCORE BANNER — decorated medieval battle score banner ===
+        const scoreAreaY = sectionY + sectionH;
         const scoreAreaH = 50;
         const scoreCX = modalX + this.modalWidth / 2;
         const scoreMidY = scoreAreaY + scoreAreaH / 2;
 
-        ctx.fillStyle = 'rgba(212, 175, 55, 0.07)';
+        // Parchment-style banner background
+        const bannerBG = ctx.createLinearGradient(modalX, scoreAreaY, modalX, scoreAreaY + scoreAreaH);
+        bannerBG.addColorStop(0, 'rgba(42, 28, 8, 0.95)');
+        bannerBG.addColorStop(0.5, 'rgba(62, 44, 12, 0.98)');
+        bannerBG.addColorStop(1, 'rgba(35, 22, 5, 0.95)');
+        ctx.fillStyle = bannerBG;
         ctx.fillRect(modalX, scoreAreaY, this.modalWidth, scoreAreaH);
 
-        // Divider top of score area
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.18)';
-        ctx.lineWidth = 1;
+        // Outer gold border lines (top and bottom)
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.72)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(modalX + 16, scoreAreaY);
-        ctx.lineTo(modalX + this.modalWidth - 16, scoreAreaY);
+        ctx.moveTo(modalX + 6, scoreAreaY + 3);
+        ctx.lineTo(modalX + this.modalWidth - 6, scoreAreaY + 3);
+        ctx.moveTo(modalX + 6, scoreAreaY + scoreAreaH - 3);
+        ctx.lineTo(modalX + this.modalWidth - 6, scoreAreaY + scoreAreaH - 3);
         ctx.stroke();
+
+        // Diamond corner ornaments
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.6)';
+        [[modalX + 6, scoreAreaY + 3], [modalX + this.modalWidth - 6, scoreAreaY + 3],
+         [modalX + 6, scoreAreaY + scoreAreaH - 3], [modalX + this.modalWidth - 6, scoreAreaY + scoreAreaH - 3]
+        ].forEach(([ox, oy]) => {
+            ctx.beginPath();
+            ctx.moveTo(ox, oy - 3.5); ctx.lineTo(ox + 3.5, oy);
+            ctx.lineTo(ox, oy + 3.5); ctx.lineTo(ox - 3.5, oy);
+            ctx.closePath(); ctx.fill();
+        });
 
         const displayScore = this.stats.displayScore || 0;
         const finalScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
         const scoreRatio = finalScore > 0 ? displayScore / finalScore : 1;
 
-        // Crossed swords icon left of label
-        this._drawCrossedSwordsIcon(ctx, scoreCX - 160, scoreMidY, 18);
-
-        // SCORE label
-        ctx.font = 'bold 13px Arial';
-        ctx.textAlign = 'left';
+        // "BATTLE SCORE" label — left-aligned inside the banner
+        const labelX = modalX + 28;
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(210, 185, 120, 0.9)';
-        ctx.fillText('SCORE', scoreCX - 140, scoreMidY);
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 11px Georgia, serif';
+        ctx.fillStyle = 'rgba(195, 170, 105, 0.82)';
+        ctx.fillText('BATTLE SCORE', labelX, scoreMidY);
 
-        // Score value — counting up, with scale and glow building as it fills
+        // Center: large score value — true center of the full banner
         ctx.save();
-        ctx.translate(scoreCX + 50, scoreMidY);
-        const scoreScale = 1.0 + scoreRatio * 0.14;
+        ctx.translate(scoreCX, scoreMidY);
+        const scoreScale = 1.0 + scoreRatio * 0.15;
         ctx.scale(scoreScale, scoreScale);
-        ctx.font = 'bold 28px Georgia, serif';
+        ctx.font = 'bold 30px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        // Glow halo
         ctx.shadowColor = '#FFD700';
-        ctx.shadowBlur = 3 + scoreRatio * 11;
-        ctx.fillStyle = '#FFD700';
+        ctx.shadowBlur = 5 + scoreRatio * 22;
+        ctx.fillStyle = 'rgba(255, 245, 140, 0.35)';
+        ctx.fillText(displayScore.toString(), 1, 1);
+        ctx.shadowBlur = 0;
+        // Gradient gold fill
+        const numGrad = ctx.createLinearGradient(0, -15, 0, 15);
+        numGrad.addColorStop(0, '#FFF5A0');
+        numGrad.addColorStop(0.4, '#FFD700');
+        numGrad.addColorStop(1, '#C89000');
+        ctx.fillStyle = numGrad;
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 4 + scoreRatio * 14;
         ctx.fillText(displayScore.toString(), 0, 0);
         ctx.shadowBlur = 0;
         ctx.restore();
-
-        // Crossed swords icon right
-        this._drawCrossedSwordsIcon(ctx, scoreCX + 160, scoreMidY, 18);
 
         ctx.textAlign = 'left';
     }
@@ -1595,34 +1619,104 @@ export class ResultsScreen {
         ctx.restore();
     }
 
+    _drawSpoilsChestIcon(ctx, cx, cy, size, flipCoins = false) {
+        ctx.save();
+        const w = size * 0.95;
+        const h = size * 0.72;
+        const bx = cx - w / 2;
+        const by = cy - h * 0.38;
+
+        // Chest body
+        const bg = ctx.createLinearGradient(bx, by + h * 0.32, bx, by + h);
+        bg.addColorStop(0, '#C8930A');
+        bg.addColorStop(1, '#8B5E0A');
+        ctx.fillStyle = bg;
+        ctx.fillRect(bx, by + h * 0.32, w, h * 0.68);
+        ctx.strokeStyle = '#5A3808';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, by + h * 0.32, w, h * 0.68);
+
+        // Chest lid
+        const lg = ctx.createLinearGradient(bx, by, bx, by + h * 0.34);
+        lg.addColorStop(0, '#FFD700');
+        lg.addColorStop(1, '#C87505');
+        ctx.fillStyle = lg;
+        ctx.fillRect(bx, by, w, h * 0.34);
+        ctx.strokeStyle = '#5A3808';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bx, by, w, h * 0.34);
+
+        // Metal bands on lid
+        ctx.strokeStyle = '#C87505';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(bx + w * 0.32, by + h * 0.34);
+        ctx.lineTo(bx + w * 0.32, by + h);
+        ctx.moveTo(bx + w * 0.68, by + h * 0.34);
+        ctx.lineTo(bx + w * 0.68, by + h);
+        ctx.stroke();
+
+        // Lock/clasp
+        ctx.beginPath();
+        ctx.arc(cx, by + h * 0.31, size * 0.075, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFD700';
+        ctx.fill();
+        ctx.strokeStyle = '#8B5E0A';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        // Scattered gold coins to one side
+        const coinDir = flipCoins ? -1 : 1;
+        const coinPositions = [
+            { dx: coinDir * w * 0.58, dy: -h * 0.06 },
+            { dx: coinDir * w * 0.74, dy:  h * 0.12 },
+            { dx: coinDir * w * 0.62, dy:  h * 0.28 }
+        ];
+        coinPositions.forEach(c => {
+            ctx.beginPath();
+            ctx.arc(cx + c.dx, by + h * 0.5 + c.dy, size * 0.09, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFD700';
+            ctx.fill();
+            ctx.strokeStyle = '#8B5E0A';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        });
+
+        ctx.restore();
+    }
+
     /**
      * Render loot items sequentially with pagination support
      */
     renderLoot(ctx, modalX, modalY) {
-        // === SPOILS SECTION HEADER ===
-        const headerY = modalY + 186;
+        // === SPOILS SECTION HEADER — treasure chest icons flanking title ===
+        const headerY = modalY + 200;
         const cx = modalX + this.modalWidth / 2;
 
         ctx.font = 'bold 13px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
-        ctx.fillText('\u2605  SPOILS OF WAR  \u2605', cx, headerY);
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.92)';
+        ctx.fillText('SPOILS OF WAR', cx, headerY);
 
-        // Decorative lines flanking header
-        const textW = ctx.measureText('\u2605  SPOILS OF WAR  \u2605').width;
+        // Treasure chest icons flanking the header text
+        const labelW = ctx.measureText('SPOILS OF WAR').width;
+        this._drawSpoilsChestIcon(ctx, cx - labelW / 2 - 22, headerY, 18, true);
+        this._drawSpoilsChestIcon(ctx, cx + labelW / 2 + 22, headerY, 18, false);
+
+        // Decorative lines stretching from chests to modal edges
         ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(modalX + 20, headerY);
-        ctx.lineTo(cx - textW / 2 - 8, headerY);
+        ctx.lineTo(cx - labelW / 2 - 40, headerY);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(cx + textW / 2 + 8, headerY);
+        ctx.moveTo(cx + labelW / 2 + 40, headerY);
         ctx.lineTo(modalX + this.modalWidth - 20, headerY);
         ctx.stroke();
 
-        const startY = modalY + this.padding + 200;
+        const startY = modalY + this.padding + 214;
         const itemsPerRow = 5;      // 5 items per row
         const itemsPerPage = 15;    // 3 rows x 5 items = 15 per page
         const itemWidth = 130;

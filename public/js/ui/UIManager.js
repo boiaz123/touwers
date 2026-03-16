@@ -1,5 +1,4 @@
 import { SaveSystem } from '../core/SaveSystem.js';
-import { MusicPlayer } from './MusicPlayer.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -20,10 +19,6 @@ export class UIManager {
         this.menuRefreshInterval = 0.1; // Refresh every 100ms to check resource changes
         this.menuRefreshTimer = 0;
         
-        // Music player - created if Musical Equipment upgrade is purchased
-        this.musicPlayer = null;
-        this.initializeMusicPlayerIfUnlocked();
-        
         // Prevent browser context menus on all panels
         this.setupPanelContextMenuHandlers();
     }
@@ -31,14 +26,6 @@ export class UIManager {
     setupPanelContextMenuHandlers() {
         // Context menu prevention is handled globally in game.js
         // This is kept as a no-op for backwards compatibility
-    }
-
-    initializeMusicPlayerIfUnlocked() {
-        // Check if player has purchased the Musical Equipment upgrade
-        const upgradeSystem = this.stateManager?.upgradeSystem;
-        if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
-            this.musicPlayer = new MusicPlayer(this);
-        }
     }
 
     // ============ BUTTON STATE MANAGEMENT ============

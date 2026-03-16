@@ -14,11 +14,11 @@ export class UpgradeRegistry {
         },
         'musical-equipment': {
             name: 'Musical Equipment',
-            description: 'Adds a music player to the UI for settling ambiance',
+            description: 'Places a Bard on the settlement square who plays your unlocked music tracks when clicked',
             cost: 300,
             icon: '▹',
             category: 'ui',
-            effect: 'Adds music player to gameplay UI'
+            effect: 'Adds a Bard to the settlement who plays music on click'
         },
         'wooden-chest': {
             name: 'Wooden Chest',

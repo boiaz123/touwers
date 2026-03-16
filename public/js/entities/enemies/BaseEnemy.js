@@ -359,7 +359,7 @@ export class BaseEnemy {
         // Normal loot items that drop from brown/common loot bag
         const normalLoot = [
             'copper-coin', 'frog-talisman', 'iron-dagger', 'emerald-shard',
-            'silver-brooch', 'sapphire-crystal', 'leather-purse', 'bronze-medallion',
+            'silver-brooch', 'sapphire-crystal', 'iron-sword', 'bronze-medallion',
             'ruby-fragment', 'wooden-amulet'
         ];
 
