@@ -69,6 +69,9 @@ export class BuildingManager {
             }
             
             const building = BuildingRegistry.createBuilding(type, x, y, gridX, gridY);
+            if ('buildingManager' in building) {
+                building.buildingManager = this;
+            }
             this.buildings.push(building);
             
             // Mark the 4x4 area as occupied

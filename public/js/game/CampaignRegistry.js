@@ -34,8 +34,35 @@ export class CampaignRegistry {
                 id: 'campaign-1',
                 name: 'The Verdant Woodlands',
                 description: 'Defend the ancient woodland realm from an encroaching darkness.',
-                icon: '▲',
-                difficulty: 'Apprentice',
+                icon: '▲',                levelCount: 12,
+                drawIcon(ctx, x, y, size) {
+                    const s = size * 0.42;
+                    // Trunk
+                    const tg = ctx.createLinearGradient(x - s*0.1, y + s*0.2, x + s*0.1, y + s*0.75);
+                    tg.addColorStop(0, '#6D4C41'); tg.addColorStop(1, '#3E2723');
+                    ctx.fillStyle = tg;
+                    ctx.fillRect(x - s*0.1, y + s*0.18, s*0.2, s*0.55);
+                    ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 0.8;
+                    ctx.strokeRect(x - s*0.1, y + s*0.18, s*0.2, s*0.55);
+                    // Three layered triangular canopy tiers
+                    const tiers = [
+                        { w: s*0.96, base: y + s*0.22, h: s*0.52, c1: '#1B5E20', c2: '#388E3C' },
+                        { w: s*0.72, base: y - s*0.08, h: s*0.46, c1: '#2E7D32', c2: '#43A047' },
+                        { w: s*0.48, base: y - s*0.32, h: s*0.40, c1: '#388E3C', c2: '#66BB6A' }
+                    ];
+                    tiers.forEach(tier => {
+                        const tg2 = ctx.createLinearGradient(x - tier.w/2, tier.base - tier.h, x + tier.w/2, tier.base);
+                        tg2.addColorStop(0, tier.c2); tg2.addColorStop(1, tier.c1);
+                        ctx.fillStyle = tg2;
+                        ctx.beginPath();
+                        ctx.moveTo(x, tier.base - tier.h);
+                        ctx.lineTo(x + tier.w/2, tier.base);
+                        ctx.lineTo(x - tier.w/2, tier.base);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = '#1a3e1a'; ctx.lineWidth = 0.8; ctx.stroke();
+                    });
+                },                difficulty: 'Apprentice',
                 class: campaignClasses.Campaign1,
                 rewards: {
                     gold: 5000,
@@ -52,8 +79,39 @@ export class CampaignRegistry {
                 id: 'campaign-2',
                 name: 'The Ironstone Mountains',
                 description: 'Brave the treacherous peaks to pursue the enemy to the desert beyond.',
-                icon: '▲',
-                difficulty: 'Warrior',
+                icon: '▲',                levelCount: 12,
+                drawIcon(ctx, x, y, size) {
+                    const s = size * 0.42;
+                    // Background mountain
+                    const bg = ctx.createLinearGradient(x + s*0.4, y - s*0.15, x + s*0.4, y + s*0.6);
+                    bg.addColorStop(0, '#78909C'); bg.addColorStop(1, '#455A64');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath();
+                    ctx.moveTo(x + s*0.35, y + s*0.6);
+                    ctx.lineTo(x + s*0.9, y + s*0.6);
+                    ctx.lineTo(x + s*0.62, y - s*0.12);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#263238'; ctx.lineWidth = 0.8; ctx.stroke();
+                    // Main peak
+                    const mg = ctx.createLinearGradient(x, y - s*0.78, x, y + s*0.6);
+                    mg.addColorStop(0, '#CFD8DC'); mg.addColorStop(0.28, '#90A4AE');
+                    mg.addColorStop(1, '#546E7A');
+                    ctx.fillStyle = mg;
+                    ctx.beginPath();
+                    ctx.moveTo(x - s*0.82, y + s*0.6);
+                    ctx.lineTo(x + s*0.82, y + s*0.6);
+                    ctx.lineTo(x, y - s*0.78);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#263238'; ctx.lineWidth = 1; ctx.stroke();
+                    // Snow cap
+                    ctx.fillStyle = '#ECEFF1';
+                    ctx.beginPath();
+                    ctx.moveTo(x, y - s*0.78);
+                    ctx.lineTo(x + s*0.28, y - s*0.35);
+                    ctx.lineTo(x - s*0.28, y - s*0.35);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#B0BEC5'; ctx.lineWidth = 0.8; ctx.stroke();
+                },                difficulty: 'Warrior',
                 class: campaignClasses.Campaign2,
                 rewards: {
                     gold: 7500,
@@ -70,8 +128,38 @@ export class CampaignRegistry {
                 id: 'campaign-3',
                 name: 'The Scorching Sands',
                 description: 'Uncover the ancient artifact that holds the secret of the enemy.',
-                icon: '▼',
-                difficulty: 'Champion',
+                icon: '▼',                levelCount: 10,
+                drawIcon(ctx, x, y, size) {
+                    const s = size * 0.36;
+                    // Outer glow
+                    const glow = ctx.createRadialGradient(x, y, 0, x, y, s * 1.6);
+                    glow.addColorStop(0, 'rgba(255,200,50,0.35)'); glow.addColorStop(1, 'rgba(255,100,0,0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath(); ctx.arc(x, y, s * 1.6, 0, Math.PI * 2); ctx.fill();
+                    // Rays
+                    ctx.lineCap = 'round';
+                    for (let i = 0; i < 8; i++) {
+                        const a = (i / 8) * Math.PI * 2 - Math.PI * 0.5;
+                        const rg = ctx.createLinearGradient(
+                            x + Math.cos(a)*s*1.05, y + Math.sin(a)*s*1.05,
+                            x + Math.cos(a)*s*1.75, y + Math.sin(a)*s*1.75
+                        );
+                        rg.addColorStop(0, '#FFB300'); rg.addColorStop(1, 'rgba(255,140,0,0)');
+                        ctx.strokeStyle = rg; ctx.lineWidth = s * 0.14;
+                        ctx.beginPath();
+                        ctx.moveTo(x + Math.cos(a)*s*1.08, y + Math.sin(a)*s*1.08);
+                        ctx.lineTo(x + Math.cos(a)*s*1.72, y + Math.sin(a)*s*1.72);
+                        ctx.stroke();
+                    }
+                    // Sun core
+                    const sg = ctx.createRadialGradient(x - s*0.22, y - s*0.22, 0, x, y, s);
+                    sg.addColorStop(0, '#FFF9C4'); sg.addColorStop(0.35, '#FFD740');
+                    sg.addColorStop(0.72, '#FF8F00'); sg.addColorStop(1, '#E65100');
+                    ctx.fillStyle = sg;
+                    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#BF360C'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.stroke();
+                },                difficulty: 'Champion',
                 class: campaignClasses.Campaign3,
                 rewards: {
                     gold: 10000,
@@ -88,8 +176,41 @@ export class CampaignRegistry {
                 id: 'campaign-4',
                 name: "The Frog King's Domain",
                 description: 'Enter the otherworldly realm and face the Frog King himself.',
-                icon: '◎',
-                difficulty: 'Legendary',
+                icon: '◎',                levelCount: 8,
+                drawIcon(ctx, x, y, size) {
+                    const s = size * 0.38;
+                    // Orb glow
+                    const orb = ctx.createRadialGradient(x, y, 0, x, y, s * 1.3);
+                    orb.addColorStop(0, 'rgba(206,147,216,0.45)'); orb.addColorStop(1, 'rgba(74,20,140,0)');
+                    ctx.fillStyle = orb;
+                    ctx.beginPath(); ctx.arc(x, y, s * 1.3, 0, Math.PI * 2); ctx.fill();
+                    // Crown body
+                    const cg = ctx.createLinearGradient(x - s, y - s*0.6, x, y + s*0.52);
+                    cg.addColorStop(0, '#AB47BC'); cg.addColorStop(0.5, '#7B1FA2'); cg.addColorStop(1, '#4A148C');
+                    ctx.fillStyle = cg;
+                    ctx.beginPath();
+                    ctx.moveTo(x - s, y + s*0.52);
+                    ctx.lineTo(x - s, y - s*0.08);
+                    ctx.lineTo(x - s*0.52, y - s*0.64);
+                    ctx.lineTo(x, y - s*0.16);
+                    ctx.lineTo(x + s*0.52, y - s*0.64);
+                    ctx.lineTo(x + s, y - s*0.08);
+                    ctx.lineTo(x + s, y + s*0.52);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#CE93D8'; ctx.lineWidth = 1.5; ctx.stroke();
+                    // Crown gems
+                    [
+                        { dx: 0, dy: -s*0.26, r: s*0.15, c: '#F06292' },
+                        { dx: -s*0.52, dy: -s*0.5, r: s*0.11, c: '#CE93D8' },
+                        { dx: s*0.52, dy: -s*0.5, r: s*0.11, c: '#CE93D8' }
+                    ].forEach(gem => {
+                        const gg = ctx.createRadialGradient(x+gem.dx-gem.r*0.3, y+gem.dy-gem.r*0.3, 0, x+gem.dx, y+gem.dy, gem.r);
+                        gg.addColorStop(0, '#FCE4EC'); gg.addColorStop(0.5, gem.c); gg.addColorStop(1, '#6A1B9A');
+                        ctx.fillStyle = gg;
+                        ctx.beginPath(); ctx.arc(x+gem.dx, y+gem.dy, gem.r, 0, Math.PI*2); ctx.fill();
+                        ctx.strokeStyle = '#7B1FA2'; ctx.lineWidth = 0.8; ctx.stroke();
+                    });
+                },                difficulty: 'Legendary',
                 class: campaignClasses.Campaign4,
                 rewards: {
                     gold: 15000,
@@ -150,6 +271,22 @@ export class CampaignRegistry {
         for (const id of completedCampaigns) {
             if (this.campaigns[id]) {
                 this.campaigns[id].locked = false;
+            }
+        }
+
+        // Compute per-campaign progress from completed levels
+        const completedLevels = saveData.completedLevels || [];
+        for (const [id, campaign] of Object.entries(this.campaigns)) {
+            if (completedCampaigns.includes(id)) {
+                campaign.progress = 100;
+            } else if (campaign.levelCount) {
+                let count = 0;
+                for (let i = 1; i <= campaign.levelCount; i++) {
+                    if (completedLevels.includes(`level${i}`)) count++;
+                }
+                campaign.progress = Math.round((count / campaign.levelCount) * 100);
+            } else {
+                campaign.progress = 0;
             }
         }
     }

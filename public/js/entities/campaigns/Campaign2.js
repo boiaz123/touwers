@@ -983,14 +983,14 @@ export class Campaign2 extends CampaignBase {
         ctx.scale(scale, scale);
         
         if (isHovered) {
-            ctx.fillStyle = 'rgba(200, 220, 240, 0.2)';
+            ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
             ctx.beginPath();
             ctx.arc(0, 0, 220, 0, Math.PI * 2);
             ctx.fill();
         }
         
         // Draw a grayed-out castle outline
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.4;
         const castle = new Castle(0, 0, 0, 0);
         castle.drawMainWall(ctx);
         castle.drawTower(ctx, -castle.wallWidth/2 - castle.towerWidth/2, 'left');
@@ -1000,19 +1000,23 @@ export class Campaign2 extends CampaignBase {
         castle.drawCrenellations(ctx);
         ctx.globalAlpha = 1;
         
-        // Lock icon
-        ctx.fillStyle = '#777';
+        // Lock icon — gray circle backing
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
         ctx.beginPath();
-        ctx.arc(0, -12, 18, Math.PI, 0, false);
-        ctx.strokeStyle = '#aaa';
-        ctx.lineWidth = 10;
-        ctx.stroke();
-        ctx.fillRect(-22, -14, 44, 36);
-        ctx.fillStyle = '#444';
-        ctx.beginPath();
-        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.arc(0, 0, 25, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillRect(-4, 4, 8, 12);
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.arc(0, -2, 7, Math.PI, 0, false);
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillRect(-9, -3, 18, 14);
+        ctx.fillStyle = '#555';
+        ctx.beginPath();
+        ctx.arc(0, 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(-2, 3, 4, 5);
         
         ctx.restore();
     }

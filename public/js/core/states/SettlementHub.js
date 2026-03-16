@@ -3814,7 +3814,8 @@ class UpgradesMenu {
                     ctx.restore();
                     ctx.restore();
                 },
-                category: 'upgrade'
+                category: 'upgrade',
+                prerequisite: 'magic-academy-unlock'
             },
             {
                 id: 'magic-academy-unlock',
@@ -3893,10 +3894,9 @@ class UpgradesMenu {
             let canPurchase = !isPurchased;
             let requirementMsg = null;
             
-            // Check prerequisites
-            if (upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
-                canPurchase = false;
-                requirementMsg = `Requires: ${upgradeData.find(u => u.id === upgrade.prerequisite)?.name}`;
+            // Check prerequisites — hide upgrade entirely if prerequisite not yet met
+            if (!isPurchased && upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
+                continue;
             }
             
             // Check campaign requirement — hide the upgrade entirely if not yet unlocked

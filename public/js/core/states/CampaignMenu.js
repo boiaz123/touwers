@@ -340,10 +340,14 @@ export class CampaignMenu {
         const iconY = b.y + Math.floor((b.height - 22) / 2);
 
         // Large campaign icon
-        ctx.font = '52px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(campaign.icon, iconX, iconY);
+        if (campaign.drawIcon) {
+            campaign.drawIcon(ctx, iconX, iconY, 52);
+        } else {
+            ctx.font = '52px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(campaign.icon, iconX, iconY);
+        }
 
         // Campaign name
         const textX = b.x + 110;
@@ -360,8 +364,9 @@ export class CampaignMenu {
         ctx.fillText(`\u25CF  ${campaign.difficulty}`, textX, nameY + 28);
 
         // Level count (top right of card)
-        const levelsCompleted = Math.min(5, Math.round((campaign.progress / 100) * 5));
-        const lvlText = `${levelsCompleted} / 5 Levels`;
+        const totalLevels = campaign.levelCount || 5;
+        const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
+        const lvlText = `${levelsCompleted} / ${totalLevels} Levels`;
         ctx.font = 'bold 13px serif';
         ctx.textAlign = 'right';
         ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#b09060';
@@ -450,8 +455,12 @@ export class CampaignMenu {
         ctx.textBaseline = 'top';
 
         // Icon + Name header
-        ctx.font = '36px serif';
-        ctx.fillText(campaign.icon, cx, cy);
+        if (campaign.drawIcon) {
+            campaign.drawIcon(ctx, cx + 18, cy + 18, 36);
+        } else {
+            ctx.font = '36px serif';
+            ctx.fillText(campaign.icon, cx, cy);
+        }
 
         ctx.font = 'bold 21px serif';
         ctx.fillStyle = '#ffd700';
@@ -467,10 +476,11 @@ export class CampaignMenu {
         cy += 12;
 
         // Progress indicator
-        const levelsCompleted = Math.min(5, Math.round((campaign.progress / 100) * 5));
+        const totalLevels = campaign.levelCount || 5;
+        const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
         ctx.font = '12px serif';
         ctx.fillStyle = '#a08040';
-        ctx.fillText(`Progress: ${levelsCompleted} / 5 levels`, cx, cy);
+        ctx.fillText(`Progress: ${levelsCompleted} / ${totalLevels} levels`, cx, cy);
         cy += 16;
 
         const bh = 8;
