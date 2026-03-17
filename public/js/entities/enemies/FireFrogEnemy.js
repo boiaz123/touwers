@@ -7,7 +7,7 @@ export class FireFrogEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 340,
         speed: 25,
-        armour: 2,
+        armour: 10,
         magicResistance: 0.5
     };
     

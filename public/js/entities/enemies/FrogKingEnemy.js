@@ -7,7 +7,7 @@ export class FrogKingEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 500,
         speed: 20,
-        armour: 3,
+        armour: 22,
         magicResistance: 1.0
     };
 

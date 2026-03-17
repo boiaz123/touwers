@@ -72,6 +72,8 @@ export class SettlementHub {
         // Bard character near the fountain
         this.bardNoteAnim = 0;
         this.bardHovered = false;
+        // Shuffle queue so the bard never repeats until all tracks have been played
+        this.bardShuffleQueue = [];
     }
 
     enter() {
@@ -995,21 +997,63 @@ export class SettlementHub {
     }
 
     onBardClick() {
-        const marketplaceSystem = this.stateManager?.marketplaceSystem;
         const audioManager = this.stateManager?.audioManager;
         if (!audioManager) return;
+
+        // Settlement tracks are always available; marketplace extras are added on top
+        const settlementTracks = audioManager.getSettlementTracks();
+        const marketplaceSystem = this.stateManager?.marketplaceSystem;
         const musicItems = MarketplaceRegistry.getItemsByCategory('music');
-        const ownedTracks = Object.entries(musicItems)
+        const purchasedExtras = Object.entries(musicItems)
             .filter(([id]) => marketplaceSystem && marketplaceSystem.getConsumableCount(id) > 0)
             .map(([, data]) => data.musicId)
-            .filter(id => id);
-        if (ownedTracks.length === 0) return;
-        const currentTrack = audioManager.currentMusicTrack;
-        const available = ownedTracks.filter(id => id !== currentTrack);
-        if (available.length === 0) return;
-        const track = available[Math.floor(Math.random() * available.length)];
+            .filter(id => id && !settlementTracks.includes(id));
+
+        const allTracks = [...settlementTracks, ...purchasedExtras];
+        if (allTracks.length === 0) return;
+        if (allTracks.length === 1) {
+            // Only one track available; play it (idempotent)
+            audioManager.isManualMusicSelection = true;
+            audioManager.playMusic(allTracks[0], true);
+            return;
+        }
+
+        // Rebuild shuffle queue when empty or when the available track list changes
+        const queueKey = allTracks.slice().sort().join(',');
+        if (!this.bardShuffleQueue || this.bardShuffleQueue.length === 0 || this._bardQueueKey !== queueKey) {
+            this._bardQueueKey = queueKey;
+            this.bardShuffleQueue = this._buildBardQueue(allTracks, audioManager.currentMusicTrack);
+        }
+
+        const track = this.bardShuffleQueue.shift();
         audioManager.isManualMusicSelection = true;
         audioManager.playMusic(track, true);
+
+        // When queue is exhausted, pre-build the next shuffled round (ensuring no immediate repeat)
+        if (this.bardShuffleQueue.length === 0) {
+            this.bardShuffleQueue = this._buildBardQueue(allTracks, track);
+        }
+    }
+
+    /**
+     * Fisher-Yates shuffle of all tracks, ensuring the banned track is never first.
+     * @param {string[]} tracks
+     * @param {string|null} bannedFirst - Track that must not be played first
+     * @returns {string[]}
+     */
+    _buildBardQueue(tracks, bannedFirst) {
+        const arr = tracks.slice();
+        // Fisher-Yates shuffle
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        // If the first element is banned, swap it with any other position
+        if (bannedFirst && arr.length > 1 && arr[0] === bannedFirst) {
+            const swapIdx = 1 + Math.floor(Math.random() * (arr.length - 1));
+            [arr[0], arr[swapIdx]] = [arr[swapIdx], arr[0]];
+        }
+        return arr;
     }
 
     /**

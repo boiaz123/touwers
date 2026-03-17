@@ -263,8 +263,8 @@ export class BaseEnemy {
         
         // Apply earth damage armor reduction effect
         if (damageType === 'earth' && this.armour > 0) {
-            // Earth damage reduces armor by 3 points per hit
-            this.armour = Math.max(0, this.armour - 3);
+            // Earth damage shreds 6 armor points per hit, making the target progressively more vulnerable
+            this.armour = Math.max(0, this.armour - 6);
         }
     }
     

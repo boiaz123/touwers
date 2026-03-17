@@ -4,7 +4,7 @@ export class BeefyEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 200,
         speed: 60,
-        armour: 5,
+        armour: 25,
         magicResistance: 0
     };
 

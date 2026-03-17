@@ -4,7 +4,7 @@ export class ArcherEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 120,
         speed: 60,
-        armour: 1,
+        armour: 8,
         magicResistance: 0
     };
 

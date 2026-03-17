@@ -307,6 +307,7 @@ export class MarketplaceRegistry {
             requirements: []
         },
         // MUSICAL SCORES
+        // Note: Settlement themes (Spring/Summer/Winter) are auto-unlocked with the musical-equipment upgrade.
         'music-menu-theme': {
             name: 'Menu Theme',
             description: 'The iconic theme that welcomes heroes to the realm. A stirring melody that captures the spirit of adventure and conquest.',
@@ -316,39 +317,6 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'menu-theme',
             effect: 'Unlock menu theme to be played within the Arcane Library',
-            requirements: ['musical-equipment']
-        },
-        'music-settlement-1': {
-            name: 'Settlement Theme - Spring',
-            description: 'A peaceful melody that echoes through the settlement during peaceful times. Reminiscent of spring blossoms and new beginnings.',
-            cost: 75,
-            drawIcon: _drawMusicNote,
-            category: 'music',
-            type: 'music',
-            musicId: 'settlement-theme-1',
-            effect: 'Unlock settlement theme to be played within the Arcane Library',
-            requirements: ['musical-equipment']
-        },
-        'music-settlement-2': {
-            name: 'Settlement Theme - Summer',
-            description: 'A warm and hopeful melody that fills the air during the golden season. The sounds of prosperity and growth.',
-            cost: 75,
-            drawIcon: _drawMusicNote,
-            category: 'music',
-            type: 'music',
-            musicId: 'settlement-theme-2',
-            effect: 'Unlock settlement theme to be played within the Arcane Library',
-            requirements: ['musical-equipment']
-        },
-        'music-settlement-3': {
-            name: 'Settlement Theme - Winter',
-            description: 'A contemplative melody that speaks of rest and renewal. The quiet beauty of the cold season.',
-            cost: 75,
-            drawIcon: _drawMusicNote,
-            category: 'music',
-            type: 'music',
-            musicId: 'settlement-theme-3',
-            effect: 'Unlock settlement theme to be played within the Arcane Library',
             requirements: ['musical-equipment']
         },
         'music-forest-1': {
