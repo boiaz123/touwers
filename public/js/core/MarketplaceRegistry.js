@@ -316,7 +316,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'menu-theme',
             effect: 'Unlock menu theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-settlement-1': {
             name: 'Settlement Theme - Spring',
@@ -327,7 +327,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'settlement-theme-1',
             effect: 'Unlock settlement theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-settlement-2': {
             name: 'Settlement Theme - Summer',
@@ -338,7 +338,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'settlement-theme-2',
             effect: 'Unlock settlement theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-settlement-3': {
             name: 'Settlement Theme - Winter',
@@ -349,7 +349,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'settlement-theme-3',
             effect: 'Unlock settlement theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-forest-1': {
             name: 'Forest Battle - Awakening',
@@ -360,7 +360,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-1-battle-1',
             effect: 'Unlock forest battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-forest-2': {
             name: 'Forest Battle - Rising Tide',
@@ -371,7 +371,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-1-battle-2',
             effect: 'Unlock forest battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-forest-3': {
             name: 'Forest Battle - Triumph',
@@ -382,7 +382,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-1-battle-3',
             effect: 'Unlock forest battle theme to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-mountain': {
             name: 'Mountain Battle Theme',
@@ -393,7 +393,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-2-battle-1',
             effect: 'Unlock mountain battle theme to be played within the Arcane Library',
-            requirements: [],
+            requirements: ['musical-equipment'],
             campaignRequirement: 'campaign-2'
         },
         'music-desert-1': {
@@ -405,7 +405,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-3-battle-1',
             effect: 'Unlock desert battle theme to be played within the Arcane Library',
-            requirements: [],
+            requirements: ['musical-equipment'],
             campaignRequirement: 'campaign-3'
         },
         'music-desert-2': {
@@ -417,8 +417,80 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'campaign-3-battle-2',
             effect: 'Unlock desert battle theme to be played within the Arcane Library',
-            requirements: [],
+            requirements: ['musical-equipment'],
             campaignRequirement: 'campaign-3'
+        },
+        'music-frogkings-1': {
+            name: "Frog King's Domain - Arrival",
+            description: "An eerie, otherworldly theme that greets you upon entering the Frog King's realm. Ancient power hums in the air.",
+            cost: 125,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-1',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
+        },
+        'music-frogkings-2': {
+            name: "Frog King's Domain - Chaos",
+            description: 'The realm descends into madness. Frenzied rhythms mirror the relentless assault of the Frog King\'s forces.',
+            cost: 125,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-2',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
+        },
+        'music-frogkings-3': {
+            name: "Frog King's Domain - Dominion",
+            description: 'The Frog King asserts his dominion. A commanding, oppressive theme that speaks of absolute power.',
+            cost: 125,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-3',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
+        },
+        'music-frogkings-4': {
+            name: "Frog King's Domain - Reckoning",
+            description: 'A moment of reckoning arrives. Tension builds to a fever pitch as the fate of the realm hangs in the balance.',
+            cost: 125,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-4',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
+        },
+        'music-frogkings-5': {
+            name: "Frog King's Domain - Defiance",
+            description: 'Against all odds, your defenders stand firm. A defiant anthem for those who refuse to yield.',
+            cost: 125,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-5',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
+        },
+        'music-frogkings-6': {
+            name: "Frog King's Domain - Final Stand",
+            description: 'The ultimate confrontation. A sweeping, climactic theme for the final battle against the Frog King himself.',
+            cost: 150,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-4-battle-6',
+            effect: "Unlock Frog King's Domain battle theme to be played within the Arcane Library",
+            requirements: ['musical-equipment'],
+            campaignRequirement: 'campaign-4'
         },
         'music-victory': {
             name: 'Victory Fanfare',
@@ -429,7 +501,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'victory-tune',
             effect: 'Unlock victory fanfare to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         'music-defeat': {
             name: 'Defeat Elegy',
@@ -440,7 +512,7 @@ export class MarketplaceRegistry {
             type: 'music',
             musicId: 'defeat-tune',
             effect: 'Unlock defeat elegy to be played within the Arcane Library',
-            requirements: []
+            requirements: ['musical-equipment']
         },
         // INTEL PACKS
         'intel-pack-1': {

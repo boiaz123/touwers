@@ -118,8 +118,8 @@ export class SettlementHub {
                 this.stateManager.playerInventory = currentSaveData.playerInventory || [];
             }
             
-            // Initialize upgrade system if not already done
-            if (!this.stateManager.upgradeSystem) {
+            // Initialize upgrade system - always reinitialize if save slot changed
+            if (saveSlotChanged || !this.stateManager.upgradeSystem) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
                 if (currentSaveData.upgrades) {
                     this.stateManager.upgradeSystem.restoreFromSave(currentSaveData.upgrades);
@@ -149,7 +149,7 @@ export class SettlementHub {
             if (!this.stateManager.playerInventory || this.stateManager.playerInventory.length === 0) {
                 this.stateManager.playerInventory = [];
             }
-            if (!this.stateManager.upgradeSystem) {
+            if (saveSlotChanged || !this.stateManager.upgradeSystem) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
             }
             // Always create new marketplace system for empty slot
@@ -589,8 +589,8 @@ export class SettlementHub {
 
         // Hover highlight ring removed
 
-        // --- Breeches / legs (dark teal, tapered) ---
-        ctx.fillStyle = '#1E4D4D';
+        // --- Breeches / legs (dark warm brown) ---
+        ctx.fillStyle = '#2A1806';
         // Left leg
         ctx.beginPath();
         ctx.moveTo(x - 6, y + 8);
@@ -608,8 +608,8 @@ export class SettlementHub {
         ctx.closePath();
         ctx.fill();
 
-        // Stockings below knee (lighter teal)
-        ctx.fillStyle = '#2E7070';
+        // Stockings below knee (lighter brown)
+        ctx.fillStyle = '#3D2809';
         ctx.fillRect(x - 7, y + 16, 5, 5);
         ctx.fillRect(x + 2, y + 16, 5, 5);
 
@@ -643,11 +643,11 @@ export class SettlementHub {
         ctx.fillRect(x - 7, y + 21, 2, 1);
         ctx.fillRect(x + 5, y + 21, 2, 1);
 
-        // --- Doublet body (deep crimson, layered) ---
+        // --- Doublet body (forest green, layered) ---
         const bodyGrad = ctx.createLinearGradient(x - 9, y - 4, x + 9, y + 10);
-        bodyGrad.addColorStop(0, '#A0201A');
-        bodyGrad.addColorStop(0.4, '#8C1A1F');
-        bodyGrad.addColorStop(1, '#5C0F13');
+        bodyGrad.addColorStop(0, '#2E5A18');
+        bodyGrad.addColorStop(0.4, '#274E14');
+        bodyGrad.addColorStop(1, '#18320C');
         ctx.fillStyle = bodyGrad;
         ctx.beginPath();
         ctx.moveTo(x - 9, y - 4);
@@ -744,7 +744,7 @@ export class SettlementHub {
         ctx.restore();
 
         // --- Arm holding lute ---
-        ctx.strokeStyle = '#A0201A';
+        ctx.strokeStyle = '#2E5A18';
         ctx.lineWidth = 3.5;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -866,21 +866,21 @@ export class SettlementHub {
         // --- Robin Hood / Sherwood hat ---
         // Back half of brim (drawn first for depth)
         ctx.beginPath();
-        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, Math.PI, Math.PI * 2);
+        ctx.ellipse(hx, hy - 8, 11, 2.5, -0.06, Math.PI, Math.PI * 2);
         ctx.fillStyle = '#152A0C';
         ctx.fill();
 
         // Crown — soft asymmetric forward-pointed cap in forest green
-        const crownGrad = ctx.createLinearGradient(hx - 8, hy - 8, hx + 6, hy - 22);
+        const crownGrad = ctx.createLinearGradient(hx - 7, hy - 8, hx + 5, hy - 19);
         crownGrad.addColorStop(0, '#2E5018');
         crownGrad.addColorStop(0.55, '#3A6424');
         crownGrad.addColorStop(1, '#264010');
         ctx.fillStyle = crownGrad;
         ctx.beginPath();
-        ctx.moveTo(hx - 8, hy - 8);
-        ctx.quadraticCurveTo(hx - 9, hy - 14, hx - 3.5, hy - 18);
-        ctx.quadraticCurveTo(hx + 0.5, hy - 22, hx + 5.5, hy - 20);
-        ctx.quadraticCurveTo(hx + 8.5, hy - 14, hx + 8, hy - 8);
+        ctx.moveTo(hx - 7, hy - 8);
+        ctx.quadraticCurveTo(hx - 8, hy - 13, hx - 3, hy - 16);
+        ctx.quadraticCurveTo(hx + 0.5, hy - 19, hx + 5, hy - 17);
+        ctx.quadraticCurveTo(hx + 7.5, hy - 13, hx + 7, hy - 8);
         ctx.closePath();
         ctx.fill();
         ctx.strokeStyle = '#1A3A0A';
@@ -892,14 +892,14 @@ export class SettlementHub {
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(hx - 1, hy - 9);
-        ctx.quadraticCurveTo(hx + 1.5, hy - 15, hx + 5, hy - 20);
+        ctx.quadraticCurveTo(hx + 1.5, hy - 13, hx + 4.5, hy - 17);
         ctx.stroke();
 
         // Upturned right-side brim flap
         ctx.beginPath();
         ctx.moveTo(hx + 2, hy - 8.5);
-        ctx.quadraticCurveTo(hx + 10, hy - 9.5, hx + 13, hy - 13);
-        ctx.quadraticCurveTo(hx + 10.5, hy - 9, hx + 4, hy - 8);
+        ctx.quadraticCurveTo(hx + 8.5, hy - 9.2, hx + 11, hy - 12);
+        ctx.quadraticCurveTo(hx + 9, hy - 8.5, hx + 4, hy - 8);
         ctx.closePath();
         ctx.fillStyle = '#2C4E16';
         ctx.fill();
@@ -910,16 +910,16 @@ export class SettlementHub {
         // Gold hat band
         ctx.fillStyle = '#C8951C';
         ctx.beginPath();
-        ctx.moveTo(hx - 8, hy - 8.8);
-        ctx.lineTo(hx + 8, hy - 8.8);
-        ctx.lineTo(hx + 8, hy - 7.2);
-        ctx.lineTo(hx - 8, hy - 7.2);
+        ctx.moveTo(hx - 7, hy - 8.8);
+        ctx.lineTo(hx + 7, hy - 8.8);
+        ctx.lineTo(hx + 7, hy - 7.2);
+        ctx.lineTo(hx - 7, hy - 7.2);
         ctx.closePath();
         ctx.fill();
 
         // Front brim layer (drawn over crown base)
         ctx.beginPath();
-        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, 0, Math.PI);
+        ctx.ellipse(hx, hy - 8, 11, 2.5, -0.06, 0, Math.PI);
         ctx.fillStyle = '#1A3410';
         ctx.fill();
         ctx.strokeStyle = '#0F1E08';
@@ -929,31 +929,31 @@ export class SettlementHub {
         ctx.strokeStyle = 'rgba(255,255,255,0.1)';
         ctx.lineWidth = 0.7;
         ctx.beginPath();
-        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, 0.05, Math.PI * 0.85);
+        ctx.ellipse(hx, hy - 8, 11, 2.5, -0.06, 0.05, Math.PI * 0.85);
         ctx.stroke();
 
         // Feather plume on right side (animated)
         const featherWave = Math.sin(t * 2.2) * 0.1;
         ctx.save();
-        ctx.translate(hx + 7, hy - 11);
+        ctx.translate(hx + 6, hy - 10);
         ctx.rotate(featherWave - 0.48);
         // Quill
         ctx.strokeStyle = '#C85A10';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(-1, -7, 2, -15);
+        ctx.quadraticCurveTo(-1, -6, 2, -13);
         ctx.stroke();
         // Vanes
         for (let v = 0; v < 6; v++) {
             const vt = v / 6;
             const vx = -1 + vt * 2.5 + Math.sin(t * 2.2 + vt * 2) * 0.4;
-            const vy = -vt * 14;
+            const vy = -vt * 12;
             ctx.strokeStyle = `rgba(215, ${115 + v * 12}, 18, ${0.72 + v * 0.04})`;
             ctx.lineWidth = 1.4 - vt * 0.6;
             ctx.beginPath();
-            ctx.moveTo(vx - 3.5, vy - 1);
-            ctx.lineTo(vx + 3.5, vy + 1);
+            ctx.moveTo(vx - 3, vy - 1);
+            ctx.lineTo(vx + 3, vy + 1);
             ctx.stroke();
         }
         ctx.restore();
@@ -1004,7 +1004,10 @@ export class SettlementHub {
             .map(([, data]) => data.musicId)
             .filter(id => id);
         if (ownedTracks.length === 0) return;
-        const track = ownedTracks[Math.floor(Math.random() * ownedTracks.length)];
+        const currentTrack = audioManager.currentMusicTrack;
+        const available = ownedTracks.filter(id => id !== currentTrack);
+        if (available.length === 0) return;
+        const track = available[Math.floor(Math.random() * available.length)];
         audioManager.isManualMusicSelection = true;
         audioManager.playMusic(track, true);
     }
@@ -6234,6 +6237,8 @@ class SettlementOptionsMenu {
         const closeButtonY = menuY + 10;
         const closeButtonSize = 25;
         
+        ctx.save();
+        ctx.globalAlpha = 1;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.strokeStyle = '#ffffff';
@@ -6243,7 +6248,8 @@ class SettlementOptionsMenu {
         ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2);
+        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.restore();
 
         ctx.globalAlpha = 1;
     }
@@ -6819,16 +6825,19 @@ class ManageSettlementMenu {
         const closeButtonX = menuX + menuWidth - 35;
         const closeButtonY = menuY + 10;
         const closeButtonSize = 25;
+        ctx.save();
+        ctx.globalAlpha = 1;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
-        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
-        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.restore();
 
         // Render warning dialog if active
         if (this.activeWarningDialog) {
@@ -7461,6 +7470,9 @@ class ArcaneLibraryMenu {
         const closeButtonY = menuY + 10;
         const closeButtonSize = 25;
         
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.setTransform ? ctx.setTransform(1, 0, 0, 1, 0, 0) : undefined;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.strokeStyle = '#ffffff';
@@ -7470,7 +7482,8 @@ class ArcaneLibraryMenu {
         ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2);
+        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.restore();
         
         ctx.globalAlpha = 1;
     }
@@ -7520,6 +7533,17 @@ class ArcaneLibraryMenu {
     }
 
     renderMusicalScoresTab(ctx, x, y, width, height) {
+        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
+        const hasMusicalEquipment = upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment');
+        if (!hasMusicalEquipment) {
+            ctx.font = '16px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Musical Equipment has not been purchased yet.', x + width / 2, y + height / 2 - 12);
+            ctx.fillText('Buy it in the Upgrades shop to bring a Bard to the square!', x + width / 2, y + height / 2 + 13);
+            return;
+        }
         if (this.unlockedMusicTracks.size === 0) {
             ctx.font = '16px Trebuchet MS, sans-serif';
             ctx.fillStyle = '#8b7355';
