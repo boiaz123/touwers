@@ -1,4 +1,5 @@
 import { SaveSystem } from '../core/SaveSystem.js';
+import { EnemyIntelRegistry } from '../core/EnemyIntelRegistry.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -1194,6 +1195,12 @@ export class UIManager {
             return;
         }
 
+        // Enemy intel panel needs live stat refresh
+        if (this.activeMenuType === 'enemy-intel') {
+            this.updateEnemyIntelLive();
+            return;
+        }
+
         // For all other menus, only update button affordability when resources change
         const currentGold = this.gameState.gold;
         const currentGems = this.towerManager.getGemStocks();
@@ -2038,7 +2045,8 @@ export class UIManager {
             'castle-panel',
             'basic-tower-panel',
             'goldmine-panel',
-            'diamond-press-panel'
+            'diamond-press-panel',
+            'enemy-intel-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -2060,7 +2068,8 @@ export class UIManager {
             'castle-panel',
             'basic-tower-panel',
             'goldmine-panel',
-            'diamond-press-panel'
+            'diamond-press-panel',
+            'enemy-intel-panel'
         ];
         
         panelIds.forEach(panelId => {
@@ -4564,6 +4573,127 @@ export class UIManager {
         } else {
             return `Level ${upgrade.level}`;
         }
+    }
+
+    // ============ ENEMY INTEL PANEL ============
+
+    showEnemyIntelMenu(enemy) {
+        this.closeOtherPanelsImmediate('enemy-intel-panel');
+
+        this.activeMenuType = 'enemy-intel';
+        this.activeMenuData = { enemy };
+
+        const enemyType = enemy.type || '';
+        const marketplaceSystem = this.stateManager.marketplaceSystem;
+        const unlockedPacks = marketplaceSystem ? marketplaceSystem.getUnlockedEnemyIntel() : [];
+        const unlockedEnemies = EnemyIntelRegistry.getUnlockedEnemies(unlockedPacks);
+        const hasIntel = unlockedEnemies.includes(enemyType);
+        const intel = EnemyIntelRegistry.getEnemyIntel(enemyType);
+        const displayName = intel ? intel.name : (enemyType ? enemyType.charAt(0).toUpperCase() + enemyType.slice(1) : 'Unknown Enemy');
+
+        let contentHTML;
+
+        if (!hasIntel) {
+            contentHTML = `
+                <div class="forge-panel-header">
+                    <div class="forge-header-top">
+                        <div class="forge-icon-display" style="font-size: 1.6rem; color: rgba(180,160,100,0.5);">?</div>
+                        <div class="forge-info-wrapper">
+                            <div class="forge-title-row">
+                                <div class="forge-name" style="color: rgba(180,160,100,0.7);">Unknown Enemy</div>
+                            </div>
+                            <div style="font-size: 0.7rem; color: rgba(200,180,100,0.8); margin-top: 0.3rem; line-height: 1.4;">
+                                Improve your intel gathering to understand the stats of this enemy. Purchase a Spy Report from the Marketplace.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            const hpPct = enemy.maxHealth > 0 ? Math.max(0, Math.min(100, (enemy.health / enemy.maxHealth) * 100)) : 0;
+            const hpBarColor = hpPct > 60 ? '#5acd5a' : (hpPct > 30 ? '#d4af37' : '#cc4444');
+            const armourVal = typeof enemy.armour === 'number' ? Math.round(enemy.armour) : 0;
+            const magicResVal = typeof enemy.magicResistance === 'number' ? Math.round(enemy.magicResistance * 100) : 0;
+            const speedVal = typeof enemy.speed === 'number' ? Math.round(enemy.speed) : 0;
+            const atkDmgVal = typeof enemy.attackDamage === 'number' ? Math.round(enemy.attackDamage) : 0;
+            const hpDisplay = `${Math.max(0, Math.round(enemy.health))} / ${Math.round(enemy.maxHealth)}`;
+
+            contentHTML = `
+                <div class="forge-panel-header" id="enemy-intel-header">
+                    <div class="forge-header-top">
+                        <div class="forge-icon-display" style="font-size: 1.4rem; color: var(--primary-gold); font-weight: bold;">${intel ? intel.icon : '?'}</div>
+                        <div class="forge-info-wrapper">
+                            <div class="forge-title-row">
+                                <div class="forge-name">${displayName}</div>
+                            </div>
+                            <div style="margin-top: 0.3rem;">
+                                <div style="font-size: 0.65rem; color: rgba(200,180,120,0.8); margin-bottom: 0.2rem;">Health</div>
+                                <div class="forge-level-bar" style="margin-bottom: 0.2rem;">
+                                    <div id="enemy-hp-bar-fill" class="forge-level-bar-fill" style="width: ${hpPct.toFixed(1)}%; background: ${hpBarColor};"></div>
+                                </div>
+                                <div id="enemy-hp-text" style="font-size: 0.7rem; color: rgba(220,200,150,0.9);">${hpDisplay}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.2rem 0;">
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(212,175,55,0.2); border-radius: 0.3rem; padding: 0.4rem 0.5rem;">
+                        <div style="font-size: 0.6rem; color: rgba(180,160,100,0.7); text-transform: uppercase; letter-spacing: 0.5px;">Speed</div>
+                        <div id="enemy-stat-speed" style="font-size: 0.85rem; color: #FFD700; font-weight: bold;">${speedVal}</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(212,175,55,0.2); border-radius: 0.3rem; padding: 0.4rem 0.5rem;">
+                        <div style="font-size: 0.6rem; color: rgba(180,160,100,0.7); text-transform: uppercase; letter-spacing: 0.5px;">Armour</div>
+                        <div id="enemy-stat-armour" style="font-size: 0.85rem; color: #FFD700; font-weight: bold;">${armourVal}</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(212,175,55,0.2); border-radius: 0.3rem; padding: 0.4rem 0.5rem;">
+                        <div style="font-size: 0.6rem; color: rgba(180,160,100,0.7); text-transform: uppercase; letter-spacing: 0.5px;">Magic Resist</div>
+                        <div id="enemy-stat-magic" style="font-size: 0.85rem; color: #FFD700; font-weight: bold;">${magicResVal}%</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(212,175,55,0.2); border-radius: 0.3rem; padding: 0.4rem 0.5rem;">
+                        <div style="font-size: 0.6rem; color: rgba(180,160,100,0.7); text-transform: uppercase; letter-spacing: 0.5px;">Atk Damage</div>
+                        <div id="enemy-stat-atk" style="font-size: 0.85rem; color: #FFD700; font-weight: bold;">${atkDmgVal}</div>
+                    </div>
+                </div>
+                ${intel && intel.description ? `<div style="font-size: 0.65rem; color: rgba(200,180,120,0.75); margin-top: 0.4rem; line-height: 1.4; border-top: 1px solid rgba(212,175,55,0.15); padding-top: 0.4rem;">${intel.description}</div>` : ''}
+            `;
+        }
+
+        this.showPanelWithoutClosing('enemy-intel-panel', displayName, contentHTML);
+    }
+
+    updateEnemyIntelLive() {
+        if (!this.activeMenuData || !this.activeMenuData.enemy) return;
+
+        const enemy = this.activeMenuData.enemy;
+
+        // Close panel if enemy is dead or has reached the end
+        if (enemy.health <= 0 || enemy.reachedEnd) {
+            this.closePanelWithAnimation('enemy-intel-panel');
+            return;
+        }
+
+        const hpFill = document.getElementById('enemy-hp-bar-fill');
+        const hpText = document.getElementById('enemy-hp-text');
+        const speedEl = document.getElementById('enemy-stat-speed');
+        const armourEl = document.getElementById('enemy-stat-armour');
+        const magicEl = document.getElementById('enemy-stat-magic');
+        const atkEl = document.getElementById('enemy-stat-atk');
+
+        if (!hpFill) return; // Panel not in intel-unlocked state (locked message shown)
+
+        const hpPct = enemy.maxHealth > 0 ? Math.max(0, Math.min(100, (enemy.health / enemy.maxHealth) * 100)) : 0;
+        const hpBarColor = hpPct > 60 ? '#5acd5a' : (hpPct > 30 ? '#d4af37' : '#cc4444');
+
+        hpFill.style.width = hpPct.toFixed(1) + '%';
+        hpFill.style.background = hpBarColor;
+
+        if (hpText) {
+            hpText.textContent = `${Math.max(0, Math.round(enemy.health))} / ${Math.round(enemy.maxHealth)}`;
+        }
+        if (speedEl) speedEl.textContent = typeof enemy.speed === 'number' ? Math.round(enemy.speed) : 0;
+        if (armourEl) armourEl.textContent = typeof enemy.armour === 'number' ? Math.round(enemy.armour) : 0;
+        if (magicEl) magicEl.textContent = (typeof enemy.magicResistance === 'number' ? Math.round(enemy.magicResistance * 100) : 0) + '%';
+        if (atkEl) atkEl.textContent = typeof enemy.attackDamage === 'number' ? Math.round(enemy.attackDamage) : 0;
     }
 
     clearActiveMenus() {

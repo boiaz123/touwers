@@ -1140,7 +1140,14 @@ export class GameplayState {
             this.lootManager.collectLoot(clickedLoot);
             return; // Don't proceed to other interactions
         }
-        
+
+        // Check if player clicked on an enemy to show intel panel
+        const clickedEnemy = this.getEnemyAtPosition(x, y);
+        if (clickedEnemy) {
+            this.uiManager.showEnemyIntelMenu(clickedEnemy);
+            return;
+        }
+
         // Only show menus if not in placement mode
         const clickResult = this.towerManager.handleClick(x, y, this.level.resolutionManager);
         
@@ -1236,7 +1243,20 @@ export class GameplayState {
             // For now, we'll just log it - the floating text on the mine shows the collection
         }
     }
-    
+
+    getEnemyAtPosition(x, y) {
+        if (!this.enemyManager || !this.enemyManager.enemies) return null;
+        const clickRadius = 28;
+        for (const enemy of this.enemyManager.enemies) {
+            const dx = enemy.x - x;
+            const dy = enemy.y - y;
+            if (dx * dx + dy * dy <= clickRadius * clickRadius) {
+                return enemy;
+            }
+        }
+        return null;
+    }
+
     cancelSelection() {
         // Cancel tower selection
         if (this.selectedTowerType) {
