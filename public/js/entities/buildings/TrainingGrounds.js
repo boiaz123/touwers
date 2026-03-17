@@ -1202,7 +1202,8 @@ export class TrainingGrounds extends Building {
     calculateRangeUpgradeCost(towerType) {
         const upgrade = this.rangeUpgrades[towerType];
         if (upgrade.level >= upgrade.maxLevel) return null;
-        return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
+        const costs = [150, 250, 375, 550, 800];
+        return costs[upgrade.level] || null;
     }
     
     calculateTrainingLevelCost() {
@@ -1298,7 +1299,8 @@ export class TrainingGrounds extends Building {
     calculateUpgradeCost(upgradeType) {
         const upgrade = this.upgrades[upgradeType];
         if (upgrade.level >= upgrade.maxLevel) return null;
-        return Math.floor(upgrade.baseCost * Math.pow(1.4, upgrade.level));
+        const costs = [150, 225, 350, 525, 800];
+        return costs[upgrade.level] || null;
     }
     
     notifyUpgradeChanged() {

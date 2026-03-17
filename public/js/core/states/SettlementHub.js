@@ -585,113 +585,383 @@ export class SettlementHub {
     renderBard(ctx, x, y) {
         ctx.save();
         const t = this.bardNoteAnim;
+        const sway = Math.sin(t * 1.8) * 1.5;
 
-        // Hover highlight ring
-        if (this.bardHovered) {
-            ctx.beginPath();
-            ctx.arc(x, y + 4, 22, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.55)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
+        // Hover highlight ring removed
 
-        // Legs
-        ctx.fillStyle = '#5B3A8C';
-        ctx.fillRect(x - 5, y + 10, 4, 10);
-        ctx.fillRect(x + 1, y + 10, 4, 10);
-        // Boots
-        ctx.fillStyle = '#3B2510';
-        ctx.fillRect(x - 6, y + 18, 5, 4);
-        ctx.fillRect(x, y + 18, 5, 4);
-
-        // Tunic body (purple/gold)
-        const bodyGrad = ctx.createLinearGradient(x - 8, y, x + 8, y);
-        bodyGrad.addColorStop(0, '#7B4BB8');
-        bodyGrad.addColorStop(0.5, '#9B6DD8');
-        bodyGrad.addColorStop(1, '#7B4BB8');
-        ctx.fillStyle = bodyGrad;
-        ctx.fillRect(x - 8, y - 2, 16, 14);
-
-        // Gold belt
-        ctx.fillStyle = '#D4A020';
-        ctx.fillRect(x - 8, y + 10, 16, 3);
-
-        // Lute (the bard plays it with a gentle sway)
-        const luteAngle = Math.sin(t * 2.5) * 0.18;
-        ctx.save();
-        ctx.translate(x + 9, y + 4);
-        ctx.rotate(luteAngle);
-        // Lute body
+        // --- Breeches / legs (dark teal, tapered) ---
+        ctx.fillStyle = '#1E4D4D';
+        // Left leg
         ctx.beginPath();
-        ctx.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2);
-        ctx.fillStyle = '#8B5A1A';
-        ctx.fill();
-        ctx.strokeStyle = '#5A3008';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        // Lute neck
-        ctx.fillStyle = '#A0722A';
-        ctx.fillRect(-1, -11, 2, 10);
-        // String
-        ctx.strokeStyle = '#D4D4D4';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(0, -10);
-        ctx.lineTo(0, 5);
-        ctx.stroke();
-        ctx.restore();
-
-        // Arm holding lute
-        ctx.strokeStyle = '#9B6DD8';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x, y + 2);
-        ctx.lineTo(x + 9, y + 4);
-        ctx.stroke();
-
-        // Head
-        ctx.beginPath();
-        ctx.arc(x, y - 9, 7, 0, Math.PI * 2);
-        ctx.fillStyle = '#F0C8A0';
-        ctx.fill();
-        ctx.strokeStyle = '#C8906A';
-        ctx.lineWidth = 0.75;
-        ctx.stroke();
-
-        // Jester hat (redesigned — wider curved prongs with rounded brim)
-        ctx.fillStyle = '#6B3AA8';
-        // Hat body — single connected path with two rounded prongs
-        ctx.beginPath();
-        ctx.moveTo(x - 9, y - 14);
-        ctx.quadraticCurveTo(x - 13, y - 20, x - 7, y - 30);
-        ctx.quadraticCurveTo(x - 3, y - 22, x, y - 25);
-        ctx.quadraticCurveTo(x + 3, y - 22, x + 7, y - 30);
-        ctx.quadraticCurveTo(x + 13, y - 20, x + 9, y - 14);
+        ctx.moveTo(x - 6, y + 8);
+        ctx.lineTo(x - 2, y + 8);
+        ctx.lineTo(x - 3, y + 20);
+        ctx.lineTo(x - 7, y + 20);
         ctx.closePath();
         ctx.fill();
-        // Brim — ellipse for 3D depth
+        // Right leg
         ctx.beginPath();
-        ctx.ellipse(x, y - 14, 11, 3.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#9B5AD8';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.ellipse(x, y - 14, 11, 3.5, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        // Gold bells at prong tips
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.arc(x - 7, y - 30, 3.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + 7, y - 30, 3.5, 0, Math.PI * 2);
+        ctx.moveTo(x + 2, y + 8);
+        ctx.lineTo(x + 6, y + 8);
+        ctx.lineTo(x + 7, y + 20);
+        ctx.lineTo(x + 3, y + 20);
+        ctx.closePath();
         ctx.fill();
 
-        // Floating music note above head — pulses softly
+        // Stockings below knee (lighter teal)
+        ctx.fillStyle = '#2E7070';
+        ctx.fillRect(x - 7, y + 16, 5, 5);
+        ctx.fillRect(x + 2, y + 16, 5, 5);
+
+        // Knee bands (gold)
+        ctx.fillStyle = '#C8951C';
+        ctx.fillRect(x - 7, y + 15, 5, 2);
+        ctx.fillRect(x + 2, y + 15, 5, 2);
+
+        // Pointed shoes
+        ctx.fillStyle = '#150D05';
+        // Left shoe — pointed toe
+        ctx.beginPath();
+        ctx.moveTo(x - 7, y + 21);
+        ctx.lineTo(x - 2, y + 21);
+        ctx.lineTo(x, y + 23);
+        ctx.lineTo(x - 8, y + 23);
+        ctx.lineTo(x - 9, y + 22);
+        ctx.closePath();
+        ctx.fill();
+        // Right shoe
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y + 21);
+        ctx.lineTo(x + 7, y + 21);
+        ctx.lineTo(x + 9, y + 22);
+        ctx.lineTo(x + 8, y + 23);
+        ctx.lineTo(x + 2, y + 23);
+        ctx.closePath();
+        ctx.fill();
+        // Small buckles
+        ctx.fillStyle = '#C8951C';
+        ctx.fillRect(x - 7, y + 21, 2, 1);
+        ctx.fillRect(x + 5, y + 21, 2, 1);
+
+        // --- Doublet body (deep crimson, layered) ---
+        const bodyGrad = ctx.createLinearGradient(x - 9, y - 4, x + 9, y + 10);
+        bodyGrad.addColorStop(0, '#A0201A');
+        bodyGrad.addColorStop(0.4, '#8C1A1F');
+        bodyGrad.addColorStop(1, '#5C0F13');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(x - 9, y - 4);
+        ctx.lineTo(x + 9, y - 4);
+        ctx.lineTo(x + 8, y + 12);
+        ctx.lineTo(x - 8, y + 12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold trim edges on doublet
+        ctx.strokeStyle = '#C8951C';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x - 9, y - 4);
+        ctx.lineTo(x - 8, y + 12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 9, y - 4);
+        ctx.lineTo(x + 8, y + 12);
+        ctx.stroke();
+
+        // Center button row
+        ctx.fillStyle = '#C8951C';
+        for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.arc(x, y - 2 + i * 3.5, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Gold belt
+        ctx.fillStyle = '#C8951C';
+        ctx.fillRect(x - 9, y + 9, 18, 2.5);
+        // Belt buckle
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(x - 2, y + 9, 4, 2.5);
+
+        // Cream undershirt — visible at sleeves
+        ctx.fillStyle = '#F5ECD7';
+        ctx.fillRect(x - 11, y, 4, 7);
+        ctx.fillRect(x + 7, y, 4, 7);
+
+        // --- Lute (pear-shaped, sways with bard) ---
+        const luteAngle = Math.sin(t * 2.5) * 0.2;
+        ctx.save();
+        ctx.translate(x + 11, y + 3);
+        ctx.rotate(luteAngle);
+        // Lute body — pear shape
+        ctx.beginPath();
+        ctx.ellipse(0, 2, 5, 7, 0, 0, Math.PI * 2);
+        const luteGrad = ctx.createRadialGradient(-1.5, -1, 1, 0, 2, 7);
+        luteGrad.addColorStop(0, '#C8843A');
+        luteGrad.addColorStop(0.6, '#8B5A1A');
+        luteGrad.addColorStop(1, '#4A2D08');
+        ctx.fillStyle = luteGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#3A2006';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        // Sound hole
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.arc(0, 3, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#C8843A';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        // Neck
+        const neckGrad = ctx.createLinearGradient(-1, -14, 1, -5);
+        neckGrad.addColorStop(0, '#B07830');
+        neckGrad.addColorStop(1, '#7A4A10');
+        ctx.fillStyle = neckGrad;
+        ctx.fillRect(-1.5, -13, 3, 10);
+        // Peg box at top
+        ctx.fillStyle = '#5A3008';
+        ctx.fillRect(-2, -16, 4, 4);
+        // Frets
+        ctx.strokeStyle = 'rgba(200,200,200,0.5)';
+        ctx.lineWidth = 0.5;
+        for (let f = 0; f < 4; f++) {
+            ctx.beginPath();
+            ctx.moveTo(-1.5, -11 + f * 2.5);
+            ctx.lineTo(1.5, -11 + f * 2.5);
+            ctx.stroke();
+        }
+        // Strings
+        ctx.lineWidth = 0.4;
+        for (let s = -1; s <= 1; s++) {
+            ctx.strokeStyle = s === 0 ? '#E0E0E0' : 'rgba(200,200,200,0.7)';
+            ctx.beginPath();
+            ctx.moveTo(s * 1.2, -13);
+            ctx.lineTo(s * 1.5, 7);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // --- Arm holding lute ---
+        ctx.strokeStyle = '#A0201A';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x + 3, y);
+        ctx.quadraticCurveTo(x + 8, y + 1, x + 11, y + 3);
+        ctx.stroke();
+        // Left arm (resting)
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.quadraticCurveTo(x - 8, y + 3, x - 9, y + 7);
+        ctx.stroke();
+
+        // --- Ruffled cravat / collar ---
+        ctx.fillStyle = '#F5F0E8';
+        ctx.beginPath();
+        ctx.ellipse(x - 3, y - 5, 3.5, 2.5, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y - 6, 3.5, 2.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - 1, y - 4, 2.5, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- Head ---
+        ctx.beginPath();
+        ctx.arc(x + sway * 0.3, y - 12, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#F0C070';
+        ctx.fill();
+        ctx.strokeStyle = '#C8906A';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        const hx = x + sway * 0.3;
+        const hy = y - 12;
+
+        // Rosy cheeks
+        ctx.fillStyle = 'rgba(220, 120, 100, 0.15)';
+        ctx.beginPath();
+        ctx.ellipse(hx - 4.5, hy + 1.5, 3, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(hx + 4.5, hy + 1.5, 3, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyebrows (arched)
+        ctx.strokeStyle = '#7A4A18';
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(hx - 5, hy - 3.5);
+        ctx.quadraticCurveTo(hx - 3, hy - 5, hx - 1.5, hy - 3.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(hx + 1.5, hy - 3.5);
+        ctx.quadraticCurveTo(hx + 3, hy - 5, hx + 5, hy - 3.5);
+        ctx.stroke();
+
+        // Eyes — whites, then iris, pupil, highlight
+        // Left eye whites
+        ctx.fillStyle = '#F5F0E8';
+        ctx.beginPath();
+        ctx.ellipse(hx - 3, hy - 1.5, 2.2, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Right eye whites
+        ctx.beginPath();
+        ctx.ellipse(hx + 3, hy - 1.5, 2.2, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Left iris
+        ctx.fillStyle = '#7A5020';
+        ctx.beginPath();
+        ctx.arc(hx - 3, hy - 1.2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Right iris
+        ctx.beginPath();
+        ctx.arc(hx + 3, hy - 1.2, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Left pupil
+        ctx.fillStyle = '#160C04';
+        ctx.beginPath();
+        ctx.arc(hx - 3, hy - 1.2, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        // Right pupil
+        ctx.beginPath();
+        ctx.arc(hx + 3, hy - 1.2, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        // Tiny highlights
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(hx - 3.6, hy - 1.8, 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(hx + 2.4, hy - 1.8, 0.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nose (small bump)
+        ctx.fillStyle = '#D4956A';
+        ctx.beginPath();
+        ctx.ellipse(hx, hy + 1, 1.2, 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Expression — composed, slight smirk
+        ctx.strokeStyle = '#7A3A1C';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(hx - 1.5, hy + 3.5);
+        ctx.quadraticCurveTo(hx + 0.8, hy + 4.8, hx + 2.8, hy + 3.2);
+        ctx.stroke();
+
+        // Refined Van Dyke goatee
+        ctx.fillStyle = '#7A4A20';
+        ctx.beginPath();
+        ctx.moveTo(hx - 2, hy + 5.8);
+        ctx.quadraticCurveTo(hx, hy + 8.2, hx + 2, hy + 5.8);
+        ctx.quadraticCurveTo(hx + 0.8, hy + 6.4, hx, hy + 6.5);
+        ctx.quadraticCurveTo(hx - 0.8, hy + 6.4, hx - 2, hy + 5.8);
+        ctx.fill();
+
+        // --- Robin Hood / Sherwood hat ---
+        // Back half of brim (drawn first for depth)
+        ctx.beginPath();
+        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, Math.PI, Math.PI * 2);
+        ctx.fillStyle = '#152A0C';
+        ctx.fill();
+
+        // Crown — soft asymmetric forward-pointed cap in forest green
+        const crownGrad = ctx.createLinearGradient(hx - 8, hy - 8, hx + 6, hy - 22);
+        crownGrad.addColorStop(0, '#2E5018');
+        crownGrad.addColorStop(0.55, '#3A6424');
+        crownGrad.addColorStop(1, '#264010');
+        ctx.fillStyle = crownGrad;
+        ctx.beginPath();
+        ctx.moveTo(hx - 8, hy - 8);
+        ctx.quadraticCurveTo(hx - 9, hy - 14, hx - 3.5, hy - 18);
+        ctx.quadraticCurveTo(hx + 0.5, hy - 22, hx + 5.5, hy - 20);
+        ctx.quadraticCurveTo(hx + 8.5, hy - 14, hx + 8, hy - 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#1A3A0A';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Crown fold / crease shadow
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(hx - 1, hy - 9);
+        ctx.quadraticCurveTo(hx + 1.5, hy - 15, hx + 5, hy - 20);
+        ctx.stroke();
+
+        // Upturned right-side brim flap
+        ctx.beginPath();
+        ctx.moveTo(hx + 2, hy - 8.5);
+        ctx.quadraticCurveTo(hx + 10, hy - 9.5, hx + 13, hy - 13);
+        ctx.quadraticCurveTo(hx + 10.5, hy - 9, hx + 4, hy - 8);
+        ctx.closePath();
+        ctx.fillStyle = '#2C4E16';
+        ctx.fill();
+        ctx.strokeStyle = '#1A3A0A';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // Gold hat band
+        ctx.fillStyle = '#C8951C';
+        ctx.beginPath();
+        ctx.moveTo(hx - 8, hy - 8.8);
+        ctx.lineTo(hx + 8, hy - 8.8);
+        ctx.lineTo(hx + 8, hy - 7.2);
+        ctx.lineTo(hx - 8, hy - 7.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Front brim layer (drawn over crown base)
+        ctx.beginPath();
+        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, 0, Math.PI);
+        ctx.fillStyle = '#1A3410';
+        ctx.fill();
+        ctx.strokeStyle = '#0F1E08';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        // Brim highlight
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(hx, hy - 8, 13, 3, -0.06, 0.05, Math.PI * 0.85);
+        ctx.stroke();
+
+        // Feather plume on right side (animated)
+        const featherWave = Math.sin(t * 2.2) * 0.1;
+        ctx.save();
+        ctx.translate(hx + 7, hy - 11);
+        ctx.rotate(featherWave - 0.48);
+        // Quill
+        ctx.strokeStyle = '#C85A10';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-1, -7, 2, -15);
+        ctx.stroke();
+        // Vanes
+        for (let v = 0; v < 6; v++) {
+            const vt = v / 6;
+            const vx = -1 + vt * 2.5 + Math.sin(t * 2.2 + vt * 2) * 0.4;
+            const vy = -vt * 14;
+            ctx.strokeStyle = `rgba(215, ${115 + v * 12}, 18, ${0.72 + v * 0.04})`;
+            ctx.lineWidth = 1.4 - vt * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(vx - 3.5, vy - 1);
+            ctx.lineTo(vx + 3.5, vy + 1);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // --- Floating music note above hat ---
         const notePulse = 0.85 + 0.15 * Math.sin(t * 3);
         const noteAlpha = 0.65 + 0.35 * Math.sin(t * 3 + 1);
-        const noteY = y - 36 + Math.sin(t * 2) * 3;
+        const noteY = y - 48 + Math.sin(t * 2) * 3;
         ctx.save();
         ctx.globalAlpha = noteAlpha;
         ctx.scale(notePulse, notePulse);
@@ -5966,16 +6236,14 @@ class SettlementOptionsMenu {
         
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
-        
-        // Draw X
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
-        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
-        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2);
 
         ctx.globalAlpha = 1;
     }
@@ -7195,16 +7463,14 @@ class ArcaneLibraryMenu {
         
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
-        
-        // Draw X
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
-        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
-        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
-        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2);
         
         ctx.globalAlpha = 1;
     }

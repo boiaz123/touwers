@@ -636,7 +636,7 @@ export class Castle {
                 level: this.fortificationLevel,
                 maxLevel: this.maxFortificationLevel,
                 cost: this.calculateFortificationCost(),
-                icon: '○',
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><rect x='2' y='20' width='36' height='18' fill='#8B7355' stroke='#3D3020' stroke-width='1.2'/><rect x='2' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><rect x='16' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><rect x='30' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><line x1='2' y1='27' x2='38' y2='27' stroke='#3D3020' stroke-width='0.8'/><line x1='2' y1='33' x2='38' y2='33' stroke='#3D3020' stroke-width='0.8'/><line x1='10' y1='20' x2='10' y2='38' stroke='#3D3020' stroke-width='0.8'/><line x1='20' y1='20' x2='20' y2='38' stroke='#3D3020' stroke-width='0.8'/><line x1='30' y1='20' x2='30' y2='38' stroke='#3D3020' stroke-width='0.8'/><path d='M16 38 L16 29 Q20 24 24 29 L24 38 Z' fill='#1A0A00' stroke='#3D3020' stroke-width='0.8'/><rect x='3' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/><rect x='17' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/><rect x='31' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/></svg>",
                 currentEffect: `Max Health: ${this.maxHealth}`
             }
         ];
@@ -644,8 +644,9 @@ export class Castle {
     }
     
     calculateFortificationCost() {
+        const costs = [400, 600, 900, 1300, 1800];
         if (this.fortificationLevel >= this.maxFortificationLevel) return null;
-        return Math.floor(400 * Math.pow(1.4, this.fortificationLevel));
+        return costs[this.fortificationLevel] || null;
     }
     
     calculateCatapultCost() {
@@ -786,7 +787,7 @@ export class Castle {
                 description: `Your defender is actively protecting the castle (${this.defender.health}/${this.defender.maxHealth} HP)`,
                 type: 'defender_status',
                 canHire: false,
-                icon: '○'
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 22 22'><path d='M11 2 L19 5 L19 12 Q19 17 11 20 Q3 17 3 12 L3 5 Z' fill='#4A7A5A' stroke='#253A2D' stroke-width='1.2'/><path d='M11 5 L17 7.5 L17 12 Q17 16 11 18.5 Q5 16 5 12 L5 7.5 Z' fill='#6A9A7A'/><line x1='11' y1='5' x2='11' y2='18.5' stroke='#3A5A4A' stroke-width='1'/></svg>"
             }];
         }
         
@@ -798,7 +799,7 @@ export class Castle {
                 description: `Your defender needs time to recover. Ready in ${this.defenderDeadCooldown.toFixed(1)}s`,
                 type: 'defender_status',
                 canHire: false,
-                icon: '○'
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 22 22'><circle cx='11' cy='12' r='8' stroke='#AA8844' stroke-width='1.5' fill='#221800'/><line x1='11' y1='12' x2='11' y2='6' stroke='#FFD700' stroke-width='1.8' stroke-linecap='round'/><line x1='11' y1='12' x2='15' y2='12' stroke='#FFD700' stroke-width='1.5' stroke-linecap='round'/></svg>"
             }];
         }
         
@@ -810,7 +811,7 @@ export class Castle {
                 description: 'Upgrade Training Grounds to Level 3 to unlock the Defender system',
                 type: 'defender_status',
                 canHire: false,
-                icon: '▪'
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 22 22'><rect x='5' y='11' width='12' height='9' rx='1.5' fill='#6A6A6A' stroke='#404040' stroke-width='1.2'/><path d='M8 11 L8 7 Q8 3 11 3 Q14 3 14 7 L14 11' fill='none' stroke='#909090' stroke-width='2' stroke-linecap='round'/><circle cx='11' cy='16' r='1.8' fill='#3A3A3A'/></svg>"
             }];
         }
         
@@ -823,7 +824,7 @@ export class Castle {
             level: 1,
             cost: this.calculateDefenderCost(1),
             canHire: true,
-            icon: '▸'
+            icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><line x1='10' y1='35' x2='30' y2='8' stroke='#C8A030' stroke-width='3' stroke-linecap='round'/><rect x='6' y='20' width='12' height='3' rx='1.5' fill='#8A5A10' stroke='#3A2005' stroke-width='1' transform='rotate(-44 12 21.5)'/><circle cx='10' cy='35' r='3.5' fill='#7A4A10' stroke='#3A2005' stroke-width='1'/></svg>"
         });
         
         // Level 2 Defender if unlocked
@@ -836,7 +837,7 @@ export class Castle {
                 level: 2,
                 cost: this.calculateDefenderCost(2),
                 canHire: true,
-                icon: '▸'
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><path d='M8 10 L20 7 L32 10 L32 22 Q32 32 20 36 Q8 32 8 22 Z' fill='#3A2010' stroke='#C0C0C0' stroke-width='1.5'/><line x1='20' y1='9' x2='20' y2='34' stroke='#C0C0C0' stroke-width='1'/><line x1='10' y1='20' x2='30' y2='20' stroke='#C0C0C0' stroke-width='1'/><line x1='26' y1='38' x2='38' y2='6' stroke='#C0C0C0' stroke-width='2.5' stroke-linecap='round'/><rect x='22' y='20' width='10' height='2.5' rx='1' fill='#5A5A5A' stroke='#2A2A2A' stroke-width='0.8' transform='rotate(-44 27 21.5)'/><circle cx='26' cy='38' r='2.5' fill='#3A3A3A' stroke='#1A1A1A' stroke-width='0.8'/></svg>"
             });
         }
         
@@ -850,7 +851,7 @@ export class Castle {
                 level: 3,
                 cost: this.calculateDefenderCost(3),
                 canHire: true,
-                icon: '▸'
+                icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><rect x='4' y='8' width='16' height='22' rx='2' fill='#1A0A02' stroke='#FFD700' stroke-width='1.8'/><line x1='12' y1='10' x2='12' y2='28' stroke='#FFD700' stroke-width='1.2'/><line x1='5' y1='18' x2='19' y2='18' stroke='#FFD700' stroke-width='1.2'/><line x1='22' y1='38' x2='38' y2='4' stroke='#FFD700' stroke-width='4' stroke-linecap='round'/><rect x='19' y='18' width='14' height='3' rx='1.5' fill='#8A6A10' stroke='#4A3005' stroke-width='0.8' transform='rotate(-44 26 19.5)'/><circle cx='22' cy='38' r='3.5' fill='#7A5010' stroke='#4A3005' stroke-width='0.8'/></svg>"
             });
         }
         

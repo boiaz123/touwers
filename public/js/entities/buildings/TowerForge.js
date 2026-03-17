@@ -1148,7 +1148,16 @@ export class TowerForge extends Building {
     calculateUpgradeCost(upgradeType) {
         const upgrade = this.upgrades[upgradeType];
         if (!upgrade || upgrade.level >= this.forgeLevel) return null;
-        return Math.floor(upgrade.baseCost * Math.pow(1.5, upgrade.level));
+        const costTables = {
+            'basic':                    [100, 150, 250, 375, 550],
+            'archer':                   [100, 175, 275, 425, 625],
+            'barricade_effectiveness':  [150, 250, 400, 600, 900],
+            'poison':                   [100, 175, 275, 425, 625],
+            'cannon':                   [125, 200, 325, 500, 750]
+        };
+        const table = costTables[upgradeType];
+        if (!table) return null;
+        return table[upgrade.level] || null;
     }
     
     purchaseUpgrade(upgradeType, gameState) {
