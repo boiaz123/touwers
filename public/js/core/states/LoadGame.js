@@ -65,8 +65,10 @@ export class LoadGame {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -107,8 +109,10 @@ export class LoadGame {
 
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
         const buttonPos = this.getBackButtonPosition();
         this.backButtonHovered = x >= buttonPos.x && x <= buttonPos.x + buttonPos.width &&
@@ -198,11 +202,11 @@ export class LoadGame {
                 return;
             }
 
-            // Background
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#2a1a0f');
-            gradient.addColorStop(1, '#1a0f0a');
-            ctx.fillStyle = gradient;
+            // Background - blue theme matching OptionsMenu
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#13111F');
+            bgGrad.addColorStop(1, '#0A0812');
+            ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Render particles from shared system
@@ -210,35 +214,49 @@ export class LoadGame {
                 this.particleSystem.render(ctx);
             }
             
-            // Semi-transparent panel overlay for menu content
-            ctx.globalAlpha = 0.3;
+            // Dark overlay
+            ctx.globalAlpha = 0.35;
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.globalAlpha = 1;
 
-            // Back button
+            // Back button - styled like OptionsMenu
             const buttonPos = this.getBackButtonPosition();
-            ctx.fillStyle = this.backButtonHovered ? '#66BB6A' : '#4CAF50';
-            ctx.fillRect(buttonPos.x, buttonPos.y, buttonPos.width, buttonPos.height);
-
-            ctx.strokeStyle = this.backButtonHovered ? '#d4af37' : '#2E7D32';
-            ctx.lineWidth = this.backButtonHovered ? 2 : 1;
-            ctx.strokeRect(buttonPos.x, buttonPos.y, buttonPos.width, buttonPos.height);
-
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 14px serif';
+            const _backHovered = this.backButtonHovered;
+            const _backAdjY = _backHovered ? buttonPos.y - 3 : buttonPos.y;
+            const _backBg = ctx.createLinearGradient(0, _backAdjY, 0, _backAdjY + buttonPos.height);
+            if (_backHovered) {
+                _backBg.addColorStop(0, 'rgba(90, 74, 63, 0.98)');
+                _backBg.addColorStop(0.5, 'rgba(74, 58, 47, 0.98)');
+                _backBg.addColorStop(1, 'rgba(64, 48, 37, 0.98)');
+            } else {
+                _backBg.addColorStop(0, 'rgba(68, 48, 28, 0.85)');
+                _backBg.addColorStop(0.5, 'rgba(48, 28, 8, 0.85)');
+                _backBg.addColorStop(1, 'rgba(38, 18, 0, 0.85)');
+            }
+            ctx.fillStyle = _backBg;
+            ctx.fillRect(buttonPos.x, _backAdjY, buttonPos.width, buttonPos.height);
+            ctx.strokeStyle = _backHovered ? '#C8A84B' : 'rgba(130, 105, 55, 0.7)';
+            ctx.lineWidth = _backHovered ? 2 : 1.5;
+            ctx.strokeRect(buttonPos.x, _backAdjY, buttonPos.width, buttonPos.height);
+            ctx.font = 'bold 16px Trebuchet MS, serif';
             ctx.textAlign = 'center';
-            ctx.fillText('BACK', buttonPos.x + buttonPos.width / 2, buttonPos.y + buttonPos.height / 2 + 4);
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillText('Back', buttonPos.x + buttonPos.width / 2 + 1, _backAdjY + buttonPos.height / 2 + 1);
+            ctx.fillStyle = _backHovered ? '#E8C96A' : '#B8954A';
+            ctx.fillText('Back', buttonPos.x + buttonPos.width / 2, _backAdjY + buttonPos.height / 2);
+            ctx.textBaseline = 'alphabetic';
 
             // Title
             ctx.globalAlpha = Math.max(0.1, this.titleOpacity);
             ctx.textAlign = 'center';
-            ctx.font = 'bold 64px serif';
-            ctx.fillStyle = '#d4af37';
-            ctx.strokeStyle = '#8b7355';
-            ctx.lineWidth = 2;
-            ctx.fillText('LOAD GAME', canvas.width / 2, 100);
-            ctx.strokeText('LOAD GAME', canvas.width / 2, 100);
+            ctx.font = 'bold 52px Georgia, serif';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillText('LOAD GAME', canvas.width / 2 + 2, 110 + 2);
+            ctx.fillStyle = '#C8A84B';
+            ctx.fillText('LOAD GAME', canvas.width / 2, 110);
 
             // Slots
             if (this.showContent) {

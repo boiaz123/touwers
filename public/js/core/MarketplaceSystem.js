@@ -263,8 +263,16 @@ export class MarketplaceSystem {
             }
         }
 
+        // Restore unlocked enemy intel packs
+        this.unlockedEnemyIntel.clear();
+        if (savedData.unlockedEnemyIntel && Array.isArray(savedData.unlockedEnemyIntel)) {
+            for (const intelId of savedData.unlockedEnemyIntel) {
+                this.unlockedEnemyIntel.add(intelId);
+            }
+        }
+
         // Note: activeBoons is NOT restored from save because it's per-level
-        // But consumables are saved so they persist across levels
+        // But consumables and intel packs are saved so they persist across levels
     }
 
     /**

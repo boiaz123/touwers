@@ -595,9 +595,9 @@ export class CampaignMenu {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillText('\u25C4  EXIT', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+        ctx.fillText('Back', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
         ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-        ctx.fillText('\u25C4  EXIT', btn.x + btn.width / 2, btn.y + btn.height / 2);
+        ctx.fillText('Back', btn.x + btn.width / 2, btn.y + btn.height / 2);
     }
 
     // â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -426,7 +426,7 @@ export class OptionsMenu {
 
             // ===== BACK BUTTON =====
             const backPos = this.getBackButtonPosition();
-            this.renderButton(ctx, backPos, '\u2190  BACK', this.buttons.back.hovered);
+            this.renderButton(ctx, backPos, 'Back', this.buttons.back.hovered);
 
             // ===== TITLE =====
             ctx.globalAlpha = Math.max(0.05, this.titleOpacity);

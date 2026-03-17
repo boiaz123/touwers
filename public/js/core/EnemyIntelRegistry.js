@@ -6,91 +6,91 @@ export class EnemyIntelRegistry {
     static #intelData = {
         // BASIC ENEMIES (Spy Report I)
         'basic': {
-            name: 'Basic Enemy',
-            description: 'The most common foot soldier encountered in battle.',
-            icon: 'U',
-            stats: { health: 20, speed: 2, damage: 1 },
+            name: 'Soldier',
+            description: 'The most common foot soldier encountered in battle. Reliable, disciplined, and always part of a larger force.',
+            image: 'assets/enemies/soldier.png',
+            stats: { health: 100, speed: 50, armour: 0, magicResistance: 0, damage: 5 },
             abilities: ['Basic movement']
         },
         'archer': {
-            name: 'Archer Enemy',
-            description: 'Armed with a bow, attacks from range.',
-            icon: 'A',
-            stats: { health: 15, speed: 2.5, damage: 3 },
+            name: 'Ranger',
+            description: 'Armed with a bow, this ranger strikes from a safe distance. Fast and lightly armored, they rely on mobility over brute force.',
+            image: 'assets/enemies/ranger.png',
+            stats: { health: 120, speed: 60, armour: 8, magicResistance: 0, damage: 3 },
             abilities: ['Ranged attack', 'Fast movement']
         },
         'beefyenemy': {
-            name: 'Beefy Enemy',
-            description: 'A heavily muscled warrior with impressive durability.',
-            icon: 'S',
-            stats: { health: 50, speed: 1, damage: 3 },
-            abilities: ['High HP', 'Slow movement']
+            name: 'Enemy Captain',
+            description: 'A heavily muscled warrior who leads from the front. Fearsome in close combat, though slow to react.',
+            image: 'assets/enemies/enemy_captain.png',
+            stats: { health: 200, speed: 60, armour: 25, magicResistance: 0, damage: 8 },
+            abilities: ['High HP', 'Heavy armour']
         },
         'villager': {
-            name: 'Villager Enemy',
-            description: 'An ordinary villager conscripted into service.',
-            icon: 'P',
-            stats: { health: 10, speed: 1.5, damage: 1 },
+            name: 'Peasant',
+            description: 'An ordinary villager conscripted into service. Poorly trained and lightly armed, but numerous.',
+            image: 'assets/enemies/peasant.png',
+            stats: { health: 100, speed: 50, armour: 0, magicResistance: 0, damage: 3 },
             abilities: ['Basic movement']
         },
         // INTERMEDIATE ENEMIES (Spy Report II)
         'knight': {
-            name: 'Knight Enemy',
-            description: 'A trained warrior in full armor.',
-            icon: 'D',
-            stats: { health: 40, speed: 1.5, damage: 4 },
-            abilities: ['Armor protection', 'Melee attack']
+            name: 'Knight',
+            description: 'A trained warrior clad in full armor. Disciplined and dangerous, the Knight is a stalwart presence on the battlefield.',
+            image: 'assets/enemies/knight.png',
+            stats: { health: 1500, speed: 40, armour: 38, magicResistance: -0.2, damage: 15 },
+            abilities: ['Heavy armour', 'Melee attack', 'Magic weakness']
         },
         'shieldknight': {
-            name: 'Shield Knight Enemy',
-            description: 'A knight with an enchanted shield for additional protection.',
-            icon: '▸',
-            stats: { health: 45, speed: 1.2, damage: 4 },
-            abilities: ['Shield defense', 'Armor', 'Reduced damage']
+            name: 'Shieldknight',
+            description: 'A knight bearing an enchanted shield that deflects a portion of all incoming damage. A formidable defensive combatant.',
+            image: 'assets/enemies/shieldknight.png',
+            stats: { health: 180, speed: 35, armour: 50, magicResistance: -0.2, damage: 12 },
+            abilities: ['Shield defense', 'Heavy armour', 'Magic weakness']
         },
         // MAGICAL ENEMIES (Spy Report III)
         'mage': {
-            name: 'Mage Enemy',
-            description: 'A spellcaster wielding arcane magic.',
-            icon: 'M',
-            stats: { health: 25, speed: 2, damage: 4 },
-            abilities: ['Spell casting', 'Magic damage']
+            name: 'Mage',
+            description: 'A spellcaster wielding devastating arcane magic. Fragile but lethal, the Mage can unleash potent spells from range.',
+            image: 'assets/enemies/mage.png',
+            stats: { health: 110, speed: 45, armour: 4, magicResistance: 0.5, damage: 10 },
+            abilities: ['Spell casting', 'Magic immune (50%)']
         },
         'frog': {
-            name: 'Frog Enemy',
-            description: 'A magical frog creature.',
-            icon: 'F',
-            stats: { health: 30, speed: 2.5, damage: 2 },
-            abilities: ['Jumping attack', 'Water affinity']
+            name: 'Frog Mage',
+            description: 'A mysterious amphibian that has mastered the arcane arts. Its erratic movement and magical attacks make it unpredictable.',
+            image: 'assets/enemies/frog_mage.png',
+            stats: { health: 85, speed: 55, armour: 10, magicResistance: 0.5, damage: 6 },
+            abilities: ['Jumping attack', 'Magic immune (50%)']
         },
         // ELEMENTAL ENEMIES (Spy Report IV)
         'earthfrog': {
-            name: 'Earth Frog Enemy',
-            description: 'A frog infused with earth magic.',
-            icon: 'R',
-            stats: { health: 50, speed: 1.5, damage: 3 },
-            abilities: ['Ground slam', 'Earth magic', 'High durability']
+            name: 'Frog of Earth',
+            description: 'A frog infused with ancient earth magic. It shakes the ground with powerful stomps and boasts exceptional durability.',
+            image: 'assets/enemies/frog_earth.png',
+            stats: { health: 340, speed: 25, armour: 20, magicResistance: 0.5, damage: 10 },
+            abilities: ['Ground slam', 'Earth magic', 'Magic immune (50%)']
         },
         'waterfrog': {
-            name: 'Water Frog Enemy',
-            description: 'A frog infused with water magic.',
-            icon: 'W',
-            stats: { health: 40, speed: 2.5, damage: 3 },
-            abilities: ['Water spray', 'Water magic', 'Enhanced speed']
+            name: 'Frog of Water',
+            description: 'A frog blessed with the power of flowing water. Swift and elusive, it moves with fluid grace across the battlefield.',
+            image: 'assets/enemies/frog_water.png',
+            stats: { health: 340, speed: 25, armour: 10, magicResistance: 0.5, damage: 10 },
+            abilities: ['Water spray', 'Water magic', 'Magic immune (50%)']
         },
         'firefrog': {
-            name: 'Fire Frog Enemy',
-            description: 'A frog infused with fire magic.',
-            icon: 'F',
-            stats: { health: 35, speed: 2, damage: 4 },
-            abilities: ['Flame burst', 'Fire magic', 'High damage']
+            name: 'Frog of Fire',
+            description: 'A frog wreathed in blazing flame. Its fiery strikes deal heavy damage, and it leaves scorched earth in its wake.',
+            image: 'assets/enemies/frog_fire.png',
+            stats: { health: 340, speed: 25, armour: 10, magicResistance: 0.5, damage: 12 },
+            abilities: ['Flame burst', 'Fire magic', 'Magic immune (50%)']
         },
         'airfrog': {
-            name: 'Air Frog Enemy',
-            description: 'A frog infused with air magic.',
-            icon: 'A',
-            stats: { health: 30, speed: 3, damage: 3 },
-            abilities: ['Wind gust', 'Air magic', 'Very fast']
+            name: 'Frog of Air',
+            description: 'A frog that commands the winds. Incredibly fast and hard to pin down, it drifts like a gust on the battlefield.',
+            image: 'assets/enemies/frog_air.png',
+            stats: { health: 340, speed: 25, armour: 8, magicResistance: 0.5, damage: 8 },
+            abilities: ['Wind gust', 'Air magic', 'Magic immune (50%)']
         }
     };
 

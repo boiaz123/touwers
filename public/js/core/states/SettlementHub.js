@@ -7031,9 +7031,14 @@ class ArcaneLibraryMenu {
         
         // Pagination for enemy intel
         this.intelCurrentPage = 0;
-        this.intelItemsPerPage = 6; // 2 rows x 3 columns
+        this.intelItemsPerPage = 9; // list view, up to 9 per page
         this.intelLeftArrowHovered = false;
         this.intelRightArrowHovered = false;
+        this.hoveredEnemyId = null;
+        this.selectedEnemyId = null;
+        // Image cache for enemy portraits
+        this.enemyImageCache = {};
+        this._loadEnemyImages();
         
         // Achievements (placeholder achievements)
         this.achievements = [
@@ -7057,6 +7062,8 @@ class ArcaneLibraryMenu {
         this.activeTab = 'statistics';
         this.musicCurrentPage = 0;
         this.intelCurrentPage = 0;
+        this.selectedEnemyId = null;
+        this.hoveredEnemyId = null;
         this.buildUnlockedMusicList();
     }
 
@@ -7065,9 +7072,20 @@ class ArcaneLibraryMenu {
         this.settlementHub.closePopup();
     }
 
+    _loadEnemyImages() {
+        const allEnemies = EnemyIntelRegistry.getAllEnemyIntel();
+        for (const [id, data] of Object.entries(allEnemies)) {
+            if (data.image && !this.enemyImageCache[id]) {
+                const img = new Image();
+                img.onload = () => { this.enemyImageCache[id] = img; };
+                img.onerror = () => { this.enemyImageCache[id] = null; };
+                img.src = data.image;
+            }
+        }
+    }
+
     buildUnlockedMusicList() {
         this.unlockedMusicTracks.clear();
-        
         // Get purchased music items from marketplace system
         if (this.stateManager.marketplaceSystem) {
             const musicItems = MarketplaceRegistry.getItemsByCategory('music');
@@ -7183,40 +7201,59 @@ class ArcaneLibraryMenu {
         if (this.activeTab === 'enemy-intel') {
             this.intelLeftArrowHovered = false;
             this.intelRightArrowHovered = false;
+            this.hoveredEnemyId = null;
             
             const contentX = menuX + 20;
             const contentY = tabStartY + tabHeight + 20;
             const contentWidth = menuWidth - 40;
             const contentHeight = menuHeight - tabHeight - 80;
+
+            // List panel: left 230px
+            const listW = 230;
+            const listX = contentX;
+            const btnH = 36;
+            const btnGap = 4;
             
             // Get unlocked enemy intel
             const unlockedIntelPacks = this.settlementHub?.stateManager?.marketplaceSystem?.getUnlockedEnemyIntel() || [];
             const unlockedEnemies = EnemyIntelRegistry.getUnlockedEnemies(unlockedIntelPacks);
             
-            // Only handle arrows if there are enemies
             if (unlockedEnemies.length > 0) {
                 const itemsPerPage = this.intelItemsPerPage;
                 const totalPages = Math.ceil(unlockedEnemies.length / itemsPerPage);
-                
+                const startIdx = this.intelCurrentPage * itemsPerPage;
+                const endIdx = Math.min(startIdx + itemsPerPage, unlockedEnemies.length);
+                let pointerNeeded = false;
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const rowIdx = i - startIdx;
+                    const btnY = contentY + 8 + rowIdx * (btnH + btnGap);
+                    if (x >= listX && x <= listX + listW && y >= btnY && y <= btnY + btnH) {
+                        this.hoveredEnemyId = unlockedEnemies[i];
+                        pointerNeeded = true;
+                    }
+                }
+
                 if (totalPages > 1) {
-                    const arrowSize = 25;
-                    const arrowY = contentY + contentHeight - 50;
-                    const leftArrowX = contentX + 20;
-                    const rightArrowX = contentX + contentWidth - 50;
-                    
+                    const arrowY = contentY + contentHeight - 34;
+                    const leftArrowX = contentX + 8;
+                    const rightArrowX = contentX + listW - 34;
+                    const arrowSize = 26;
                     this.intelLeftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize &&
                                               y >= arrowY && y <= arrowY + arrowSize &&
                                               this.intelCurrentPage > 0;
-                    
                     this.intelRightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize &&
                                                 y >= arrowY && y <= arrowY + arrowSize &&
                                                 this.intelCurrentPage < totalPages - 1;
+                    if (this.intelLeftArrowHovered || this.intelRightArrowHovered) pointerNeeded = true;
                 }
+
+                this.stateManager.canvas.style.cursor =
+                    (this.tabs.some(t => t.hovered) || this.closeButtonHovered || pointerNeeded) ? 'pointer' : 'default';
+            } else {
+                this.stateManager.canvas.style.cursor =
+                    (this.tabs.some(t => t.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
             }
-            
-            this.stateManager.canvas.style.cursor =
-                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || 
-                 this.intelLeftArrowHovered || this.intelRightArrowHovered) ? 'pointer' : 'default';
             return;
         }
         
@@ -7325,12 +7362,15 @@ class ArcaneLibraryMenu {
             }
         }
         
-        // Handle enemy intel tab pagination clicks
+        // Handle enemy intel tab clicks
         if (this.activeTab === 'enemy-intel') {
             const contentX = menuX + 20;
             const contentY = tabStartY + tabHeight + 20;
             const contentWidth = menuWidth - 40;
             const contentHeight = menuHeight - tabHeight - 80;
+            const listW = 230;
+            const btnH = 36;
+            const btnGap = 4;
             
             // Get unlocked enemy intel
             const unlockedIntelPacks = this.settlementHub?.stateManager?.marketplaceSystem?.getUnlockedEnemyIntel() || [];
@@ -7339,26 +7379,39 @@ class ArcaneLibraryMenu {
             if (unlockedEnemies.length > 0) {
                 const itemsPerPage = this.intelItemsPerPage;
                 const totalPages = Math.ceil(unlockedEnemies.length / itemsPerPage);
-                
+                const startIdx = this.intelCurrentPage * itemsPerPage;
+                const endIdx = Math.min(startIdx + itemsPerPage, unlockedEnemies.length);
+
+                // Check enemy button clicks
+                for (let i = startIdx; i < endIdx; i++) {
+                    const rowIdx = i - startIdx;
+                    const btnY = contentY + 8 + rowIdx * (btnH + btnGap);
+                    if (x >= contentX && x <= contentX + listW && y >= btnY && y <= btnY + btnH) {
+                        this.selectedEnemyId = unlockedEnemies[i];
+                        return;
+                    }
+                }
+
+                // Pagination arrow clicks
                 if (totalPages > 1) {
-                    const arrowSize = 25;
-                    const arrowY = contentY + contentHeight - 50;
-                    const leftArrowX = contentX + 20;
-                    const rightArrowX = contentX + contentWidth - 50;
+                    const arrowY = contentY + contentHeight - 34;
+                    const leftArrowX = contentX + 8;
+                    const rightArrowX = contentX + listW - 34;
+                    const arrowSize = 26;
                     
-                    // Left arrow click
                     if (x >= leftArrowX && x <= leftArrowX + arrowSize &&
                         y >= arrowY && y <= arrowY + arrowSize &&
                         this.intelCurrentPage > 0) {
                         this.intelCurrentPage--;
+                        this.selectedEnemyId = null;
                         return;
                     }
                     
-                    // Right arrow click
                     if (x >= rightArrowX && x <= rightArrowX + arrowSize &&
                         y >= arrowY && y <= arrowY + arrowSize &&
                         this.intelCurrentPage < totalPages - 1) {
                         this.intelCurrentPage++;
+                        this.selectedEnemyId = null;
                         return;
                     }
                 }
@@ -7839,17 +7892,7 @@ class ArcaneLibraryMenu {
         // Get unlocked enemy intel from marketplace system
         const unlockedIntelPacks = this.stateManager?.marketplaceSystem?.getUnlockedEnemyIntel() || [];
         const unlockedEnemies = EnemyIntelRegistry.getUnlockedEnemies(unlockedIntelPacks);
-        
-        // Grid layout: 3 columns, 2 rows per page
-        const cols = 3;
-        const rows = 2;
-        const itemWidth = 110;
-        const itemHeight = 150;
-        const padding = 15;
-        const contentWidth = cols * (itemWidth + padding) + 40;
-        const startX = x + (width - contentWidth) / 2;
-        const startY = y + 20;
-        
+
         // If no intel unlocked, show message
         if (unlockedEnemies.length === 0) {
             ctx.font = 'bold 14px Trebuchet MS, sans-serif';
@@ -7861,124 +7904,268 @@ class ArcaneLibraryMenu {
             ctx.fillText('Visit the marketplace to buy spy reports', x + width / 2, y + height / 2 + 20);
             return;
         }
-        
-        // Calculate pagination - properties are initialized in constructor
+
+        // Layout: left side = enemy list buttons, right side = detail panel
+        const listW = 230;
+        const gap = 10;
+        const detailX = x + listW + gap;
+        const detailW = width - listW - gap;
+        const btnH = 36;
+        const btnGap = 4;
         const itemsPerPage = this.intelItemsPerPage;
         const totalPages = Math.ceil(unlockedEnemies.length / itemsPerPage);
         const startIdx = this.intelCurrentPage * itemsPerPage;
         const endIdx = Math.min(startIdx + itemsPerPage, unlockedEnemies.length);
-        
-        // Display enemies for current page
+
+        // ── Enemy list buttons ───────────────────────────────────────────────
         for (let i = startIdx; i < endIdx; i++) {
+            const rowIdx = i - startIdx;
             const enemyId = unlockedEnemies[i];
-            const enemyIntel = EnemyIntelRegistry.getEnemyIntel(enemyId);
-            if (!enemyIntel) continue;
-            
-            const gridIdx = i - startIdx;
-            const col = gridIdx % cols;
-            const row = Math.floor(gridIdx / cols);
-            
-            const itemX = startX + col * (itemWidth + padding);
-            const itemY = startY + row * (itemHeight + padding);
-            
-            // Enemy tile background
-            ctx.fillStyle = '#3d2817';
-            ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
-            
-            // Tile border (gold)
-            ctx.strokeStyle = '#d4af37';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(itemX, itemY, itemWidth, itemHeight);
-            
-            // Enemy icon
-            ctx.font = 'bold 40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#ffd700';
-            ctx.fillText(enemyIntel.icon, itemX + itemWidth / 2, itemY + 28);
-            
-            // Enemy name
-            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#c9a876';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillText(enemyIntel.name, itemX + itemWidth / 2, itemY + 70);
-            
-            // Health stat
-            ctx.font = '9px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
-            ctx.textAlign = 'left';
-            ctx.fillText(`HP: ${enemyIntel.stats.health}`, itemX + 8, itemY + 90);
-            
-            // Speed stat
-            ctx.textAlign = 'center';
-            ctx.fillText(`SPD: ${enemyIntel.stats.speed}`, itemX + itemWidth / 2, itemY + 90);
-            
-            // Damage stat
-            ctx.textAlign = 'right';
-            ctx.fillText(`DMG: ${enemyIntel.stats.damage}`, itemX + itemWidth - 8, itemY + 90);
-            
-            // Abilities
-            ctx.font = '8px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#6a5a4a';
-            ctx.textAlign = 'center';
-            const abilityText = enemyIntel.abilities.slice(0, 2).join(', ');
-            const abilityLines = this.wrapText(abilityText, 12);
-            let abilityY = itemY + 108;
-            for (const line of abilityLines) {
-                ctx.fillText(line, itemX + itemWidth / 2, abilityY);
-                abilityY += 8;
-            }
-        }
-        
-        // Render pagination arrows if multiple pages
-        if (totalPages > 1) {
-            const arrowSize = 25;
-            const arrowY = y + height - 40;
-            const leftArrowX = x + 20;
-            const rightArrowX = x + width - 50;
-            
-            // Left arrow
-            if (this.arcaneLibraryPopup.intelCurrentPage > 0) {
-                ctx.fillStyle = this.arcaneLibraryPopup.intelLeftArrowHovered ? '#ffd700' : '#d4af37';
+            const intel = EnemyIntelRegistry.getEnemyIntel(enemyId);
+            if (!intel) continue;
+
+            const btnY = y + 8 + rowIdx * (btnH + btnGap);
+            const isSelected = this.selectedEnemyId === enemyId;
+            const isHovered = this.hoveredEnemyId === enemyId;
+
+            // Button background
+            if (isSelected) {
+                const bg = ctx.createLinearGradient(x, btnY, x, btnY + btnH);
+                bg.addColorStop(0, '#5a3d1a');
+                bg.addColorStop(1, '#3d2410');
+                ctx.fillStyle = bg;
+            } else if (isHovered) {
+                ctx.fillStyle = 'rgba(80, 55, 25, 0.8)';
             } else {
-                ctx.fillStyle = '#555555';
+                ctx.fillStyle = 'rgba(30, 18, 8, 0.7)';
             }
+            ctx.fillRect(x, btnY, listW, btnH);
+
+            // Button border
+            ctx.strokeStyle = isSelected ? '#ffd700' : (isHovered ? '#c8a84b' : 'rgba(140, 110, 50, 0.5)');
+            ctx.lineWidth = isSelected ? 2 : 1;
+            ctx.strokeRect(x, btnY, listW, btnH);
+
+            // Selected indicator bar on the left
+            if (isSelected) {
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(x, btnY, 3, btnH);
+            }
+
+            // Thumbnail image or placeholder square
+            const thumbSize = 26;
+            const thumbX = x + 8;
+            const thumbY = btnY + (btnH - thumbSize) / 2;
+            const cachedImg = this.enemyImageCache[enemyId];
+            if (cachedImg) {
+                ctx.drawImage(cachedImg, thumbX, thumbY, thumbSize, thumbSize);
+            } else {
+                ctx.fillStyle = 'rgba(60, 40, 15, 0.9)';
+                ctx.fillRect(thumbX, thumbY, thumbSize, thumbSize);
+                ctx.strokeStyle = 'rgba(140, 110, 50, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(thumbX, thumbY, thumbSize, thumbSize);
+            }
+
+            // Enemy name
+            ctx.font = isSelected ? 'bold 12px Trebuchet MS, sans-serif' : '12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = isSelected ? '#ffd700' : (isHovered ? '#e8d49a' : '#c9a876');
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(intel.name, thumbX + thumbSize + 8, btnY + btnH / 2);
+        }
+
+        // Pagination arrows (below the list)
+        if (totalPages > 1) {
+            const arrowY = y + height - 34;
+            const arrowSize = 26;
+            const leftArrowX = x + 8;
+            const rightArrowX = x + listW - arrowSize - 8;
+
+            // Left arrow
+            ctx.fillStyle = this.intelCurrentPage > 0
+                ? (this.intelLeftArrowHovered ? '#ffd700' : '#c8a84b')
+                : '#333333';
             ctx.fillRect(leftArrowX, arrowY, arrowSize, arrowSize);
-            ctx.strokeStyle = '#8b7355';
+            ctx.strokeStyle = '#6a501e';
             ctx.lineWidth = 1;
             ctx.strokeRect(leftArrowX, arrowY, arrowSize, arrowSize);
-            
-            // Left arrow text
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = this.arcaneLibraryPopup.intelCurrentPage > 0 ? '#000000' : '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = this.intelCurrentPage > 0 ? '#1a0f04' : '#555555';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('◀', leftArrowX + arrowSize / 2, arrowY + arrowSize / 2);
-            
+            ctx.fillText('<', leftArrowX + arrowSize / 2, arrowY + arrowSize / 2);
+
             // Right arrow
-            if (this.arcaneLibraryPopup.intelCurrentPage < totalPages - 1) {
-                ctx.fillStyle = this.arcaneLibraryPopup.intelRightArrowHovered ? '#ffd700' : '#d4af37';
-            } else {
-                ctx.fillStyle = '#555555';
-            }
+            ctx.fillStyle = this.intelCurrentPage < totalPages - 1
+                ? (this.intelRightArrowHovered ? '#ffd700' : '#c8a84b')
+                : '#333333';
             ctx.fillRect(rightArrowX, arrowY, arrowSize, arrowSize);
-            ctx.strokeStyle = '#8b7355';
+            ctx.strokeStyle = '#6a501e';
             ctx.lineWidth = 1;
             ctx.strokeRect(rightArrowX, arrowY, arrowSize, arrowSize);
-            
-            // Right arrow text
-            ctx.font = 'bold 16px Arial';
-            ctx.fillStyle = this.arcaneLibraryPopup.intelCurrentPage < totalPages - 1 ? '#000000' : '#333333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = this.intelCurrentPage < totalPages - 1 ? '#1a0f04' : '#555555';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('▶', rightArrowX + arrowSize / 2, arrowY + arrowSize / 2);
-            
+            ctx.fillText('>', rightArrowX + arrowSize / 2, arrowY + arrowSize / 2);
+
             // Page indicator
-            ctx.font = '11px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#d4af37';
+            ctx.font = '10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
             ctx.textAlign = 'center';
-            ctx.fillText(`Page ${this.arcaneLibraryPopup.intelCurrentPage + 1} of ${totalPages}`, x + width / 2, arrowY + arrowSize + 15);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${this.intelCurrentPage + 1}/${totalPages}`, x + listW / 2, arrowY + arrowSize / 2);
+        }
+
+        // ── Detail panel (right side) ────────────────────────────────────────
+        // Panel background
+        ctx.fillStyle = 'rgba(15, 10, 4, 0.8)';
+        ctx.fillRect(detailX, y, detailW, height);
+        ctx.strokeStyle = 'rgba(140, 110, 50, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(detailX, y, detailW, height);
+
+        // Show detail for selected enemy only (click to select)
+        const displayId = this.selectedEnemyId;
+        const intel = displayId ? EnemyIntelRegistry.getEnemyIntel(displayId) : null;
+
+        if (!intel) {
+            ctx.font = '13px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#5a4a3a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Select an enemy to view details', detailX + detailW / 2, y + height / 2);
+            return;
+        }
+
+        const pad = 14;
+        let cy = y + pad;
+
+        // Portrait image
+        const portraitSize = Math.min(detailW - pad * 2, 80);
+        const portraitX = detailX + (detailW - portraitSize) / 2;
+        const cachedPortrait = this.enemyImageCache[displayId];
+        const portraitBgX = detailX + (detailW - portraitSize) / 2;
+
+        ctx.fillStyle = 'rgba(40, 25, 10, 0.9)';
+        ctx.fillRect(portraitBgX, cy, portraitSize, portraitSize);
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(portraitBgX, cy, portraitSize, portraitSize);
+
+        if (cachedPortrait) {
+            ctx.drawImage(cachedPortrait, portraitBgX, cy, portraitSize, portraitSize);
+        } else {
+            // Placeholder label
+            ctx.font = '10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#4a3a28';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Portrait', portraitBgX + portraitSize / 2, cy + portraitSize / 2);
+        }
+        cy += portraitSize + 10;
+
+        // Enemy name
+        ctx.font = 'bold 15px Georgia, serif';
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(intel.name, detailX + detailW / 2, cy);
+        cy += 20;
+
+        // Divider
+        ctx.strokeStyle = 'rgba(140, 110, 50, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(detailX + pad, cy);
+        ctx.lineTo(detailX + detailW - pad, cy);
+        ctx.stroke();
+        cy += 8;
+
+        // Description (word-wrapped)
+        ctx.font = '11px Trebuchet MS, sans-serif';
+        ctx.fillStyle = '#b09060';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        const descWords = intel.description.split(' ');
+        let descLine = '';
+        const maxDescW = detailW - pad * 2;
+        for (const word of descWords) {
+            const test = descLine ? descLine + ' ' + word : word;
+            if (ctx.measureText(test).width > maxDescW && descLine) {
+                ctx.fillText(descLine, detailX + pad, cy);
+                descLine = word;
+                cy += 14;
+            } else {
+                descLine = test;
+            }
+        }
+        if (descLine) { ctx.fillText(descLine, detailX + pad, cy); cy += 14; }
+        cy += 6;
+
+        // Stats
+        ctx.font = 'bold 11px Trebuchet MS, sans-serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'left';
+        ctx.fillText('BASE STATS', detailX + pad, cy);
+        cy += 14;
+
+        const statColor = { hp: '#7ec87e', spd: '#7eafd4', dmg: '#d47e7e', arm: '#c8c8d4', mag: '#b47ec8' };
+        const statRows = [
+            { label: 'Health', value: intel.stats.health, color: statColor.hp },
+            { label: 'Speed', value: intel.stats.speed, color: statColor.spd },
+            { label: 'Armour', value: intel.stats.armour ?? 0, color: statColor.arm },
+            { label: 'Damage', value: intel.stats.damage, color: statColor.dmg }
+        ];
+        for (const stat of statRows) {
+            ctx.font = '11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'left';
+            ctx.fillText(stat.label + ':', detailX + pad, cy);
+            ctx.fillStyle = stat.color;
+            ctx.textAlign = 'right';
+            ctx.fillText(String(stat.value), detailX + detailW - pad, cy);
+            cy += 14;
+        }
+        cy += 2;
+
+        // Magic resistance / elemental notes
+        const magRes = intel.stats.magicResistance;
+        if (typeof magRes === 'number' && magRes !== 0) {
+            let magLabel, magColor;
+            if (magRes > 0) {
+                magLabel = 'Magic Resist: ' + Math.round(magRes * 100) + '%';
+                magColor = statColor.mag;
+            } else {
+                magLabel = 'Magic Weak: +' + Math.round(-magRes * 100) + '%';
+                magColor = '#d4827e';
+            }
+            ctx.font = '10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'left';
+            ctx.fillText('Magic:', detailX + pad, cy);
+            ctx.fillStyle = magColor;
+            ctx.textAlign = 'right';
+            ctx.fillText(magLabel, detailX + detailW - pad, cy);
+            cy += 14;
+        }
+        cy += 4;
+
+        // Abilities
+        if (intel.abilities && intel.abilities.length > 0) {
+            ctx.font = 'bold 11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#d4af37';
+            ctx.textAlign = 'left';
+            ctx.fillText('ABILITIES', detailX + pad, cy);
+            cy += 14;
+            ctx.font = '10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#a09060';
+            for (const ability of intel.abilities) {
+                if (cy > y + height - pad) break;
+                ctx.fillText('· ' + ability, detailX + pad + 4, cy);
+                cy += 12;
+            }
         }
     }
 

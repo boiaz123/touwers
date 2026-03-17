@@ -4621,7 +4621,7 @@ export class UIManager {
             contentHTML = `
                 <div class="forge-panel-header" id="enemy-intel-header">
                     <div class="forge-header-top">
-                        <div class="forge-icon-display" style="font-size: 1.4rem; color: var(--primary-gold); font-weight: bold;">${intel ? intel.icon : '?'}</div>
+                        <div class="forge-icon-display" style="padding: 2px;">${intel && intel.image ? `<img src="${intel.image}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated;" alt="${displayName}">` : '?'}</div>
                         <div class="forge-info-wrapper">
                             <div class="forge-title-row">
                                 <div class="forge-name">${displayName}</div>
