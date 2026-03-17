@@ -523,54 +523,16 @@ export class LevelBase {
      * @returns {number} - Effective tower range in pixels
      */
     getEffectiveTowerRange(towerType, towerManager) {
-        // Start with base range
-        let effectiveRange = this.getBaseTowerRange(towerType);
-
-        if (!towerManager || !towerManager.buildingManager) {
-            return effectiveRange;
+        // Use TowerManager's full upgrade calculation when available
+        if (towerManager && typeof towerManager.getUpgradedTowerStats === 'function') {
+            const stats = towerManager.getUpgradedTowerStats(towerType);
+            if (stats && typeof stats.range === 'number') {
+                return stats.range;
+            }
         }
 
-        // Check for Training Grounds upgrades
-        const trainingGrounds = towerManager.buildingManager.buildings.find(b => 
-            b.constructor.name === 'TrainingGrounds'
-        );
-
-        if (!trainingGrounds || !trainingGrounds.rangeUpgrades) {
-            return effectiveRange;
-        }
-
-        // Map tower type to training grounds upgrade key
-        let upgradeKey = null;
-        switch (towerType) {
-            case 'archer':
-                upgradeKey = 'archerTower';
-                break;
-            case 'barricade':
-                upgradeKey = 'barricadeTower';
-                break;
-            case 'basic':
-                upgradeKey = 'basicTower';
-                break;
-            case 'poison':
-                upgradeKey = 'poisonArcherTower';
-                break;
-            case 'cannon':
-                upgradeKey = 'cannonTower';
-                break;
-            case 'guard-post':
-                upgradeKey = 'guardPostTower';
-                break;
-            default:
-                return effectiveRange;
-        }
-
-        // Apply training grounds upgrades
-        const upgrade = trainingGrounds.rangeUpgrades[upgradeKey];
-        if (upgrade && upgrade.level > 0) {
-            effectiveRange = this.getBaseTowerRange(towerType) + (upgrade.level * upgrade.effect);
-        }
-
-        return effectiveRange;
+        // Fallback: base range without upgrades
+        return this.getBaseTowerRange(towerType);
     }
 
     /**
@@ -581,13 +543,13 @@ export class LevelBase {
     getBaseTowerRange(towerType) {
         const baseRanges = {
             'basic': 120,
-            'cannon': 120,
-            'archer': 140,
-            'magic': 110,
-            'barricade': 100,
+            'cannon': 155,
+            'archer': 155,
+            'magic': 130,
+            'barricade': 120,
             'poison': 130,
-            'combination': 110,
-            'guard-post': 120
+            'combination': 140,
+            'guard-post': 0
         };
         return baseRanges[towerType] || 120;
     }

@@ -62,8 +62,10 @@ export class CampaignBase {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.clickHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const scaleX = this.stateManager.canvas.width / rect.width;
+            const scaleY = this.stateManager.canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
             this.handleClick(x, y);
         };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
@@ -104,8 +106,10 @@ export class CampaignBase {
     
     handleMouseMove(e) {
         const rect = this.stateManager.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
         
         this.hoveredLevel = -1;
         this.hoveredExitButton = false;

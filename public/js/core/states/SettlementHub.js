@@ -659,31 +659,33 @@ export class SettlementHub {
         ctx.lineWidth = 0.75;
         ctx.stroke();
 
-        // Jester hat (two-pronged, purple with gold tips)
+        // Jester hat (redesigned — wider curved prongs with rounded brim)
         ctx.fillStyle = '#6B3AA8';
-        // Hat brim
-        ctx.fillRect(x - 9, y - 14, 18, 4);
-        // Left prong
+        // Hat body — single connected path with two rounded prongs
         ctx.beginPath();
-        ctx.moveTo(x - 7, y - 14);
-        ctx.lineTo(x - 11, y - 26);
-        ctx.lineTo(x - 3, y - 14);
+        ctx.moveTo(x - 9, y - 14);
+        ctx.quadraticCurveTo(x - 13, y - 20, x - 7, y - 30);
+        ctx.quadraticCurveTo(x - 3, y - 22, x, y - 25);
+        ctx.quadraticCurveTo(x + 3, y - 22, x + 7, y - 30);
+        ctx.quadraticCurveTo(x + 13, y - 20, x + 9, y - 14);
         ctx.closePath();
         ctx.fill();
-        // Right prong
+        // Brim — ellipse for 3D depth
         ctx.beginPath();
-        ctx.moveTo(x + 3, y - 14);
-        ctx.lineTo(x + 11, y - 26);
-        ctx.lineTo(x + 7, y - 14);
-        ctx.closePath();
+        ctx.ellipse(x, y - 14, 11, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Gold tips (bells)
+        ctx.strokeStyle = '#9B5AD8';
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.arc(x - 11, y - 26, 3, 0, Math.PI * 2);
+        ctx.ellipse(x, y - 14, 11, 3.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Gold bells at prong tips
         ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(x - 7, y - 30, 3.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(x + 11, y - 26, 3, 0, Math.PI * 2);
+        ctx.arc(x + 7, y - 30, 3.5, 0, Math.PI * 2);
         ctx.fill();
 
         // Floating music note above head — pulses softly
@@ -6129,8 +6131,8 @@ class ManageSettlementMenu {
             { label: 'OPTIONS', action: 'options', hovered: false },
             { label: 'QUIT SETTLEMENT', action: 'quitSettlement', hovered: false },
             { label: 'QUIT TOUWERS', action: 'quitTouwers', hovered: false },
-            { label: 'CLOSE', action: 'close', hovered: false },
         ];
+        this.closeButtonHovered = false;
         this.buttonWidth = 300;
         this.buttonHeight = 52;
         this.buttonMarginTop = 52;
@@ -6177,8 +6179,14 @@ class ManageSettlementMenu {
                            y >= buttonY && y <= buttonY + this.buttonHeight;
         });
 
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+                                   y >= closeButtonY && y <= closeButtonY + closeButtonSize;
+
         this.stateManager.canvas.style.cursor =
-            this.buttons.some(b => b.hovered) ? 'pointer' : 'default';
+            (this.buttons.some(b => b.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
     }
 
     updateWarningDialogHoverState(x, y) {
@@ -6234,6 +6242,18 @@ class ManageSettlementMenu {
         const menuHeight = this.buttons.length * (this.buttonHeight + this.buttonGap) + this.buttonMarginTop + menuPadding * 2;
         const menuX = canvas.width / 2 - menuWidth / 2;
         const menuY = canvas.height / 2 - menuHeight / 2;
+
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
+            this.close();
+            return;
+        }
 
         for (let i = 0; i < this.buttons.length; i++) {
             const button = this.buttons[i];
@@ -6526,6 +6546,21 @@ class ManageSettlementMenu {
             ctx.fillStyle = button.hovered ? '#ffd700' : '#d4af37';
             ctx.fillText(button.label, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2);
         });
+
+        // Close (X) button — top-right corner, same style as other menus
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(closeButtonX + 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + closeButtonSize - 5, closeButtonY + closeButtonSize - 5);
+        ctx.moveTo(closeButtonX + closeButtonSize - 5, closeButtonY + 5);
+        ctx.lineTo(closeButtonX + 5, closeButtonY + closeButtonSize - 5);
+        ctx.stroke();
 
         // Render warning dialog if active
         if (this.activeWarningDialog) {
