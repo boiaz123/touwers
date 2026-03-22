@@ -49,6 +49,28 @@ export class TowerForge extends Building {
             // Cannon upgrades - available at forge level 3+
             'cannon': { level: 0, baseCost: 120, damageEffect: 10, radiusEffect: 5 }
         };
+        
+        // Pre-computed grass blade positions to prevent per-frame flickering
+        this.grassBlades = [
+            { cx: -12, cy: 42, blades: [] },
+            { cx: 18,  cy: 38, blades: [] },
+            { cx: -28, cy: 30, blades: [] },
+            { cx: 32,  cy: 45, blades: [] }
+        ].map(clump => {
+            const count = 3 + Math.floor(clump.cx * 0.7 % 2) + 1; // 3-4 blades, deterministic
+            const blades = [];
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2 + clump.cy * 0.08;
+                const dist = (clump.cx * 0.03 + i * 0.7) % 2.5;
+                blades.push({
+                    dx: Math.cos(angle) * dist,
+                    dy: Math.sin(angle) * dist,
+                    tipDx: (i % 3 - 1) * 0.6,
+                    height: 3 + (i * 0.9 % 2.5)
+                });
+            }
+            return { cx: clump.cx, cy: clump.cy, blades };
+        });
     }
     
     update(deltaTime) {
@@ -229,6 +251,17 @@ export class TowerForge extends Building {
             ctx.lineTo(barrel.size/2, -barrel.size * 0.7);
             ctx.moveTo(-barrel.size/2, -barrel.size * 0.3);
             ctx.lineTo(barrel.size/2, -barrel.size * 0.3);
+            ctx.stroke();
+            
+            // Barrel top ellipse for 3D depth
+            const topFill = barrel.type === 'wood' ? '#A0522D' : '#404040';
+            const topStroke = barrel.type === 'wood' ? '#654321' : '#1C1C1C';
+            ctx.fillStyle = topFill;
+            ctx.beginPath();
+            ctx.ellipse(0, -barrel.size, barrel.size / 2, barrel.size * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = topStroke;
+            ctx.lineWidth = 1;
             ctx.stroke();
             
             ctx.restore();
@@ -493,30 +526,18 @@ export class TowerForge extends Building {
             ctx.stroke();
         });
         
-        // Small grass clumps
-        const grassClumps = [
-            { x: -12, y: 42, count: 3, spread: 2 },
-            { x: 18, y: 38, count: 4, spread: 3 },
-            { x: -28, y: 30, count: 2, spread: 1.5 },
-            { x: 32, y: 45, count: 3, spread: 2.5 }
-        ];
-        
-        grassClumps.forEach(clump => {
+        // Small grass clumps - pre-computed positions to prevent flickering
+        this.grassBlades.forEach(clump => {
             ctx.strokeStyle = '#228B22';
             ctx.lineWidth = 1;
-            
-            for (let i = 0; i < clump.count; i++) {
-                const angle = (i / clump.count) * Math.PI * 2;
-                const distance = Math.random() * clump.spread;
-                const bladeX = this.x + clump.x + Math.cos(angle) * distance;
-                const bladeY = this.y + clump.y + Math.sin(angle) * distance;
-                const bladeHeight = 3 + Math.random() * 2;
-                
+            clump.blades.forEach(blade => {
+                const bladeX = this.x + clump.cx + blade.dx;
+                const bladeY = this.y + clump.cy + blade.dy;
                 ctx.beginPath();
                 ctx.moveTo(bladeX, bladeY);
-                ctx.lineTo(bladeX + (Math.random() - 0.5), bladeY - bladeHeight);
+                ctx.lineTo(bladeX + blade.tipDx, bladeY - blade.height);
                 ctx.stroke();
-            }
+            });
         });
         
         // Worn footpaths in the dirt
@@ -667,8 +688,9 @@ export class TowerForge extends Building {
                     continue;
                 }
                 
-                // Individual stone color variation
-                const stoneShade = 0.8 + Math.sin(row * col * 0.5) * 0.2;
+                // Individual stone color variation - deterministic hash for consistent look
+                const hashVal = ((row * 11 + col * 7) % 13) / 13;
+                const stoneShade = 0.78 + hashVal * 0.2;
                 ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
                 
                 // Draw stone
@@ -891,21 +913,49 @@ export class TowerForge extends Building {
         // Forge opening in the wall
         const openingWidth = size * 0.25;
         const openingHeight = size * 0.2;
-        const openingX = this.x - openingWidth/2 - 15;
-        const openingY = this.y - openingHeight/2 - 5;
+        const openingX = this.x - openingWidth / 2 - 15;
+        const openingY = this.y - openingHeight / 2 - 5;
+        const archCX = openingX + openingWidth / 2;
+        const archRadius = openingWidth / 2;
+        
+        // Stone arch surround (keystone)
+        ctx.fillStyle = '#888888';
+        ctx.beginPath();
+        ctx.arc(archCX, openingY, archRadius + 5, Math.PI, 0);
+        ctx.fill();
         
         // Opening shadow/depth
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = '#050505';
         ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
+        // Arch void over rectangle
+        ctx.beginPath();
+        ctx.arc(archCX, openingY, archRadius, Math.PI, 0);
+        ctx.fill();
         
-        // Opening border (stone arch)
+        // Stone frame border
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(openingX - 2, openingY - 2, openingWidth + 4, openingHeight + 4);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(openingX, openingY, openingWidth, openingHeight);
         
-        // Arch top
-        ctx.fillStyle = '#808080';
-        ctx.fillRect(openingX - 2, openingY - 4, openingWidth + 4, 4);
+        // Arch outline
+        ctx.beginPath();
+        ctx.arc(archCX, openingY, archRadius + 5, Math.PI, 0);
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        
+        // Keystone at top of arch
+        ctx.fillStyle = '#999999';
+        ctx.beginPath();
+        ctx.moveTo(archCX - 4, openingY - archRadius - 1);
+        ctx.lineTo(archCX + 4, openingY - archRadius - 1);
+        ctx.lineTo(archCX + 3, openingY - archRadius + 5);
+        ctx.lineTo(archCX - 3, openingY - archRadius + 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         
         // Fire glow from opening
         const fireGlow = ctx.createRadialGradient(

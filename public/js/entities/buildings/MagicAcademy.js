@@ -147,7 +147,6 @@ export class MagicAcademy extends Building {
         // Render the upper fortress structures (towers, spires, details - above trees)
         this.renderCentralTower(ctx, size);
         this.renderSideSpires(ctx, size);
-        this.renderFortressDetails(ctx, size);
         
         // Render magic effects
         this.renderMagicEffects(ctx, size);
@@ -410,8 +409,9 @@ export class MagicAcademy extends Building {
             for (let col = 0; col < 12; col++) {
                 const stoneX = this.x - baseWidth/2 + offsetX + (col * stoneWidth);
                 
-                // Stone color variation with better shading
-                const stoneShade = 0.75 + Math.sin(row * col * 0.3) * 0.25;
+                // Stone color variation - deterministic hash for consistent natural look
+                const hashVal = ((row * 11 + col * 7) % 13) / 13;
+                const stoneShade = 0.75 + hashVal * 0.22;
                 ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
                 
                 ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
@@ -419,10 +419,10 @@ export class MagicAcademy extends Building {
                 
                 // Stone highlight with better gradation
                 ctx.fillStyle = `rgba(210, 210, 210, ${0.25 * stoneShade})`;
-                ctx.fillRect(stoneX + 1, rowY + 1, stoneWidth/3 - 1, stoneHeight/3 - 1);
+                ctx.fillRect(stoneX + 1, rowY + 1, stoneWidth / 3 - 1, stoneHeight / 3 - 1);
                 
-                // Stone shadow for depth
-                ctx.fillStyle = `rgba(100, 100, 100, ${0.15 * stoneShade})`;
+                // Stone shadow for depth (bottom-right corner)
+                ctx.fillStyle = `rgba(60, 60, 60, ${0.18 * stoneShade})`;
                 ctx.fillRect(stoneX + stoneWidth - 3, rowY + stoneHeight - 3, 2, 2);
             }
         }
@@ -478,57 +478,92 @@ export class MagicAcademy extends Building {
         const towerRadius = size * 0.15;
         const towerHeight = size * 0.5;
         const towerY = this.y - towerHeight;
+        const towerLeft = this.x - towerRadius;
+        const towerRight = this.x + towerRadius;
         
-        // Tower gradient
+        // Tower gradient (left-lit front face)
         const towerGradient = ctx.createLinearGradient(
-            this.x - towerRadius, towerY,
-            this.x + towerRadius, this.y
+            towerLeft, towerY,
+            towerRight, this.y
         );
         towerGradient.addColorStop(0, '#B0C4DE');
         towerGradient.addColorStop(0.5, '#708090');
         towerGradient.addColorStop(1, '#2F4F4F');
         
-        // Central tower cylinder
+        // Right-side shadow face for depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.fillRect(towerRight - 4, towerY, 4, towerHeight);
+        
+        // Central tower body - rectangle (front view)
         ctx.fillStyle = towerGradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight/2, towerRadius, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(towerLeft, towerY, towerRadius * 2, towerHeight);
         
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.strokeRect(towerLeft, towerY, towerRadius * 2, towerHeight);
         
-        // Tower rings (cobblestone courses)
-        for (let ring = 0; ring < 5; ring++) {
-            const ringY = this.y - towerHeight + ring * towerHeight/5;
+        // Stone courses (horizontal mortar lines)
+        const courseH = towerHeight / 5;
+        for (let c = 1; c < 5; c++) {
+            const cy = towerY + c * courseH;
             ctx.strokeStyle = '#1C1C1C';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
-            ctx.arc(this.x, ringY, towerRadius * 0.95, 0, Math.PI * 2);
+            ctx.moveTo(towerLeft, cy);
+            ctx.lineTo(towerRight, cy);
+            ctx.stroke();
+        }
+        // Vertical mortar columns
+        const colW = towerRadius * 2 / 3;
+        for (let col = 1; col < 3; col++) {
+            ctx.strokeStyle = '#1C1C1C';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(towerLeft + col * colW, towerY);
+            ctx.lineTo(towerLeft + col * colW, this.y);
             ctx.stroke();
         }
         
-        // Tower windows
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * towerRadius * 0.8;
-            const windowY = this.y - towerHeight * 0.7;
-            
-            // Window glow (magical)
-            const windowGlow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, 8);
-            windowGlow.addColorStop(0, 'rgba(138, 43, 226, 0.8)');
+        // Tower windows - 3 in vertical column with arch tops
+        const winW = 7;
+        const winH = 10;
+        const windowYPositions = [
+            this.y - towerHeight * 0.75,
+            this.y - towerHeight * 0.5,
+            this.y - towerHeight * 0.25
+        ];
+        windowYPositions.forEach(wY => {
+            // Window glow
+            const windowGlow = ctx.createRadialGradient(this.x, wY, 0, this.x, wY, 12);
+            windowGlow.addColorStop(0, 'rgba(138, 43, 226, 0.6)');
             windowGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
             ctx.fillStyle = windowGlow;
             ctx.beginPath();
-            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
+            ctx.arc(this.x, wY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Window body (arched top)
+            ctx.fillStyle = '#1C1C1C';
+            ctx.fillRect(this.x - winW / 2, wY - winH / 2, winW, winH);
+            ctx.beginPath();
+            ctx.arc(this.x, wY - winH / 2, winW / 2, Math.PI, 0);
             ctx.fill();
             
             // Window frame
-            ctx.fillStyle = '#1C1C1C';
+            ctx.strokeStyle = '#4A3060';
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(windowX, windowY, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
+            ctx.moveTo(this.x - winW / 2, wY + winH / 2);
+            ctx.lineTo(this.x - winW / 2, wY - winH / 2);
+            ctx.arc(this.x, wY - winH / 2, winW / 2, Math.PI, 0);
+            ctx.lineTo(this.x + winW / 2, wY + winH / 2);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Inner purple glow
+            ctx.fillStyle = 'rgba(180, 80, 255, 0.35)';
+            ctx.fillRect(this.x - winW / 2 + 1, wY - winH / 2 + 1, winW - 2, winH - 2);
+        });
         
         // Tower roof (conical)
         const roofHeight = size * 0.2;
@@ -544,10 +579,10 @@ export class MagicAcademy extends Building {
         ctx.fill();
         ctx.stroke();
         
-        // Roof tiles
+        // Roof tile lines
         for (let i = 1; i < 4; i++) {
-            const tileY = towerY - roofHeight * (i/4);
-            const tileWidth = towerRadius * 1.2 * (1 - i/5);
+            const tileY = towerY - roofHeight * (i / 4);
+            const tileWidth = towerRadius * 1.2 * (1 - i / 5);
             ctx.strokeStyle = '#2E0A4F';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -689,34 +724,7 @@ export class MagicAcademy extends Building {
     }
     
     renderFortressDetails(ctx, size) {
-        // Fortress banners
-        const bannerPositions = [
-            { x: this.x - 35, y: this.y - size * 0.25 },
-            { x: this.x + 35, y: this.y - size * 0.25 }
-        ];
-        
-        bannerPositions.forEach(banner => {
-            // Banner pole
-            ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(banner.x, banner.y);
-            ctx.lineTo(banner.x, banner.y - 20);
-            ctx.stroke();
-            
-            // Banner cloth with wind effect
-            const windOffset = Math.sin(this.animationTime * 2 + banner.x) * 3;
-            ctx.fillStyle = '#4B0082';
-            ctx.beginPath();
-            ctx.moveTo(banner.x, banner.y - 20);
-            ctx.lineTo(banner.x + 15 + windOffset, banner.y - 18);
-            ctx.lineTo(banner.x + 12 + windOffset, banner.y - 10);
-            ctx.lineTo(banner.x, banner.y - 12);
-            ctx.closePath();
-            ctx.fill();
-            
-
-        });
+        // Flags/banners removed
     }
     
     renderMagicEffects(ctx, size) {

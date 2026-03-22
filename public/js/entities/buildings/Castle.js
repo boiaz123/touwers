@@ -77,9 +77,9 @@ export class Castle {
         }
         
         this.lights.forEach((light, i) => {
-            this.windowFlicker[i] += Math.random() - 0.5;
-            this.windowFlicker[i] = Math.max(0, Math.min(1, this.windowFlicker[i]));
-            light.intensity = 0.24 + this.windowFlicker[i] * 0.6;
+            this.windowFlicker[i] += (Math.random() - 0.5) * deltaTime * 0.9;
+            this.windowFlicker[i] = Math.max(0.15, Math.min(0.85, this.windowFlicker[i]));
+            light.intensity = 0.48 + this.windowFlicker[i] * 0.32;
         });
     }
     
@@ -243,37 +243,54 @@ export class Castle {
             }
         }
         
-        // Tower windows - vertical arrangement
-        const windowSize = 3.5;
+        // Tower windows - vertical arrangement with arched tops
+        const winW = 5;
+        const winH = 7;
         const windowPositions = [
             { x: 0, y: -50 },
-            { x: 0, y: -30 },
-            { x: 0, y: -10 }
+            { x: 0, y: -32 },
+            { x: 0, y: -14 }
         ];
         
-        windowPositions.forEach((pos, idx) => {
-            ctx.fillStyle = '#1A1815';
-            ctx.fillRect(pos.x - windowSize/2, pos.y - windowSize/2, windowSize, windowSize);
+        windowPositions.forEach((pos) => {
+            const wx = pos.x - winW / 2;
+            const wy = pos.y - winH / 2;
             
-            ctx.strokeStyle = '#3D3830';
+            // Stone surround
+            ctx.fillStyle = '#6B5F52';
+            ctx.fillRect(wx - 1.5, wy - 1, winW + 3, winH + 1);
+            ctx.beginPath();
+            ctx.arc(pos.x, wy, winW / 2 + 1.5, Math.PI, 0);
+            ctx.fill();
+            
+            // Window interior dark
+            ctx.fillStyle = '#100E0C';
+            ctx.fillRect(wx, wy, winW, winH);
+            ctx.beginPath();
+            ctx.arc(pos.x, wy, winW / 2, Math.PI, 0);
+            ctx.fill();
+            
+            // Window frame
+            ctx.strokeStyle = '#2A2520';
             ctx.lineWidth = 0.8;
-            ctx.strokeRect(pos.x - windowSize/2, pos.y - windowSize/2, windowSize, windowSize);
-            
-            const intensity = this.lights[3 + (side === 'left' ? 0 : 1)] ? this.lights[3 + (side === 'left' ? 0 : 1)].intensity : 0.5;
-            ctx.fillStyle = `rgba(255, 180, 100, ${intensity * 0.4})`;
-            ctx.fillRect(pos.x - windowSize/2 + 0.3, pos.y - windowSize/2 + 0.3, windowSize - 0.6, windowSize - 0.6);
-            
-            // Window cross
-            ctx.strokeStyle = '#3D3830';
-            ctx.lineWidth = 0.4;
             ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y - windowSize/2);
-            ctx.lineTo(pos.x, pos.y + windowSize/2);
+            ctx.moveTo(wx, pos.y + winH / 2);
+            ctx.lineTo(wx, wy);
+            ctx.arc(pos.x, wy, winW / 2, Math.PI, 0);
+            ctx.lineTo(wx + winW, pos.y + winH / 2);
+            ctx.closePath();
             ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(pos.x - windowSize/2, pos.y);
-            ctx.lineTo(pos.x + windowSize/2, pos.y);
-            ctx.stroke();
+            
+            // Warm glow
+            const lightIdx = 3 + (side === 'left' ? 0 : 1);
+            const intensity = this.lights[lightIdx] ? this.lights[lightIdx].intensity : 0.5;
+            if (intensity > 0.15) {
+                ctx.fillStyle = `rgba(255, 180, 100, ${intensity * 0.4})`;
+                ctx.fillRect(wx + 1, wy + 1, winW - 2, winH - 2);
+                ctx.beginPath();
+                ctx.arc(pos.x, wy, winW / 2 - 1, Math.PI, 0);
+                ctx.fill();
+            }
         });
         
         // Tower top - integrated crenellations (short, 10px)
@@ -285,21 +302,23 @@ export class Castle {
         ctx.lineWidth = 0.8;
         ctx.strokeRect(-towerTopW/2, topY - creneH, towerTopW, creneH);
         
-        // Crenellation merlons (small raised parts)
-        const meralonW = towerTopW/4;
-        const meralonH = 4;
+        // Crenellation merlons - 3 symmetrically spaced
+        const meralonW = 5;
+        const meralonH = 5;
+        const meralonGap = (towerTopW - 3 * meralonW) / 4;
+        const mBaseY = topY - creneH - meralonH;
         
-        // Left merlon
-        ctx.fillRect(-towerTopW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
-        ctx.strokeRect(-towerTopW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
-        
-        // Center merlon
-        ctx.fillRect(-meralonW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
-        ctx.strokeRect(-meralonW/2 + 2, topY - creneH - meralonH, meralonW - 3, meralonH);
-        
-        // Right merlon
-        ctx.fillRect(towerTopW/2 - meralonW + 1, topY - creneH - meralonH, meralonW - 3, meralonH);
-        ctx.strokeRect(towerTopW/2 - meralonW + 1, topY - creneH - meralonH, meralonW - 3, meralonH);
+        for (let m = 0; m < 3; m++) {
+            const mx = -towerTopW / 2 + meralonGap + m * (meralonW + meralonGap);
+            ctx.fillStyle = '#7A6D5D';
+            ctx.fillRect(mx, mBaseY, meralonW, meralonH);
+            ctx.strokeStyle = '#3D3830';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(mx, mBaseY, meralonW, meralonH);
+            // Top highlight for subtle 3D depth
+            ctx.fillStyle = 'rgba(180, 165, 150, 0.35)';
+            ctx.fillRect(mx, mBaseY, meralonW, 1.5);
+        }
         
         // Minimal roof cap - taller peak for flags
         const roofH = 12;
@@ -414,8 +433,8 @@ export class Castle {
     }
     
     drawWallWindows(ctx) {
-        const windowSize = 4;
-        const windowColor = '#1A1815';
+        const winW = 6;
+        const winH = 9;
         
         const positions = [
             { x: -30, y: -20 },
@@ -424,98 +443,142 @@ export class Castle {
         ];
         
         positions.forEach((pos, idx) => {
-            ctx.fillStyle = windowColor;
-            ctx.fillRect(pos.x - windowSize/2, pos.y - windowSize/2, windowSize, windowSize);
+            const wx = pos.x - winW / 2;
+            const wy = pos.y - winH / 2;
             
-            ctx.strokeStyle = '#3D3830';
-            ctx.lineWidth = 0.8;
-            ctx.strokeRect(pos.x - windowSize/2, pos.y - windowSize/2, windowSize, windowSize);
+            // Stone surround (keystone arch)
+            ctx.fillStyle = '#6B5F52';
+            ctx.fillRect(wx - 2, wy - 1, winW + 4, winH + 1);
+            ctx.beginPath();
+            ctx.arc(pos.x, wy, winW / 2 + 2, Math.PI, 0);
+            ctx.fill();
             
+            // Window interior dark
+            ctx.fillStyle = '#100E0C';
+            ctx.fillRect(wx, wy, winW, winH);
+            ctx.beginPath();
+            ctx.arc(pos.x, wy, winW / 2, Math.PI, 0);
+            ctx.fill();
+            
+            // Window frame outline
+            ctx.strokeStyle = '#2A2520';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(wx, pos.y + winH / 2);
+            ctx.lineTo(wx, wy);
+            ctx.arc(pos.x, wy, winW / 2, Math.PI, 0);
+            ctx.lineTo(wx + winW, pos.y + winH / 2);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Warm inner light
             const intensity = this.lights[idx] ? this.lights[idx].intensity : 0.5;
-            ctx.fillStyle = `rgba(255, 200, 100, ${intensity * 0.5})`;
-            ctx.fillRect(pos.x - windowSize/2 + 0.5, pos.y - windowSize/2 + 0.5, windowSize - 1, windowSize - 1);
-            
-            // Window cross
-            ctx.strokeStyle = '#3D3830';
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y - windowSize/2);
-            ctx.lineTo(pos.x, pos.y + windowSize/2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(pos.x - windowSize/2, pos.y);
-            ctx.lineTo(pos.x + windowSize/2, pos.y);
-            ctx.stroke();
+            if (intensity > 0.15) {
+                ctx.fillStyle = `rgba(255, 200, 100, ${intensity * 0.45})`;
+                ctx.fillRect(wx + 1, wy + 1, winW - 2, winH - 2);
+                ctx.beginPath();
+                ctx.arc(pos.x, wy, winW / 2 - 1, Math.PI, 0);
+                ctx.fill();
+            }
         });
     }
     
     drawGate(ctx) {
         const gateW = 40;
         const gateH = 50;
+        const gateTopY = this.wallHeight / 2 - gateH;
+        const gateBotY = this.wallHeight / 2;
         
-        // Gate shadow
+        // Stone arch keystone surround
+        ctx.fillStyle = '#6B5F52';
+        ctx.beginPath();
+        ctx.arc(0, gateTopY, gateW / 2 + 5, Math.PI, 0);
+        ctx.fill();
+        ctx.strokeStyle = '#3D3830';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, gateTopY, gateW / 2 + 5, Math.PI, 0);
+        ctx.stroke();
+        
+        // Gate shadow offset
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(-gateW/2 + 2, this.wallHeight/2 - gateH + 1, gateW, gateH);
+        ctx.fillRect(-gateW / 2 + 2, gateTopY + 1, gateW, gateH);
         
-        // Gate door
+        // Gate door panels
         ctx.fillStyle = '#4A3A2A';
-        ctx.fillRect(-gateW/2, this.wallHeight/2 - gateH, gateW, gateH);
+        ctx.fillRect(-gateW / 2, gateTopY, gateW, gateH);
         
+        // Dark arch void cut into gate top
+        ctx.fillStyle = '#100E0C';
+        ctx.beginPath();
+        ctx.arc(0, gateTopY, gateW / 2, Math.PI, 0);
+        ctx.fill();
+        
+        // Gate outline
         ctx.strokeStyle = '#2C1810';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(-gateW/2, this.wallHeight/2 - gateH, gateW, gateH);
+        ctx.strokeRect(-gateW / 2, gateTopY, gateW, gateH);
         
-        // Gate center seam
+        // Center seam
         ctx.beginPath();
-        ctx.moveTo(0, this.wallHeight/2 - gateH);
-        ctx.lineTo(0, this.wallHeight/2);
+        ctx.moveTo(0, gateTopY);
+        ctx.lineTo(0, gateBotY);
         ctx.stroke();
         
         // Metal bands
-        ctx.strokeStyle = '#8B7355';
+        ctx.strokeStyle = '#7A6B50';
         ctx.lineWidth = 2;
         for (let i = 1; i < 3; i++) {
             ctx.beginPath();
-            ctx.moveTo(-gateW/2 + 2, this.wallHeight/2 - gateH + (i * gateH/3));
-            ctx.lineTo(gateW/2 - 2, this.wallHeight/2 - gateH + (i * gateH/3));
+            ctx.moveTo(-gateW / 2 + 2, gateTopY + (i * gateH / 3));
+            ctx.lineTo(gateW / 2 - 2, gateTopY + (i * gateH / 3));
             ctx.stroke();
         }
         
         // Gate studs
-        ctx.fillStyle = '#654321';
+        ctx.fillStyle = '#7A6040';
         for (let i = 0; i < 4; i++) {
             for (let j = 0; j < 3; j++) {
                 ctx.beginPath();
-                ctx.arc(-gateW/4 + i * gateW/6, this.wallHeight/2 - gateH + gateH/6 + j * gateH/4, 1.5, 0, Math.PI * 2);
+                ctx.arc(-gateW / 4 + i * gateW / 6, gateTopY + gateH / 6 + j * gateH / 4, 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
         
-        // Gate knocker
-        ctx.fillStyle = '#D4AF37';
-        ctx.beginPath();
-        ctx.arc(gateW/2 - 6, this.wallHeight/2 - gateH/2, 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(gateW/2 - 6, this.wallHeight/2 - gateH/2, 2, 0, Math.PI * 2);
-        ctx.stroke();
+        // Gate knockers - one on each door panel
+        const knockerY = gateTopY + gateH * 0.55;
+        [-gateW / 4, gateW / 4].forEach(kx => {
+            ctx.fillStyle = '#D4AF37';
+            ctx.beginPath();
+            ctx.arc(kx, knockerY, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#8B7500';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(kx, knockerY, 2, 0, Math.PI * 2);
+            ctx.stroke();
+        });
     }
     
     drawCrenellations(ctx) {
         const creneHeight = 14;
         const creneWidth = 12;
         const creneSpacing = 16;
+        const numMerlons = 7;
+        const totalPatternW = (numMerlons - 1) * creneSpacing + creneWidth;
+        const startX = -totalPatternW / 2;
+        const merY = -this.wallHeight / 2 - creneHeight;
         
-        ctx.fillStyle = '#7A6D5D';
-        ctx.strokeStyle = '#3D3830';
-        ctx.lineWidth = 0.8;
-        
-        for (let x = -this.wallWidth/2 + 8; x < this.wallWidth/2; x += creneSpacing) {
-            ctx.fillRect(x, -this.wallHeight/2 - creneHeight, creneWidth, creneHeight);
-            ctx.strokeRect(x, -this.wallHeight/2 - creneHeight, creneWidth, creneHeight);
+        for (let i = 0; i < numMerlons; i++) {
+            const x = startX + i * creneSpacing;
+            ctx.fillStyle = '#7A6D5D';
+            ctx.fillRect(x, merY, creneWidth, creneHeight);
+            ctx.strokeStyle = '#3D3830';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(x, merY, creneWidth, creneHeight);
+            // Subtle top highlight for 3D depth
+            ctx.fillStyle = 'rgba(175, 160, 145, 0.35)';
+            ctx.fillRect(x, merY, creneWidth, 2);
         }
     }
     

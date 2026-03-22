@@ -270,114 +270,185 @@ export class GuardPost extends Tower {
     render(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
-        
-        // Shadow - square shadow at the bottom of the building
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.fillRect(-this.width * 0.4, this.height * 0.3, this.width * 0.8, this.height * 0.1);
-        
-        // --- GUARD POST HUT - DEFENSIVE DESIGN ---
-        
-        // Foundation/base - stone look
-        ctx.fillStyle = '#6B6B6B';
-        ctx.fillRect(-this.width * 0.4, -this.height * 0.1, this.width * 0.8, this.height * 0.35);
-        ctx.strokeStyle = '#3a3a3a';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-this.width * 0.4, -this.height * 0.1, this.width * 0.8, this.height * 0.35);
-        
-        // Stone pattern/texture
-        ctx.strokeStyle = '#4a4a4a';
-        ctx.lineWidth = 0.5;
-        for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 3; j++) {
-                const stoneX = -this.width * 0.35 + i * this.width * 0.2;
-                const stoneY = -this.height * 0.05 + j * this.height * 0.12;
-                ctx.strokeRect(stoneX, stoneY, this.width * 0.18, this.height * 0.1);
+
+        const w = this.width;
+        const h = this.height;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillRect(-w * 0.42, h * 0.25, w * 0.84, h * 0.1);
+
+        // --- FOUNDATION SLAB (wider base) ---
+        ctx.fillStyle = '#505050';
+        ctx.fillRect(-w * 0.45, h * 0.08, w * 0.9, h * 0.18);
+        ctx.fillStyle = '#686868';
+        ctx.fillRect(-w * 0.45, h * 0.08, w * 0.9, h * 0.035);
+        ctx.strokeStyle = '#383838';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-w * 0.45, h * 0.08, w * 0.9, h * 0.18);
+
+        // --- STONE WALLS ---
+        const wallLeft   = -w * 0.36;
+        const wallRight  =  w * 0.36;
+        const wallTop    = -h * 0.18;
+        const wallBottom =  h * 0.08;
+        const wallW      = wallRight - wallLeft;
+        const wallH      = wallBottom - wallTop;
+
+        // Wall base fill
+        ctx.fillStyle = '#787878';
+        ctx.fillRect(wallLeft, wallTop, wallW, wallH);
+
+        // Highlight left face
+        ctx.fillStyle = '#8c8c8c';
+        ctx.fillRect(wallLeft, wallTop, wallW * 0.15, wallH);
+
+        // Shadow right face
+        ctx.fillStyle = '#5e5e5e';
+        ctx.fillRect(wallRight - wallW * 0.12, wallTop, wallW * 0.12, wallH);
+
+        // Stone block texture (offset rows, clipped to wall rect)
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 0.75;
+        const stoneW = wallW / 4;
+        const stoneH = wallH / 3;
+        for (let row = 0; row < 3; row++) {
+            const offset = (row % 2 === 0) ? 0 : stoneW * 0.5;
+            for (let col = -1; col < 5; col++) {
+                const bx = wallLeft + col * stoneW - offset;
+                const by = wallTop + row * stoneH;
+                const bx1 = Math.max(bx, wallLeft);
+                const bx2 = Math.min(bx + stoneW, wallRight);
+                if (bx2 > bx1) {
+                    ctx.strokeRect(bx1, by, bx2 - bx1, stoneH);
+                }
             }
         }
-        
-        // Defensive roof - sharper peaks
-        ctx.fillStyle = '#A0522D';
-        ctx.beginPath();
-        ctx.moveTo(-this.width * 0.5, -this.height * 0.1);
-        ctx.lineTo(this.width * 0.5, -this.height * 0.1);
-        ctx.lineTo(0, -this.height * 0.6);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Roof shading for depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.beginPath();
-        ctx.moveTo(0, -this.height * 0.6);
-        ctx.lineTo(this.width * 0.5, -this.height * 0.1);
-        ctx.lineTo(0, -this.height * 0.3);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Roof edge/trim
-        ctx.strokeStyle = '#5a3a1a';
+
+        // Wall outline
+        ctx.strokeStyle = '#3c3c3c';
         ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(-this.width * 0.5, -this.height * 0.1);
-        ctx.lineTo(this.width * 0.5, -this.height * 0.1);
-        ctx.stroke();
-        
-        // Defensive palisade on roof edge
-        ctx.strokeStyle = '#333333';
+        ctx.strokeRect(wallLeft, wallTop, wallW, wallH);
+
+        // --- ARROW SLIT (left of center) ---
+        ctx.fillStyle = '#1c1c1c';
+        ctx.fillRect(-w * 0.2, wallTop + wallH * 0.15, w * 0.07, wallH * 0.6);
+        // Slit stone surround
+        ctx.strokeStyle = '#505050';
         ctx.lineWidth = 1;
-        for (let i = -3; i <= 3; i++) {
+        ctx.strokeRect(-w * 0.2, wallTop + wallH * 0.15, w * 0.07, wallH * 0.6);
+
+        // --- DOOR (center) ---
+        ctx.fillStyle = '#3a2414';
+        ctx.fillRect(-w * 0.11, wallTop + wallH * 0.45, w * 0.22, wallH * 0.55);
+        // Door frame
+        ctx.strokeStyle = '#6a5030';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-w * 0.11, wallTop + wallH * 0.45, w * 0.22, wallH * 0.55);
+        // Door plank lines
+        ctx.strokeStyle = '#2a1a0a';
+        ctx.lineWidth = 0.75;
+        ctx.beginPath();
+        ctx.moveTo(0, wallTop + wallH * 0.45);
+        ctx.lineTo(0, wallBottom);
+        ctx.stroke();
+        // Door handle
+        ctx.fillStyle = '#999999';
+        ctx.beginPath();
+        ctx.arc(w * 0.05, wallTop + wallH * 0.72, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- BATTLEMENTS at top of wall ---
+        // Draw before roof so roof cleanly overlaps them
+        const merlonH = h * 0.06;
+        const merlonW = wallW / 9;
+        ctx.fillStyle = '#8a8a8a';
+        ctx.strokeStyle = '#3c3c3c';
+        ctx.lineWidth = 0.75;
+        for (let i = 0; i < 5; i++) {
+            const mx = wallLeft + i * merlonW * 2 + merlonW * 0.1;
+            ctx.fillRect(mx, wallTop - merlonH, merlonW * 1.8, merlonH);
+            ctx.strokeRect(mx, wallTop - merlonH, merlonW * 1.8, merlonH);
+        }
+
+        // --- ROOF (drawn OVER wall and battlements) ---
+        const roofBase = wallTop;
+        const roofPeak = -h * 0.62;
+
+        // Main roof fill (left half)
+        ctx.fillStyle = '#8b3a18';
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.5, roofBase);
+        ctx.lineTo(0, roofPeak);
+        ctx.lineTo(w * 0.5, roofBase);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right side shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.beginPath();
+        ctx.moveTo(0, roofPeak);
+        ctx.lineTo(w * 0.5, roofBase);
+        ctx.lineTo(0, roofBase);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shingle lines across roof
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        const roofH = roofBase - roofPeak;
+        for (let t = 0.22; t < 1.0; t += 0.19) {
+            const ly = roofPeak + roofH * t;
+            const hw = w * 0.5 * t;
             ctx.beginPath();
-            ctx.moveTo(i * this.width * 0.13, -this.height * 0.1);
-            ctx.lineTo(i * this.width * 0.13, -this.height * 0.2);
+            ctx.moveTo(-hw, ly);
+            ctx.lineTo(hw, ly);
             ctx.stroke();
         }
-        
-        // Door - narrow and fortified
-        ctx.fillStyle = '#3a2817';
-        ctx.fillRect(-this.width * 0.1, -this.height * 0.05, this.width * 0.2, this.height * 0.22);
-        
-        // Door frame - metal reinforced
-        ctx.strokeStyle = '#666666';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-this.width * 0.1, -this.height * 0.05, this.width * 0.2, this.height * 0.22);
-        
-        // Door handle - iron ring
-        ctx.fillStyle = '#888888';
+
+        // Roof outline
+        ctx.strokeStyle = '#4a1e08';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(this.width * 0.04, this.height * 0.05, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#444444';
-        ctx.lineWidth = 1;
+        ctx.moveTo(-w * 0.5, roofBase);
+        ctx.lineTo(0, roofPeak);
+        ctx.lineTo(w * 0.5, roofBase);
         ctx.stroke();
-        
-        // Arrow slit window - defensive
-        ctx.fillStyle = '#333333';
-        ctx.fillRect(-this.width * 0.25, -this.height * 0.1, this.width * 0.08, this.height * 0.25);
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(-this.width * 0.25, -this.height * 0.08, this.width * 0.08, this.height * 0.1);
-        
-        // Flagpole - reinforced
-        ctx.strokeStyle = '#444444';
+
+        // Eave trim
+        ctx.strokeStyle = '#6a3010';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(this.width * 0.28, -this.height * 0.6);
-        ctx.lineTo(this.width * 0.28, -this.height * 0.9);
+        ctx.moveTo(-w * 0.5, roofBase);
+        ctx.lineTo(w * 0.5, roofBase);
         ctx.stroke();
-        
-        // Flag - guard colors (red and gold)
+
+        // Ridge cap at peak
+        ctx.fillStyle = '#aa5428';
+        ctx.fillRect(-w * 0.035, roofPeak - h * 0.018, w * 0.07, h * 0.036);
+
+        // --- FLAGPOLE from roof peak ---
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, roofPeak);
+        ctx.lineTo(0, roofPeak - h * 0.3);
+        ctx.stroke();
+
+        // Flag (red with gold stripe)
         ctx.fillStyle = '#CC3333';
         ctx.beginPath();
-        ctx.moveTo(this.width * 0.28, -this.height * 0.82);
-        ctx.lineTo(this.width * 0.28 + 14, -this.height * 0.72);
-        ctx.lineTo(this.width * 0.28, -this.height * 0.62);
+        ctx.moveTo(0, roofPeak - h * 0.28);
+        ctx.lineTo(13, roofPeak - h * 0.19);
+        ctx.lineTo(0, roofPeak - h * 0.1);
         ctx.closePath();
         ctx.fill();
-        
-        // Flag stripe
+
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(this.width * 0.28, -this.height * 0.77, 14, 3);
-        
+        ctx.fillRect(0, roofPeak - h * 0.23, 11, 2.5);
+
         ctx.restore();
-        
+
         // Render defender if alive
         if (this.defender && !this.defender.isDead()) {
             this.defender.render(ctx);

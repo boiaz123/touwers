@@ -280,6 +280,7 @@ export class Campaign4 extends CampaignBase {
     update(deltaTime) {
         super.update(deltaTime);
         this.animationTime += deltaTime;
+        this.lastDeltaTime = deltaTime;
     }
 
     renderBackground(ctx) {
@@ -594,50 +595,46 @@ export class Campaign4 extends CampaignBase {
     }
     
     renderShootingStars(ctx, width, height) {
-        // Generate shooting stars if not exists
+        const dt = this.lastDeltaTime || 0.016;
+
+        // Generate shooting stars if not initialized
         if (!this.terrainDetails.shootingStars || this.terrainDetails.shootingStars.length === 0) {
             this.terrainDetails.shootingStars = [];
-            // Create 1 shooting star with rare appearances
-            for (let i = 0; i < 1; i++) {
-                // Varied directions including more horizontal paths
-                const directions = [
-                    { angle: -Math.PI / 12, label: 'gentle-horizontal' },  // 15 degrees (very shallow)
-                    { angle: -Math.PI / 8, label: 'slight-diagonal' },     // 22.5 degrees
-                    { angle: -Math.PI / 6, label: 'down-right' },          // 30 degrees down-right
-                    { angle: -Math.PI / 7, label: 'mild-down' }            // 25.7 degrees
-                ];
-                const dir = directions[Math.floor(Math.random() * directions.length)];
-                
-                this.terrainDetails.shootingStars.push({
-                    startX: Math.random() * width,
-                    startY: Math.random() * height * 0.35,
-                    speed: 80 + Math.random() * 60,  // Much slower speed (was 150-250)
-                    angle: dir.angle,
-                    duration: 3 + Math.random() * 2, // Longer duration for slower appearance
-                    delay: 20 + Math.random() * 25,  // Longer delay between appearances
-                    active: false,
-                    time: 0
-                });
-            }
+            const angles = [-Math.PI / 12, -Math.PI / 8, -Math.PI / 6, -Math.PI / 7, Math.PI / 12, Math.PI / 8];
+            this.terrainDetails.shootingStars.push({
+                startX: Math.random() * width,
+                startY: Math.random() * height * 0.35,
+                speed: 80 + Math.random() * 60,
+                angle: angles[Math.floor(Math.random() * angles.length)],
+                duration: 2 + Math.random() * 2,
+                delay: 15 + Math.random() * 35,
+                active: false,
+                time: 0
+            });
         }
-        
+
         // Update and draw shooting stars
         for (const star of this.terrainDetails.shootingStars) {
-            star.time += this.animationTime * 0.016; // Approximate dt
-            
+            star.time += dt;
+
             if (star.time > star.delay && star.time < star.delay + star.duration) {
                 star.active = true;
                 const elapsed = star.time - star.delay;
                 const progress = elapsed / star.duration;
-                
+
                 const x = star.startX + Math.cos(star.angle) * star.speed * elapsed;
                 const y = star.startY + Math.sin(star.angle) * star.speed * elapsed;
-                
-                // Fade out at end
-                const opacity = 1 - (progress > 0.7 ? (progress - 0.7) / 0.3 : 0);
-                
+
+                // Fade in at start, fade out at end
+                let opacity = 1;
+                if (progress < 0.15) {
+                    opacity = progress / 0.15;
+                } else if (progress > 0.7) {
+                    opacity = (1 - progress) / 0.3;
+                }
+
                 // Trail
-                const trailLength = 80;  // Slightly longer trail for slower stars
+                const trailLength = 80;
                 const gradient = ctx.createLinearGradient(
                     x, y,
                     x - Math.cos(star.angle) * trailLength,
@@ -645,7 +642,7 @@ export class Campaign4 extends CampaignBase {
                 );
                 gradient.addColorStop(0, `rgba(255, 255, 200, ${opacity * 0.8})`);
                 gradient.addColorStop(1, `rgba(255, 255, 150, 0)`);
-                
+
                 ctx.strokeStyle = gradient;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -655,17 +652,24 @@ export class Campaign4 extends CampaignBase {
                     y - Math.sin(star.angle) * trailLength
                 );
                 ctx.stroke();
-                
-                // Star
+
                 ctx.fillStyle = `rgba(255, 255, 200, ${opacity})`;
                 ctx.beginPath();
                 ctx.arc(x, y, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
-            // Reset if finished - much longer cooldown before reappearing
-            if (star.time > star.delay + star.duration + 5) {
-                star.time = 0;
+
+            // Reset with new random properties once the streak has finished
+            if (star.time > star.delay + star.duration) {
+                const angles = [-Math.PI / 12, -Math.PI / 8, -Math.PI / 6, -Math.PI / 7, Math.PI / 12, Math.PI / 8];
+                star.startX    = Math.random() * width;
+                star.startY    = Math.random() * height * 0.35;
+                star.speed     = 80 + Math.random() * 60;
+                star.angle     = angles[Math.floor(Math.random() * angles.length)];
+                star.duration  = 2 + Math.random() * 2;
+                star.delay     = 18 + Math.random() * 40;
+                star.active    = false;
+                star.time      = 0;
             }
         }
     }

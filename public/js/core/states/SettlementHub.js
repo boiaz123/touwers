@@ -3739,59 +3739,156 @@ export class SettlementHub {
     }
     
     renderGuardPostSmall(ctx, x, y, scale = 1.0) {
-        // Simplified GuardPost rendering based on BasicTower style
         scale = scale || 0.6;
-        
-        // Stone base
-        ctx.fillStyle = '#8a8a8a';
-        const baseWidth = 35 * scale;
-        const baseHeight = 40 * scale;
-        ctx.fillRect(x - baseWidth/2, y - baseHeight, baseWidth, baseHeight);
-        
-        // Base shading
-        ctx.fillStyle = '#7a7a7a';
-        ctx.fillRect(x - baseWidth/2, y - baseHeight + 5 * scale, baseWidth, baseHeight - 10 * scale);
-        
-        // Wooden corner posts
-        ctx.fillStyle = '#6b5a47';
-        const cornerOffset = baseWidth * 0.35;
-        ctx.fillRect(x - cornerOffset - 2 * scale, y - baseHeight - 20 * scale, 4 * scale, 20 * scale);
-        ctx.fillRect(x + cornerOffset - 2 * scale, y - baseHeight - 20 * scale, 4 * scale, 20 * scale);
-        
-        // Wooden platform
-        ctx.fillStyle = '#7a5f3f';
-        ctx.fillRect(x - baseWidth/2 - 3 * scale, y - baseHeight - 25 * scale, baseWidth + 6 * scale, 6 * scale);
-        
-        // Platform railings - vertical posts
-        ctx.strokeStyle = '#6b5a47';
+
+        const w  = 50 * scale;
+        const h  = 50 * scale;
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillRect(x - w * 0.42, y + h * 0.25, w * 0.84, h * 0.1);
+
+        // Foundation slab (wide base)
+        ctx.fillStyle = '#505050';
+        ctx.fillRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.18);
+        ctx.fillStyle = '#686868';
+        ctx.fillRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.035);
+        ctx.strokeStyle = '#383838';
+        ctx.lineWidth = scale;
+        ctx.strokeRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.18);
+
+        // Stone walls
+        const wl = x - w * 0.36;
+        const wr = x + w * 0.36;
+        const wt = y - h * 0.18;
+        const wb = y + h * 0.08;
+        const wallW = wr - wl;
+        const wallH = wb - wt;
+
+        ctx.fillStyle = '#787878';
+        ctx.fillRect(wl, wt, wallW, wallH);
+        ctx.fillStyle = '#8c8c8c';
+        ctx.fillRect(wl, wt, wallW * 0.15, wallH);
+        ctx.fillStyle = '#5e5e5e';
+        ctx.fillRect(wr - wallW * 0.12, wt, wallW * 0.12, wallH);
+
+        // Stone block texture
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 0.75 * scale;
+        const sW = wallW / 4;
+        const sH = wallH / 3;
+        for (let row = 0; row < 3; row++) {
+            const off = (row % 2 === 0) ? 0 : sW * 0.5;
+            for (let col = -1; col < 5; col++) {
+                const bx = wl + col * sW - off;
+                const by = wt + row * sH;
+                const bx1 = Math.max(bx, wl);
+                const bx2 = Math.min(bx + sW, wr);
+                if (bx2 > bx1) ctx.strokeRect(bx1, by, bx2 - bx1, sH);
+            }
+        }
+
+        ctx.strokeStyle = '#3c3c3c';
         ctx.lineWidth = 1.5 * scale;
-        for (let i = -1; i <= 1; i++) {
+        ctx.strokeRect(wl, wt, wallW, wallH);
+
+        // Arrow slit
+        ctx.fillStyle = '#1c1c1c';
+        ctx.fillRect(wl + wallW * 0.08, wt + wallH * 0.15, wallW * 0.14, wallH * 0.6);
+        ctx.strokeStyle = '#505050';
+        ctx.lineWidth = scale;
+        ctx.strokeRect(wl + wallW * 0.08, wt + wallH * 0.15, wallW * 0.14, wallH * 0.6);
+
+        // Door
+        ctx.fillStyle = '#3a2414';
+        ctx.fillRect(x - wallW * 0.15, wt + wallH * 0.45, wallW * 0.3, wallH * 0.55);
+        ctx.strokeStyle = '#6a5030';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.strokeRect(x - wallW * 0.15, wt + wallH * 0.45, wallW * 0.3, wallH * 0.55);
+
+        // Battlements (drawn before roof so roof overlaps)
+        const mH = h * 0.06;
+        const mW = wallW / 9;
+        ctx.fillStyle = '#8a8a8a';
+        ctx.strokeStyle = '#3c3c3c';
+        ctx.lineWidth = 0.75 * scale;
+        for (let i = 0; i < 5; i++) {
+            const mx = wl + i * mW * 2 + mW * 0.1;
+            ctx.fillRect(mx, wt - mH, mW * 1.8, mH);
+            ctx.strokeRect(mx, wt - mH, mW * 1.8, mH);
+        }
+
+        // Roof (drawn over wall & battlements)
+        const roofBase = wt;
+        const roofPeak = y - h * 0.62;
+
+        ctx.fillStyle = '#8b3a18';
+        ctx.beginPath();
+        ctx.moveTo(x - w * 0.5, roofBase);
+        ctx.lineTo(x, roofPeak);
+        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeak);
+        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.lineTo(x, roofBase);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shingle lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = scale;
+        const roofH = roofBase - roofPeak;
+        for (let t = 0.22; t < 1.0; t += 0.19) {
+            const ly = roofPeak + roofH * t;
+            const hw = w * 0.5 * t;
             ctx.beginPath();
-            ctx.moveTo(x + i * 6 * scale, y - baseHeight - 25 * scale);
-            ctx.lineTo(x + i * 6 * scale, y - baseHeight - 30 * scale);
+            ctx.moveTo(x - hw, ly);
+            ctx.lineTo(x + hw, ly);
             ctx.stroke();
         }
-        
-        // Roof - small conical shape
-        ctx.fillStyle = '#8b3a3a';
+
+        ctx.strokeStyle = '#4a1e08';
+        ctx.lineWidth = 1.5 * scale;
         ctx.beginPath();
-        ctx.moveTo(x - baseWidth/2, y - baseHeight - 25 * scale);
-        ctx.lineTo(x, y - baseHeight - 42 * scale);
-        ctx.lineTo(x + baseWidth/2, y - baseHeight - 25 * scale);
-        ctx.fill();
-        
-        // Roof detail
-        ctx.strokeStyle = '#6b2a2a';
-        ctx.lineWidth = 1 * scale;
-        ctx.beginPath();
-        ctx.moveTo(x - baseWidth/2 + 2 * scale, y - baseHeight - 23 * scale);
-        ctx.lineTo(x, y - baseHeight - 40 * scale);
-        ctx.lineTo(x + baseWidth/2 - 2 * scale, y - baseHeight - 23 * scale);
+        ctx.moveTo(x - w * 0.5, roofBase);
+        ctx.lineTo(x, roofPeak);
+        ctx.lineTo(x + w * 0.5, roofBase);
         ctx.stroke();
-        
-        // Small flag
-        ctx.fillStyle = '#cc3333';
-        ctx.fillRect(x - 2 * scale, y - baseHeight - 44 * scale, 7 * scale, 3 * scale);
+
+        // Eave trim
+        ctx.strokeStyle = '#6a3010';
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath();
+        ctx.moveTo(x - w * 0.5, roofBase);
+        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.stroke();
+
+        // Ridge cap
+        ctx.fillStyle = '#aa5428';
+        ctx.fillRect(x - w * 0.035, roofPeak - h * 0.018, w * 0.07, h * 0.036);
+
+        // Flagpole
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeak);
+        ctx.lineTo(x, roofPeak - h * 0.3);
+        ctx.stroke();
+
+        // Flag
+        ctx.fillStyle = '#CC3333';
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeak - h * 0.28);
+        ctx.lineTo(x + 13 * scale, roofPeak - h * 0.19);
+        ctx.lineTo(x, roofPeak - h * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(x, roofPeak - h * 0.23, 11 * scale, 2.5 * scale);
     }
 
     renderFlowerBeds(ctx, centerX, centerY) {
