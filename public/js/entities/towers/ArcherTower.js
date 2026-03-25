@@ -90,13 +90,14 @@ export class ArcherTower extends Tower {
             const towerHeight = towerSize * 0.7;
             const platformWidth = towerSize * 0.6 * 1.2;
             const platformY = this.y - towerHeight;
-            const railingHeight = towerSize * 0.15;
+            const platformThickness = towerSize * 0.08;
+            const railingHeight = towerSize * 0.19;
             
             const archerPositions = [
-                { x: this.x - platformWidth * 0.3, y: platformY - platformWidth * 0.08 - railingHeight/2 },
-                { x: this.x + platformWidth * 0.3, y: platformY - platformWidth * 0.08 - railingHeight/2 },
-                { x: this.x - platformWidth * 0.1, y: platformY - platformWidth * 0.08 - railingHeight/2 },
-                { x: this.x + platformWidth * 0.1, y: platformY - platformWidth * 0.08 - railingHeight/2 }
+                { x: this.x - platformWidth * 0.08, y: platformY - platformThickness - railingHeight * 0.70 },
+                { x: this.x + platformWidth * 0.14, y: platformY - platformThickness - railingHeight * 0.62 },
+                { x: this.x - platformWidth * 0.30, y: platformY - platformThickness - railingHeight * 0.38 },
+                { x: this.x + platformWidth * 0.27, y: platformY - platformThickness - railingHeight * 0.32 }
             ];
             
             const archerIndex = Math.floor(Math.random() * this.archers.length);
@@ -247,7 +248,7 @@ export class ArcherTower extends Tower {
         }
         
         // Wooden railings with arrow slits
-        const railingHeight = towerSize * 0.15;
+        const railingHeight = towerSize * 0.19;
         ctx.fillStyle = '#A0522D';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
@@ -280,11 +281,11 @@ export class ArcherTower extends Tower {
             }
         }
         
-        // Peaked roof — dark shingles, same style as BasicTower
-        const roofHeight = towerSize * 0.26;
+        // Thatched roof
+        const roofHeight = towerSize * 0.27;
         const roofY = platformY - platformThickness - railingHeight;
         const roofPeakPt = roofY - roofHeight;
-        const roofHalfW = platformWidth / 2 + postSize + 3;
+        const roofHalfW = platformWidth / 2 + postSize + 4;
 
         // Roof drop shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
@@ -295,30 +296,82 @@ export class ArcherTower extends Tower {
         ctx.closePath();
         ctx.fill();
 
-        // Roof face – dark aged shingles
-        ctx.fillStyle = '#5a341d';
-        ctx.strokeStyle = '#3d2010';
-        ctx.lineWidth = 1.5;
+        // Base thatch fill — warm straw gradient
+        const thatchGrad = ctx.createLinearGradient(this.x, roofPeakPt, this.x, roofY);
+        thatchGrad.addColorStop(0, '#7a5520');
+        thatchGrad.addColorStop(0.5, '#b5863a');
+        thatchGrad.addColorStop(1, '#c8a040');
+        ctx.fillStyle = thatchGrad;
         ctx.beginPath();
         ctx.moveTo(this.x, roofPeakPt);
         ctx.lineTo(this.x - roofHalfW, roofY);
         ctx.lineTo(this.x + roofHalfW, roofY);
         ctx.closePath();
         ctx.fill();
+
+        // Thatch rows — horizontal bands with shadow lines and straw strokes
+        const numLayers = 5;
+        for (let layer = 1; layer <= numLayers; layer++) {
+            const t = layer / numLayers;
+            const hw = roofHalfW * t;
+            const bandY = roofPeakPt + (roofY - roofPeakPt) * t;
+            const tPrev = (layer - 1) / numLayers;
+            const prevY = roofPeakPt + (roofY - roofPeakPt) * tPrev;
+            const prevHW = roofHalfW * tPrev;
+
+            // Shadow line between each thatch row
+            if (layer < numLayers) {
+                ctx.strokeStyle = 'rgba(55, 30, 5, 0.55)';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(this.x - hw, bandY);
+                ctx.lineTo(this.x + hw, bandY);
+                ctx.stroke();
+            }
+
+            // Straw strokes within this band — slightly diagonal, clipped to triangle
+            ctx.strokeStyle = 'rgba(215, 175, 65, 0.5)';
+            ctx.lineWidth = 0.7;
+            for (let sx = this.x - hw + 2; sx < this.x + hw - 2; sx += 4) {
+                if (prevHW > 0 && Math.abs(sx - this.x) > prevHW) continue;
+                const wobble = (Math.floor(sx) % 8 < 4) ? 1.5 : -1;
+                ctx.beginPath();
+                ctx.moveTo(sx, prevY + (bandY - prevY) * 0.15);
+                ctx.lineTo(sx + wobble, bandY);
+                ctx.stroke();
+            }
+        }
+
+        // Eave fringe — ragged thatch tufts hanging at the lower edge
+        for (let i = 0; i < 10; i++) {
+            const tx = this.x - roofHalfW + (i + 0.5) * (roofHalfW * 2 / 10);
+            const drop = 3 + (i * 3 + 2) % 4;
+            ctx.fillStyle = (i % 2 === 0) ? '#c8a040' : '#b48828';
+            ctx.fillRect(tx - 2, roofY, 4, drop);
+        }
+
+        // Roof outline
+        ctx.strokeStyle = '#5a3c10';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, roofPeakPt);
+        ctx.lineTo(this.x - roofHalfW, roofY);
+        ctx.lineTo(this.x + roofHalfW, roofY);
+        ctx.closePath();
         ctx.stroke();
 
-        // Shingle lines
-        ctx.strokeStyle = '#3d2010';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const t = i / 4;
-            const shingleY = roofPeakPt + (roofY - roofPeakPt) * t;
-            const hw = roofHalfW * t;
-            ctx.beginPath();
-            ctx.moveTo(this.x - hw, shingleY);
-            ctx.lineTo(this.x + hw, shingleY);
-            ctx.stroke();
-        }
+        // Ridge cap — bound thatch bundle at the peak
+        ctx.fillStyle = '#6b4818';
+        ctx.beginPath();
+        ctx.moveTo(this.x - 4, roofPeakPt + 3);
+        ctx.lineTo(this.x + 4, roofPeakPt + 3);
+        ctx.lineTo(this.x + 2, roofPeakPt - 1);
+        ctx.lineTo(this.x - 2, roofPeakPt - 1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#3d2008';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
 
         // Flagpole at roof peak
         ctx.strokeStyle = '#5a341d';
@@ -353,10 +406,10 @@ export class ArcherTower extends Tower {
             ctx.save();
             
             const archerPositions = [
-                { x: this.x - platformWidth * 0.3, y: platformY - platformThickness - railingHeight/2 },
-                { x: this.x + platformWidth * 0.3, y: platformY - platformThickness - railingHeight/2 },
-                { x: this.x - platformWidth * 0.1, y: platformY - platformThickness - railingHeight/2 },
-                { x: this.x + platformWidth * 0.1, y: platformY - platformThickness - railingHeight/2 }
+                { x: this.x - platformWidth * 0.08, y: platformY - platformThickness - railingHeight * 0.70 },
+                { x: this.x + platformWidth * 0.14, y: platformY - platformThickness - railingHeight * 0.62 },
+                { x: this.x - platformWidth * 0.30, y: platformY - platformThickness - railingHeight * 0.38 },
+                { x: this.x + platformWidth * 0.27, y: platformY - platformThickness - railingHeight * 0.32 }
             ];
             
             const pos = archerPositions[index];
