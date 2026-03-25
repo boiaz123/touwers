@@ -502,12 +502,12 @@ export class BasicTower extends Tower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Trees at the 4 corners of the 2x2 grid, sized between BasicTower and BarricadeTower.
+        // Trees at the 4 corners of the 2x2 grid, scaled proportionally to gridSize
         const trees = [
-            { x: -gridSize * 0.38, y: gridSize * 0.30, size: 0.65 * 2.8, type: 'pine' },
-            { x:  gridSize * 0.33, y: gridSize * 0.34, size: 0.55 * 2.8, type: 'round' },
-            { x: -gridSize * 0.40, y: -gridSize * 0.25, size: 0.70 * 2.8, type: 'pine' },
-            { x:  gridSize * 0.34, y: -gridSize * 0.33, size: 0.50 * 2.8, type: 'round' }
+            { x: -gridSize * 0.36, y: gridSize * 0.28,  size: gridSize * 0.033, type: 'pine' },
+            { x:  gridSize * 0.32, y: gridSize * 0.30,  size: gridSize * 0.040, type: 'round' },
+            { x: -gridSize * 0.37, y: -gridSize * 0.22, size: gridSize * 0.035, type: 'pine' },
+            { x:  gridSize * 0.33, y: -gridSize * 0.28, size: gridSize * 0.038, type: 'round' }
         ];
         
         trees.forEach(tree => {

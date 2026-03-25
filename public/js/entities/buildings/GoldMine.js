@@ -1135,103 +1135,95 @@ export class GoldMine extends Building {
     }
     
     renderExcavatedGround(ctx, size) {
-        // Create a natural grass ground base for the entire mine area
-        const baseArea = size * 0.5; // Larger base area
+        // Natural forest-floor clearing around the mine
+        const baseArea = size * 0.5;
         
-        // First: Create a natural grass foundation for the whole mine clearing
+        // Muted earthy-green base — like packed forest floor with sparse grass
         const grassGradient = ctx.createRadialGradient(
             this.x, this.y + baseArea * 0.1, 0,
             this.x, this.y + baseArea * 0.2, baseArea * 1.2
         );
-        grassGradient.addColorStop(0, 'rgba(76, 175, 80, 0.7)'); // Bright grass in center
-        grassGradient.addColorStop(0.4, 'rgba(56, 155, 60, 0.5)'); // Medium grass
-        grassGradient.addColorStop(0.8, 'rgba(107, 142, 35, 0.3)'); // Darker grass fade
-        grassGradient.addColorStop(1, 'rgba(107, 142, 35, 0)'); // Fade to transparent
+        grassGradient.addColorStop(0, 'rgba(88, 110, 55, 0.40)');
+        grassGradient.addColorStop(0.35, 'rgba(80, 100, 50, 0.30)');
+        grassGradient.addColorStop(0.7, 'rgba(95, 95, 55, 0.18)');
+        grassGradient.addColorStop(1, 'rgba(95, 95, 55, 0)');
         
         ctx.fillStyle = grassGradient;
         ctx.beginPath();
         ctx.ellipse(this.x, this.y + baseArea * 0.1, baseArea, baseArea * 0.8, 0.1, 0, Math.PI * 2);
         ctx.fill();
         
-        // Subtle earth-tone patch near mine entrance only (keeps foreground clean)
-        ctx.fillStyle = 'rgba(139, 115, 85, 0.22)';
+        // Earthy disturbed-ground patch near entrance
+        ctx.fillStyle = 'rgba(130, 105, 70, 0.28)';
         ctx.beginPath();
         ctx.ellipse(this.x - baseArea * 0.15, this.y - baseArea * 0.05, baseArea * 0.38, baseArea * 0.28, -0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // WATER POOL — natural seepage pool, lower-left of the mine
+        // Small natural seepage puddle — muted and subtle
         const poolX = this.x - baseArea * 0.65;
         const poolY = this.y + baseArea * 0.50;
-        const poolR  = 22;   // slightly bigger for more presence
+        const poolR = 13;
 
-        // Muddy bank ring (slightly larger, dark earthy tone)
-        ctx.fillStyle = 'rgba(90, 60, 30, 0.55)';
+        // Muddy bank
+        ctx.fillStyle = 'rgba(85, 65, 35, 0.45)';
         ctx.beginPath();
-        ctx.ellipse(poolX, poolY, poolR + 7, (poolR + 7) * 0.68, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(poolX, poolY, poolR + 4, (poolR + 4) * 0.68, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Wet sand / muddy shore ring
-        ctx.fillStyle = 'rgba(120, 95, 55, 0.65)';
+        // Wet earth ring
+        ctx.fillStyle = 'rgba(100, 80, 45, 0.50)';
         ctx.beginPath();
-        ctx.ellipse(poolX, poolY, poolR + 3, (poolR + 3) * 0.72, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(poolX, poolY, poolR + 2, (poolR + 2) * 0.72, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
         // Drop shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
-        ctx.ellipse(poolX + 2, poolY + 3, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
+        ctx.ellipse(poolX + 1, poolY + 2, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Water surface gradient — deep centre, lighter reflective edge
+        // Murky water surface — dark, earthy tones
         const waterGrad = ctx.createRadialGradient(
             poolX - poolR * 0.25, poolY - poolR * 0.2, 0,
             poolX, poolY, poolR
         );
-        waterGrad.addColorStop(0,    '#7EC8E3');
-        waterGrad.addColorStop(0.35, '#4B9EBF');
-        waterGrad.addColorStop(0.70, '#2E6C8A');
-        waterGrad.addColorStop(1,    '#1a3f50');
+        waterGrad.addColorStop(0,    '#5A8A7A');
+        waterGrad.addColorStop(0.4,  '#3E6B60');
+        waterGrad.addColorStop(0.75, '#2A4A42');
+        waterGrad.addColorStop(1,    '#1A2E28');
         ctx.fillStyle = waterGrad;
         ctx.beginPath();
         ctx.ellipse(poolX, poolY, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Subtle shoreline edge stroke
-        ctx.strokeStyle = 'rgba(30, 55, 70, 0.45)';
-        ctx.lineWidth = 1.5;
+        // Faint shoreline stroke
+        ctx.strokeStyle = 'rgba(40, 55, 45, 0.35)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(poolX, poolY, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Specular highlight — small bright ellipse upper-left
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        // Single subtle specular highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.beginPath();
-        ctx.ellipse(poolX - poolR * 0.3, poolY - poolR * 0.28, poolR * 0.28, poolR * 0.18, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(poolX - poolR * 0.25, poolY - poolR * 0.25, poolR * 0.22, poolR * 0.14, -0.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Second smaller shimmer
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-        ctx.beginPath();
-        ctx.ellipse(poolX + poolR * 0.2, poolY + poolR * 0.15, poolR * 0.12, poolR * 0.08, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Reeds — clustered on the muddy bank, drawn above water
+        // Two simple reeds at pool edge
         const reedPos = [
-            { x: poolX - poolR * 1.05, y: poolY - poolR * 0.35, h: 15, d:  1 },
-            { x: poolX - poolR * 0.75, y: poolY + poolR * 0.65, h: 18, d: -1 },
-            { x: poolX + poolR * 0.55, y: poolY + poolR * 0.70, h: 13, d:  1 },
-            { x: poolX - poolR * 1.15, y: poolY + poolR * 0.15, h: 12, d: -1 },
+            { x: poolX - poolR * 0.95, y: poolY - poolR * 0.3, h: 11, d: 1 },
+            { x: poolX + poolR * 0.50, y: poolY + poolR * 0.60, h: 10, d: -1 }
         ];
         reedPos.forEach(r => {
             ctx.strokeStyle = '#5a7a1a';
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = 1.4;
             ctx.beginPath();
             ctx.moveTo(r.x, r.y);
-            ctx.quadraticCurveTo(r.x + r.d * 3, r.y - r.h * 0.6, r.x + r.d * 2, r.y - r.h);
+            ctx.quadraticCurveTo(r.x + r.d * 2, r.y - r.h * 0.6, r.x + r.d * 1.5, r.y - r.h);
             ctx.stroke();
-            ctx.fillStyle = '#7a5a22';
+            ctx.fillStyle = '#6a5420';
             ctx.beginPath();
-            ctx.ellipse(r.x + r.d * 2, r.y - r.h, 2, 4.5, r.d * 0.3, 0, Math.PI * 2);
+            ctx.ellipse(r.x + r.d * 1.5, r.y - r.h, 1.5, 3.5, r.d * 0.3, 0, Math.PI * 2);
             ctx.fill();
         });
     }
