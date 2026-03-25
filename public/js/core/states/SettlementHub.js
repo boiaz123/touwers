@@ -320,28 +320,6 @@ export class SettlementHub {
                 scale: 0.6,
                 clickable: false,
                 action: null
-            },
-                                   
-
-            {
-                building: new GuardPost(centerX - 560, centerY - 80, 0, 0),
-                scale: 0.6,
-                clickable: false,
-                action: null
-            },
-
-            {
-                building: new GuardPost(centerX + 500, centerY - 60, 0, 0),
-                scale: 0.6,
-                clickable: false,
-                action: null
-            },
-
-            {
-                building: new GuardPost(centerX + 460, centerY - 25, 0, 0),
-                scale: 0.6,
-                clickable: false,
-                action: null
             }
         ];
         
@@ -1686,10 +1664,18 @@ export class SettlementHub {
         ctx.save();
         this.createEllipseClipPath(ctx, centerX, centerY, 360, 140);
         this.renderSettlementPaths(ctx, canvas, centerX, centerY);
+        // Details (crates, barrels, shrubs) drawn ON TOP of paths, still inside wall clip
+        this.renderSettlementDetails(ctx, centerX, centerY);
         ctx.restore();
 
-        // Render settlement buildings (on top of paths)
-        this.renderSettlementBuildings(ctx, canvas);
+        // Render interior decorative buildings clipped to ellipse so they don't poke through walls
+        ctx.save();
+        this.createEllipseClipPath(ctx, centerX, centerY, 364, 144);
+        this.renderSettlementBuildings(ctx, canvas, true);
+        ctx.restore();
+
+        // Render exterior/clickable buildings without clipping (TrainingGrounds, Castle — intentionally outside)
+        this.renderSettlementBuildings(ctx, canvas, false);
 
         // Render bard character near the fountain (only if musical-equipment upgrade purchased)
         const upgradeSystem = this.stateManager?.upgradeSystem;
@@ -1790,17 +1776,76 @@ export class SettlementHub {
         const radiusX = 360;
         const radiusY = 140;
         
-        // Draw foundation/berm
-        ctx.fillStyle = '#6b7a6b';
+        // ── Village foundation – layered earth/stone base ────────────────────────
+        // Deep shadow drop beneath the foundation
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 20, radiusY + 20, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX + 5, centerY + 22, radiusX + 26, radiusY + 26, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Darker shade for shadow
-        ctx.fillStyle = '#5a6a5a';
+
+        // Outermost rough-earth berm layer
+        ctx.fillStyle = '#6b5230';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 12, radiusX + 18, radiusY + 18, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY + 8, radiusX + 26, radiusY + 26, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Mid earth – slightly lighter
+        ctx.fillStyle = '#80643e';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 4, radiusX + 20, radiusY + 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Upper berm face – warm packed earth
+        ctx.fillStyle = '#9a7d52';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radiusX + 14, radiusY + 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Foundation stone ring – draw small irregular stone blocks around perimeter
+        const stoneCount = 48;
+        for (let i = 0; i < stoneCount; i++) {
+            const angle = (i / stoneCount) * Math.PI * 2;
+            const jitter = ((i * 1237 + 5) % 7) - 3.5;  // deterministic offset
+            const stoneX = centerX + (radiusX + 16) * Math.cos(angle);
+            const stoneY = centerY + (radiusY + 16) * Math.sin(angle);
+            const stoneW = 14 + ((i * 397) % 8);
+            const stoneH = 6 + ((i * 631) % 4);
+            const tone = 105 + (i * 47) % 30;
+            ctx.save();
+            ctx.translate(stoneX, stoneY);
+            ctx.rotate(angle);
+            ctx.fillStyle = `rgb(${tone}, ${tone - 12}, ${tone - 28})`;
+            ctx.fillRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, stoneH);
+            ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, stoneH);
+            // Crest highlight on each stone
+            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, 2);
+            ctx.restore();
+        }
+
+        // Gravel/grit strip just inside the stone ring
+        ctx.strokeStyle = '#c4aa80';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 8]);
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 2, radiusX + 8, radiusY + 6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Inner earth surface – slightly darker packed dirt
+        ctx.fillStyle = '#8c7048';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 2, radiusX + 6, radiusY + 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crest edge highlight (soil meets palisade base)
+        ctx.strokeStyle = '#b8975a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 4, radiusX + 3, radiusY + 1, 0, 0, Math.PI * 2);
+        ctx.stroke();
         
         // Draw vertical STICK posts around the ellipse with 3D trunk texture
         // Render in proper z-order: back posts first, then sides, then front for natural layering
@@ -1829,11 +1874,11 @@ export class SettlementHub {
         
         // Render posts in depth order
         posts.forEach(post => {
-            const { x, y } = post;
+            const { x, y, i } = post;
             
-            // Draw 3D trunk with texture
+            // Draw 3D trunk with texture - alternate slightly taller posts for handbuilt look
             const postWidth = 12;
-            const postHeight = 60;
+            const postHeight = 60 + (i % 3 === 0 ? 6 : 0);
             
             // Left side shadow (3D depth)
             ctx.fillStyle = '#4a3a2a';
@@ -1862,14 +1907,28 @@ export class SettlementHub {
                 ctx.stroke();
             }
             
-            // Post top cap
+            // Post top cap - pointed
             ctx.fillStyle = '#5a4a37';
             ctx.beginPath();
             ctx.moveTo(x - postWidth/2, y - postHeight);
-            ctx.lineTo(x, y - postHeight - 4);
+            ctx.lineTo(x, y - postHeight - 5);
             ctx.lineTo(x + postWidth/2, y - postHeight);
             ctx.fill();
         });
+
+        // Horizontal connecting rail near top of posts (rope/beam look)
+        // Draw the rail as a dark-brown ellipse outline slightly inside the post ring
+        ctx.strokeStyle = '#4a3a2a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 46, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // Rail highlight
+        ctx.strokeStyle = '#7a6040';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 48, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
+        ctx.stroke();
         
         // Draw single integrated GATE in the middle of the front wall
         this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5);
@@ -2091,38 +2150,65 @@ export class SettlementHub {
         ctx.fillRect(x - roofPostOffset, platformY, 2, -roofHeight);
         ctx.fillRect(x + roofPostOffset, platformY, 2, -roofHeight);
         ctx.fillRect(x, platformY, 2, -roofHeight);
-        
-        // Roof
-        ctx.fillStyle = '#6f3b1a';
-        ctx.fillRect(x - roofSize/2, roofY, roofSize, 4);
-        
-        // Roof planks
-        ctx.strokeStyle = '#4a2a17';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankX = x - roofSize/2 + (roofSize * i / 4);
-            ctx.beginPath();
-            ctx.moveTo(plankX, roofY);
-            ctx.lineTo(plankX, roofY + 4);
-            ctx.stroke();
-        }
-        
-        // Roof peak
-        ctx.fillStyle = '#4a2a1a';
+
+        // ── Peaked triangular roof ────────────────────────────────────────────
+        const roofBaseY = platformY;
+        const roofPeakY = roofY - 10;
+        const roofHalfW = roofSize / 2 + 3;
+
+        // Roof shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.moveTo(x - roofSize/2, roofY);
-        ctx.lineTo(x, roofY - 8);
-        ctx.lineTo(x + roofSize/2, roofY);
-        ctx.fill();
-        
-        // Flag/banner on center post
-        ctx.fillStyle = '#8B1E3F';
-        ctx.beginPath();
-        ctx.moveTo(x + 1, platformY - roofHeight * 0.3);
-        ctx.lineTo(x + 8, platformY - roofHeight * 0.3 + 3);
-        ctx.lineTo(x + 1, platformY - roofHeight * 0.3 + 6);
+        ctx.moveTo(x + 2, roofPeakY + 2);
+        ctx.lineTo(x - roofHalfW + 2, roofBaseY + 2);
+        ctx.lineTo(x + roofHalfW + 2, roofBaseY + 2);
         ctx.closePath();
         ctx.fill();
+
+        // Roof face
+        ctx.fillStyle = '#5a341d';
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY);
+        ctx.lineTo(x - roofHalfW, roofBaseY);
+        ctx.lineTo(x + roofHalfW, roofBaseY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Shingle lines
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const t = i / 4;
+            const sy = roofPeakY + (roofBaseY - roofPeakY) * t;
+            const hw = roofHalfW * t;
+            ctx.beginPath();
+            ctx.moveTo(x - hw, sy);
+            ctx.lineTo(x + hw, sy);
+            ctx.stroke();
+        }
+
+        // Flagpole at peak
+        ctx.strokeStyle = '#5a341d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY);
+        ctx.lineTo(x, roofPeakY - 13);
+        ctx.stroke();
+
+        // Burgundy pennant
+        ctx.fillStyle = '#8B1E3F';
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY - 13);
+        ctx.lineTo(x + 9, roofPeakY - 9);
+        ctx.lineTo(x, roofPeakY - 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#5b1028';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
     }
 
     renderGuardTowerWithBase(ctx, x, y) {
@@ -2160,20 +2246,20 @@ export class SettlementHub {
         // Main tower body - wood
         const towerY = y - baseHeight - towerHeight;
         
-        // Wooden posts at corners
+        // Wooden posts at corners — left post at outer left edge, right post at outer right edge
         ctx.fillStyle = '#7a3f18';
         const postSize = 6;
         const postOffset = towerSize/2 - postSize;
-        ctx.fillRect(x - postOffset, towerY, postSize, towerHeight);
-        ctx.fillRect(x + postOffset, towerY, postSize, towerHeight);
+        ctx.fillRect(x - towerSize/2, towerY, postSize, towerHeight);  // left post at outer edge
+        ctx.fillRect(x + postOffset, towerY, postSize, towerHeight);   // right post at outer edge
         
-        // Wood grain lines
+        // Wood grain lines across full width
         ctx.strokeStyle = '#5a2f10';
         ctx.lineWidth = 1;
         for (let i = 1; i < 7; i++) {
             const grainY = towerY + (towerHeight * i / 8);
             ctx.beginPath();
-            ctx.moveTo(x - postOffset, grainY);
+            ctx.moveTo(x - towerSize/2, grainY);
             ctx.lineTo(x + postOffset + postSize, grainY);
             ctx.stroke();
         }
@@ -2192,12 +2278,12 @@ export class SettlementHub {
             ctx.stroke();
         }
         
-        // Metal corner plates
+        // Metal corner plates — symmetric on both sides
         ctx.fillStyle = '#606060';
-        ctx.fillRect(x - postOffset - 1, towerY, 5, 12);
+        ctx.fillRect(x - towerSize/2 - 1, towerY, 5, 12);
         ctx.fillRect(x + postOffset, towerY, 5, 12);
         ctx.strokeStyle = '#333';
-        ctx.strokeRect(x - postOffset - 1, towerY, 5, 12);
+        ctx.strokeRect(x - towerSize/2 - 1, towerY, 5, 12);
         ctx.strokeRect(x + postOffset, towerY, 5, 12);
         
         // Platform at top
@@ -2225,46 +2311,72 @@ export class SettlementHub {
         ctx.fillRect(x - platformSize/2 + 2, towerY - platformHeight - roofHeight, 3, roofHeight);
         ctx.fillRect(x + platformSize/2 - 5, towerY - platformHeight - roofHeight, 3, roofHeight);
         ctx.fillRect(x - 2, towerY - platformHeight - roofHeight, 3, roofHeight);
-        
-        // Roof
-        const roofY = towerY - platformHeight - roofHeight;
-        ctx.fillStyle = '#6f3b1a';
-        ctx.fillRect(x - roofSize/2, roofY, roofSize, 4);
-        
-        // Roof planks
-        ctx.strokeStyle = '#4a2a17';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const plankX = x - roofSize/2 + (roofSize * i / 4);
-            ctx.beginPath();
-            ctx.moveTo(plankX, roofY);
-            ctx.lineTo(plankX, roofY + 4);
-            ctx.stroke();
-        }
-        
-        // Roof peak
-        ctx.fillStyle = '#4a2a1a';
-        ctx.beginPath();
-        ctx.moveTo(x - roofSize/2, roofY);
-        ctx.lineTo(x, roofY - 12);
-        ctx.lineTo(x + roofSize/2, roofY);
-        ctx.fill();
-        
-        // Crenellations on top
-        ctx.fillStyle = '#696969';
-        const battlementCount = 5;
-        const battlementSpacing = roofSize / (battlementCount + 1);
-        for (let i = 1; i <= battlementCount; i++) {
-            const bx = x - roofSize/2 + battlementSpacing * i;
-            ctx.fillRect(bx - 3, roofY - 8, 6, 8);
-        }
-        
+
         // Arrow slits
         ctx.fillStyle = '#2a2a2a';
         for (let h = 0; h < 3; h++) {
             ctx.fillRect(x - towerSize/4, towerY + 15 + (h * 15), 2, 8);
             ctx.fillRect(x + towerSize/4 - 2, towerY + 15 + (h * 15), 2, 8);
         }
+
+        // ── Peaked triangular roof ────────────────────────────────────────────
+        const roofBaseY = towerY - platformHeight;
+        const roofPeakY = roofBaseY - roofHeight - 14;
+        const roofHalfW = roofSize / 2 + 4;
+
+        // Roof shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.beginPath();
+        ctx.moveTo(x + 2, roofPeakY + 2);
+        ctx.lineTo(x - roofHalfW + 2, roofBaseY + 2);
+        ctx.lineTo(x + roofHalfW + 2, roofBaseY + 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Roof face
+        ctx.fillStyle = '#5a341d';
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY);
+        ctx.lineTo(x - roofHalfW, roofBaseY);
+        ctx.lineTo(x + roofHalfW, roofBaseY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Shingle lines
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const t = i / 4;
+            const sy = roofPeakY + (roofBaseY - roofPeakY) * t;
+            const hw = roofHalfW * t;
+            ctx.beginPath();
+            ctx.moveTo(x - hw, sy);
+            ctx.lineTo(x + hw, sy);
+            ctx.stroke();
+        }
+
+        // Flagpole at peak
+        ctx.strokeStyle = '#5a341d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY);
+        ctx.lineTo(x, roofPeakY - 16);
+        ctx.stroke();
+
+        // Burgund pennant
+        ctx.fillStyle = '#8B1E3F';
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeakY - 16);
+        ctx.lineTo(x + 11, roofPeakY - 11);
+        ctx.lineTo(x, roofPeakY - 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#5b1028';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
     }
 
     renderWoodenPalisadeSide(ctx, x1, y1, x2, y2, side) {
@@ -2353,8 +2465,11 @@ export class SettlementHub {
         ctx.fillRect(x + 15, y + 15, 6, 12);
     }
 
-    renderSettlementBuildings(ctx, canvas) {
+    renderSettlementBuildings(ctx, canvas, interiorOnly) {
         // Render all actual building instances with settlement-specific visuals
+        // interiorOnly=true  → render only non-clickable decorative interior buildings (clipped)
+        // interiorOnly=false → render only clickable exterior buildings (not clipped)
+        // interiorOnly=undefined → render everything (legacy call, not used in renderSettlementScene)
         const headers = {
             'TrainingGrounds': 'Campaign',
             'MagicAcademy': 'Arcane Library',
@@ -2364,6 +2479,11 @@ export class SettlementHub {
 
         this.settlementBuildings.forEach(item => {
             if (item.building) {
+                // Interior pass (clipped): only non-clickable decorative buildings
+                // Exterior pass (unclipped): all clickable buildings (headers must render above walls)
+                if (interiorOnly === true && item.clickable) return;
+                if (interiorOnly === false && !item.clickable) return;
+
                 ctx.globalAlpha = this.contentOpacity;
                 
                 // Special handling for TrainingGrounds: render scaled-down version at 70% for settlement
@@ -3437,6 +3557,197 @@ export class SettlementHub {
         this.renderWell(ctx, centerX, centerY + 5);
     }
 
+    renderSettlementDetails(ctx, centerX, centerY) {
+        // ── CRATES near TowerForge (right side) ────────────────────────────────
+        this.renderCrate(ctx, centerX + 180, centerY - 65, 12);
+        this.renderCrate(ctx, centerX + 194, centerY - 65, 12);
+        this.renderCrate(ctx, centerX + 187, centerY - 77, 12);  // stacked on top
+        this.renderCrate(ctx, centerX + 210, centerY - 72, 10);  // extra crate right
+
+        // ── BARRELS near TowerForge ─────────────────────────────────────────────
+        this.renderBarrel(ctx, centerX + 162, centerY - 50, 10);
+        this.renderBarrel(ctx, centerX + 173, centerY - 52, 9);
+        this.renderBarrel(ctx, centerX + 215, centerY - 52, 10); // one more right side
+
+        // ── CRATES near Magic Academy (left side) ──────────────────────────────
+        this.renderCrate(ctx, centerX - 175, centerY - 68, 11);
+        this.renderCrate(ctx, centerX - 163, centerY - 68, 11);
+        this.renderCrate(ctx, centerX - 168, centerY - 80, 10); // stacked
+        this.renderBarrel(ctx, centerX - 148, centerY - 62, 9); // barrel beside crates
+
+        // ── BACK OF SETTLEMENT (north, behind buildings) ───────────────────────
+        this.renderCrate(ctx, centerX - 280, centerY - 80, 11);
+        this.renderBarrel(ctx, centerX - 295, centerY - 75, 9);
+        this.renderBarrel(ctx, centerX - 265, centerY - 78, 10);
+
+        this.renderCrate(ctx, centerX + 270, centerY - 82, 11);
+        this.renderCrate(ctx, centerX + 282, centerY - 82, 11);
+        this.renderBarrel(ctx, centerX + 295, centerY - 78, 9);
+
+        this.renderCrate(ctx, centerX - 50, centerY - 78, 10);
+        this.renderCrate(ctx, centerX + 38, centerY - 82, 10);
+        this.renderBarrel(ctx, centerX - 5, centerY - 76, 9);
+
+        // ── SOUTH PATH – leading from plaza toward the gate ───────────────────
+        this.renderBarrel(ctx, centerX - 22, centerY + 80, 9);
+        this.renderBarrel(ctx, centerX - 10, centerY + 82, 10);
+        this.renderBarrel(ctx, centerX + 5, centerY + 84, 9);
+        this.renderCrate(ctx, centerX - 38, centerY + 90, 10);
+        this.renderCrate(ctx, centerX + 28, centerY + 88, 10);
+
+        // ── GATE AREA – immediately behind the gate ────────────────────────────
+        this.renderBarrel(ctx, centerX - 30, centerY + 108, 9);
+        this.renderBarrel(ctx, centerX + 22, centerY + 110, 9);
+        this.renderCrate(ctx, centerX - 15, centerY + 116, 8);
+
+        // ── LEFT INNER AREA ─────────────────────────────────────────────────────
+        this.renderBarrel(ctx, centerX - 310, centerY - 10, 9);
+        this.renderCrate(ctx, centerX - 320, centerY + 5, 10);
+        this.renderBarrel(ctx, centerX - 330, centerY + 30, 8);
+        this.renderCrate(ctx, centerX - 290, centerY + 55, 9);
+
+        // ── RIGHT INNER AREA ────────────────────────────────────────────────────
+        this.renderBarrel(ctx, centerX + 300, centerY - 10, 9);
+        this.renderBarrel(ctx, centerX + 318, centerY + 25, 8);
+        this.renderCrate(ctx, centerX + 305, centerY + 55, 9);
+
+        // ── SHRUBS/BUSHES spread naturally across the interior ─────────────────
+        const shrubs = [
+            // Back left cluster
+            { x: centerX - 300, y: centerY - 55, r: 9 },
+            { x: centerX - 250, y: centerY - 75, r: 8 },
+            { x: centerX - 330, y: centerY - 30, r: 10 },
+            // Back right cluster
+            { x: centerX + 295, y: centerY - 60, r: 9 },
+            { x: centerX + 240, y: centerY - 78, r: 8 },
+            { x: centerX + 320, y: centerY - 30, r: 9 },
+            // Back center
+            { x: centerX - 90, y: centerY - 70, r: 7 },
+            { x: centerX + 80, y: centerY - 72, r: 7 },
+            // Mid left
+            { x: centerX - 200, y: centerY + 70, r: 9 },
+            { x: centerX - 260, y: centerY + 45, r: 8 },
+            // Mid right
+            { x: centerX + 205, y: centerY + 65, r: 8 },
+            { x: centerX + 255, y: centerY + 42, r: 9 },
+            // South inner left/right
+            { x: centerX - 100, y: centerY + 95, r: 7 },
+            { x: centerX + 110, y: centerY + 92, r: 7 },
+            // Near gate sides
+            { x: centerX - 55, y: centerY + 112, r: 6 },
+            { x: centerX + 48, y: centerY + 114, r: 6 },
+        ];
+        shrubs.forEach(s => this.renderShrub(ctx, s.x, s.y, s.r));
+
+        // ── SCATTERED HAY/STRAW PATCHES near buildings ─────────────────────────
+        const hayPositions = [
+            { x: centerX + 155, y: centerY - 35 },
+            { x: centerX - 155, y: centerY - 40 },
+            { x: centerX, y: centerY + 70 },
+            { x: centerX - 290, y: centerY + 18 },
+            { x: centerX + 285, y: centerY + 15 },
+        ];
+        hayPositions.forEach(h => {
+            ctx.fillStyle = 'rgba(200, 170, 80, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(h.x, h.y, 10, 5, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(160, 130, 50, 0.4)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 4; i++) {
+                const angle = -0.4 + i * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(h.x - 5, h.y + 2);
+                ctx.lineTo(h.x + Math.cos(angle) * 9, h.y + Math.sin(angle) * 4);
+                ctx.stroke();
+            }
+        });
+    }
+
+    renderCrate(ctx, x, y, size) {
+        // Wooden crate
+        const s = size;
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(x - s * 0.5 + 2, y + 2, s, s * 0.9);
+        // Face
+        ctx.fillStyle = '#c8a060';
+        ctx.fillRect(x - s * 0.5, y - s * 0.5, s, s);
+        // Wood slat lines
+        ctx.strokeStyle = '#8a6030';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(x - s * 0.5, y - s * 0.5, s, s);
+        // Cross slats
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.5, y - s * 0.5 + s * 0.33);
+        ctx.lineTo(x + s * 0.5, y - s * 0.5 + s * 0.33);
+        ctx.moveTo(x - s * 0.5, y - s * 0.5 + s * 0.66);
+        ctx.lineTo(x + s * 0.5, y - s * 0.5 + s * 0.66);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - s * 0.5 + s * 0.33, y - s * 0.5);
+        ctx.lineTo(x - s * 0.5 + s * 0.33, y + s * 0.5);
+        ctx.stroke();
+        // Corner nail dots
+        ctx.fillStyle = '#5a3a18';
+        [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]].forEach(([dx, dy]) => {
+            ctx.beginPath();
+            ctx.arc(x + dx * s, y + dy * s, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    renderBarrel(ctx, x, y, size) {
+        const s = size;
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + s * 0.55, s * 0.48, s * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Barrel body (rounded rect approximated with two rects + ellipses)
+        ctx.fillStyle = '#9a6030';
+        ctx.fillRect(x - s * 0.42, y - s * 0.45, s * 0.84, s * 0.9);
+        // Top/bottom ellipses
+        ctx.fillStyle = '#b57840';
+        ctx.beginPath();
+        ctx.ellipse(x, y - s * 0.45, s * 0.42, s * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Bottom
+        ctx.fillStyle = '#805020';
+        ctx.beginPath();
+        ctx.ellipse(x, y + s * 0.45, s * 0.42, s * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Hoops
+        ctx.strokeStyle = '#3a2010';
+        ctx.lineWidth = 1.5;
+        [-0.25, 0, 0.25].forEach(frac => {
+            ctx.beginPath();
+            ctx.ellipse(x, y + s * frac, s * 0.45, s * 0.12, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+        // Outline
+        ctx.strokeStyle = '#5a3010';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(x - s * 0.42, y - s * 0.45, s * 0.84, s * 0.9);
+    }
+
+    renderShrub(ctx, x, y, r) {
+        // Small bush cluster — 3 overlapping circles
+        const colors = ['#1B5E20', '#2E7D32', '#388E3C'];
+        const offsets = [[-r * 0.55, r * 0.2], [r * 0.55, r * 0.25], [0, -r * 0.15]];
+        offsets.forEach((off, i) => {
+            ctx.fillStyle = colors[i];
+            ctx.beginPath();
+            ctx.arc(x + off[0], y + off[1], r * 0.65, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        // Top highlight circle
+        ctx.fillStyle = '#4CAF50';
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.1, r * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     renderSmallWatchTower(ctx, x, y, size) {
         // Small tower structure similar to guard post but just decorative
         // Base platform
@@ -3520,139 +3831,272 @@ export class SettlementHub {
     }
 
     renderSettlementPaths(ctx, canvas, centerX, centerY) {
-        // Stone/dirt paths - simple layout focused on central plaza with meandering branches
-        // All paths contained within the settlement walls
-        const pathColor = '#9d9181';
         const pathDark = '#7a6f5d';
-        
-        // Set line cap and join for smoother curves
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        // CENTRAL GATHERING PLAZA - main feature (smaller, original size)
-        ctx.fillStyle = pathColor;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, 80, 60, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Central plaza edge highlight
-        ctx.strokeStyle = pathDark;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, 82, 62, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Render fountain/well centerpiece in plaza
-        this.renderFountainCenterpiece(ctx, centerX, centerY);
-        
-        // BRANCH 1: From plaza up-left to Magic Academy - meandering path
-        this.drawCurvedPath(ctx, [
-            { x: centerX - 60, y: centerY - 50 },
-            { x: centerX - 85, y: centerY - 70 },
-            { x: centerX - 110, y: centerY - 80 }
-        ], 22, pathColor, pathDark);
-        
-        // BRANCH 2: From plaza up-right to Tower Forge - meandering path
-        this.drawCurvedPath(ctx, [
-            { x: centerX + 60, y: centerY - 50 },
-            { x: centerX + 85, y: centerY - 70 },
-            { x: centerX + 110, y: centerY - 80 }
-        ], 22, pathColor, pathDark);
-        
-        // Add stone texture details to main paths
-        ctx.fillStyle = 'rgba(100, 100, 100, 0.12)';
-        for (let i = 0; i < 15; i++) {
-            const x = centerX - 130 + Math.random() * 260;
-            const y = centerY - 120 + Math.random() * 220;
-            const size = 2 + Math.random() * 3;
-            ctx.fillRect(x, y, size, size);
-        }
-        
-        // Add worn spots at path junctions
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, 50, 40, 0, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    
-    renderFountainCenterpiece(ctx, centerX, centerY) {
-        // Decorative fountain/well centerpiece in the plaza
-        const fountainScale = 1.0;
-        
-        // Base stone platform
-        ctx.fillStyle = '#9a8a77';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 3, 35, 28, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Base edge shadow
-        ctx.fillStyle = '#7a7a67';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 5, 33, 26, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Base highlight rim
-        ctx.strokeStyle = '#b9b9a7';
+        const paverW = 16;
+        const paverH = 10;
+
+        // Position-seeded paver draw — same stone at same grid coord regardless of draw order
+        const drawPaverRegion = (clipFn, bx, by, bw, bh, seedXor) => {
+            ctx.save();
+            clipFn();
+            ctx.clip();
+            ctx.fillStyle = '#9d9181';
+            ctx.fillRect(bx - 4, by - 4, bw + 8, bh + 8);
+
+            const colMin = Math.floor((bx - centerX) / paverW) - 1;
+            const colMax = Math.ceil((bx + bw - centerX) / paverW) + 1;
+            const rowMin = Math.floor((by - centerY) / paverH) - 1;
+            const rowMax = Math.ceil((by + bh - centerY) / paverH) + 1;
+
+            for (let row = rowMin; row <= rowMax; row++) {
+                for (let col = colMin; col <= colMax; col++) {
+                    let ps = (((row * 1031 + col * 1873) ^ seedXor) >>> 0);
+                    const pr = () => { ps = (ps * 1664525 + 1013904223) >>> 0; return ps / 0x100000000; };
+                    const rowOffset = (row % 2 === 0) ? 0 : paverW * 0.55;
+                    const px = centerX + col * paverW + rowOffset + (pr() - 0.5) * 2.2;
+                    const py = centerY + row * paverH + (pr() - 0.5) * 1.4;
+                    const tone = 68 + Math.floor(pr() * 24);
+                    ctx.fillStyle = `rgb(${145 + (tone * 0.3) | 0},${130 + (tone * 0.28) | 0},${110 + (tone * 0.22) | 0})`;
+                    const pw2 = paverW - 2.5 - pr() * 1.5;
+                    const ph2 = paverH - 2 - pr() * 1;
+                    ctx.fillRect(px - pw2 / 2, py - ph2 / 2, pw2, ph2);
+                    if (pr() < 0.08) {
+                        ctx.fillStyle = 'rgba(60,90,40,0.22)';
+                        ctx.fillRect(px - pw2 / 2, py + ph2 * 0.35, pw2 * (0.3 + pr() * 0.6), 1.5);
+                    }
+                }
+            }
+            ctx.restore();
+        };
+
+        // Helper: paved strip between two points
+        const drawPavedStrip = (p0, p1, width) => {
+            const dx = p1.x - p0.x;
+            const dy = p1.y - p0.y;
+            const angle = Math.atan2(dy, dx);
+            const hw = width * 0.5;
+            const perpX = -Math.sin(angle) * hw;
+            const perpY =  Math.cos(angle) * hw;
+
+            const bx = Math.min(p0.x, p1.x) - hw;
+            const by = Math.min(p0.y, p1.y) - hw;
+            const bw = Math.abs(p1.x - p0.x) + hw * 2;
+            const bh = Math.abs(p1.y - p0.y) + hw * 2;
+
+            drawPaverRegion(() => {
+                ctx.beginPath();
+                ctx.moveTo(p0.x + perpX, p0.y + perpY);
+                ctx.lineTo(p1.x + perpX, p1.y + perpY);
+                ctx.lineTo(p1.x - perpX, p1.y - perpY);
+                ctx.lineTo(p0.x - perpX, p0.y - perpY);
+                ctx.closePath();
+            }, bx, by, bw, bh, 0x9137);
+
+            // Curbing edges matching the plaza ring style
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#c4b49a';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(p0.x + perpX, p0.y + perpY); ctx.lineTo(p1.x + perpX, p1.y + perpY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p0.x - perpX, p0.y - perpY); ctx.lineTo(p1.x - perpX, p1.y - perpY); ctx.stroke();
+            ctx.strokeStyle = pathDark;
+            ctx.lineWidth = 2;
+            const opx = -Math.sin(angle) * (hw + 1.5);
+            const opy =  Math.cos(angle) * (hw + 1.5);
+            ctx.beginPath(); ctx.moveTo(p0.x + opx, p0.y + opy); ctx.lineTo(p1.x + opx, p1.y + opy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(p0.x - opx, p0.y - opy); ctx.lineTo(p1.x - opx, p1.y - opy); ctx.stroke();
+        };
+
+        // ── 1. PATHS FIRST — plaza is drawn on top so the join looks clean ─────
+
+        // BRANCH 1: starts well inside plaza → Magic Academy (upper-left)
+        // Starting point is inside the plaza ellipse (79×59) so the plaza paving caps it cleanly
+        drawPavedStrip(
+            { x: centerX - 52, y: centerY - 36 },
+            { x: centerX - 130, y: centerY - 55 },
+            26
+        );
+
+        // BRANCH 2: starts well inside plaza → Tower Forge (upper-right)
+        drawPavedStrip(
+            { x: centerX + 52, y: centerY - 36 },
+            { x: centerX + 157, y: centerY - 50 },
+            26
+        );
+
+        // SHORT SOUTH TRAIL — fades below the plaza toward the gate
+        drawPavedStrip(
+            { x: centerX, y: centerY + 55 },
+            { x: centerX - 2, y: centerY + 105 },
+            24
+        );
+
+        // ── 2. CENTRAL PLAZA on top — caps path ends with a clean edge ─────────
+        drawPaverRegion(() => {
+            ctx.beginPath();
+            ctx.ellipse(centerX, centerY, 79, 59, 0, 0, Math.PI * 2);
+        }, centerX - 80, centerY - 60, 160, 120, 0x9137);
+
+        // Sunlit curbing rim
+        ctx.strokeStyle = '#c4b49a';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 2, 34, 27, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY, 78, 58, 0, 0, Math.PI * 2);
         ctx.stroke();
-        
-        // Stone blocks on base - horizontal lines for stone pattern
-        ctx.strokeStyle = '#8a8a77';
+
+        // Outer edge shadow
+        ctx.strokeStyle = pathDark;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 81, 61, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Natural center wear
+        const wearGrad = ctx.createRadialGradient(centerX, centerY, 4, centerX, centerY, 50);
+        wearGrad.addColorStop(0,    'rgba(55,42,30,0.16)');
+        wearGrad.addColorStop(0.55, 'rgba(55,42,30,0.07)');
+        wearGrad.addColorStop(1,    'rgba(55,42,30,0)');
+        ctx.fillStyle = wearGrad;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 52, 42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fountain / well centerpiece last so it sits on top of the plaza
+        this.renderFountainCenterpiece(ctx, centerX, centerY);
+    }
+
+    renderFountainCenterpiece(ctx, centerX, centerY) {
+        // ── Outer basin shadow ──────────────────────────────────────────────────
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(centerX + 2, centerY + 6, 34, 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Outer stone basin ───────────────────────────────────────────────────
+        const basinGrad = ctx.createRadialGradient(
+            centerX - 10, centerY - 8, 0,
+            centerX, centerY, 36
+        );
+        basinGrad.addColorStop(0,   '#c8b89a');
+        basinGrad.addColorStop(0.4, '#a89070');
+        basinGrad.addColorStop(0.8, '#8a7255');
+        basinGrad.addColorStop(1,   '#6a5540');
+        ctx.fillStyle = basinGrad;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 2, 34, 23, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stone block rings on basin wall
+        ctx.strokeStyle = '#6a5540';
         ctx.lineWidth = 1;
-        for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 2, 34, 23, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, 32, 21, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Top rim highlight
+        ctx.strokeStyle = '#d4c4a8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 1, 33, 22, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // ── Water surface ───────────────────────────────────────────────────────
+        const waterGrad = ctx.createRadialGradient(
+            centerX - 6, centerY - 4, 0,
+            centerX, centerY, 22
+        );
+        waterGrad.addColorStop(0,   'rgba(150, 210, 255, 0.80)');
+        waterGrad.addColorStop(0.5, 'rgba(80, 155, 215, 0.65)');
+        waterGrad.addColorStop(1,   'rgba(40, 100, 170, 0.50)');
+        ctx.fillStyle = waterGrad;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 1, 24, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Water ripple lines
+        ctx.strokeStyle = 'rgba(200, 235, 255, 0.45)';
+        ctx.lineWidth = 1;
+        for (let r = 1; r <= 3; r++) {
             ctx.beginPath();
-            ctx.ellipse(centerX, centerY + 3 + (i * 8), 34, 27, 0, 0, Math.PI * 2);
+            ctx.ellipse(centerX, centerY + 1, 6 * r, 4 * r, 0, 0, Math.PI * 2);
             ctx.stroke();
         }
-        
-        // Central well/fountain structure
-        // Inner stone ring
-        ctx.fillStyle = '#8a7a67';
+
+        // Water highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, 20, 16, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX - 8, centerY - 4, 8, 5, -0.4, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Inner stone ring top highlight
-        ctx.fillStyle = '#aaa97a';
+
+        // ── Central stone plinth ────────────────────────────────────────────────
+        // Plinth shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 2, 18, 14, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX + 1, centerY - 6, 7, 5, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Water surface reflection
-        ctx.fillStyle = 'rgba(100, 150, 200, 0.25)';
+
+        // Plinth base
+        ctx.fillStyle = '#b0a088';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 1, 16, 12, 0, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY - 9, 7, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Central post/spout structure
-        ctx.fillStyle = '#9a8a77';
-        ctx.fillRect(centerX - 3, centerY - 8, 6, 10);
-        
-        // Post top
+        ctx.strokeStyle = '#6a5540';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Plinth shaft
+        ctx.fillStyle = '#9a8870';
+        ctx.fillRect(centerX - 3, centerY - 26, 6, 18);
+        ctx.strokeStyle = '#6a5540';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(centerX - 3, centerY - 26, 6, 18);
+
+        // Plinth cross strut (decorative)
+        ctx.fillStyle = '#a8957a';
+        ctx.fillRect(centerX - 6, centerY - 20, 12, 3);
+        ctx.strokeStyle = '#6a5540';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(centerX - 6, centerY - 20, 12, 3);
+
+        // Plinth cap top
+        ctx.fillStyle = '#c8b89a';
         ctx.beginPath();
-        ctx.arc(centerX, centerY - 8, 3.5, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY - 26, 4, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Water spout light
-        ctx.fillStyle = 'rgba(150, 200, 255, 0.3)';
-        ctx.fillRect(centerX - 2, centerY - 12, 4, 5);
-        
-        // Small decorative accent stones on corners
-        ctx.fillStyle = '#a9a997';
-        const cornerDistance = 25;
-        const corners = [
-            { x: centerX - cornerDistance, y: centerY - cornerDistance },
-            { x: centerX + cornerDistance, y: centerY - cornerDistance },
-            { x: centerX - cornerDistance, y: centerY + cornerDistance },
-            { x: centerX + cornerDistance, y: centerY + cornerDistance }
-        ];
-        
-        corners.forEach(corner => {
+        ctx.strokeStyle = '#6a5540';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Soft water-spout glow at top
+        const spoutGlow = ctx.createRadialGradient(
+            centerX, centerY - 27, 0,
+            centerX, centerY - 27, 10
+        );
+        spoutGlow.addColorStop(0,   'rgba(150, 210, 255, 0.55)');
+        spoutGlow.addColorStop(0.5, 'rgba(100, 180, 240, 0.20)');
+        spoutGlow.addColorStop(1,   'rgba(80, 160, 220, 0)');
+        ctx.fillStyle = spoutGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY - 27, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Four corner accent stones on plaza floor ────────────────────────────
+        ctx.fillStyle = '#b0a088';
+        ctx.strokeStyle = '#8a7255';
+        ctx.lineWidth = 1;
+        const cornerD = 26;
+        [
+            { x: centerX - cornerD, y: centerY - cornerD * 0.55 },
+            { x: centerX + cornerD, y: centerY - cornerD * 0.55 },
+            { x: centerX - cornerD, y: centerY + cornerD * 0.55 },
+            { x: centerX + cornerD, y: centerY + cornerD * 0.55 }
+        ].forEach(c => {
             ctx.beginPath();
-            ctx.arc(corner.x, corner.y, 2.5, 0, Math.PI * 2);
+            ctx.arc(c.x, c.y, 3.5, 0, Math.PI * 2);
             ctx.fill();
+            ctx.stroke();
         });
     }
     
@@ -3741,154 +4185,229 @@ export class SettlementHub {
     renderGuardPostSmall(ctx, x, y, scale = 1.0) {
         scale = scale || 0.6;
 
-        const w  = 50 * scale;
-        const h  = 50 * scale;
+        const w = 50 * scale;
+        const h = 50 * scale;
 
-        // Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-        ctx.fillRect(x - w * 0.42, y + h * 0.25, w * 0.84, h * 0.1);
+        // ── Ground shadow ──────────────────────────────────────────────────────
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.06, y + h * 0.34, w * 0.5, h * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Foundation slab (wide base)
-        ctx.fillStyle = '#505050';
-        ctx.fillRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.18);
+        // ── Stepped foundation ────────────────────────────────────────────────
+        ctx.fillStyle = '#484848';
+        ctx.fillRect(x - w * 0.48, y + h * 0.18, w * 0.96, h * 0.14);
+        ctx.fillStyle = '#5e5e5e';
+        ctx.fillRect(x - w * 0.48, y + h * 0.18, w * 0.96, h * 0.035);
+        ctx.strokeStyle = '#303030';
+        ctx.lineWidth = scale * 0.8;
+        ctx.strokeRect(x - w * 0.48, y + h * 0.18, w * 0.96, h * 0.14);
+
+        ctx.fillStyle = '#525252';
+        ctx.fillRect(x - w * 0.4, y + h * 0.08, w * 0.8, h * 0.1);
         ctx.fillStyle = '#686868';
-        ctx.fillRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.035);
-        ctx.strokeStyle = '#383838';
-        ctx.lineWidth = scale;
-        ctx.strokeRect(x - w * 0.45, y + h * 0.08, w * 0.9, h * 0.18);
+        ctx.fillRect(x - w * 0.4, y + h * 0.08, w * 0.8, h * 0.03);
+        ctx.strokeStyle = '#363636';
+        ctx.strokeRect(x - w * 0.4, y + h * 0.08, w * 0.8, h * 0.1);
 
-        // Stone walls
+        // ── Wall geometry ──────────────────────────────────────────────────────
         const wl = x - w * 0.36;
         const wr = x + w * 0.36;
-        const wt = y - h * 0.18;
+        const wt = y - h * 0.22;
         const wb = y + h * 0.08;
         const wallW = wr - wl;
         const wallH = wb - wt;
+        const depthW = w * 0.1;
 
-        ctx.fillStyle = '#787878';
+        // Right depth panel
+        ctx.fillStyle = '#4e4e4e';
+        ctx.beginPath();
+        ctx.moveTo(wr, wt);
+        ctx.lineTo(wr + depthW, wt - depthW * 0.45);
+        ctx.lineTo(wr + depthW, wb - depthW * 0.45);
+        ctx.lineTo(wr, wb);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#2e2e2e';
+        ctx.lineWidth = scale * 0.8;
+        ctx.stroke();
+
+        // Front wall gradient
+        const wallGrad = ctx.createLinearGradient(wl, 0, wr, 0);
+        wallGrad.addColorStop(0,    '#929292');
+        wallGrad.addColorStop(0.18, '#848484');
+        wallGrad.addColorStop(0.85, '#686868');
+        wallGrad.addColorStop(1,    '#525252');
+        ctx.fillStyle = wallGrad;
         ctx.fillRect(wl, wt, wallW, wallH);
-        ctx.fillStyle = '#8c8c8c';
-        ctx.fillRect(wl, wt, wallW * 0.15, wallH);
-        ctx.fillStyle = '#5e5e5e';
-        ctx.fillRect(wr - wallW * 0.12, wt, wallW * 0.12, wallH);
 
-        // Stone block texture
-        ctx.strokeStyle = '#555555';
+        // Stone block courses
+        ctx.strokeStyle = 'rgba(42,42,42,0.55)';
         ctx.lineWidth = 0.75 * scale;
         const sW = wallW / 4;
-        const sH = wallH / 3;
-        for (let row = 0; row < 3; row++) {
+        const sH = wallH / 4;
+        for (let row = 0; row < 4; row++) {
             const off = (row % 2 === 0) ? 0 : sW * 0.5;
             for (let col = -1; col < 5; col++) {
-                const bx = wl + col * sW - off;
-                const by = wt + row * sH;
-                const bx1 = Math.max(bx, wl);
-                const bx2 = Math.min(bx + sW, wr);
-                if (bx2 > bx1) ctx.strokeRect(bx1, by, bx2 - bx1, sH);
+                const bx1 = Math.max(wl + col * sW + off, wl);
+                const bx2 = Math.min(wl + (col + 1) * sW + off, wr);
+                if (bx2 > bx1) ctx.strokeRect(bx1, wt + row * sH, bx2 - bx1, sH);
             }
         }
-
-        ctx.strokeStyle = '#3c3c3c';
+        // Top stone row highlight
+        ctx.fillStyle = 'rgba(160,160,160,0.18)';
+        ctx.fillRect(wl, wt, wallW, sH * 0.4);
+        // Wall outline
+        ctx.strokeStyle = '#2e2e2e';
         ctx.lineWidth = 1.5 * scale;
         ctx.strokeRect(wl, wt, wallW, wallH);
 
-        // Arrow slit
-        ctx.fillStyle = '#1c1c1c';
-        ctx.fillRect(wl + wallW * 0.08, wt + wallH * 0.15, wallW * 0.14, wallH * 0.6);
-        ctx.strokeStyle = '#505050';
-        ctx.lineWidth = scale;
-        ctx.strokeRect(wl + wallW * 0.08, wt + wallH * 0.15, wallW * 0.14, wallH * 0.6);
+        // ── Arrow slit ────────────────────────────────────────────────────────
+        const slitX = wl + wallW * 0.10;
+        const slitW2 = wallW * 0.12;
+        const slitYt = wt + wallH * 0.10;
+        const slitH2 = wallH * 0.52;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(slitX, slitYt, slitW2, slitH2);
+        ctx.fillStyle = 'rgba(160,160,160,0.35)';
+        ctx.fillRect(slitX - 1, slitYt - 1, slitW2 + 2, 2);
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = scale * 0.8;
+        ctx.strokeRect(slitX, slitYt, slitW2, slitH2);
 
-        // Door
-        ctx.fillStyle = '#3a2414';
-        ctx.fillRect(x - wallW * 0.15, wt + wallH * 0.45, wallW * 0.3, wallH * 0.55);
-        ctx.strokeStyle = '#6a5030';
-        ctx.lineWidth = 1.5 * scale;
-        ctx.strokeRect(x - wallW * 0.15, wt + wallH * 0.45, wallW * 0.3, wallH * 0.55);
-
-        // Battlements (drawn before roof so roof overlaps)
-        const mH = h * 0.06;
-        const mW = wallW / 9;
-        ctx.fillStyle = '#8a8a8a';
-        ctx.strokeStyle = '#3c3c3c';
-        ctx.lineWidth = 0.75 * scale;
-        for (let i = 0; i < 5; i++) {
-            const mx = wl + i * mW * 2 + mW * 0.1;
-            ctx.fillRect(mx, wt - mH, mW * 1.8, mH);
-            ctx.strokeRect(mx, wt - mH, mW * 1.8, mH);
-        }
-
-        // Roof (drawn over wall & battlements)
-        const roofBase = wt;
-        const roofPeak = y - h * 0.62;
-
-        ctx.fillStyle = '#8b3a18';
+        // ── Arched door ────────────────────────────────────────────────────────
+        const dW  = wallW * 0.32;
+        const dH  = wallH * 0.52;
+        const dX  = x - dW / 2;
+        const dYb = wb;
+        const dYt = dYb - dH;
+        ctx.fillStyle = '#251508';
         ctx.beginPath();
-        ctx.moveTo(x - w * 0.5, roofBase);
-        ctx.lineTo(x, roofPeak);
-        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.moveTo(dX, dYb);
+        ctx.lineTo(dX, dYt + dW / 2);
+        ctx.arc(x, dYt + dW / 2, dW / 2, Math.PI, 0);
+        ctx.lineTo(dX + dW, dYb);
         ctx.closePath();
         ctx.fill();
+        // Arch frame stone
+        ctx.strokeStyle = '#6a5030';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.stroke();
+        // Keystone
+        ctx.fillStyle = '#8a7055';
+        ctx.beginPath();
+        ctx.arc(x, dYt + dW * 0.5, dW * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        // Door plank lines
+        ctx.strokeStyle = 'rgba(90,55,20,0.45)';
+        ctx.lineWidth = scale * 0.7;
+        ctx.beginPath(); ctx.moveTo(x - dW * 0.08, dYt + dW * 0.55); ctx.lineTo(x - dW * 0.08, dYb); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + dW * 0.08, dYt + dW * 0.55); ctx.lineTo(x + dW * 0.08, dYb); ctx.stroke();
 
-        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        // ── Battlements ────────────────────────────────────────────────────────
+        const mH  = h * 0.08;
+        const mW  = wallW / 8;
+        const mTop = wt - mH;
+        ctx.fillStyle = '#868686';
+        ctx.strokeStyle = '#2e2e2e';
+        ctx.lineWidth = 0.75 * scale;
+        for (let i = 0; i < 4; i++) {
+            const mx = wl + i * mW * 2 + mW * 0.1;
+            if (mx + mW * 1.8 > wr + 1) continue;
+            ctx.fillRect(mx, mTop, mW * 1.8, mH);
+            ctx.strokeRect(mx, mTop, mW * 1.8, mH);
+        }
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = scale * 0.5;
+        for (let i = 0; i < 4; i++) {
+            const mx = wl + i * mW * 2 + mW * 0.1;
+            if (mx + mW * 1.8 > wr + 1) continue;
+            ctx.beginPath(); ctx.moveTo(mx, mTop); ctx.lineTo(mx + mW * 1.8, mTop); ctx.stroke();
+        }
+        // Depth panel battlement
+        ctx.fillStyle = '#585858';
+        ctx.fillRect(wr, wt - mH * 0.7, depthW, mH * 0.7);
+
+        // ── Roof ──────────────────────────────────────────────────────────────
+        const roofBase = wt;
+        const roofPeak = y - h * 0.68;
+        const rHW = w * 0.52;
+
+        // Left face (lit)
+        ctx.fillStyle = '#8b3a18';
+        ctx.beginPath();
+        ctx.moveTo(x - rHW, roofBase);
+        ctx.lineTo(x, roofPeak);
+        ctx.lineTo(x, roofBase);
+        ctx.closePath();
+        ctx.fill();
+        // Right face (shadow)
+        ctx.fillStyle = '#5a2410';
         ctx.beginPath();
         ctx.moveTo(x, roofPeak);
-        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.lineTo(x + rHW, roofBase);
         ctx.lineTo(x, roofBase);
         ctx.closePath();
         ctx.fill();
 
-        // Shingle lines
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        // Shingle rows
+        ctx.strokeStyle = 'rgba(0,0,0,0.28)';
         ctx.lineWidth = scale;
         const roofH = roofBase - roofPeak;
-        for (let t = 0.22; t < 1.0; t += 0.19) {
+        for (let t = 0.2; t < 1.0; t += 0.18) {
             const ly = roofPeak + roofH * t;
-            const hw = w * 0.5 * t;
             ctx.beginPath();
-            ctx.moveTo(x - hw, ly);
-            ctx.lineTo(x + hw, ly);
+            ctx.moveTo(x - rHW * t, ly);
+            ctx.lineTo(x + rHW * t, ly);
             ctx.stroke();
         }
-
-        ctx.strokeStyle = '#4a1e08';
+        // Roof outline
+        ctx.strokeStyle = '#3a1808';
         ctx.lineWidth = 1.5 * scale;
         ctx.beginPath();
-        ctx.moveTo(x - w * 0.5, roofBase);
+        ctx.moveTo(x - rHW, roofBase);
         ctx.lineTo(x, roofPeak);
-        ctx.lineTo(x + w * 0.5, roofBase);
+        ctx.lineTo(x + rHW, roofBase);
         ctx.stroke();
-
-        // Eave trim
+        // Eave
         ctx.strokeStyle = '#6a3010';
         ctx.lineWidth = 2 * scale;
-        ctx.beginPath();
-        ctx.moveTo(x - w * 0.5, roofBase);
-        ctx.lineTo(x + w * 0.5, roofBase);
-        ctx.stroke();
-
+        ctx.beginPath(); ctx.moveTo(x - rHW, roofBase); ctx.lineTo(x + rHW, roofBase); ctx.stroke();
         // Ridge cap
         ctx.fillStyle = '#aa5428';
-        ctx.fillRect(x - w * 0.035, roofPeak - h * 0.018, w * 0.07, h * 0.036);
+        ctx.fillRect(x - w * 0.04, roofPeak - h * 0.02, w * 0.08, h * 0.04);
 
-        // Flagpole
-        ctx.strokeStyle = '#4a4a4a';
+        // Right side roof depth slope
+        ctx.fillStyle = '#6a2c10';
+        ctx.beginPath();
+        ctx.moveTo(wr, roofBase);
+        ctx.lineTo(wr + depthW, roofBase - depthW * 0.45);
+        ctx.lineTo(x + depthW, roofPeak - depthW * 0.45);
+        ctx.lineTo(x, roofPeak);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#3a1808';
+        ctx.lineWidth = scale;
+        ctx.stroke();
+
+        // ── Flagpole & burgundy pennant ───────────────────────────────────────
+        ctx.strokeStyle = '#5a5a5a';
         ctx.lineWidth = 1.5 * scale;
         ctx.beginPath();
         ctx.moveTo(x, roofPeak);
-        ctx.lineTo(x, roofPeak - h * 0.3);
+        ctx.lineTo(x, roofPeak - h * 0.35);
         ctx.stroke();
 
-        // Flag
-        ctx.fillStyle = '#CC3333';
+        ctx.fillStyle = '#8B1E3F';
         ctx.beginPath();
-        ctx.moveTo(x, roofPeak - h * 0.28);
-        ctx.lineTo(x + 13 * scale, roofPeak - h * 0.19);
-        ctx.lineTo(x, roofPeak - h * 0.1);
+        ctx.moveTo(x, roofPeak - h * 0.33);
+        ctx.lineTo(x + 14 * scale, roofPeak - h * 0.23);
+        ctx.lineTo(x, roofPeak - h * 0.14);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#FFD700';
-        ctx.fillRect(x, roofPeak - h * 0.23, 11 * scale, 2.5 * scale);
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = scale * 0.5;
+        ctx.stroke();
     }
 
     renderFlowerBeds(ctx, centerX, centerY) {

@@ -198,12 +198,19 @@ export class BasicTower extends Tower {
         // Stone base - tight and aligned
         const baseY = this.y;
         
-        // Base front face
-        ctx.fillStyle = '#A9A9A9';
+        // Stone base with gradient for depth
+        const baseGradient = ctx.createLinearGradient(
+            this.x - baseSize/2, baseY - baseHeight,
+            this.x + baseSize/2, baseY
+        );
+        baseGradient.addColorStop(0, '#D0D0D0');
+        baseGradient.addColorStop(0.4, '#A9A9A9');
+        baseGradient.addColorStop(1, '#6A6A6A');
+        ctx.fillStyle = baseGradient;
         ctx.fillRect(this.x - baseSize/2, baseY - baseHeight, baseSize, baseHeight);
-        
-        // Base top
-        ctx.fillStyle = '#D3D3D3';
+
+        // Base top highlight
+        ctx.fillStyle = '#E8E8E8';
         ctx.fillRect(this.x - baseSize/2, baseY - baseHeight, baseSize, 2);
         
         // Stone texture - add more lines for detail
@@ -329,29 +336,63 @@ export class BasicTower extends Tower {
         ctx.fillRect(this.x + roofPostOffset, platformY, 2, -roofHeight);
         ctx.fillRect(this.x, platformY, 2, -roofHeight); // center post
 
-        // small cloth banner on center post
-        ctx.fillStyle = '#8B1E3F'; // muted burgundy
+        // Peaked triangular roof
+        const roofPeakY = roofY - gridSize * 0.14;
+        const roofHalfW = roofSize / 2 + 4;
+
+        // Roof shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.moveTo(this.x + 1, platformY - roofHeight * 0.25);
-        ctx.lineTo(this.x + 1 + 10, platformY - roofHeight * 0.25 + 4);
-        ctx.lineTo(this.x + 1, platformY - roofHeight * 0.25 + 8);
+        ctx.moveTo(this.x + 2, roofPeakY + 2);
+        ctx.lineTo(this.x - roofHalfW + 2, roofY + 2);
+        ctx.lineTo(this.x + roofHalfW + 2, roofY + 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Roof face (dark shingles)
+        ctx.fillStyle = '#5a341d';
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, roofPeakY);
+        ctx.lineTo(this.x - roofHalfW, roofY);
+        ctx.lineTo(this.x + roofHalfW, roofY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Shingle lines
+        ctx.strokeStyle = '#3d2010';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            const t = i / 4;
+            const shingleY = roofPeakY + (roofY - roofPeakY) * t;
+            const hw = roofHalfW * t;
+            ctx.beginPath();
+            ctx.moveTo(this.x - hw, shingleY);
+            ctx.lineTo(this.x + hw, shingleY);
+            ctx.stroke();
+        }
+
+        // Flagpole at roof peak
+        ctx.strokeStyle = '#5a341d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x, roofPeakY);
+        ctx.lineTo(this.x, roofPeakY - 14);
+        ctx.stroke();
+
+        // Flag (burgundy pennant)
+        ctx.fillStyle = '#8B1E3F';
+        ctx.beginPath();
+        ctx.moveTo(this.x, roofPeakY - 14);
+        ctx.lineTo(this.x + 12, roofPeakY - 10);
+        ctx.lineTo(this.x, roofPeakY - 6);
         ctx.closePath();
         ctx.fill();
         ctx.strokeStyle = '#5b1028';
+        ctx.lineWidth = 0.5;
         ctx.stroke();
-
-        // Roof surface and planks (slightly darker)
-        ctx.fillStyle = '#6f3b1a';
-        ctx.fillRect(this.x - roofSize/2, roofY, roofSize, 4);
-        ctx.strokeStyle = '#4a2a17';
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 5; i++) {
-            const plankX = this.x - roofSize/2 + (roofSize * i / 5);
-            ctx.beginPath();
-            ctx.moveTo(plankX, roofY);
-            ctx.lineTo(plankX, roofY + 4);
-            ctx.stroke();
-        }
         
         // Render defender - centered on platform with simple shoulder plates
         const defenderX = this.x;
@@ -461,59 +502,80 @@ export class BasicTower extends Tower {
     }
     
     drawEnvironment(ctx, gridSize) {
-        // Keep trees/bushes/rocks within the 2x2 grid; tweak positions and add small grass patches.
-        // Tree sizes increased by 4x for a larger visual impact.
+        // Trees at the 4 corners of the 2x2 grid, sized between BasicTower and BarricadeTower.
         const trees = [
-            { x: -gridSize * 0.38, y: gridSize * 0.32, size: 0.7 * 4 },
-            { x: gridSize * 0.34, y: gridSize * 0.36, size: 0.6 * 4 },
-            { x: -gridSize * 0.42, y: -gridSize * 0.28, size: 0.8 * 4 },
-            { x: gridSize * 0.36, y: -gridSize * 0.36, size: 0.5 * 4 }
+            { x: -gridSize * 0.38, y: gridSize * 0.30, size: 0.65 * 2.8, type: 'pine' },
+            { x:  gridSize * 0.33, y: gridSize * 0.34, size: 0.55 * 2.8, type: 'round' },
+            { x: -gridSize * 0.40, y: -gridSize * 0.25, size: 0.70 * 2.8, type: 'pine' },
+            { x:  gridSize * 0.34, y: -gridSize * 0.33, size: 0.50 * 2.8, type: 'round' }
         ];
         
         trees.forEach(tree => {
-	        const treeX = this.x + tree.x;
-	        const treeY = this.y + tree.y;
-	        const scale = tree.size;
-	        
-	        // Tree shadow
-	        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-	        ctx.save();
-	        ctx.translate(treeX + 2, treeY + 2);
-	        ctx.scale(1, 0.45);
-	        ctx.beginPath();
-	        ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
-	        ctx.fill();
-	        ctx.restore();
-	        
-	        // Trunk
-	        ctx.fillStyle = '#5a341d';
-	        ctx.fillRect(treeX - 1 * scale, treeY, 2 * scale, -6 * scale);
-
-	        // Pine layers (slightly rebalanced colors)
-	        const layers = [
-	            { y: -10 * scale, width: 8 * scale, color: '#0e3a0e' },
-	            { y: -7 * scale, width: 6 * scale, color: '#1f6f1f' },
-	            { y: -4 * scale, width: 4 * scale, color: '#2fa02f' }
-	        ];
-	        
-	        layers.forEach(layer => {
-	            ctx.fillStyle = layer.color;
-	            ctx.beginPath();
-	            ctx.moveTo(treeX, treeY + layer.y);
-	            ctx.lineTo(treeX - layer.width/2, treeY + layer.y + layer.width * 0.8);
-	            ctx.lineTo(treeX + layer.width/2, treeY + layer.y + layer.width * 0.8);
-	            ctx.closePath();
-	            ctx.fill();
-	            ctx.strokeStyle = '#0b2b0b';
-	            ctx.lineWidth = 1;
-	            ctx.stroke();
-	        });
-	    });
+            const treeX = this.x + tree.x;
+            const treeY = this.y + tree.y;
+            const scale = tree.size;
+            
+            // Drop shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+            ctx.save();
+            ctx.translate(treeX + 2, treeY + 2);
+            ctx.scale(1, 0.45);
+            ctx.beginPath();
+            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            if (tree.type === 'pine') {
+                // Conifer – same colour palette as LevelBase renderTreeType1/4
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(treeX - 1.1 * scale, treeY, 2.2 * scale, -5.5 * scale);
+                ctx.fillStyle = '#3E2723'; // trunk shadow side
+                ctx.fillRect(treeX, treeY, 1.1 * scale, -5.5 * scale);
+                
+                const piLayers = [
+                    { dy: -9.5 * scale, hw: 7.5 * scale, color: '#0D3817' },
+                    { dy: -6.5 * scale, hw: 5.8 * scale, color: '#1B5E20' },
+                    { dy: -3.5 * scale, hw: 4.0 * scale, color: '#2E7D32' }
+                ];
+                piLayers.forEach(l => {
+                    ctx.fillStyle = l.color;
+                    ctx.beginPath();
+                    ctx.moveTo(treeX,        treeY + l.dy);
+                    ctx.lineTo(treeX - l.hw, treeY + l.dy + l.hw * 0.75);
+                    ctx.lineTo(treeX + l.hw, treeY + l.dy + l.hw * 0.75);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#0b2b0b';
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                });
+            } else {
+                // Round canopy – same colour palette as LevelBase renderTreeType2
+                ctx.fillStyle = '#6B4423';
+                const tw = scale * 1.8, th = scale * 4;
+                ctx.fillRect(treeX - tw * 0.5, treeY, tw, -th);
+                ctx.fillStyle = '#8B5A3C';
+                ctx.fillRect(treeX, treeY, tw * 0.5, -th);
+                
+                ctx.fillStyle = '#1B5E20';
+                ctx.beginPath();
+                ctx.arc(treeX, treeY - th - scale * 0.5, scale * 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2E7D32';
+                ctx.beginPath();
+                ctx.arc(treeX, treeY - th - scale * 2.2, scale * 3.0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#43A047';
+                ctx.beginPath();
+                ctx.arc(treeX, treeY - th - scale * 3.6, scale * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
 	    
         // Bushes (adjusted positions)
         const bushes = [
             { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
-            { x: gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
+            { x:  gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
             { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
         ];
         

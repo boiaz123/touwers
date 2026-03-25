@@ -59,56 +59,29 @@ export class GoldMine extends Building {
         this.environmentRocks = [];
         this.bushes = [];
         
-        // Generate dense pine forest - but avoid bottom right corner and track area
+        // Generate a sparser, well-arranged pine forest – frames the mine without crowding it
         const treePositions = [
-            // Back row - taller trees (very dense)
-            { x: -55, y: -45, height: 'tall' },
-            { x: -45, y: -50, height: 'tall' },
-            { x: -35, y: -47, height: 'medium' },
+            // Back row – wide-spread backdrop
+            { x: -55, y: -50, height: 'tall' },
             { x: -25, y: -52, height: 'tall' },
-            { x: -15, y: -48, height: 'medium' },
-            { x: -5, y: -51, height: 'tall' },
-            { x: 5, y: -49, height: 'medium' },
-            { x: 15, y: -53, height: 'tall' },
-            { x: 25, y: -46, height: 'medium' },
-            { x: 35, y: -50, height: 'tall' },
-            { x: 45, y: -48, height: 'medium' },
-            { x: 55, y: -45, height: 'tall' },
-            
-            // Second back row
-            { x: -50, y: -25, height: 'medium' },
-            { x: -40, y: -28, height: 'small' },
-            { x: -30, y: -22, height: 'medium' },
-            { x: -20, y: -26, height: 'small' },
-            { x: -10, y: -24, height: 'medium' },
-            { x: 0, y: -20, height: 'small' },
-            { x: 10, y: -23, height: 'medium' },
-            { x: 20, y: -27, height: 'small' },
-            { x: 30, y: -21, height: 'medium' },
-            { x: 40, y: -25, height: 'small' },
-            { x: 50, y: -23, height: 'medium' },
-            
-            // Side dense coverage (left side only to avoid clearing)
-            { x: -58, y: -15, height: 'medium' },
-            { x: -60, y: 0, height: 'small' },
-            { x: -57, y: 15, height: 'medium' },
-            { x: -55, y: 30, height: 'small' },
-            
-            // Front left area only (avoid bottom right clearing)
-            { x: -45, y: 35, height: 'small' },
-            { x: -35, y: 38, height: 'small' },
-            { x: -25, y: 32, height: 'small' },
-            { x: -15, y: 36, height: 'small' },
-            
-            // Fill in gaps on left side only
-            { x: -42, y: -35, height: 'small' },
-            { x: -32, y: -38, height: 'small' },
-            { x: -22, y: -35, height: 'small' },
-            { x: -12, y: -38, height: 'small' },
-            { x: -2, y: -35, height: 'small' },
-            { x: 8, y: -38, height: 'small' },
-            { x: 18, y: -35, height: 'small' }
-            // Removed trees from bottom right: 28, 35, 38, 42, 45, 55-60 on right side
+            { x:   5, y: -50, height: 'medium' },
+            { x:  35, y: -48, height: 'tall' },
+            { x:  55, y: -45, height: 'medium' },
+
+            // Left side framing
+            { x: -58, y: -18, height: 'medium' },
+            { x: -60, y:  12, height: 'small' },
+
+            // Front-left corner (partially frames entrance)
+            { x: -48, y:  32, height: 'small' },
+            { x: -32, y:  36, height: 'small' },
+
+            // Behind entrance (upper mid section)
+            { x: -10, y: -28, height: 'small' },
+            { x:  28, y: -32, height: 'small' },
+
+            // Upper right (keeps right side open for cart track)
+            { x:  50, y: -28, height: 'small' }
         ];
         
         // Use fixed seed for consistent tree generation
@@ -125,18 +98,18 @@ export class GoldMine extends Building {
             switch (pos.height) {
                 case 'tall':
                     baseHeight = 35 + (seededRandom() * 20);
-                    crownRadius = 12 + (seededRandom() * 6);
-                    trunkWidth = 4 + (seededRandom() * 2);
+                    crownRadius = 20 + (seededRandom() * 8);
+                    trunkWidth = 5 + (seededRandom() * 2);
                     break;
                 case 'medium':
                     baseHeight = 25 + (seededRandom() * 15);
-                    crownRadius = 8 + (seededRandom() * 4);
-                    trunkWidth = 3 + (seededRandom() * 1.5);
+                    crownRadius = 14 + (seededRandom() * 5);
+                    trunkWidth = 3.5 + (seededRandom() * 1.5);
                     break;
                 case 'small':
                     baseHeight = 15 + (seededRandom() * 10);
-                    crownRadius = 6 + (seededRandom() * 3);
-                    trunkWidth = 2 + (seededRandom() * 1);
+                    crownRadius = 10 + (seededRandom() * 4);
+                    trunkWidth = 2.5 + (seededRandom() * 1);
                     break;
             }
             
@@ -212,33 +185,20 @@ export class GoldMine extends Building {
         this.excavatedDebris = [];
         this.dirtMounds = [];
         
-        // Create excavated area with scattered rocks and dirt
+        // Focused excavation debris - clustered near the mine entrance only
         const debrisPositions = [
-            // Large rock piles from excavation
-            { x: -25, y: -15, type: 'rockPile', size: 'large' },
-            { x: 20, y: -10, type: 'rockPile', size: 'large' },
-            { x: -35, y: 25, type: 'rockPile', size: 'medium' },
-            { x: 30, y: 30, type: 'rockPile', size: 'medium' },
-            { x: -10, y: 35, type: 'rockPile', size: 'small' },
-            { x: 15, y: -25, type: 'rockPile', size: 'small' },
-            
-            // Dirt mounds from digging
-            { x: -40, y: 15, type: 'dirtMound', size: 'large' },
-            { x: 25, y: 20, type: 'dirtMound', size: 'medium' },
-            { x: -15, y: 25, type: 'dirtMound', size: 'small' },
-            { x: 35, y: -5, type: 'dirtMound', size: 'medium' },
-            { x: -5, y: -20, type: 'dirtMound', size: 'small' },
-            
-            // Scattered individual rocks
-            { x: -30, y: 5, type: 'scatteredRock', size: 'small' },
-            { x: 10, y: 15, type: 'scatteredRock', size: 'small' },
-            { x: -20, y: 30, type: 'scatteredRock', size: 'small' },
-            { x: 40, y: 10, type: 'scatteredRock', size: 'small' },
-            { x: 0, y: 25, type: 'scatteredRock', size: 'small' },
-            { x: -45, y: 0, type: 'scatteredRock', size: 'small' },
-            { x: 45, y: 5, type: 'scatteredRock', size: 'small' },
-            { x: -8, y: 10, type: 'scatteredRock', size: 'small' },
-            { x: 22, y: 35, type: 'scatteredRock', size: 'small' }
+            // Rock piles directly beside the cave entrance
+            { x: -30, y:  10, type: 'rockPile', size: 'large' },
+            { x:  18, y:   5, type: 'rockPile', size: 'medium' },
+
+            // Two dirt mounds flanking the entrance
+            { x: -22, y:  22, type: 'dirtMound', size: 'medium' },
+            { x:  28, y:  18, type: 'dirtMound', size: 'small' },
+
+            // A handful of scattered rocks
+            { x: -38, y:  -5, type: 'scatteredRock', size: 'small' },
+            { x:  10, y:  28, type: 'scatteredRock', size: 'small' },
+            { x: -12, y:  -8, type: 'scatteredRock', size: 'small' }
         ];
         
         debrisPositions.forEach((pos, i) => {
@@ -1193,248 +1153,262 @@ export class GoldMine extends Building {
         ctx.ellipse(this.x, this.y + baseArea * 0.1, baseArea, baseArea * 0.8, 0.1, 0, Math.PI * 2);
         ctx.fill();
         
-        // Add natural dirt/earth texture overlay (varied earth tones)
-        const earthAreas = [
-            { x: -baseArea * 0.4, y: -baseArea * 0.3, radiusX: baseArea * 0.4, radiusY: baseArea * 0.3, color: 'rgba(139, 115, 85, 0.3)' },
-            { x: baseArea * 0.35, y: baseArea * 0.15, radiusX: baseArea * 0.35, radiusY: baseArea * 0.35, color: 'rgba(160, 82, 45, 0.25)' },
-            { x: -baseArea * 0.1, y: baseArea * 0.45, radiusX: baseArea * 0.45, radiusY: baseArea * 0.25, color: 'rgba(139, 69, 19, 0.2)' }
-        ];
-        
-        earthAreas.forEach(area => {
-            ctx.fillStyle = area.color;
-            ctx.beginPath();
-            ctx.ellipse(this.x + area.x, this.y + area.y, area.radiusX, area.radiusY, 0, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Render WATER POOL - positioned naturally within the grass ground
+        // Subtle earth-tone patch near mine entrance only (keeps foreground clean)
+        ctx.fillStyle = 'rgba(139, 115, 85, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(this.x - baseArea * 0.15, this.y - baseArea * 0.05, baseArea * 0.38, baseArea * 0.28, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // WATER POOL — natural seepage pool, lower-left of the mine
         const poolX = this.x - baseArea * 0.65;
-        const poolY = this.y + baseArea * 0.55;
-        const poolRadius = 16;
-        
-        // Water pool shadow/depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        const poolY = this.y + baseArea * 0.50;
+        const poolR  = 22;   // slightly bigger for more presence
+
+        // Muddy bank ring (slightly larger, dark earthy tone)
+        ctx.fillStyle = 'rgba(90, 60, 30, 0.55)';
         ctx.beginPath();
-        ctx.ellipse(poolX + 1, poolY + 2, poolRadius, poolRadius * 0.75, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX, poolY, poolR + 7, (poolR + 7) * 0.68, 0.15, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Water surface with gradient
-        const waterGradient = ctx.createRadialGradient(
-            poolX - poolRadius * 0.3, poolY - poolRadius * 0.3, 0,
-            poolX, poolY, poolRadius
+
+        // Wet sand / muddy shore ring
+        ctx.fillStyle = 'rgba(120, 95, 55, 0.65)';
+        ctx.beginPath();
+        ctx.ellipse(poolX, poolY, poolR + 3, (poolR + 3) * 0.72, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Drop shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(poolX + 2, poolY + 3, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Water surface gradient — deep centre, lighter reflective edge
+        const waterGrad = ctx.createRadialGradient(
+            poolX - poolR * 0.25, poolY - poolR * 0.2, 0,
+            poolX, poolY, poolR
         );
-        waterGradient.addColorStop(0, '#87CEEB');
-        waterGradient.addColorStop(0.3, '#5FA8D3');
-        waterGradient.addColorStop(0.6, '#4682B4');
-        waterGradient.addColorStop(0.85, '#2F4F4F');
-        waterGradient.addColorStop(1, '#1a3a3a');
-        
-        ctx.fillStyle = waterGradient;
+        waterGrad.addColorStop(0,    '#7EC8E3');
+        waterGrad.addColorStop(0.35, '#4B9EBF');
+        waterGrad.addColorStop(0.70, '#2E6C8A');
+        waterGrad.addColorStop(1,    '#1a3f50');
+        ctx.fillStyle = waterGrad;
         ctx.beginPath();
-        ctx.ellipse(poolX, poolY, poolRadius, poolRadius * 0.75, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX, poolY, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Water highlights/reflections
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+
+        // Subtle shoreline edge stroke
+        ctx.strokeStyle = 'rgba(30, 55, 70, 0.45)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(poolX - poolRadius * 0.35, poolY - poolRadius * 0.35, poolRadius * 0.35, poolRadius * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.ellipse(poolX, poolY, poolR, poolR * 0.72, 0.15, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Specular highlight — small bright ellipse upper-left
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.beginPath();
-        ctx.ellipse(poolX + poolRadius * 0.25, poolY + poolRadius * 0.2, poolRadius * 0.2, poolRadius * 0.12, 0, 0, Math.PI * 2);
+        ctx.ellipse(poolX - poolR * 0.3, poolY - poolR * 0.28, poolR * 0.28, poolR * 0.18, -0.3, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Reeds around water - natural integrated look
-        const reedPositions = [
-            { x: poolX - poolRadius * 1.15, y: poolY - poolRadius * 0.4, height: 14, bendDir: 1 },
-            { x: poolX - poolRadius * 0.85, y: poolY + poolRadius * 0.75, height: 16, bendDir: -1 },
-            { x: poolX + poolRadius * 0.65, y: poolY + poolRadius * 0.8, height: 13, bendDir: 1 },
-            { x: poolX - poolRadius * 1.25, y: poolY + poolRadius * 0.15, height: 11, bendDir: -1 },
-            { x: poolX + poolRadius * 0.4, y: poolY - poolRadius * 0.6, height: 9, bendDir: 1 }
+
+        // Second smaller shimmer
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(poolX + poolR * 0.2, poolY + poolR * 0.15, poolR * 0.12, poolR * 0.08, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Reeds — clustered on the muddy bank, drawn above water
+        const reedPos = [
+            { x: poolX - poolR * 1.05, y: poolY - poolR * 0.35, h: 15, d:  1 },
+            { x: poolX - poolR * 0.75, y: poolY + poolR * 0.65, h: 18, d: -1 },
+            { x: poolX + poolR * 0.55, y: poolY + poolR * 0.70, h: 13, d:  1 },
+            { x: poolX - poolR * 1.15, y: poolY + poolR * 0.15, h: 12, d: -1 },
         ];
-        
-        reedPositions.forEach((reed) => {
-            // Reed stem
-            ctx.strokeStyle = '#6B8E23';
-            ctx.lineWidth = 2;
+        reedPos.forEach(r => {
+            ctx.strokeStyle = '#5a7a1a';
+            ctx.lineWidth = 1.8;
             ctx.beginPath();
-            ctx.moveTo(reed.x, reed.y);
-            ctx.lineTo(reed.x + reed.bendDir * 1.5, reed.y - reed.height);
+            ctx.moveTo(r.x, r.y);
+            ctx.quadraticCurveTo(r.x + r.d * 3, r.y - r.h * 0.6, r.x + r.d * 2, r.y - r.h);
             ctx.stroke();
-            
-            // Reed head
-            ctx.fillStyle = '#8FBC8F';
+            ctx.fillStyle = '#7a5a22';
             ctx.beginPath();
-            ctx.ellipse(reed.x + reed.bendDir * 1.5, reed.y - reed.height, 2.5, 4, 0, 0, Math.PI * 2);
+            ctx.ellipse(r.x + r.d * 2, r.y - r.h, 2, 4.5, r.d * 0.3, 0, Math.PI * 2);
             ctx.fill();
-        });
-        
-        // Grass patches around water - seamless integration
-        const poolGrassPatches = [
-            { x: poolX - poolRadius * 0.8, y: poolY - poolRadius * 1.2, radius: 10, intensity: 0.4 },
-            { x: poolX + poolRadius * 0.9, y: poolY - poolRadius * 0.5, radius: 8, intensity: 0.35 },
-            { x: poolX - poolRadius * 1.4, y: poolY + poolRadius * 0.5, radius: 9, intensity: 0.45 },
-            { x: poolX + poolRadius * 1.2, y: poolY + poolRadius * 0.9, radius: 8, intensity: 0.38 }
-        ];
-        
-        poolGrassPatches.forEach(patch => {
-            const grassGradient = ctx.createRadialGradient(
-                patch.x, patch.y, 0,
-                patch.x, patch.y, patch.radius
-            );
-            grassGradient.addColorStop(0, `rgba(76, 175, 80, ${patch.intensity})`);
-            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.7})`);
-            grassGradient.addColorStop(1, `rgba(107, 142, 35, 0)`);
-            
-            ctx.fillStyle = grassGradient;
-            ctx.beginPath();
-            ctx.arc(patch.x, patch.y, patch.radius, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Rock formations scattered around the excavated area (OPTIMIZATION: simplified)
-        const rockFormations = [
-            { x: -baseArea * 0.5, y: -baseArea * 0.3, size: 6 },
-            { x: baseArea * 0.4, y: -baseArea * 0.5, size: 5 },
-            { x: -baseArea * 0.7, y: baseArea * 0.4, size: 7 },
-            { x: baseArea * 0.6, y: baseArea * 0.3, size: 5 }
-        ];
-        
-        rockFormations.forEach(formation => {
-            ctx.fillStyle = '#8B7355';
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.ellipse(this.x + formation.x, this.y + formation.y, formation.size, formation.size * 0.7, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
         });
     }
     
     renderCaveEntrance(ctx, size) {
-        // Rock formation around cave entrance - integrated into excavated ground
-        const rockColor = '#8B7355';
-        const darkRock = '#654321';
-        const lightRock = '#A0522D';
-        
-        // Natural rock outcropping from excavated ground
-        ctx.fillStyle = rockColor;
-        ctx.strokeStyle = darkRock;
+        // ── Center of the mine entrance area ──────────────────────────────────
+        const cx = this.x - size * 0.12;  // entrance center x (left of building centre)
+        const cy = this.y - size * 0.04;  // entrance centre y
+
+        const w  = size * 0.28;  // half-width of entrance face
+        const h  = size * 0.22;  // height of rock face above ground line
+        const gY = cy + size * 0.12; // ground line y
+
+        // ── 1. Rock face gradient ─────────────────────────────────────────────
+        const rockGrad = ctx.createLinearGradient(cx - w, cy - h, cx + w, cy);
+        rockGrad.addColorStop(0,   '#7d6a52');
+        rockGrad.addColorStop(0.4, '#8B7355');
+        rockGrad.addColorStop(0.7, '#9a8060');
+        rockGrad.addColorStop(1,   '#6a5540');
+
+        ctx.fillStyle = rockGrad;
+        ctx.strokeStyle = '#4a3520';
         ctx.lineWidth = 2;
-        
         ctx.beginPath();
-        ctx.moveTo(this.x - size * 0.35, this.y + size * 0.15);
-        ctx.lineTo(this.x - size * 0.25, this.y - size * 0.15);
-        ctx.lineTo(this.x - size * 0.05, this.y - size * 0.25);
-        ctx.lineTo(this.x + size * 0.15, this.y - size * 0.2);
-        ctx.lineTo(this.x + size * 0.3, this.y + size * 0.05);
-        ctx.lineTo(this.x + size * 0.25, this.y + size * 0.15);
+        // Left boulder edge
+        ctx.moveTo(cx - w,       gY);
+        ctx.lineTo(cx - w + 4,   cy - h * 0.55);
+        ctx.lineTo(cx - w * 0.7, cy - h * 0.85);
+        ctx.lineTo(cx - w * 0.3, cy - h * 1.0);
+        // Arch top over tunnel opening
+        ctx.lineTo(cx - w * 0.1, cy - h * 1.05);
+        ctx.lineTo(cx + w * 0.1, cy - h * 1.05);
+        // Right boulder edge
+        ctx.lineTo(cx + w * 0.3, cy - h * 0.95);
+        ctx.lineTo(cx + w * 0.7, cy - h * 0.75);
+        ctx.lineTo(cx + w - 4,   cy - h * 0.45);
+        ctx.lineTo(cx + w,       gY);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        
-        
-        
-        // Cave entrance (dark oval opening)
-        const caveGradient = ctx.createRadialGradient(
-            this.x - size * 0.12, this.y - size * 0.05, 0,
-            this.x - size * 0.12, this.y - size * 0.05, size * 0.12
-        );
-        caveGradient.addColorStop(0, '#000000');
-        caveGradient.addColorStop(0.7, '#1a1a1a');
-        caveGradient.addColorStop(1, '#2a2a2a');
-        
-        ctx.fillStyle = caveGradient;
+
+        // ── 2. Rock face secondary boulder bumps (darker) ─────────────────────
+        ctx.fillStyle = 'rgba(60, 45, 25, 0.25)';
         ctx.beginPath();
-        ctx.ellipse(this.x - size * 0.12, this.y - size * 0.05, size * 0.12, size * 0.08, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx - w * 0.55, cy - h * 0.45, w * 0.22, h * 0.28, -0.3, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Cave entrance border
-        ctx.strokeStyle = '#333333';
+        ctx.beginPath();
+        ctx.ellipse(cx + w * 0.5,  cy - h * 0.35, w * 0.18, h * 0.22,  0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── 3. Light edge along top of rock (sunlight catch) ─────────────────
+        ctx.strokeStyle = '#b0956e';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - w * 0.7, cy - h * 0.85);
+        ctx.lineTo(cx - w * 0.3, cy - h * 1.0);
+        ctx.lineTo(cx - w * 0.1, cy - h * 1.05);
+        ctx.lineTo(cx + w * 0.1, cy - h * 1.05);
+        ctx.lineTo(cx + w * 0.3, cy - h * 0.95);
+        ctx.stroke();
+
+        // ── 4. Arched mine tunnel opening ─────────────────────────────────────
+        const tW = w * 0.52;  // tunnel half-width
+        const tH = h * 0.62;  // tunnel height
+        const tY = gY;         // tunnel base at ground
+
+        // Dark interior fill (arched)
+        ctx.fillStyle = '#0d0c0a';
+        ctx.beginPath();
+        ctx.moveTo(cx - tW, tY);
+        ctx.lineTo(cx - tW, tY - tH * 0.55);
+        ctx.quadraticCurveTo(cx - tW, tY - tH, cx, tY - tH);
+        ctx.quadraticCurveTo(cx + tW, tY - tH, cx + tW, tY - tH * 0.55);
+        ctx.lineTo(cx + tW, tY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Warm lantern glow spilling from inside
+        const caveGlow = ctx.createRadialGradient(cx, tY - tH * 0.4, 0, cx, tY - tH * 0.4, tW * 1.8);
+        caveGlow.addColorStop(0,   'rgba(255, 165, 40, 0.50)');
+        caveGlow.addColorStop(0.35,'rgba(255, 130, 20, 0.20)');
+        caveGlow.addColorStop(1,   'rgba(255, 100,  0, 0)');
+        ctx.fillStyle = caveGlow;
+        ctx.beginPath();
+        ctx.moveTo(cx - tW, tY);
+        ctx.lineTo(cx - tW, tY - tH * 0.55);
+        ctx.quadraticCurveTo(cx - tW, tY - tH, cx, tY - tH);
+        ctx.quadraticCurveTo(cx + tW, tY - tH, cx + tW, tY - tH * 0.55);
+        ctx.lineTo(cx + tW, tY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Arch edge border
+        ctx.strokeStyle = '#2c2018';
         ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - tW, tY);
+        ctx.lineTo(cx - tW, tY - tH * 0.55);
+        ctx.quadraticCurveTo(cx - tW, tY - tH, cx, tY - tH);
+        ctx.quadraticCurveTo(cx + tW, tY - tH, cx + tW, tY - tH * 0.55);
+        ctx.lineTo(cx + tW, tY);
         ctx.stroke();
-        
-        // Wooden support beams at cave entrance
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
+
+        // ── 5. Mine shoring timbers ───────────────────────────────────────────
+        const beamW  = size * 0.032;
+        const beamH  = tH + size * 0.04;
+        const lPostX = cx - tW - beamW * 0.5;
+        const rPostX = cx + tW - beamW * 0.5;
+        const basePostY = tY - beamH * 0.92;
+
+        // Left post shadow + face
+        ctx.fillStyle = '#3d2010';
+        ctx.fillRect(lPostX - 2, basePostY, beamW, beamH);
+        ctx.fillStyle = '#7a4520';
+        ctx.fillRect(lPostX, basePostY, beamW, beamH);
+        ctx.fillStyle = '#a06030';
+        ctx.fillRect(lPostX + beamW * 0.6, basePostY, beamW * 0.25, beamH);
+        ctx.strokeStyle = '#2c1510';
         ctx.lineWidth = 1;
-        
-        // Vertical supports
-        ctx.fillRect(this.x - size * 0.22, this.y - size * 0.1, size * 0.03, size * 0.12);
-        ctx.strokeRect(this.x - size * 0.22, this.y - size * 0.1, size * 0.03, size * 0.12);
-        
-        ctx.fillRect(this.x - size * 0.05, this.y - size * 0.1, size * 0.03, size * 0.12);
-        ctx.strokeRect(this.x - size * 0.05, this.y - size * 0.1, size * 0.03, size * 0.12);
-        
-        // Horizontal beam
-        ctx.fillRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
-        ctx.strokeRect(this.x - size * 0.22, this.y - size * 0.12, size * 0.2, size * 0.025);
-        
-        // Mine cart track on excavated ground
-        const trackY = this.y + size * 0.2;
-        const trackStartX = this.x - size * 0.08;
-        const trackEndX = this.x + size * 0.35;
-        
-        // Track rails
-        ctx.strokeStyle = '#696969';
-        ctx.lineWidth = 3;
-        
-        // Left rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY - size * 0.015);
-        ctx.lineTo(trackEndX, trackY - size * 0.015);
-        ctx.stroke();
-        
-        // Right rail
-        ctx.beginPath();
-        ctx.moveTo(trackStartX, trackY + size * 0.015);
-        ctx.lineTo(trackEndX, trackY + size * 0.015);
-        ctx.stroke();
-        
-        // Railroad ties on excavated ground
-        ctx.fillStyle = '#654321';
-        for (let i = 0; i < 6; i++) {
-            const tieX = trackStartX + (trackEndX - trackStartX) * (i / 5);
-            ctx.fillRect(tieX - size * 0.015, trackY - size * 0.025, size * 0.03, size * 0.05);
-        }
-        
-        // Mine cart
-        const cartX = trackStartX + (trackEndX - trackStartX) * this.cartPosition;
-        
-        // Cart shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(cartX - size * 0.04 + 2, trackY - size * 0.08 + 2, size * 0.08, size * 0.06);
-        
-        // Cart body
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
+        ctx.strokeRect(lPostX, basePostY, beamW, beamH);
+
+        // Right post shadow + face
+        ctx.fillStyle = '#3d2010';
+        ctx.fillRect(rPostX - 2, basePostY, beamW, beamH);
+        ctx.fillStyle = '#7a4520';
+        ctx.fillRect(rPostX, basePostY, beamW, beamH);
+        ctx.fillStyle = '#a06030';
+        ctx.fillRect(rPostX + beamW * 0.6, basePostY, beamW * 0.25, beamH);
+        ctx.strokeStyle = '#2c1510';
+        ctx.strokeRect(rPostX, basePostY, beamW, beamH);
+
+        // Horizontal header beam (on top of posts)
+        const headerY = basePostY - beamW * 0.9;
+        const hBeamW  = rPostX + beamW - lPostX + beamW * 0.5;
+        ctx.fillStyle = '#3d2010';
+        ctx.fillRect(lPostX - beamW * 0.3, headerY + 2, hBeamW, beamW);
+        ctx.fillStyle = '#7a4520';
+        ctx.fillRect(lPostX - beamW * 0.3, headerY, hBeamW, beamW);
+        ctx.fillStyle = '#a06030';
+        ctx.fillRect(lPostX - beamW * 0.3, headerY, hBeamW, beamW * 0.25);
+        ctx.strokeStyle = '#2c1510';
         ctx.lineWidth = 1;
-        ctx.fillRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        ctx.strokeRect(cartX - size * 0.04, trackY - size * 0.08, size * 0.08, size * 0.06);
-        
-        // Cart wheels
-        ctx.fillStyle = '#2F2F2F';
+        ctx.strokeRect(lPostX - beamW * 0.3, headerY, hBeamW, beamW);
+
+        // ── 6. Hanging lantern from header ────────────────────────────────────
+        const lanternX   = cx;
+        const lanternTopY = headerY + beamW;
+        // Wire
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(cartX - size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(lanternX, lanternTopY);
+        ctx.lineTo(lanternX, lanternTopY + size * 0.03);
         ctx.stroke();
-        
+        // Glow halo
+        const lgR = size * 0.09;
+        const lanternGlow = ctx.createRadialGradient(
+            lanternX, lanternTopY + lgR, 0,
+            lanternX, lanternTopY + lgR, lgR * 1.8
+        );
+        lanternGlow.addColorStop(0,   'rgba(255, 200, 80, 0.55)');
+        lanternGlow.addColorStop(0.5, 'rgba(255, 160, 30, 0.22)');
+        lanternGlow.addColorStop(1,   'rgba(255, 120,  0, 0)');
+        ctx.fillStyle = lanternGlow;
         ctx.beginPath();
-        ctx.arc(cartX + size * 0.025, trackY, size * 0.012, 0, Math.PI * 2);
+        ctx.arc(lanternX, lanternTopY + lgR, lgR * 1.8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
-        
-        // Gold ore in cart (if ready)
-        if (this.goldReady && this.cartPosition > 0.5) { // Use goldReady instead of isReady
-            ctx.fillStyle = '#FFD700';
-            for (let i = 0; i < 3; i++) {
-                const oreX = cartX - size * 0.02 + (i * size * 0.013);
-                const oreY = trackY - size * 0.07;
-                ctx.beginPath();
-                ctx.arc(oreX, oreY, size * 0.008, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+        // Cage body
+        const lw = size * 0.025;
+        const lh = size * 0.05;
+        ctx.fillStyle = '#282828';
+        ctx.fillRect(lanternX - lw, lanternTopY + size * 0.03, lw * 2, lh);
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(lanternX - lw, lanternTopY + size * 0.03, lw * 2, lh);
+        // Warm pane
+        ctx.fillStyle = 'rgba(255, 200, 80, 0.9)';
+        ctx.fillRect(lanternX - lw * 0.55, lanternTopY + size * 0.035, lw * 1.1, lh * 0.75);
     }
 }
