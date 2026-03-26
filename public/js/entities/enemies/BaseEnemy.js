@@ -10,7 +10,7 @@ export class BaseEnemy {
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
-        this.lootDropChance = 0.1; // 1% chance to drop normal loot on death (0-1)
+        this.lootDropChance = 0.1; // 10% chance to drop normal loot on death (0-1)
         this.rareLootDropChance = 0.025; // 0.25% chance to drop rare loot on death (0-1)
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
@@ -56,6 +56,10 @@ export class BaseEnemy {
 
         // Hit splatter effects
         this.hitSplatters = [];
+        
+        // OPTIMIZATION: Precompute offset waypoints once instead of per-frame
+        this._offsetWaypoints = null;
+        this._precomputeOffsetWaypoints();
     }
     
     updatePath(newPath) {
@@ -85,6 +89,8 @@ export class BaseEnemy {
             this.y = this.path[0].y;
         }
         
+        // Recompute offset waypoints for new path
+        this._precomputeOffsetWaypoints();
     }
     
     update(deltaTime) {
@@ -162,29 +168,61 @@ export class BaseEnemy {
      * Returns the laterally-offset position for a given path waypoint index.
      * Each enemy has a fixed pathOffsetAmount so they consistently spread
      * across the path width without converging on the centre line.
+     * OPTIMIZATION: Uses precomputed cache instead of per-frame Math.hypot calculations.
      */
     getOffsetWaypointAt(index) {
-        if (!this.path || index < 0 || index >= this.path.length) return null;
-        const wp = this.path[index];
-        if (this.pathOffsetAmount === 0) return wp;
-
-        // Use the incoming segment direction to compute the perpendicular
-        if (index === 0) {
-            if (this.path.length < 2) return wp;
-            const next = this.path[1];
-            const dx = next.x - wp.x;
-            const dy = next.y - wp.y;
-            const len = Math.hypot(dx, dy);
-            if (len === 0) return wp;
-            return { x: wp.x + (-dy / len) * this.pathOffsetAmount, y: wp.y + (dx / len) * this.pathOffsetAmount };
+        if (!this._offsetWaypoints || index < 0 || index >= this._offsetWaypoints.length) return null;
+        return this._offsetWaypoints[index];
+    }
+    
+    /**
+     * Precompute offset waypoints for the entire path.
+     * Called once on construction and whenever the path changes.
+     */
+    _precomputeOffsetWaypoints() {
+        if (!this.path || this.path.length === 0) {
+            this._offsetWaypoints = null;
+            return;
         }
-
-        const prev = this.path[index - 1];
-        const dx = wp.x - prev.x;
-        const dy = wp.y - prev.y;
-        const len = Math.hypot(dx, dy);
-        if (len === 0) return wp;
-        return { x: wp.x + (-dy / len) * this.pathOffsetAmount, y: wp.y + (dx / len) * this.pathOffsetAmount };
+        
+        this._offsetWaypoints = new Array(this.path.length);
+        
+        if (this.pathOffsetAmount === 0) {
+            // No offset - just reference original waypoints
+            for (let i = 0; i < this.path.length; i++) {
+                this._offsetWaypoints[i] = this.path[i];
+            }
+            return;
+        }
+        
+        for (let i = 0; i < this.path.length; i++) {
+            const wp = this.path[i];
+            let dx, dy;
+            
+            if (i === 0) {
+                if (this.path.length < 2) {
+                    this._offsetWaypoints[i] = wp;
+                    continue;
+                }
+                const next = this.path[1];
+                dx = next.x - wp.x;
+                dy = next.y - wp.y;
+            } else {
+                const prev = this.path[i - 1];
+                dx = wp.x - prev.x;
+                dy = wp.y - prev.y;
+            }
+            
+            const len = Math.hypot(dx, dy);
+            if (len === 0) {
+                this._offsetWaypoints[i] = wp;
+            } else {
+                this._offsetWaypoints[i] = {
+                    x: wp.x + (-dy / len) * this.pathOffsetAmount,
+                    y: wp.y + (dx / len) * this.pathOffsetAmount
+                };
+            }
+        }
     }
     
     /**

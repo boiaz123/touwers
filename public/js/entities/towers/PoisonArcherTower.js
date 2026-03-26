@@ -216,8 +216,8 @@ export class PoisonArcherTower extends Tower {
         const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
         
         // Ensure archer position is valid - use rangerSpot as fallback
-        const startX = this.archerPosition.x || this.rangerSpot.x;
-        const startY = this.archerPosition.y || this.rangerSpot.y;
+        const startX = this.archerPosition.x ?? this.rangerSpot.x;
+        const startY = this.archerPosition.y ?? this.rangerSpot.y;
         
         const dx = predicted.x - startX;
         const dy = predicted.y - startY;

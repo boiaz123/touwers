@@ -15,15 +15,14 @@ export class BeefyEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
-        this.lootDropChance = 0.05; // 35% chance to drop loot (higher than basic)
+        this.lootDropChance = 0.05; // 5% chance to drop loot
         this.tunicColor = this.getRandomTunicColor();
         this.sizeMultiplier = 1.2;
         
         this.attackDamage = 9;
         this.attackSpeed = 0.8;
         
-        // Rendering optimization: Cache pre-calculated values
-        this.cachedBaseSize = null;
+        // Rendering optimization: Cache pre-calculated color variants
         this.cachedColorVariants = this.getColorVariants();
         
         // Pre-calculate colors to avoid repeated color manipulation
@@ -77,11 +76,6 @@ export class BeefyEnemy extends BaseEnemy {
     
     render(ctx) {
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
-        // Use cached baseSize if possible to avoid recalculation
-        if (this.cachedBaseSize !== baseSize) {
-            this.cachedBaseSize = baseSize;
-        }
         
         // Apply phase offset for animation diversity - slower for beefier enemies
         const animTime = (this.animationTime * 6.5 + this.animationPhaseOffset); // Slightly slower animation for beefier feel

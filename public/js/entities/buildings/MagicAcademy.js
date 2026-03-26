@@ -28,7 +28,6 @@ export class MagicAcademy extends Building {
         // Level 1: Magic Tower + Gem Mining automatically unlocked
         // Level 2: Magic Tower upgrades unlocked
         // Level 3: Super Weapon Lab buildable
-        this.gemMiningResearched = true; // Automatic at level 1
         this.superWeaponUnlocked = false;
         
         // Water ripples animation
@@ -150,10 +149,6 @@ export class MagicAcademy extends Building {
         
         // Render magic effects
         this.renderMagicEffects(ctx, size);
-    }
-    
-    renderFortress(ctx, size) {
-        // This method is no longer used - rendering order is handled in render()
     }
     
     renderWaterMoat(ctx, size) {

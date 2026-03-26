@@ -1588,58 +1588,73 @@ export class GameplayState {
             }
         }
         
-        // OPTIMIZATION: Register path defenders only once per enemy, not every frame
-        // Only do this if we don't have defenders cached, or tower count changed
-        const currentTowerCount = this.towerManager?.towers?.length || 0;
-        if (this.lastTowerCount !== currentTowerCount) {
-            this.lastTowerCount = currentTowerCount;
-            this.defendersCacheNeedsUpdate = true;
-        }
-        
-        // ALWAYS rebuild the guard post cache - defenders can be hired/fired anytime
-        // Initialize cache if needed
+        // OPTIMIZATION: Only rebuild guard post defender cache when defender status changes
+        // Initialize persistent cache array once (enemies hold references to this same array)
         if (!this.guardPostDefenderCache) {
             this.guardPostDefenderCache = [];
         }
-        this.guardPostDefenderCache = [];
         
-        // Build current cache of all active guard post defenders
+        // Count active defenders to detect changes (hire/fire/death)
+        let activeDefenderCount = 0;
         if (guardPostTowers && guardPostTowers.length > 0) {
-            guardPostTowers.forEach(tower => {
-                const defender = tower.getDefender();
-                if (defender) {
-                    this.guardPostDefenderCache.push({
-                        defender: defender,
-                        waypoint: tower.getDefenderWaypoint(),
-                        tower: tower,
-                        pathIndex: tower.pathIndex
-                    });
+            for (let i = 0; i < guardPostTowers.length; i++) {
+                const defender = guardPostTowers[i].getDefender();
+                if (defender && !defender.isDead()) {
+                    activeDefenderCount++;
                 }
-            });
+            }
         }
         
-        // ALWAYS ensure all enemies have access to the current guard post cache
-        // This is critical so newly spawned enemies get the cache immediately
-        if (this.enemyManager && this.enemyManager.enemies) {
-            this.enemyManager.enemies.forEach((enemy) => {
-                // Ensure enemy has pathDefenders array
-                if (!enemy.pathDefenders) {
-                    enemy.pathDefenders = [];
-                }
-                
-                // Always assign the current cache (even if empty) to all enemies
-                enemy.guardPostCache = this.guardPostDefenderCache;
-                
-                // Update pathDefenders list to include all active defenders
-                this.guardPostDefenderCache.forEach(cache => {
-                    if (!enemy.pathDefenders.includes(cache.defender)) {
-                        enemy.pathDefenders.push(cache.defender);
+        const guardPostCount = guardPostTowers ? guardPostTowers.length : 0;
+        if (activeDefenderCount !== this._lastActiveDefenderCount || guardPostCount !== this._lastGuardPostCount) {
+            this._lastActiveDefenderCount = activeDefenderCount;
+            this._lastGuardPostCount = guardPostCount;
+            
+            // Clear in-place to preserve enemy references to this array
+            this.guardPostDefenderCache.length = 0;
+            
+            if (guardPostTowers && guardPostTowers.length > 0) {
+                guardPostTowers.forEach(tower => {
+                    const defender = tower.getDefender();
+                    if (defender) {
+                        this.guardPostDefenderCache.push({
+                            defender: defender,
+                            waypoint: tower.getDefenderWaypoint(),
+                            tower: tower,
+                            pathIndex: tower.pathIndex
+                        });
                     }
                 });
-            });
+            }
+            
+            // When cache changes, update pathDefenders on all enemies
+            if (this.enemyManager && this.enemyManager.enemies) {
+                for (let i = 0; i < this.enemyManager.enemies.length; i++) {
+                    const enemy = this.enemyManager.enemies[i];
+                    if (!enemy.pathDefenders) enemy.pathDefenders = [];
+                    enemy.guardPostCache = this.guardPostDefenderCache;
+                    // Rebuild pathDefenders from current cache
+                    enemy.pathDefenders.length = 0;
+                    for (let j = 0; j < this.guardPostDefenderCache.length; j++) {
+                        enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
+                    }
+                }
+            }
         }
         
-        this.defendersCacheNeedsUpdate = false;
+        // Assign cache to newly spawned enemies (those without it yet)
+        if (this.enemyManager && this.enemyManager.enemies) {
+            for (let i = 0; i < this.enemyManager.enemies.length; i++) {
+                const enemy = this.enemyManager.enemies[i];
+                if (!enemy.guardPostCache) {
+                    if (!enemy.pathDefenders) enemy.pathDefenders = [];
+                    enemy.guardPostCache = this.guardPostDefenderCache;
+                    for (let j = 0; j < this.guardPostDefenderCache.length; j++) {
+                        enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
+                    }
+                }
+            }
+        }
         
         // FIRST: Update enemy positions (enemies move to defenders)
         if (this.enemyManager) {
@@ -1937,7 +1952,10 @@ export class GameplayState {
         
         // Collect all renderable entities (towers, buildings, enemies, loot, castle) 
         // with their Y positions for unified depth sorting
-        const entities = [];
+        // OPTIMIZATION: Reuse persistent array to avoid allocation every frame
+        if (!this._entityRenderPool) this._entityRenderPool = [];
+        const entities = this._entityRenderPool;
+        entities.length = 0;
         
         // Add towers with render function
         if (this.towerManager && this.towerManager.towers) {

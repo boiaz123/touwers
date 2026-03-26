@@ -24,6 +24,7 @@ export class BuildingManager {
             lightning: { chainRange: 0 },
             earth: { armorPiercing: 0 }
         };
+        this._upgradesDirty = true; // Ensure initial calculation runs
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
@@ -80,6 +81,9 @@ export class BuildingManager {
             // Apply building effects to this manager
             building.applyEffect(this);
             
+            // Flag upgrades for recalculation
+            this._upgradesDirty = true;
+            
             return true;
         } else {
         }
@@ -119,13 +123,16 @@ export class BuildingManager {
             building.update(deltaTime);
             
             // Apply mine income multiplier to gold mines
-            if (building.constructor.name === 'GoldMine' && this.mineIncomeMultiplier) {
+            if (building.type === 'mine' && this.mineIncomeMultiplier) {
                 building.incomeMultiplier = this.mineIncomeMultiplier;
             }
         });
         
-        // Recalculate tower upgrades
-        this.calculateTowerUpgrades();
+        // OPTIMIZATION: Only recalculate tower upgrades when flagged dirty
+        if (this._upgradesDirty) {
+            this._upgradesDirty = false;
+            this.calculateTowerUpgrades();
+        }
     }
     
     calculateTowerUpgrades() {

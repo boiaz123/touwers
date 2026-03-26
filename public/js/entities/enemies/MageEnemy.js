@@ -28,10 +28,6 @@ export class MageEnemy extends BaseEnemy {
         this.staffPulse = 0;
         this.spellCastTimer = 0;
         this.isCastingSpell = false;
-        
-        // Cache for computed values
-        this.lastBaseSize = 0;
-        this.lastAnimTime = 0;
     }
     
     update(deltaTime) {

@@ -6,6 +6,7 @@ export class EnemyManager {
         this.enemies = [];
         this.spawning = false;
         this.spawnQueue = [];
+        this.spawnQueueIndex = 0; // OPTIMIZATION: Index pointer instead of Array.shift()
         this.spawnTimer = 0;
         this.spawnInterval = 1.2; // Increased from 0.8 for more spacing
         
@@ -36,6 +37,7 @@ export class EnemyManager {
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
+        this.spawnQueueIndex = 0;
         this.spawnInterval = spawnInterval;
         this.waveStartSFXPlayed = false; // Reset flag for new wave
         
@@ -57,6 +59,7 @@ export class EnemyManager {
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
+        this.spawnQueueIndex = 0;
         this.spawnInterval = spawnInterval;
         this.waveStartSFXPlayed = false; // Reset flag for new wave
         
@@ -82,6 +85,7 @@ export class EnemyManager {
         this.spawnInterval = spawnInterval;
         this.spawnPatternIndex = 0;
         this.spawnQueue = [];
+        this.spawnQueueIndex = 0;
         this.spawnTimer = 0;
         
         if (pattern) {
@@ -92,7 +96,7 @@ export class EnemyManager {
     
     update(deltaTime) {
         // In continuous mode, keep queue filled
-        if (this.continuousMode && this.spawnQueue.length === 0) {
+        if (this.continuousMode && this.spawnQueueIndex >= this.spawnQueue.length) {
             const enemyType = this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length];
             const defaultSpeed = EnemyRegistry.getDefaultSpeed(enemyType);
             
@@ -105,11 +109,18 @@ export class EnemyManager {
             
         }
         
-        if (this.spawnQueue.length > 0) {
+        if (this.spawnQueueIndex < this.spawnQueue.length) {
             this.spawnTimer += deltaTime;
             
             if (this.spawnTimer >= this.spawnInterval) {
-                const enemyData = this.spawnQueue.shift();
+                // OPTIMIZATION: Use index pointer instead of shift() to avoid O(n) array re-indexing
+                const enemyData = this.spawnQueue[this.spawnQueueIndex++];
+                
+                // Reset queue when fully consumed to free memory
+                if (this.spawnQueueIndex >= this.spawnQueue.length && !this.continuousMode) {
+                    this.spawnQueue.length = 0;
+                    this.spawnQueueIndex = 0;
+                }
                 
                 // Normalize enemy data: handle both "health" (from spawnWave) and "health_multiplier" (from waves/continuous)
                 let healthMultiplier = enemyData.health_multiplier;
@@ -149,7 +160,7 @@ export class EnemyManager {
                     this.spawnTimer = 0;
                 }
             }
-        } else if (!this.continuousMode) {
+        } else if (!this.continuousMode && this.spawnQueueIndex >= this.spawnQueue.length) {
             this.spawning = false;
         }
         
@@ -159,32 +170,31 @@ export class EnemyManager {
         }
         
         // OPTIMIZATION: Consolidate splatter updates into single loop
-        // This prevents multiple forEach passes over enemies
+        // Uses compact-in-place pattern (swap-with-last) for O(1) removal
         for (let i = 0; i < this.enemies.length; i++) {
             const enemy = this.enemies[i];
-            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                let j = enemy.hitSplatters.length - 1;
-                while (j >= 0) {
-                    const splatter = enemy.hitSplatters[j];
-                    splatter.update(deltaTime);
-                    if (!splatter.isAlive()) {
-                        enemy.hitSplatters.splice(j, 1);
+            const splatters = enemy.hitSplatters;
+            if (splatters && splatters.length > 0) {
+                let writeIdx = 0;
+                for (let j = 0; j < splatters.length; j++) {
+                    splatters[j].update(deltaTime);
+                    if (splatters[j].isAlive()) {
+                        splatters[writeIdx++] = splatters[j];
                     }
-                    j--;
                 }
+                splatters.length = writeIdx;
             }
         }
         
-        // Update orphaned splatters from dead enemies
-        let j = this.orphanedSplatters.length - 1;
-        while (j >= 0) {
-            const splatter = this.orphanedSplatters[j];
-            splatter.update(deltaTime);
-            if (!splatter.isAlive()) {
-                this.orphanedSplatters.splice(j, 1);
+        // Update orphaned splatters from dead enemies (compact-in-place)
+        let writeIdx = 0;
+        for (let j = 0; j < this.orphanedSplatters.length; j++) {
+            this.orphanedSplatters[j].update(deltaTime);
+            if (this.orphanedSplatters[j].isAlive()) {
+                this.orphanedSplatters[writeIdx++] = this.orphanedSplatters[j];
             }
-            j--;
         }
+        this.orphanedSplatters.length = writeIdx;
     }
     
     checkReachedEnd() {

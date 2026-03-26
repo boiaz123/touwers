@@ -31,13 +31,15 @@ export class Tower {
     
     findTarget(enemies) {
         let closest = null;
-        let closestDist = this.range;
+        let closestDistSq = this.range * this.range;
         
         for (const enemy of enemies) {
-            const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-            if (dist <= this.range && dist < closestDist) {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < closestDistSq) {
                 closest = enemy;
-                closestDist = dist;
+                closestDistSq = distSq;
             }
         }
         

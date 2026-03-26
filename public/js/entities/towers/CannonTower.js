@@ -155,11 +155,6 @@ export class CannonTower extends Tower {
         });
     }
     
-    seededRandom(seed) {
-        const x = Math.sin(seed) * 10000;
-        return x - Math.floor(x);
-    }
-    
     render(ctx) {
         // Get tower size - use ResolutionManager if available
         const cellSize = this.getCellSize(ctx);

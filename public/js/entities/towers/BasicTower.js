@@ -10,7 +10,6 @@ export class BasicTower extends Tower {
         
         // Animation properties
         this.throwingDefender = -1;
-        this.throwAnimationTime = 0;
         this.rocks = [];
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },

@@ -15,41 +15,12 @@ export class KnightEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
-        this.lootDropChance = 0.1; // 40% chance to drop loot (heavily armored)
+        this.lootDropChance = 0.1; // 10% chance to drop loot
         this.armorColor = '#4A5568';
         this.sizeMultiplier = 1.15;
         
         this.attackDamage = 7;
         this.attackSpeed = 0.7;
-        
-    }
-    
-    updatePath(newPath) {
-        if (!newPath || newPath.length === 0) {
-            console.warn('KnightEnemy: Received invalid path');
-            return;
-        }
-        
-        const oldPath = this.path;
-        this.path = newPath;
-        
-        if (oldPath && oldPath.length > 0 && this.currentPathIndex < oldPath.length) {
-            const totalOldSegments = oldPath.length - 1;
-            const progressRatio = this.currentPathIndex / Math.max(1, totalOldSegments);
-            
-            const totalNewSegments = this.path.length - 1;
-            this.currentPathIndex = Math.floor(progressRatio * totalNewSegments);
-            this.currentPathIndex = Math.max(0, Math.min(this.currentPathIndex, this.path.length - 2));
-            
-            if (this.currentPathIndex < this.path.length) {
-                this.x = this.path[this.currentPathIndex].x;
-                this.y = this.path[this.currentPathIndex].y;
-            }
-        } else {
-            this.currentPathIndex = 0;
-            this.x = this.path[0].x;
-            this.y = this.path[0].y;
-        }
         
     }
     

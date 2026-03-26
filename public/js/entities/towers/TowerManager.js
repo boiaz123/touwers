@@ -363,16 +363,16 @@ export class TowerManager {
         // OPTIMIZATION: Cache building references instead of filtering every frame
         if (!this.cachedForges || !this.cachedAcademies || !this.cachedTrainingGrounds) {
             this.cachedForges = this.buildingManager.buildings.filter(building => 
-                building.constructor.name === 'TowerForge'
+                building.type === 'forge'
             );
             this.cachedAcademies = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'MagicAcademy'
+                building.type === 'academy'
             );
             this.cachedTrainingGrounds = this.buildingManager.buildings.filter(building => 
-                building.constructor.name === 'TrainingGrounds'
+                building.type === 'training'
             );
             this.cachedLabs = this.buildingManager.buildings.filter(building =>
-                building.constructor.name === 'SuperWeaponLab'
+                building.type === 'superweapon'
             );
         }
         
@@ -385,6 +385,7 @@ export class TowerManager {
             this.cachedAcademies = null;
             this.cachedTrainingGrounds = null;
             this.cachedLabs = null;
+            this._towerStatsNeedUpdate = true;
             return; // Skip update this frame to rebuild cache next frame
         }
         
@@ -400,46 +401,62 @@ export class TowerManager {
         // If upgrades changed, recalculate all tower stats
         if (upgradesChanged) {
             this.recalculateAllTowerStats();
+            this._towerStatsNeedUpdate = true;
         }
         
-        // Apply building upgrades to towers
-        const upgrades = this.buildingManager.towerUpgrades;
+        // Detect new towers added
+        const currentTowerCount = this.towers.length;
+        if (this._lastTowerCount !== currentTowerCount) {
+            this._lastTowerCount = currentTowerCount;
+            this._towerStatsNeedUpdate = true;
+        }
         
+        // OPTIMIZATION: Only reapply building upgrade stats when something changed
+        if (this._towerStatsNeedUpdate) {
+            this._towerStatsNeedUpdate = false;
+            const upgrades = this.buildingManager.towerUpgrades;
+            
+            for (let i = 0; i < this.towers.length; i++) {
+                const tower = this.towers[i];
+                
+                // Store original values if not already stored
+                if (!tower.originalDamage) {
+                    tower.originalDamage = tower.damage;
+                    tower.originalRange = tower.range;
+                    tower.originalFireRate = tower.fireRate;
+                }
+                
+                // Store barricade-specific original values if not already stored
+                if (tower.type === 'barricade') {
+                    if (!tower.originalSlowDuration && tower.hasOwnProperty('slowDuration')) {
+                        tower.originalSlowDuration = tower.slowDuration;
+                        tower.originalMaxEnemiesSlowed = tower.maxEnemiesSlowed;
+                    }
+                }
+                
+                // Apply base building upgrades
+                tower.damage = tower.originalDamage * upgrades.damage;
+                tower.range = tower.originalRange * upgrades.range;
+                tower.fireRate = tower.originalFireRate * upgrades.fireRate;
+                
+                // Apply forge-specific upgrades
+                this.applyForgeUpgrades(tower);
+                
+                // Apply Training Grounds range upgrades
+                this.applyTrainingGroundsUpgrades(tower);
+                
+                // Apply academy elemental bonuses to Magic Towers
+                this.applyAcademyUpgrades(tower);
+            }
+        }
+        
+        // Update all towers every frame (cooldown, targeting, shooting)
         for (let i = 0; i < this.towers.length; i++) {
             const tower = this.towers[i];
             
-            // Store original values if not already stored
-            if (!tower.originalDamage) {
-                tower.originalDamage = tower.damage;
-                tower.originalRange = tower.range;
-                tower.originalFireRate = tower.fireRate;
-            }
-            
-            // Store barricade-specific original values if not already stored
-            if (tower.constructor.name === 'BarricadeTower') {
-                if (!tower.originalSlowDuration && tower.hasOwnProperty('slowDuration')) {
-                    tower.originalSlowDuration = tower.slowDuration;
-                    tower.originalMaxEnemiesSlowed = tower.maxEnemiesSlowed;
-                }
-            }
-            
-            // Apply base building upgrades
-            tower.damage = tower.originalDamage * upgrades.damage;
-            tower.range = tower.originalRange * upgrades.range;
-            tower.fireRate = tower.originalFireRate * upgrades.fireRate;
-            
-            // Apply forge-specific upgrades
-            this.applyForgeUpgrades(tower);
-            
-            // Apply Training Grounds range upgrades
-            this.applyTrainingGroundsUpgrades(tower);
-            
-            // Apply academy elemental bonuses to Magic Towers
-            this.applyAcademyUpgrades(tower);
-            
             // Get poison damage bonus for Poison Archer Towers
             let poisonBonus = 0;
-            if (tower.constructor.name === 'PoisonArcherTower' && this.cachedForges.length > 0) {
+            if (tower.type === 'poison' && this.cachedForges && this.cachedForges.length > 0) {
                 const multipliers = this.cachedForges[0].getUpgradeMultipliers();
                 poisonBonus = multipliers.poisonDamageBonus || 0;
             }
@@ -452,7 +469,7 @@ export class TowerManager {
     }
     
     applyAcademyUpgrades(tower) {
-        if (tower.constructor.name === 'MagicTower') {
+        if (tower.type === 'magic') {
             // Use cached academies
             if (this.cachedAcademies && this.cachedAcademies.length > 0) {
                 const elementalBonuses = this.cachedAcademies[0].getElementalBonuses();
@@ -461,7 +478,7 @@ export class TowerManager {
         }
         
         // New: Apply combination spell bonuses to Combination Towers
-        if (tower.constructor.name === 'CombinationTower') {
+        if (tower.type === 'combination') {
             if (this.cachedAcademies && this.cachedAcademies.length > 0) {
                 const academy = this.cachedAcademies[0];
                 
@@ -577,7 +594,7 @@ export class TowerManager {
             }
             
             // Reset barricade-specific stats
-            if (tower.constructor.name === 'BarricadeTower') {
+            if (tower.type === 'barricade') {
                 if (tower.originalSlowDuration) {
                     tower.slowDuration = tower.originalSlowDuration;
                 }
@@ -593,17 +610,17 @@ export class TowerManager {
         if (!this.cachedForges || this.cachedForges.length === 0) return;
         
         const multipliers = this.cachedForges[0].getUpgradeMultipliers();
-        const towerType = tower.constructor.name;
+        const towerType = tower.type;
         
         // Apply forge upgrades as additive bonuses on top of original damage
         switch (towerType) {
-            case 'BasicTower':
+            case 'basic':
                 if (multipliers.basicDamageBonus > 0) {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.basicDamageBonus;
                 }
                 break;
                 
-            case 'BarricadeTower':
+            case 'barricade':
                 // Apply capacity upgrades using original base value
                 if (multipliers.barricadeCapacityBonus > 0) {
                     tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed + multipliers.barricadeCapacityBonus;
@@ -614,7 +631,7 @@ export class TowerManager {
                 }
                 break;
                 
-            case 'ArcherTower':
+            case 'archer':
                 if (multipliers.archerDamageBonus > 0) {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.archerDamageBonus;
                 }
@@ -624,12 +641,12 @@ export class TowerManager {
                 }
                 break;
                 
-            case 'PoisonArcherTower':
+            case 'poison':
                 // Note: poisonDamageBonus applies only to poison tick damage (handled via towerForgeBonus parameter)
                 // tower.damage stays as the direct hit marker value; do NOT add poisonDamageBonus here
                 break;
                 
-            case 'CannonTower':
+            case 'cannon':
                 if (multipliers.cannonDamageBonus > 0) {
                     tower.damage = tower.originalDamage * this.buildingManager.towerUpgrades.damage + multipliers.cannonDamageBonus;
                 }
@@ -644,24 +661,24 @@ export class TowerManager {
         // Use cached Training Grounds buildings
         if (!this.cachedTrainingGrounds || this.cachedTrainingGrounds.length === 0) return;
         
-        const towerType = tower.constructor.name;
+        const towerType = tower.type;
         let towerTypeKey = null;
         
-        // Map tower constructor names to range upgrade keys
+        // Map tower type keys to range upgrade keys
         switch (towerType) {
-            case 'ArcherTower':
+            case 'archer':
                 towerTypeKey = 'archerTower';
                 break;
-            case 'BarricadeTower':
+            case 'barricade':
                 towerTypeKey = 'barricadeTower';
                 break;
-            case 'BasicTower':
+            case 'basic':
                 towerTypeKey = 'basicTower';
                 break;
-            case 'PoisonArcherTower':
+            case 'poison':
                 towerTypeKey = 'poisonArcherTower';
                 break;
-            case 'CannonTower':
+            case 'cannon':
                 towerTypeKey = 'cannonTower';
                 break;
             default:
@@ -678,12 +695,12 @@ export class TowerManager {
             }
             
             // Apply Barricade Tower fire rate upgrade if present
-            if (towerType === 'BarricadeTower' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
+            if (towerType === 'barricade' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
                 tower.fireRate = tower.originalFireRate + (grounds.upgrades.barricadeFireRate.level * grounds.upgrades.barricadeFireRate.effect);
             }
             
             // Apply Poison Archer Tower fire rate upgrade if present
-            if (towerType === 'PoisonArcherTower' && grounds.upgrades.poisonArcherTowerFireRate && grounds.upgrades.poisonArcherTowerFireRate.level > 0) {
+            if (towerType === 'poison' && grounds.upgrades.poisonArcherTowerFireRate && grounds.upgrades.poisonArcherTowerFireRate.level > 0) {
                 tower.fireRate = tower.originalFireRate + (grounds.upgrades.poisonArcherTowerFireRate.level * grounds.upgrades.poisonArcherTowerFireRate.effect);
             }
         }
@@ -701,7 +718,7 @@ export class TowerManager {
         
         for (const tower of this.towers) {
             // Special handling for GuardPost (uses absolute coordinates, not grid)
-            if (tower.constructor.name === 'GuardPost') {
+            if (tower.type === 'guard-post') {
                 // Use clickBoxWidth/Height if available, otherwise fall back to width/height
                 const clickBoxWidth = tower.clickBoxWidth || tower.width || 80;
                 const clickBoxHeight = tower.clickBoxHeight || tower.height || 80;
@@ -714,7 +731,7 @@ export class TowerManager {
                     tower.isSelected = true;
                     this.playTowerSelectSound(tower);
                     // Get training grounds to pass defender max level info
-                    const trainingGrounds = this.buildingManager.buildings.find(b => b.constructor.name === 'TrainingGrounds');
+                    const trainingGrounds = this.buildingManager.buildings.find(b => b.type === 'training');
                     const hireOptions = tower.getDefenderHiringOptions(trainingGrounds);
                     return {
                         type: 'guard_post_menu',

@@ -647,7 +647,7 @@ export class BarricadeTower extends Tower {
             name: 'Barricade Tower',
             description: 'Defenders roll barrels to create rubble clouds that slow enemies. Multiple clouds can exist simultaneously.',
             damage: 'None',
-            range: '120 px',
+            range: '120',
             fireRate: '0.5/sec',
             cost: 90,
             icon: ''

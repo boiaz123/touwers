@@ -10,7 +10,6 @@ export class UIManager {
         this.level = gameplayState.level;
         this.activeMenu = null;
         this.currentForgeData = null;
-        this.lastSpellReadyCount = 0;
         
         // Menu refresh tracking
         this.activeMenuType = null; // 'superweapon', 'academy', 'forge', etc.
