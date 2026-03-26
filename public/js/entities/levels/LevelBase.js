@@ -711,305 +711,442 @@ export class LevelBase {
 
     // --- FOREST BACKDROP: semi-top-down perspective, horizon at top ---
     _renderForestBackdrop(ctx, w, h) {
-        // Full forest floor — top-down forced perspective, no sky or horizon
+        // Full forest floor — top-down, no sky. Rich layered greens, dark near camera.
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#2c6014');
-        ground.addColorStop(0.28, '#1e4a0a');
-        ground.addColorStop(0.62, '#153808');
-        ground.addColorStop(1,    '#0a2003');
+        ground.addColorStop(0,    '#2a6012');
+        ground.addColorStop(0.32, '#1c460a');
+        ground.addColorStop(0.68, '#123206');
+        ground.addColorStop(1,    '#081a02');
         ctx.fillStyle = ground;
         ctx.fillRect(0, 0, w, h);
 
-        // Grass tufts — dense clusters of short upward blades
-        ctx.lineWidth = 1;
-        [[0.05,0.12,6],[0.12,0.22,5],[0.20,0.15,7],[0.30,0.08,6],[0.38,0.18,5],
-         [0.47,0.10,6],[0.55,0.20,7],[0.63,0.12,5],[0.72,0.22,6],[0.80,0.14,7],[0.88,0.08,5],[0.95,0.16,6],
-         [0.04,0.35,6],[0.14,0.42,5],[0.22,0.38,7],[0.33,0.45,6],[0.42,0.36,5],
-         [0.52,0.44,7],[0.61,0.38,6],[0.70,0.45,5],[0.78,0.36,7],[0.86,0.42,6],[0.94,0.38,5],
-         [0.08,0.62,7],[0.18,0.55,5],[0.28,0.65,6],[0.40,0.58,7],[0.50,0.62,5],
-         [0.60,0.55,6],[0.70,0.65,7],[0.80,0.58,5],[0.90,0.62,6],
-         [0.06,0.78,5],[0.16,0.82,6],[0.26,0.75,7],[0.38,0.80,5],[0.48,0.72,6],
-         [0.58,0.82,5],[0.68,0.75,7],[0.78,0.80,6],[0.88,0.72,5],[0.96,0.80,6]]
-        .forEach(([fx, fy, n]) => {
-            const gx = w * fx, gy = h * fy;
-            const bladeLen = h * (0.012 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.010);
-            for (let k = 0; k < n; k++) {
-                const bx = gx + (k - n * 0.5) * 3;
-                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.4;
-                const g = 100 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 50);
-                ctx.strokeStyle = `rgba(30,${g},10,0.55)`;
-                ctx.beginPath();
-                ctx.moveTo(bx, gy);
-                ctx.quadraticCurveTo(bx + lean * bladeLen, gy - bladeLen * 0.5, bx + lean * bladeLen * 1.4, gy - bladeLen);
-                ctx.stroke();
-            }
+        // Large ground colour variation — very faint, wide radial patches that break up
+        // the flat gradient with darker shadow pools (under canopy) and slightly lighter
+        // open clearings. All blended softly, no hard edges.
+        [
+            [0.25, 0.18, 0.22, 'rgba(10,30,4,0.18)'],
+            [0.72, 0.24, 0.20, 'rgba(10,30,4,0.14)'],
+            [0.48, 0.50, 0.26, 'rgba(8,26,2,0.16)'],
+            [0.12, 0.64, 0.18, 'rgba(10,30,4,0.14)'],
+            [0.84, 0.58, 0.20, 'rgba(10,30,4,0.18)'],
+            [0.36, 0.80, 0.22, 'rgba(8,26,2,0.13)'],
+        ].forEach(([fx, fy, frad, col]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, col);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Fallen leaf scatter — small elongated shapes in autumn browns/yellows
-        [[0.10,0.18,1.8],[0.24,0.26,1.5],[0.36,0.14,1.6],[0.46,0.24,2.0],[0.58,0.16,1.7],
-         [0.70,0.28,1.5],[0.82,0.18,1.8],[0.92,0.24,1.6],
-         [0.08,0.44,1.7],[0.20,0.52,2.0],[0.34,0.40,1.5],[0.48,0.48,1.8],[0.62,0.42,1.6],
-         [0.76,0.50,1.9],[0.88,0.44,1.5],
-         [0.12,0.68,1.8],[0.24,0.74,1.6],[0.40,0.62,2.0],[0.54,0.70,1.7],
-         [0.66,0.64,1.5],[0.78,0.72,1.8],[0.92,0.66,1.6]]
-        .forEach(([fx, fy, sz]) => {
-            const lx = w * fx, ly = h * fy;
-            const ang = Math.sin(fx * 23 + fy * 17) * Math.PI;
-            const r = Math.abs(Math.sin(fx * 31 + fy * 13));
-            const leafColor = r < 0.33 ? 'rgba(140,80,20,0.55)' : r < 0.66 ? 'rgba(160,100,30,0.50)' : 'rgba(180,130,40,0.48)';
-            ctx.fillStyle = leafColor;
-            ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang);
-            ctx.beginPath(); ctx.ellipse(0, 0, sz * 2.5, sz * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = 'rgba(90,50,10,0.35)'; ctx.lineWidth = 0.6;
-            ctx.beginPath(); ctx.moveTo(-sz * 2, 0); ctx.lineTo(sz * 2, 0); ctx.stroke();
-            ctx.restore();
+        // Dappled canopy light — warm golden pools of sunlight filtering through the canopy.
+        // Kept warm and natural, not oversaturated green.
+        [
+            [0.10, 0.09, 0.11, 0.13],
+            [0.42, 0.06, 0.09, 0.12],
+            [0.70, 0.12, 0.10, 0.11],
+            [0.90, 0.07, 0.08, 0.12],
+            [0.26, 0.32, 0.10, 0.11],
+            [0.60, 0.26, 0.09, 0.10],
+            [0.82, 0.36, 0.10, 0.12],
+            [0.08, 0.54, 0.09, 0.10],
+            [0.46, 0.50, 0.11, 0.13],
+            [0.74, 0.56, 0.09, 0.11],
+            [0.32, 0.72, 0.10, 0.11],
+            [0.64, 0.76, 0.09, 0.10],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(200,195,100,${alpha})`);
+            grd.addColorStop(0.50, `rgba(140,160,50,${alpha * 0.38})`);
+            grd.addColorStop(1,   'rgba(60,100,10,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Dirt patches — irregular ground-level earth marks
-        [[0.16,0.30,0.018],[0.44,0.12,0.015],[0.66,0.35,0.022],[0.84,0.20,0.016],
-         [0.10,0.58,0.020],[0.32,0.62,0.018],[0.56,0.68,0.015],[0.76,0.60,0.019],[0.92,0.74,0.017]]
-        .forEach(([fx, fy, fs]) => {
-            const dx = w * fx, dy = h * fy, ds = w * fs * 2.2;
-            const tone = Math.abs(Math.sin(fx * 19 + fy * 11));
-            const light = Math.floor(28 + tone * 14);
-            ctx.fillStyle = `rgba(${light},${Math.floor(light * 1.2)},${Math.floor(light * 0.2)},0.22)`;
-            ctx.beginPath();
-            const numPts = 7 + Math.floor(Math.abs(Math.sin(fx * 7 + fy * 5)) * 2);
-            for (let pi = 0; pi < numPts; pi++) {
-                const pang = pi / numPts * Math.PI * 2 + Math.sin(fx * 5 + pi * 2.3) * 0.45;
-                const pr = ds * (0.78 + Math.abs(Math.sin(fx * 13 + fy * 7 + pi * 1.1)) * 0.40);
-                pi === 0 ? ctx.moveTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58) :
-                           ctx.lineTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58);
-            }
-            ctx.closePath(); ctx.fill();
+        // Sparse exposed dirt patches — soft warm brown radial gradients where soil
+        // shows through the leaf cover. Low opacity, widely spaced, fully blended.
+        [
+            [0.16, 0.20, 0.08, 0.18],
+            [0.52, 0.16, 0.07, 0.16],
+            [0.80, 0.28, 0.09, 0.17],
+            [0.06, 0.42, 0.07, 0.15],
+            [0.38, 0.44, 0.08, 0.17],
+            [0.68, 0.48, 0.07, 0.15],
+            [0.92, 0.52, 0.08, 0.16],
+            [0.24, 0.68, 0.09, 0.18],
+            [0.58, 0.70, 0.07, 0.15],
+            [0.84, 0.74, 0.08, 0.17],
+            [0.14, 0.84, 0.07, 0.14],
+            [0.46, 0.86, 0.09, 0.16],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const t = Math.abs(Math.sin(fx * 19.1 + fy * 11.3));
+            const rb = 100 + Math.floor(t * 30);
+            const gb = 62 + Math.floor(t * 18);
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(${rb},${gb},18,${alpha})`);
+            grd.addColorStop(1, `rgba(${rb},${gb},18,0)`);
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Foreground shadow vignette
-        const vgn = ctx.createLinearGradient(0, h * 0.72, 0, h);
-        vgn.addColorStop(0, 'rgba(0,0,0,0)'); vgn.addColorStop(1, 'rgba(0,0,0,0.42)');
-        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        // Leaf litter — scattered pixel-sized dots in muted amber, rust and brown tones.
+        // Purely pointillist, never reads as shapes, just organic colour noise on the floor.
+        [
+            [0.06,0.08],[0.14,0.13],[0.24,0.06],[0.35,0.11],[0.46,0.05],[0.57,0.10],[0.68,0.07],[0.79,0.12],[0.90,0.06],[0.97,0.10],
+            [0.04,0.22],[0.13,0.28],[0.22,0.20],[0.32,0.26],[0.44,0.18],[0.54,0.25],[0.65,0.21],[0.76,0.27],[0.87,0.19],[0.95,0.24],
+            [0.09,0.38],[0.20,0.34],[0.30,0.40],[0.41,0.36],[0.53,0.33],[0.62,0.39],[0.73,0.35],[0.83,0.41],[0.93,0.37],
+            [0.07,0.55],[0.18,0.60],[0.28,0.52],[0.40,0.58],[0.51,0.54],[0.61,0.60],[0.72,0.53],[0.82,0.59],[0.92,0.55],
+            [0.11,0.70],[0.23,0.75],[0.36,0.68],[0.48,0.73],[0.60,0.67],[0.71,0.74],[0.81,0.69],[0.94,0.72],
+            [0.08,0.84],[0.20,0.88],[0.34,0.82],[0.47,0.87],[0.59,0.83],[0.72,0.89],[0.85,0.84],[0.96,0.86],
+        ].forEach(([fx, fy]) => {
+            const t = Math.abs(Math.sin(fx * 37.1 + fy * 23.9));
+            // Alternate between amber, rust brown, and dark khaki
+            let r, g, b;
+            if (t < 0.33)      { r = 130; g = 78;  b = 20; }
+            else if (t < 0.66) { r = 112; g = 58;  b = 12; }
+            else               { r = 96;  g = 82;  b = 28; }
+            const alpha = 0.22 + t * 0.18;
+            const sz = t < 0.25 ? 2 : 1;
+            ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+            ctx.fillRect(Math.floor(w * fx), Math.floor(h * fy), sz, sz);
+        });
+
+        // Foreground depth shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.78, 0, h);
+        vgn.addColorStop(0, 'rgba(0,8,0,0)');
+        vgn.addColorStop(1, 'rgba(0,8,0,0.46)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.78, w, h * 0.22);
+
+        // Side vignette — deep canopy shadow at edges
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+        vigL.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigL.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.08, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.92, 0);
+        vigR.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigR.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.92, 0, w * 0.08, h);
     }
 
     // --- MOUNTAIN / SNOW BACKDROP: full snow field top-down, no sky ---
     _renderMountainBackdrop(ctx, w, h) {
-        // Full snow/ice ground — bright and distant at top, shadowed/close at bottom
+        // Base: mixed exposed rock and compacted snow — deep blue-grey at bottom, pale icy at top
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#eaf4fc');
-        ground.addColorStop(0.28, '#dce8f2');
-        ground.addColorStop(0.60, '#c8d8ea');
-        ground.addColorStop(1,    '#aec0d4');
+        ground.addColorStop(0,    '#dce8f0');
+        ground.addColorStop(0.25, '#c2d2e2');
+        ground.addColorStop(0.58, '#9aaec4');
+        ground.addColorStop(1,    '#7890a8');
         ctx.fillStyle = ground;
         ctx.fillRect(0, 0, w, h);
 
-        // Snow tufts — small clustered frost-blade bursts
-        ctx.lineWidth = 1;
-        [[0.05,0.12,5],[0.14,0.20,4],[0.22,0.14,6],[0.32,0.08,5],[0.40,0.18,4],
-         [0.50,0.10,5],[0.58,0.22,6],[0.66,0.12,4],[0.76,0.20,5],[0.84,0.14,6],[0.92,0.08,4],[0.96,0.18,5],
-         [0.04,0.34,5],[0.16,0.42,4],[0.24,0.36,6],[0.36,0.44,5],[0.44,0.36,4],
-         [0.54,0.44,6],[0.62,0.36,5],[0.72,0.44,4],[0.80,0.36,6],[0.88,0.42,5],[0.94,0.36,4],
-         [0.08,0.60,6],[0.20,0.54,4],[0.30,0.64,5],[0.42,0.58,6],[0.52,0.62,4],
-         [0.62,0.54,5],[0.72,0.64,6],[0.82,0.58,4],[0.92,0.62,5],
-         [0.06,0.76,4],[0.18,0.82,5],[0.28,0.74,6],[0.40,0.80,4],[0.50,0.72,5],
-         [0.60,0.80,4],[0.70,0.74,6],[0.80,0.78,5],[0.90,0.72,4],[0.96,0.80,5]]
-        .forEach(([fx, fy, n]) => {
-            const gx = w * fx, gy = h * fy;
-            const bLen = h * (0.008 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.007);
-            for (let k = 0; k < n; k++) {
-                const bx = gx + (k - n * 0.5) * 2.5;
-                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.3;
-                const bright = 210 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 40);
-                ctx.strokeStyle = `rgba(${bright},${bright},255,0.50)`;
-                ctx.beginPath();
-                ctx.moveTo(bx, gy);
-                ctx.quadraticCurveTo(bx + lean * bLen, gy - bLen * 0.5, bx + lean * bLen * 1.2, gy - bLen);
-                ctx.stroke();
-            }
-        });
+        // Atmospheric light — pale haze at the far/top of the mountain
+        const haze = ctx.createLinearGradient(0, 0, 0, h * 0.22);
+        haze.addColorStop(0, 'rgba(240,248,255,0.55)');
+        haze.addColorStop(1, 'rgba(240,248,255,0)');
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, 0, w, h * 0.22);
 
-        // Snow sparkle glints — tiny cross marks scattered across the snow
-        ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1;
-        [[0.07,0.10],[0.18,0.06],[0.28,0.16],[0.40,0.08],[0.52,0.14],[0.64,0.06],[0.76,0.16],[0.88,0.09],[0.96,0.13],
-         [0.04,0.32],[0.15,0.40],[0.26,0.34],[0.38,0.42],[0.50,0.34],[0.62,0.42],[0.74,0.34],[0.86,0.40],[0.96,0.36],
-         [0.10,0.54],[0.22,0.58],[0.34,0.52],[0.46,0.60],[0.58,0.52],[0.70,0.58],[0.82,0.52],[0.92,0.56]]
-        .forEach(([fx, fy]) => {
-            const gx = w * fx, gy = h * fy;
-            const r = w * (0.003 + Math.abs(Math.sin(fx * 29 + fy * 17)) * 0.004);
-            ctx.beginPath(); ctx.moveTo(gx - r, gy); ctx.lineTo(gx + r, gy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(gx, gy - r); ctx.lineTo(gx, gy + r); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(gx - r*0.7, gy - r*0.7); ctx.lineTo(gx + r*0.7, gy + r*0.7); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(gx + r*0.7, gy - r*0.7); ctx.lineTo(gx - r*0.7, gy + r*0.7); ctx.stroke();
-        });
+        // Rock strata bands — jagged horizontal ledges that define mountain rockface layers.
+        // Each band: a dark shadow underside + thin bright snow-dusted top edge.
+        const strata = [
+            // [fy, ampFrac, cycles, phase, shadowAlpha, lw]
+            [0.18, 0.010, 2.1, 1.40, 0.18, h * 0.018],
+            [0.28, 0.013, 2.4, 3.20, 0.17, h * 0.022],
+            [0.38, 0.014, 1.9, 0.70, 0.18, h * 0.024],
+            [0.48, 0.016, 2.3, 2.60, 0.19, h * 0.026],
+            [0.58, 0.017, 2.0, 1.10, 0.18, h * 0.028],
+            [0.68, 0.018, 2.2, 3.80, 0.19, h * 0.030],
+            [0.80, 0.020, 1.8, 2.00, 0.18, h * 0.032],
+        ];
+        strata.forEach(([fy, ampFrac, cycles, phase, alpha, lw]) => {
+            const baseY = h * fy;
+            const amp = h * ampFrac;
+            const freq = Math.PI * 2 * cycles;
+            // Slightly jagged: mix two sine waves at non-harmonic frequencies
+            const getY = (xf) =>
+                baseY
+                + Math.sin(xf * freq + phase) * amp
+                + Math.sin(xf * freq * 0.73 + phase * 1.6) * amp * 0.44
+                + Math.sin(xf * freq * 1.37 + phase * 0.9) * amp * 0.22;
 
-        // Rock exposure patches — angular shapes
-        ctx.fillStyle = 'rgba(100,120,140,0.18)';
-        [[0.15,0.35],[0.40,0.28],[0.65,0.38],[0.85,0.30],[0.08,0.62],[0.35,0.70],[0.60,0.65],[0.80,0.72]]
-        .forEach(([fx, fy]) => {
-            const rx = w * fx, ry = h * fy;
-            const rs = w * (0.025 + Math.abs(Math.sin(fx * 17)) * 0.020);
+            // Rock shadow beneath the ledge
+            ctx.strokeStyle = `rgba(54,70,90,${alpha})`;
+            ctx.lineWidth = lw;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(rx - rs, ry - rs * 0.3); ctx.lineTo(rx - rs * 0.4, ry - rs * 0.8);
-            ctx.lineTo(rx + rs * 0.6, ry - rs * 0.7); ctx.lineTo(rx + rs, ry + rs * 0.2);
-            ctx.lineTo(rx + rs * 0.3, ry + rs * 0.7); ctx.lineTo(rx - rs * 0.7, ry + rs * 0.5);
-            ctx.closePath(); ctx.fill();
-        });
-
-        // Frost crystal clusters — tiny radiating lines in ice-blue
-        ctx.strokeStyle = 'rgba(200,230,255,0.40)'; ctx.lineWidth = 0.8;
-        [[0.12,0.22],[0.30,0.18],[0.50,0.26],[0.68,0.20],[0.85,0.24],
-         [0.08,0.46],[0.28,0.50],[0.48,0.44],[0.65,0.50],[0.82,0.46]]
-        .forEach(([fx, fy]) => {
-            const fcx = w * fx, fcy = h * fy;
-            const flen = w * (0.012 + Math.abs(Math.sin(fx * 23 + fy * 13)) * 0.008);
-            for (let ray = 0; ray < 6; ray++) {
-                const ang = ray * Math.PI / 3 + Math.sin(fx * 7) * 0.3;
-                ctx.beginPath(); ctx.moveTo(fcx, fcy);
-                ctx.lineTo(fcx + Math.cos(ang) * flen, fcy + Math.sin(ang) * flen); ctx.stroke();
+            for (let i = 0; i <= w; i += 3) {
+                const y = getY(i / w);
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
             }
+            ctx.stroke();
+
+            // Snow-dusted top of ledge — bright thin line just above the shadow
+            ctx.strokeStyle = `rgba(225,238,250,${alpha * 0.65})`;
+            ctx.lineWidth = lw * 0.38;
+            ctx.beginPath();
+            for (let i = 0; i <= w; i += 3) {
+                const y = getY(i / w) - lw * 1.10;
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
         });
 
-        // Foreground shadow
-        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
-        vgn.addColorStop(0, 'rgba(30,50,80,0)'); vgn.addColorStop(1, 'rgba(30,50,80,0.28)');
-        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
+        // Snow field fills — pale translucent wedges that pool above each strata line,
+        // giving the impression of snow settling into rock hollows.
+        ctx.lineCap = 'butt';
+        strata.forEach(([fy, ampFrac, cycles, phase, , lw]) => {
+            const baseY = h * fy;
+            const amp = h * ampFrac;
+            const freq = Math.PI * 2 * cycles;
+            const getY = (xf) =>
+                baseY
+                + Math.sin(xf * freq + phase) * amp
+                + Math.sin(xf * freq * 0.73 + phase * 1.6) * amp * 0.44
+                + Math.sin(xf * freq * 1.37 + phase * 0.9) * amp * 0.22;
+            const snowGrd = ctx.createLinearGradient(0, baseY - lw * 5, 0, baseY);
+            snowGrd.addColorStop(0, 'rgba(228,242,255,0)');
+            snowGrd.addColorStop(1, 'rgba(228,242,255,0.22)');
+            ctx.fillStyle = snowGrd;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for (let i = 0; i <= w; i += 3) {
+                const y = getY(i / w);
+                if (i === 0) ctx.lineTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.lineTo(w, 0);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        // Wind-blown snow texture — fine pale horizontal ripples across the whole surface
+        for (let row = 0; row < 28; row++) {
+            const fy = 0.08 + row * 0.032;
+            const baseY = h * fy;
+            const phase = fy * 12.7 + 0.9;
+            const amp = h * (0.002 + Math.abs(Math.sin(fy * 7.3)) * 0.0018);
+            const alpha = 0.038 + Math.abs(Math.sin(fy * 4.9)) * 0.030;
+            ctx.strokeStyle = `rgba(200,220,240,${alpha})`;
+            ctx.lineWidth = 0.7;
+            ctx.lineCap = 'butt';
+            ctx.beginPath();
+            for (let i = 0; i <= w; i += 4) {
+                const y = baseY + Math.sin(i / w * Math.PI * 4.8 + phase) * amp;
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+        }
+
+        // Foreground depth shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.80, 0, h);
+        vgn.addColorStop(0, 'rgba(30,50,80,0)');
+        vgn.addColorStop(1, 'rgba(30,50,80,0.32)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.80, w, h * 0.20);
+
+        // Side vignette for painterly framing
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.09, 0);
+        vigL.addColorStop(0, 'rgba(40,60,90,0.22)');
+        vigL.addColorStop(1, 'rgba(40,60,90,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.09, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.91, 0);
+        vigR.addColorStop(0, 'rgba(40,60,90,0.22)');
+        vigR.addColorStop(1, 'rgba(40,60,90,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.91, 0, w * 0.09, h);
     }
 
     // --- DESERT BACKDROP: full sand ground top-down, no sky ---
     _renderDesertBackdrop(ctx, w, h) {
-        // Full sand surface — warm gold at top (far), deep amber-brown at bottom (near)
+        // Base sand — muted dune palette: dusty cream at distant horizon, warm sienna near camera
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#d4aa44');
-        ground.addColorStop(0.28, '#c89832');
-        ground.addColorStop(0.62, '#b88020');
-        ground.addColorStop(1,    '#9a6518');
+        ground.addColorStop(0,    '#e0d0a2');
+        ground.addColorStop(0.28, '#d0b46e');
+        ground.addColorStop(0.60, '#bc9040');
+        ground.addColorStop(1,    '#9e7228');
         ctx.fillStyle = ground;
         ctx.fillRect(0, 0, w, h);
 
-        // Desert scrub tufts — sparse dry grass blades
-        ctx.lineWidth = 1;
-        [[0.06,0.14,3],[0.18,0.22,2],[0.30,0.12,3],[0.42,0.20,2],[0.54,0.14,3],
-         [0.66,0.22,2],[0.78,0.12,3],[0.90,0.20,2],
-         [0.08,0.38,3],[0.20,0.46,2],[0.34,0.40,3],[0.48,0.46,2],[0.60,0.40,3],
-         [0.72,0.46,2],[0.84,0.38,3],[0.94,0.44,2],
-         [0.04,0.62,3],[0.16,0.58,2],[0.28,0.66,3],[0.42,0.60,2],[0.56,0.64,3],
-         [0.70,0.58,2],[0.82,0.66,3],[0.94,0.60,2],
-         [0.10,0.80,2],[0.24,0.76,3],[0.38,0.82,2],[0.52,0.78,3],[0.66,0.74,2],[0.80,0.82,3],[0.92,0.76,2]]
-        .forEach(([fx, fy, n]) => {
-            const gx = w * fx, gy = h * fy;
-            const bLen = h * (0.014 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.012);
-            for (let k = 0; k < n; k++) {
-                const bx = gx + (k - n * 0.5) * 4;
-                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.5;
-                const tone = 80 + Math.floor(Math.abs(Math.sin(fy * 9 + k)) * 40);
-                ctx.strokeStyle = `rgba(${tone + 40},${tone},15,0.48)`;
-                ctx.beginPath();
-                ctx.moveTo(bx, gy);
-                ctx.quadraticCurveTo(bx + lean * bLen, gy - bLen * 0.5, bx + lean * bLen * 1.4, gy - bLen);
-                ctx.stroke();
-            }
-        });
+        // Atmospheric haze lightens the distant horizon
+        const haze = ctx.createLinearGradient(0, 0, 0, h * 0.24);
+        haze.addColorStop(0, 'rgba(245,230,195,0.50)');
+        haze.addColorStop(1, 'rgba(245,230,195,0)');
+        ctx.fillStyle = haze;
+        ctx.fillRect(0, 0, w, h * 0.24);
 
-        // Sand grain texture — tiny dots in varying sand tones
-        [[0.08,0.12],[0.15,0.20],[0.24,0.10],[0.32,0.28],[0.40,0.16],[0.48,0.24],
-         [0.56,0.12],[0.64,0.22],[0.72,0.14],[0.80,0.26],[0.88,0.12],[0.94,0.20],
-         [0.06,0.38],[0.14,0.44],[0.22,0.36],[0.30,0.50],[0.38,0.42],[0.46,0.48],
-         [0.54,0.38],[0.62,0.44],[0.70,0.36],[0.78,0.50],[0.86,0.38],[0.96,0.46],
-         [0.08,0.64],[0.18,0.70],[0.30,0.62],[0.42,0.68],[0.52,0.60],[0.62,0.70],
-         [0.72,0.64],[0.82,0.68],[0.92,0.62]]
-        .forEach(([fx, fy]) => {
-            const px = w * fx, py = h * fy;
-            const r = Math.abs(Math.sin(fx * 31 + fy * 19));
-            ctx.fillStyle = r < 0.5 ? 'rgba(200,150,50,0.20)' : 'rgba(120,75,15,0.18)';
-            const gs = w * (0.004 + r * 0.005);
-            ctx.beginPath(); ctx.arc(px, py, gs, 0, Math.PI * 2); ctx.fill();
-        });
+        // Dune ridge lines — sweeping sinusoidal stripes mimicking aerial dune topography.
+        // Each ridge has a shadow trough and a lighter highlight crest just above it.
+        const ridges = [
+            // [fy, ampFrac, cycleCount, phase, shadowAlpha, lineWidth]
+            [0.20, 0.012, 1.6, 2.30, 0.16, h * 0.016],
+            [0.30, 0.015, 1.8, 1.70, 0.15, h * 0.018],
+            [0.40, 0.016, 1.5, 3.10, 0.15, h * 0.020],
+            [0.50, 0.018, 1.9, 0.80, 0.16, h * 0.022],
+            [0.60, 0.020, 1.6, 2.80, 0.15, h * 0.024],
+            [0.70, 0.022, 1.8, 1.40, 0.16, h * 0.026],
+            [0.82, 0.024, 1.7, 3.50, 0.15, h * 0.028],
+        ];
+        ridges.forEach(([fy, ampFrac, cycles, phase, alpha, lw]) => {
+            const baseY = h * fy;
+            const amp = h * ampFrac;
+            const freq = Math.PI * 2 * cycles;
+            const getY = (xf) =>
+                baseY
+                + Math.sin(xf * freq + phase) * amp
+                + Math.sin(xf * freq * 0.61 + phase * 1.9) * amp * 0.36;
 
-        // Pebble/stone scatter as angular marks
-        ctx.fillStyle = 'rgba(110,70,15,0.16)';
-        [[0.08,0.22],[0.20,0.30],[0.36,0.18],[0.50,0.26],[0.65,0.20],[0.80,0.28],[0.94,0.15],
-         [0.12,0.45],[0.28,0.52],[0.45,0.48],[0.62,0.55],[0.78,0.45],[0.92,0.52],
-         [0.16,0.70],[0.34,0.65],[0.54,0.72],[0.72,0.68],[0.88,0.74]]
-        .forEach(([fx, fy]) => {
-            const px = w * fx, py = h * fy;
-            const ps = w * (0.007 + Math.abs(Math.sin(fx * 19.3 + fy * 11.7)) * 0.012);
+            // Shadow trough
+            ctx.strokeStyle = `rgba(132,82,10,${alpha})`;
+            ctx.lineWidth = lw;
+            ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(px - ps, py); ctx.lineTo(px - ps * 0.4, py - ps * 0.9);
-            ctx.lineTo(px + ps * 0.8, py - ps * 0.7); ctx.lineTo(px + ps, py + ps * 0.3);
-            ctx.lineTo(px, py + ps * 0.8); ctx.closePath(); ctx.fill();
+            for (let i = 0; i <= w; i += 3) {
+                const y = getY(i / w);
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+
+            // Highlight crest just above the shadow trough
+            ctx.strokeStyle = `rgba(232,200,132,${alpha * 0.60})`;
+            ctx.lineWidth = lw * 0.42;
+            ctx.beginPath();
+            for (let i = 0; i <= w; i += 3) {
+                const y = getY(i / w) - lw * 1.15;
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
         });
 
-        // Foreground shadow
-        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
-        vgn.addColorStop(0, 'rgba(60,30,0,0)'); vgn.addColorStop(1, 'rgba(60,30,0,0.38)');
-        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
+        // Fine wind ripple texture — closely spaced subtle wavy lines between ridges
+        ctx.lineCap = 'butt';
+        for (let row = 0; row < 30; row++) {
+            const fy = 0.12 + row * 0.028;
+            const baseY = h * fy;
+            const phase = fy * 15.1 + 1.2;
+            const amp = h * (0.003 + Math.abs(Math.sin(fy * 8.9)) * 0.0025);
+            const alpha = 0.050 + Math.abs(Math.sin(fy * 5.7)) * 0.038;
+            ctx.strokeStyle = `rgba(145,90,16,${alpha})`;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            for (let i = 0; i <= w; i += 4) {
+                const y = baseY + Math.sin(i / w * Math.PI * 5.4 + phase) * amp;
+                if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+        }
+
+        // Foreground depth shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.80, 0, h);
+        vgn.addColorStop(0, 'rgba(78,40,4,0)');
+        vgn.addColorStop(1, 'rgba(78,40,4,0.30)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.80, w, h * 0.20);
+
+        // Side vignette for painterly framing
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.09, 0);
+        vigL.addColorStop(0, 'rgba(105,62,12,0.24)');
+        vigL.addColorStop(1, 'rgba(105,62,12,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.09, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.91, 0);
+        vigR.addColorStop(0, 'rgba(105,62,12,0.24)');
+        vigR.addColorStop(1, 'rgba(105,62,12,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.91, 0, w * 0.09, h);
     }
 
     // --- SPACE / FROG KING BACKDROP: alien surface top-down, no sky ---
     _renderSpaceBackdrop(ctx, w, h) {
-        // Full alien ground — slightly lit at top (distant), dark at bottom (near)
+        // Base: near-void deep space ground — very dark indigo-black
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#1a0840');
-        ground.addColorStop(0.30, '#140630');
-        ground.addColorStop(0.65, '#100422');
-        ground.addColorStop(1,    '#080118');
+        ground.addColorStop(0,    '#0e1428');
+        ground.addColorStop(0.42, '#0a1020');
+        ground.addColorStop(1,    '#060c18');
         ctx.fillStyle = ground;
         ctx.fillRect(0, 0, w, h);
 
-        // Alien bioluminescent tufts — short crystalline spike clusters
-        ctx.lineWidth = 1;
-        [[0.06,0.10,4],[0.16,0.18,3],[0.28,0.10,4],[0.40,0.16,3],[0.52,0.08,4],
-         [0.64,0.18,3],[0.76,0.10,4],[0.88,0.18,3],[0.96,0.10,4],
-         [0.04,0.34,3],[0.18,0.42,4],[0.30,0.36,3],[0.44,0.40,4],[0.56,0.34,3],
-         [0.68,0.42,4],[0.80,0.36,3],[0.90,0.40,4],
-         [0.06,0.60,4],[0.18,0.56,3],[0.30,0.64,4],[0.44,0.58,3],[0.56,0.62,4],
-         [0.68,0.56,3],[0.80,0.64,4],[0.92,0.58,3],
-         [0.10,0.80,3],[0.24,0.76,4],[0.38,0.82,3],[0.52,0.78,4],[0.66,0.74,3],[0.80,0.80,4],[0.94,0.76,3]]
-        .forEach(([fx, fy, n]) => {
-            const gx = w * fx, gy = h * fy;
-            const bLen = h * (0.010 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.009);
-            for (let k = 0; k < n; k++) {
-                const bx = gx + (k - n * 0.5) * 2;
-                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.25;
-                const c = Math.abs(Math.sin(fx * 13 + k * 3.1));
-                ctx.strokeStyle = c < 0.5 ? 'rgba(180,60,255,0.55)' : 'rgba(60,220,200,0.55)';
-                ctx.beginPath();
-                ctx.moveTo(bx, gy);
-                ctx.lineTo(bx + lean * bLen * 1.4, gy - bLen);
-                ctx.stroke();
-            }
+        // Nebula gas clouds — 4 large radial gradient blobs, very faint and sparse.
+        // These give the ground a sense of alien mineral luminescence without crowding the field.
+        [
+            [0.18, 0.24, 0.24, 'rgba(40,80,160,0.11)', 'rgba(40,80,160,0)'],
+            [0.66, 0.36, 0.20, 'rgba(80,40,140,0.09)', 'rgba(80,40,140,0)'],
+            [0.40, 0.70, 0.22, 'rgba(20,100,120,0.10)', 'rgba(20,100,120,0)'],
+            [0.86, 0.58, 0.18, 'rgba(55,30,110,0.08)', 'rgba(55,30,110,0)'],
+        ].forEach(([fx, fy, frad, inner, outer]) => {
+            const cx = w * fx, cy = h * fy;
+            const r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, inner);
+            grd.addColorStop(1, outer);
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Hexagonal alien ground tile pattern — subtle geometric surface
-        ctx.strokeStyle = 'rgba(80,20,140,0.13)'; ctx.lineWidth = 0.8;
-        const hexR = w * 0.032;
-        const hexSqrt3 = hexR * Math.sqrt(3);
-        for (let col = 0; col < Math.ceil(w / (hexR * 1.5)) + 2; col++) {
-            for (let row = 0; row < Math.ceil(h / hexSqrt3) + 2; row++) {
-                const hx = col * hexR * 1.5 - hexR;
-                const hy = row * hexSqrt3 + (col % 2 === 0 ? 0 : hexSqrt3 * 0.5) - hexSqrt3;
-                ctx.beginPath();
-                for (let vi = 0; vi < 6; vi++) {
-                    const ang = vi * Math.PI / 3;
-                    const px = hx + hexR * Math.cos(ang), py = hy + hexR * Math.sin(ang);
-                    vi === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                }
-                ctx.closePath(); ctx.stroke();
-            }
-        }
-
-        // Bioluminescent surface dots
-        ctx.fillStyle = 'rgba(140,60,255,0.28)';
-        [[0.06,0.08],[0.18,0.14],[0.30,0.06],[0.42,0.16],[0.56,0.08],[0.68,0.18],[0.80,0.10],[0.92,0.14],
-         [0.10,0.36],[0.24,0.44],[0.40,0.38],[0.54,0.46],[0.70,0.38],[0.86,0.42],
-         [0.04,0.62],[0.20,0.68],[0.36,0.60],[0.52,0.66],[0.68,0.62],[0.84,0.66],[0.96,0.58]]
-        .forEach(([fx, fy]) => {
-            const dotR = w * (0.003 + Math.abs(Math.sin(fx * 29 + fy * 17)) * 0.004);
-            ctx.beginPath(); ctx.arc(w * fx, h * fy, dotR, 0, Math.PI * 2); ctx.fill();
+        // Crater rings — partial thin arcs suggesting ancient impact sites.
+        // Sparse and low-opacity so they read as texture, not competing shapes.
+        [
+            [0.14, 0.16, 0.062, 0.10, Math.PI * 0.15, Math.PI * 1.45],
+            [0.72, 0.30, 0.048, 0.09, Math.PI * 1.50, Math.PI * 2.80],
+            [0.44, 0.54, 0.056, 0.09, Math.PI * 0.60, Math.PI * 1.80],
+            [0.88, 0.68, 0.042, 0.08, Math.PI * 0.25, Math.PI * 1.60],
+            [0.28, 0.80, 0.052, 0.08, Math.PI * 1.20, Math.PI * 2.50],
+            [0.58, 0.12, 0.050, 0.09, Math.PI * 0.80, Math.PI * 2.00],
+        ].forEach(([fx, fy, frad, alpha, startAng, endAng]) => {
+            const cx = w * fx, cy = h * fy;
+            const r  = w * frad;
+            // Outer rim shadow
+            ctx.strokeStyle = `rgba(20,50,100,${alpha})`;
+            ctx.lineWidth = 2.0;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, startAng, endAng);
+            ctx.stroke();
+            // Inner bright rim
+            ctx.strokeStyle = `rgba(100,170,240,${alpha * 0.40})`;
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.86, startAng, endAng);
+            ctx.stroke();
         });
 
-        // Foreground vignette
-        const vgn = ctx.createLinearGradient(0, h * 0.74, 0, h);
-        vgn.addColorStop(0, 'rgba(0,0,0,0)'); vgn.addColorStop(1, 'rgba(0,0,0,0.48)');
-        ctx.fillStyle = vgn; ctx.fillRect(0, h * 0.74, w, h * 0.26);
+        // Distant star field (geological glints on the alien surface)
+        // Pixel-sized dots only, concentrated in the distant top half, thinning toward camera.
+        // No lines — purely pointillist.
+        [
+            [0.04,0.03],[0.13,0.07],[0.23,0.02],[0.33,0.09],[0.44,0.04],[0.55,0.08],[0.67,0.03],[0.77,0.07],[0.89,0.02],[0.97,0.08],
+            [0.08,0.14],[0.20,0.18],[0.29,0.12],[0.39,0.20],[0.50,0.16],[0.61,0.19],[0.71,0.13],[0.81,0.20],[0.93,0.15],
+            [0.06,0.27],[0.16,0.31],[0.27,0.25],[0.37,0.33],[0.48,0.28],[0.59,0.32],[0.69,0.26],[0.80,0.30],[0.91,0.24],
+            [0.11,0.41],[0.25,0.45],[0.40,0.38],[0.54,0.44],[0.66,0.39],[0.79,0.43],[0.95,0.37],
+        ].forEach(([fx, fy]) => {
+            const bright = 150 + Math.floor(Math.abs(Math.sin(fx * 31 + fy * 17)) * 100);
+            const sz = Math.abs(Math.sin(fx * 41 + fy * 23)) < 0.28 ? 1.5 : 0.9;
+            ctx.fillStyle = `rgba(${bright},${Math.floor(bright * 0.88)},${Math.min(255, bright + 40)},0.62)`;
+            ctx.fillRect(Math.floor(w * fx), Math.floor(h * fy), sz, sz);
+        });
+
+        // Foreground depth shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.78, 0, h);
+        vgn.addColorStop(0, 'rgba(4,8,18,0)');
+        vgn.addColorStop(1, 'rgba(4,8,18,0.44)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.78, w, h * 0.22);
+
+        // Side vignette
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+        vigL.addColorStop(0, 'rgba(6,10,24,0.30)');
+        vigL.addColorStop(1, 'rgba(6,10,24,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.08, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.92, 0);
+        vigR.addColorStop(0, 'rgba(6,10,24,0.30)');
+        vigR.addColorStop(1, 'rgba(6,10,24,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.92, 0, w * 0.08, h);
     }
     drawCobblestoneBlock(ctx, x, y, width, height, seed) {
         // Draw a single cobblestone with realistic stone appearance
@@ -1107,7 +1244,7 @@ export class LevelBase {
             forest:   '#7a6444',
             mountain: '#a09888',
             desert:   '#b89850',
-            space:    '#4a3868'
+            space:    '#1e3248'
         };
         const pathColor = _campaignPathColors[this.getCampaign()] || '#8b7355';
         
