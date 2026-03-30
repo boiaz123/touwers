@@ -176,7 +176,7 @@ export function initializeSFXRegistry() {
         'assets/audio/sfx/TowerSounds/Arrow.mp3',
         {
             category: 'tower',
-            volume: 0.6
+            volume: 0.3
         }
     );
     
@@ -251,7 +251,7 @@ export function initializeSFXRegistry() {
         'assets/audio/sfx/TowerSounds/BasicTouwer.mp3',
         {
             category: 'tower',
-            volume: 0.6
+            volume: 0.8
         }
     );
 
