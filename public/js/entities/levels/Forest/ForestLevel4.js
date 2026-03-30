@@ -328,7 +328,7 @@ export class ForestLevel4 extends LevelBase {
         // Wave 10
         , { 
             enemyCount: 1, 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 3, 
             enemySpeed: 75, 
             spawnInterval: 7, 
             pattern: ['knight'] 
@@ -360,7 +360,7 @@ export class ForestLevel4 extends LevelBase {
         // Wave 14
         , { 
             enemyCount: 2, 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 4, 
             enemySpeed: 35, 
             spawnInterval: 1.5, 
             pattern: ['knight'] 
@@ -368,7 +368,7 @@ export class ForestLevel4 extends LevelBase {
         // Wave 15
         , { 
             enemyCount: 1, 
-            enemyHealth_multiplier: 15, 
+            enemyHealth_multiplier: 5, 
             enemySpeed: 35, 
             spawnInterval: 1, 
             pattern: ['knight'] 
@@ -376,7 +376,7 @@ export class ForestLevel4 extends LevelBase {
         // Wave 16
         , { 
             enemyCount: 1, 
-            enemyHealth_multiplier: 20, 
+            enemyHealth_multiplier: 7, 
             enemySpeed: 35, 
             spawnInterval: 1, 
             pattern: ['knight'] 
@@ -392,7 +392,7 @@ export class ForestLevel4 extends LevelBase {
         // Wave 18
         , { 
             enemyCount: 3, 
-            enemyHealth_multiplier: 15, 
+            enemyHealth_multiplier: 7, 
             enemySpeed: 45, 
             spawnInterval: 2, 
             pattern: ['knight'] 
