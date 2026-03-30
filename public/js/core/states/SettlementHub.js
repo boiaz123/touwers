@@ -74,6 +74,8 @@ export class SettlementHub {
         this.bardHovered = false;
         // Shuffle queue so the bard never repeats until all tracks have been played
         this.bardShuffleQueue = [];
+        // Cooldown to prevent click-through when SirFrogerty closes
+        this._postSirFrogertyCooldown = 0;
     }
 
     enter() {
@@ -98,6 +100,7 @@ export class SettlementHub {
         this.fadeInOpacity = 0; // Fade-in overlay starts transparent
         this.isFirstRender = true; // Force pre-render on next render
         this.activePopup = null;
+        this._postSirFrogertyCooldown = 0;
         
         // Load settlement data from the current save slot
         // This includes gold, inventory, upgrades, and unlock progression
@@ -470,9 +473,15 @@ export class SettlementHub {
         // Sir Frogerty intercepts clicks first
         if (this.sirFrogerty && this.sirFrogerty.visible && !this.activePopup) {
             if (this.sirFrogerty.handleClick(x, y, this.stateManager.canvas)) {
+                if (!this.sirFrogerty.visible) {
+                    this._postSirFrogertyCooldown = 0.5;
+                }
                 return;
             }
         }
+
+        // Block building clicks briefly after SirFrogerty closes to prevent click-through
+        if (this._postSirFrogertyCooldown > 0) return;
 
         // If popup is active, delegate click to popup
         if (this.activePopup === 'upgrades' && this.upgradesPopup) {
@@ -1166,6 +1175,11 @@ export class SettlementHub {
         // Update Sir Frogerty adviser
         if (this.sirFrogerty) {
             this.sirFrogerty.update(deltaTime);
+        }
+
+        // Decrement post-SirFrogerty click cooldown
+        if (this._postSirFrogertyCooldown > 0) {
+            this._postSirFrogertyCooldown -= deltaTime;
         }
 
         // Update settlement buildings for animations
@@ -5413,13 +5427,13 @@ class UpgradesMenu {
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
-        const panelWidth = Math.min(baseWidth * 0.85, 1200);
-        const panelHeight = Math.min(baseHeight * 0.85, 700);
+        const panelWidth = Math.min(baseWidth * 0.89, 1280);
+        const panelHeight = Math.min(baseHeight * 0.89, 840);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
-        const tabY = panelY + 42;
-        const tabHeight = 32;
+        const tabY = panelY + 49;
+        const tabHeight = 48;
         const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
@@ -5431,8 +5445,8 @@ class UpgradesMenu {
         
         // Check category filter buttons (only visible in buy tab)
         if (this.activeTab === 'buy') {
-            const categoryY = panelY + 74;
-            const categoryHeight = 25;
+            const categoryY = panelY + 97;
+            const categoryHeight = 38;
             const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
             
             this.buyCategories.forEach((category, index) => {
@@ -5443,25 +5457,25 @@ class UpgradesMenu {
         }
         
         // Check close button
-        const closeX = panelX + panelWidth - 40;
+        const closeX = panelX + panelWidth - 52;
         const closeY = panelY + 12;
-        this.closeButtonHovered = x >= closeX && x <= closeX + 25 && y >= closeY && y <= closeY + 25;
+        this.closeButtonHovered = x >= closeX && x <= closeX + 38 && y >= closeY && y <= closeY + 38;
         
         // Check arrow buttons
-        const arrowY = panelY + panelHeight - 45;
-        const arrowSize = 25;
+        const arrowY = panelY + panelHeight - 62;
+        const arrowSize = 38;
         const leftArrowX = panelX + 20;
-        const rightArrowX = panelX + panelWidth - 45;
+        const rightArrowX = panelX + panelWidth - 57;
         this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize;
         this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize;
         
         // Check item buttons (for sell and upgrade tabs)
-        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
-        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
+        const contentY = panelY + 100 + (this.activeTab === 'buy' ? 38 : 0);
+        const contentHeight = panelHeight - 165 - (this.activeTab === 'buy' ? 38 : 0);
         
         const horizontalPadding = 20;
         const verticalPadding = 15;
-        const gridSpacing = 10;
+        const gridSpacing = 12;
         
         const availableWidth = panelWidth - (horizontalPadding * 2);
         const availableHeight = contentHeight - (verticalPadding * 2);
@@ -5498,22 +5512,22 @@ class UpgradesMenu {
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
-        const panelWidth = Math.min(baseWidth * 0.85, 1200);
-        const panelHeight = Math.min(baseHeight * 0.85, 700);
+        const panelWidth = Math.min(baseWidth * 0.89, 1280);
+        const panelHeight = Math.min(baseHeight * 0.89, 840);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
         // Check close button
-        const closeX = panelX + panelWidth - 40;
+        const closeX = panelX + panelWidth - 52;
         const closeY = panelY + 12;
-        if (x >= closeX && x <= closeX + 25 && y >= closeY && y <= closeY + 25) {
+        if (x >= closeX && x <= closeX + 38 && y >= closeY && y <= closeY + 38) {
             this.close();
             return;
         }
         
         // Check tab buttons
-        const tabY = panelY + 42;
-        const tabHeight = 32;
+        const tabY = panelY + 49;
+        const tabHeight = 48;
         const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
@@ -5537,7 +5551,7 @@ class UpgradesMenu {
         // Check category filter buttons (only visible in buy tab)
         if (this.activeTab === 'buy') {
             const categoryY = tabY + tabHeight + 10;
-            const categoryHeight = 25;
+            const categoryHeight = 38;
             const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
             
             this.buyCategories.forEach((category, index) => {
@@ -5555,10 +5569,10 @@ class UpgradesMenu {
         }
         
         // Check arrow buttons
-        const arrowY = panelY + panelHeight - 45;
-        const arrowSize = 25;
+        const arrowY = panelY + panelHeight - 62;
+        const arrowSize = 38;
         const leftArrowX = panelX + 20;
-        const rightArrowX = panelX + panelWidth - 45;
+        const rightArrowX = panelX + panelWidth - 57;
         const maxPages = this.getMaxPages();
         
         // Prevent double-click by checking time since last click
@@ -5588,12 +5602,12 @@ class UpgradesMenu {
         }
         
         // Check item buttons
-        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
-        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
+        const contentY = panelY + 100 + (this.activeTab === 'buy' ? 38 : 0);
+        const contentHeight = panelHeight - 165 - (this.activeTab === 'buy' ? 38 : 0);
         
         const horizontalPadding = 20;
         const verticalPadding = 15;
-        const gridSpacing = 10;
+        const gridSpacing = 12;
         
         const availableWidth = panelWidth - (horizontalPadding * 2);
         const availableHeight = contentHeight - (verticalPadding * 2);
@@ -5613,9 +5627,9 @@ class UpgradesMenu {
             
             // Check if click is within button bounds (not entire item)
             const buttonWidth = itemWidth - 14;
-            const buttonHeight = 24;
+            const buttonHeight = 36;
             const buttonX = itemX + 7;
-            const buttonY = itemY + itemHeight - 32;
+            const buttonY = itemY + itemHeight - 47;
             
             if (x >= buttonX && x <= buttonX + buttonWidth && y >= buttonY && y <= buttonY + buttonHeight) {
                 if (this.stateManager.audioManager) {
@@ -5731,18 +5745,18 @@ class UpgradesMenu {
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
-        const panelWidth = Math.min(baseWidth * 0.85, 1200);
-        const panelHeight = Math.min(baseHeight * 0.85, 700);
+        const panelWidth = Math.min(baseWidth * 0.89, 1280);
+        const panelHeight = Math.min(baseHeight * 0.89, 840);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
         // Calculate item grid positions (same as in updateHoverState and renderTabContent)
-        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
-        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
+        const contentY = panelY + 100 + (this.activeTab === 'buy' ? 38 : 0);
+        const contentHeight = panelHeight - 165 - (this.activeTab === 'buy' ? 38 : 0);
         
         const horizontalPadding = 20;
         const verticalPadding = 15;
-        const gridSpacing = 10;
+        const gridSpacing = 12;
         
         const availableWidth = panelWidth - (horizontalPadding * 2);
         const availableHeight = contentHeight - (verticalPadding * 2);
@@ -6004,8 +6018,8 @@ class UpgradesMenu {
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
-        const panelWidth = Math.min(baseWidth * 0.85, 1200); // Use more screen space
-        const panelHeight = Math.min(baseHeight * 0.85, 700);
+        const panelWidth = Math.min(baseWidth * 0.89, 1280); // Use more screen space
+        const panelHeight = Math.min(baseHeight * 0.89, 840);
         const panelX = (canvas.width - panelWidth) / 2;
         const panelY = (canvas.height - panelHeight) / 2;
         
@@ -6032,7 +6046,7 @@ class UpgradesMenu {
         this.drawCornerTrim(ctx, panelX + panelWidth, panelY + panelHeight, 20, false, false, false, true);  // Bottom-right
         
         // Panel title - inside at top
-        ctx.font = 'bold 18px serif';
+        ctx.font = 'bold 27px serif';
         ctx.fillStyle = '#ffd700';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
@@ -6042,22 +6056,22 @@ class UpgradesMenu {
         this.renderGoldDisplay(ctx, panelX + 20, panelY + 10);
         
         // Close button
-        const closeX = panelX + panelWidth - 40;
+        const closeX = panelX + panelWidth - 52;
         const closeY = panelY + 12;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
-        ctx.fillRect(closeX, closeY, 25, 25);
+        ctx.fillRect(closeX, closeY, 38, 38);
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(closeX, closeY, 25, 25);
+        ctx.strokeRect(closeX, closeY, 38, 38);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 27px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('×', closeX + 12.5, closeY + 12.5);
+        ctx.fillText('×', closeX + 19, closeY + 19);
         
         // Tabs
-        const tabY = panelY + 42;
-        const tabHeight = 32;
+        const tabY = panelY + 49;
+        const tabHeight = 48;
         const tabWidth = (panelWidth - 40) / 2;
         const tabGap = 0;
         
@@ -6092,7 +6106,7 @@ class UpgradesMenu {
             ctx.strokeRect(tabX, tabY, tabWidth, tabHeight);
             
             // Tab text - brighter if hovered
-            ctx.font = isActive ? 'bold 13px Arial' : (tab.hovered ? 'bold 13px Arial' : '13px Arial');
+            ctx.font = isActive ? 'bold 19px Arial' : (tab.hovered ? 'bold 19px Arial' : '19px Arial');
             ctx.fillStyle = isActive ? '#ffd700' : (tab.hovered ? '#d4a574' : '#b89968');
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -6101,8 +6115,8 @@ class UpgradesMenu {
         
         // Render category filter buttons (only in buy tab)
         if (this.activeTab === 'buy') {
-            const categoryY = panelY + 74;
-            const categoryHeight = 25;
+            const categoryY = panelY + 97;
+            const categoryHeight = 38;
             const categoryButtonWidth = (panelWidth - 40) / this.buyCategories.length;
             
             this.buyCategories.forEach((category, index) => {
@@ -6119,7 +6133,7 @@ class UpgradesMenu {
                 ctx.strokeRect(categoryX, categoryY, categoryButtonWidth, categoryHeight);
                 
                 // Button text
-                ctx.font = isActive ? 'bold 11px Arial' : '11px Arial';
+                ctx.font = isActive ? 'bold 17px Arial' : '17px Arial';
                 ctx.fillStyle = isActive ? '#ffd700' : '#b89968';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
@@ -6128,15 +6142,15 @@ class UpgradesMenu {
         }
         
         // Content area based on active tab - expanded to fill space
-        const contentY = panelY + 78 + (this.activeTab === 'buy' ? 30 : 0);
-        const contentHeight = panelHeight - 140 - (this.activeTab === 'buy' ? 30 : 0);
+        const contentY = panelY + 100 + (this.activeTab === 'buy' ? 38 : 0);
+        const contentHeight = panelHeight - 165 - (this.activeTab === 'buy' ? 38 : 0);
         
         this.renderTabContent(ctx, panelX, contentY, panelWidth, contentHeight);
         
         // Pagination controls
         const maxPages = this.getMaxPages();
         if (maxPages > 1) {
-            this.renderPaginationControls(ctx, panelX, panelY + panelHeight - 50, panelWidth);
+            this.renderPaginationControls(ctx, panelX, panelY + panelHeight - 62, panelWidth);
         }
         
         // Store panel info for coordinate calculations
@@ -6230,7 +6244,7 @@ class UpgradesMenu {
         ctx.fill();
         
         // Gold amount text next to chest - ENHANCED STYLING
-        ctx.font = 'bold 16px Arial';
+        ctx.font = 'bold 24px Arial';
         ctx.fillStyle = '#ffed4e';  // Brighter gold
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
@@ -6256,7 +6270,7 @@ class UpgradesMenu {
         // Better spacing calculations for 3-column layout
         const horizontalPadding = 20;
         const verticalPadding = 15;
-        const gridSpacing = 10;
+        const gridSpacing = 12;
         
         const availableWidth = panelWidth - (horizontalPadding * 2);
         const availableHeight = contentHeight - (verticalPadding * 2);
@@ -6322,8 +6336,8 @@ class UpgradesMenu {
         
         // Determine icon size and name font based on tab
         const isSellTab = this.activeTab === 'sell';
-        const iconSize = isSellTab ? 28 : 24;
-        const nameFontSize = isSellTab ? 12 : 11;
+        const iconSize = isSellTab ? 42 : 36;
+        const nameFontSize = isSellTab ? 18 : 17;
         
         // Icon
         if (typeof item.drawIcon === 'function') {
@@ -6364,8 +6378,8 @@ class UpgradesMenu {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         
-        const nameY = y + (isSellTab ? 38 : 32);
-        const maxCharsPerLine = 15;
+        const nameY = y + (isSellTab ? 57 : 48);
+        const maxCharsPerLine = 18;
         if (item.name.length > maxCharsPerLine) {
             const words = item.name.split(' ');
             let line1 = '', line2 = '';
@@ -6378,15 +6392,15 @@ class UpgradesMenu {
             }
             ctx.fillText(line1, x + width / 2, nameY);
             if (line2) {
-                ctx.fillText(line2, x + width / 2, nameY + 12);
+                ctx.fillText(line2, x + width / 2, nameY + 18);
             }
         } else {
             ctx.fillText(item.name, x + width / 2, nameY);
         }
         
         // ===== SCROLLABLE DESCRIPTION BOX AT TOP (SMALLER, FIXED HEIGHT) =====
-        const descBoxStartY = nameY + 30;
-        const descBoxHeight = 50; // Fixed smaller size for scrollable textbox
+        const descBoxStartY = nameY + 45;
+        const descBoxHeight = 75; // Fixed smaller size for scrollable textbox
         const textPadding = 4;
         
         // Description box background
@@ -6458,12 +6472,12 @@ class UpgradesMenu {
         
         // ===== EFFECTS SECTION AT BOTTOM (BEFORE BUTTON) =====
         const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
-        const effectBoxHeight = (height - 32) - (descBoxStartY + descBoxHeight + 2);
+        const effectBoxHeight = (height - 47) - (descBoxStartY + descBoxHeight + 2);
         
         // Effects header/content
         if (item.effect) {
             // Effect text with bullet points
-            ctx.font = 'bold 10px Arial';
+            ctx.font = 'bold 15px Arial';
             ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
@@ -6471,7 +6485,7 @@ class UpgradesMenu {
             // Split effect by newlines first, then wrap each line if needed
             const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const effectLines = [];
-            const effectCharPerLine = Math.floor((width - 16) / 4.5);
+            const effectCharPerLine = Math.floor((width - 16) / 7);
             
             for (const rawLine of rawEffectLines) {
                 const wrappedLines = this.wrapText(rawLine, effectCharPerLine);
@@ -6479,9 +6493,9 @@ class UpgradesMenu {
             }
             
             const effectTextStartY = effectBoxStartY + 2;
-            for (let i = 0; i < Math.min(effectLines.length, 3); i++) {
+            for (let i = 0; i < Math.min(effectLines.length, 2); i++) {
                 const bulletText = '• ' + effectLines[i];
-                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 12));
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 18));
             }
         }
         
@@ -6493,9 +6507,9 @@ class UpgradesMenu {
         
         // Action button
         const buttonWidth = width - 14;
-        const buttonHeight = 24;
+        const buttonHeight = 36;
         const buttonX = x + 7;
-        const buttonY = y + height - 32;
+        const buttonY = y + height - 47;
         
         // Sell tab uses a slightly different button color scheme (amber-green) to indicate receiving gold
         const isSellButton = this.activeTab === 'sell';
@@ -6520,32 +6534,32 @@ class UpgradesMenu {
         }
         
         const buttonCenterY = buttonY + buttonHeight / 2;
-        const coinRadius = 5;
+        const coinRadius = 8;
         
         if (isSellButton) {
             // Sell button: "SELL" label on left, coin+price on right
             const labelColor = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#a0cc80');
-            ctx.font = 'bold 9px Arial';
+            ctx.font = 'bold 14px Arial';
             ctx.fillStyle = labelColor;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillText('SELL', buttonX + 6, buttonCenterY);
             // Coin + price on right side
-            const coinX = buttonX + buttonWidth - 28;
+            const coinX = buttonX + buttonWidth - 37;
             const priceTextX = coinX + coinRadius + 3;
             this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius,
                                       isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
-            ctx.font = 'bold 11px Arial';
+            ctx.font = 'bold 17px Arial';
             ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
             ctx.textAlign = 'left';
             ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
         } else {
             // Buy button: coin icon + price centered
-            ctx.font = 'bold 13px Arial';
+            ctx.font = 'bold 19px Arial';
             ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            const coinX = buttonX + buttonWidth / 2 - 12;
+            const coinX = buttonX + buttonWidth / 2 - 17;
             const priceTextX = buttonX + buttonWidth / 2 + 2;
             this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius,
                                       isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
@@ -6588,7 +6602,7 @@ class UpgradesMenu {
         ctx.strokeRect(x, y, width, height);
         
         // Icon - PROMINENT at top
-        const iconSize = 28;
+        const iconSize = 42;
         if (typeof item.drawIcon === 'function') {
             item.drawIcon(ctx, x + width / 2, y + 6 + iconSize * 0.5, iconSize);
         } else if (item.icon) {
@@ -6600,13 +6614,13 @@ class UpgradesMenu {
         }
         
         // Item name - centered below icon
-        ctx.font = 'bold 11px Arial';
+        ctx.font = 'bold 17px Arial';
         ctx.fillStyle = isDisabled ? '#8a8a8a' : '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         
-        const nameY = y + 38;
-        const maxCharsPerLine = 15;
+        const nameY = y + 57;
+        const maxCharsPerLine = 18;
         if (item.name.length > maxCharsPerLine) {
             const words = item.name.split(' ');
             let line1 = '', line2 = '';
@@ -6619,15 +6633,15 @@ class UpgradesMenu {
             }
             ctx.fillText(line1, x + width / 2, nameY);
             if (line2) {
-                ctx.fillText(line2, x + width / 2, nameY + 12);
+                ctx.fillText(line2, x + width / 2, nameY + 18);
             }
         } else {
             ctx.fillText(item.name, x + width / 2, nameY);
         }
         
         // ===== SCROLLABLE DESCRIPTION BOX =====
-        const descBoxStartY = nameY + 30;
-        const descBoxHeight = 50;
+        const descBoxStartY = nameY + 45;
+        const descBoxHeight = 75;
         const textPadding = 4;
         
         // Description box background
@@ -6699,11 +6713,11 @@ class UpgradesMenu {
         
         // ===== EFFECTS SECTION AT BOTTOM =====
         const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
-        const effectBoxHeight = (height - 32) - (descBoxStartY + descBoxHeight + 2);
+        const effectBoxHeight = (height - 47) - (descBoxStartY + descBoxHeight + 2);
         
         // Effects header/content
         if (item.effect) {
-            ctx.font = 'bold 10px Arial';
+            ctx.font = 'bold 15px Arial';
             ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
@@ -6712,10 +6726,10 @@ class UpgradesMenu {
             const effectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             
             const effectTextStartY = effectBoxStartY + 2;
-            const maxEffectLines = 3;
+            const maxEffectLines = 2;
             for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
                 const bulletText = '• ' + effectLines[i];
-                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 12));
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 18));
             }
         }
         
@@ -6734,9 +6748,9 @@ class UpgradesMenu {
         
         // Action button
         const buttonWidth = width - 14;
-        const buttonHeight = 24;
+        const buttonHeight = 36;
         const buttonX = x + 7;
-        const buttonY = y + height - 32;
+        const buttonY = y + height - 47;
         
         // Button beveled effect
         ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? '#8b6f47' : '#5a4a3a');
@@ -6751,15 +6765,15 @@ class UpgradesMenu {
         ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
         // Render coin icon and price
-        ctx.font = 'bold 13px Arial';
+        ctx.font = 'bold 19px Arial';
         ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         
         // Draw coin icon and price text
         const buttonCenterY = buttonY + buttonHeight / 2;
-        const coinRadius = 5;
-        const coinX = buttonX + buttonWidth / 2 - 12;
+        const coinRadius = 8;
+        const coinX = buttonX + buttonWidth / 2 - 17;
         const priceTextX = buttonX + buttonWidth / 2 + 2;
         this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius, 
                                   isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
@@ -6768,9 +6782,9 @@ class UpgradesMenu {
     }
 
     renderPaginationControls(ctx, panelX, y, panelWidth) {
-        const arrowSize = 25;
+        const arrowSize = 38;
         const leftArrowX = panelX + 20;
-        const rightArrowX = panelX + panelWidth - 45;
+        const rightArrowX = panelX + panelWidth - 57;
         const maxPages = this.getMaxPages();
         
         // Left arrow with beveled effect
@@ -6785,7 +6799,7 @@ class UpgradesMenu {
         ctx.lineWidth = 2;
         ctx.strokeRect(leftArrowX, y, arrowSize, arrowSize);
         
-        ctx.font = 'bold 16px Arial';
+        ctx.font = 'bold 24px Arial';
         ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -6803,14 +6817,14 @@ class UpgradesMenu {
         ctx.lineWidth = 2;
         ctx.strokeRect(rightArrowX, y, arrowSize, arrowSize);
         
-        ctx.font = 'bold 16px Arial';
+        ctx.font = 'bold 24px Arial';
         ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('▶', rightArrowX + arrowSize / 2, y + arrowSize / 2);
         
         // Page indicator
-        ctx.font = 'bold 12px Arial';
+        ctx.font = 'bold 18px Arial';
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
