@@ -398,10 +398,12 @@ export class TowerManager {
             }
         }
         
-        // If upgrades changed, recalculate all tower stats
+        // If upgrades changed, recalculate all tower stats and mine income
         if (upgradesChanged) {
             this.recalculateAllTowerStats();
             this._towerStatsNeedUpdate = true;
+            // Also mark building manager dirty so mine income multiplier is recalculated
+            this.buildingManager._upgradesDirty = true;
         }
         
         // Detect new towers added

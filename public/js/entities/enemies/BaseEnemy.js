@@ -10,8 +10,8 @@ export class BaseEnemy {
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
-        this.lootDropChance = 0.005; // 1% chance to drop normal loot on death (0-1)
-        this.rareLootDropChance = 0.0125; // 0.25% chance to drop rare loot on death (0-1)
+        this.lootDropChance = 0.01; // 1/100 base chance to drop normal loot on death (0-1)
+        this.rareLootDropChance = 0.001; // 1/1000 base chance to drop rare loot on death (0-1)
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;

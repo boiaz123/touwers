@@ -340,16 +340,21 @@ export class UnlockSystem {
     }
     
     getMineIncomeMultiplier() {
-        // Base income: 1x
-        // Forge level 1: 1.5x
-        // Forge level 2: 2x
-        // Forge level 3: 2.5x
-        // Forge level 4+: 3x + 0.2x per additional level
-        if (this.forgeLevel === 0) return 1;
-        if (this.forgeLevel === 1) return 1.5;
-        if (this.forgeLevel === 2) return 2.0;
-        if (this.forgeLevel === 3) return 2.5;
-        return 3.0 + (this.forgeLevel - 4) * 0.2;
+        // Matches TowerForge.getMineIncomeMultiplier() exactly for consistent display
+        // Level 1 (just built): 1.0x (no bonus yet)
+        // Level 2: 2.0x (doubles income)
+        // Level 3: 2.5x
+        // Level 4: 3.0x
+        // Level 5: 3.5x
+        switch(this.forgeLevel) {
+            case 0: return 1.0;
+            case 1: return 1.0;
+            case 2: return 2.0;
+            case 3: return 2.5;
+            case 4: return 3.0;
+            case 5: return 3.5;
+            default: return 1.0;
+        }
     }
     
     getForgeUpgradeInfo() {

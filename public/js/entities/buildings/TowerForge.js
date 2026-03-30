@@ -1238,6 +1238,9 @@ export class TowerForge extends Building {
         gameState.gold -= cost;
         this.forgeLevel++;
         
+        // Notify that upgrades changed so building manager recalculates mine income multiplier
+        this.notifyUpgradeChanged();
+        
         return true;
     }
     

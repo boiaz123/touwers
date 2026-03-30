@@ -1510,8 +1510,8 @@ export class UIManager {
                 effectsList.push(`Trebuchet: +${forge.upgrades.cannon.level * 10}`);
             }
             
-            // Calculate forge-level benefits
-            const goldMineCount = forge.forgeLevel >= 5 ? 3 : (forge.forgeLevel >= 3 ? 3 : 1);
+            // Calculate forge-level benefits (matches UnlockSystem.getMaxMines() logic)
+            const goldMineCount = forge.forgeLevel >= 5 ? 3 : (forge.forgeLevel >= 3 ? 2 : 1);
             const incomeMultiplier = forge.getMineIncomeMultiplier();
             
             contentHTML += `
