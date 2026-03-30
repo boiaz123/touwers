@@ -301,14 +301,14 @@ export class ResultsScreen {
             // Score counts up in the final 35% of countup — appears after other stats
             const scoreDelay = 0.65;
             const scoreProgress = Math.max(0, Math.min((progress - scoreDelay) / (1.0 - scoreDelay), 1));
-            const finalScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
+            const finalScore = this._calculateFinalScore();
             this.stats.displayScore = Math.floor(finalScore * scoreProgress);
         } else if (this.animationPhase === 'loot' || this.animationPhase === 'buttons') {
             this.stats.displayEnemiesSlain = this.stats.enemiesSlain;
             this.stats.displayGoldEarned = this.stats.goldEarned;
             this.stats.displayGoldRemaining = this.stats.goldRemaining;
             this.stats.displayTimeTaken = this.stats.timeTaken;
-            this.stats.displayScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
+            this.stats.displayScore = this._calculateFinalScore();
         }
 
         // Update loot animations - synced with lootAnimationTime to match renderLoot timing
@@ -1410,7 +1410,7 @@ export class ResultsScreen {
         });
 
         const displayScore = this.stats.displayScore || 0;
-        const finalScore = Math.floor(this.stats.enemiesSlain * 10 + this.stats.goldEarned * 0.5);
+        const finalScore = this._calculateFinalScore();
         const scoreRatio = finalScore > 0 ? displayScore / finalScore : 1;
 
         // "BATTLE SCORE" label — left-aligned inside the banner
@@ -1448,6 +1448,21 @@ export class ResultsScreen {
         ctx.restore();
 
         ctx.textAlign = 'left';
+    }
+
+    /**
+     * Calculate the final battle score based on performance metrics.
+     * Rewards: enemies slain, fast completion, gold efficiency, and economic output.
+     */
+    _calculateFinalScore() {
+        const enemiesScore = this.stats.enemiesSlain * 10;
+        // Time bonus: up to 5000 for instant completion, -5 per second elapsed
+        const timeBonus = Math.max(0, 5000 - this.stats.timeTaken * 5);
+        // Gold surplus bonus: reward spending wisely and keeping reserves
+        const goldBonus = Math.floor(this.stats.goldRemaining * 2);
+        // Economy bonus: reward high total gold throughput
+        const economyBonus = Math.floor(this.stats.goldEarned * 0.5);
+        return enemiesScore + timeBonus + goldBonus + economyBonus;
     }
 
     _drawSkullIcon(ctx, cx, cy, size) {

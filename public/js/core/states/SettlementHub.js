@@ -267,7 +267,7 @@ export class SettlementHub {
             },
 
             // === GUARD POST QUARTERS (BARRACKS) ===
-            // Left side positions
+            // Left cluster
             {
                 building: new GuardPost(centerX - 260, centerY - 20, 0, 0),
                 scale: 0.65,
@@ -280,7 +280,6 @@ export class SettlementHub {
                 clickable: false,
                 action: null
             },
-            
             {
                 building: new GuardPost(centerX - 220, centerY + 20, 0, 0),
                 scale: 0.65,
@@ -293,31 +292,28 @@ export class SettlementHub {
                 clickable: false,
                 action: null
             },
-            
             {
                 building: new GuardPost(centerX - 180, centerY + 15, 0, 0),
-                scale: 0.6,
+                scale: 0.65,
                 clickable: false,
                 action: null
             },
-
+            // Right cluster
             {
                 building: new GuardPost(centerX + 165, centerY + 15, 0, 0),
-                scale: 0.6,
+                scale: 0.65,
                 clickable: false,
                 action: null
             },
-
             {
                 building: new GuardPost(centerX + 180, centerY + 35, 0, 0),
-                scale: 0.6,
+                scale: 0.65,
                 clickable: false,
                 action: null
             },
-
             {
                 building: new GuardPost(centerX + 240, centerY + 20, 0, 0),
-                scale: 0.6,
+                scale: 0.65,
                 clickable: false,
                 action: null
             }
@@ -1654,25 +1650,37 @@ export class SettlementHub {
         const centerX = canvas.width / 2;
         const centerY = canvas.height * 0.76;  // Ground level, lower
 
-        // Render decorative terrain (trees and rocks) - behind everything
+        // Exterior trees behind the wall — sorted by Y so distant ones draw first
         this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
 
-        // Render 3D palisade walls - foundation layer (behind paths and buildings)
+        // Back-arc (upper/rear half) exterior wall decoration drawn BEFORE the wall
+        // so it correctly appears behind the wall structure
+        this.renderWallExteriorDecoration(ctx, centerX, centerY, false);
+
+        // Render 3D palisade walls (includes guard towers in front)
         this.renderEllipticalPalisade(ctx, canvas, centerX, centerY);
 
-        // Render paths INSIDE the walls - clipped to ellipse interior
+        // Front-arc (lower/front half) exterior wall decoration drawn AFTER the wall
+        // so it correctly appears in front of the wall base for proper perspective
+        this.renderWallExteriorDecoration(ctx, centerX, centerY, true);
+
+        // Render interior elements clipped tightly to the wall ellipse
         ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 360, 140);
-        this.renderSettlementPaths(ctx, canvas, centerX, centerY);
+        this.createEllipseClipPath(ctx, centerX, centerY, 358, 138);
+        this.renderSettlementPaths(ctx, canvas, centerX, centerY);   // floor surface + fountain
         // Details (crates, barrels, shrubs) drawn ON TOP of paths, still inside wall clip
         this.renderSettlementDetails(ctx, centerX, centerY);
         ctx.restore();
 
-        // Render interior decorative buildings clipped to ellipse so they don't poke through walls
+        // Render interior decorative buildings clipped well inside the wall inner face
         ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 364, 144);
+        this.createEllipseClipPath(ctx, centerX, centerY, 356, 136);
         this.renderSettlementBuildings(ctx, canvas, true);
         ctx.restore();
+
+        // Re-render front-arc wall posts + horizontal rail + gate + guard towers on top of
+        // all interior content so they correctly occlude interior buildings
+        this.renderFrontWallOverlay(ctx, canvas, centerX, centerY);
 
         // Render exterior/clickable buildings without clipping (TrainingGrounds, Castle — intentionally outside)
         this.renderSettlementBuildings(ctx, canvas, false);
@@ -1771,81 +1779,173 @@ export class SettlementHub {
         ctx.clip();
     }
 
+    /**
+     * Scatter rocks and small shrubs around the OUTSIDE of the elliptical wall.
+     * @param {boolean} frontHalf - true = lower/front arc (rendered after wall),
+     *                              false = upper/rear arc (rendered before wall)
+     */
+    renderWallExteriorDecoration(ctx, centerX, centerY, frontHalf) {
+        const rX = 360;
+        const rY = 140;
+        const total = 64; // candidate positions around the full perimeter
+
+        for (let i = 0; i < total; i++) {
+            const angle = (i / total) * Math.PI * 2;
+            const sinA = Math.sin(angle);
+            const cosA = Math.cos(angle);
+
+            // Front half: sin > 0  (bottom arc, higher Y, closer to viewer)
+            // Back  half: sin <= 0 (top  arc, lower  Y, further from viewer)
+            if (frontHalf  && sinA <= 0.05) continue;
+            if (!frontHalf && sinA >  0.05) continue;
+
+            // Skip gate gap (bottom-center) — gate is at angle ≈ π/2
+            const normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            if (normAngle > 1.26 && normAngle < 1.88) continue; // ~72-108 deg
+
+            // Skip guard-tower flanking zones (centerX ± ~120 px at the very bottom)
+            if (sinA > 0.88 && Math.abs(cosA * rX) < 150) continue;
+
+            // Deterministic LCG values from index — stable across frames
+            let s = (i * 1664525 + 1013904223) >>> 0;
+            const r1 = (s >>> 0) / 0x100000000;
+            s = (s * 1664525 + 1013904223) >>> 0;
+            const r2 = (s >>> 0) / 0x100000000;
+            s = (s * 1664525 + 1013904223) >>> 0;
+            const r3 = (s >>> 0) / 0x100000000;
+
+            // Outset radially from wall surface, with tangential scatter
+            const outset  = 20 + r1 * 32;        // 20-52 px outside the wall
+            const tangent = (r2 - 0.5) * 22;     // ±11 px tangential jitter
+            const wx = centerX + (rX + outset) * cosA + (-sinA) * tangent;
+            const wy = centerY + (rY + outset) * sinA + cosA   * tangent;
+
+            // Item type: 0 = medium rock, 1 = shrub, 2 = small rock
+            const type = Math.floor(r3 * 3);
+
+            if (type === 1) {
+                // Shrub — reuse existing helper
+                const r = 5 + r2 * 7;
+                this.renderShrub(ctx, wx, wy, r);
+            } else {
+                // Rock (medium or small)
+                const size = type === 0 ? (9 + r1 * 10) : (4 + r2 * 7);
+                const tone = 92 + Math.floor(r3 * 32);
+                const rot  = r1 * 1.5;
+
+                ctx.fillStyle = `rgb(${tone},${tone - 11},${tone - 24})`;
+                ctx.beginPath();
+                ctx.ellipse(wx, wy, size * 0.72, size * 0.44, rot, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Shadow underside
+                ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                ctx.beginPath();
+                ctx.ellipse(wx + 1, wy + 2, size * 0.66, size * 0.30, rot, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.13)';
+                ctx.beginPath();
+                ctx.ellipse(wx - size * 0.18, wy - size * 0.14, size * 0.28, size * 0.16, rot, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
     renderEllipticalPalisade(ctx, canvas, centerX, centerY) {
         // Simple vertical stick palisade with 3D trunk texture
         const radiusX = 360;
         const radiusY = 140;
         
-        // ── Village foundation – layered earth/stone base ────────────────────────
-        // Deep shadow drop beneath the foundation
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.30)';
+        // ─────────────────────────────────────────────────────────────────────────
+        // FOUNDATION — prominent earth rampart with stone footing
+        // Drawn back-to-front so layers stack correctly
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // Outermost cast shadow from the entire rampart mass
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
         ctx.beginPath();
-        ctx.ellipse(centerX + 5, centerY + 22, radiusX + 26, radiusY + 26, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX + 6, centerY + 28, radiusX + 34, radiusY + 34, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Outermost rough-earth berm layer
-        ctx.fillStyle = '#6b5230';
+        // Wide outer earth berm — darkest EARTH colour
+        ctx.fillStyle = '#5c4424';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 10, radiusX + 32, radiusY + 32, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Second berm layer — mid-earth tone, raised slightly
+        ctx.fillStyle = '#7a5c38';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 6, radiusX + 24, radiusY + 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rampart face — packed warm earth
+        ctx.fillStyle = '#96784c';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 2, radiusX + 16, radiusY + 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle contour-line shadow (makes the rampart look curved/3-D)
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY + 4, radiusX + 18, radiusY + 18, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.ellipse(centerX, centerY + 8, radiusX + 26, radiusY + 26, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.stroke();
 
-        // Mid earth – slightly lighter
-        ctx.fillStyle = '#80643e';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 4, radiusX + 20, radiusY + 20, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Upper berm face – warm packed earth
-        ctx.fillStyle = '#9a7d52';
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, radiusX + 14, radiusY + 12, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Foundation stone ring – draw small irregular stone blocks around perimeter
-        const stoneCount = 48;
-        for (let i = 0; i < stoneCount; i++) {
-            const angle = (i / stoneCount) * Math.PI * 2;
-            const jitter = ((i * 1237 + 5) % 7) - 3.5;  // deterministic offset
-            const stoneX = centerX + (radiusX + 16) * Math.cos(angle);
-            const stoneY = centerY + (radiusY + 16) * Math.sin(angle);
-            const stoneW = 14 + ((i * 397) % 8);
-            const stoneH = 6 + ((i * 631) % 4);
-            const tone = 105 + (i * 47) % 30;
-            ctx.save();
-            ctx.translate(stoneX, stoneY);
-            ctx.rotate(angle);
-            ctx.fillStyle = `rgb(${tone}, ${tone - 12}, ${tone - 28})`;
-            ctx.fillRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, stoneH);
-            ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-            ctx.lineWidth = 0.8;
-            ctx.strokeRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, stoneH);
-            // Crest highlight on each stone
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
-            ctx.fillRect(-stoneW / 2, -stoneH / 2 + jitter * 0.4, stoneW, 2);
-            ctx.restore();
+        // ── ROUGH EARTH EDGE — irregular speckled texture on the berm face ──────
+        // Instead of a stone block ring (which looks like planks at the front),
+        // we speckle small earth-tone patches along the berm to give an organic texture.
+        const speckSeed = 7919;
+        const speckCount = 90;
+        for (let i = 0; i < speckCount; i++) {
+            const si = (i * speckSeed) & 0xFFFF;
+            // Distribute along perimeter at varying radial depths (inside the berm)
+            const ang = (i / speckCount) * Math.PI * 2 + (si % 100) * 0.001;
+            const radDepth = 10 + (si % 18);  // 10–28px inside the outer berm edge
+            const rX = centerX + (radiusX + 28 - radDepth) * Math.cos(ang);
+            const rY = centerY + (radiusY + 28 - radDepth) * Math.sin(ang) + 4;
+            const sW = 5 + (si % 7);
+            const sH = 3 + (si % 4);
+            const tone = 65 + (si % 22);  // dark earth speck colours
+            ctx.fillStyle = `rgba(${tone}, ${tone - 8}, ${tone - 18}, 0.55)`;
+            ctx.beginPath();
+            ctx.ellipse(rX, rY, sW, sH, ang, 0, Math.PI * 2);
+            ctx.fill();
         }
 
-        // Gravel/grit strip just inside the stone ring
-        ctx.strokeStyle = '#c4aa80';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([6, 8]);
+        // Berm edge — a ridge line where the outer earth bank peaks
+        // Draw as a slightly lighter thick ellipse stroke, no rotation artifacts
+        ctx.strokeStyle = '#b09060';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 2, radiusX + 8, radiusY + 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY + 2, radiusX + 18, radiusY + 18, 0, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.setLineDash([]);
 
-        // Inner earth surface – slightly darker packed dirt
-        ctx.fillStyle = '#8c7048';
+        // Rampart crest — packed-gravel / soil strip, slightly elevated inner shelf
+        ctx.fillStyle = '#8a6c44';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 2, radiusX + 6, radiusY + 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY - 1, radiusX + 10, radiusY + 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Crest edge highlight (soil meets palisade base)
-        ctx.strokeStyle = '#b8975a';
-        ctx.lineWidth = 2;
+        // Crest top-light (warm sunlight catching the top of the earth bank)
+        ctx.strokeStyle = '#c8a870';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 4, radiusX + 3, radiusY + 1, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX - 2, centerY - 3, radiusX + 6, radiusY + 4, 0, 0, Math.PI * 2);
         ctx.stroke();
+
+        // Inner soil collar — dark packed earth band immediately inside palisade base
+        ctx.fillStyle = '#6e5632';
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY - 3, radiusX + 3, radiusY + 1, 0, 0, Math.PI * 2);
+        ctx.fill();
         
         // Draw vertical STICK posts around the ellipse with 3D trunk texture
         // Render in proper z-order: back posts first, then sides, then front for natural layering
@@ -1872,8 +1972,9 @@ export class SettlementHub {
         // Sort posts by Y position (depth) - back (smaller Y) to front (larger Y)
         posts.sort((a, b) => a.y - b.y);
         
-        // Render posts in depth order
-        posts.forEach(post => {
+        // Back-arc posts only — front-arc posts are re-drawn last via renderFrontWallOverlay
+        // so they always appear in front of interior settlement buildings
+        posts.filter(p => p.y <= centerY).forEach(post => {
             const { x, y, i } = post;
             
             // Draw 3D trunk with texture - alternate slightly taller posts for handbuilt look
@@ -1915,29 +2016,90 @@ export class SettlementHub {
             ctx.lineTo(x + postWidth/2, y - postHeight);
             ctx.fill();
         });
+        // Note: horizontal rail, gate, and guard towers are rendered in renderFrontWallOverlay
+    }
+    
+    renderFrontWallOverlay(ctx, canvas, centerX, centerY) {
+        // Renders the front-facing wall posts, horizontal rail, gate, and guard towers
+        // Called AFTER all interior content so these elements always draw on top
+        const radiusX = 360;
+        const radiusY = 140;
 
-        // Horizontal connecting rail near top of posts (rope/beam look)
-        // Draw the rail as a dark-brown ellipse outline slightly inside the post ring
+        const postSpacing = 18;
+        const perimeter = Math.PI * (radiusX + radiusY) * 1.5;
+        const postCount = Math.ceil(perimeter / postSpacing);
+
+        const posts = [];
+        for (let i = 0; i < postCount; i++) {
+            const angle = (i / postCount) * Math.PI * 2;
+            const x = centerX + radiusX * Math.cos(angle);
+            const y = centerY + radiusY * Math.sin(angle);
+
+            const distFromCenterGate = Math.abs(x - centerX);
+            if (distFromCenterGate < 50 && y > centerY + radiusY - 20) continue;
+
+            // Only render the front arc (y > centerY) in this overlay pass
+            if (y <= centerY) continue;
+
+            posts.push({ x, y, angle, i });
+        }
+
+        posts.sort((a, b) => a.y - b.y);
+
+        posts.forEach(post => {
+            const { x, y, i } = post;
+            const postWidth = 12;
+            const postHeight = 60 + (i % 3 === 0 ? 6 : 0);
+
+            ctx.fillStyle = '#4a3a2a';
+            ctx.fillRect(x - postWidth/2 - 3, y - postHeight, 3, postHeight);
+
+            ctx.fillStyle = '#6b5a47';
+            ctx.fillRect(x - postWidth/2, y - postHeight, postWidth, postHeight);
+
+            ctx.fillStyle = '#8b7a67';
+            ctx.fillRect(x + postWidth/2, y - postHeight, 2, postHeight);
+
+            ctx.strokeStyle = '#4a3a2a';
+            ctx.lineWidth = 1;
+            for (let g = 0; g < postHeight; g += 6) {
+                ctx.beginPath();
+                ctx.moveTo(x - postWidth/2 + 2, y - postHeight + g);
+                ctx.lineTo(x - postWidth/2 + 2, y - postHeight + g + 4);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(x + postWidth/2 - 2, y - postHeight + g);
+                ctx.lineTo(x + postWidth/2 - 2, y - postHeight + g + 4);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#5a4a37';
+            ctx.beginPath();
+            ctx.moveTo(x - postWidth/2, y - postHeight);
+            ctx.lineTo(x, y - postHeight - 5);
+            ctx.lineTo(x + postWidth/2, y - postHeight);
+            ctx.fill();
+        });
+
+        // Horizontal connecting rail — drawn over all posts and interior content
         ctx.strokeStyle = '#4a3a2a';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.ellipse(centerX, centerY - 46, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
         ctx.stroke();
-        // Rail highlight
         ctx.strokeStyle = '#7a6040';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(centerX, centerY - 48, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
         ctx.stroke();
-        
-        // Draw single integrated GATE in the middle of the front wall
+
+        // Gate and guard towers — always topmost front elements
         this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5);
-        
-        // Draw GUARD TOWERS on either side of gate - properly scaled
         this.renderGuardTowerWithBase(ctx, centerX - 120, centerY + radiusY + 15);
         this.renderGuardTowerWithBase(ctx, centerX + 120, centerY + radiusY + 15);
     }
-    
+
     renderIntegratedGate(ctx, x, y) {
         // Gate integrated into wall structure - part of the wall
         const gateWidth = 55;
@@ -3254,17 +3416,9 @@ export class SettlementHub {
     }
 
     renderSettlementTerrain(ctx, canvas, centerX, centerY) {
-        // Render decorative terrain elements within the settlement boundary
-        // Boundary: ellipse center (centerX, centerY), radiusX=360, radiusY=140
-        
-        // Paths are now rendered separately in renderSettlementScene() for proper layering
-        
-        // Render GuardPost living quarters around the settlement interior
-        // These represent barracks and living areas for defenders
-        this.renderGuardPostQuarters(ctx, centerX, centerY);
-        
-        // Flower beds and gardens - positioned within boundary
-        this.renderFlowerBeds(ctx, centerX, centerY);
+        // Render only EXTERIOR trees behind the settlement walls.
+        // Interior items (guard posts, flower beds, rocks, fountain) are handled
+        // in the clipped interior pass inside renderSettlementScene().
         
         // Scattered trees throughout the entire settlement area
         // Create a natural forest feel with many trees in various sizes and depths
@@ -3545,16 +3699,6 @@ export class SettlementHub {
             this.renderTree(ctx, treePos.x, treePos.y, treePos.size, gridX, gridY);
         });
 
-        // Small decorative rocks inside boundary
-        this.renderSimpleRock(ctx, centerX - 280, centerY + 95, 20);
-        this.renderSimpleRock(ctx, centerX + 280, centerY + 95, 20);
-        
-        // Additional scattered elements for depth - all within boundary
-        this.renderSimpleRock(ctx, centerX - 160, centerY + 110, 18);
-        this.renderSimpleRock(ctx, centerX + 160, centerY + 110, 18);
-        
-        // Well/fountain in center
-        this.renderWell(ctx, centerX, centerY + 5);
     }
 
     renderSettlementDetails(ctx, centerX, centerY) {
@@ -3567,75 +3711,60 @@ export class SettlementHub {
         // ── BARRELS near TowerForge ─────────────────────────────────────────────
         this.renderBarrel(ctx, centerX + 162, centerY - 50, 10);
         this.renderBarrel(ctx, centerX + 173, centerY - 52, 9);
-        this.renderBarrel(ctx, centerX + 215, centerY - 52, 10); // one more right side
+        this.renderBarrel(ctx, centerX + 215, centerY - 52, 10);
 
         // ── CRATES near Magic Academy (left side) ──────────────────────────────
         this.renderCrate(ctx, centerX - 175, centerY - 68, 11);
         this.renderCrate(ctx, centerX - 163, centerY - 68, 11);
         this.renderCrate(ctx, centerX - 168, centerY - 80, 10); // stacked
-        this.renderBarrel(ctx, centerX - 148, centerY - 62, 9); // barrel beside crates
+        this.renderBarrel(ctx, centerX - 148, centerY - 62, 9);
 
         // ── BACK OF SETTLEMENT (north, behind buildings) ───────────────────────
-        this.renderCrate(ctx, centerX - 280, centerY - 80, 11);
-        this.renderBarrel(ctx, centerX - 295, centerY - 75, 9);
-        this.renderBarrel(ctx, centerX - 265, centerY - 78, 10);
+        this.renderCrate(ctx, centerX - 265, centerY - 82, 11);
+        this.renderBarrel(ctx, centerX - 278, centerY - 78, 9);
+        this.renderBarrel(ctx, centerX - 252, centerY - 80, 10);
 
-        this.renderCrate(ctx, centerX + 270, centerY - 82, 11);
-        this.renderCrate(ctx, centerX + 282, centerY - 82, 11);
-        this.renderBarrel(ctx, centerX + 295, centerY - 78, 9);
+        this.renderCrate(ctx, centerX + 258, centerY - 84, 11);
+        this.renderCrate(ctx, centerX + 272, centerY - 84, 11);
+        this.renderBarrel(ctx, centerX + 285, centerY - 80, 9);
 
         this.renderCrate(ctx, centerX - 50, centerY - 78, 10);
         this.renderCrate(ctx, centerX + 38, centerY - 82, 10);
         this.renderBarrel(ctx, centerX - 5, centerY - 76, 9);
 
-        // ── SOUTH PATH – leading from plaza toward the gate ───────────────────
-        this.renderBarrel(ctx, centerX - 22, centerY + 80, 9);
-        this.renderBarrel(ctx, centerX - 10, centerY + 82, 10);
-        this.renderBarrel(ctx, centerX + 5, centerY + 84, 9);
-        this.renderCrate(ctx, centerX - 38, centerY + 90, 10);
-        this.renderCrate(ctx, centerX + 28, centerY + 88, 10);
+        // ── LEFT INNER AREA – pulled well away from the left wall ──────────────
+        this.renderBarrel(ctx, centerX - 280, centerY - 18, 9);
+        this.renderCrate(ctx, centerX - 290, centerY - 5, 10);
+        this.renderBarrel(ctx, centerX - 270, centerY + 22, 8);
+        this.renderCrate(ctx, centerX - 260, centerY + 48, 9);
 
-        // ── GATE AREA – immediately behind the gate ────────────────────────────
-        this.renderBarrel(ctx, centerX - 30, centerY + 108, 9);
-        this.renderBarrel(ctx, centerX + 22, centerY + 110, 9);
-        this.renderCrate(ctx, centerX - 15, centerY + 116, 8);
+        // ── RIGHT INNER AREA – pulled well away from the right wall ────────────
+        this.renderBarrel(ctx, centerX + 272, centerY - 18, 9);
+        this.renderBarrel(ctx, centerX + 285, centerY + 18, 8);
+        this.renderCrate(ctx, centerX + 270, centerY + 48, 9);
 
-        // ── LEFT INNER AREA ─────────────────────────────────────────────────────
-        this.renderBarrel(ctx, centerX - 310, centerY - 10, 9);
-        this.renderCrate(ctx, centerX - 320, centerY + 5, 10);
-        this.renderBarrel(ctx, centerX - 330, centerY + 30, 8);
-        this.renderCrate(ctx, centerX - 290, centerY + 55, 9);
-
-        // ── RIGHT INNER AREA ────────────────────────────────────────────────────
-        this.renderBarrel(ctx, centerX + 300, centerY - 10, 9);
-        this.renderBarrel(ctx, centerX + 318, centerY + 25, 8);
-        this.renderCrate(ctx, centerX + 305, centerY + 55, 9);
-
-        // ── SHRUBS/BUSHES spread naturally across the interior ─────────────────
+        // ── SHRUBS/BUSHES – kept safely inside, away from the perimeter ────────
         const shrubs = [
             // Back left cluster
-            { x: centerX - 300, y: centerY - 55, r: 9 },
-            { x: centerX - 250, y: centerY - 75, r: 8 },
-            { x: centerX - 330, y: centerY - 30, r: 10 },
+            { x: centerX - 270, y: centerY - 58, r: 9 },
+            { x: centerX - 235, y: centerY - 78, r: 8 },
+            { x: centerX - 295, y: centerY - 35, r: 9 },
             // Back right cluster
-            { x: centerX + 295, y: centerY - 60, r: 9 },
-            { x: centerX + 240, y: centerY - 78, r: 8 },
-            { x: centerX + 320, y: centerY - 30, r: 9 },
+            { x: centerX + 260, y: centerY - 62, r: 9 },
+            { x: centerX + 225, y: centerY - 80, r: 8 },
+            { x: centerX + 285, y: centerY - 35, r: 9 },
             // Back center
             { x: centerX - 90, y: centerY - 70, r: 7 },
             { x: centerX + 80, y: centerY - 72, r: 7 },
             // Mid left
-            { x: centerX - 200, y: centerY + 70, r: 9 },
-            { x: centerX - 260, y: centerY + 45, r: 8 },
+            { x: centerX - 185, y: centerY + 65, r: 8 },
+            { x: centerX - 240, y: centerY + 40, r: 8 },
             // Mid right
-            { x: centerX + 205, y: centerY + 65, r: 8 },
-            { x: centerX + 255, y: centerY + 42, r: 9 },
-            // South inner left/right
-            { x: centerX - 100, y: centerY + 95, r: 7 },
-            { x: centerX + 110, y: centerY + 92, r: 7 },
-            // Near gate sides
-            { x: centerX - 55, y: centerY + 112, r: 6 },
-            { x: centerX + 48, y: centerY + 114, r: 6 },
+            { x: centerX + 190, y: centerY + 60, r: 8 },
+            { x: centerX + 240, y: centerY + 35, r: 8 },
+            // South inner — only near the sides of the south path, clear of gate
+            { x: centerX - 95, y: centerY + 85, r: 7 },
+            { x: centerX + 100, y: centerY + 82, r: 7 },
         ];
         shrubs.forEach(s => this.renderShrub(ctx, s.x, s.y, s.r));
 
@@ -3643,9 +3772,8 @@ export class SettlementHub {
         const hayPositions = [
             { x: centerX + 155, y: centerY - 35 },
             { x: centerX - 155, y: centerY - 40 },
-            { x: centerX, y: centerY + 70 },
-            { x: centerX - 290, y: centerY + 18 },
-            { x: centerX + 285, y: centerY + 15 },
+            { x: centerX - 275, y: centerY + 10 },
+            { x: centerX + 265, y: centerY + 8 },
         ];
         hayPositions.forEach(h => {
             ctx.fillStyle = 'rgba(200, 170, 80, 0.35)';
