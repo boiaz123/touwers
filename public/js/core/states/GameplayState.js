@@ -352,11 +352,11 @@ export class GameplayState {
      */
     getCampaignLootConfig(campaignId) {
         switch (campaignId) {
-            case 'campaign-1': return { normalChance: 0.01,  rareChance: 0.0    }; // Woodlands: normal only, base rate
-            case 'campaign-2': return { normalChance: 0.01,  rareChance: 0.001  }; // Mountains: base rare introduced
-            case 'campaign-3': return { normalChance: 0.015, rareChance: 0.0015 }; // Desert: 1.5x rates
-            case 'campaign-4': return { normalChance: 0.02,  rareChance: 0.002  }; // Frog King: 2x rates
-            case 'campaign-5': return { normalChance: 0.02,  rareChance: 0.002  }; // Testing: 2x rates
+            case 'campaign-1': return { normalChance: 0.0167,  rareChance: 0.0    };
+            case 'campaign-2': return { normalChance: 0.0167,  rareChance: 0.001  }; 
+            case 'campaign-3': return { normalChance: 0.02, rareChance: 0.0015 }; 
+            case 'campaign-4': return { normalChance: 0.025,  rareChance: 0.002  }; 
+            case 'campaign-5': return { normalChance: 0.02,  rareChance: 0.002  }; 
             default:           return { normalChance: 0.01,  rareChance: 0.001  };
         }
     }
@@ -415,10 +415,7 @@ export class GameplayState {
             if (this.enemyManager && this.enemyManager.enemies) {
                 for (const enemy of this.enemyManager.enemies) {
                     if (enemy.lootDropChance !== undefined) {
-                        enemy.lootDropChance *= 2;
-                    }
-                    if (enemy.rareLootDropChance !== undefined) {
-                        enemy.rareLootDropChance *= 2;
+                        enemy.lootDropChance *= 2; // Double the base loot chance
                     }
                 }
             }
