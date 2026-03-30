@@ -146,6 +146,26 @@ export function initializeMusicRegistry() {
         }
     );
 
+    MusicRegistry.registerMusic(
+        'campaign-2-battle-2',
+        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-2',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-2-battle-3',
+        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle3.mp3',
+        {
+            loop: true,
+            category: 'campaign-2',
+            volume: 0.7
+        }
+    );
+
     // Campaign 3 (Desert) songs
     MusicRegistry.registerMusic(
         'campaign-3-battle-1',
@@ -160,6 +180,16 @@ export function initializeMusicRegistry() {
     MusicRegistry.registerMusic(
         'campaign-3-battle-2',
         'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle2.mp3',
+        {
+            loop: true,
+            category: 'campaign-3',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-3-battle-3',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle3.mp3',
         {
             loop: true,
             category: 'campaign-3',
