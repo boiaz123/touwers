@@ -880,142 +880,121 @@ export class LevelDesigner {
     }
 
     _drawForestBackground(ctx, w, h) {
-        // Forest floor — top-down, earthy tones clearly distinct from tree foliage greens
+        // Forest backdrop — matches game _renderForestBackdrop exactly
+        // Full forest floor — top-down, no sky. Rich layered greens, dark near camera.
         const ground = ctx.createLinearGradient(0, 0, 0, h);
-        ground.addColorStop(0,    '#2a4a14');
-        ground.addColorStop(0.30, '#1f3a0e');
-        ground.addColorStop(0.60, '#1a3010');
-        ground.addColorStop(1,    '#162c0e');
+        ground.addColorStop(0,    '#2a6012');
+        ground.addColorStop(0.32, '#1c460a');
+        ground.addColorStop(0.68, '#123206');
+        ground.addColorStop(1,    '#081a02');
         ctx.fillStyle = ground;
         ctx.fillRect(0, 0, w, h);
 
-        // Ground variation patches — moss, bare soil, pine needle beds, damp earth
-        // Colors deliberately avoid the tree greens (#2d5016, #4a7c2c, #2E7D32, #43A047)
+        // Large ground colour variation
         [
-            [0.10, 0.10, 0.10, 38, 58, 10, 0.32],   // olive moss — darker, more yellow
-            [0.32, 0.07, 0.08, 28, 20,  8, 0.28],   // bare dry earth
-            [0.56, 0.11, 0.09, 52, 42,  8, 0.26],   // pine needle ochre
-            [0.78, 0.09, 0.09, 34, 52, 10, 0.30],   // mossy ground
-            [0.16, 0.34, 0.09, 24, 16,  6, 0.24],   // dark bare soil
-            [0.44, 0.30, 0.10, 44, 38,  8, 0.26],   // mixed floor litter
-            [0.68, 0.36, 0.09, 56, 30,  8, 0.24],   // warm amber earth
-            [0.88, 0.28, 0.11, 32, 48, 10, 0.28],   // damp moss
-            [0.08, 0.56, 0.09, 34, 24,  8, 0.26],   // leaf litter shadow
-            [0.36, 0.54, 0.12, 28, 44, 10, 0.30],   // deep moss
-            [0.62, 0.58, 0.09, 22, 14,  6, 0.24],   // dark damp soil
-            [0.82, 0.50, 0.10, 48, 36,  8, 0.24],   // pine needle bed
-            [0.14, 0.76, 0.10, 30, 22,  8, 0.28],   // leaf litter warm
-            [0.48, 0.78, 0.09, 26, 40, 10, 0.26],   // moss patch
-            [0.74, 0.72, 0.11, 58, 26,  8, 0.22],   // warm sienna earth
-            [0.94, 0.68, 0.08, 30, 44, 10, 0.26],   // mossy edge
-        ].forEach(([fx, fy, fs, r, g, b, alpha]) => {
-            const px = w * fx, py = h * fy, rad = w * fs;
-            const pg = ctx.createRadialGradient(px, py, 0, px, py, rad);
-            pg.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
-            pg.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = pg;
-            ctx.beginPath();
-            ctx.ellipse(px, py, rad, rad * 0.62, Math.sin(fx * 4 + fy * 3) * 0.9, 0, Math.PI * 2);
-            ctx.fill();
+            [0.25, 0.18, 0.22, 'rgba(10,30,4,0.18)'],
+            [0.72, 0.24, 0.20, 'rgba(10,30,4,0.14)'],
+            [0.48, 0.50, 0.26, 'rgba(8,26,2,0.16)'],
+            [0.12, 0.64, 0.18, 'rgba(10,30,4,0.14)'],
+            [0.84, 0.58, 0.20, 'rgba(10,30,4,0.18)'],
+            [0.36, 0.80, 0.22, 'rgba(8,26,2,0.13)'],
+        ].forEach(([fx, fy, frad, col]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, col);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Grass tufts — muted olive/earthy tones, clearly below tree brightness
-        ctx.lineWidth = 1;
-        [[0.05,0.12,6],[0.12,0.22,5],[0.20,0.15,7],[0.30,0.08,6],[0.38,0.18,5],
-         [0.47,0.10,6],[0.55,0.20,7],[0.63,0.12,5],[0.72,0.22,6],[0.80,0.14,7],[0.88,0.08,5],[0.95,0.16,6],
-         [0.04,0.35,6],[0.14,0.42,5],[0.22,0.38,7],[0.33,0.45,6],[0.42,0.36,5],
-         [0.52,0.44,7],[0.61,0.38,6],[0.70,0.45,5],[0.78,0.36,7],[0.86,0.42,6],[0.94,0.38,5],
-         [0.08,0.62,7],[0.18,0.55,5],[0.28,0.65,6],[0.40,0.58,7],[0.50,0.62,5],
-         [0.60,0.55,6],[0.70,0.65,7],[0.80,0.58,5],[0.90,0.62,6],
-         [0.06,0.78,5],[0.16,0.82,6],[0.26,0.75,7],[0.38,0.80,5],[0.48,0.72,6],
-         [0.58,0.82,5],[0.68,0.75,7],[0.78,0.80,6],[0.88,0.72,5],[0.96,0.80,6]]
-        .forEach(([fx, fy, n]) => {
-            const gx = w * fx, gy = h * fy;
-            const bladeLen = h * (0.012 + Math.abs(Math.sin(fx * 11 + fy * 7)) * 0.010);
-            for (let k = 0; k < n; k++) {
-                const bx = gx + (k - n * 0.5) * 3;
-                const lean = (Math.sin(fx * 17 + k * 2.3) - 0.5) * 0.4;
-                const vary = Math.abs(Math.sin(fy * 9 + k));
-                // Earthy palette: dark olive, warm ochre-green, muted brown-green
-                let strokeColor;
-                if (vary < 0.33) {
-                    strokeColor = `rgba(42,${Math.floor(68 + vary * 28)},8,0.52)`;
-                } else if (vary < 0.66) {
-                    strokeColor = `rgba(52,${Math.floor(58 + vary * 22)},6,0.48)`;
-                } else {
-                    strokeColor = `rgba(32,${Math.floor(78 + vary * 18)},10,0.50)`;
-                }
-                ctx.strokeStyle = strokeColor;
-                ctx.beginPath();
-                ctx.moveTo(bx, gy);
-                ctx.quadraticCurveTo(bx + lean * bladeLen, gy - bladeLen * 0.5, bx + lean * bladeLen * 1.4, gy - bladeLen);
-                ctx.stroke();
-            }
+        // Dappled canopy light — warm golden pools
+        [
+            [0.10, 0.09, 0.11, 0.13],
+            [0.42, 0.06, 0.09, 0.12],
+            [0.70, 0.12, 0.10, 0.11],
+            [0.90, 0.07, 0.08, 0.12],
+            [0.26, 0.32, 0.10, 0.11],
+            [0.60, 0.26, 0.09, 0.10],
+            [0.82, 0.36, 0.10, 0.12],
+            [0.08, 0.54, 0.09, 0.10],
+            [0.46, 0.50, 0.11, 0.13],
+            [0.74, 0.56, 0.09, 0.11],
+            [0.32, 0.72, 0.10, 0.11],
+            [0.64, 0.76, 0.09, 0.10],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(200,195,100,${alpha})`);
+            grd.addColorStop(0.50, `rgba(140,160,50,${alpha * 0.38})`);
+            grd.addColorStop(1,   'rgba(60,100,10,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Fallen leaf scatter — warm amber, rust, sienna, dark ochre
-        [[0.10,0.18,1.8],[0.24,0.26,1.5],[0.36,0.14,1.6],[0.46,0.24,2.0],[0.58,0.16,1.7],
-         [0.70,0.28,1.5],[0.82,0.18,1.8],[0.92,0.24,1.6],
-         [0.08,0.44,1.7],[0.20,0.52,2.0],[0.34,0.40,1.5],[0.48,0.48,1.8],[0.62,0.42,1.6],
-         [0.76,0.50,1.9],[0.88,0.44,1.5],
-         [0.12,0.68,1.8],[0.24,0.74,1.6],[0.40,0.62,2.0],[0.54,0.70,1.7],
-         [0.66,0.64,1.5],[0.78,0.72,1.8],[0.92,0.66,1.6]]
-        .forEach(([fx, fy, sz]) => {
-            const lx = w * fx, ly = h * fy;
-            const ang = Math.sin(fx * 23 + fy * 17) * Math.PI;
-            const r = Math.abs(Math.sin(fx * 31 + fy * 13));
-            // Warm autumn tones: amber, rust, sienna, dark gold — deliberately non-green
-            const leafColor = r < 0.25  ? 'rgba(162,88,18,0.62)' :
-                              r < 0.50  ? 'rgba(148,62,14,0.58)' :
-                              r < 0.75  ? 'rgba(178,108,22,0.54)' :
-                                          'rgba(118,50,10,0.60)';
-            ctx.fillStyle = leafColor;
-            ctx.save(); ctx.translate(lx, ly); ctx.rotate(ang);
-            ctx.beginPath(); ctx.ellipse(0, 0, sz * 2.5, sz * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = 'rgba(78,36,6,0.40)'; ctx.lineWidth = 0.6;
-            ctx.beginPath(); ctx.moveTo(-sz * 2, 0); ctx.lineTo(sz * 2, 0); ctx.stroke();
-            ctx.restore();
+        // Sparse exposed dirt patches
+        [
+            [0.16, 0.20, 0.08, 0.18],
+            [0.52, 0.16, 0.07, 0.16],
+            [0.80, 0.28, 0.09, 0.17],
+            [0.06, 0.42, 0.07, 0.15],
+            [0.38, 0.44, 0.08, 0.17],
+            [0.68, 0.48, 0.07, 0.15],
+            [0.92, 0.52, 0.08, 0.16],
+            [0.24, 0.68, 0.09, 0.18],
+            [0.58, 0.70, 0.07, 0.15],
+            [0.84, 0.74, 0.08, 0.17],
+            [0.14, 0.84, 0.07, 0.14],
+            [0.46, 0.86, 0.09, 0.16],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const t = Math.abs(Math.sin(fx * 19.1 + fy * 11.3));
+            const rb = 100 + Math.floor(t * 30);
+            const gb = 62 + Math.floor(t * 18);
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(${rb},${gb},18,${alpha})`);
+            grd.addColorStop(1, `rgba(${rb},${gb},18,0)`);
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
         });
 
-        // Dirt patches — warm sienna/brown, not green
-        [[0.16,0.30,0.018],[0.44,0.12,0.015],[0.66,0.35,0.022],[0.84,0.20,0.016],
-         [0.10,0.58,0.020],[0.32,0.62,0.018],[0.56,0.68,0.015],[0.76,0.60,0.019],[0.92,0.74,0.017]]
-        .forEach(([fx, fy, fs]) => {
-            const dx = w * fx, dy = h * fy, ds = w * fs * 2.2;
-            const tone = Math.abs(Math.sin(fx * 19 + fy * 11));
-            const r = Math.floor(38 + tone * 22);
-            const g = Math.floor(26 + tone * 14);
-            const b = Math.floor(6 + tone * 6);
-            ctx.fillStyle = `rgba(${r},${g},${b},0.30)`;
-            ctx.beginPath();
-            const numPts = 7 + Math.floor(Math.abs(Math.sin(fx * 7 + fy * 5)) * 2);
-            for (let pi = 0; pi < numPts; pi++) {
-                const pang = pi / numPts * Math.PI * 2 + Math.sin(fx * 5 + pi * 2.3) * 0.45;
-                const pr = ds * (0.78 + Math.abs(Math.sin(fx * 13 + fy * 7 + pi * 1.1)) * 0.40);
-                pi === 0 ? ctx.moveTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58) :
-                           ctx.lineTo(dx + Math.cos(pang) * pr, dy + Math.sin(pang) * pr * 0.58);
-            }
-            ctx.closePath(); ctx.fill();
+        // Leaf litter — scattered pixel-sized dots
+        [
+            [0.06,0.08],[0.14,0.13],[0.24,0.06],[0.35,0.11],[0.46,0.05],[0.57,0.10],[0.68,0.07],[0.79,0.12],[0.90,0.06],[0.97,0.10],
+            [0.04,0.22],[0.13,0.28],[0.22,0.20],[0.32,0.26],[0.44,0.18],[0.54,0.25],[0.65,0.21],[0.76,0.27],[0.87,0.19],[0.95,0.24],
+            [0.09,0.38],[0.20,0.34],[0.30,0.40],[0.41,0.36],[0.53,0.33],[0.62,0.39],[0.73,0.35],[0.83,0.41],[0.93,0.37],
+            [0.07,0.55],[0.18,0.60],[0.28,0.52],[0.40,0.58],[0.51,0.54],[0.61,0.60],[0.72,0.53],[0.82,0.59],[0.92,0.55],
+            [0.11,0.70],[0.23,0.75],[0.36,0.68],[0.48,0.73],[0.60,0.67],[0.71,0.74],[0.81,0.69],[0.94,0.72],
+            [0.08,0.84],[0.20,0.88],[0.34,0.82],[0.47,0.87],[0.59,0.83],[0.72,0.89],[0.85,0.84],[0.96,0.86],
+        ].forEach(([fx, fy]) => {
+            const t = Math.abs(Math.sin(fx * 37.1 + fy * 23.9));
+            let r, g, b;
+            if (t < 0.33)      { r = 130; g = 78;  b = 20; }
+            else if (t < 0.66) { r = 112; g = 58;  b = 12; }
+            else               { r = 96;  g = 82;  b = 28; }
+            const alpha = 0.22 + t * 0.18;
+            const sz = t < 0.25 ? 2 : 1;
+            ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+            ctx.fillRect(Math.floor(w * fx), Math.floor(h * fy), sz, sz);
         });
 
-        // Mossy bright spots — yellow-green tint distinct from tree greens
-        [[0.22,0.18,0.028],[0.65,0.25,0.024],[0.40,0.68,0.030],[0.85,0.58,0.022]]
-        .forEach(([fx, fy, fs]) => {
-            const mx = w * fx, my = h * fy, mr = w * fs;
-            const mg = ctx.createRadialGradient(mx, my, 0, mx, my, mr);
-            mg.addColorStop(0, 'rgba(56,74,8,0.34)');
-            mg.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = mg;
-            ctx.beginPath();
-            ctx.ellipse(mx, my, mr, mr * 0.68, Math.sin(fx * 6) * 0.7, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        const vgn = ctx.createLinearGradient(0, h * 0.72, 0, h);
-        vgn.addColorStop(0, 'rgba(0,0,0,0)');
-        vgn.addColorStop(1, 'rgba(0,0,0,0.08)');
+        // Foreground depth shadow
+        const vgn = ctx.createLinearGradient(0, h * 0.78, 0, h);
+        vgn.addColorStop(0, 'rgba(0,8,0,0)');
+        vgn.addColorStop(1, 'rgba(0,8,0,0.46)');
         ctx.fillStyle = vgn;
-        ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        ctx.fillRect(0, h * 0.78, w, h * 0.22);
+
+        // Side vignette
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+        vigL.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigL.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.08, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.92, 0);
+        vigR.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigR.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.92, 0, w * 0.08, h);
     }
 
     _drawMountainBackground(ctx, w, h) {
@@ -2867,184 +2846,373 @@ export class LevelDesigner {
     }
 
     drawRockType1(x, y, size, primaryColor, accentColor) {
-        // Jagged irregular rock
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.3, y - size * 0.15);
-        this.ctx.lineTo(x - size * 0.25, y - size * 0.35);
-        this.ctx.lineTo(x, y - size * 0.38);
-        this.ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        this.ctx.lineTo(x + size * 0.28, y + size * 0.2);
-        this.ctx.lineTo(x, y + size * 0.35);
-        this.ctx.lineTo(x - size * 0.32, y + size * 0.18);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Shadow
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + size * 0.28, y + size * 0.2);
-        this.ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        this.ctx.lineTo(x + size * 0.12, y - size * 0.08);
-        this.ctx.lineTo(x, y + size * 0.35);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Highlight
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.beginPath();
-        this.ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-
+        // Jagged irregular rock — matches game renderRockType1
+        const ctx = this.ctx;
+        
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.34, y + size * 0.23);
+        ctx.lineTo(x - size * 0.36, y - size * 0.22);
+        ctx.lineTo(x - size * 0.21, y - size * 0.38);
+        ctx.lineTo(x + size * 0.06, y - size * 0.43);
+        ctx.lineTo(x + size * 0.36, y - size * 0.13);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x + 1, y + size * 0.42);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Main rock body
+        ctx.fillStyle = '#5e5e5e';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right shadow face
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.08, y - size * 0.3);
+        ctx.lineTo(x + size * 0.02, y + size * 0.32);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Light highlights on upper faces
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x - size * 0.05, y - size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering spots
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.3;
+            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.22;
+            const spotSize = size * (0.06 + Math.abs(Math.sin(i * 0.7)) * 0.03);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Rock cracks
+        ctx.strokeStyle = '#2a2a28';
+        ctx.lineWidth = 1.5;
+        const crackCount = 2 + Math.floor(Math.abs(Math.sin(x * 0.02)) * 2);
+        for (let i = 0; i < crackCount; i++) {
+            const startX = (Math.sin(i * 0.7 + x * 0.01) - 0.5) * size * 0.3;
+            const startY = (Math.cos(i * 0.7 + y * 0.01) - 0.5) * size * 0.2;
+            const endX = startX + (Math.sin(i * 1.2 + x * 0.02) - 0.5) * size * 0.2;
+            const endY = startY + (Math.cos(i * 1.2 + y * 0.02) - 0.5) * size * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(x + startX, y + startY);
+            ctx.lineTo(x + endX, y + endY);
+            ctx.stroke();
+        }
+        
         // Outline
-        this.ctx.strokeStyle = '#1A1A1A';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.3, y - size * 0.15);
-        this.ctx.lineTo(x - size * 0.25, y - size * 0.35);
-        this.ctx.lineTo(x, y - size * 0.38);
-        this.ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        this.ctx.lineTo(x + size * 0.28, y + size * 0.2);
-        this.ctx.lineTo(x, y + size * 0.35);
-        this.ctx.lineTo(x - size * 0.32, y + size * 0.18);
-        this.ctx.closePath();
-        this.ctx.stroke();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.35, y - size * 0.25);
+        ctx.lineTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x + size * 0.35, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.25);
+        ctx.lineTo(x, y + size * 0.38);
+        ctx.lineTo(x - size * 0.35, y + size * 0.2);
+        ctx.closePath();
+        ctx.stroke();
     }
 
     drawRockType2(x, y, size, primaryColor, accentColor) {
-        // Round boulder with bumps
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Shadow — clipped to rock boundary
-        this.ctx.save();
-        this.ctx.beginPath(); this.ctx.arc(x, y, size * 0.33, 0, Math.PI * 2); this.ctx.clip();
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.arc(x + size * 0.15, y + size * 0.15, size * 0.33, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.restore();
-
-        // Top light
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.beginPath();
-        this.ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.15, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-
-        // Bumps on surface
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.globalAlpha = 0.5;
-        [
-            {x: -0.18, y: 0.1, r: 0.08},
-            {x: 0.22, y: -0.12, r: 0.07},
-            {x: 0.08, y: 0.22, r: 0.06}
-        ].forEach(bump => {
-            this.ctx.beginPath();
-            this.ctx.arc(x + bump.x * size, y + bump.y * size, size * bump.r, 0, Math.PI * 2);
-            this.ctx.fill();
-        });
-        this.ctx.globalAlpha = 1;
-
+        // Irregular boulder — matches game renderRockType2
+        const ctx = this.ctx;
+        
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.30, y + size * 0.22);
+        ctx.lineTo(x - size * 0.36, y + size * 0.05);
+        ctx.lineTo(x - size * 0.28, y - size * 0.22);
+        ctx.lineTo(x - size * 0.08, y - size * 0.34);
+        ctx.lineTo(x + size * 0.20, y - size * 0.30);
+        ctx.lineTo(x + size * 0.36, y - size * 0.10);
+        ctx.lineTo(x + size * 0.34, y + size * 0.18);
+        ctx.lineTo(x + size * 0.18, y + size * 0.30);
+        ctx.lineTo(x - size * 0.10, y + size * 0.32);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Main boulder body — irregular polygon
+        ctx.fillStyle = '#636363';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.18, y - size * 0.32);
+        ctx.lineTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Darker right/bottom face
+        ctx.fillStyle = '#444444';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.lineTo(x - size * 0.05, y + size * 0.10);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Light highlight on upper-left
+        ctx.fillStyle = '#9a9a9a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.08, y - size * 0.28);
+        ctx.lineTo(x - size * 0.12, y - size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Secondary highlight
+        ctx.fillStyle = '#888888';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.15);
+        ctx.lineTo(x - size * 0.18, y - size * 0.02);
+        ctx.lineTo(x - size * 0.28, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering spots
+        ctx.fillStyle = '#4e4844';
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + 0.5;
+            const distance = size * (0.12 + Math.abs(Math.sin(i * 0.5)) * 0.08);
+            const vx = x + Math.cos(angle) * distance;
+            const vy = y + Math.sin(angle) * distance;
+            const spotSize = size * (0.05 + Math.abs(Math.cos(i * 0.7)) * 0.03);
+            ctx.beginPath();
+            ctx.arc(vx, vy, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Subtle cracks
+        ctx.strokeStyle = '#2e2e2c';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.10, y - size * 0.15);
+        ctx.lineTo(x + size * 0.10, y + size * 0.12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y - size * 0.20);
+        ctx.lineTo(x + size * 0.20, y + size * 0.05);
+        ctx.stroke();
+        
         // Outline
-        this.ctx.strokeStyle = '#1A1A1A';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.33, 0, Math.PI * 2);
-        this.ctx.stroke();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.18, y - size * 0.32);
+        ctx.lineTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.closePath();
+        ctx.stroke();
     }
 
     drawRockType3(x, y, size, primaryColor, accentColor) {
-        // Flat angular rock
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        this.ctx.lineTo(x + size * 0.3, y + size * 0.25);
-        this.ctx.lineTo(x - size * 0.35, y + size * 0.2);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Highlight top
-        this.ctx.fillStyle = accentColor;
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        this.ctx.lineTo(x, y - size * 0.05);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-
+        // Jagged angular rock — matches game renderRockType3
+        const ctx = this.ctx;
+        
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.34, y + size * 0.28);
+        ctx.lineTo(x - size * 0.36, y - size * 0.09);
+        ctx.lineTo(x - size * 0.1, y - size * 0.37);
+        ctx.lineTo(x + size * 0.32, y - size * 0.17);
+        ctx.lineTo(x + size * 0.36, y + size * 0.31);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Main rock body
+        ctx.fillStyle = '#585858';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x - size * 0.35, y + size * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Highlighted face (left side)
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.15, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Darker right side face
+        ctx.fillStyle = '#3e3e3e';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.15, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering spots
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.28;
+            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.20;
+            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         // Cracks
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.1, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.1, y + size * 0.15);
-        this.ctx.stroke();
-
+        ctx.strokeStyle = '#2a2a28';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.1, y - size * 0.2);
+        ctx.lineTo(x + size * 0.1, y + size * 0.12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.stroke();
+        
         // Outline
-        this.ctx.strokeStyle = '#1A1A1A';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.32, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.35, y - size * 0.2);
-        this.ctx.lineTo(x + size * 0.3, y + size * 0.25);
-        this.ctx.lineTo(x - size * 0.35, y + size * 0.2);
-        this.ctx.closePath();
-        this.ctx.stroke();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.36, y - size * 0.12);
+        ctx.lineTo(x - size * 0.1, y - size * 0.38);
+        ctx.lineTo(x + size * 0.32, y - size * 0.18);
+        ctx.lineTo(x + size * 0.35, y + size * 0.28);
+        ctx.lineTo(x - size * 0.35, y + size * 0.25);
+        ctx.closePath();
+        ctx.stroke();
     }
 
     drawRockType4(x, y, size, primaryColor, accentColor) {
-        // Triangular jagged rock
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        this.ctx.lineTo(x - size * 0.33, y + size * 0.15);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Shadow right side
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        this.ctx.lineTo(x, y + size * 0.08);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Highlight
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.beginPath();
-        this.ctx.arc(x - size * 0.12, y - size * 0.15, size * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-
-        // Surface texture
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.15, y - size * 0.1);
-        this.ctx.lineTo(x + size * 0.1, y + size * 0.12);
-        this.ctx.stroke();
-
+        // Jagged rocky formation — matches game renderRockType4
+        const ctx = this.ctx;
+        
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.05, y + size * 0.24, size * 0.38, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Main rock body - irregular polygon
+        ctx.fillStyle = '#5e5e5e';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.15, y + size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Left highlighted face
+        ctx.fillStyle = '#8a8a8a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x - size * 0.05, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Top bright face
+        ctx.fillStyle = '#9a9a9a';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.15, y - size * 0.2);
+        ctx.lineTo(x - size * 0.05, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Dark right face
+        ctx.fillStyle = '#3a3a3a';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.2, y + size * 0.05);
+        ctx.lineTo(x + size * 0.05, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Weathering stains
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 5; i++) {
+            const offsetX = (Math.sin(i * 1.2 + x * 0.01) - 0.5) * size * 0.3;
+            const offsetY = (Math.cos(i * 1.2 + y * 0.01) - 0.5) * size * 0.25;
+            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
+            ctx.beginPath();
+            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Cracks
+        ctx.strokeStyle = '#2a2a28';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.15, y - size * 0.15);
+        ctx.lineTo(x + size * 0.1, y + size * 0.1);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x - size * 0.1, y + size * 0.15);
+        ctx.stroke();
+        
         // Outline
-        this.ctx.strokeStyle = '#1A1A1A';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.33, y + size * 0.15);
-        this.ctx.lineTo(x - size * 0.33, y + size * 0.15);
-        this.ctx.closePath();
-        this.ctx.stroke();
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.2, y - size * 0.32);
+        ctx.lineTo(x + size * 0.05, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y - size * 0.15);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.15, y + size * 0.22);
+        ctx.closePath();
+        ctx.stroke();
     }
 
     drawLake(x, y, size) {

@@ -3604,23 +3604,23 @@ export class LevelBase {
     }
 
     renderRockType1(ctx, x, y, size) {
-        // Large rough mountain-like rock with better depth and integration
+        // Large rough jagged rock — fully opaque, no green tint
         
-        // Create layered shadow for depth effect
-        ctx.fillStyle = 'rgba(30, 25, 20, 0.4)';
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.36, y - size * 0.22);
+        ctx.moveTo(x - size * 0.34, y + size * 0.23);
+        ctx.lineTo(x - size * 0.36, y - size * 0.22);
         ctx.lineTo(x - size * 0.21, y - size * 0.38);
         ctx.lineTo(x + size * 0.06, y - size * 0.43);
         ctx.lineTo(x + size * 0.36, y - size * 0.13);
         ctx.lineTo(x + size * 0.35, y + size * 0.28);
         ctx.lineTo(x + 1, y + size * 0.42);
-        ctx.lineTo(x - size * 0.34, y + size * 0.23);
         ctx.closePath();
         ctx.fill();
         
-        // Main mountain body with multiple shades
-        ctx.fillStyle = '#505050';
+        // Main rock body
+        ctx.fillStyle = '#5e5e5e';
         ctx.beginPath();
         ctx.moveTo(x - size * 0.35, y - size * 0.25);
         ctx.lineTo(x - size * 0.2, y - size * 0.4);
@@ -3632,8 +3632,8 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
         
-        // Right shadow side for dimension
-        ctx.fillStyle = '#343434';
+        // Right shadow face
+        ctx.fillStyle = '#3a3a3a';
         ctx.beginPath();
         ctx.moveTo(x + size * 0.32, y + size * 0.25);
         ctx.lineTo(x + size * 0.35, y - size * 0.15);
@@ -3643,29 +3643,28 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
         
-        // Light highlights on top faces
+        // Light highlights on upper faces
         ctx.fillStyle = '#8a8a8a';
-        for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.sin(i * 1.3 + x * 0.01) - 0.5) * size * 0.25;
-            const offsetY = (Math.cos(i * 1.3 + y * 0.01) - 0.5) * size * 0.15;
-            ctx.beginPath();
-            ctx.arc(x + offsetX, y - size * 0.15 + offsetY, size * 0.06, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.2, y - size * 0.4);
+        ctx.lineTo(x + size * 0.05, y - size * 0.45);
+        ctx.lineTo(x - size * 0.05, y - size * 0.25);
+        ctx.closePath();
+        ctx.fill();
         
-        // Weathering spots and moss - spread naturally
-        ctx.fillStyle = 'rgba(90, 110, 70, 0.4)';
-        for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.38;
-            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.28;
-            const spotSize = size * (0.08 + Math.abs(Math.sin(i * 0.7)) * 0.04);
+        // Weathering spots — warm brown/tan, no green
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.3;
+            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.22;
+            const spotSize = size * (0.06 + Math.abs(Math.sin(i * 0.7)) * 0.03);
             ctx.beginPath();
             ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Rock cracks/texture
-        ctx.strokeStyle = 'rgba(40, 35, 30, 0.3)';
+        // Rock cracks
+        ctx.strokeStyle = '#2a2a28';
         ctx.lineWidth = 1.5;
         const crackCount = 2 + Math.floor(Math.abs(Math.sin(x * 0.02)) * 2);
         for (let i = 0; i < crackCount; i++) {
@@ -3679,7 +3678,7 @@ export class LevelBase {
             ctx.stroke();
         }
         
-        // Outline for definition
+        // Outline
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -3692,117 +3691,131 @@ export class LevelBase {
         ctx.lineTo(x - size * 0.35, y + size * 0.2);
         ctx.closePath();
         ctx.stroke();
-        
-        // Natural growth at base - connects mountain to ground
-        ctx.fillStyle = 'rgba(100, 120, 80, 0.3)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + size * 0.32, size * 0.4, size * 0.15, 0, 0, Math.PI * 2);
-        ctx.fill();
     }
 
     renderRockType2(ctx, x, y, size) {
-        // Rounded mountain form with better integration and detail
+        // Irregular boulder — NOT a circle, natural lumpy shape
         
-        // Shadow base for grounding
-        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
         ctx.beginPath();
-        ctx.arc(x + 2, y + 2, size * 0.39, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.30, y + size * 0.22);
+        ctx.lineTo(x - size * 0.36, y + size * 0.05);
+        ctx.lineTo(x - size * 0.28, y - size * 0.22);
+        ctx.lineTo(x - size * 0.08, y - size * 0.34);
+        ctx.lineTo(x + size * 0.20, y - size * 0.30);
+        ctx.lineTo(x + size * 0.36, y - size * 0.10);
+        ctx.lineTo(x + size * 0.34, y + size * 0.18);
+        ctx.lineTo(x + size * 0.18, y + size * 0.30);
+        ctx.lineTo(x - size * 0.10, y + size * 0.32);
+        ctx.closePath();
         ctx.fill();
         
-        // Main rounded mountain body
-        ctx.fillStyle = '#595959';
+        // Main boulder body — irregular polygon
+        ctx.fillStyle = '#636363';
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.18, y - size * 0.32);
+        ctx.lineTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.closePath();
         ctx.fill();
         
-        // Darker overlay for form and depth — clipped to rock boundary
-        ctx.save();
-        ctx.beginPath(); ctx.arc(x, y, size * 0.38, 0, Math.PI * 2); ctx.clip();
-        ctx.fillStyle = '#414141';
+        // Darker right/bottom face for dimension
+        ctx.fillStyle = '#444444';
         ctx.beginPath();
-        ctx.arc(x + size * 0.12, y + size * 0.12, size * 0.34, 0, Math.PI * 2);
+        ctx.moveTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.lineTo(x - size * 0.05, y + size * 0.10);
+        ctx.lineTo(x + size * 0.15, y - size * 0.05);
+        ctx.closePath();
         ctx.fill();
-        ctx.restore();
         
-        // Light highlights on upper portions
+        // Light highlight on upper-left
         ctx.fillStyle = '#9a9a9a';
         ctx.beginPath();
-        ctx.arc(x - size * 0.15, y - size * 0.2, size * 0.18, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.08, y - size * 0.28);
+        ctx.lineTo(x - size * 0.12, y - size * 0.10);
+        ctx.closePath();
         ctx.fill();
         
+        // Secondary highlight
         ctx.fillStyle = '#888888';
         ctx.beginPath();
-        ctx.arc(x - size * 0.25, y - size * 0.05, size * 0.12, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.15);
+        ctx.lineTo(x - size * 0.18, y - size * 0.02);
+        ctx.lineTo(x - size * 0.28, y + size * 0.08);
+        ctx.closePath();
         ctx.fill();
         
-        // Weathering and moss spread naturally across the mountain
-        ctx.fillStyle = 'rgba(85, 105, 65, 0.35)';
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const distance = size * (0.15 + Math.abs(Math.sin(i * 0.5)) * 0.12);
+        // Weathering spots — warm brown tones, no green
+        ctx.fillStyle = '#4e4844';
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2 + 0.5;
+            const distance = size * (0.12 + Math.abs(Math.sin(i * 0.5)) * 0.08);
             const vx = x + Math.cos(angle) * distance;
             const vy = y + Math.sin(angle) * distance;
-            const spotSize = size * (0.09 + Math.abs(Math.cos(i * 0.7)) * 0.05);
+            const spotSize = size * (0.05 + Math.abs(Math.cos(i * 0.7)) * 0.03);
             ctx.beginPath();
             ctx.arc(vx, vy, spotSize, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Darker moss in crevices
-        ctx.fillStyle = 'rgba(60, 80, 45, 0.4)';
-        for (let i = 0; i < 3; i++) {
-            const angle = (i / 3 + 0.3) * Math.PI * 2;
-            const vx = x + Math.cos(angle) * size * 0.2;
-            const vy = y + Math.sin(angle) * size * 0.2;
-            ctx.beginPath();
-            ctx.arc(vx, vy, size * 0.07, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Subtle cracks for texture
-        ctx.strokeStyle = 'rgba(40, 35, 30, 0.25)';
+        // Subtle cracks
+        ctx.strokeStyle = '#2e2e2c';
         ctx.lineWidth = 1.2;
-        for (let i = 0; i < 3; i++) {
-            const angle = (i / 3) * Math.PI * 2;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(
-                x + Math.cos(angle) * size * 0.3,
-                y + Math.sin(angle) * size * 0.3
-            );
-            ctx.stroke();
-        }
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.10, y - size * 0.15);
+        ctx.lineTo(x + size * 0.10, y + size * 0.12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y - size * 0.20);
+        ctx.lineTo(x + size * 0.20, y + size * 0.05);
+        ctx.stroke();
         
-        // Define outline
+        // Outline
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.38, 0, Math.PI * 2);
+        ctx.moveTo(x - size * 0.32, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.02);
+        ctx.lineTo(x - size * 0.30, y - size * 0.20);
+        ctx.lineTo(x - size * 0.10, y - size * 0.36);
+        ctx.lineTo(x + size * 0.18, y - size * 0.32);
+        ctx.lineTo(x + size * 0.34, y - size * 0.12);
+        ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.16, y + size * 0.28);
+        ctx.lineTo(x - size * 0.12, y + size * 0.30);
+        ctx.closePath();
         ctx.stroke();
-        
-        // Natural growth at base
-        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + size * 0.34, size * 0.42, size * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
     }
 
     renderRockType3(ctx, x, y, size) {
-        // Jagged angular mountain with better weathering and integration
+        // Jagged angular rock — fully opaque, no green tint
         
-        // Shadow base
-        ctx.fillStyle = 'rgba(30, 25, 20, 0.35)';
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
         ctx.beginPath();
-        ctx.moveTo(x - size * 0.36, y - size * 0.09);
+        ctx.moveTo(x - size * 0.34, y + size * 0.28);
+        ctx.lineTo(x - size * 0.36, y - size * 0.09);
         ctx.lineTo(x - size * 0.1, y - size * 0.37);
         ctx.lineTo(x + size * 0.32, y - size * 0.17);
         ctx.lineTo(x + size * 0.36, y + size * 0.31);
-        ctx.lineTo(x - size * 0.34, y + size * 0.28);
         ctx.closePath();
         ctx.fill();
         
-        // Main mountain body
-        ctx.fillStyle = '#535353';
+        // Main rock body
+        ctx.fillStyle = '#585858';
         ctx.beginPath();
         ctx.moveTo(x - size * 0.36, y - size * 0.12);
         ctx.lineTo(x - size * 0.1, y - size * 0.38);
@@ -3822,7 +3835,7 @@ export class LevelBase {
         ctx.fill();
         
         // Darker right side face
-        ctx.fillStyle = '#414141';
+        ctx.fillStyle = '#3e3e3e';
         ctx.beginPath();
         ctx.moveTo(x - size * 0.1, y - size * 0.38);
         ctx.lineTo(x + size * 0.32, y - size * 0.18);
@@ -3830,19 +3843,19 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
         
-        // Moss and weathering spots
-        ctx.fillStyle = 'rgba(90, 110, 70, 0.35)';
-        for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.35;
-            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.25;
-            const spotSize = size * (0.07 + Math.abs(Math.sin(i * 0.6)) * 0.04);
+        // Weathering spots — warm brown, no green
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 4; i++) {
+            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.28;
+            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.20;
+            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
             ctx.beginPath();
             ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Cracks for detail
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        // Cracks
+        ctx.strokeStyle = '#2a2a28';
         ctx.lineWidth = 1.3;
         ctx.beginPath();
         ctx.moveTo(x - size * 0.1, y - size * 0.2);
@@ -3865,25 +3878,19 @@ export class LevelBase {
         ctx.lineTo(x - size * 0.35, y + size * 0.25);
         ctx.closePath();
         ctx.stroke();
-        
-        // Natural growth at base
-        ctx.fillStyle = 'rgba(100, 120, 80, 0.25)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + size * 0.3, size * 0.38, size * 0.1, 0, 0, Math.PI * 2);
-        ctx.fill();
     }
 
     renderRockType4(ctx, x, y, size) {
-        // Jagged rocky formation with proper polygonal structure
+        // Jagged rocky formation — fully opaque, no green tint
         
-        // Shadow base
-        ctx.fillStyle = 'rgba(30, 25, 20, 0.4)';
+        // Drop shadow
+        ctx.fillStyle = '#1a1a18';
         ctx.beginPath();
-        ctx.ellipse(x + size * 0.05, y + size * 0.22, size * 0.38, size * 0.12, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + size * 0.05, y + size * 0.24, size * 0.38, size * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Main rock body - irregular polygon
-        ctx.fillStyle = '#5a5a5a';
+        ctx.fillStyle = '#5e5e5e';
         ctx.beginPath();
         ctx.moveTo(x - size * 0.25, y + size * 0.2);
         ctx.lineTo(x - size * 0.35, y - size * 0.1);
@@ -3925,19 +3932,19 @@ export class LevelBase {
         ctx.closePath();
         ctx.fill();
         
-        // Weathering stains and moss
-        ctx.fillStyle = 'rgba(85, 105, 65, 0.25)';
-        for (let i = 0; i < 8; i++) {
+        // Weathering stains — brown/tan, no green
+        ctx.fillStyle = '#4a4440';
+        for (let i = 0; i < 5; i++) {
             const offsetX = (Math.sin(i * 1.2 + x * 0.01) - 0.5) * size * 0.3;
             const offsetY = (Math.cos(i * 1.2 + y * 0.01) - 0.5) * size * 0.25;
-            const spotSize = size * (0.07 + Math.abs(Math.sin(i * 0.6)) * 0.04);
+            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
             ctx.beginPath();
             ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
             ctx.fill();
         }
         
-        // Cracks and surface texture
-        ctx.strokeStyle = 'rgba(40, 40, 40, 0.4)';
+        // Cracks
+        ctx.strokeStyle = '#2a2a28';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(x - size * 0.15, y - size * 0.15);
@@ -3949,9 +3956,9 @@ export class LevelBase {
         ctx.lineTo(x - size * 0.1, y + size * 0.15);
         ctx.stroke();
         
-        // Surface edge definition
+        // Outline
         ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(x - size * 0.25, y + size * 0.2);
         ctx.lineTo(x - size * 0.35, y - size * 0.1);
@@ -3959,17 +3966,9 @@ export class LevelBase {
         ctx.lineTo(x + size * 0.05, y - size * 0.35);
         ctx.lineTo(x + size * 0.3, y - size * 0.15);
         ctx.lineTo(x + size * 0.32, y + size * 0.15);
+        ctx.lineTo(x + size * 0.15, y + size * 0.22);
+        ctx.closePath();
         ctx.stroke();
-        
-        // Lichen patches
-        ctx.fillStyle = 'rgba(120, 140, 100, 0.2)';
-        for (let i = 0; i < 3; i++) {
-            const px = x - size * 0.2 + Math.sin(i * 2.3) * size * 0.25;
-            const py = y - size * 0.1 + Math.cos(i * 2.3) * size * 0.15;
-            ctx.beginPath();
-            ctx.arc(px, py, size * 0.08, 0, Math.PI * 2);
-            ctx.fill();
-        }
     }
 
     renderLakeCells(ctx) {
