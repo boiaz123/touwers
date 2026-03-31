@@ -91,6 +91,7 @@ export class SaveSlotSelection {
     exit() {
         this.removeMouseListeners();
         this.removeKeyboardListeners();
+        this.removeMobileInput();
     }
 
     setupKeyboardListeners() {
@@ -101,6 +102,52 @@ export class SaveSlotSelection {
     removeKeyboardListeners() {
         if (this.keyDownHandler) {
             document.removeEventListener('keydown', this.keyDownHandler);
+        }
+    }
+
+    // Hidden input element for triggering mobile onscreen keyboard
+    createMobileInput() {
+        this.removeMobileInput();
+        const input = document.createElement('input');
+        input.id = 'commander-name-mobile-input';
+        input.type = 'text';
+        input.maxLength = 30;
+        input.autocomplete = 'off';
+        input.autocapitalize = 'words';
+        input.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+        input.value = this.commanderNameInput;
+        input.addEventListener('input', () => {
+            // Filter to allowed characters
+            const filtered = input.value.replace(/[^a-zA-Z0-9\s\-',.!?]/g, '').slice(0, 30);
+            input.value = filtered;
+            this.commanderNameInput = filtered;
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Simulate confirm button click
+                const canvas = this.stateManager.canvas;
+                const panelWidth = 500;
+                const panelHeight = 280;
+                const panelX = (canvas.width - panelWidth) / 2;
+                const panelY = (canvas.height - panelHeight) / 2;
+                const confirmButtonX = panelX + panelWidth / 2 - 110;
+                const confirmButtonY = panelY + panelHeight - 80;
+                const buttonWidth = 100;
+                const buttonHeight = 40;
+                this.handleClick(confirmButtonX + buttonWidth / 2, confirmButtonY + buttonHeight / 2);
+            }
+        });
+        document.body.appendChild(input);
+        this._mobileInput = input;
+        // Delay focus slightly to ensure it triggers the keyboard on mobile
+        setTimeout(() => { if (this._mobileInput) this._mobileInput.focus(); }, 50);
+    }
+
+    removeMobileInput() {
+        if (this._mobileInput) {
+            this._mobileInput.remove();
+            this._mobileInput = null;
         }
     }
 
@@ -281,6 +328,7 @@ export class SaveSlotSelection {
                 this.isOverwriting = false;
                 this.warningSlotNumber = null;
                 this.showWarning = false;
+                this.removeMobileInput();
                 return;
             }
             return;
@@ -310,6 +358,7 @@ export class SaveSlotSelection {
                 this.commanderNameInput = '';
                 this.commanderInputFocused = true;
                 this.warningSlotNumber = null;
+                this.createMobileInput();
                 return;
             }
             
@@ -356,6 +405,7 @@ export class SaveSlotSelection {
                     this.pendingSlotNumber = slotNum;
                     this.commanderNameInput = '';
                     this.commanderInputFocused = true;
+                    this.createMobileInput();
                 }
             }
         });
@@ -411,11 +461,13 @@ export class SaveSlotSelection {
         } else if (e.key === 'Backspace') {
             e.preventDefault();
             this.commanderNameInput = this.commanderNameInput.slice(0, -1);
+            if (this._mobileInput) this._mobileInput.value = this.commanderNameInput;
         } else if (e.key.length === 1 && this.commanderNameInput.length < 30) {
             e.preventDefault();
             // Allow alphanumeric, spaces, and common punctuation
             if (/^[a-zA-Z0-9\s\-',.!?]$/.test(e.key)) {
                 this.commanderNameInput += e.key;
+                if (this._mobileInput) this._mobileInput.value = this.commanderNameInput;
             }
         }
     }

@@ -169,6 +169,20 @@ export class UIManager {
             }
             badge.textContent = InputManager.getKeyDisplayName(key);
         });
+
+        // Update spell buttons
+        document.querySelectorAll('.spell-btn').forEach(btn => {
+            const spellId = btn.dataset.spellId;
+            const action = 'spell_' + spellId;
+            const key = inputManager.getBinding(action);
+            let badge = btn.querySelector('.hotkey-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'hotkey-badge';
+                btn.appendChild(badge);
+            }
+            badge.textContent = InputManager.getKeyDisplayName(key);
+        });
     }
 
     // ============ SETUP ============
@@ -965,6 +979,112 @@ export class UIManager {
         }
     }
 
+    showSpellInfo(spell, btn) {
+        this.clearSpellInfoMenu();
+
+        // Build stats HTML per spell type
+        let statsHTML = '';
+        const inputManager = this.stateManager.inputManager;
+
+        switch (spell.id) {
+            case 'arcaneBlast':
+                statsHTML = `
+                    <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
+                    <div><span>Radius:</span> <span style="color: #FFD700;">${spell.radius}</span></div>
+                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                `;
+                break;
+            case 'frostNova':
+                statsHTML = `
+                    <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
+                    <div><span>Freeze:</span> <span style="color: #FFD700;">${spell.freezeDuration}s</span></div>
+                    <div><span>Radius:</span> <span style="color: #FFD700;">${spell.radius}</span></div>
+                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                `;
+                break;
+            case 'meteorStrike':
+                statsHTML = `
+                    <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
+                    <div><span>Burn:</span> <span style="color: #FFD700;">${spell.burnDamage}/s for ${spell.burnDuration}s</span></div>
+                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                `;
+                break;
+            case 'chainLightning':
+                statsHTML = `
+                    <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
+                    <div><span>Chains:</span> <span style="color: #FFD700;">${spell.chainCount} targets</span></div>
+                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                `;
+                break;
+        }
+
+        // Add upgrade level if upgraded
+        if (spell.upgradeLevel > 0) {
+            statsHTML += `<div><span>Upgrade:</span> <span style="color: #A855F7;">Level ${spell.upgradeLevel}</span></div>`;
+        }
+
+        // Show keyboard shortcut if bound
+        let hotkeyHTML = '';
+        if (inputManager) {
+            const key = inputManager.getBinding('spell_' + spell.id);
+            if (key) {
+                const keyName = inputManager.constructor.getKeyDisplayName(key);
+                hotkeyHTML = `<div style="margin-top: 0.3rem; color: #A855F7; font-size: 0.75rem;">Hotkey: <span style="color: #FFD700;">${keyName}</span></div>`;
+            }
+        }
+
+        // Cooldown status
+        let statusHTML = '';
+        if (spell.currentCooldown > 0) {
+            statusHTML = `<div style="margin-top: 0.3rem; color: #ff6b6b; font-size: 0.8rem;">Cooldown: ${Math.ceil(spell.currentCooldown)}s</div>`;
+        } else {
+            statusHTML = `<div style="margin-top: 0.3rem; color: #7dff7d; font-size: 0.8rem;">Ready</div>`;
+        }
+
+        const menu = document.createElement('div');
+        menu.className = 'building-info-menu';
+        menu.id = 'spell-info-hover';
+        menu.innerHTML = `
+            <div class="info-title">${spell.name}</div>
+            <div class="info-stats">
+                ${statsHTML}
+            </div>
+            <div class="info-description">${spell.description}</div>
+            ${statusHTML}
+            ${hotkeyHTML}
+        `;
+
+        document.body.appendChild(menu);
+
+        // Position to the left of the button
+        const btnRect = btn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+
+        let left = btnRect.left - menuWidth - 10;
+        let top = btnRect.top;
+
+        if (left < 10) {
+            left = btnRect.right + 10;
+        }
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight - 10;
+        }
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+
+        btn.addEventListener('mouseleave', () => {
+            this.clearSpellInfoMenu();
+        }, { once: true });
+    }
+
+    clearSpellInfoMenu() {
+        const existingMenu = document.getElementById('spell-info-hover');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+    }
+
     // ============ SPELL UI ============
 
     updateSpellUI() {
@@ -997,8 +1117,12 @@ export class UIManager {
                 const btn = document.createElement('button');
                 btn.className = 'spell-btn';
                 btn.dataset.spellId = spell.id;
-                btn.title = `${spell.name}: ${spell.description}`;
                 btn.innerHTML = `<span>${spell.icon}</span>`;
+                
+                // Add hover info panel (same style as tower/building info)
+                btn.addEventListener('mouseenter', () => {
+                    this.showSpellInfo(spell, btn);
+                });
                 
                 // Add click listener with proper closure
                 btn.addEventListener('click', (e) => {
@@ -1010,7 +1134,6 @@ export class UIManager {
                     }
                     if (spell.currentCooldown === 0) {
                         this.gameplayState.activateSpellTargeting(spell.id);
-                    } else {
                     }
                 });
                 

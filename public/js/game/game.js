@@ -367,6 +367,25 @@ export class Game {
                 });
             }
 
+            // Spell hotkeys
+            const spellIds = ['arcaneBlast', 'frostNova', 'meteorStrike', 'chainLightning'];
+            for (const spellId of spellIds) {
+                this.inputManager.on('spell_' + spellId, () => {
+                    const refs = getGameplayRefs();
+                    if (!refs) return;
+                    if (refs.gameplayState.isPaused) return;
+                    // Find the Super Weapon Lab and check if spell is available
+                    const superWeaponLab = refs.gameplayState.towerManager.buildingManager.buildings.find(
+                        b => b.constructor.name === 'SuperWeaponLab'
+                    );
+                    if (!superWeaponLab) return;
+                    const spell = superWeaponLab.spells[spellId];
+                    if (spell && spell.unlocked && spell.currentCooldown === 0) {
+                        refs.gameplayState.activateSpellTargeting(spellId);
+                    }
+                });
+            }
+
             // Gamepad click -> simulate canvas click
             this.inputManager.on('gamepad_click', (data) => {
                 if (this.stateManager && this.stateManager.currentState) {

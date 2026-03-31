@@ -33,7 +33,13 @@ export class InputManager {
         'building_academy': 'c',
         'building_training': 'v',
         'building_superweapon': 'b',
-        'building_diamond-press': 'g'
+        'building_diamond-press': 'g',
+
+        // Spell hotkeys
+        'spell_arcaneBlast': 'f',
+        'spell_frostNova': 'h',
+        'spell_meteorStrike': 'j',
+        'spell_chainLightning': 'k'
     };
 
     // Human-readable action names for the controls screen
@@ -58,14 +64,19 @@ export class InputManager {
         'building_academy': 'Magic Academy',
         'building_training': 'Training Grounds',
         'building_superweapon': 'Super Weapon Lab',
-        'building_diamond-press': 'Diamond Press'
+        'building_diamond-press': 'Diamond Press',
+        'spell_arcaneBlast': 'Arcane Blast',
+        'spell_frostNova': 'Frozen Nova',
+        'spell_meteorStrike': 'Meteor Strike',
+        'spell_chainLightning': 'Chain Lightning'
     };
 
     // Action categories for display grouping
     static ACTION_CATEGORIES = {
         'Game Controls': ['pause', 'nextWave', 'speed1', 'speed2', 'speed3', 'cancel', 'menu'],
         'Tower Hotkeys': ['tower_basic', 'tower_cannon', 'tower_archer', 'tower_magic', 'tower_barricade', 'tower_poison', 'tower_combination', 'tower_guard-post'],
-        'Building Hotkeys': ['building_mine', 'building_forge', 'building_academy', 'building_training', 'building_superweapon', 'building_diamond-press']
+        'Building Hotkeys': ['building_mine', 'building_forge', 'building_academy', 'building_training', 'building_superweapon', 'building_diamond-press'],
+        'Spell Hotkeys': ['spell_arcaneBlast', 'spell_frostNova', 'spell_meteorStrike', 'spell_chainLightning']
     };
 
     // Default gamepad bindings (action -> button index)
