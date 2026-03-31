@@ -1,5 +1,7 @@
 import { SaveSystem } from '../core/SaveSystem.js';
 import { EnemyIntelRegistry } from '../core/EnemyIntelRegistry.js';
+import { InputManager } from '../core/InputManager.js';
+import { ControlsScreen } from './ControlsScreen.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -130,6 +132,42 @@ export class UIManager {
                     }
                 }
             }
+        });
+    }
+
+    /**
+     * Add keyboard shortcut badges to tower and building buttons
+     */
+    updateHotkeyBadges() {
+        const inputManager = this.stateManager.inputManager;
+        if (!inputManager) return;
+
+        // Update tower buttons
+        document.querySelectorAll('.tower-btn').forEach(btn => {
+            const towerType = btn.dataset.type;
+            const action = 'tower_' + towerType;
+            const key = inputManager.getBinding(action);
+            let badge = btn.querySelector('.hotkey-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'hotkey-badge';
+                btn.appendChild(badge);
+            }
+            badge.textContent = InputManager.getKeyDisplayName(key);
+        });
+
+        // Update building buttons
+        document.querySelectorAll('.building-btn').forEach(btn => {
+            const buildingType = btn.dataset.type;
+            const action = 'building_' + buildingType;
+            const key = inputManager.getBinding(action);
+            let badge = btn.querySelector('.hotkey-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'hotkey-badge';
+                btn.appendChild(badge);
+            }
+            badge.textContent = InputManager.getKeyDisplayName(key);
         });
     }
 
@@ -308,6 +346,9 @@ export class UIManager {
 
         // Initial button state update
         this.updateButtonStates();
+
+        // Add hotkey badges to sidebar buttons
+        this.updateHotkeyBadges();
     }
 
     removeUIEventListeners() {
@@ -5135,6 +5176,8 @@ export class UIManager {
                     </div>
                 </div>
                 <div class="ingame-options-divider"></div>
+                <button id="ingame-controls-btn" class="ingame-options-support-btn">Controls</button>
+                <div class="ingame-options-divider"></div>
                 <button id="ingame-support-btn" class="ingame-options-support-btn">\u2764\ufe0f  Support the Developer</button>
             </div>
         `;
@@ -5177,5 +5220,32 @@ export class UIManager {
                 }
             });
         }
+
+        const controlsBtn = document.getElementById('ingame-controls-btn');
+        if (controlsBtn) {
+            controlsBtn.addEventListener('click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.openControlsScreen();
+            });
+        }
+    }
+
+    openControlsScreen() {
+        if (!this._controlsScreen) {
+            this._controlsScreen = new ControlsScreen(
+                this.stateManager.inputManager,
+                this.stateManager.audioManager
+            );
+        }
+        this._controlsScreen.show();
+        // Refresh hotkey badges after controls change
+        const checkClosed = setInterval(() => {
+            if (!this._controlsScreen.isVisible()) {
+                clearInterval(checkClosed);
+                this.updateHotkeyBadges();
+            }
+        }, 200);
     }
 }

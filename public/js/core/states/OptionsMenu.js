@@ -1,4 +1,5 @@
 import { ParticleSystem } from '../ParticleSystem.js';
+import { ControlsScreen } from '../../ui/ControlsScreen.js';
 
 export class OptionsMenu {
     constructor(stateManager) {
@@ -9,6 +10,7 @@ export class OptionsMenu {
         this.showContent = false;
         this.backButtonHovered = false;
         this.particleSystem = null;
+        this.controlsScreen = null;
         
         // Options state
         this.musicVolume = 0.7; // Will be overridden in enter() from AudioManager
@@ -17,7 +19,8 @@ export class OptionsMenu {
         // Button states
         this.buttons = {
             back: { hovered: false },
-            visitProducer: { hovered: false }
+            visitProducer: { hovered: false },
+            controls: { hovered: false }
         };
         
         // Slider states
@@ -163,15 +166,22 @@ export class OptionsMenu {
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
         
+        // Check controls button
+        const controlsY = canvas.height / 2 + 70;
+        const controlsWidth = 280;
+        const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
+        this.buttons.controls.hovered = x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
+                                        y >= controlsPos.y && y <= controlsPos.y + controlsPos.height;
+
         // Check producer button
-        const producerY = canvas.height / 2 + 100;
+        const producerY = canvas.height / 2 + 130;
         const producerWidth = 280;
         const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
         this.buttons.visitProducer.hovered = x >= producerPos.x && x <= producerPos.x + producerPos.width &&
                                              y >= producerPos.y && y <= producerPos.y + producerPos.height;
 
         this.stateManager.canvas.style.cursor = 
-            this.buttons.back.hovered || this.buttons.visitProducer.hovered ? 'pointer' : 'default';
+            this.buttons.back.hovered || this.buttons.visitProducer.hovered || this.buttons.controls.hovered ? 'pointer' : 'default';
     }
 
     handleMouseDown(x, y) {
@@ -227,8 +237,18 @@ export class OptionsMenu {
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
         
+        // Check controls button
+        const controlsY = canvas.height / 2 + 70;
+        const controlsWidth = 280;
+        const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
+        if (x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
+            y >= controlsPos.y && y <= controlsPos.y + controlsPos.height) {
+            this.openControlsScreen();
+            return;
+        }
+
         // Check producer button
-        const producerY = canvas.height / 2 + 100;
+        const producerY = canvas.height / 2 + 130;
         const producerWidth = 280;
         const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
@@ -240,6 +260,16 @@ export class OptionsMenu {
             }
             return;
         }
+    }
+
+    openControlsScreen() {
+        if (!this.controlsScreen) {
+            this.controlsScreen = new ControlsScreen(
+                this.stateManager.inputManager,
+                this.stateManager.audioManager
+            );
+        }
+        this.controlsScreen.show();
     }
 
     update(deltaTime) {
@@ -393,7 +423,7 @@ export class OptionsMenu {
 
             // ===== PANEL =====
             const panelW = 520;
-            const panelH = 380;
+            const panelH = 440;
             const panelX = canvas.width / 2 - panelW / 2;
             const panelY = canvas.height / 2 - panelH / 2 + 30;
 
@@ -471,12 +501,18 @@ export class OptionsMenu {
                 ctx.strokeStyle = 'rgba(120, 100, 55, 0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(panelX + 30, panelY + panelH - 82);
-                ctx.lineTo(panelX + panelW - 30, panelY + panelH - 82);
+                ctx.moveTo(panelX + 30, panelY + panelH - 112);
+                ctx.lineTo(panelX + panelW - 30, panelY + panelH - 112);
                 ctx.stroke();
 
+                // Controls button
+                const controlsY = canvas.height / 2 + 70;
+                const controlsWidth = 280;
+                const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
+                this.renderButton(ctx, controlsPos, 'Controls', this.buttons.controls.hovered);
+
                 // Producer button
-                const producerY = canvas.height / 2 + 100;
+                const producerY = canvas.height / 2 + 130;
                 const producerWidth = 280;
                 const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 42 };
                 this.renderButton(ctx, producerPos, '\u2764  Support the Developer', this.buttons.visitProducer.hovered);

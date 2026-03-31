@@ -20,6 +20,7 @@ import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
 import { AudioManager } from '../core/AudioManager.js';
 import { MusicRegistry, initializeMusicRegistry } from '../core/MusicRegistry.js';
 import { SFXRegistry, initializeSFXRegistry } from '../core/SFXRegistry.js';
+import { InputManager } from '../core/InputManager.js';
 
 export class Game {
     constructor() {
@@ -68,12 +69,16 @@ export class Game {
             this.audioManager.setMusicRegistry(MusicRegistry.getAllMusic());
             this.audioManager.setSFXRegistry(SFXRegistry.getAllSFX());
             
+            // Initialize input manager
+            this.inputManager = new InputManager();
+            
             // Create state manager AFTER canvas is properly sized
             this.stateManager = new GameStateManager(this.canvas, this.ctx);
             this.stateManager.SaveSystem = SaveSystem;
             this.stateManager.resolutionManager = this.resolutionManager;
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
+            this.stateManager.inputManager = this.inputManager; // Set input manager reference
             
             // Initialize all save slot files (create empty files if they don't exist)
             SaveSystem.initializeSaveSlots();
@@ -247,79 +252,149 @@ export class Game {
                 return false;
             }, true);
 
-            // ============ KEYBOARD SHORTCUTS ============
-            window.addEventListener('keydown', (e) => {
-                try {
-                    // Only handle shortcuts during gameplay
-                    if (!this.stateManager || !this.stateManager.currentState) return;
-                    
-                    const currentState = this.stateManager.currentState;
-                    const gameplayState = currentState.gameplayState || currentState;
-                    
-                    // Check if this is a GameplayState (has gameState and towerManager)
-                    const isGameplay = gameplayState && gameplayState.gameState && gameplayState.towerManager;
-                    
-                    if (!isGameplay) return; // Not in gameplay, don't handle shortcuts
-                    
-                    const uiManager = currentState.uiManager || gameplayState.uiManager;
-                    
-                    switch (e.key.toUpperCase()) {
-                        // Speed controls: 1, 2, 3
-                        case '1':
-                            e.preventDefault();
-                            gameplayState.setGameSpeed(1.0);
-                            break;
-                        case '2':
-                            e.preventDefault();
-                            gameplayState.setGameSpeed(2.0);
-                            break;
-                        case '3':
-                            e.preventDefault();
-                            gameplayState.setGameSpeed(3.0);
-                            break;
-                        
-                        // Pause: P
-                        case 'P':
-                            e.preventDefault();
-                            if (uiManager && uiManager.togglePauseGame) {
-                                uiManager.togglePauseGame();
-                            }
-                            break;
-                        
-                        // Close menus: ESC
-                        case 'ESCAPE':
-                            e.preventDefault();
-                            if (uiManager) {
-                                // Close all panels
-                                if (uiManager.closeAllPanels) {
-                                    uiManager.closeAllPanels();
-                                }
-                                // Close pause menu if open
-                                if (uiManager.closePauseMenu) {
-                                    const pauseMenuModal = document.getElementById('pause-menu-modal');
-                                    if (pauseMenuModal && pauseMenuModal.classList.contains('show')) {
-                                        uiManager.closePauseMenu();
-                                    }
-                                }
-                            }
-                            break;
-                        
-                        // Next wave: SPACE
-                        case ' ':
-                            e.preventDefault();
-                            if (gameplayState.skipWaveCooldown) {
-                                // Play button click SFX
-                                if (this.audioManager) {
-                                    this.audioManager.playSFX('button-click');
-                                }
-                                gameplayState.skipWaveCooldown();
-                            }
-                            break;
-                    }
-                } catch (error) {
-                    console.error('Game: Error handling keyboard shortcut:', error);
+            // ============ INPUT MANAGER BINDINGS ============
+            // Helper references resolved at action time
+            const getGameplayRefs = () => {
+                if (!this.stateManager || !this.stateManager.currentState) return null;
+                const currentState = this.stateManager.currentState;
+                const gameplayState = currentState.gameplayState || currentState;
+                const isGameplay = gameplayState && gameplayState.gameState && gameplayState.towerManager;
+                if (!isGameplay) return null;
+                const uiManager = currentState.uiManager || gameplayState.uiManager;
+                return { gameplayState, uiManager, currentState };
+            };
+
+            // Speed controls
+            this.inputManager.on('speed1', () => {
+                const refs = getGameplayRefs();
+                if (refs) refs.gameplayState.setGameSpeed(1.0);
+            });
+            this.inputManager.on('speed2', () => {
+                const refs = getGameplayRefs();
+                if (refs) refs.gameplayState.setGameSpeed(2.0);
+            });
+            this.inputManager.on('speed3', () => {
+                const refs = getGameplayRefs();
+                if (refs) refs.gameplayState.setGameSpeed(3.0);
+            });
+
+            // Pause (Space)
+            this.inputManager.on('pause', () => {
+                const refs = getGameplayRefs();
+                if (refs && refs.uiManager && refs.uiManager.togglePauseGame) {
+                    refs.uiManager.togglePauseGame();
                 }
             });
+
+            // Next Wave (N)
+            this.inputManager.on('nextWave', () => {
+                const refs = getGameplayRefs();
+                if (refs && refs.gameplayState.skipWaveCooldown) {
+                    if (this.audioManager) {
+                        this.audioManager.playSFX('button-click');
+                    }
+                    refs.gameplayState.skipWaveCooldown();
+                }
+            });
+
+            // Cancel / Close (ESC)
+            this.inputManager.on('cancel', () => {
+                const refs = getGameplayRefs();
+                if (refs && refs.uiManager) {
+                    if (refs.uiManager.closeAllPanels) {
+                        refs.uiManager.closeAllPanels();
+                    }
+                    if (refs.uiManager.closePauseMenu) {
+                        const pauseMenuModal = document.getElementById('pause-menu-modal');
+                        if (pauseMenuModal && pauseMenuModal.classList.contains('show')) {
+                            refs.uiManager.closePauseMenu();
+                        }
+                    }
+                }
+                // Also cancel tower/building selection
+                if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.cancelSelection) {
+                    this.stateManager.currentState.cancelSelection();
+                }
+            });
+
+            // Menu (M)
+            this.inputManager.on('menu', () => {
+                const refs = getGameplayRefs();
+                if (refs && refs.uiManager && refs.uiManager.openPauseMenu) {
+                    refs.uiManager.openPauseMenu();
+                }
+            });
+
+            // Tower hotkeys
+            const towerTypes = ['basic', 'cannon', 'archer', 'magic', 'barricade', 'poison', 'combination', 'guard-post'];
+            for (const type of towerTypes) {
+                this.inputManager.on('tower_' + type, () => {
+                    const refs = getGameplayRefs();
+                    if (!refs || !refs.uiManager) return;
+                    if (refs.gameplayState.isPaused) return;
+                    const btn = document.querySelector(`.tower-btn[data-type="${type}"]`);
+                    if (btn && !btn.disabled && btn.style.display !== 'none') {
+                        refs.uiManager.selectTower(btn);
+                    }
+                });
+            }
+
+            // Building hotkeys
+            const buildingTypes = ['mine', 'forge', 'academy', 'training', 'superweapon', 'diamond-press'];
+            for (const type of buildingTypes) {
+                this.inputManager.on('building_' + type, () => {
+                    const refs = getGameplayRefs();
+                    if (!refs || !refs.uiManager) return;
+                    if (refs.gameplayState.isPaused) return;
+                    const btn = document.querySelector(`.building-btn[data-type="${type}"]`);
+                    if (btn && !btn.disabled && btn.style.display !== 'none') {
+                        refs.uiManager.selectBuilding(btn);
+                    }
+                });
+            }
+
+            // Gamepad click -> simulate canvas click
+            this.inputManager.on('gamepad_click', (data) => {
+                if (this.stateManager && this.stateManager.currentState) {
+                    this.stateManager.handleClick(data.x, data.y);
+                }
+            });
+
+            // Gamepad shoulder buttons -> cycle through towers/buildings
+            this.inputManager.on('gamepad_prev_item', () => {
+                const refs = getGameplayRefs();
+                if (!refs || !refs.uiManager) return;
+                this._cycleSelection(refs.uiManager, -1);
+            });
+            this.inputManager.on('gamepad_next_item', () => {
+                const refs = getGameplayRefs();
+                if (!refs || !refs.uiManager) return;
+                this._cycleSelection(refs.uiManager, 1);
+            });
+
+            // Touch tap -> click
+            this.inputManager.on('touch_tap', (data) => {
+                if (this.stateManager && this.stateManager.currentState) {
+                    this.stateManager.handleClick(data.x, data.y);
+                }
+            });
+
+            // Touch move -> update placement preview 
+            this.inputManager.on('touch_move', (data) => {
+                if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.handleTouchMove) {
+                    this.stateManager.currentState.handleTouchMove(data.x, data.y);
+                }
+            });
+
+            // Touch long press -> right-click (cancel selection)
+            this.inputManager.on('touch_longpress', () => {
+                if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.cancelSelection) {
+                    this.stateManager.currentState.cancelSelection();
+                }
+            });
+
+            // Setup touch on canvas
+            this.inputManager.setupTouchHandlers(this.canvas);
             
         } catch (error) {
             console.error('Game: Error setting up event listeners:', error);
@@ -332,6 +407,29 @@ export class Game {
         window.addEventListener('beforeunload', (e) => {
             this.shutdown();
         });
+    }
+
+    /**
+     * Cycle through tower/building selection with gamepad shoulder buttons
+     */
+    _cycleSelection(uiManager, direction) {
+        const allBtns = [
+            ...document.querySelectorAll('.tower-btn'),
+            ...document.querySelectorAll('.building-btn')
+        ].filter(btn => !btn.disabled && btn.style.display !== 'none');
+
+        if (allBtns.length === 0) return;
+
+        const currentSelected = document.querySelector('.tower-btn.selected, .building-btn.selected');
+        let index = currentSelected ? allBtns.indexOf(currentSelected) : -1;
+        index = (index + direction + allBtns.length) % allBtns.length;
+        
+        const btn = allBtns[index];
+        if (btn.classList.contains('tower-btn')) {
+            uiManager.selectTower(btn);
+        } else {
+            uiManager.selectBuilding(btn);
+        }
     }
     
     /**
@@ -351,6 +449,12 @@ export class Game {
         if (this.animationFrameId !== null) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
+        }
+        
+        // Cleanup input manager
+        if (this.inputManager) {
+            this.inputManager.removeTouchHandlers(this.canvas);
+            this.inputManager.destroy();
         }
         
         // Exit current state if any

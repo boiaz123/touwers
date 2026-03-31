@@ -753,6 +753,23 @@ export class GameplayState {
         this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
     }
     
+    /**
+     * Handle touch move for placement preview (coordinates already in canvas space)
+     */
+    handleTouchMove(x, y) {
+        if (!this.selectedTowerType && !this.selectedBuildingType) {
+            this.level.setPlacementPreview(0, 0, false);
+            return;
+        }
+        
+        let size = 2;
+        if (this.selectedBuildingType) {
+            const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
+            size = buildingType?.size || 4;
+        }
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
+    }
+    
     activateSpellTargeting(spellId) {
         this.selectedSpell = spellId;
         this.stateManager.canvas.style.cursor = 'crosshair';
@@ -2062,6 +2079,11 @@ export class GameplayState {
         
         // Render performance monitor
         this.performanceMonitor.render(ctx, 10, 10);
+        
+        // Render gamepad cursor if connected
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.renderGamepadCursor(ctx);
+        }
         
         // Render results screen on top if showing
         if (this.resultsScreen && this.resultsScreen.isShowing) {
