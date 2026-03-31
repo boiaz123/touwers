@@ -380,13 +380,20 @@ export class TowerManager {
         const currentBuildingCount = this.buildingManager.buildings.length;
         if (this.lastBuildingCount !== currentBuildingCount) {
             this.lastBuildingCount = currentBuildingCount;
-            // Rebuild cache on next update
-            this.cachedForges = null;
-            this.cachedAcademies = null;
-            this.cachedTrainingGrounds = null;
-            this.cachedLabs = null;
+            // Rebuild cache immediately
+            this.cachedForges = this.buildingManager.buildings.filter(building => 
+                building.type === 'forge'
+            );
+            this.cachedAcademies = this.buildingManager.buildings.filter(building =>
+                building.type === 'academy'
+            );
+            this.cachedTrainingGrounds = this.buildingManager.buildings.filter(building => 
+                building.type === 'training'
+            );
+            this.cachedLabs = this.buildingManager.buildings.filter(building =>
+                building.type === 'superweapon'
+            );
             this._towerStatsNeedUpdate = true;
-            return; // Skip update this frame to rebuild cache next frame
         }
         
         let upgradesChanged = false;
@@ -587,7 +594,8 @@ export class TowerManager {
     
     recalculateAllTowerStats() {
         // Force recalculation of all tower stats when forge upgrades change
-        this.towers.forEach(tower => {
+        for (let i = 0; i < this.towers.length; i++) {
+            const tower = this.towers[i];
             // Reset to original values first
             if (tower.originalDamage) {
                 tower.damage = tower.originalDamage;
@@ -604,7 +612,7 @@ export class TowerManager {
                     tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed;
                 }
             }
-        });
+        }
     }
     
     applyForgeUpgrades(tower) {
@@ -870,14 +878,10 @@ export class TowerManager {
     }
     
     render(ctx) {
-        // Sort towers by Y position for proper depth ordering (bottom-to-top perspective)
-        // Entities lower on screen (higher Y) are rendered last (on top)
-        const sortedTowers = [...this.towers].sort((a, b) => a.y - b.y);
-        
-        // Render all towers in sorted order
-        sortedTowers.forEach(tower => {
-            tower.render(ctx);
-        });
+        // Render all towers (depth sorting handled by GameplayState)
+        for (let i = 0; i < this.towers.length; i++) {
+            this.towers[i].render(ctx);
+        }
         
         // Render all buildings
         this.buildingManager.render(ctx);
@@ -890,11 +894,11 @@ export class TowerManager {
     ensureAudioManagerForAllTowers() {
         if (!this.audioManager) return;
         
-        this.towers.forEach(tower => {
-            if (!tower.audioManager) {
-                tower.audioManager = this.audioManager;
+        for (let i = 0; i < this.towers.length; i++) {
+            if (!this.towers[i].audioManager) {
+                this.towers[i].audioManager = this.audioManager;
             }
-        });
+        }
     }
     
     getTowerInfo(type) {

@@ -197,15 +197,8 @@ export class BasicTower extends Tower {
         // Stone base - tight and aligned
         const baseY = this.y;
         
-        // Stone base with gradient for depth
-        const baseGradient = ctx.createLinearGradient(
-            this.x - baseSize/2, baseY - baseHeight,
-            this.x + baseSize/2, baseY
-        );
-        baseGradient.addColorStop(0, '#D0D0D0');
-        baseGradient.addColorStop(0.4, '#A9A9A9');
-        baseGradient.addColorStop(1, '#6A6A6A');
-        ctx.fillStyle = baseGradient;
+        // Stone base
+        ctx.fillStyle = '#A9A9A9';
         ctx.fillRect(this.x - baseSize/2, baseY - baseHeight, baseSize, baseHeight);
 
         // Base top highlight
@@ -442,7 +435,7 @@ export class BasicTower extends Tower {
         const throwingDefender = this.defenders[0];
         const armAngle = this.target && this.throwingDefender === 0 ?
             -Math.PI / 2 - throwingDefender.armRaised * Math.PI / 3 :
-            Math.sin(Date.now() * 0.002) * 0.2;
+            Math.sin(this.animationTime * 2) * 0.2;
 
         ctx.beginPath();
         ctx.moveTo(-1, -2);
@@ -466,23 +459,20 @@ export class BasicTower extends Tower {
         ctx.restore();
         
         // Render flying rocks
-        this.rocks.forEach(rock => {
+        for (let r = 0; r < this.rocks.length; r++) {
+            const rock = this.rocks[r];
             ctx.save();
             ctx.translate(rock.x, rock.y);
             ctx.rotate(rock.rotation);
             
-            const rockGradient = ctx.createRadialGradient(-1, -1, 0, 0, 0, rock.size);
-            rockGradient.addColorStop(0, '#A9A9A9');
-            rockGradient.addColorStop(1, '#696969');
-            
-            ctx.fillStyle = rockGradient;
+            ctx.fillStyle = '#808080';
             ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 0.5;
             
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
                 const angle = (i / 6) * Math.PI * 2;
-                const variance = 0.7 + Math.random() * 0.3;
+                const variance = 0.7 + ((i * 0.618) % 1) * 0.3;
                 const x = Math.cos(angle) * rock.size * variance;
                 const y = Math.sin(angle) * rock.size * variance;
                 
@@ -494,7 +484,7 @@ export class BasicTower extends Tower {
             ctx.stroke();
             
             ctx.restore();
-        });
+        }
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

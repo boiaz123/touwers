@@ -84,23 +84,6 @@ export class MagicTower extends Tower {
         }
     }
     
-    findTarget(enemies) {
-        let closest = null;
-        let closestDistSq = this.range * this.range;
-        
-        for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closest = enemy;
-                closestDistSq = distSq;
-            }
-        }
-        
-        return closest;
-    }
-    
     shoot() {
         if (this.target) {
             let finalDamage = this.damage;
@@ -459,8 +442,6 @@ export class MagicTower extends Tower {
         const gb = gemRadius * 0.65;
 
         ctx.save();
-        ctx.shadowBlur = glowSize;
-        ctx.shadowColor = gemData.glow;
         // Prism gem body
         ctx.fillStyle = gemData.gem;
         ctx.beginPath();
@@ -473,7 +454,6 @@ export class MagicTower extends Tower {
         ctx.lineTo(cx - gw * 0.5, sphereY - gt * 0.35);
         ctx.closePath();
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = 'rgba(0,0,0,0.45)';
         ctx.lineWidth = 1;
         ctx.stroke();
@@ -509,14 +489,15 @@ export class MagicTower extends Tower {
         ctx.restore();
         
         // Floating runes around tower base (not coil)
-        this.runePositions.forEach((rune, index) => {
+        for (let i = 0; i < this.runePositions.length; i++) {
+            const rune = this.runePositions[i];
             const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * 6;
             const runeAngle = this.runeRotation + rune.angle;
             const runeRadius = baseRadius * 1.3;
             const runeX = this.x + Math.cos(runeAngle) * runeRadius;
             const runeY = this.y - towerHeight * 0.3 + Math.sin(runeAngle) * runeRadius * 0.3 + floatY;
             
-            // Rune glow - simplified without gradient
+            // Rune glow
             ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.4})`;
             ctx.beginPath();
             ctx.arc(runeX, runeY, 12, 0, Math.PI * 2);
@@ -528,19 +509,21 @@ export class MagicTower extends Tower {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(rune.symbol, runeX, runeY);
-        });
+        }
         
-        // Render magic particles - simplified without individual glows
-        this.magicParticles.forEach(particle => {
+        // Render magic particles
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             const alpha = particle.life / particle.maxLife;
             ctx.fillStyle = particle.color + alpha + ')';
             ctx.beginPath();
             ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
         
         // Render lightning bolts with elemental colors
-        this.lightningBolts.forEach(bolt => {
+        for (let i = 0; i < this.lightningBolts.length; i++) {
+            const bolt = this.lightningBolts[i];
             const alpha = bolt.life / bolt.maxLife;
             
             // Update bolt start position to tesla coil sphere
@@ -550,23 +533,25 @@ export class MagicTower extends Tower {
             // Main lightning with elemental color
             ctx.strokeStyle = (bolt.color || 'rgba(255, 255, 255, ') + alpha + ')';
             ctx.lineWidth = 4;
-            bolt.segments.forEach(segment => {
+            for (let s = 0; s < bolt.segments.length; s++) {
+                const segment = bolt.segments[s];
                 ctx.beginPath();
                 ctx.moveTo(segment.fromX, segment.fromY);
                 ctx.lineTo(segment.toX, segment.toY);
                 ctx.stroke();
-            });
+            }
             
-            // Lightning glow - single pass instead of double
+            // Lightning glow - single pass
             ctx.strokeStyle = (bolt.color || 'rgba(138, 43, 226, ') + (alpha * 0.4) + ')';
             ctx.lineWidth = 6;
-            bolt.segments.forEach(segment => {
+            for (let s = 0; s < bolt.segments.length; s++) {
+                const segment = bolt.segments[s];
                 ctx.beginPath();
                 ctx.moveTo(segment.fromX, segment.fromY);
                 ctx.lineTo(segment.toX, segment.toY);
                 ctx.stroke();
-            });
-        });
+            }
+        }
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

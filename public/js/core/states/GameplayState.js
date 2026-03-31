@@ -1170,8 +1170,9 @@ export class GameplayState {
         // Only show menus if not in placement mode
         const clickResult = this.towerManager.handleClick(x, y, this.level.resolutionManager);
         
-        
+        // Track that a selection was made so deselection only runs when needed
         if (clickResult) {
+            this._hasSelection = true;
             if (clickResult.type === 'forge_menu') {
                 this.uiManager.showForgeUpgradeMenu(clickResult);
                 return;
@@ -1557,15 +1558,19 @@ export class GameplayState {
             }
         }
         
-        // Process pending damage (delayed spell effects)
-        this.pendingDamage = this.pendingDamage.filter(damage => {
+        // Process pending damage (delayed spell effects) - compact in-place
+        let pendingAlive = 0;
+        for (let i = 0; i < this.pendingDamage.length; i++) {
+            const damage = this.pendingDamage[i];
             damage.time -= adjustedDeltaTime;
             if (damage.time <= 0) {
                 damage.callback();
-                return false; // Remove from pending list
+            } else {
+                this.pendingDamage[pendingAlive] = damage;
+                pendingAlive++;
             }
-            return true;
-        });
+        }
+        this.pendingDamage.length = pendingAlive;
         
         // Update castle first so it's ready for defender positioning
         if (this.level.castle) {
@@ -1702,12 +1707,19 @@ export class GameplayState {
         }
         
         // Deselect all towers and buildings during normal gameplay (no menu open)
-        // This ensures the radius only shows when a tower is selected via clicking
+        // Only run the deselection pass when selection state actually needs clearing
         if (this.towerManager && !this.uiManager.activeMenuType) {
-            this.towerManager.towers.forEach(tower => tower.isSelected = false);
-            this.towerManager.buildingManager.buildings.forEach(building => {
-                if (building.deselect) building.deselect();
-            });
+            if (this._hasSelection) {
+                const towers = this.towerManager.towers;
+                for (let i = 0; i < towers.length; i++) {
+                    towers[i].isSelected = false;
+                }
+                const buildings = this.towerManager.buildingManager.buildings;
+                for (let i = 0; i < buildings.length; i++) {
+                    if (buildings[i].deselect) buildings[i].deselect();
+                }
+                this._hasSelection = false;
+            }
         }
         
         // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
@@ -1723,17 +1735,16 @@ export class GameplayState {
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
             
-            // Clean up dead path defenders
+            // Clean up dead path defenders using compact-in-place (avoids splice overhead)
             if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
-                // Remove dead defenders from the enemy's list
                 let aliveCount = 0;
-                for (let j = enemy.pathDefenders.length - 1; j >= 0; j--) {
-                    if (enemy.pathDefenders[j].isDead()) {
-                        enemy.pathDefenders.splice(j, 1);
-                    } else {
+                for (let j = 0; j < enemy.pathDefenders.length; j++) {
+                    if (!enemy.pathDefenders[j].isDead()) {
+                        enemy.pathDefenders[aliveCount] = enemy.pathDefenders[j];
                         aliveCount++;
                     }
                 }
+                enemy.pathDefenders.length = aliveCount;
                 
                 // If all path defenders are dead, allow enemy to resume
                 if (aliveCount === 0) {
@@ -1893,16 +1904,22 @@ export class GameplayState {
         // Update active menu if one is open (for real-time resource availability)
         this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
         
-        // Update spell effects
-        this.spellEffects = this.spellEffects.filter(effect => {
+        // Update spell effects - compact-in-place to avoid allocating new array
+        let aliveEffects = 0;
+        for (let i = 0; i < this.spellEffects.length; i++) {
+            const effect = this.spellEffects[i];
             effect.life -= adjustedDeltaTime;
             if (effect.x !== undefined && effect.vx !== undefined) {
                 effect.x += effect.vx * adjustedDeltaTime;
                 effect.y += effect.vy * adjustedDeltaTime;
                 effect.vy += 100 * adjustedDeltaTime; // gravity
             }
-            return effect.life > 0;
-        });
+            if (effect.life > 0) {
+                this.spellEffects[aliveEffects] = effect;
+                aliveEffects++;
+            }
+        }
+        this.spellEffects.length = aliveEffects;
     }
     
     gameOver() {
@@ -1969,88 +1986,106 @@ export class GameplayState {
         // Render background terrain/level first
         this.level.render(ctx);
         
+        // OPTIMIZATION: When results screen is showing, skip rendering all game entities
+        // The update() already stops game logic; this stops the expensive render pass too
+        if (this.resultsScreen && this.resultsScreen.isShowing) {
+            // Render performance monitor
+            this.performanceMonitor.render(ctx, 10, 10);
+            // Render results screen on top
+            this.resultsScreen.render(ctx);
+            return;
+        }
+        
         // Collect all renderable entities (towers, buildings, enemies, loot, castle) 
         // with their Y positions for unified depth sorting
-        // OPTIMIZATION: Reuse persistent array to avoid allocation every frame
+        // OPTIMIZATION: Reuse persistent array and entity wrapper objects to avoid GC pressure
         if (!this._entityRenderPool) this._entityRenderPool = [];
+        if (!this._entityObjectPool) this._entityObjectPool = [];
         const entities = this._entityRenderPool;
-        entities.length = 0;
+        const objectPool = this._entityObjectPool;
+        let entityIndex = 0;
         
-        // Add towers with render function
+        // Helper to get or create an entity wrapper from the pool
+        const getEntity = (y, source, type) => {
+            if (entityIndex >= objectPool.length) {
+                objectPool.push({ y: 0, source: null, type: '' });
+            }
+            const obj = objectPool[entityIndex];
+            obj.y = y;
+            obj.source = source;
+            obj.type = type;
+            entityIndex++;
+            return obj;
+        };
+        
+        // Add towers
         if (this.towerManager && this.towerManager.towers) {
-            this.towerManager.towers.forEach(tower => {
-                entities.push({
-                    y: tower.y,
-                    render: () => tower.render(ctx),
-                    type: 'tower'
-                });
-            });
-        }
-        
-        // Add buildings with render function
-        if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
-            this.towerManager.buildingManager.buildings.forEach(building => {
-                entities.push({
-                    y: building.y,
-                    render: () => {
-                        const cellSize = building.getCellSize(ctx);
-                        const buildingSize = cellSize * building.size;
-                        ctx.buildingManager = this.towerManager.buildingManager;
-                        building.render(ctx, buildingSize);
-                        delete ctx.buildingManager;
-                    },
-                    type: 'building'
-                });
-            });
-        }
-        
-        // Add enemies with render function
-        if (this.enemyManager && this.enemyManager.enemies) {
-            this.enemyManager.enemies.forEach(enemy => {
-                entities.push({
-                    y: enemy.y,
-                    render: () => {
-                        enemy.render(ctx);
-                        // Render splatters from this enemy
-                        if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                            for (let j = 0; j < enemy.hitSplatters.length; j++) {
-                                enemy.hitSplatters[j].render(ctx);
-                            }
-                        }
-                    },
-                    type: 'enemy'
-                });
-            });
-        }
-        
-        // Add loot bags with render function
-        if (this.lootManager) {
-            if (this.lootManager.lootBags) {
-                this.lootManager.lootBags.forEach(lootBag => {
-                    entities.push({
-                        y: lootBag.y,
-                        render: () => lootBag.render(ctx),
-                        type: 'loot'
-                    });
-                });
+            const towers = this.towerManager.towers;
+            for (let i = 0; i < towers.length; i++) {
+                getEntity(towers[i].y, towers[i], 'tower');
             }
         }
         
-        // Add castle with render function
-        if (this.level.castle) {
-            entities.push({
-                y: this.level.castle.y,
-                render: () => this.level.castle.render(ctx),
-                type: 'castle'
-            });
+        // Add buildings
+        if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
+            const buildings = this.towerManager.buildingManager.buildings;
+            for (let i = 0; i < buildings.length; i++) {
+                getEntity(buildings[i].y, buildings[i], 'building');
+            }
         }
         
-        // Sort all entities by Y position for proper depth ordering (bottom-to-top perspective)
-        // Entities lower on screen (higher Y) are rendered last (on top)
+        // Add enemies
+        if (this.enemyManager && this.enemyManager.enemies) {
+            const enemies = this.enemyManager.enemies;
+            for (let i = 0; i < enemies.length; i++) {
+                getEntity(enemies[i].y, enemies[i], 'enemy');
+            }
+        }
+        
+        // Add loot bags
+        if (this.lootManager && this.lootManager.lootBags) {
+            const bags = this.lootManager.lootBags;
+            for (let i = 0; i < bags.length; i++) {
+                getEntity(bags[i].y, bags[i], 'loot');
+            }
+        }
+        
+        // Add castle
+        if (this.level.castle) {
+            getEntity(this.level.castle.y, this.level.castle, 'castle');
+        }
+        
+        // Set the active length of the entities view into the object pool
+        entities.length = entityIndex;
+        for (let i = 0; i < entityIndex; i++) {
+            entities[i] = objectPool[i];
+        }
+        
+        // Sort all entities by Y position for proper depth ordering
         entities.sort((a, b) => a.y - b.y);
         
         // Render all entities in sorted order
-        entities.forEach(entity => entity.render());
+        for (let i = 0; i < entities.length; i++) {
+            const ent = entities[i];
+            if (ent.type === 'building') {
+                const building = ent.source;
+                const cellSize = building.getCellSize(ctx);
+                const buildingSize = cellSize * building.size;
+                ctx.buildingManager = this.towerManager.buildingManager;
+                building.render(ctx, buildingSize);
+                delete ctx.buildingManager;
+            } else if (ent.type === 'enemy') {
+                const enemy = ent.source;
+                enemy.render(ctx);
+                if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
+                    for (let j = 0; j < enemy.hitSplatters.length; j++) {
+                        enemy.hitSplatters[j].render(ctx);
+                    }
+                }
+            } else {
+                ent.source.render(ctx);
+            }
+        }
         
         // Render orphaned splatters from dead enemies
         if (this.enemyManager && this.enemyManager.orphanedSplatters) {
@@ -2066,11 +2101,13 @@ export class GameplayState {
         
         // Render guard post defenders
         if (this.towerManager && this.towerManager.towers) {
-            this.towerManager.towers.forEach(tower => {
+            const towers = this.towerManager.towers;
+            for (let i = 0; i < towers.length; i++) {
+                const tower = towers[i];
                 if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     tower.defender.render(ctx);
                 }
-            });
+            }
         }
         
         this.renderSpellEffects(ctx);
@@ -2080,11 +2117,6 @@ export class GameplayState {
         
         // Render performance monitor
         this.performanceMonitor.render(ctx, 10, 10);
-        
-        // Render results screen on top if showing
-        if (this.resultsScreen && this.resultsScreen.isShowing) {
-            this.resultsScreen.render(ctx);
-        }
     }
     
     renderActiveBoons(ctx) {
@@ -2131,11 +2163,6 @@ export class GameplayState {
                 continue;
             }
             
-            // Animated glow effect
-            const glowIntensity = 0.3 + Math.sin((this.stateManager.gameState?.timeElapsed || 0) * 2) * 0.2;
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = 12 + glowIntensity * 8;
-            
             // Border
             ctx.strokeStyle = borderColor;
             ctx.lineWidth = 2;
@@ -2172,7 +2199,8 @@ export class GameplayState {
         if (!this.spellEffects) {
             return;
         }
-        this.spellEffects.forEach(effect => {
+        for (let i = 0; i < this.spellEffects.length; i++) {
+            const effect = this.spellEffects[i];
             const alpha = effect.life / effect.maxLife;
             ctx.globalAlpha = alpha;
             
@@ -2236,7 +2264,7 @@ export class GameplayState {
                 ctx.fillStyle = effect.color;
                 ctx.save();
                 ctx.translate(effect.x, effect.y);
-                ctx.rotate(Date.now() / 100);
+                ctx.rotate(effect.life * 20);
                 ctx.fillRect(-effect.size / 2, -effect.size / 2, effect.size, effect.size);
                 ctx.restore();
                 
@@ -2307,7 +2335,7 @@ export class GameplayState {
             }
             
             ctx.globalAlpha = 1;
-        });
+        }
     }
     
     resize() {

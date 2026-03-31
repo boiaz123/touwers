@@ -199,21 +199,28 @@ export class EnemyManager {
     
     checkReachedEnd() {
         let reachedCount = 0;
-        this.enemies = this.enemies.filter(enemy => {
-            if (enemy.reachedEnd) {
+        let writeIdx = 0;
+        for (let i = 0; i < this.enemies.length; i++) {
+            if (this.enemies[i].reachedEnd) {
                 reachedCount++;
-                return false;
+            } else {
+                this.enemies[writeIdx] = this.enemies[i];
+                writeIdx++;
             }
-            return true;
-        });
+        }
+        this.enemies.length = writeIdx;
         return reachedCount;
     }
     
     removeDeadEnemies() {
         let totalGold = 0;
-        const lootDrops = []; // Array of { x, y, lootId, isRare }
+        if (!this._lootDropBuffer) this._lootDropBuffer = [];
+        const lootDrops = this._lootDropBuffer;
+        lootDrops.length = 0;
         
-        this.enemies = this.enemies.filter(enemy => {
+        let writeIdx = 0;
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
                 
@@ -240,25 +247,33 @@ export class EnemyManager {
                 
                 // Preserve splatters from dead enemies so they continue to animate and fade
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                    this.orphanedSplatters.push(...enemy.hitSplatters);
+                    for (let j = 0; j < enemy.hitSplatters.length; j++) {
+                        this.orphanedSplatters.push(enemy.hitSplatters[j]);
+                    }
                 }
-                return false;
+            } else {
+                this.enemies[writeIdx] = enemy;
+                writeIdx++;
             }
-            return true;
-        });
+        }
+        this.enemies.length = writeIdx;
         
         return { totalGold, lootDrops };
     }
     
     render(ctx) {
-        // Sort enemies by Y position for proper depth ordering (bottom-to-top perspective)
-        // Entities lower on screen (higher Y) are rendered last (on top)
-        const sortedEnemies = [...this.enemies].sort((a, b) => a.y - b.y);
+        // Sort enemies by Y position for proper depth ordering
+        // OPTIMIZATION: Reuse buffer array instead of spreading into a new one each frame
+        if (!this._renderBuffer) this._renderBuffer = [];
+        const buf = this._renderBuffer;
+        buf.length = this.enemies.length;
+        for (let i = 0; i < this.enemies.length; i++) {
+            buf[i] = this.enemies[i];
+        }
+        buf.sort((a, b) => a.y - b.y);
         
-        // OPTIMIZATION: Consolidate rendering into single loop
-        // Render all enemies and their splatters in one pass
-        for (let i = 0; i < sortedEnemies.length; i++) {
-            const enemy = sortedEnemies[i];
+        for (let i = 0; i < buf.length; i++) {
+            const enemy = buf[i];
             enemy.render(ctx);
             
             // Render splatters from this enemy

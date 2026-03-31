@@ -261,7 +261,8 @@ export class PoisonArcherTower extends Tower {
     }
     
     renderCoverElements(ctx) {
-        this.coverElements.forEach((element) => {
+        for (let eIdx = 0; eIdx < this.coverElements.length; eIdx++) {
+            const element = this.coverElements[eIdx];
             ctx.save();
             ctx.translate(element.x, element.y);
             
@@ -283,7 +284,8 @@ export class PoisonArcherTower extends Tower {
             ctx.stroke();
             
             // Branches with cached data
-            element.branches.forEach(branch => {
+            for (let bIdx = 0; bIdx < element.branches.length; bIdx++) {
+                const branch = element.branches[bIdx];
                 const branchX = Math.cos(branch.angle) * branch.length;
                 const branchY = Math.sin(branch.angle) * branch.length;
                 
@@ -294,7 +296,8 @@ export class PoisonArcherTower extends Tower {
                 
                 // Sub-branches
                 ctx.lineWidth = 1;
-                branch.subBranches.forEach(subBranch => {
+                for (let sIdx = 0; sIdx < branch.subBranches.length; sIdx++) {
+                    const subBranch = branch.subBranches[sIdx];
                     const subX = branchX + Math.cos(subBranch.angle) * subBranch.length;
                     const subY = branchY + Math.sin(subBranch.angle) * subBranch.length;
                     
@@ -302,12 +305,13 @@ export class PoisonArcherTower extends Tower {
                     ctx.moveTo(branchX, branchY);
                     ctx.lineTo(subX, subY);
                     ctx.stroke();
-                });
+                }
                 ctx.lineWidth = 2;
-            });
+            }
             
             // Leaf clusters
-            element.leafClusters.forEach((cluster) => {
+            for (let cIdx = 0; cIdx < element.leafClusters.length; cIdx++) {
+                const cluster = element.leafClusters[cIdx];
                 const leafX = Math.cos(cluster.angle) * cluster.distance;
                 const leafY = Math.sin(cluster.angle) * cluster.distance;
                 
@@ -328,7 +332,7 @@ export class PoisonArcherTower extends Tower {
                     ctx.ellipse(lx, ly, 3, 6, leafAngle, 0, Math.PI * 2);
                     ctx.fill();
                 }
-            });
+            }
             
             // Dense foliage base
             ctx.fillStyle = '#1F4F1F';
@@ -345,7 +349,7 @@ export class PoisonArcherTower extends Tower {
             ctx.fill();
             
             ctx.restore();
-        });
+        }
     }
     
     renderArcher(ctx) {
@@ -442,7 +446,8 @@ export class PoisonArcherTower extends Tower {
     }
     
     renderArrows(ctx) {
-        this.poisonArrows.forEach(arrow => {
+        for (let i = 0; i < this.poisonArrows.length; i++) {
+            const arrow = this.poisonArrows[i];
             ctx.save();
             ctx.translate(arrow.x, arrow.y);
             ctx.rotate(arrow.rotation);
@@ -475,7 +480,7 @@ export class PoisonArcherTower extends Tower {
             ctx.stroke();
             
             ctx.restore();
-        });
+        }
     }
     
     renderIndicators(ctx) {

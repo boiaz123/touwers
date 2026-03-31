@@ -7,8 +7,8 @@ export class BarricadeTower extends Tower {
         this.fireRate = 0.5; // Fires a barrel every 2 seconds
         
         this.defenders = [
-            { angle: 0, pushAnimation: 0, hasBarrel: true },
-            { angle: Math.PI, pushAnimation: 0, hasBarrel: true }
+            { angle: 0, pushAnimation: 0, hasBarrel: true, barrelReloadTimer: 0 },
+            { angle: Math.PI, pushAnimation: 0, hasBarrel: true, barrelReloadTimer: 0 }
         ];
         this.rollingBarrels = [];
         this.slowZones = [];
@@ -27,8 +27,18 @@ export class BarricadeTower extends Tower {
     update(deltaTime, enemies) {
         super.update(deltaTime, enemies);
         
-        this.defenders.forEach(defender => {
+        for (let d = 0; d < this.defenders.length; d++) {
+            const defender = this.defenders[d];
             defender.pushAnimation = Math.max(0, defender.pushAnimation - deltaTime * 2);
+            
+            // Reload barrel via frame-based timer
+            if (!defender.hasBarrel && defender.barrelReloadTimer > 0) {
+                defender.barrelReloadTimer -= deltaTime;
+                if (defender.barrelReloadTimer <= 0) {
+                    defender.hasBarrel = true;
+                    defender.barrelReloadTimer = 0;
+                }
+            }
             
             if (this.target) {
                 const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
@@ -36,7 +46,7 @@ export class BarricadeTower extends Tower {
                 const adjustedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
                 defender.angle += Math.sign(adjustedDiff) * Math.min(Math.abs(adjustedDiff), deltaTime * 1.5);
             }
-        });
+        }
         
         if (this.target && this.cooldown <= 0) {
             this.rollBarrel();
@@ -76,51 +86,67 @@ export class BarricadeTower extends Tower {
             
             // Determine which enemies to slow (up to max capacity)
             const enemiesInRange = [];
-            enemies.forEach(enemy => {
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
                 if (!enemy.hasOwnProperty('originalSpeed')) {
                     enemy.originalSpeed = enemy.speed;
                 }
                 
-                const distance = Math.hypot(enemy.x - zone.x, enemy.y - zone.y);
-                if (distance <= zone.radius) {
-                    enemiesInRange.push({ enemy, distance });
+                const dx = enemy.x - zone.x;
+                const dy = enemy.y - zone.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq <= zone.radius * zone.radius) {
+                    enemiesInRange.push({ enemy, distSq });
                 }
-            });
+            }
             
-            // Sort by distance (closest first) and take only up to maxEnemiesSlowed
-            enemiesInRange.sort((a, b) => a.distance - b.distance);
-            const enemiesSlowed = new Set(enemiesInRange.slice(0, zone.maxEnemiesSlowed).map(e => e.enemy));
+            // Sort by distance only when necessary
+            if (enemiesInRange.length > zone.maxEnemiesSlowed) {
+                enemiesInRange.sort((a, b) => a.distSq - b.distSq);
+            }
+            const slowed = Math.min(enemiesInRange.length, zone.maxEnemiesSlowed);
             
-            // Apply slow to enemies that should be slowed and restore others
-            enemies.forEach(enemy => {
+            // Apply slow to closest enemies
+            for (let i = 0; i < slowed; i++) {
+                const enemy = enemiesInRange[i].enemy;
+                const targetSpeed = enemy.originalSpeed * 0.25;
+                const slowRate = 1 - Math.pow(0.05, deltaTime);
+                enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
+            }
+            
+            // Restore speed for enemies not being slowed
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
                 if (!enemy.hasOwnProperty('originalSpeed')) {
                     enemy.originalSpeed = enemy.speed;
                 }
                 
-                if (enemiesSlowed.has(enemy)) {
-                    // Apply slow effect
-                    const targetSpeed = enemy.originalSpeed * 0.25;
-                    const slowRate = 1 - Math.pow(0.05, deltaTime);
-                    enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
-                } else {
-                    // Restore speed if not being slowed
-                    if (enemy.speed < enemy.originalSpeed) {
-                        const restoreRate = 1 - Math.pow(0.3, deltaTime);
-                        enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
+                // Check if enemy is in slowed set
+                let isSlowed = false;
+                for (let j = 0; j < slowed; j++) {
+                    if (enemiesInRange[j].enemy === enemy) {
+                        isSlowed = true;
+                        break;
                     }
                 }
-            });
+                
+                if (!isSlowed && enemy.speed < enemy.originalSpeed) {
+                    const restoreRate = 1 - Math.pow(0.3, deltaTime);
+                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
+                }
+            }
             
             return zone.life > 0;
         });
         
         if (this.slowZones.length === 0) {
-            enemies.forEach(enemy => {
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
                 if (enemy.hasOwnProperty('originalSpeed') && enemy.speed < enemy.originalSpeed) {
                     const restoreRate = 1 - Math.pow(0.3, deltaTime);
                     enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
                 }
-            });
+            }
         }
     }
     
@@ -162,11 +188,7 @@ export class BarricadeTower extends Tower {
                     fallbackY: this.target.y
                 });
                 
-                setTimeout(() => {
-                    if (defender) {
-                        defender.hasBarrel = true;
-                    }
-                }, 1500 + Math.random() * 1000);
+                defender.barrelReloadTimer = 1.5 + Math.random();
             }
         }
     }
@@ -212,16 +234,7 @@ export class BarricadeTower extends Tower {
             const plankY = this.y - baseHeight + (i * plankHeight);
             const plankOffset = (i % 2) * 2;
             
-            const plankGradient = ctx.createLinearGradient(
-                this.x - baseWidth/2, plankY,
-                this.x + baseWidth/2, plankY + plankHeight
-            );
-            plankGradient.addColorStop(0, '#B8860B');
-            plankGradient.addColorStop(0.3, '#8B4513');
-            plankGradient.addColorStop(0.7, '#CD853F');
-            plankGradient.addColorStop(1, '#654321');
-            
-            ctx.fillStyle = plankGradient;
+            ctx.fillStyle = '#9B6B35';
             ctx.fillRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
             
             ctx.strokeStyle = '#3D2F1F';
@@ -252,9 +265,10 @@ export class BarricadeTower extends Tower {
             { x: this.x + 20, y: this.y + 10, size: 49, seed: 3 }
         ];
         
-        treePositions.forEach(tree => {
+        for (let i = 0; i < treePositions.length; i++) {
+            const tree = treePositions[i];
             this.renderTreeType(ctx, tree.x, tree.y, tree.size, tree.seed % 4);
-        });
+        }
     }
     
     renderTreeType(ctx, x, y, size, typeId) {
@@ -386,15 +400,7 @@ export class BarricadeTower extends Tower {
         for (let side = -1; side <= 1; side += 2) {
             const supportX = this.x + side * (baseWidth/2 - supportWidth/2);
             
-            const supportGradient = ctx.createLinearGradient(
-                supportX, this.y - baseHeight - supportHeight,
-                supportX + supportWidth, this.y - baseHeight
-            );
-            supportGradient.addColorStop(0, '#8B4513');
-            supportGradient.addColorStop(0.5, '#654321');
-            supportGradient.addColorStop(1, '#5D4E37');
-            
-            ctx.fillStyle = supportGradient;
+            ctx.fillStyle = '#704226';
             ctx.fillRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
             
             // Strong outline for definition
@@ -414,13 +420,14 @@ export class BarricadeTower extends Tower {
             
             // Metal binding points
             ctx.fillStyle = '#1F1F1F';
-            const bindingPoints = [0.3, 0.7];
-            bindingPoints.forEach(point => {
-                const bindY = this.y - baseHeight - supportHeight * point;
-                ctx.beginPath();
-                ctx.arc(supportX + supportWidth/2, bindY, 2.5, 0, Math.PI * 2);
-                ctx.fill();
-            });
+            const bindY1 = this.y - baseHeight - supportHeight * 0.3;
+            ctx.beginPath();
+            ctx.arc(supportX + supportWidth/2, bindY1, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            const bindY2 = this.y - baseHeight - supportHeight * 0.7;
+            ctx.beginPath();
+            ctx.arc(supportX + supportWidth/2, bindY2, 2.5, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
     
@@ -441,15 +448,7 @@ export class BarricadeTower extends Tower {
         for (let i = 0; i < platformPlanks; i++) {
             const plankX = this.x - platformWidth/2 + (i * plankWidth);
             
-            const plankGradient = ctx.createLinearGradient(
-                plankX, platformY,
-                plankX + plankWidth, platformY + platformHeight
-            );
-            plankGradient.addColorStop(0, '#DEB887');
-            plankGradient.addColorStop(0.5, '#CD853F');
-            plankGradient.addColorStop(1, '#A0522D');
-            
-            ctx.fillStyle = plankGradient;
+            ctx.fillStyle = '#CD853F';
             ctx.fillRect(plankX, platformY, plankWidth, platformHeight);
             
             ctx.strokeStyle = '#8B4513';
@@ -509,7 +508,9 @@ export class BarricadeTower extends Tower {
         const platformHeight = 10;
         const platformY = this.y - baseHeight - supportHeight;
         
-        this.defenders.forEach((defender, index) => {
+        for (let dIdx = 0; dIdx < this.defenders.length; dIdx++) {
+            const defender = this.defenders[dIdx];
+            const index = dIdx;
             ctx.save();
             
             const defenderX = this.x + (index === 0 ? -15 : 15);
@@ -570,11 +571,12 @@ export class BarricadeTower extends Tower {
             }
             
             ctx.restore();
-        });
+        }
     }
     
     renderRollingBarrels(ctx) {
-        this.rollingBarrels.forEach(barrel => {
+        for (let i = 0; i < this.rollingBarrels.length; i++) {
+            const barrel = this.rollingBarrels[i];
             ctx.save();
             ctx.translate(barrel.x, barrel.y);
             ctx.rotate(barrel.rotation);
@@ -596,11 +598,12 @@ export class BarricadeTower extends Tower {
             ctx.stroke();
             
             ctx.restore();
-        });
+        }
     }
     
     renderSmokeZones(ctx) {
-        this.slowZones.forEach(zone => {
+        for (let zIdx = 0; zIdx < this.slowZones.length; zIdx++) {
+            const zone = this.slowZones[zIdx];
             const alpha = zone.life / zone.maxLife;
             const smokeAlpha = zone.smokeIntensity * alpha;
             
@@ -639,7 +642,7 @@ export class BarricadeTower extends Tower {
             ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
-        });
+        }
     }
     
     static getInfo() {

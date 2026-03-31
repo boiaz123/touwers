@@ -65,12 +65,8 @@ export class CombinationTower extends Tower {
         super.update(deltaTime, enemies);
         this.enemies = enemies; // Store for use in chainLightning
         
-        this.cooldown = Math.max(0, this.cooldown - deltaTime);
-        this.animationTime += deltaTime;
         this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
         this.runeRotation += deltaTime * 0.5;
-        
-        this.target = this.findTarget(enemies);
         
         if (this.target && this.cooldown === 0) {
             this.shoot();
@@ -110,37 +106,20 @@ export class CombinationTower extends Tower {
         }
     }
     
-    findTarget(enemies) {
-        let closest = null;
-        let closestDistSq = this.range * this.range;
-        
-        for (const enemy of enemies) {
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closest = enemy;
-                closestDistSq = distSq;
-            }
-        }
-        
-        return closest;
-    }
-    
     chainToNearbyEnemies(originalTarget, damage, damageType) {
         const chainRange = 100;
         if (!this.enemies) return;
         
-        this.enemies.forEach(enemy => {
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
             if (enemy !== originalTarget && !enemy.isDead()) {
                 const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
                 if (dist <= chainRange) {
-                    // Reduced damage for chained targets
                     const chainDamage = Math.floor(damage * 0.5);
                     enemy.takeDamage(chainDamage, 0, damageType);
                 }
             }
-        });
+        }
     }
     
     shoot() {
@@ -608,15 +587,8 @@ export class CombinationTower extends Tower {
         
         // Tower foundation (using combination color instead of purple)
         const combinationColor = this.getCombinationColor();
-        const foundationGradient = ctx.createRadialGradient(
-            this.x - baseRadius * 0.3, this.y - baseRadius * 0.3, 0,
-            this.x, this.y, baseRadius
-        );
-        foundationGradient.addColorStop(0, combinationColor + '1)');
-        foundationGradient.addColorStop(0.7, combinationColor + '0.8)');
-        foundationGradient.addColorStop(1, combinationColor + '0.6)');
         
-        ctx.fillStyle = foundationGradient;
+        ctx.fillStyle = combinationColor + '0.8)';
         ctx.strokeStyle = combinationColor + '1)';
         ctx.lineWidth = 2;
         
@@ -656,10 +628,7 @@ export class CombinationTower extends Tower {
             const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
             const windowY = this.y - towerHeight/2;
             
-            const windowGlow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, 8);
-            windowGlow.addColorStop(0, combinationColor + `${this.crystalPulse})`);
-            windowGlow.addColorStop(1, combinationColor + '0)');
-            ctx.fillStyle = windowGlow;
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.5})`;
             ctx.beginPath();
             ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
             ctx.fill();
@@ -683,16 +652,18 @@ export class CombinationTower extends Tower {
         ctx.stroke();
         
         // Render magic particles with combination colors
-        this.magicParticles.forEach(particle => {
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             const alpha = particle.life / particle.maxLife;
             ctx.fillStyle = particle.color + alpha + ')';
             ctx.beginPath();
             ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
         
         // Render lightning bolts with unique styles
-        this.lightningBolts.forEach(bolt => {
+        for (let bIdx = 0; bIdx < this.lightningBolts.length; bIdx++) {
+            const bolt = this.lightningBolts[bIdx];
             const alpha = bolt.life / bolt.maxLife;
             
             if (bolt.isMagma) {
@@ -703,11 +674,7 @@ export class CombinationTower extends Tower {
                 const currentY = bolt.startY + (bolt.endY - bolt.startY) * progress;
                 
                 // Glow
-                const glowGradient = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, bolt.size * 2);
-                glowGradient.addColorStop(0, `rgba(255, 140, 0, ${alpha})`);
-                glowGradient.addColorStop(0.5, `rgba(255, 69, 0, ${alpha * 0.5})`);
-                glowGradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
-                ctx.fillStyle = glowGradient;
+                ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.5})`;
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, bolt.size * 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -726,11 +693,7 @@ export class CombinationTower extends Tower {
                 const currentY = bolt.startY + (bolt.endY - bolt.startY) * progress;
                 
                 // Fiery glow
-                const glowGradient = ctx.createRadialGradient(currentX, currentY, 0, currentX, currentY, bolt.size * 2);
-                glowGradient.addColorStop(0, `rgba(255, 140, 0, ${alpha})`);
-                glowGradient.addColorStop(0.5, `rgba(255, 69, 0, ${alpha * 0.5})`);
-                glowGradient.addColorStop(1, `rgba(255, 0, 0, 0)`);
-                ctx.fillStyle = glowGradient;
+                ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.5})`;
                 ctx.beginPath();
                 ctx.arc(currentX, currentY, bolt.size * 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -751,29 +714,27 @@ export class CombinationTower extends Tower {
                 // Render tempest as jagged lightning
                 ctx.strokeStyle = (bolt.color || 'rgba(255, 255, 100, ') + alpha + ')';
                 ctx.lineWidth = 3;
-                ctx.shadowColor = `rgba(255, 255, 255, ${alpha})`;
-                ctx.shadowBlur = 10;
                 
-                bolt.segments.forEach(segment => {
+                for (let s = 0; s < bolt.segments.length; s++) {
+                    const segment = bolt.segments[s];
                     ctx.beginPath();
                     ctx.moveTo(segment.fromX, segment.fromY);
                     ctx.lineTo(segment.toX, segment.toY);
                     ctx.stroke();
-                });
-                
-                ctx.shadowBlur = 0;
+                }
             } else {
                 // Default lightning rendering
                 ctx.strokeStyle = (bolt.color || this.getCombinationColor()) + alpha + ')';
                 ctx.lineWidth = 4;
-                bolt.segments.forEach(segment => {
+                for (let s = 0; s < bolt.segments.length; s++) {
+                    const segment = bolt.segments[s];
                     ctx.beginPath();
                     ctx.moveTo(segment.fromX, segment.fromY);
                     ctx.lineTo(segment.toX, segment.toY);
                     ctx.stroke();
-                });
+                }
             }
-        });
+        }
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);

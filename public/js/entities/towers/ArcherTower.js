@@ -141,15 +141,8 @@ export class ArcherTower extends Tower {
         const baseWidth = towerSize * 0.6;
         const baseHeight = towerSize * 0.15;
         
-        // Foundation stones - gradient for depth
-        const baseGrad = ctx.createLinearGradient(
-            this.x - baseWidth/2, this.y - baseHeight,
-            this.x + baseWidth/2, this.y + baseHeight
-        );
-        baseGrad.addColorStop(0,   '#D0D0D0');
-        baseGrad.addColorStop(0.4, '#A9A9A9');
-        baseGrad.addColorStop(1,   '#6A6A6A');
-        ctx.fillStyle = baseGrad;
+        // Foundation stones
+        ctx.fillStyle = '#A9A9A9';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight * 2);
@@ -172,16 +165,8 @@ export class ArcherTower extends Tower {
         const towerWidth = baseWidth * 0.8;
         const towerHeight = towerSize * 0.7;
         
-        // Tower gradient (vertical wood planks)
-        const towerGradient = ctx.createLinearGradient(
-            this.x - towerWidth/2, this.y - towerHeight,
-            this.x + towerWidth/4, this.y
-        );
-        towerGradient.addColorStop(0, '#DEB887');
-        towerGradient.addColorStop(0.5, '#CD853F');
-        towerGradient.addColorStop(1, '#8B7355');
-        
-        ctx.fillStyle = towerGradient;
+        // Tower wood planks
+        ctx.fillStyle = '#CD853F';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
@@ -219,14 +204,7 @@ export class ArcherTower extends Tower {
         ctx.fillRect(this.x - platformWidth/2 + 2, platformY - platformThickness + 2, platformWidth, platformThickness);
         
         // Platform
-        const platformGradient = ctx.createLinearGradient(
-            this.x - platformWidth/2, platformY - platformThickness,
-            this.x + platformWidth/4, platformY
-        );
-        platformGradient.addColorStop(0, '#CD853F');
-        platformGradient.addColorStop(1, '#8B7355');
-        
-        ctx.fillStyle = platformGradient;
+        ctx.fillStyle = '#A0825B';
         ctx.strokeStyle = '#5D4E37';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - platformWidth/2, platformY - platformThickness, platformWidth, platformThickness);
@@ -296,12 +274,8 @@ export class ArcherTower extends Tower {
         ctx.closePath();
         ctx.fill();
 
-        // Base thatch fill — warm straw gradient
-        const thatchGrad = ctx.createLinearGradient(this.x, roofPeakPt, this.x, roofY);
-        thatchGrad.addColorStop(0, '#7a5520');
-        thatchGrad.addColorStop(0.5, '#b5863a');
-        thatchGrad.addColorStop(1, '#c8a040');
-        ctx.fillStyle = thatchGrad;
+        // Base thatch fill
+        ctx.fillStyle = '#b5863a';
         ctx.beginPath();
         ctx.moveTo(this.x, roofPeakPt);
         ctx.lineTo(this.x - roofHalfW, roofY);
@@ -332,7 +306,7 @@ export class ArcherTower extends Tower {
             // Straw strokes within this band — slightly diagonal, clipped to triangle
             ctx.strokeStyle = 'rgba(215, 175, 65, 0.5)';
             ctx.lineWidth = 0.7;
-            for (let sx = this.x - hw + 2; sx < this.x + hw - 2; sx += 4) {
+            for (let sx = this.x - hw + 2; sx < this.x + hw - 2; sx += 8) {
                 if (prevHW > 0 && Math.abs(sx - this.x) > prevHW) continue;
                 const wobble = (Math.floor(sx) % 8 < 4) ? 1.5 : -1;
                 ctx.beginPath();
@@ -558,7 +532,8 @@ export class ArcherTower extends Tower {
         });
         
         // Render flying arrows
-        this.arrows.forEach(arrow => {
+        for (let a = 0; a < this.arrows.length; a++) {
+            const arrow = this.arrows[a];
             ctx.save();
             ctx.translate(arrow.x, arrow.y);
             ctx.rotate(arrow.rotation);
@@ -593,7 +568,7 @@ export class ArcherTower extends Tower {
             ctx.stroke();
             
             ctx.restore();
-        });
+        }
         
         
         // Render attack radius circle if selected

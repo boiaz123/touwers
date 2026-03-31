@@ -168,17 +168,8 @@ export class CannonTower extends Tower {
         const towerWidth = towerSize * 0.8;
         const towerHeight = towerSize * 0.7;
         
-        // Stone tower gradient (robust square design)
-        const stoneGradient = ctx.createLinearGradient(
-            this.x - towerWidth/2, this.y - towerHeight,
-            this.x + towerWidth/3, this.y
-        );
-        stoneGradient.addColorStop(0, '#B8B8B8');
-        stoneGradient.addColorStop(0.3, '#969696');
-        stoneGradient.addColorStop(0.7, '#696969');
-        stoneGradient.addColorStop(1, '#2F2F2F');
-        
-        ctx.fillStyle = stoneGradient;
+        // Stone tower (robust square design)
+        ctx.fillStyle = '#808080';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
         ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
@@ -394,13 +385,7 @@ export class CannonTower extends Tower {
             
             // Fireball in sling
             const fireballRadius = 5;
-            const fireGradient = ctx.createRadialGradient(0, 6, 0, 0, 6, fireballRadius);
-            fireGradient.addColorStop(0, '#FFFF00');
-            fireGradient.addColorStop(0.3, '#FF8C00');
-            fireGradient.addColorStop(0.7, '#FF4500');
-            fireGradient.addColorStop(1, '#8B0000');
-            
-            ctx.fillStyle = fireGradient;
+            ctx.fillStyle = '#FF8C00';
             ctx.beginPath();
             ctx.arc(0, 6, fireballRadius, 0, Math.PI * 2);
             ctx.fill();
@@ -411,7 +396,7 @@ export class CannonTower extends Tower {
                 const flameX = Math.cos(flameAngle) * (fireballRadius + 3);
                 const flameY = 6 + Math.sin(flameAngle) * (fireballRadius + 3);
                 
-                ctx.fillStyle = `rgba(255, ${100 + Math.random() * 155}, 0, 0.7)`;
+                ctx.fillStyle = `rgba(255, ${100 + (i * 25) % 155}, 0, 0.7)`;
                 ctx.beginPath();
                 ctx.arc(flameX, flameY, 1.5, 0, Math.PI * 2);
                 ctx.fill();
@@ -423,7 +408,8 @@ export class CannonTower extends Tower {
         ctx.restore();
         
         // Render flying fireballs
-        this.fireballs.forEach(fireball => {
+        for (let f = 0; f < this.fireballs.length; f++) {
+            const fireball = this.fireballs[f];
             ctx.save();
             ctx.translate(fireball.x, fireball.y);
             
@@ -432,38 +418,27 @@ export class CannonTower extends Tower {
             const flameFlicker = Math.sin(fireball.flameAnimation) * 0.3 + 1;
             
             // Outer flame layer
-            const outerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, fireballRadius * flameFlicker);
-            outerGradient.addColorStop(0, '#FFFF00');
-            outerGradient.addColorStop(0.3, '#FF8C00');
-            outerGradient.addColorStop(0.7, '#FF4500');
-            outerGradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
-            
-            ctx.fillStyle = outerGradient;
+            ctx.fillStyle = '#FF6600';
             ctx.beginPath();
             ctx.arc(0, 0, fireballRadius * flameFlicker, 0, Math.PI * 2);
             ctx.fill();
             
             // Inner core
-            const coreGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, fireballRadius * 0.6);
-            coreGradient.addColorStop(0, '#FFFFFF');
-            coreGradient.addColorStop(0.4, '#FFFF00');
-            coreGradient.addColorStop(1, '#FF8C00');
-            
-            ctx.fillStyle = coreGradient;
+            ctx.fillStyle = '#FFCC00';
             ctx.beginPath();
             ctx.arc(0, 0, fireballRadius * 0.6, 0, Math.PI * 2);
             ctx.fill();
             
-            // Trailing flames
+            // Trailing flames (deterministic)
             for (let i = 0; i < 8; i++) {
                 const trailAngle = (i / 8) * Math.PI * 2;
-                const trailDistance = fireballRadius + Math.random() * 6;
+                const trailDistance = fireballRadius + (i % 3) * 2 + 2;
                 const trailX = Math.cos(trailAngle) * trailDistance;
                 const trailY = Math.sin(trailAngle) * trailDistance;
                 
-                ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${0.3 + Math.random() * 0.4})`;
+                ctx.fillStyle = `rgba(255, ${100 + (i * 15)}, 0, ${0.4 + (i % 3) * 0.1})`;
                 ctx.beginPath();
-                ctx.arc(trailX, trailY, 1 + Math.random() * 2, 0, Math.PI * 2);
+                ctx.arc(trailX, trailY, 1.5 + (i % 2), 0, Math.PI * 2);
                 ctx.fill();
             }
             
@@ -474,10 +449,11 @@ export class CannonTower extends Tower {
             ctx.fill();
             
             ctx.restore();
-        });
+        }
         
         // Render explosions with fire effects
-        this.explosions.forEach(explosion => {
+        for (let e = 0; e < this.explosions.length; e++) {
+            const explosion = this.explosions[e];
             const alpha = explosion.life / explosion.maxLife;
             
             // Outer fire ring
@@ -488,17 +464,7 @@ export class CannonTower extends Tower {
             ctx.stroke();
             
             // Main explosion fire
-            const explosionGradient = ctx.createRadialGradient(
-                explosion.x, explosion.y, 0,
-                explosion.x, explosion.y, explosion.radius
-            );
-            explosionGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-            explosionGradient.addColorStop(0.2, `rgba(255, 255, 0, ${alpha * 0.9})`);
-            explosionGradient.addColorStop(0.5, `rgba(255, 100, 0, ${alpha * 0.8})`);
-            explosionGradient.addColorStop(0.8, `rgba(255, 0, 0, ${alpha * 0.6})`);
-            explosionGradient.addColorStop(1, `rgba(139, 0, 0, 0)`);
-            
-            ctx.fillStyle = explosionGradient;
+            ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.8})`;
             ctx.beginPath();
             ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -508,7 +474,7 @@ export class CannonTower extends Tower {
             ctx.beginPath();
             ctx.arc(explosion.x, explosion.y, explosion.radius * 0.2, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
         
         // Render attack radius circle if selected
         this.renderAttackRadiusCircle(ctx);
