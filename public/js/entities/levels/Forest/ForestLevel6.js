@@ -248,7 +248,7 @@ export class ForestLevel6 extends LevelBase {
         , { 
             enemyCount: 12, 
             enemyHealth_multiplier: 0.8, 
-            enemySpeed: 140, 
+            enemySpeed: 110, 
             spawnInterval: 0.1, 
             pattern: ['archer'] 
         }

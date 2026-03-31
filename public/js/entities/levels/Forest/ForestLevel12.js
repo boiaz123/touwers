@@ -190,23 +190,23 @@ export class ForestLevel12 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 15, 
-            enemyHealth_multiplier: 1.2, 
-            enemySpeed: 35, 
-            spawnInterval: 0.4, 
+            enemyCount: 12, 
+            enemyHealth_multiplier: 1.0, 
+            enemySpeed: 20, 
+            spawnInterval: 0.6, 
             pattern: ['frog'] 
         }
         // Wave 2
         , { 
-            enemyCount: 30, 
-            enemyHealth_multiplier: 1.4, 
-            enemySpeed: 80, 
-            spawnInterval: 0.5, 
+            enemyCount: 24, 
+            enemyHealth_multiplier: 1.0, 
+            enemySpeed: 60, 
+            spawnInterval: 0.8, 
             pattern: ['archer'] 
         }
         // Wave 3
         , { 
-            enemyCount: 45, 
+            enemyCount: 35, 
             enemyHealth_multiplier: 1.5, 
             enemySpeed: 55, 
             spawnInterval: 0.8, 
@@ -215,7 +215,7 @@ export class ForestLevel12 extends LevelBase {
         // Wave 4
         , { 
             enemyCount: 17, 
-            enemyHealth_multiplier: 2.5, 
+            enemyHealth_multiplier: 2, 
             enemySpeed: 65, 
             spawnInterval: 0.8, 
             pattern: ['beefyenemy', 'beefyenemy', 'frog', 'beefyenemy', 'beefyenemy'] 
@@ -223,9 +223,9 @@ export class ForestLevel12 extends LevelBase {
         // Wave 5
         , { 
             enemyCount: 55, 
-            enemyHealth_multiplier: 2.5, 
-            enemySpeed: 100, 
-            spawnInterval: 0.5, 
+            enemyHealth_multiplier: 1.5, 
+            enemySpeed: 70, 
+            spawnInterval: 0.7, 
             pattern: ['archer'] 
         }
         // Wave 6
@@ -233,7 +233,7 @@ export class ForestLevel12 extends LevelBase {
             enemyCount: 45, 
             enemyHealth_multiplier: 3.5, 
             enemySpeed: 75, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: ['frog'] 
         }
         // Wave 7

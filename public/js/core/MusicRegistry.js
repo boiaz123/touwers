@@ -135,6 +135,16 @@ export function initializeMusicRegistry() {
         }
     );
 
+    MusicRegistry.registerMusic(
+        'campaign-1-battle-4',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle4.mp3',
+        {
+            loop: true,
+            category: 'campaign-1',
+            volume: 0.7
+        }
+    );
+
     // Campaign 2 (Mountain) songs
     MusicRegistry.registerMusic(
         'campaign-2-battle-1',
@@ -166,6 +176,16 @@ export function initializeMusicRegistry() {
         }
     );
 
+    MusicRegistry.registerMusic(
+        'campaign-2-battle-4',
+        'assets/audio/music/CampaignSongs/MountainSongs/Mountain_Battle4.mp3',
+        {
+            loop: true,
+            category: 'campaign-2',
+            volume: 0.7
+        }
+    );
+
     // Campaign 3 (Desert) songs
     MusicRegistry.registerMusic(
         'campaign-3-battle-1',
@@ -190,6 +210,16 @@ export function initializeMusicRegistry() {
     MusicRegistry.registerMusic(
         'campaign-3-battle-3',
         'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle3.mp3',
+        {
+            loop: true,
+            category: 'campaign-3',
+            volume: 0.7
+        }
+    );
+
+        MusicRegistry.registerMusic(
+        'campaign-3-battle-4',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle4.mp3',
         {
             loop: true,
             category: 'campaign-3',
@@ -253,6 +283,26 @@ export function initializeMusicRegistry() {
             MusicRegistry.registerMusic(
         'campaign-4-battle-6',
         'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle6.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+    );
+
+            MusicRegistry.registerMusic(
+        'campaign-4-battle-7',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle7.mp3',
+        {
+            loop: true,
+            category: 'campaign-4',
+            volume: 0.7
+        }
+    );
+
+                MusicRegistry.registerMusic(
+        'campaign-4-battle-8',
+        'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle8.mp3',
         {
             loop: true,
             category: 'campaign-4',

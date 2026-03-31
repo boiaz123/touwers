@@ -17,8 +17,8 @@ export class ArcherEnemy extends BaseEnemy {
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.tunicColor = '#2D5016'; // Dark green ranger tunic
         
-        this.attackDamage = 8;
-        this.attackSpeed = 1.5;
+        this.attackDamage = 3;
+        this.attackSpeed = 0.5;
         
     }
     
