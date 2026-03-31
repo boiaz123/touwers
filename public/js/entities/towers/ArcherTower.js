@@ -41,31 +41,30 @@ export class ArcherTower extends Tower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update arrows
-        this.arrows = this.arrows.filter(arrow => {
+        // Update arrows (compact in-place)
+        let arrowWrite = 0;
+        for (let i = 0; i < this.arrows.length; i++) {
+            const arrow = this.arrows[i];
             arrow.x += arrow.vx * deltaTime;
             arrow.y += arrow.vy * deltaTime;
             arrow.vy += 200 * deltaTime; // Gravity effect
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
-            // Check collision with target (alive or dead) or fallback position
+            let hit = false;
             if (arrow.target) {
-                // Always check distance to target's current position (works for alive and dead enemies)
                 const dist = Math.hypot(arrow.x - arrow.target.x, arrow.y - arrow.target.y);
-                if (dist <= 15) {
-                    return false;
-                }
+                if (dist <= 15) hit = true;
             } else if (arrow.fallbackX != null) {
-                // If target is completely gone, use fallback position
                 const dist = Math.hypot(arrow.x - arrow.fallbackX, arrow.y - arrow.fallbackY);
-                if (dist <= 15) {
-                    return false;
-                }
+                if (dist <= 15) hit = true;
             }
             
-            return arrow.life > 0;
-        });
+            if (!hit && arrow.life > 0) {
+                this.arrows[arrowWrite++] = arrow;
+            }
+        }
+        this.arrows.length = arrowWrite;
     }
     
     shoot() {

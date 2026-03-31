@@ -53,21 +53,21 @@ export class BarricadeTower extends Tower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        this.rollingBarrels = this.rollingBarrels.filter(barrel => {
+        // Update barrels (compact in-place)
+        let barrelWrite = 0;
+        for (let i = 0; i < this.rollingBarrels.length; i++) {
+            const barrel = this.rollingBarrels[i];
             barrel.x += barrel.vx * deltaTime;
             barrel.y += barrel.vy * deltaTime;
             barrel.rotation += barrel.rotationSpeed * deltaTime;
             barrel.life -= deltaTime;
             
-            // Determine target position - use target's current position (alive or dead), or fallback if gone
             let targetX = barrel.targetX;
             let targetY = barrel.targetY;
             if (barrel.target) {
-                // Always use target's current position (works for alive and dead enemies)
                 targetX = barrel.target.x;
                 targetY = barrel.target.y;
             } else if (barrel.fallbackX != null) {
-                // If target is completely gone, use fallback position
                 targetX = barrel.fallbackX;
                 targetY = barrel.fallbackY;
             }
@@ -75,12 +75,16 @@ export class BarricadeTower extends Tower {
             const distanceToTarget = Math.hypot(barrel.x - targetX, barrel.y - targetY);
             if (barrel.life <= 0 || distanceToTarget < 20) {
                 this.createSmokeZone(targetX, targetY);
-                return false;
+            } else {
+                this.rollingBarrels[barrelWrite++] = barrel;
             }
-            return true;
-        });
+        }
+        this.rollingBarrels.length = barrelWrite;
         
-        this.slowZones = this.slowZones.filter(zone => {
+        // Update slow zones (compact in-place)
+        let zoneWrite = 0;
+        for (let zi = 0; zi < this.slowZones.length; zi++) {
+            const zone = this.slowZones[zi];
             zone.life -= deltaTime;
             zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
@@ -136,8 +140,11 @@ export class BarricadeTower extends Tower {
                 }
             }
             
-            return zone.life > 0;
-        });
+            if (zone.life > 0) {
+                this.slowZones[zoneWrite++] = zone;
+            }
+        }
+        this.slowZones.length = zoneWrite;
         
         if (this.slowZones.length === 0) {
             for (let i = 0; i < enemies.length; i++) {

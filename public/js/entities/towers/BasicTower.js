@@ -44,8 +44,10 @@ export class BasicTower extends Tower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update flying rocks
-        this.rocks = this.rocks.filter(rock => {
+        // Update flying rocks (compact in-place)
+        let rockWrite = 0;
+        for (let i = 0; i < this.rocks.length; i++) {
+            const rock = this.rocks[i];
             const oldX = rock.x;
             const oldY = rock.y;
             
@@ -55,39 +57,32 @@ export class BasicTower extends Tower {
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
             
-            // Use swept collision detection for fast-moving rocks
-            // Check if rock's path passes near target (prevents missing at high speeds)
             const collisionRadius = Math.max(15, Math.hypot(rock.vx, rock.vy) * deltaTime * 0.5);
             
-            // Check if rock hits target (alive or dead) or fallback position
+            let hit = false;
             if (rock.target) {
-                // Check distance to target's current position (works for alive and dead enemies)
                 const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
                 if (dist <= collisionRadius) {
-                    return false;
-                }
-                // Also check if the projectile path passed near the target (swept collision)
-                const targetX = rock.target.x;
-                const targetY = rock.target.y;
-                const segmentDist = this.distanceToSegment(targetX, targetY, oldX, oldY, rock.x, rock.y);
-                if (segmentDist <= collisionRadius) {
-                    return false;
+                    hit = true;
+                } else {
+                    const segmentDist = this.distanceToSegment(rock.target.x, rock.target.y, oldX, oldY, rock.x, rock.y);
+                    if (segmentDist <= collisionRadius) hit = true;
                 }
             } else if (rock.fallbackX != null) {
-                // If target is completely gone, use fallback position
                 const dist = Math.hypot(rock.x - rock.fallbackX, rock.y - rock.fallbackY);
                 if (dist <= collisionRadius) {
-                    return false;
-                }
-                // Also check if the projectile path passed near the fallback position (swept collision)
-                const segmentDist = this.distanceToSegment(rock.fallbackX, rock.fallbackY, oldX, oldY, rock.x, rock.y);
-                if (segmentDist <= collisionRadius) {
-                    return false;
+                    hit = true;
+                } else {
+                    const segmentDist = this.distanceToSegment(rock.fallbackX, rock.fallbackY, oldX, oldY, rock.x, rock.y);
+                    if (segmentDist <= collisionRadius) hit = true;
                 }
             }
             
-            return rock.life > 0;
-        });
+            if (!hit && rock.life > 0) {
+                this.rocks[rockWrite++] = rock;
+            }
+        }
+        this.rocks.length = rockWrite;
     }
     
     /**

@@ -109,34 +109,32 @@ export class PoisonArcherTower extends Tower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update poison arrows - SINGLE TARGET HIT
-        this.poisonArrows = this.poisonArrows.filter(arrow => {
+        // Update poison arrows (compact in-place)
+        let paWrite = 0;
+        for (let ai = 0; ai < this.poisonArrows.length; ai++) {
+            const arrow = this.poisonArrows[ai];
             arrow.x += arrow.vx * deltaTime;
             arrow.y += arrow.vy * deltaTime;
             arrow.vy += 180 * deltaTime; // Gravity
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
-            // Determine target position - use target's current position (alive or dead), or fallback if gone
             let targetX = arrow.targetX;
             let targetY = arrow.targetY;
             if (arrow.target) {
-                // Always use target's current position (works for alive and dead enemies)
                 targetX = arrow.target.x;
                 targetY = arrow.target.y;
             } else if (arrow.fallbackX != null) {
-                // If target is completely gone, use fallback position
                 targetX = arrow.fallbackX;
                 targetY = arrow.fallbackY;
             }
             
-            // Check if arrow hits target area (within 15px of target position)
             if (arrow.life <= 0 || Math.hypot(arrow.x - targetX, arrow.y - targetY) < 15) {
-                // Only poison the intended target - find closest enemy to impact point
                 let hitTarget = null;
-                let minDist = 20; // Only hit if very close
+                let minDist = 20;
                 
-                for (const enemy of enemies) {
+                for (let ei = 0; ei < enemies.length; ei++) {
+                    const enemy = enemies[ei];
                     const dist = Math.hypot(enemy.x - arrow.x, enemy.y - arrow.y);
                     if (dist < minDist) {
                         minDist = dist;
@@ -144,15 +142,14 @@ export class PoisonArcherTower extends Tower {
                     }
                 }
                 
-                // Apply poison only to the hit target
                 if (hitTarget) {
                     this.applyPoisonToEnemy(hitTarget, towerForgeBonus);
                 }
-                
-                return false; // Remove arrow
+            } else {
+                this.poisonArrows[paWrite++] = arrow;
             }
-            return true;
-        });
+        }
+        this.poisonArrows.length = paWrite;
         
         // Update poison effects on enemies - HIGHLY OPTIMIZED
         // Skip entirely if no poisoned enemies (early exit)

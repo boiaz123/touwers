@@ -51,20 +51,30 @@ export class MagicTower extends Tower {
             this.cooldown = 1 / this.fireRate;
         }
         
-        // Update lightning bolts
-        this.lightningBolts = this.lightningBolts.filter(bolt => {
+        // Update lightning bolts (compact in-place)
+        let boltW = 0;
+        for (let i = 0; i < this.lightningBolts.length; i++) {
+            const bolt = this.lightningBolts[i];
             bolt.life -= deltaTime;
-            return bolt.life > 0;
-        });
+            if (bolt.life > 0) {
+                this.lightningBolts[boltW++] = bolt;
+            }
+        }
+        this.lightningBolts.length = boltW;
         
-        // Update magic particles
-        this.magicParticles = this.magicParticles.filter(particle => {
+        // Update magic particles (compact in-place)
+        let pW = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
-            particle.size = particle.maxSize * (particle.life / particle.maxLife);
-            return particle.life > 0;
-        });
+            if (particle.life > 0) {
+                particle.size = particle.maxSize * (particle.life / particle.maxLife);
+                this.magicParticles[pW++] = particle;
+            }
+        }
+        this.magicParticles.length = pW;
         
         // Generate ambient magic particles - reduced frequency for performance
         if (Math.random() < deltaTime * 1.2) {

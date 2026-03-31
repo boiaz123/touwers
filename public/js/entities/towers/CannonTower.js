@@ -50,23 +50,22 @@ export class CannonTower extends Tower {
             this.trebuchetAngle = targetAngle;
         }
         
-        // Update fireballs
-        this.fireballs = this.fireballs.filter(fireball => {
+        // Update fireballs (compact in-place)
+        let fbWrite = 0;
+        for (let i = 0; i < this.fireballs.length; i++) {
+            const fireball = this.fireballs[i];
             fireball.x += fireball.vx * deltaTime;
             fireball.y += fireball.vy * deltaTime;
             fireball.vy += fireball.gravity * deltaTime;
             fireball.life -= deltaTime;
             fireball.flameAnimation += deltaTime * 8;
             
-            // Determine impact position - use target's current position (alive or dead), or fallback if target is gone
             let targetX = fireball.targetX;
             let targetY = fireball.targetY;
             if (fireball.target) {
-                // Always use target's current position (works for alive and dead enemies)
                 targetX = fireball.target.x;
                 targetY = fireball.target.y;
             } else if (fireball.fallbackX != null) {
-                // If target is completely gone, use fallback position
                 targetX = fireball.fallbackX;
                 targetY = fireball.fallbackY;
             }
@@ -75,17 +74,23 @@ export class CannonTower extends Tower {
                 (fireball.life < fireball.maxLife * 0.5 && 
                  Math.hypot(fireball.x - targetX, fireball.y - targetY) < 20)) {
                 this.explode(targetX, targetY, enemies);
-                return false;
+            } else {
+                this.fireballs[fbWrite++] = fireball;
             }
-            return true;
-        });
+        }
+        this.fireballs.length = fbWrite;
         
-        // Update explosions
-        this.explosions = this.explosions.filter(explosion => {
+        // Update explosions (compact in-place)
+        let expWrite = 0;
+        for (let i = 0; i < this.explosions.length; i++) {
+            const explosion = this.explosions[i];
             explosion.life -= deltaTime;
             explosion.radius = (1 - explosion.life / explosion.maxLife) * explosion.maxRadius;
-            return explosion.life > 0;
-        });
+            if (explosion.life > 0) {
+                this.explosions[expWrite++] = explosion;
+            }
+        }
+        this.explosions.length = expWrite;
     }
     
     shoot() {

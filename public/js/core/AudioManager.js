@@ -29,6 +29,16 @@ export class AudioManager {
         this.musicRegistry = {};
         this.sfxRegistry = {};
         
+        // SFX pool - fixed set of Audio elements to prevent unbounded DOM growth
+        this._sfxPool = [];
+        this._sfxPoolSize = 24;
+        this._sfxPoolIndex = 0;
+        this._sfxThrottles = {};
+        this._sfxMinInterval = 80; // Min ms between same SFX name
+        
+        // Fade interval tracking
+        this._fadeIntervalId = null;
+        
         // Initialize audio
         this.initialize();
     }
@@ -41,6 +51,11 @@ export class AudioManager {
         this.musicElement = new Audio();
         this.musicElement.loop = true;
         this.musicElement.volume = this.musicVolume;
+        
+        // Create SFX pool
+        for (let i = 0; i < this._sfxPoolSize; i++) {
+            this._sfxPool[i] = new Audio();
+        }
         
         // Load registries from MusicRegistry and SFXRegistry
         this.loadRegistries();
@@ -275,17 +290,23 @@ export class AudioManager {
      * @param {number} duration - Duration in milliseconds
      */
     fadeInMusic(targetVolume, duration = 1000) {
+        if (this._fadeIntervalId) {
+            clearInterval(this._fadeIntervalId);
+            this._fadeIntervalId = null;
+        }
+        
         const startVolume = this.musicElement.volume;
         const startTime = Date.now();
         
-        const fadeInterval = setInterval(() => {
+        this._fadeIntervalId = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
             this.musicElement.volume = startVolume + (targetVolume - startVolume) * progress;
             
             if (progress >= 1) {
-                clearInterval(fadeInterval);
+                clearInterval(this._fadeIntervalId);
+                this._fadeIntervalId = null;
                 this.musicElement.volume = targetVolume;
             }
         }, 16); // ~60fps
@@ -297,17 +318,23 @@ export class AudioManager {
      * @param {function} callback - Optional callback when fade completes
      */
     fadeOutMusic(duration = 500, callback = null) {
+        if (this._fadeIntervalId) {
+            clearInterval(this._fadeIntervalId);
+            this._fadeIntervalId = null;
+        }
+        
         const startVolume = this.musicElement.volume;
         const startTime = Date.now();
         
-        const fadeInterval = setInterval(() => {
+        this._fadeIntervalId = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
             this.musicElement.volume = startVolume * (1 - progress);
             
             if (progress >= 1) {
-                clearInterval(fadeInterval);
+                clearInterval(this._fadeIntervalId);
+                this._fadeIntervalId = null;
                 this.musicElement.volume = 0;
                 if (callback) {
                     callback();
@@ -330,6 +357,16 @@ export class AudioManager {
         const sfxData = this.sfxRegistry[sfxName] || this.musicRegistry[sfxName];
         const finalVolume = volume !== null ? volume : this.sfxVolume;
         
+        // Throttle: skip if same SFX played too recently (except tunes)
+        if (sfxName !== 'victory-tune' && sfxName !== 'defeat-tune') {
+            const now = performance.now();
+            const lastPlayed = this._sfxThrottles[sfxName] || 0;
+            if (now - lastPlayed < this._sfxMinInterval) {
+                return false;
+            }
+            this._sfxThrottles[sfxName] = now;
+        }
+        
         try {
             // Stop previous tune if playing a new one
             if ((sfxName === 'victory-tune' || sfxName === 'defeat-tune') && this.currentSFXTune) {
@@ -338,8 +375,14 @@ export class AudioManager {
                 this.currentSFXTune = null;
             }
             
-            // Create new audio element for sound effect (allows multiple simultaneous plays)
-            const sfxElement = new Audio();
+            // Get next pool element (round-robin)
+            const sfxElement = this._sfxPool[this._sfxPoolIndex];
+            this._sfxPoolIndex = (this._sfxPoolIndex + 1) % this._sfxPoolSize;
+            
+            // Stop if currently playing something
+            sfxElement.pause();
+            sfxElement.currentTime = 0;
+            
             sfxElement.src = sfxData.path;
             sfxElement.volume = finalVolume;
             sfxElement.play().catch(err => {
@@ -351,16 +394,6 @@ export class AudioManager {
                 this.currentSFXTune = sfxElement;
             }
             
-            // Clean up after playing
-            sfxElement.addEventListener('ended', () => {
-                sfxElement.pause();
-                sfxElement.currentTime = 0;
-                if (this.currentSFXTune === sfxElement) {
-                    this.currentSFXTune = null;
-                }
-            }, { once: true });
-            
-            // console.log(`AudioManager: Playing SFX '${sfxName}'`);
             return true;
         } catch (error) {
             console.error('AudioManager: Error playing SFX:', error);
