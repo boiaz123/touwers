@@ -73,10 +73,60 @@ export class OptionsMenu {
         }
 
         this.setupMouseListeners();
+
+        // Set controller to button navigation mode
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        return 3; // Back, Controls, Visit Producer
+    }
+
+    getFocusedButtonIndex() {
+        if (this.buttons.back.hovered) return 0;
+        if (this.buttons.controls.hovered) return 1;
+        if (this.buttons.visitProducer.hovered) return 2;
+        return -1;
+    }
+
+    focusButton(index) {
+        this.buttons.back.hovered = (index === 0);
+        this.buttons.controls.hovered = (index === 1);
+        this.buttons.visitProducer.hovered = (index === 2);
+    }
+
+    activateFocusedButton() {
+        const idx = this.getFocusedButtonIndex();
+        if (idx < 0) return;
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+        const actionMap = ['back', 'controls', 'visitProducer'];
+        this._activateButton(actionMap[idx]);
+    }
+
+    _activateButton(buttonName) {
+        if (buttonName === 'back') {
+            const prevState = this.stateManager.previousState || 'mainMenu';
+            this.stateManager.changeState(prevState);
+        } else if (buttonName === 'controls') {
+            if (!this.controlsScreen) {
+                this.controlsScreen = new ControlsScreen(this.stateManager.inputManager, this.stateManager.audioManager);
+            }
+            this.controlsScreen.show();
+        } else if (buttonName === 'visitProducer') {
+            if (typeof window !== 'undefined' && window.__TAURI__) {
+                window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
+            } else {
+                window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
+            }
+        }
     }
 
     setupMouseListeners() {

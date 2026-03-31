@@ -1,8 +1,10 @@
 import { InputManager } from '../core/InputManager.js';
 
 /**
- * ControlsScreen - Reusable controls/keybinding overlay
- * Can be opened from the main Options menu or from in-game options.
+ * ControlsScreen - Comprehensive controls/keybinding overlay
+ * Shows tabbed interface for different control schemes:
+ * Keyboard+Mouse, Controller, Touch Screen
+ * Also has controller cursor speed setting.
  */
 export class ControlsScreen {
     constructor(inputManager, audioManager) {
@@ -10,6 +12,7 @@ export class ControlsScreen {
         this.audioManager = audioManager;
         this.overlay = null;
         this.currentListeningBtn = null;
+        this.activeTab = 'keyboard'; // 'keyboard', 'controller', 'touch'
     }
 
     /**
@@ -34,40 +37,99 @@ export class ControlsScreen {
         `;
         panel.appendChild(header);
 
-        // Body
+        // Tab bar
+        const tabBar = document.createElement('div');
+        tabBar.className = 'controls-tab-bar';
+        tabBar.innerHTML = `
+            <button class="controls-tab active" data-tab="keyboard">Keyboard + Mouse</button>
+            <button class="controls-tab" data-tab="controller">Controller</button>
+            <button class="controls-tab" data-tab="touch">Touch Screen</button>
+        `;
+        panel.appendChild(tabBar);
+
+        // Body (tab content)
         const body = document.createElement('div');
         body.className = 'controls-body';
+        body.id = 'controls-tab-content';
+        panel.appendChild(body);
 
-        // Mouse/Touch info section
-        body.innerHTML += `
-            <div class="controls-category">
-                <div class="controls-category-title">Mouse / Touch</div>
-                <div class="controls-mouse-info">
-                    <span>Left Click</span> - Select tower/building, place on grid, interact with menus<br>
-                    <span>Right Click</span> - Cancel tower/building placement<br>
-                    <span>Mouse Hover</span> - Preview tower/building info on sidebar buttons<br>
-                    <span>Tap</span> (Touch) - Same as left click<br>
-                    <span>Long Press</span> (Touch) - Same as right click (cancel)<br>
-                    <span>Drag from Sidebar</span> (Touch) - Drag tower/building onto the map to place
-                </div>
-            </div>
+        // Footer
+        const footer = document.createElement('div');
+        footer.className = 'controls-footer';
+        footer.innerHTML = `
+            <button class="controls-reset-btn" id="controls-reset-btn">Reset to Defaults</button>
+            <button class="controls-done-btn" id="controls-done-btn">Done</button>
         `;
+        panel.appendChild(footer);
 
-        // Gamepad info section
-        body.innerHTML += `
+        this.overlay.appendChild(panel);
+        document.body.appendChild(this.overlay);
+
+        // Tab switching
+        tabBar.querySelectorAll('.controls-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                if (this.audioManager) this.audioManager.playSFX('button-click');
+                tabBar.querySelectorAll('.controls-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.activeTab = tab.dataset.tab;
+                this._renderTabContent();
+            });
+        });
+
+        // Event listeners
+        const closeBtn = document.getElementById('controls-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.hide());
+        }
+
+        const doneBtn = document.getElementById('controls-done-btn');
+        if (doneBtn) {
+            doneBtn.addEventListener('click', () => this.hide());
+        }
+
+        const resetBtn = document.getElementById('controls-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => this._resetDefaults());
+        }
+
+        // Click overlay background to close
+        this.overlay.addEventListener('click', (e) => {
+            if (e.target === this.overlay) {
+                this.hide();
+            }
+        });
+
+        // Render initial tab
+        this._renderTabContent();
+    }
+
+    _renderTabContent() {
+        const content = document.getElementById('controls-tab-content');
+        if (!content) return;
+        content.innerHTML = '';
+
+        switch (this.activeTab) {
+            case 'keyboard':
+                this._renderKeyboardTab(content);
+                break;
+            case 'controller':
+                this._renderControllerTab(content);
+                break;
+            case 'touch':
+                this._renderTouchTab(content);
+                break;
+        }
+    }
+
+    _renderKeyboardTab(container) {
+        // Mouse controls
+        container.innerHTML += `
             <div class="controls-category">
-                <div class="controls-category-title">Controller</div>
-                <div class="controls-mouse-info">
-                    <span>Left Stick</span> - Move cursor<br>
-                    <span>D-Pad</span> - Move cursor / Navigate menus<br>
-                    <span>A Button</span> - Confirm / Place / Select<br>
-                    <span>B Button</span> - Cancel / Go Back<br>
-                    <span>X Button</span> - Collect nearest loot<br>
-                    <span>Y Button</span> - Next Wave<br>
-                    <span>Start</span> - Pause<br>
-                    <span>Back/Select</span> - Open Menu<br>
-                    <span>LB / RB</span> - Cycle tower/building selection<br>
-                    <span>Right Stick</span> - Scroll sidebar
+                <div class="controls-category-title">Mouse Controls</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">Left Click</span><span class="controls-key-desc">Select, place tower/building, interact</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Right Click</span><span class="controls-key-desc">Cancel placement</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Mouse Hover</span><span class="controls-key-desc">Preview tower/building info</span></div>
                 </div>
             </div>
         `;
@@ -107,45 +169,113 @@ export class ControlsScreen {
                 catDiv.appendChild(row);
             }
 
-            body.appendChild(catDiv);
+            container.appendChild(catDiv);
         }
+    }
 
-        panel.appendChild(body);
-
-        // Footer
-        const footer = document.createElement('div');
-        footer.className = 'controls-footer';
-        footer.innerHTML = `
-            <button class="controls-reset-btn" id="controls-reset-btn">Reset to Defaults</button>
-            <button class="controls-done-btn" id="controls-done-btn">Done</button>
+    _renderControllerTab(container) {
+        // Controller navigation info
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Navigation</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">Left Stick</span><span class="controls-key-desc">Move cursor (in-game / settlement) or navigate buttons (menus)</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">D-Pad</span><span class="controls-key-desc">Move cursor (in-game) or navigate buttons (menus)</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Right Stick</span><span class="controls-key-desc">Scroll sidebar</span></div>
+                </div>
+            </div>
         `;
-        panel.appendChild(footer);
 
-        this.overlay.appendChild(panel);
-        document.body.appendChild(this.overlay);
+        // Action buttons
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Actions</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">A Button</span><span class="controls-key-desc">Confirm / Place / Select</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">B Button</span><span class="controls-key-desc">Cancel / Go Back</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">X Button</span><span class="controls-key-desc">Collect nearest loot</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Y Button</span><span class="controls-key-desc">Start next wave</span></div>
+                </div>
+            </div>
+        `;
 
-        // Event listeners
-        const closeBtn = document.getElementById('controls-close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
-        }
+        // Menu & speed
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Menu & Speed</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">Start</span><span class="controls-key-desc">Pause / Resume</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Back / Select</span><span class="controls-key-desc">Open menu</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">LT (Left Trigger)</span><span class="controls-key-desc">Decrease game speed</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">RT (Right Trigger)</span><span class="controls-key-desc">Increase game speed</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">LB / RB</span><span class="controls-key-desc">Cycle tower/building selection</span></div>
+                </div>
+            </div>
+        `;
 
-        const doneBtn = document.getElementById('controls-done-btn');
-        if (doneBtn) {
-            doneBtn.addEventListener('click', () => this.hide());
-        }
+        // Controller cursor speed setting
+        const cursorSpeed = this.inputManager.getCursorSpeed();
+        const speedSettingDiv = document.createElement('div');
+        speedSettingDiv.className = 'controls-category';
+        speedSettingDiv.innerHTML = `
+            <div class="controls-category-title">Controller Settings</div>
+            <div class="controls-setting-row">
+                <label class="controls-setting-label">Cursor Speed</label>
+                <div class="controls-slider-container">
+                    <input type="range" id="cursor-speed-slider" class="controls-slider" min="4" max="30" value="${cursorSpeed}" step="1">
+                    <span id="cursor-speed-value" class="controls-slider-value">${cursorSpeed}</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(speedSettingDiv);
 
-        const resetBtn = document.getElementById('controls-reset-btn');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => this._resetDefaults());
-        }
-
-        // Click overlay background to close
-        this.overlay.addEventListener('click', (e) => {
-            if (e.target === this.overlay) {
-                this.hide();
+        // Wire up slider
+        setTimeout(() => {
+            const slider = document.getElementById('cursor-speed-slider');
+            const valueDisplay = document.getElementById('cursor-speed-value');
+            if (slider && valueDisplay) {
+                slider.addEventListener('input', (e) => {
+                    const val = parseInt(e.target.value);
+                    valueDisplay.textContent = val;
+                    this.inputManager.setCursorSpeed(val);
+                });
             }
-        });
+        }, 0);
+    }
+
+    _renderTouchTab(container) {
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Basic Controls</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">Tap</span><span class="controls-key-desc">Select, place tower/building, interact with buttons</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Long Press</span><span class="controls-key-desc">Cancel placement (same as right-click)</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Drag</span><span class="controls-key-desc">Drag tower/building from sidebar onto the map</span></div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Gestures</div>
+                <div class="controls-info-grid">
+                    <div class="controls-info-row"><span class="controls-key-label">Swipe</span><span class="controls-key-desc">Scroll through sidebar items</span></div>
+                    <div class="controls-info-row"><span class="controls-key-label">Pinch</span><span class="controls-key-desc">Zoom (where supported)</span></div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML += `
+            <div class="controls-category">
+                <div class="controls-category-title">Tips</div>
+                <div class="controls-mouse-info" style="color: var(--text-secondary); line-height: 1.8;">
+                    Touch controls work best on tablets and larger screens.<br>
+                    Drag directly from sidebar buttons to place towers and buildings.<br>
+                    Long press on the map cancels the current placement.<br>
+                    All buttons and menus respond to tap.
+                </div>
+            </div>
+        `;
     }
 
     /**

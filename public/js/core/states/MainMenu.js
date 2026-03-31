@@ -98,10 +98,45 @@ export class MainMenu {
         }
 
         this.setupMouseListeners();
+
+        // Set controller to button navigation mode for menus
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        return this.showButtons ? this.buttons.length : 0;
+    }
+
+    getFocusedButtonIndex() {
+        return this.buttons.findIndex(b => b.hovered);
+    }
+
+    focusButton(index) {
+        if (!this.showButtons) return;
+        this.buttons.forEach((b, i) => b.hovered = (i === index));
+    }
+
+    activateFocusedButton() {
+        const idx = this.getFocusedButtonIndex();
+        if (idx >= 0) {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
+            this.handleButtonAction(this.buttons[idx].action);
+        } else if (!this.transitionActive && this.showContinue && this.transitionTime === 0) {
+            // If no buttons shown yet, treat A as "press to continue"
+            this.transitionActive = true;
+            this.transitionTime = 0;
+            this.swordSoundPlayed = false;
+        }
     }
 
     setupMouseListeners() {

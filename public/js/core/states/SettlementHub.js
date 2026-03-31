@@ -323,6 +323,11 @@ export class SettlementHub {
         ];
         
         this.setupMouseListeners();
+
+        // Set controller to cursor mode for settlement hub (as requested)
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('cursor');
+        }
     }
 
     exit() {

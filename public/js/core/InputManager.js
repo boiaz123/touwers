@@ -106,8 +106,15 @@ export class InputManager {
         this.gamepadPollInterval = null;
         this.gamepadCursorX = 0;
         this.gamepadCursorY = 0;
-        this.gamepadCursorSpeed = 8;
+        this.gamepadCursorSpeed = 14;
         this.gamepadCursorVisible = false;
+
+        // Controller navigation mode: 'cursor' for in-game/settlement, 'buttons' for menus
+        this.gamepadNavigationMode = 'buttons';
+        this.gamepadFocusedIndex = 0; // Index of currently focused button in menu navigation
+
+        // Load saved cursor speed
+        this._loadCursorSpeed();
 
         // Touch state
         this.touchEnabled = false;
@@ -410,22 +417,42 @@ export class InputManager {
         const leftY = Math.abs(gp.axes[1]) > deadzone ? gp.axes[1] : 0;
 
         if (canvas && (leftX !== 0 || leftY !== 0)) {
-            this.gamepadCursorX = Math.max(0, Math.min(canvas.width, this.gamepadCursorX + leftX * this.gamepadCursorSpeed));
-            this.gamepadCursorY = Math.max(0, Math.min(canvas.height, this.gamepadCursorY + leftY * this.gamepadCursorSpeed));
-            this.gamepadCursorVisible = true;
-            cursorMoved = true;
+            if (this.gamepadNavigationMode === 'cursor') {
+                this.gamepadCursorX = Math.max(0, Math.min(canvas.width, this.gamepadCursorX + leftX * this.gamepadCursorSpeed));
+                this.gamepadCursorY = Math.max(0, Math.min(canvas.height, this.gamepadCursorY + leftY * this.gamepadCursorSpeed));
+                this.gamepadCursorVisible = true;
+                cursorMoved = true;
+            } else {
+                // In buttons mode, analog stick acts as nav events with repeat throttling
+                if (!this._analogNavCooldown) this._analogNavCooldown = 0;
+                this._analogNavCooldown -= 16;
+                if (this._analogNavCooldown <= 0) {
+                    if (Math.abs(leftY) > Math.abs(leftX)) {
+                        if (leftY < -0.5) this._triggerAction('gamepad_nav_up', { type: 'gamepad' });
+                        else if (leftY > 0.5) this._triggerAction('gamepad_nav_down', { type: 'gamepad' });
+                    } else {
+                        if (leftX < -0.5) this._triggerAction('gamepad_nav_left', { type: 'gamepad' });
+                        else if (leftX > 0.5) this._triggerAction('gamepad_nav_right', { type: 'gamepad' });
+                    }
+                    this._analogNavCooldown = 200;
+                }
+            }
+        } else {
+            this._analogNavCooldown = 0;
         }
 
-        // ---- D-pad: cursor movement + edge-triggered nav events ----
+        // ---- D-pad: cursor movement in cursor mode, nav-only in buttons mode ----
         const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
         const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
         const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
         const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
 
-        if (dpadUp) { this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed); cursorMoved = true; }
-        if (dpadDown && canvas) { this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed); cursorMoved = true; }
-        if (dpadLeft) { this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed); cursorMoved = true; }
-        if (dpadRight && canvas) { this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed); cursorMoved = true; }
+        if (this.gamepadNavigationMode === 'cursor') {
+            if (dpadUp) { this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed); cursorMoved = true; }
+            if (dpadDown && canvas) { this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed); cursorMoved = true; }
+            if (dpadLeft) { this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed); cursorMoved = true; }
+            if (dpadRight && canvas) { this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed); cursorMoved = true; }
+        }
 
         // Edge-triggered D-pad navigation events (for menu button cycling)
         const dpadUpWas = this.previousGamepadState['dpad_up'] || false;
@@ -506,6 +533,23 @@ export class InputManager {
         }
         this.previousGamepadState['lb'] = lbPressed;
         this.previousGamepadState['rb'] = rbPressed;
+
+        // ---- Triggers for game speed cycling ----
+        const ltValue = gp.buttons[6] ? gp.buttons[6].value : 0;
+        const rtValue = gp.buttons[7] ? gp.buttons[7].value : 0;
+        const ltPressed = ltValue > 0.5;
+        const rtPressed = rtValue > 0.5;
+        const ltWas = this.previousGamepadState['lt'] || false;
+        const rtWas = this.previousGamepadState['rt'] || false;
+
+        if (ltPressed && !ltWas) {
+            this._triggerAction('gamepad_speed_down', { type: 'gamepad' });
+        }
+        if (rtPressed && !rtWas) {
+            this._triggerAction('gamepad_speed_up', { type: 'gamepad' });
+        }
+        this.previousGamepadState['lt'] = ltPressed;
+        this.previousGamepadState['rt'] = rtPressed;
     }
 
     _handleGamepadButton(buttonIndex) {
@@ -516,6 +560,51 @@ export class InputManager {
                 return;
             }
         }
+    }
+
+    // ============ CURSOR SPEED SETTINGS ============
+
+    setCursorSpeed(speed) {
+        this.gamepadCursorSpeed = Math.max(4, Math.min(30, speed));
+        try {
+            localStorage.setItem('touwers_cursor_speed', String(this.gamepadCursorSpeed));
+        } catch (e) {
+            // Storage not available
+        }
+    }
+
+    getCursorSpeed() {
+        return this.gamepadCursorSpeed;
+    }
+
+    _loadCursorSpeed() {
+        try {
+            const saved = localStorage.getItem('touwers_cursor_speed');
+            if (saved !== null) {
+                const val = parseInt(saved);
+                if (!isNaN(val) && val >= 4 && val <= 30) {
+                    this.gamepadCursorSpeed = val;
+                }
+            }
+        } catch (e) {
+            // Storage not available
+        }
+    }
+
+    // ============ NAVIGATION MODE ============
+
+    setNavigationMode(mode) {
+        this.gamepadNavigationMode = mode; // 'cursor' or 'buttons'
+        if (mode === 'buttons') {
+            this.gamepadCursorVisible = false;
+            this.gamepadFocusedIndex = 0;
+        } else if (mode === 'cursor' && this.gamepadConnected) {
+            this.gamepadCursorVisible = true;
+        }
+    }
+
+    getNavigationMode() {
+        return this.gamepadNavigationMode;
     }
 
     /**

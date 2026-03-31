@@ -55,10 +55,58 @@ export class LoadGame {
         }
 
         this.setupMouseListeners();
+
+        // Set controller to button navigation mode
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        return this.slots.length + 1; // slots + back button
+    }
+
+    getFocusedButtonIndex() {
+        for (let i = 0; i < this.slots.length; i++) {
+            if (this.hoveredSlot === this.slots[i]) return i;
+        }
+        if (this.backButtonHovered) return this.slots.length;
+        return -1;
+    }
+
+    focusButton(index) {
+        this.hoveredSlot = -1;
+        this.backButtonHovered = false;
+        if (index >= 0 && index < this.slots.length) {
+            this.hoveredSlot = this.slots[index];
+        } else if (index === this.slots.length) {
+            this.backButtonHovered = true;
+        }
+    }
+
+    activateFocusedButton() {
+        const idx = this.getFocusedButtonIndex();
+        if (idx < 0) return;
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+
+        if (idx < this.slots.length) {
+            const slotNum = this.slots[idx];
+            const saveData = SaveSystem.getSave(slotNum);
+            if (saveData) {
+                this.stateManager.currentSaveSlot = slotNum;
+                this.stateManager.currentSaveData = saveData;
+                this.stateManager.changeState('settlementHub');
+            }
+        } else {
+            const targetState = this.stateManager.previousState || 'mainMenu';
+            this.stateManager.changeState(targetState);
+        }
     }
 
     setupMouseListeners() {

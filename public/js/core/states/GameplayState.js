@@ -318,6 +318,11 @@ export class GameplayState {
         this.uiManager = new UIManager(this);
         
         this.setupEventListeners();
+
+        // Set controller to cursor mode for in-game
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('cursor');
+        }
         this.uiManager.setupSpellUI(); // Setup spell UI through UIManager
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.updateUIAvailability(); // Update button visibility based on unlocks

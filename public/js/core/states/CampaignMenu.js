@@ -62,10 +62,70 @@ export class CampaignMenu {
         }
 
         this.setupMouseListeners();
+
+        // Set controller to button navigation mode
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        // campaigns + start button + exit button
+        return this.campaigns.length + 2;
+    }
+
+    getFocusedButtonIndex() {
+        // Map current hover state to an index
+        for (let i = 0; i < this.campaigns.length; i++) {
+            if (this.hoveredCampaignId === this.campaigns[i].id) return i;
+        }
+        if (this.hoveredStartButton) return this.campaigns.length;
+        if (this.hoveredExitButton) return this.campaigns.length + 1;
+        return -1;
+    }
+
+    focusButton(index) {
+        this.hoveredCampaignId = null;
+        this.hoveredStartButton = false;
+        this.hoveredExitButton = false;
+
+        if (index >= 0 && index < this.campaigns.length) {
+            this.hoveredCampaignId = this.campaigns[index].id;
+            this.selectedCampaignId = this.campaigns[index].id;
+        } else if (index === this.campaigns.length) {
+            this.hoveredStartButton = true;
+        } else if (index === this.campaigns.length + 1) {
+            this.hoveredExitButton = true;
+        }
+    }
+
+    activateFocusedButton() {
+        const idx = this.getFocusedButtonIndex();
+        if (idx < 0) return;
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+
+        if (idx < this.campaigns.length) {
+            // Select campaign card
+            this.selectedCampaignId = this.campaigns[idx].id;
+        } else if (idx === this.campaigns.length) {
+            // Start button
+            const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+            if (sel && !sel.locked) {
+                if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
+                const campaignState = new sel.class(this.stateManager);
+                this.stateManager.addState('levelSelect', campaignState);
+                this.stateManager.changeState('levelSelect');
+            }
+        } else if (idx === this.campaigns.length + 1) {
+            // Exit
+            this.stateManager.changeState('settlementHub');
+        }
     }
 
     setupMouseListeners() {

@@ -86,12 +86,137 @@ export class SaveSlotSelection {
 
         this.setupMouseListeners();
         this.setupKeyboardListeners();
+
+        // Set controller to button navigation mode
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
 
     exit() {
         this.removeMouseListeners();
         this.removeKeyboardListeners();
         this.removeMobileInput();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        if (this.showWarning) return 2; // Confirm, Cancel
+        if (this.showCommanderInput) return 2; // Confirm, Cancel
+        return this.slots.length + 1; // slots + back
+    }
+
+    getFocusedButtonIndex() {
+        if (this.showWarning) {
+            if (this.warningConfirmHovered) return 0;
+            if (this.warningCancelHovered) return 1;
+            return -1;
+        }
+        if (this.showCommanderInput) {
+            if (this.commanderConfirmHovered) return 0;
+            if (this.commanderCancelHovered) return 1;
+            return -1;
+        }
+        for (let i = 0; i < this.slots.length; i++) {
+            if (this.hoveredSlot === this.slots[i]) return i;
+        }
+        if (this.backButtonHovered) return this.slots.length;
+        return -1;
+    }
+
+    focusButton(index) {
+        if (this.showWarning) {
+            this.warningConfirmHovered = (index === 0);
+            this.warningCancelHovered = (index === 1);
+            return;
+        }
+        if (this.showCommanderInput) {
+            this.commanderConfirmHovered = (index === 0);
+            this.commanderCancelHovered = (index === 1);
+            return;
+        }
+        this.hoveredSlot = -1;
+        this.backButtonHovered = false;
+        if (index >= 0 && index < this.slots.length) {
+            this.hoveredSlot = this.slots[index];
+        } else if (index === this.slots.length) {
+            this.backButtonHovered = true;
+        }
+    }
+
+    activateFocusedButton() {
+        // For dialogs, simulate clicks on dialog buttons
+        // For now just trigger the existing handleClick at the hover position
+        // This is simpler than duplicating all the click logic
+        const idx = this.getFocusedButtonIndex();
+        if (idx < 0) return;
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+
+        if (this.showWarning) {
+            if (idx === 0) this._confirmWarning();
+            else this._cancelWarning();
+            return;
+        }
+        if (this.showCommanderInput) {
+            if (idx === 0) this._confirmCommanderName();
+            else this._cancelCommanderName();
+            return;
+        }
+        if (idx < this.slots.length) {
+            // Simulate slot click
+            this._handleSlotSelect(this.slots[idx]);
+        } else {
+            this.stateManager.changeState('mainMenu');
+        }
+    }
+
+    _handleSlotSelect(slotNum) {
+        // Check if slot has existing data
+        const saveData = SaveSystem.getSave(slotNum);
+        if (saveData) {
+            this.warningSlotNumber = slotNum;
+            this.showWarning = true;
+        } else {
+            this.pendingSlotNumber = slotNum;
+            this.isOverwriting = false;
+            this.showCommanderInput = true;
+            this.commanderNameInput = '';
+        }
+    }
+
+    _confirmWarning() {
+        this.showWarning = false;
+        this.pendingSlotNumber = this.warningSlotNumber;
+        this.isOverwriting = true;
+        this.showCommanderInput = true;
+        this.commanderNameInput = '';
+    }
+
+    _cancelWarning() {
+        this.showWarning = false;
+        this.warningSlotNumber = null;
+    }
+
+    _confirmCommanderName() {
+        const name = this.commanderNameInput.trim();
+        if (name.length === 0) return;
+        // Create new game with commander name
+        const newGameData = SaveSystem.createNewGameState();
+        newGameData.commanderName = name;
+        if (this.isOverwriting) {
+            SaveSystem.wipeSaveSlot(this.pendingSlotNumber);
+        }
+        SaveSystem.saveSettlementData(this.pendingSlotNumber, newGameData);
+        this.stateManager.currentSaveSlot = this.pendingSlotNumber;
+        this.stateManager.currentSaveData = newGameData;
+        this.stateManager.changeState('settlementHub');
+    }
+
+    _cancelCommanderName() {
+        this.showCommanderInput = false;
+        this.commanderNameInput = '';
+        this.pendingSlotNumber = null;
     }
 
     setupKeyboardListeners() {

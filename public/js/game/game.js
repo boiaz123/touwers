@@ -386,10 +386,16 @@ export class Game {
                 });
             }
 
-            // Gamepad click -> simulate canvas click
+            // Gamepad click -> simulate canvas click or activate focused button
             this.inputManager.on('gamepad_click', (data) => {
                 if (this.stateManager && this.stateManager.currentState) {
-                    this.stateManager.handleClick(data.x, data.y);
+                    const state = this.stateManager.currentState;
+                    // In buttons mode, activate the focused button
+                    if (this.inputManager.gamepadNavigationMode === 'buttons' && state.activateFocusedButton) {
+                        state.activateFocusedButton();
+                    } else {
+                        this.stateManager.handleClick(data.x, data.y);
+                    }
                 }
             });
 
@@ -397,12 +403,30 @@ export class Game {
             this.inputManager.on('gamepad_prev_item', () => {
                 const refs = getGameplayRefs();
                 if (!refs || !refs.uiManager) return;
-                this._cycleSelection(refs.uiManager, -1);
+                this._cycleSelection(refs.uiManager, -1, refs.gameplayState);
             });
             this.inputManager.on('gamepad_next_item', () => {
                 const refs = getGameplayRefs();
                 if (!refs || !refs.uiManager) return;
-                this._cycleSelection(refs.uiManager, 1);
+                this._cycleSelection(refs.uiManager, 1, refs.gameplayState);
+            });
+
+            // Gamepad triggers -> cycle game speed
+            this.inputManager.on('gamepad_speed_down', () => {
+                const refs = getGameplayRefs();
+                if (!refs || !refs.gameplayState) return;
+                const speeds = [1, 2, 3];
+                const currentIdx = speeds.indexOf(refs.gameplayState.gameSpeed);
+                const newIdx = Math.max(0, currentIdx - 1);
+                refs.gameplayState.setGameSpeed(speeds[newIdx]);
+            });
+            this.inputManager.on('gamepad_speed_up', () => {
+                const refs = getGameplayRefs();
+                if (!refs || !refs.gameplayState) return;
+                const speeds = [1, 2, 3];
+                const currentIdx = speeds.indexOf(refs.gameplayState.gameSpeed);
+                const newIdx = Math.min(speeds.length - 1, currentIdx + 1);
+                refs.gameplayState.setGameSpeed(speeds[newIdx]);
             });
 
             // Touch tap -> click
@@ -460,22 +484,55 @@ export class Game {
                 }
             });
 
-            // Gamepad D-pad navigation for Results Screen keyboard-style input
+            // Gamepad D-pad navigation for menu button cycling and Results Screen
+            this.inputManager.on('gamepad_nav_up', () => {
+                if (!this.stateManager || !this.stateManager.currentState) return;
+                const state = this.stateManager.currentState;
+                // Menu button navigation in 'buttons' mode
+                if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
+                    const count = state.getButtonCount();
+                    if (count <= 0) return;
+                    let idx = state.getFocusedButtonIndex();
+                    idx = idx <= 0 ? count - 1 : idx - 1;
+                    state.focusButton(idx);
+                }
+            });
+            this.inputManager.on('gamepad_nav_down', () => {
+                if (!this.stateManager || !this.stateManager.currentState) return;
+                const state = this.stateManager.currentState;
+                if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
+                    const count = state.getButtonCount();
+                    if (count <= 0) return;
+                    let idx = state.getFocusedButtonIndex();
+                    idx = (idx + 1) % count;
+                    state.focusButton(idx);
+                }
+            });
             this.inputManager.on('gamepad_nav_left', () => {
-                if (this.stateManager && this.stateManager.currentState) {
-                    const state = this.stateManager.currentState;
-                    // ResultsScreen uses handleKeyPress for button navigation
-                    if (state.resultsScreen && state.resultsScreen.isShowing) {
-                        state.resultsScreen.handleKeyPress('ArrowLeft');
-                    }
+                if (!this.stateManager || !this.stateManager.currentState) return;
+                const state = this.stateManager.currentState;
+                // ResultsScreen uses handleKeyPress for button navigation
+                if (state.resultsScreen && state.resultsScreen.isShowing) {
+                    state.resultsScreen.handleKeyPress('ArrowLeft');
+                } else if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
+                    const count = state.getButtonCount();
+                    if (count <= 0) return;
+                    let idx = state.getFocusedButtonIndex();
+                    idx = idx <= 0 ? count - 1 : idx - 1;
+                    state.focusButton(idx);
                 }
             });
             this.inputManager.on('gamepad_nav_right', () => {
-                if (this.stateManager && this.stateManager.currentState) {
-                    const state = this.stateManager.currentState;
-                    if (state.resultsScreen && state.resultsScreen.isShowing) {
-                        state.resultsScreen.handleKeyPress('ArrowRight');
-                    }
+                if (!this.stateManager || !this.stateManager.currentState) return;
+                const state = this.stateManager.currentState;
+                if (state.resultsScreen && state.resultsScreen.isShowing) {
+                    state.resultsScreen.handleKeyPress('ArrowRight');
+                } else if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
+                    const count = state.getButtonCount();
+                    if (count <= 0) return;
+                    let idx = state.getFocusedButtonIndex();
+                    idx = (idx + 1) % count;
+                    state.focusButton(idx);
                 }
             });
 
@@ -498,7 +555,7 @@ export class Game {
     /**
      * Cycle through tower/building selection with gamepad shoulder buttons
      */
-    _cycleSelection(uiManager, direction) {
+    _cycleSelection(uiManager, direction, gameplayState) {
         const allBtns = [
             ...document.querySelectorAll('.tower-btn'),
             ...document.querySelectorAll('.building-btn')
@@ -515,6 +572,14 @@ export class Game {
             uiManager.selectTower(btn);
         } else {
             uiManager.selectBuilding(btn);
+        }
+
+        // Trigger placement preview at the gamepad cursor position
+        if (gameplayState && this.inputManager) {
+            gameplayState.handleTouchMove(
+                this.inputManager.gamepadCursorX,
+                this.inputManager.gamepadCursorY
+            );
         }
     }
     

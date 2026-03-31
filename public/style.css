@@ -3082,12 +3082,22 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 }
 
 .pause-menu-content {
-    background: linear-gradient(135deg, 
-        rgba(42, 26, 15, 0.99) 0%,
-        rgba(26, 15, 10, 0.99) 50%,
-        rgba(32, 18, 8, 0.99) 100%);
+    background: 
+        /* Subtle parchment texture */
+        repeating-linear-gradient(2deg,
+            transparent 0px,
+            transparent 4px,
+            rgba(0, 0, 0, 0.03) 4px,
+            rgba(0, 0, 0, 0.03) 5px,
+            transparent 5px,
+            transparent 10px),
+        linear-gradient(135deg, 
+            rgba(52, 34, 18, 0.99) 0%,
+            rgba(38, 22, 12, 0.99) 40%,
+            rgba(44, 28, 14, 0.99) 70%,
+            rgba(36, 20, 10, 0.99) 100%);
     border: 2px solid rgba(155, 125, 60, 0.7);
-    border-radius: 0.8rem;
+    border-radius: 0.4rem;
     padding: clamp(2rem, 5vh, 3rem) clamp(2.5rem, 6vw, 4rem);
     box-shadow: 
         0 30px 80px rgba(0, 0, 0, 0.95),
@@ -3109,7 +3119,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     }
 }
 
-/* Medieval stone texture and details */
+/* Iron frame with rivets */
 .pause-menu-content::before {
     content: '';
     position: absolute;
@@ -3117,13 +3127,21 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: -8px;
     right: -8px;
     bottom: -8px;
-    background: linear-gradient(135deg, rgba(139, 111, 78, 0.5), rgba(58, 42, 31, 0.5));
+    background: linear-gradient(135deg, rgba(100, 80, 55, 0.5), rgba(58, 42, 31, 0.5));
     border: 3px solid #6b5540;
-    border-radius: 0.8rem;
+    border-radius: 0.4rem;
     z-index: -1;
     box-shadow: 
         inset 0 0 20px rgba(0, 0, 0, 0.9),
-        0 0 30px rgba(0, 0, 0, 0.7);
+        0 0 30px rgba(0, 0, 0, 0.7),
+        /* Corner rivet top-left */
+        8px 8px 0 0 rgba(90, 85, 75, 0.35),
+        /* Corner rivet top-right */
+        calc(100% - 13px) 8px 0 0 rgba(90, 85, 75, 0.35),
+        /* Corner rivet bottom-left */
+        8px calc(100% - 13px) 0 0 rgba(90, 85, 75, 0.35),
+        /* Corner rivet bottom-right */
+        calc(100% - 13px) calc(100% - 13px) 0 0 rgba(90, 85, 75, 0.35);
 }
 
 .pause-menu-content::after {
@@ -3133,12 +3151,12 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: 0;
     right: 0;
     bottom: 0;
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 0.8rem;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 0.4rem;
     pointer-events: none;
     box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.15),
-        inset 0 0 20px rgba(212, 175, 55, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 0 25px rgba(212, 175, 55, 0.06),
         inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 
@@ -3147,13 +3165,29 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     margin-bottom: clamp(2rem, 4vh, 3rem);
     position: relative;
     padding-bottom: clamp(1.5rem, 3vh, 2rem);
-    border-bottom: 3px solid;
+    border-bottom: 2px solid;
     border-image: linear-gradient(90deg, 
         transparent 0%, 
-        #8b6f47 20%, 
-        #d4af37 50%, 
-        #8b6f47 80%, 
+        rgba(100, 80, 55, 0.6) 15%, 
+        #d4af37 40%, 
+        #f0d060 50%, 
+        #d4af37 60%, 
+        rgba(100, 80, 55, 0.6) 85%, 
         transparent 100%) 1;
+}
+
+/* Center diamond ornament on header divider */
+.pause-menu-header::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: #d4af37;
+    transform: translateX(-50%) rotate(45deg);
+    border: 1px solid rgba(240, 208, 96, 0.6);
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
 }
 
 .pause-menu-title {
@@ -3162,9 +3196,11 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     font-weight: 900;
     text-shadow: 
         0 3px 6px rgba(0, 0, 0, 0.9),
-        1px 1px 0 rgba(0, 0, 0, 0.7);
-    letter-spacing: 2px;
+        1px 1px 0 rgba(0, 0, 0, 0.7),
+        0 0 12px rgba(212, 175, 55, 0.15);
+    letter-spacing: 3px;
     text-transform: uppercase;
+    font-family: Georgia, 'Times New Roman', serif;
 }
 
 .pause-menu-buttons {
@@ -3177,34 +3213,50 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 
 .pause-menu-btn {
     padding: clamp(0.9rem, 1.8vh, 1.3rem) clamp(1.8rem, 4vw, 2.5rem);
-    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%);
-    border: 2px solid rgba(155, 125, 55, 0.6);
-    border-radius: 0.3rem;
+    background: 
+        /* Wood grain texture */
+        repeating-linear-gradient(1deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px,
+            rgba(0, 0, 0, 0.04) 4px,
+            transparent 4px,
+            transparent 7px),
+        linear-gradient(135deg, rgba(82, 58, 38, 0.95) 0%, rgba(62, 44, 28, 0.95) 50%, rgba(70, 50, 32, 0.95) 100%);
+    border: 2px solid rgba(155, 125, 55, 0.55);
+    border-radius: 0.25rem;
     color: var(--primary-gold-light);
     font-size: clamp(1rem, 2.2vw, 1.3rem);
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
+    letter-spacing: 1.5px;
     cursor: pointer;
     transition: all 0.25s ease;
     box-shadow: 
         0 6px 14px rgba(0, 0, 0, 0.75),
-        inset 0 1px 2px rgba(255, 255, 255, 0.08);
+        inset 0 1px 2px rgba(255, 255, 255, 0.08),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3);
     position: relative;
     overflow: hidden;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    font-family: Georgia, 'Times New Roman', serif;
 }
 
 .pause-menu-btn::before {
     content: '';
     position: absolute;
-    top: 1px;
-    left: 1px;
-    right: 1px;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.1);
+    top: 50%;
+    left: 8px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(120, 115, 105, 0.5) 0%, rgba(80, 75, 65, 0.3) 60%, transparent 70%);
+    transform: translateY(-50%);
     pointer-events: none;
     z-index: 1;
+    box-shadow:
+        /* Right nail */
+        calc(100% - 21px) 0 0 0 rgba(120, 115, 105, 0.4);
 }
 
 .pause-menu-btn::after {
@@ -3226,12 +3278,21 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 }
 
 .pause-menu-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%);
-    border-color: rgba(190, 160, 70, 0.9);
+    background: 
+        repeating-linear-gradient(1deg,
+            transparent 0px,
+            transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px,
+            rgba(0, 0, 0, 0.04) 4px,
+            transparent 4px,
+            transparent 7px),
+        linear-gradient(135deg, rgba(100, 76, 50, 0.98) 0%, rgba(80, 62, 42, 0.98) 50%, rgba(88, 68, 46, 0.98) 100%);
+    border-color: rgba(212, 175, 55, 0.8);
     box-shadow: 
         0 12px 24px rgba(0, 0, 0, 0.9),
         inset 0 1px 2px rgba(255, 255, 255, 0.12),
-        inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+        inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+        0 0 8px rgba(212, 175, 55, 0.15);
     transform: translateY(-2px);
     color: var(--primary-gold-light);
 }
@@ -3249,15 +3310,20 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     cursor: not-allowed;
 }
 
-/* All pause menu buttons use the same medieval stone style */
+/* All pause menu buttons use the same medieval wood-plank style */
 .resume-btn,
 .restart-btn,
 .quit-btn,
 .options-btn,
 .save-btn,
 .exit-btn {
-    background: linear-gradient(135deg, rgba(74, 58, 47, 0.95) 0%, rgba(58, 42, 31, 0.95) 100%) !important;
-    border-color: rgba(155, 125, 55, 0.6) !important;
+    background: 
+        repeating-linear-gradient(1deg,
+            transparent 0px, transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
+            transparent 4px, transparent 7px),
+        linear-gradient(135deg, rgba(82, 58, 38, 0.95) 0%, rgba(62, 44, 28, 0.95) 50%, rgba(70, 50, 32, 0.95) 100%) !important;
+    border-color: rgba(155, 125, 55, 0.55) !important;
     color: var(--primary-gold-light) !important;
 }
 
@@ -3267,7 +3333,12 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 .options-btn:hover:not(:disabled),
 .save-btn:hover:not(:disabled),
 .exit-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, rgba(90, 74, 63, 0.98) 0%, rgba(74, 58, 47, 0.98) 100%) !important;
+    background: 
+        repeating-linear-gradient(1deg,
+            transparent 0px, transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
+            transparent 4px, transparent 7px),
+        linear-gradient(135deg, rgba(100, 76, 50, 0.98) 0%, rgba(80, 62, 42, 0.98) 50%, rgba(88, 68, 46, 0.98) 100%) !important;
     border-color: rgba(190, 160, 70, 0.9) !important;
     color: var(--primary-gold-light) !important;
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.5) !important;
@@ -3697,6 +3768,136 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 .controls-mouse-info span {
     color: rgba(200, 168, 75, 0.9);
     font-weight: bold;
+}
+
+/* Controls tab bar */
+.controls-tab-bar {
+    display: flex;
+    border-bottom: 1px solid rgba(150, 120, 60, 0.4);
+    padding: 0 1rem;
+    background: rgba(15, 12, 25, 0.5);
+}
+
+.controls-tab {
+    flex: 1;
+    padding: 0.6rem 0.8rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(180, 155, 100, 0.5);
+    font-size: 0.8rem;
+    font-weight: bold;
+    font-family: Georgia, serif;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.controls-tab:hover {
+    color: rgba(200, 168, 75, 0.8);
+    background: rgba(200, 168, 75, 0.05);
+}
+
+.controls-tab.active {
+    color: #C8A84B;
+    border-bottom-color: #C8A84B;
+    background: rgba(200, 168, 75, 0.08);
+}
+
+/* Controls info grid (for controller/touch tabs) */
+.controls-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.controls-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.controls-key-label {
+    color: #C8A84B;
+    font-size: 0.82rem;
+    font-weight: bold;
+    min-width: 140px;
+}
+
+.controls-key-desc {
+    color: rgba(210, 195, 170, 0.85);
+    font-size: 0.8rem;
+    text-align: right;
+    flex: 1;
+}
+
+/* Controller settings (cursor speed) */
+.controls-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+}
+
+.controls-setting-label {
+    color: rgba(210, 195, 170, 0.9);
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.controls-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.controls-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 180px;
+    height: 6px;
+    background: rgba(30, 25, 45, 0.9);
+    border: 1px solid rgba(155, 125, 55, 0.4);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.controls-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #C8A84B;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.controls-slider::-webkit-slider-thumb:hover {
+    background: #FFD700;
+    transform: scale(1.15);
+}
+
+.controls-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #C8A84B;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    cursor: pointer;
+}
+
+.controls-slider-value {
+    color: #C8A84B;
+    font-size: 0.85rem;
+    font-weight: bold;
+    min-width: 24px;
+    text-align: center;
 }
 
 

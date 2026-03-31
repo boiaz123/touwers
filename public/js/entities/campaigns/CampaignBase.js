@@ -52,10 +52,78 @@ export class CampaignBase {
         }
         
         this.setupMouseListeners();
+
+        // Set controller to button navigation mode for campaign level select
+        if (this.stateManager.inputManager) {
+            this.stateManager.inputManager.setNavigationMode('buttons');
+        }
     }
     
     exit() {
         this.removeMouseListeners();
+    }
+
+    // ============ GAMEPAD BUTTON NAVIGATION ============
+
+    getButtonCount() {
+        // Unlocked levels + exit button
+        const unlockedCount = this.levels ? this.levels.filter(l => l.unlocked && !l.id.startsWith('placeholder-')).length : 0;
+        return unlockedCount + 1; // +1 for exit
+    }
+
+    getFocusedButtonIndex() {
+        if (this.hoveredExitButton) {
+            return this.getButtonCount() - 1; // Last item is exit
+        }
+        if (this.hoveredLevel >= 0) {
+            // Map hoveredLevel (slot index) to our unlocked-only index
+            const unlockedLevels = this._getUnlockedLevelIndices();
+            return unlockedLevels.indexOf(this.hoveredLevel);
+        }
+        return -1;
+    }
+
+    focusButton(index) {
+        this.hoveredLevel = -1;
+        this.hoveredExitButton = false;
+        const unlockedLevels = this._getUnlockedLevelIndices();
+        const exitIdx = unlockedLevels.length;
+
+        if (index >= 0 && index < unlockedLevels.length) {
+            this.hoveredLevel = unlockedLevels[index];
+        } else if (index === exitIdx) {
+            this.hoveredExitButton = true;
+        }
+    }
+
+    activateFocusedButton() {
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+        if (this.hoveredExitButton) {
+            this.stateManager.changeState('campaignMenu');
+            return;
+        }
+        if (this.hoveredLevel >= 0 && this.levelSlots && this.levelSlots[this.hoveredLevel]) {
+            const slot = this.levelSlots[this.hoveredLevel];
+            const level = slot.level;
+            if (level && level.unlocked && !level.id.startsWith('placeholder-')) {
+                this.stateManager.selectedLevelInfo = {
+                    ...level,
+                    campaignId: this.campaignId
+                };
+                this.stateManager.changeState('game');
+            }
+        }
+    }
+
+    _getUnlockedLevelIndices() {
+        if (!this.levels) return [];
+        const indices = [];
+        for (let i = 0; i < this.levels.length; i++) {
+            if (this.levels[i].unlocked && !this.levels[i].id.startsWith('placeholder-')) {
+                indices.push(i);
+            }
+        }
+        return indices;
     }
     
     setupMouseListeners() {
