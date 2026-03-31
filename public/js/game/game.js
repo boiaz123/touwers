@@ -386,19 +386,6 @@ export class Game {
                 });
             }
 
-            // Gamepad click -> simulate canvas click or activate focused button
-            this.inputManager.on('gamepad_click', (data) => {
-                if (this.stateManager && this.stateManager.currentState) {
-                    const state = this.stateManager.currentState;
-                    // In buttons mode, activate the focused button
-                    if (this.inputManager.gamepadNavigationMode === 'buttons' && state.activateFocusedButton) {
-                        state.activateFocusedButton();
-                    } else {
-                        this.stateManager.handleClick(data.x, data.y);
-                    }
-                }
-            });
-
             // Gamepad shoulder buttons -> cycle through towers/buildings
             this.inputManager.on('gamepad_prev_item', () => {
                 const refs = getGameplayRefs();
@@ -450,18 +437,6 @@ export class Game {
                 }
             });
 
-            // Gamepad cursor move -> update hover state in current state
-            this.inputManager.on('gamepad_cursor_move', (data) => {
-                if (this.stateManager && this.stateManager.currentState) {
-                    const state = this.stateManager.currentState;
-                    if (state.handleMouseMove) {
-                        state.handleMouseMove(data.x, data.y);
-                    } else if (state.handleTouchMove) {
-                        state.handleTouchMove(data.x, data.y);
-                    }
-                }
-            });
-
             // Gamepad collect nearest loot (X button)
             this.inputManager.on('gamepad_collect_loot', () => {
                 const refs = getGameplayRefs();
@@ -481,58 +456,6 @@ export class Game {
                 }
                 if (nearestBag) {
                     lootManager.collectLoot(nearestBag);
-                }
-            });
-
-            // Gamepad D-pad navigation for menu button cycling and Results Screen
-            this.inputManager.on('gamepad_nav_up', () => {
-                if (!this.stateManager || !this.stateManager.currentState) return;
-                const state = this.stateManager.currentState;
-                // Menu button navigation in 'buttons' mode
-                if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
-                    const count = state.getButtonCount();
-                    if (count <= 0) return;
-                    let idx = state.getFocusedButtonIndex();
-                    idx = idx <= 0 ? count - 1 : idx - 1;
-                    state.focusButton(idx);
-                }
-            });
-            this.inputManager.on('gamepad_nav_down', () => {
-                if (!this.stateManager || !this.stateManager.currentState) return;
-                const state = this.stateManager.currentState;
-                if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
-                    const count = state.getButtonCount();
-                    if (count <= 0) return;
-                    let idx = state.getFocusedButtonIndex();
-                    idx = (idx + 1) % count;
-                    state.focusButton(idx);
-                }
-            });
-            this.inputManager.on('gamepad_nav_left', () => {
-                if (!this.stateManager || !this.stateManager.currentState) return;
-                const state = this.stateManager.currentState;
-                // ResultsScreen uses handleKeyPress for button navigation
-                if (state.resultsScreen && state.resultsScreen.isShowing) {
-                    state.resultsScreen.handleKeyPress('ArrowLeft');
-                } else if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
-                    const count = state.getButtonCount();
-                    if (count <= 0) return;
-                    let idx = state.getFocusedButtonIndex();
-                    idx = idx <= 0 ? count - 1 : idx - 1;
-                    state.focusButton(idx);
-                }
-            });
-            this.inputManager.on('gamepad_nav_right', () => {
-                if (!this.stateManager || !this.stateManager.currentState) return;
-                const state = this.stateManager.currentState;
-                if (state.resultsScreen && state.resultsScreen.isShowing) {
-                    state.resultsScreen.handleKeyPress('ArrowRight');
-                } else if (state.getButtonCount && this.inputManager.gamepadNavigationMode === 'buttons') {
-                    const count = state.getButtonCount();
-                    if (count <= 0) return;
-                    let idx = state.getFocusedButtonIndex();
-                    idx = (idx + 1) % count;
-                    state.focusButton(idx);
                 }
             });
 

@@ -98,11 +98,6 @@ export class MainMenu {
         }
 
         this.setupMouseListeners();
-
-        // Set controller to button navigation mode for menus
-        if (this.stateManager.inputManager) {
-            this.stateManager.inputManager.setNavigationMode('buttons');
-        }
     }
 
     exit() {

@@ -86,11 +86,6 @@ export class SaveSlotSelection {
 
         this.setupMouseListeners();
         this.setupKeyboardListeners();
-
-        // Set controller to button navigation mode
-        if (this.stateManager.inputManager) {
-            this.stateManager.inputManager.setNavigationMode('buttons');
-        }
     }
 
     exit() {

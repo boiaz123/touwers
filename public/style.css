@@ -48,6 +48,12 @@
     box-sizing: border-box;
 }
 
+/* Hide real cursor when gamepad is active (crosshair overlay takes over) */
+.gamepad-active,
+.gamepad-active * {
+    cursor: none !important;
+}
+
 html {
     font-size: 16px;
     /* Responsive font sizing */

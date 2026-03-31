@@ -109,9 +109,20 @@ export class InputManager {
         this.gamepadCursorSpeed = 14;
         this.gamepadCursorVisible = false;
 
-        // Controller navigation mode: 'cursor' for in-game/settlement, 'buttons' for menus
-        this.gamepadNavigationMode = 'buttons';
-        this.gamepadFocusedIndex = 0; // Index of currently focused button in menu navigation
+        // Synthetic mouse event tracking for gamepad cursor
+        this._lastHoveredElement = null;
+        this._gamepadActive = false;
+        this._syntheticEvent = false;
+
+        // Listen for real mouse to switch back from gamepad mode
+        this._realMouseMoveHandler = (e) => {
+            if (this._syntheticEvent) return;
+            if (this._gamepadActive) {
+                this._gamepadActive = false;
+                document.documentElement.classList.remove('gamepad-active');
+            }
+        };
+        window.addEventListener('mousemove', this._realMouseMoveHandler);
 
         // Load saved cursor speed
         this._loadCursorSpeed();
@@ -412,93 +423,52 @@ export class InputManager {
         const deadzone = 0.15;
         let cursorMoved = false;
 
-        // ---- Cursor movement via left stick ----
+        // ---- Left stick cursor movement (always moves cursor) ----
         const leftX = Math.abs(gp.axes[0]) > deadzone ? gp.axes[0] : 0;
         const leftY = Math.abs(gp.axes[1]) > deadzone ? gp.axes[1] : 0;
 
         if (canvas && (leftX !== 0 || leftY !== 0)) {
-            if (this.gamepadNavigationMode === 'cursor') {
-                this.gamepadCursorX = Math.max(0, Math.min(canvas.width, this.gamepadCursorX + leftX * this.gamepadCursorSpeed));
-                this.gamepadCursorY = Math.max(0, Math.min(canvas.height, this.gamepadCursorY + leftY * this.gamepadCursorSpeed));
-                this.gamepadCursorVisible = true;
-                cursorMoved = true;
-            } else {
-                // In buttons mode, analog stick acts as nav events with repeat throttling
-                if (!this._analogNavCooldown) this._analogNavCooldown = 0;
-                this._analogNavCooldown -= 16;
-                if (this._analogNavCooldown <= 0) {
-                    if (Math.abs(leftY) > Math.abs(leftX)) {
-                        if (leftY < -0.5) this._triggerAction('gamepad_nav_up', { type: 'gamepad' });
-                        else if (leftY > 0.5) this._triggerAction('gamepad_nav_down', { type: 'gamepad' });
-                    } else {
-                        if (leftX < -0.5) this._triggerAction('gamepad_nav_left', { type: 'gamepad' });
-                        else if (leftX > 0.5) this._triggerAction('gamepad_nav_right', { type: 'gamepad' });
-                    }
-                    this._analogNavCooldown = 200;
-                }
-            }
-        } else {
-            this._analogNavCooldown = 0;
+            this.gamepadCursorX = Math.max(0, Math.min(canvas.width, this.gamepadCursorX + leftX * this.gamepadCursorSpeed));
+            this.gamepadCursorY = Math.max(0, Math.min(canvas.height, this.gamepadCursorY + leftY * this.gamepadCursorSpeed));
+            this.gamepadCursorVisible = true;
+            cursorMoved = true;
         }
 
-        // ---- D-pad: cursor movement in cursor mode, nav-only in buttons mode ----
+        // ---- D-pad cursor movement (always moves cursor) ----
         const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
         const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
         const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
         const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
 
-        if (this.gamepadNavigationMode === 'cursor') {
-            if (dpadUp) { this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed); cursorMoved = true; }
-            if (dpadDown && canvas) { this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed); cursorMoved = true; }
-            if (dpadLeft) { this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed); cursorMoved = true; }
-            if (dpadRight && canvas) { this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadUp) { this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadDown && canvas) { this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadLeft) { this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadRight && canvas) { this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed); cursorMoved = true; }
+
+        // Dispatch synthetic mousemove when cursor moves
+        if (cursorMoved && canvas) {
+            this._setGamepadActive();
+            this._dispatchSyntheticMouseMove(canvas);
         }
 
-        // Edge-triggered D-pad navigation events (for menu button cycling)
-        const dpadUpWas = this.previousGamepadState['dpad_up'] || false;
-        const dpadDownWas = this.previousGamepadState['dpad_down'] || false;
-        const dpadLeftWas = this.previousGamepadState['dpad_left'] || false;
-        const dpadRightWas = this.previousGamepadState['dpad_right'] || false;
-
-        if (dpadUp && !dpadUpWas) this._triggerAction('gamepad_nav_up', { type: 'gamepad' });
-        if (dpadDown && !dpadDownWas) this._triggerAction('gamepad_nav_down', { type: 'gamepad' });
-        if (dpadLeft && !dpadLeftWas) this._triggerAction('gamepad_nav_left', { type: 'gamepad' });
-        if (dpadRight && !dpadRightWas) this._triggerAction('gamepad_nav_right', { type: 'gamepad' });
-
-        this.previousGamepadState['dpad_up'] = dpadUp;
-        this.previousGamepadState['dpad_down'] = dpadDown;
-        this.previousGamepadState['dpad_left'] = dpadLeft;
-        this.previousGamepadState['dpad_right'] = dpadRight;
-
-        // Fire cursor move event for hover state updates in menus
-        if (cursorMoved) {
-            this._triggerAction('gamepad_cursor_move', {
-                type: 'gamepad',
-                x: this.gamepadCursorX,
-                y: this.gamepadCursorY
-            });
-        }
-
-        // ---- Button presses (edge-triggered) ----
+        // ---- Button presses (edge-triggered via bindings: B, Y, Start, Back) ----
         for (let i = 0; i < gp.buttons.length; i++) {
             const pressed = gp.buttons[i].pressed;
             const wasPressed = this.previousGamepadState[i] || false;
 
             if (pressed && !wasPressed) {
+                this._setGamepadActive();
                 this._handleGamepadButton(i);
             }
             this.previousGamepadState[i] = pressed;
         }
 
-        // ---- A button = click/confirm at cursor position ----
+        // ---- A button = click at cursor position (synthetic click) ----
         const aPressed = gp.buttons[0] && gp.buttons[0].pressed;
         const aWasPressed = this.previousGamepadState['a_click'] || false;
         if (aPressed && !aWasPressed) {
-            this._triggerAction('gamepad_click', {
-                type: 'gamepad',
-                x: this.gamepadCursorX,
-                y: this.gamepadCursorY
-            });
+            this._setGamepadActive();
+            if (canvas) this._dispatchSyntheticClick(canvas);
         }
         this.previousGamepadState['a_click'] = aPressed;
 
@@ -506,6 +476,7 @@ export class InputManager {
         const xPressed = gp.buttons[2] && gp.buttons[2].pressed;
         const xWasPressed = this.previousGamepadState['x_loot'] || false;
         if (xPressed && !xWasPressed) {
+            this._setGamepadActive();
             this._triggerAction('gamepad_collect_loot', { type: 'gamepad' });
         }
         this.previousGamepadState['x_loot'] = xPressed;
@@ -526,9 +497,11 @@ export class InputManager {
         const rbWas = this.previousGamepadState['rb'] || false;
 
         if (lbPressed && !lbWas) {
+            this._setGamepadActive();
             this._triggerAction('gamepad_prev_item', { type: 'gamepad' });
         }
         if (rbPressed && !rbWas) {
+            this._setGamepadActive();
             this._triggerAction('gamepad_next_item', { type: 'gamepad' });
         }
         this.previousGamepadState['lb'] = lbPressed;
@@ -543,9 +516,11 @@ export class InputManager {
         const rtWas = this.previousGamepadState['rt'] || false;
 
         if (ltPressed && !ltWas) {
+            this._setGamepadActive();
             this._triggerAction('gamepad_speed_down', { type: 'gamepad' });
         }
         if (rtPressed && !rtWas) {
+            this._setGamepadActive();
             this._triggerAction('gamepad_speed_up', { type: 'gamepad' });
         }
         this.previousGamepadState['lt'] = ltPressed;
@@ -591,20 +566,81 @@ export class InputManager {
         }
     }
 
-    // ============ NAVIGATION MODE ============
+    // ============ SYNTHETIC MOUSE EVENTS FOR GAMEPAD ============
 
-    setNavigationMode(mode) {
-        this.gamepadNavigationMode = mode; // 'cursor' or 'buttons'
-        if (mode === 'buttons') {
-            this.gamepadCursorVisible = false;
-            this.gamepadFocusedIndex = 0;
-        } else if (mode === 'cursor' && this.gamepadConnected) {
+    /**
+     * Mark the gamepad as the active input device (hides real cursor)
+     */
+    _setGamepadActive() {
+        if (!this._gamepadActive) {
+            this._gamepadActive = true;
             this.gamepadCursorVisible = true;
+            document.documentElement.classList.add('gamepad-active');
         }
     }
 
-    getNavigationMode() {
-        return this.gamepadNavigationMode;
+    /**
+     * Dispatch synthetic mousemove on the canvas and handle DOM element hover
+     */
+    _dispatchSyntheticMouseMove(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const clientX = rect.left + this.gamepadCursorX * scaleX;
+        const clientY = rect.top + this.gamepadCursorY * scaleY;
+
+        // Dispatch mousemove on canvas (picked up by each state's mouseMoveHandler)
+        this._syntheticEvent = true;
+        canvas.dispatchEvent(new MouseEvent('mousemove', {
+            clientX, clientY, bubbles: true, cancelable: true
+        }));
+        this._syntheticEvent = false;
+
+        // Handle DOM element hover (for tower/building info panels, pause menu, etc.)
+        const rawEl = document.elementFromPoint(clientX, clientY);
+        // Walk up to find the nearest interactive element for enter/leave tracking
+        const el = rawEl
+            ? (rawEl.closest('.tower-btn, .building-btn, .spell-btn, .pause-menu-btn, button, a, [data-clickable]') || rawEl)
+            : null;
+
+        if (el !== this._lastHoveredElement) {
+            // Dispatch mouseleave on previous element
+            if (this._lastHoveredElement && this._lastHoveredElement !== canvas) {
+                this._lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', {
+                    clientX, clientY, bubbles: false, cancelable: false,
+                    relatedTarget: el
+                }));
+            }
+            // Dispatch mouseenter on new element
+            if (el && el !== canvas) {
+                el.dispatchEvent(new MouseEvent('mouseenter', {
+                    clientX, clientY, bubbles: false, cancelable: false,
+                    relatedTarget: this._lastHoveredElement
+                }));
+            }
+            this._lastHoveredElement = el;
+        }
+    }
+
+    /**
+     * Dispatch synthetic click at the gamepad cursor position
+     */
+    _dispatchSyntheticClick(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = rect.width / canvas.width;
+        const scaleY = rect.height / canvas.height;
+        const clientX = rect.left + this.gamepadCursorX * scaleX;
+        const clientY = rect.top + this.gamepadCursorY * scaleY;
+
+        // Find the element at the cursor position
+        const el = document.elementFromPoint(clientX, clientY) || canvas;
+
+        // Click dispatches with bubbles:true so it reaches parent handlers
+        this._syntheticEvent = true;
+        el.dispatchEvent(new MouseEvent('click', {
+            clientX, clientY, bubbles: true, cancelable: true
+        }));
+        this._syntheticEvent = false;
     }
 
     /**
@@ -844,6 +880,12 @@ export class InputManager {
         window.removeEventListener('keyup', this._keyupHandler);
         window.removeEventListener('gamepadconnected', this._gamepadConnectedHandler);
         window.removeEventListener('gamepaddisconnected', this._gamepadDisconnectedHandler);
+
+        if (this._realMouseMoveHandler) {
+            window.removeEventListener('mousemove', this._realMouseMoveHandler);
+        }
+
+        document.documentElement.classList.remove('gamepad-active');
 
         if (this.gamepadPollInterval) {
             clearInterval(this.gamepadPollInterval);
