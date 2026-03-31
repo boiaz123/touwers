@@ -297,10 +297,13 @@ export class Game {
                 }
             });
 
-            // Cancel / Close (ESC)
+            // Cancel / Close (ESC / B button)
             this.inputManager.on('cancel', () => {
+                if (!this.stateManager || !this.stateManager.currentState) return;
+
                 const refs = getGameplayRefs();
                 if (refs && refs.uiManager) {
+                    // In gameplay: close panels / pause menu / cancel selection
                     if (refs.uiManager.closeAllPanels) {
                         refs.uiManager.closeAllPanels();
                     }
@@ -310,10 +313,21 @@ export class Game {
                             refs.uiManager.closePauseMenu();
                         }
                     }
+                    if (this.stateManager.currentState.cancelSelection) {
+                        this.stateManager.currentState.cancelSelection();
+                    }
+                    return;
                 }
-                // Also cancel tower/building selection
-                if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.cancelSelection) {
-                    this.stateManager.currentState.cancelSelection();
+
+                // In non-gameplay states: go back to previous state
+                const stateName = this.stateManager.currentStateName;
+                if (stateName === 'options') {
+                    const prev = this.stateManager.previousState || 'mainMenu';
+                    this.stateManager.changeState(prev);
+                } else if (stateName === 'loadGame' || stateName === 'saveSlotSelection') {
+                    this.stateManager.changeState('mainMenu');
+                } else if (stateName === 'levelSelect' || stateName === 'campaigns') {
+                    this.stateManager.changeState('settlementHub');
                 }
             });
 
@@ -390,6 +404,59 @@ export class Game {
             this.inputManager.on('touch_longpress', () => {
                 if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.cancelSelection) {
                     this.stateManager.currentState.cancelSelection();
+                }
+            });
+
+            // Gamepad cursor move -> update hover state in current state
+            this.inputManager.on('gamepad_cursor_move', (data) => {
+                if (this.stateManager && this.stateManager.currentState) {
+                    const state = this.stateManager.currentState;
+                    if (state.handleMouseMove) {
+                        state.handleMouseMove(data.x, data.y);
+                    } else if (state.handleTouchMove) {
+                        state.handleTouchMove(data.x, data.y);
+                    }
+                }
+            });
+
+            // Gamepad collect nearest loot (X button)
+            this.inputManager.on('gamepad_collect_loot', () => {
+                const refs = getGameplayRefs();
+                if (!refs) return;
+                const lootManager = refs.gameplayState.lootManager;
+                if (!lootManager) return;
+                // Find the nearest clickable loot bag
+                let nearestBag = null;
+                let nearestDist = Infinity;
+                for (const bag of lootManager.lootBags) {
+                    if (!bag.isClickable()) continue;
+                    const dist = Math.hypot(bag.x - this.inputManager.gamepadCursorX, bag.y - this.inputManager.gamepadCursorY);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearestBag = bag;
+                    }
+                }
+                if (nearestBag) {
+                    lootManager.collectLoot(nearestBag);
+                }
+            });
+
+            // Gamepad D-pad navigation for Results Screen keyboard-style input
+            this.inputManager.on('gamepad_nav_left', () => {
+                if (this.stateManager && this.stateManager.currentState) {
+                    const state = this.stateManager.currentState;
+                    // ResultsScreen uses handleKeyPress for button navigation
+                    if (state.resultsScreen && state.resultsScreen.isShowing) {
+                        state.resultsScreen.handleKeyPress('ArrowLeft');
+                    }
+                }
+            });
+            this.inputManager.on('gamepad_nav_right', () => {
+                if (this.stateManager && this.stateManager.currentState) {
+                    const state = this.stateManager.currentState;
+                    if (state.resultsScreen && state.resultsScreen.isShowing) {
+                        state.resultsScreen.handleKeyPress('ArrowRight');
+                    }
                 }
             });
 

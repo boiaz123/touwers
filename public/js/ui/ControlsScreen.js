@@ -48,7 +48,7 @@ export class ControlsScreen {
                     <span>Mouse Hover</span> - Preview tower/building info on sidebar buttons<br>
                     <span>Tap</span> (Touch) - Same as left click<br>
                     <span>Long Press</span> (Touch) - Same as right click (cancel)<br>
-                    <span>Swipe</span> (Touch) - Scroll sidebar
+                    <span>Drag from Sidebar</span> (Touch) - Drag tower/building onto the map to place
                 </div>
             </div>
         `;
@@ -59,13 +59,14 @@ export class ControlsScreen {
                 <div class="controls-category-title">Controller</div>
                 <div class="controls-mouse-info">
                     <span>Left Stick</span> - Move cursor<br>
-                    <span>A Button</span> - Click / Place / Select<br>
-                    <span>B Button</span> - Cancel<br>
+                    <span>D-Pad</span> - Move cursor / Navigate menus<br>
+                    <span>A Button</span> - Confirm / Place / Select<br>
+                    <span>B Button</span> - Cancel / Go Back<br>
+                    <span>X Button</span> - Collect nearest loot<br>
+                    <span>Y Button</span> - Next Wave<br>
                     <span>Start</span> - Pause<br>
                     <span>Back/Select</span> - Open Menu<br>
-                    <span>Y Button</span> - Next Wave<br>
                     <span>LB / RB</span> - Cycle tower/building selection<br>
-                    <span>D-Pad</span> - Fine cursor movement<br>
                     <span>Right Stick</span> - Scroll sidebar
                 </div>
             </div>

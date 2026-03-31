@@ -179,6 +179,11 @@ export class UIManager {
     }
 
     setupUIEventListeners() {
+        // Track touch drag-and-drop state for mobile placement
+        this._touchDragActive = false;
+        this._touchDragType = null; // 'tower' or 'building'
+        this._touchDragBtn = null;
+
         // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -195,7 +200,13 @@ export class UIManager {
             
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                this.showTowerInfo(e.currentTarget.dataset.type);
+                // Select the tower and start drag-and-drop mode
+                this.selectTower(e.currentTarget);
+                if (this.gameplayState.selectedTowerType) {
+                    this._touchDragActive = true;
+                    this._touchDragType = 'tower';
+                    this._touchDragBtn = e.currentTarget;
+                }
             });
         });
         
@@ -215,9 +226,57 @@ export class UIManager {
             
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                this.showBuildingInfo(e.currentTarget.dataset.type);
+                // Select the building and start drag-and-drop mode
+                this.selectBuilding(e.currentTarget);
+                if (this.gameplayState.selectedBuildingType) {
+                    this._touchDragActive = true;
+                    this._touchDragType = 'building';
+                    this._touchDragBtn = e.currentTarget;
+                }
             });
         });
+
+        // Global touch listeners for drag-and-drop placement across sidebar → canvas
+        this._globalTouchMoveHandler = (e) => {
+            if (!this._touchDragActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (!touch) return;
+            const canvas = document.getElementById('gameCanvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (touch.clientX - rect.left) * scaleX;
+            const y = (touch.clientY - rect.top) * scaleY;
+            // Update placement preview on the canvas
+            if (this.gameplayState && this.gameplayState.handleTouchMove) {
+                this.gameplayState.handleTouchMove(x, y);
+            }
+        };
+        this._globalTouchEndHandler = (e) => {
+            if (!this._touchDragActive) return;
+            this._touchDragActive = false;
+            this._touchDragBtn = null;
+            const touch = e.changedTouches[0];
+            if (!touch) return;
+            const canvas = document.getElementById('gameCanvas');
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            // Only place if finger ended over the canvas area
+            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (touch.clientX - rect.left) * scaleX;
+                const y = (touch.clientY - rect.top) * scaleY;
+                if (this.gameplayState && this.gameplayState.handleClick) {
+                    this.gameplayState.handleClick(x, y);
+                }
+            }
+        };
+        document.addEventListener('touchmove', this._globalTouchMoveHandler, { passive: false });
+        document.addEventListener('touchend', this._globalTouchEndHandler, { passive: false });
 
         
         // Speed control circles - new bottom-left design
@@ -520,8 +579,6 @@ export class UIManager {
         // Clear building selection
         this.gameplayState.selectedBuildingType = null;
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
-        
-        this.showTowerInfo(towerType);
     }
 
     selectBuilding(btn) {
@@ -560,8 +617,6 @@ export class UIManager {
         // Clear tower selection
         this.gameplayState.selectedTowerType = null;
         this.gameplayState.selectedBuildingType = buildingType;
-        
-        this.showBuildingInfo(buildingType);
     }
 
     showTowerInfo(towerType) {

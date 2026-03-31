@@ -117,6 +117,11 @@ export class GameStateManager {
                 this.ctx.fillText(`No render method for state: ${this.currentStateName}`, this.canvas.width / 2, this.canvas.height / 2);
             }
             
+            // Render gamepad cursor on top of all states
+            if (this.inputManager) {
+                this.inputManager.renderGamepadCursor(this.ctx);
+            }
+            
             // Call performance monitor end render
             if (this.currentState && this.currentState.performanceMonitor) {
                 this.currentState.performanceMonitor.endRender();

@@ -2080,11 +2080,6 @@ export class GameplayState {
         // Render performance monitor
         this.performanceMonitor.render(ctx, 10, 10);
         
-        // Render gamepad cursor if connected
-        if (this.stateManager.inputManager) {
-            this.stateManager.inputManager.renderGamepadCursor(ctx);
-        }
-        
         // Render results screen on top if showing
         if (this.resultsScreen && this.resultsScreen.isShowing) {
             this.resultsScreen.render(ctx);

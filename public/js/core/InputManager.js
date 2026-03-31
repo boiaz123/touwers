@@ -390,16 +390,55 @@ export class InputManager {
         const gp = gamepads[this.gamepadIndex];
         if (!gp) return;
 
-        // ---- Cursor movement via left stick ----
+        const canvas = document.getElementById('gameCanvas');
         const deadzone = 0.15;
+        let cursorMoved = false;
+
+        // ---- Cursor movement via left stick ----
         const leftX = Math.abs(gp.axes[0]) > deadzone ? gp.axes[0] : 0;
         const leftY = Math.abs(gp.axes[1]) > deadzone ? gp.axes[1] : 0;
 
-        const canvas = document.getElementById('gameCanvas');
         if (canvas && (leftX !== 0 || leftY !== 0)) {
             this.gamepadCursorX = Math.max(0, Math.min(canvas.width, this.gamepadCursorX + leftX * this.gamepadCursorSpeed));
             this.gamepadCursorY = Math.max(0, Math.min(canvas.height, this.gamepadCursorY + leftY * this.gamepadCursorSpeed));
             this.gamepadCursorVisible = true;
+            cursorMoved = true;
+        }
+
+        // ---- D-pad: cursor movement + edge-triggered nav events ----
+        const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
+        const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
+        const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
+        const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+        if (dpadUp) { this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadDown && canvas) { this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadLeft) { this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed); cursorMoved = true; }
+        if (dpadRight && canvas) { this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed); cursorMoved = true; }
+
+        // Edge-triggered D-pad navigation events (for menu button cycling)
+        const dpadUpWas = this.previousGamepadState['dpad_up'] || false;
+        const dpadDownWas = this.previousGamepadState['dpad_down'] || false;
+        const dpadLeftWas = this.previousGamepadState['dpad_left'] || false;
+        const dpadRightWas = this.previousGamepadState['dpad_right'] || false;
+
+        if (dpadUp && !dpadUpWas) this._triggerAction('gamepad_nav_up', { type: 'gamepad' });
+        if (dpadDown && !dpadDownWas) this._triggerAction('gamepad_nav_down', { type: 'gamepad' });
+        if (dpadLeft && !dpadLeftWas) this._triggerAction('gamepad_nav_left', { type: 'gamepad' });
+        if (dpadRight && !dpadRightWas) this._triggerAction('gamepad_nav_right', { type: 'gamepad' });
+
+        this.previousGamepadState['dpad_up'] = dpadUp;
+        this.previousGamepadState['dpad_down'] = dpadDown;
+        this.previousGamepadState['dpad_left'] = dpadLeft;
+        this.previousGamepadState['dpad_right'] = dpadRight;
+
+        // Fire cursor move event for hover state updates in menus
+        if (cursorMoved) {
+            this._triggerAction('gamepad_cursor_move', {
+                type: 'gamepad',
+                x: this.gamepadCursorX,
+                y: this.gamepadCursorY
+            });
         }
 
         // ---- Button presses (edge-triggered) ----
@@ -413,7 +452,7 @@ export class InputManager {
             this.previousGamepadState[i] = pressed;
         }
 
-        // ---- A button = click at cursor position ----
+        // ---- A button = click/confirm at cursor position ----
         const aPressed = gp.buttons[0] && gp.buttons[0].pressed;
         const aWasPressed = this.previousGamepadState['a_click'] || false;
         if (aPressed && !aWasPressed) {
@@ -425,16 +464,13 @@ export class InputManager {
         }
         this.previousGamepadState['a_click'] = aPressed;
 
-        // ---- D-pad navigation via buttons 12-15 ----
-        const dpadUp = gp.buttons[12] && gp.buttons[12].pressed;
-        const dpadDown = gp.buttons[13] && gp.buttons[13].pressed;
-        const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
-        const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
-
-        if (dpadUp) this.gamepadCursorY = Math.max(0, this.gamepadCursorY - this.gamepadCursorSpeed);
-        if (dpadDown && canvas) this.gamepadCursorY = Math.min(canvas.height, this.gamepadCursorY + this.gamepadCursorSpeed);
-        if (dpadLeft) this.gamepadCursorX = Math.max(0, this.gamepadCursorX - this.gamepadCursorSpeed);
-        if (dpadRight && canvas) this.gamepadCursorX = Math.min(canvas.width, this.gamepadCursorX + this.gamepadCursorSpeed);
+        // ---- X button (2) = collect nearest loot ----
+        const xPressed = gp.buttons[2] && gp.buttons[2].pressed;
+        const xWasPressed = this.previousGamepadState['x_loot'] || false;
+        if (xPressed && !xWasPressed) {
+            this._triggerAction('gamepad_collect_loot', { type: 'gamepad' });
+        }
+        this.previousGamepadState['x_loot'] = xPressed;
 
         // ---- Right stick = scroll sidebar ----
         const rightY = Math.abs(gp.axes[3]) > deadzone ? gp.axes[3] : 0;
