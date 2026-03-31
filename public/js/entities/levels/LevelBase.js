@@ -1798,7 +1798,7 @@ export class LevelBase {
                 case 'water':
                     if (element.waterType === 'river') {
                         this.renderRiver(ctx, screenX, screenY, size, element.flowAngle);
-                    } else {
+                    } else if (element.waterType === 'lake') {
                         this.renderLake(ctx, screenX, screenY, size);
                     }
                     break;
@@ -1843,7 +1843,7 @@ export class LevelBase {
                 case 'water':
                     if (element.waterType === 'river') {
                         this.renderRiver(ctx, screenX, screenY, size, element.flowAngle);
-                    } else {
+                    } else if (element.waterType === 'lake') {
                         this.renderLake(ctx, screenX, screenY, size);
                     }
                     break;
@@ -3972,9 +3972,58 @@ export class LevelBase {
         }
     }
 
+    renderLakeCells(ctx) {
+        // Collect all lake cells from terrain elements into a set for efficient neighbor lookup
+        if (!this.terrainElements) return;
+        const lakeCellSet = new Set();
+        for (const elem of this.terrainElements) {
+            if (elem.type === 'water' && elem.waterType === 'lake') {
+                lakeCellSet.add(`${Math.round(elem.gridX)},${Math.round(elem.gridY)}`);
+            }
+        }
+        if (lakeCellSet.size === 0) return;
+
+        const cs = this.cellSize;
+
+        // First pass: fill each lake cell with water color
+        lakeCellSet.forEach(key => {
+            const [gx, gy] = key.split(',').map(Number);
+            const px = gx * cs;
+            const py = gy * cs;
+            ctx.fillStyle = '#01579B';
+            ctx.fillRect(px, py, cs, cs);
+        });
+
+        // Second pass: draw shore edges and highlight
+        lakeCellSet.forEach(key => {
+            const [gx, gy] = key.split(',').map(Number);
+            const px = gx * cs;
+            const py = gy * cs;
+
+            const hasTop = lakeCellSet.has(`${gx},${gy - 1}`);
+            const hasBottom = lakeCellSet.has(`${gx},${gy + 1}`);
+            const hasLeft = lakeCellSet.has(`${gx - 1},${gy}`);
+            const hasRight = lakeCellSet.has(`${gx + 1},${gy}`);
+
+            // Dark shore edge where lake meets land
+            ctx.strokeStyle = '#004D7A';
+            ctx.lineWidth = Math.max(1, cs * 0.08);
+            if (!hasTop) { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cs, py); ctx.stroke(); }
+            if (!hasBottom) { ctx.beginPath(); ctx.moveTo(px, py + cs); ctx.lineTo(px + cs, py + cs); ctx.stroke(); }
+            if (!hasLeft) { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + cs); ctx.stroke(); }
+            if (!hasRight) { ctx.beginPath(); ctx.moveTo(px + cs, py); ctx.lineTo(px + cs, py + cs); ctx.stroke(); }
+
+            // Subtle wave highlight in center
+            ctx.fillStyle = 'rgba(41, 182, 246, 0.15)';
+            const inset = cs * 0.2;
+            ctx.fillRect(px + inset, py + inset, cs - inset * 2, cs - inset * 2);
+        });
+    }
+
     renderLake(ctx, x, y, size) {
-        // Create organic water shape with rounded edges instead of squares
-        const radius = size * 0.4;
+        // Create organic water shape with rounded edges
+        // Use 0.7 multiplier to match collision radius (size * 0.71 in markTerrainCells)
+        const radius = size * 0.7;
         
         // Water gradient
         const gradient = ctx.createRadialGradient(x - size * 0.1, y - size * 0.1, 0, x, y, radius * 1.2);

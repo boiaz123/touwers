@@ -253,7 +253,7 @@ export class ForestLevel3 extends LevelBase {
             { type: 'rock', gridX: 6.00, gridY: 33.00, size: 2, variant: 2 },
             { type: 'rock', gridX: 2.00, gridY: 10.00, size: 2, variant: 3 },
             { type: 'rock', gridX: 3.00, gridY: 4.00, size: 2, variant: 3 },
-            { type: 'water', gridX: 40.00, gridY: 23.00, size: 5, waterType: 'lake' },
+            { type: 'water', gridX: 40.00, gridY: 23.00, size: 4, waterType: 'lake' },
             { type: 'water', gridX: 16.00, gridY: 4.00, size: 4, waterType: 'lake' }
         ];
     }

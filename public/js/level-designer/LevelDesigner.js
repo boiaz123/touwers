@@ -21,7 +21,6 @@ export class LevelDesigner {
         this.mode = 'path'; // Start in path mode, ready to draw immediately
         this.terrainMode = null; // 'vegetation', 'rock', 'water' when in terrain mode
         this.waterMode = null; // 'river' or 'lake' when placing water
-        this.waterSize = 2; // Size for lake mode
         this.waves = [];
         this.terrainElements = []; // Array of {type, gridX, gridY, size}
         this.currentEditingWaveId = null;
@@ -125,12 +124,7 @@ export class LevelDesigner {
         document.getElementById('waterRiverBtn')?.addEventListener('click', () => this.setWaterMode('river'));
         document.getElementById('waterLakeBtn')?.addEventListener('click', () => this.setWaterMode('lake'));
         
-        // Water size slider
-        document.getElementById('waterSizeSlider')?.addEventListener('input', (e) => {
-            this.waterSize = parseFloat(e.target.value);
-            const label = document.getElementById('waterSizeLabel');
-            if (label) label.textContent = this.waterSize.toFixed(1);
-        });
+
 
         // Terrain size slider
         document.getElementById('terrainSizeSlider')?.addEventListener('input', (e) => {
@@ -301,7 +295,7 @@ export class LevelDesigner {
             pathInfo.textContent = 'River mode -- Click and drag to draw freehand, or single-click for waypoints. Click "Finish River" when done.';
             this.riverPoints = []; // Always start fresh when entering river mode
         } else if (mode === 'lake') {
-            pathInfo.textContent = `Lake mode -- Click to place circular lakes (size: ${this.waterSize.toFixed(1)}). Right-click to erase.`;
+            pathInfo.textContent = 'Lake mode -- Click to place a lake. Use the Size slider to control lake size. Right-click to remove last element.';
             this.riverPoints = [];
         }
     }
@@ -363,6 +357,8 @@ export class LevelDesigner {
             }
         }
         
+        // Lake painting — no longer used (lakes are terrain elements)
+        
         this.render();
     }
 
@@ -387,16 +383,9 @@ export class LevelDesigner {
                 if (!this.riverPoints) this.riverPoints = [];
                 this.riverPoints.push(gridCoords);
             } else if (this.waterMode === 'lake') {
-                // Add single lake circle with variable size (snapped to grid)
+                // Place a lake element at the clicked position
                 const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
-                const element = {
-                    type: 'water',
-                    waterType: 'lake',
-                    gridX: snapped.gridX,
-                    gridY: snapped.gridY,
-                    size: this.waterSize
-                };
-                this.terrainElements.push(element);
+                this.addTerrainElement(this.terrainMode, snapped.gridX, snapped.gridY, null, 'lake');
             } else {
                 // Regular terrain placement (snapped to grid)
                 const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
@@ -421,6 +410,8 @@ export class LevelDesigner {
             this.lastRiverDragPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
             this.updateGeneratedCode();
             this.render();
+        } else if (this.mode === 'terrain' && this.waterMode === 'lake') {
+            // Lake placement is handled by handleCanvasClick, not mousedown drag
         }
     }
 
@@ -445,6 +436,14 @@ export class LevelDesigner {
                     // Remove the last completed river path
                     this.riverPaths.pop();
                 }
+            } else if (this.waterMode === 'lake') {
+                // Remove last lake terrain element
+                for (let i = this.terrainElements.length - 1; i >= 0; i--) {
+                    if (this.terrainElements[i].type === 'water' && this.terrainElements[i].waterType === 'lake') {
+                        this.terrainElements.splice(i, 1);
+                        break;
+                    }
+                }
             } else if (this.terrainElements.length > 0) {
                 this.terrainElements.pop();
             }
@@ -457,9 +456,7 @@ export class LevelDesigner {
         // Determine size based on type
         let size = customSize;
         if (size === null) {
-            if (type === 'vegetation') size = this.terrainElementSize;
-            else if (type === 'rock') size = this.terrainElementSize;
-            else if (type === 'water') size = 2;
+            size = this.terrainElementSize;
         }
 
         const element = {
@@ -3051,8 +3048,9 @@ export class LevelDesigner {
     }
 
     drawLake(x, y, size) {
-        // Create organic water shape with rounded edges instead of squares
-        const radius = size * 0.4;
+        // Create organic water shape with rounded edges
+        // Use 0.7 multiplier to match collision radius (size * 0.71 in markTerrainCells)
+        const radius = size * 0.7;
         
         // Water gradient
         const gradient = this.ctx.createRadialGradient(x - size * 0.1, y - size * 0.1, 0, x, y, radius * 1.2);
@@ -4000,6 +3998,7 @@ export class LevelDesigner {
                 }
             }
         });
+        // Convert lakeCells to terrain elements for export (legacy support)
         const allTerrainElements = [...riverElements, ...this.terrainElements];
         
         // Generate terrain elements
@@ -4271,7 +4270,7 @@ ${pathCode}
                 this.currentCampaign = level.campaign;
             }
             
-            // Load terrain elements — separate river cells from other terrain
+            // Load terrain elements — separate river cells from other terrain (lakes stay as terrain elements)
             if (level.terrainElements && Array.isArray(level.terrainElements)) {
                 const nonRiverElems = [];
                 const riverCells = [];
