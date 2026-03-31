@@ -4962,26 +4962,46 @@ class UpgradesMenu {
                 cost: 300,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
-                    ctx.translate(cx, cy);
-                    ctx.rotate(Math.PI / 5.5);
-                    // Lute body
+                    // Lyre frame - two curved arms
+                    const armW = size * 0.32, armH = size * 0.4;
+                    ctx.strokeStyle = '#C8960A'; ctx.lineWidth = size * 0.06; ctx.lineCap = 'round';
+                    // Left arm
                     ctx.beginPath();
-                    ctx.ellipse(0, size * 0.08, size * 0.18, size * 0.24, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = '#8B5A1A'; ctx.fill();
-                    ctx.strokeStyle = '#5A3008'; ctx.lineWidth = 1; ctx.stroke();
-                    // Lute neck
-                    ctx.fillStyle = '#A0722A';
-                    ctx.fillRect(-size * 0.04, -size * 0.38, size * 0.08, size * 0.34);
-                    ctx.strokeStyle = '#5A3008'; ctx.lineWidth = 0.8;
-                    ctx.strokeRect(-size * 0.04, -size * 0.38, size * 0.08, size * 0.34);
-                    // String
-                    ctx.strokeStyle = '#D4D4D4'; ctx.lineWidth = 0.7;
-                    ctx.beginPath(); ctx.moveTo(0, -size * 0.36); ctx.lineTo(0, size * 0.28); ctx.stroke();
-                    // Music note floating
-                    ctx.fillStyle = '#FFD700';
-                    ctx.beginPath(); ctx.arc(size * 0.28, -size * 0.24, size * 0.08, 0, Math.PI * 2); ctx.fill();
-                    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.2;
-                    ctx.beginPath(); ctx.moveTo(size * 0.355, -size * 0.24); ctx.lineTo(size * 0.355, -size * 0.44); ctx.stroke();
+                    ctx.moveTo(cx - size * 0.08, cy + size * 0.1);
+                    ctx.quadraticCurveTo(cx - armW, cy - armH * 0.3, cx - armW * 0.7, cy - armH);
+                    ctx.stroke();
+                    // Right arm
+                    ctx.beginPath();
+                    ctx.moveTo(cx + size * 0.08, cy + size * 0.1);
+                    ctx.quadraticCurveTo(cx + armW, cy - armH * 0.3, cx + armW * 0.7, cy - armH);
+                    ctx.stroke();
+                    // Top crossbar
+                    ctx.lineWidth = size * 0.05;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - armW * 0.7, cy - armH);
+                    ctx.quadraticCurveTo(cx, cy - armH - size * 0.08, cx + armW * 0.7, cy - armH);
+                    ctx.stroke();
+                    ctx.lineCap = 'butt';
+                    // Base/soundbox
+                    ctx.beginPath();
+                    ctx.ellipse(cx, cy + size * 0.2, size * 0.18, size * 0.14, 0, 0, Math.PI * 2);
+                    const bg = ctx.createRadialGradient(cx - size * 0.04, cy + size * 0.17, size * 0.02, cx, cy + size * 0.2, size * 0.18);
+                    bg.addColorStop(0, '#FFD860'); bg.addColorStop(0.6, '#C8960A'); bg.addColorStop(1, '#8B6914');
+                    ctx.fillStyle = bg; ctx.fill();
+                    ctx.strokeStyle = '#5A3E08'; ctx.lineWidth = 1; ctx.stroke();
+                    // Strings
+                    ctx.strokeStyle = '#E0D0A0'; ctx.lineWidth = 0.6;
+                    for (let i = -1; i <= 1; i++) {
+                        const sx = cx + i * size * 0.06;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, cy - armH + size * 0.06);
+                        ctx.lineTo(sx, cy + size * 0.1);
+                        ctx.stroke();
+                    }
+                    // Decorative knob at top
+                    ctx.beginPath(); ctx.arc(cx, cy - armH - size * 0.04, size * 0.04, 0, Math.PI * 2);
+                    ctx.fillStyle = '#FFD700'; ctx.fill();
+                    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 0.8; ctx.stroke();
                     ctx.restore();
                 },
                 category: 'upgrade'
@@ -5021,23 +5041,32 @@ class UpgradesMenu {
                 cost: 400,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
-                    const coinR = size * 0.22, coinH = size * 0.07;
-                    for (let i = 2; i >= 0; i--) {
-                        const oy = i * coinH * 1.5;
-                        const baseY = cy + size * 0.14 - oy;
-                        const eg = ctx.createLinearGradient(cx, baseY, cx, baseY + coinH);
-                        eg.addColorStop(0, '#E09000'); eg.addColorStop(1, '#A06000');
-                        ctx.fillStyle = eg;
-                        ctx.beginPath(); ctx.ellipse(cx, baseY + coinH * 0.5, coinR, coinH * 0.4, 0, 0, Math.PI * 2); ctx.fill();
-                        const fg = ctx.createRadialGradient(cx - coinR * 0.25, baseY - coinH * 0.2, coinR * 0.05, cx, baseY, coinR);
-                        fg.addColorStop(0, '#FFE060'); fg.addColorStop(0.5, '#E09000'); fg.addColorStop(1, '#A06000');
-                        ctx.beginPath(); ctx.ellipse(cx, baseY, coinR, coinR * 0.38, 0, 0, Math.PI * 2);
-                        ctx.fillStyle = fg; ctx.fill(); ctx.strokeStyle = '#7A4800'; ctx.lineWidth = 1; ctx.stroke();
-                        if (i === 0) {
-                            ctx.beginPath(); ctx.ellipse(cx, baseY, coinR * 0.68, coinR * 0.26, 0, 0, Math.PI * 2);
-                            ctx.strokeStyle = 'rgba(122,72,0,0.4)'; ctx.lineWidth = 0.8; ctx.stroke();
-                        }
-                    }
+                    const w = size * 0.78, h = size * 0.58;
+                    const bx = cx - w / 2, by = cy - h * 0.4;
+                    // Body
+                    const bg = ctx.createLinearGradient(cx, by + h * 0.32, cx, by + h);
+                    bg.addColorStop(0, '#E8B830'); bg.addColorStop(1, '#8B6914');
+                    ctx.fillStyle = bg; ctx.fillRect(bx, by + h * 0.32, w, h * 0.68);
+                    ctx.strokeStyle = '#5A3E08'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by + h * 0.32, w, h * 0.68);
+                    // Lid
+                    const lg = ctx.createLinearGradient(cx, by, cx, by + h * 0.34);
+                    lg.addColorStop(0, '#FFD860'); lg.addColorStop(1, '#C8960A');
+                    ctx.fillStyle = lg; ctx.fillRect(bx, by, w, h * 0.34); ctx.strokeStyle = '#5A3E08'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, w, h * 0.34);
+                    // Rounded top
+                    ctx.beginPath(); ctx.moveTo(bx, by + h * 0.34); ctx.quadraticCurveTo(cx, by - h * 0.08, bx + w, by + h * 0.34);
+                    ctx.closePath(); ctx.fillStyle = lg; ctx.fill(); ctx.strokeStyle = '#5A3E08'; ctx.lineWidth = 1; ctx.stroke();
+                    // Metal bands
+                    ctx.strokeStyle = '#A07010'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.25, by + h * 0.34); ctx.lineTo(bx + w * 0.25, by + h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.75, by + h * 0.34); ctx.lineTo(bx + w * 0.75, by + h); ctx.stroke();
+                    // Ruby gem
+                    ctx.beginPath(); ctx.arc(cx, by + h * 0.32, size * 0.08, 0, Math.PI * 2);
+                    const gg = ctx.createRadialGradient(cx - size * 0.02, by + h * 0.3, size * 0.01, cx, by + h * 0.32, size * 0.08);
+                    gg.addColorStop(0, '#FF4040'); gg.addColorStop(0.6, '#CC1010'); gg.addColorStop(1, '#800000');
+                    ctx.fillStyle = gg; ctx.fill(); ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1; ctx.stroke();
+                    // Highlight
+                    ctx.beginPath(); ctx.ellipse(cx + w * 0.2, by + h * 0.12, w * 0.12, h * 0.06, 0.2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,220,0.3)'; ctx.fill();
                     ctx.restore();
                 },
                 category: 'upgrade',
@@ -5051,19 +5080,36 @@ class UpgradesMenu {
                 cost: 600,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
-                    ctx.beginPath();
-                    ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx + size * 0.3, cy - size * 0.08);
-                    ctx.lineTo(cx, cy + size * 0.46); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.closePath();
-                    const g = ctx.createLinearGradient(cx, cy - size * 0.46, cx, cy + size * 0.46);
-                    g.addColorStop(0, '#E8E8FF'); g.addColorStop(0.35, '#A0A8D8'); g.addColorStop(1, '#5060A0');
-                    ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = '#3848A0'; ctx.lineWidth = 1.5; ctx.stroke();
-                    ctx.strokeStyle = 'rgba(220,220,255,0.55)'; ctx.lineWidth = 0.8;
-                    ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx + size * 0.3, cy - size * 0.08); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.46); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(cx + size * 0.3, cy - size * 0.08); ctx.lineTo(cx - size * 0.3, cy - size * 0.08); ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(cx - size * 0.1, cy - size * 0.38); ctx.lineTo(cx, cy - size * 0.2); ctx.lineTo(cx - size * 0.2, cy - size * 0.04);
-                    ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.24)'; ctx.fill();
+                    const w = size * 0.78, h = size * 0.58;
+                    const bx = cx - w / 2, by = cy - h * 0.4;
+                    // Body - platinum
+                    const bg = ctx.createLinearGradient(cx, by + h * 0.32, cx, by + h);
+                    bg.addColorStop(0, '#C0C8D8'); bg.addColorStop(1, '#6878A0');
+                    ctx.fillStyle = bg; ctx.fillRect(bx, by + h * 0.32, w, h * 0.68);
+                    ctx.strokeStyle = '#3848A0'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by + h * 0.32, w, h * 0.68);
+                    // Lid - platinum
+                    const lg = ctx.createLinearGradient(cx, by, cx, by + h * 0.34);
+                    lg.addColorStop(0, '#E0E8F8'); lg.addColorStop(1, '#8890B8');
+                    ctx.fillStyle = lg; ctx.fillRect(bx, by, w, h * 0.34); ctx.strokeStyle = '#3848A0'; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, w, h * 0.34);
+                    // Rounded top
+                    ctx.beginPath(); ctx.moveTo(bx, by + h * 0.34); ctx.quadraticCurveTo(cx, by - h * 0.08, bx + w, by + h * 0.34);
+                    ctx.closePath(); ctx.fillStyle = lg; ctx.fill(); ctx.strokeStyle = '#3848A0'; ctx.lineWidth = 1; ctx.stroke();
+                    // Metal bands - silver
+                    ctx.strokeStyle = '#7080B0'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.25, by + h * 0.34); ctx.lineTo(bx + w * 0.25, by + h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(bx + w * 0.75, by + h * 0.34); ctx.lineTo(bx + w * 0.75, by + h); ctx.stroke();
+                    // Corner accents
+                    ctx.fillStyle = '#A0A8C0';
+                    ctx.fillRect(bx + 1, by + h * 0.34, w * 0.08, h * 0.12);
+                    ctx.fillRect(bx + w - w * 0.08 - 1, by + h * 0.34, w * 0.08, h * 0.12);
+                    // Sapphire gem
+                    ctx.beginPath(); ctx.arc(cx, by + h * 0.32, size * 0.08, 0, Math.PI * 2);
+                    const sg = ctx.createRadialGradient(cx - size * 0.02, by + h * 0.3, size * 0.01, cx, by + h * 0.32, size * 0.08);
+                    sg.addColorStop(0, '#80C0FF'); sg.addColorStop(0.6, '#2070CC'); sg.addColorStop(1, '#103880');
+                    ctx.fillStyle = sg; ctx.fill(); ctx.strokeStyle = '#C0C8E0'; ctx.lineWidth = 1; ctx.stroke();
+                    // Highlight
+                    ctx.beginPath(); ctx.ellipse(cx + w * 0.2, by + h * 0.12, w * 0.12, h * 0.06, 0.2, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(220,230,255,0.35)'; ctx.fill();
                     ctx.restore();
                 },
                 category: 'upgrade',
@@ -6472,12 +6518,18 @@ class UpgradesMenu {
         
         // ===== EFFECTS SECTION AT BOTTOM (BEFORE BUTTON) =====
         const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
-        const effectBoxHeight = (height - 47) - (descBoxStartY + descBoxHeight + 2);
+        const buttonTopY = y + height - 47;
+        const effectBoxHeight = buttonTopY - effectBoxStartY;
         
         // Effects header/content
-        if (item.effect) {
-            // Effect text with bullet points
-            ctx.font = 'bold 15px Arial';
+        if (item.effect && effectBoxHeight > 0) {
+            // Effect text with bullet points - clipped to tile bounds
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x + 4, effectBoxStartY, width - 8, effectBoxHeight);
+            ctx.clip();
+            
+            ctx.font = 'bold 12px Arial';
             ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
@@ -6485,18 +6537,22 @@ class UpgradesMenu {
             // Split effect by newlines first, then wrap each line if needed
             const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const effectLines = [];
-            const effectCharPerLine = Math.floor((width - 16) / 7);
+            const effectCharPerLine = Math.floor((width - 24) / 7);
             
             for (const rawLine of rawEffectLines) {
                 const wrappedLines = this.wrapText(rawLine, effectCharPerLine);
                 effectLines.push(...wrappedLines);
             }
             
+            const effectLineHeight = 15;
+            const maxEffectLines = Math.max(1, Math.floor(effectBoxHeight / effectLineHeight));
             const effectTextStartY = effectBoxStartY + 2;
-            for (let i = 0; i < Math.min(effectLines.length, 2); i++) {
-                const bulletText = '• ' + effectLines[i];
-                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 18));
+            for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
+                const bulletText = '\u2022 ' + effectLines[i];
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * effectLineHeight));
             }
+            
+            ctx.restore();
         }
         
         // Disabled overlay - no message shown here, it will appear as floating text

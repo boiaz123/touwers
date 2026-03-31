@@ -98,7 +98,21 @@ export class PoisonArcherTower extends Tower {
         this.animationTime += deltaTime;
         this.drawback = Math.max(0, this.drawback - deltaTime * 3);
         
-        this.target = this.findTarget(enemies);
+        // OPTIMIZATION: Only rescan if current target is dead/gone/out-of-range
+        if (this.target) {
+            if (this.target.health <= 0 || this.target.reachedEnd) {
+                this.target = null;
+            } else {
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                if (dx * dx + dy * dy > this.range * this.range) {
+                    this.target = null;
+                }
+            }
+        }
+        if (!this.target) {
+            this.target = this.findTarget(enemies);
+        }
         
         // Update archer visibility based on target
         this.archerPosition.hidden = !this.target;
@@ -131,14 +145,33 @@ export class PoisonArcherTower extends Tower {
             
             if (arrow.life <= 0 || Math.hypot(arrow.x - targetX, arrow.y - targetY) < 15) {
                 let hitTarget = null;
-                let minDist = 20;
+                let minDistSq = 400; // 20^2
                 
-                for (let ei = 0; ei < enemies.length; ei++) {
-                    const enemy = enemies[ei];
-                    const dist = Math.hypot(enemy.x - arrow.x, enemy.y - arrow.y);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        hitTarget = enemy;
+                // OPTIMIZATION: Use spatial grid for arrow-enemy collision
+                if (this._spatialGrid) {
+                    const grid = this._spatialGrid;
+                    const count = grid.query(arrow.x, arrow.y, 20);
+                    const buf = grid._queryBuf;
+                    for (let ei = 0; ei < count; ei++) {
+                        const enemy = buf[ei];
+                        const dx = enemy.x - arrow.x;
+                        const dy = enemy.y - arrow.y;
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq < minDistSq) {
+                            minDistSq = distSq;
+                            hitTarget = enemy;
+                        }
+                    }
+                } else {
+                    for (let ei = 0; ei < enemies.length; ei++) {
+                        const enemy = enemies[ei];
+                        const dx = enemy.x - arrow.x;
+                        const dy = enemy.y - arrow.y;
+                        const distSq = dx * dx + dy * dy;
+                        if (distSq < minDistSq) {
+                            minDistSq = distSq;
+                            hitTarget = enemy;
+                        }
                     }
                 }
                 

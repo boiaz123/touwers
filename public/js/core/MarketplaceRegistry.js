@@ -8,14 +8,34 @@ import { UpgradeRegistry } from './UpgradeRegistry.js';
 // ── Icon drawing helpers (module-level, no emoji) ──────────────────────────────
 function _drawMusicNote(ctx, cx, cy, size) {
     ctx.save();
-    const nx = cx - size * 0.08, ny = cy - size * 0.1;
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath(); ctx.ellipse(nx, ny + size * 0.28, size * 0.13, size * 0.09, -0.4, 0, Math.PI * 2);
-    ctx.fill(); ctx.strokeStyle = '#CC8800'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny + size * 0.23); ctx.lineTo(nx + size * 0.12, ny - size * 0.22);
-    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = size * 0.04; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(nx + size * 0.12, ny - size * 0.22);
-    ctx.quadraticCurveTo(nx + size * 0.32, ny, nx + size * 0.22, ny + size * 0.14); ctx.stroke();
+    // Parchment scroll background
+    const sw = size * 0.48, sh = size * 0.56;
+    const sx = cx - sw / 2, sy = cy - sh / 2, rr = size * 0.06;
+    const sg = ctx.createLinearGradient(sx, sy, sx + sw, sy + sh);
+    sg.addColorStop(0, '#F8EDD0'); sg.addColorStop(1, '#D8C898');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(sx + rr, sy); ctx.lineTo(sx + sw - rr, sy);
+    ctx.arcTo(sx + sw, sy, sx + sw, sy + rr, rr); ctx.lineTo(sx + sw, sy + sh - rr);
+    ctx.arcTo(sx + sw, sy + sh, sx + sw - rr, sy + sh, rr); ctx.lineTo(sx + rr, sy + sh);
+    ctx.arcTo(sx, sy + sh, sx, sy + sh - rr, rr); ctx.lineTo(sx, sy + rr);
+    ctx.arcTo(sx, sy, sx + rr, sy, rr); ctx.closePath();
+    ctx.fill(); ctx.strokeStyle = '#A08840'; ctx.lineWidth = 1; ctx.stroke();
+    // Staff lines
+    ctx.strokeStyle = 'rgba(120,100,60,0.4)'; ctx.lineWidth = 0.6;
+    for (let i = 0; i < 5; i++) {
+        const lineY = sy + sh * 0.25 + i * sh * 0.11;
+        ctx.beginPath(); ctx.moveTo(sx + size * 0.04, lineY); ctx.lineTo(sx + sw - size * 0.04, lineY); ctx.stroke();
+    }
+    // Music note on scroll
+    const nx = cx, ny = cy + size * 0.02;
+    ctx.fillStyle = '#8B6914';
+    ctx.beginPath(); ctx.ellipse(nx - size * 0.02, ny + size * 0.06, size * 0.07, size * 0.05, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = size * 0.03;
+    ctx.beginPath(); ctx.moveTo(nx + size * 0.04, ny + size * 0.04); ctx.lineTo(nx + size * 0.04, ny - size * 0.14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(nx + size * 0.04, ny - size * 0.14);
+    ctx.quadraticCurveTo(nx + size * 0.14, ny - size * 0.06, nx + size * 0.1, ny); ctx.stroke();
     ctx.restore();
 }
 
@@ -38,23 +58,34 @@ function _drawHammer(ctx, cx, cy, size) {
 
 function _drawMedal(ctx, cx, cy, size) {
     ctx.save();
-    const r = size * 0.34;
-    const ribbonW = size * 0.2, ribbonH = size * 0.28;
-    const rx = cx - ribbonW / 2, ry = cy - r - ribbonH + size * 0.08;
-    ctx.fillStyle = '#CC2020'; ctx.fillRect(rx, ry, ribbonW, ribbonH);
-    ctx.strokeStyle = '#880000'; ctx.lineWidth = 0.8; ctx.strokeRect(rx, ry, ribbonW, ribbonH);
-    ctx.strokeStyle = 'rgba(255,100,100,0.4)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(cx, ry); ctx.lineTo(cx, ry + ribbonH); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-    g.addColorStop(0, '#FFE878'); g.addColorStop(0.5, '#D4A020'); g.addColorStop(1, '#8B5E0A');
-    ctx.fillStyle = g; ctx.fill();
-    ctx.strokeStyle = '#5A2E0A'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy, r * 0.65, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(90,46,10,0.4)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.font = `bold ${Math.round(size * 0.34)}px serif`;
-    ctx.fillStyle = 'rgba(90,46,10,0.72)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('1', cx, cy + 1);
+    // Crossed swords behind shield
+    const sLen = size * 0.44;
+    ctx.strokeStyle = '#A0A0A0'; ctx.lineWidth = size * 0.05; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx - sLen, cy - sLen * 0.8); ctx.lineTo(cx + sLen, cy + sLen * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + sLen, cy - sLen * 0.8); ctx.lineTo(cx - sLen, cy + sLen * 0.8); ctx.stroke();
+    // Sword hilts
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = size * 0.06;
+    ctx.beginPath(); ctx.moveTo(cx - sLen + size * 0.06, cy - sLen * 0.8 + size * 0.04); ctx.lineTo(cx - sLen - size * 0.02, cy - sLen * 0.8 - size * 0.02); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + sLen - size * 0.06, cy - sLen * 0.8 + size * 0.04); ctx.lineTo(cx + sLen + size * 0.02, cy - sLen * 0.8 - size * 0.02); ctx.stroke();
+    ctx.lineCap = 'butt';
+    // Shield body
+    const sw = size * 0.52, sh = size * 0.58;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - sh * 0.45);
+    ctx.lineTo(cx + sw * 0.5, cy - sh * 0.25);
+    ctx.lineTo(cx + sw * 0.5, cy + sh * 0.05);
+    ctx.quadraticCurveTo(cx + sw * 0.35, cy + sh * 0.38, cx, cy + sh * 0.5);
+    ctx.quadraticCurveTo(cx - sw * 0.35, cy + sh * 0.38, cx - sw * 0.5, cy + sh * 0.05);
+    ctx.lineTo(cx - sw * 0.5, cy - sh * 0.25);
+    ctx.closePath();
+    const sg = ctx.createLinearGradient(cx - sw / 2, cy - sh / 2, cx + sw / 2, cy + sh / 2);
+    sg.addColorStop(0, '#CC2020'); sg.addColorStop(0.5, '#AA1818'); sg.addColorStop(1, '#881010');
+    ctx.fillStyle = sg; ctx.fill();
+    ctx.strokeStyle = '#600808'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Shield cross
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy - sh * 0.34); ctx.lineTo(cx, cy + sh * 0.38); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - sw * 0.34, cy - sh * 0.04); ctx.lineTo(cx + sw * 0.34, cy - sh * 0.04); ctx.stroke();
     ctx.restore();
 }
 

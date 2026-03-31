@@ -44,8 +44,6 @@ export class MagicTower extends Tower {
         this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
         this.runeRotation += deltaTime * 0.5;
         
-        this.target = this.findTarget(enemies);
-        
         if (this.target && this.cooldown === 0) {
             this.shoot();
             this.cooldown = 1 / this.fireRate;

@@ -111,15 +111,15 @@ export class BaseEnemy {
         // If so, engage with the defender instead of continuing to the castle
         if (this.guardPostCache && this.guardPostCache.length > 0) {
             // Check if any guard post defender is directly ahead and alive
-            for (let cache of this.guardPostCache) {
+            for (let i = 0; i < this.guardPostCache.length; i++) {
+                const cache = this.guardPostCache[i];
                 if (!cache.defender.isDead() && cache.waypoint) {
-                    const distanceToWaypoint = Math.hypot(
-                        cache.waypoint.x - this.x,
-                        cache.waypoint.y - this.y
-                    );
+                    const dx = cache.waypoint.x - this.x;
+                    const dy = cache.waypoint.y - this.y;
                     
                     // If we're close to a path defender, stop moving and prepare to engage
-                    if (distanceToWaypoint < 60) {
+                    // 60*60 = 3600 (squared distance comparison avoids Math.hypot)
+                    if (dx * dx + dy * dy < 3600) {
                         this.reachedEnd = true;
                         this.isAttackingCastle = false;
                         // Will be attacked by defender in GameplayState combat handling

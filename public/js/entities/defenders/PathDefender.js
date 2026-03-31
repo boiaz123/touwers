@@ -35,20 +35,33 @@ export class PathDefender extends DefenderBase {
             return;
         }
         
-        // ATTACK: Find closest enemy and attack
-        this.attackTarget = null;
-        let closestDistance = this.attackRange;
+        // OPTIMIZATION: Cache target - only rescan when target is gone/out of range
+        if (this.attackTarget) {
+            if (this.attackTarget.isDead()) {
+                this.attackTarget = null;
+            } else {
+                const dx = this.attackTarget.x - this.x;
+                const dy = this.attackTarget.y - this.y;
+                if (dx * dx + dy * dy > this.attackRange * this.attackRange) {
+                    this.attackTarget = null;
+                }
+            }
+        }
         
-        if (enemies && enemies.length > 0) {
-            enemies.forEach(enemy => {
+        if (!this.attackTarget && enemies && enemies.length > 0) {
+            let closestDistSq = this.attackRange * this.attackRange;
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
                 if (!enemy.isDead()) {
-                    const distance = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
+                    const dx = enemy.x - this.x;
+                    const dy = enemy.y - this.y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < closestDistSq) {
+                        closestDistSq = distSq;
                         this.attackTarget = enemy;
                     }
                 }
-            });
+            }
         }
         
         // Attack closest enemy if ready
@@ -65,10 +78,15 @@ export class PathDefender extends DefenderBase {
             }
         }
         
-        // Update visual effects (hit splatters)
-        this.hitSplatters = this.hitSplatters.filter(splatter => {
+        // Update visual effects (hit splatters) - compact in-place
+        let splWrite = 0;
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            const splatter = this.hitSplatters[i];
             splatter.update(deltaTime);
-            return splatter.life > 0;
-        });
+            if (splatter.life > 0) {
+                this.hitSplatters[splWrite++] = splatter;
+            }
+        }
+        this.hitSplatters.length = splWrite;
     }
 }

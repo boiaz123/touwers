@@ -26,7 +26,8 @@ export class ArcherTower extends Tower {
     update(deltaTime, enemies) {
         super.update(deltaTime, enemies);
         
-        this.archers.forEach(archer => {
+        for (let a = 0; a < this.archers.length; a++) {
+            const archer = this.archers[a];
             archer.shootTimer = Math.max(0, archer.shootTimer - deltaTime);
             archer.drawback = Math.max(0, archer.drawback - deltaTime * 3);
             
@@ -34,7 +35,7 @@ export class ArcherTower extends Tower {
                 const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
                 archer.angle = targetAngle + Math.sin(this.animationTime * 2) * 0.1;
             }
-        });
+        }
         
         if (this.target && this.cooldown === 0) {
             this.shoot();

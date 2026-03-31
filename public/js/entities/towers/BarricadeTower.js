@@ -83,24 +83,46 @@ export class BarricadeTower extends Tower {
         
         // Update slow zones (compact in-place)
         let zoneWrite = 0;
+        // OPTIMIZATION: Track slowed enemies in a Set to avoid O(n*k) nested loop
+        if (!this._slowedSet) this._slowedSet = new Set();
+        this._slowedSet.clear();
+        
         for (let zi = 0; zi < this.slowZones.length; zi++) {
             const zone = this.slowZones[zi];
             zone.life -= deltaTime;
             zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
-            // Determine which enemies to slow (up to max capacity)
+            // OPTIMIZATION: Use spatial grid to find enemies near zone
             const enemiesInRange = [];
-            for (let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                if (!enemy.hasOwnProperty('originalSpeed')) {
-                    enemy.originalSpeed = enemy.speed;
+            const radiusSq = zone.radius * zone.radius;
+            if (this._spatialGrid) {
+                const grid = this._spatialGrid;
+                const count = grid.query(zone.x, zone.y, zone.radius);
+                const buf = grid._queryBuf;
+                for (let i = 0; i < count; i++) {
+                    const enemy = buf[i];
+                    if (!enemy.hasOwnProperty('originalSpeed')) {
+                        enemy.originalSpeed = enemy.speed;
+                    }
+                    const dx = enemy.x - zone.x;
+                    const dy = enemy.y - zone.y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq <= radiusSq) {
+                        enemiesInRange.push({ enemy, distSq });
+                    }
                 }
-                
-                const dx = enemy.x - zone.x;
-                const dy = enemy.y - zone.y;
-                const distSq = dx * dx + dy * dy;
-                if (distSq <= zone.radius * zone.radius) {
-                    enemiesInRange.push({ enemy, distSq });
+            } else {
+                for (let i = 0; i < enemies.length; i++) {
+                    const enemy = enemies[i];
+                    if (!enemy.hasOwnProperty('originalSpeed')) {
+                        enemy.originalSpeed = enemy.speed;
+                    }
+                    const dx = enemy.x - zone.x;
+                    const dy = enemy.y - zone.y;
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq <= radiusSq) {
+                        enemiesInRange.push({ enemy, distSq });
+                    }
                 }
             }
             
@@ -116,28 +138,7 @@ export class BarricadeTower extends Tower {
                 const targetSpeed = enemy.originalSpeed * 0.25;
                 const slowRate = 1 - Math.pow(0.05, deltaTime);
                 enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
-            }
-            
-            // Restore speed for enemies not being slowed
-            for (let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                if (!enemy.hasOwnProperty('originalSpeed')) {
-                    enemy.originalSpeed = enemy.speed;
-                }
-                
-                // Check if enemy is in slowed set
-                let isSlowed = false;
-                for (let j = 0; j < slowed; j++) {
-                    if (enemiesInRange[j].enemy === enemy) {
-                        isSlowed = true;
-                        break;
-                    }
-                }
-                
-                if (!isSlowed && enemy.speed < enemy.originalSpeed) {
-                    const restoreRate = 1 - Math.pow(0.3, deltaTime);
-                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
-                }
+                this._slowedSet.add(enemy);
             }
             
             if (zone.life > 0) {
@@ -146,13 +147,12 @@ export class BarricadeTower extends Tower {
         }
         this.slowZones.length = zoneWrite;
         
-        if (this.slowZones.length === 0) {
-            for (let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                if (enemy.hasOwnProperty('originalSpeed') && enemy.speed < enemy.originalSpeed) {
-                    const restoreRate = 1 - Math.pow(0.3, deltaTime);
-                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
-                }
+        // Restore speed for enemies not being slowed (O(n) with Set lookup instead of O(n*k))
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (enemy.hasOwnProperty('originalSpeed') && !this._slowedSet.has(enemy) && enemy.speed < enemy.originalSpeed) {
+                const restoreRate = 1 - Math.pow(0.3, deltaTime);
+                enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
             }
         }
     }

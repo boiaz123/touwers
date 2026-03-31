@@ -26,14 +26,54 @@ export class Tower {
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
-        this.target = this.findTarget(enemies);
+        
+        // OPTIMIZATION: Only rescan enemies when needed
+        // Keep current target if still alive and in range
+        if (this.target) {
+            if (this.target.health <= 0 || this.target.reachedEnd) {
+                this.target = null;
+            } else {
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                if (dx * dx + dy * dy > this.range * this.range) {
+                    this.target = null;
+                }
+            }
+        }
+        
+        // Only scan for new target if we don't have one
+        if (!this.target) {
+            this.target = this.findTarget(enemies);
+        }
     }
     
     findTarget(enemies) {
+        // OPTIMIZATION: Use spatial grid for fast range queries when available
+        const grid = this._spatialGrid;
+        if (grid) {
+            const count = grid.query(this.x, this.y, this.range);
+            const buf = grid._queryBuf;
+            let closest = null;
+            let closestDistSq = this.range * this.range;
+            for (let i = 0; i < count; i++) {
+                const enemy = buf[i];
+                const dx = enemy.x - this.x;
+                const dy = enemy.y - this.y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < closestDistSq) {
+                    closest = enemy;
+                    closestDistSq = distSq;
+                }
+            }
+            return closest;
+        }
+        
+        // Fallback: linear scan of all enemies
         let closest = null;
         let closestDistSq = this.range * this.range;
         
-        for (const enemy of enemies) {
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distSq = dx * dx + dy * dy;

@@ -1,6 +1,7 @@
 import { TowerRegistry } from './TowerRegistry.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../../core/UnlockSystem.js';
+import { SpatialGrid } from '../../core/SpatialGrid.js';
 
 export class TowerManager {
     constructor(gameState, level) {
@@ -22,6 +23,9 @@ export class TowerManager {
         this.cachedTrainingGrounds = null;
         this.cachedLabs = null;
         this.lastBuildingCount = 0;
+        
+        // Spatial grid for fast range queries (cell size ~160px covers most tower ranges)
+        this._spatialGrid = new SpatialGrid(160);
     }
     
     setStateManager(stateManager) {
@@ -362,37 +366,37 @@ export class TowerManager {
     update(deltaTime, enemies) {
         // OPTIMIZATION: Cache building references instead of filtering every frame
         if (!this.cachedForges || !this.cachedAcademies || !this.cachedTrainingGrounds) {
-            this.cachedForges = this.buildingManager.buildings.filter(building => 
-                building.type === 'forge'
-            );
-            this.cachedAcademies = this.buildingManager.buildings.filter(building =>
-                building.type === 'academy'
-            );
-            this.cachedTrainingGrounds = this.buildingManager.buildings.filter(building => 
-                building.type === 'training'
-            );
-            this.cachedLabs = this.buildingManager.buildings.filter(building =>
-                building.type === 'superweapon'
-            );
+            this.cachedForges = [];
+            this.cachedAcademies = [];
+            this.cachedTrainingGrounds = [];
+            this.cachedLabs = [];
+            const buildings = this.buildingManager.buildings;
+            for (let i = 0; i < buildings.length; i++) {
+                const b = buildings[i];
+                if (b.type === 'forge') this.cachedForges.push(b);
+                else if (b.type === 'academy') this.cachedAcademies.push(b);
+                else if (b.type === 'training') this.cachedTrainingGrounds.push(b);
+                else if (b.type === 'superweapon') this.cachedLabs.push(b);
+            }
         }
         
         // Check if building count changed (indicates new buildings may have been added)
         const currentBuildingCount = this.buildingManager.buildings.length;
         if (this.lastBuildingCount !== currentBuildingCount) {
             this.lastBuildingCount = currentBuildingCount;
-            // Rebuild cache immediately
-            this.cachedForges = this.buildingManager.buildings.filter(building => 
-                building.type === 'forge'
-            );
-            this.cachedAcademies = this.buildingManager.buildings.filter(building =>
-                building.type === 'academy'
-            );
-            this.cachedTrainingGrounds = this.buildingManager.buildings.filter(building => 
-                building.type === 'training'
-            );
-            this.cachedLabs = this.buildingManager.buildings.filter(building =>
-                building.type === 'superweapon'
-            );
+            // Rebuild cache in single pass instead of 4 separate filter() calls
+            this.cachedForges = [];
+            this.cachedAcademies = [];
+            this.cachedTrainingGrounds = [];
+            this.cachedLabs = [];
+            const buildings = this.buildingManager.buildings;
+            for (let i = 0; i < buildings.length; i++) {
+                const b = buildings[i];
+                if (b.type === 'forge') this.cachedForges.push(b);
+                else if (b.type === 'academy') this.cachedAcademies.push(b);
+                else if (b.type === 'training') this.cachedTrainingGrounds.push(b);
+                else if (b.type === 'superweapon') this.cachedLabs.push(b);
+            }
             this._towerStatsNeedUpdate = true;
         }
         
@@ -460,16 +464,24 @@ export class TowerManager {
         }
         
         // Update all towers every frame (cooldown, targeting, shooting)
+        // OPTIMIZATION: Cache poison bonus once before loop instead of per-tower
+        let cachedPoisonBonus = 0;
+        if (this.cachedForges && this.cachedForges.length > 0) {
+            const multipliers = this.cachedForges[0].getUpgradeMultipliers();
+            cachedPoisonBonus = multipliers.poisonDamageBonus || 0;
+        }
+        
+        // OPTIMIZATION: Build spatial grid of enemies for fast range queries
+        const grid = this._spatialGrid;
+        grid.clear();
+        for (let i = 0; i < enemies.length; i++) {
+            grid.insert(enemies[i]);
+        }
+        
         for (let i = 0; i < this.towers.length; i++) {
             const tower = this.towers[i];
-            
-            // Get poison damage bonus for Poison Archer Towers
-            let poisonBonus = 0;
-            if (tower.type === 'poison' && this.cachedForges && this.cachedForges.length > 0) {
-                const multipliers = this.cachedForges[0].getUpgradeMultipliers();
-                poisonBonus = multipliers.poisonDamageBonus || 0;
-            }
-            
+            tower._spatialGrid = grid;
+            const poisonBonus = tower.type === 'poison' ? cachedPoisonBonus : 0;
             tower.update(deltaTime, enemies, poisonBonus);
         }
         

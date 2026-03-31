@@ -150,14 +150,38 @@ export class CannonTower extends Tower {
             maxLife: 1.0
         });
         
-        enemies.forEach(enemy => {
-            const distance = Math.hypot(enemy.x - x, enemy.y - y);
-            if (distance <= this.splashRadius) {
-                const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
-                const actualDamage = Math.floor(this.damage * damageFalloff);
-                enemy.takeDamage(actualDamage, 0, 'physical');
+        // OPTIMIZATION: Use spatial grid for AoE damage when available
+        const splashRadiusSq = this.splashRadius * this.splashRadius;
+        if (this._spatialGrid) {
+            const grid = this._spatialGrid;
+            const count = grid.query(x, y, this.splashRadius);
+            const buf = grid._queryBuf;
+            for (let i = 0; i < count; i++) {
+                const enemy = buf[i];
+                const dx = enemy.x - x;
+                const dy = enemy.y - y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq <= splashRadiusSq) {
+                    const distance = Math.sqrt(distSq);
+                    const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
+                    const actualDamage = Math.floor(this.damage * damageFalloff);
+                    enemy.takeDamage(actualDamage, 0, 'physical');
+                }
             }
-        });
+        } else {
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
+                const dx = enemy.x - x;
+                const dy = enemy.y - y;
+                const distSq = dx * dx + dy * dy;
+                if (distSq <= splashRadiusSq) {
+                    const distance = Math.sqrt(distSq);
+                    const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
+                    const actualDamage = Math.floor(this.damage * damageFalloff);
+                    enemy.takeDamage(actualDamage, 0, 'physical');
+                }
+            }
+        }
     }
     
     render(ctx) {
