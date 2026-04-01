@@ -24,9 +24,13 @@ export class BasicEnemy extends BaseEnemy {
         // Pre-calculate darkened tunic color for performance
         this.tunicDarkRGB = this.getRgbDarkenedByAmount(this.tunicColorHex, 0.2);
         
-        // Animation cache to reduce computation
+        // Pre-compute color strings to avoid per-frame template literal allocation
+        this._tunicDarkColorStr = `rgb(${this.tunicDarkRGB[0]},${this.tunicDarkRGB[1]},${this.tunicDarkRGB[2]})`;
+        this._tunicMainColorStr = `rgb(${this.tunicColorHex[0]},${this.tunicColorHex[1]},${this.tunicColorHex[2]})`;
+        
+        // Animation cache to reduce computation (reuse same object, never reallocate)
         this.cachedAnimFrame = -1;
-        this.cachedAnimValues = null;
+        this.cachedAnimValues = { walkCycle: 0, bobAnimation: 0, leftArmBase: 0, rightArmBase: 0, animTime: 0 };
     }
     
     getRandomTunicColor() {
@@ -54,24 +58,23 @@ export class BasicEnemy extends BaseEnemy {
         // Cache animation calculations every 2 frames to reduce recalculation
         const frameKey = Math.floor(time * 30) >> 1; // Every 2 frames
         
-        if (this.cachedAnimFrame === frameKey && this.cachedAnimValues) {
+        if (this.cachedAnimFrame === frameKey) {
             return this.cachedAnimValues;
         }
         
         const animTime = time * 8 + this.animationPhaseOffset;
         const walkCycle = Math.sin(animTime) * 0.5;
-        const bobAnimation = Math.sin(animTime) * 0.3;
         const armSwingFreq = animTime;
         
-        this.cachedAnimValues = {
-            walkCycle,
-            bobAnimation,
-            leftArmBase: Math.sin(armSwingFreq) * 0.6,
-            rightArmBase: Math.sin(armSwingFreq + Math.PI) * 0.55,
-            animTime
-        };
+        // Mutate existing object instead of creating new (zero-allocation)
+        const v = this.cachedAnimValues;
+        v.walkCycle = walkCycle;
+        v.bobAnimation = Math.sin(animTime) * 0.3;
+        v.leftArmBase = Math.sin(armSwingFreq) * 0.6;
+        v.rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;
+        v.animTime = animTime;
         this.cachedAnimFrame = frameKey;
-        return this.cachedAnimValues;
+        return v;
     }
     
     render(ctx) {
@@ -92,11 +95,11 @@ export class BasicEnemy extends BaseEnemy {
         // --- BODY (SIMPLIFIED) ---
         
         // Dark back layer
-        ctx.fillStyle = `rgb(${this.tunicDarkRGB[0]},${this.tunicDarkRGB[1]},${this.tunicDarkRGB[2]})`;
+        ctx.fillStyle = this._tunicDarkColorStr;
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.75, baseSize * 1.3, baseSize * 1.1);
         
         // Main tunic - NO gradient, just solid color with outline
-        ctx.fillStyle = `rgb(${this.tunicColorHex[0]},${this.tunicColorHex[1]},${this.tunicColorHex[2]})`;
+        ctx.fillStyle = this._tunicMainColorStr;
         ctx.fillRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
         
         ctx.strokeStyle = '#2F2F2F';

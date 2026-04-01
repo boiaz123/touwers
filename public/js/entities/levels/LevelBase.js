@@ -32,6 +32,7 @@ export class LevelBase {
         this.pathTextureGenerated = false;
         this.pathLeaves = [];
         this.backgroundCanvas = null; // Cache for pre-rendered background
+        this.terrainCanvas = null;   // Cache for pre-rendered terrain (rocks, water, rivers, path, vegetation)
         
         this.castle = null;
     }
@@ -234,6 +235,7 @@ export class LevelBase {
             
             // CRITICAL: Clear the cached background canvas so it gets rerendered with new visuals
             this.backgroundCanvas = null;
+            this.terrainCanvas = null;
             
             this.lastCanvasWidth = canvasWidth;
             this.lastCanvasHeight = canvasHeight;
@@ -691,6 +693,29 @@ export class LevelBase {
         
         // Just blit the pre-rendered background
         ctx.drawImage(this.backgroundCanvas, 0, 0);
+    }
+    
+    renderTerrainLayer(ctx) {
+        // PRE-RENDER OPTIMIZATION: Cache all static terrain (rocks, water, rivers, path, vegetation)
+        // to an offscreen canvas. These elements never change during gameplay, saving ~60-130
+        // draw calls per frame.
+        if (!this.terrainCanvas) {
+            this.terrainCanvas = document.createElement('canvas');
+            this.terrainCanvas.width = ctx.canvas.width;
+            this.terrainCanvas.height = ctx.canvas.height;
+            const tCtx = this.terrainCanvas.getContext('2d');
+            // Propagate resolutionManager so terrain elements can scale correctly
+            tCtx.resolutionManager = ctx.resolutionManager;
+            
+            // Render terrain in the correct order onto the offscreen canvas
+            this.renderTerrainElementsByType(tCtx, ['rock', 'water']);
+            this.renderRiverSmooth(tCtx);
+            this.renderPath(tCtx);
+            this.renderTerrainElementsByType(tCtx, ['vegetation', 'tree', 'cactus', 'drybush']);
+        }
+        
+        // Single drawImage call replaces all terrain rendering
+        ctx.drawImage(this.terrainCanvas, 0, 0);
     }
     
     _renderBackgroundToCanvas(ctx) {
@@ -1571,17 +1596,8 @@ export class LevelBase {
         // 1. Grass background (base layer)
         this.renderGrassBackground(ctx);
         
-        // 2. Render terrain rocks/mountains FIRST - these form the landscape base
-        this.renderTerrainElementsByType(ctx, ['rock', 'water']);
-        
-        // 3. Render smooth river overlays for blended corners and water effects
-        this.renderRiverSmooth(ctx);
-        
-        // 4. Render path/road - on top of terrain and rivers
-        this.renderPath(ctx);
-        
-        // 5. Render trees and vegetation - LAST, on top of everything
-        this.renderTerrainElementsByType(ctx, ['vegetation', 'tree', 'cactus', 'drybush']);
+        // 2-5. Terrain layer (rocks, water, rivers, path, vegetation) - cached to offscreen canvas
+        this.renderTerrainLayer(ctx);
         
         // Render castle - NOTE: Castle is now rendered by GameplayState after buildings/towers
         // This ensures proper z-ordering so the castle appears in front of buildings behind it

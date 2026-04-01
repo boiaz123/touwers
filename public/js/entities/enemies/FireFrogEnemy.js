@@ -338,13 +338,16 @@ export class FireFrogEnemy extends BaseEnemy {
             ctx.stroke();
         }
         
-        // --- MAIN BODY/CHEST ---
-        const bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.1, baseSize * 0.4, baseSize * 0.2);
-        bodyGrad.addColorStop(0, '#6a3030');
-        bodyGrad.addColorStop(0.5, '#4a2020');
-        bodyGrad.addColorStop(1, '#2a1010');
+        // --- MAIN BODY/CHEST --- (cached gradient)
+        if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
+            this._gradBaseSize = baseSize;
+            this._bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.1, baseSize * 0.4, baseSize * 0.2);
+            this._bodyGrad.addColorStop(0, '#6a3030');
+            this._bodyGrad.addColorStop(0.5, '#4a2020');
+            this._bodyGrad.addColorStop(1, '#2a1010');
+        }
         
-        ctx.fillStyle = bodyGrad;
+        ctx.fillStyle = this._bodyGrad;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.05, baseSize * 0.52, baseSize * 0.5, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -470,11 +473,10 @@ export class FireFrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES (FIRE) ---
         
-        const particleColors = [
-            'rgba(200, 74, 42, ',
-            'rgba(255, 140, 0, ',
-            'rgba(255, 200, 100, '
-        ];
+        if (!this._particleColors) {
+            this._particleColors = ['rgba(200, 74, 42, ', 'rgba(255, 140, 0, ', 'rgba(255, 200, 100, '];
+        }
+        const particleColors = this._particleColors;
         
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
@@ -658,13 +660,20 @@ const upperLength = baseSize * 0.035;
     }
     
     drawBattleMageHat(ctx, baseSize) {
-        // Hat cone body - Fire colored
-        const hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.6);
-        hatGradient.addColorStop(0, '#ff6600');
-        hatGradient.addColorStop(0.5, '#cc4400');
-        hatGradient.addColorStop(1, '#8a2800');
+        // Hat cone body - Fire colored (cached gradients)
+        if (!this._hatGrad || this._hatGradBaseSize !== baseSize) {
+            this._hatGradBaseSize = baseSize;
+            this._hatGrad = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.6);
+            this._hatGrad.addColorStop(0, '#ff6600');
+            this._hatGrad.addColorStop(0.5, '#cc4400');
+            this._hatGrad.addColorStop(1, '#8a2800');
+            this._tipGlow = ctx.createRadialGradient(baseSize * 0.1, -baseSize * 1.58, 0, baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25);
+            this._tipGlow.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+            this._tipGlow.addColorStop(0.5, 'rgba(255, 100, 0, 0.3)');
+            this._tipGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        }
         
-        ctx.fillStyle = hatGradient;
+        ctx.fillStyle = this._hatGrad;
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.33, -baseSize * 0.75);
         ctx.lineTo(baseSize * 0.33, -baseSize * 0.75);
@@ -707,12 +716,7 @@ const upperLength = baseSize * 0.035;
         }
         
         // Glowing tip (red/orange)
-        const tipGlow = ctx.createRadialGradient(baseSize * 0.1, -baseSize * 1.58, 0, baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25);
-        tipGlow.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
-        tipGlow.addColorStop(0.5, 'rgba(255, 100, 0, 0.3)');
-        tipGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
-        
-        ctx.fillStyle = tipGlow;
+        ctx.fillStyle = this._tipGlow;
         ctx.beginPath();
         ctx.arc(baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25, 0, Math.PI * 2);
         ctx.fill();

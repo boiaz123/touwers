@@ -5,6 +5,7 @@ export class BuildingManager {
         this.gameState = gameState;
         this.level = level;
         this.buildings = [];
+        this._sortedBuildings = []; // Cached Y-sorted array for rendering
         this.occupiedPositions = new Set();
         this.stateManager = null; // Will be set by TowerManager
         
@@ -74,6 +75,10 @@ export class BuildingManager {
                 building.buildingManager = this;
             }
             this.buildings.push(building);
+            
+            // Maintain sorted render order (insert-sorted by Y)
+            this._sortedBuildings.push(building);
+            this._sortedBuildings.sort((a, b) => a.y - b.y);
             
             // Mark the 4x4 area as occupied
             this.markBuildingPosition(gridX, gridY, buildingType.size);
@@ -195,11 +200,10 @@ export class BuildingManager {
     }
     
     render(ctx) {
-        // Sort buildings by Y position for proper depth ordering (bottom-to-top perspective)
-        // Entities lower on screen (higher Y) are rendered last (on top)
-        const sortedBuildings = [...this.buildings].sort((a, b) => a.y - b.y);
-        
-        sortedBuildings.forEach(building => this.renderBuilding(ctx, building));
+        // Buildings are pre-sorted by Y position in _sortedBuildings (updated on placement)
+        for (let i = 0; i < this._sortedBuildings.length; i++) {
+            this.renderBuilding(ctx, this._sortedBuildings[i]);
+        }
     }
     
     renderBuilding(ctx, building) {
@@ -219,7 +223,7 @@ export class BuildingManager {
         }
         
         building.render(ctx, buildingSize);
-        delete ctx.buildingManager; // Clean up after
+        ctx.buildingManager = null; // Clean up after (avoid delete to preserve V8 hidden class)
     }
     
     getBuildingInfo(type) {

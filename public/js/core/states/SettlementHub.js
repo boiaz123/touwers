@@ -6535,20 +6535,24 @@ class UpgradesMenu {
             ctx.textBaseline = 'top';
             
             // Split effect by newlines first, then wrap each line if needed
+            // Each newline-separated sentence gets ONE bullet; wrapped continuations are indented
             const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            const effectLines = [];
+            const effectLines = []; // Each entry: { text, isBullet }
             const effectCharPerLine = Math.floor((width - 24) / 7);
             
             for (const rawLine of rawEffectLines) {
                 const wrappedLines = this.wrapText(rawLine, effectCharPerLine);
-                effectLines.push(...wrappedLines);
+                for (let wi = 0; wi < wrappedLines.length; wi++) {
+                    effectLines.push({ text: wrappedLines[wi], isBullet: wi === 0 });
+                }
             }
             
             const effectLineHeight = 15;
             const maxEffectLines = Math.max(1, Math.floor(effectBoxHeight / effectLineHeight));
             const effectTextStartY = effectBoxStartY + 2;
             for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
-                const bulletText = '\u2022 ' + effectLines[i];
+                const entry = effectLines[i];
+                const bulletText = entry.isBullet ? ('\u2022 ' + entry.text) : ('  ' + entry.text);
                 ctx.fillText(bulletText, x + 8, effectTextStartY + (i * effectLineHeight));
             }
             

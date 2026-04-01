@@ -14,10 +14,10 @@ export class SpatialGrid {
     }
 
     clear() {
-        this.cells.forEach(cell => {
+        for (const cell of this.cells.values()) {
             cell.length = 0;
             this._cellPool.push(cell);
-        });
+        }
         this.cells.clear();
     }
 

@@ -336,13 +336,16 @@ export class FrogKingEnemy extends BaseEnemy {
             ctx.stroke();
         }
         
-        // --- MAIN BODY/CHEST ---
-        const bodyGrad = ctx.createLinearGradient(-baseSize * 0.45, -baseSize * 0.1, baseSize * 0.45, baseSize * 0.2);
-        bodyGrad.addColorStop(0, FrogKingEnemy.darkenColor(this.skinColor, 0.1));
-        bodyGrad.addColorStop(0.5, FrogKingEnemy.darkenColor(this.skinColor, 0.2));
-        bodyGrad.addColorStop(1, FrogKingEnemy.darkenColor(this.skinColor, 0.3));
+        // --- MAIN BODY/CHEST --- (cached gradient)
+        if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
+            this._gradBaseSize = baseSize;
+            this._bodyGrad = ctx.createLinearGradient(-baseSize * 0.45, -baseSize * 0.1, baseSize * 0.45, baseSize * 0.2);
+            this._bodyGrad.addColorStop(0, FrogKingEnemy.darkenColor(this.skinColor, 0.1));
+            this._bodyGrad.addColorStop(0.5, FrogKingEnemy.darkenColor(this.skinColor, 0.2));
+            this._bodyGrad.addColorStop(1, FrogKingEnemy.darkenColor(this.skinColor, 0.3));
+        }
         
-        ctx.fillStyle = bodyGrad;
+        ctx.fillStyle = this._bodyGrad;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52, baseSize * 0.48, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -527,11 +530,10 @@ export class FrogKingEnemy extends BaseEnemy {
         this.drawRoyalCrown(ctx, baseSize);
         
         // --- RENDER MAGIC PARTICLES ---
-        const particleColors = [
-            this.particleColor,
-            this.particleColor,
-            this.particleColor
-        ];
+        if (!this._particleColors) {
+            this._particleColors = [this.particleColor, this.particleColor, this.particleColor];
+        }
+        const particleColors = this._particleColors;
         
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
@@ -645,13 +647,21 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.rotate(stableAngle);
         
         // --- SCEPTER STAFF ---
-        // Gold gradient staff
-        const staffGradient = ctx.createLinearGradient(-baseSize * 0.05, 0, baseSize * 0.05, scepterHeight);
-        staffGradient.addColorStop(0, '#FFE55C');
-        staffGradient.addColorStop(0.5, '#DAA520');
-        staffGradient.addColorStop(1, '#B8860B');
+        // Gold gradient staff (cached)
+        if (!this._staffGrad || this._staffGradBaseSize !== baseSize) {
+            this._staffGradBaseSize = baseSize;
+            this._staffGrad = ctx.createLinearGradient(-baseSize * 0.05, 0, baseSize * 0.05, scepterHeight);
+            this._staffGrad.addColorStop(0, '#FFE55C');
+            this._staffGrad.addColorStop(0.5, '#DAA520');
+            this._staffGrad.addColorStop(1, '#B8860B');
+            
+            this._orbGrad = ctx.createRadialGradient(0, -baseSize * 0.42, baseSize * 0.04, 0, -baseSize * 0.42, baseSize * 0.16);
+            this._orbGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            this._orbGrad.addColorStop(0.5, this.crownColor);
+            this._orbGrad.addColorStop(1, this.crownColor);
+        }
         
-        ctx.fillStyle = staffGradient;
+        ctx.fillStyle = this._staffGrad;
         ctx.fillRect(-baseSize * 0.042, 0, baseSize * 0.084, scepterHeight);
         
         // Staff outline
@@ -699,13 +709,8 @@ export class FrogKingEnemy extends BaseEnemy {
         }
         
         // --- MAGICAL CRYSTAL ORB ---
-        // Create radial gradient for crystal effect
-        const orbGrad = ctx.createRadialGradient(0, -baseSize * 0.42, baseSize * 0.04, 0, -baseSize * 0.42, baseSize * 0.16);
-        orbGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-        orbGrad.addColorStop(0.5, this.crownColor);
-        orbGrad.addColorStop(1, this.crownColor);
-        
-        ctx.fillStyle = orbGrad;
+        // Create radial gradient for crystal effect (cached)
+        ctx.fillStyle = this._orbGrad;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 0.42, baseSize * 0.16, 0, Math.PI * 2);
         ctx.fill();

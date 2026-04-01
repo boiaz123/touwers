@@ -99,8 +99,14 @@ export class LootManager {
             this.lootBags[i].update(deltaTime, canvasHeight, canvasWidth);
         }
 
-        // Remove collected loot
-        this.lootBags = this.lootBags.filter(bag => !bag.isCollected());
+        // Remove collected loot (compact in-place)
+        let lbWrite = 0;
+        for (let i = 0; i < this.lootBags.length; i++) {
+            if (!this.lootBags[i].isCollected()) {
+                this.lootBags[lbWrite++] = this.lootBags[i];
+            }
+        }
+        this.lootBags.length = lbWrite;
     }
 
     /**

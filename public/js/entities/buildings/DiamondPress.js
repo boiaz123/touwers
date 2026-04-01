@@ -43,22 +43,32 @@ export class DiamondPress extends Building {
             }
         }
 
-        // Update magic particles
-        this.magicParticles = this.magicParticles.filter(particle => {
+        // Update magic particles (compact in-place)
+        let mpWrite = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
-            particle.vy += 40 * deltaTime; // gravity
+            particle.vy += 40 * deltaTime;
             particle.size = Math.max(0, particle.size - deltaTime * 2);
-            return particle.life > 0 && particle.size > 0;
-        });
+            if (particle.life > 0 && particle.size > 0) {
+                this.magicParticles[mpWrite++] = particle;
+            }
+        }
+        this.magicParticles.length = mpWrite;
 
-        // Update floating text
-        this.floatingTexts = this.floatingTexts.filter(text => {
+        // Update floating text (compact in-place)
+        let ftWrite = 0;
+        for (let i = 0; i < this.floatingTexts.length; i++) {
+            const text = this.floatingTexts[i];
             text.y -= deltaTime * 30;
             text.life -= deltaTime;
-            return text.life > 0;
-        });
+            if (text.life > 0) {
+                this.floatingTexts[ftWrite++] = text;
+            }
+        }
+        this.floatingTexts.length = ftWrite;
     }
 
     render(ctx, size) {

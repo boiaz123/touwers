@@ -338,13 +338,16 @@ export class EarthFrogEnemy extends BaseEnemy {
             ctx.stroke();
         }
         
-        // --- MAIN BODY/CHEST ---
-        const bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.1, baseSize * 0.4, baseSize * 0.2);
-        bodyGrad.addColorStop(0, '#4a3a2a');
-        bodyGrad.addColorStop(0.5, '#3a2a1a');
-        bodyGrad.addColorStop(1, '#1a1000');
+        // --- MAIN BODY/CHEST --- (cached gradient)
+        if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
+            this._gradBaseSize = baseSize;
+            this._bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.1, baseSize * 0.4, baseSize * 0.2);
+            this._bodyGrad.addColorStop(0, '#4a3a2a');
+            this._bodyGrad.addColorStop(0.5, '#3a2a1a');
+            this._bodyGrad.addColorStop(1, '#1a1000');
+        }
         
-        ctx.fillStyle = bodyGrad;
+        ctx.fillStyle = this._bodyGrad;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.05, baseSize * 0.52, baseSize * 0.5, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -470,11 +473,10 @@ export class EarthFrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES ---
         
-        const particleColors = [
-            'rgba(139, 111, 71, ',
-            'rgba(184, 134, 11, ',
-            'rgba(160, 82, 45, '
-        ];
+        if (!this._particleColors) {
+            this._particleColors = ['rgba(139, 111, 71, ', 'rgba(184, 134, 11, ', 'rgba(160, 82, 45, '];
+        }
+        const particleColors = this._particleColors;
         
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
@@ -649,10 +651,19 @@ const upperLength = baseSize * 0.035;
     }
     
     drawBattleMageHat(ctx, baseSize) {
-        const hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
-        hatGradient.addColorStop(0, '#8a6a3a');
-        hatGradient.addColorStop(0.6, '#6a4a2a');
-        hatGradient.addColorStop(1, '#3a2a1a');
+        // Cached gradients
+        if (!this._hatGrad || this._hatGradBaseSize !== baseSize) {
+            this._hatGradBaseSize = baseSize;
+            this._hatGrad = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
+            this._hatGrad.addColorStop(0, '#8a6a3a');
+            this._hatGrad.addColorStop(0.6, '#6a4a2a');
+            this._hatGrad.addColorStop(1, '#3a2a1a');
+            this._tipGlow = ctx.createRadialGradient(baseSize * 0.08, -baseSize * 1.44, 0, baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2);
+            this._tipGlow.addColorStop(0, 'rgba(204, 136, 0, 0.8)');
+            this._tipGlow.addColorStop(1, 'rgba(204, 136, 0, 0)');
+        }
+        
+        const hatGradient = this._hatGrad;
         
         ctx.fillStyle = hatGradient;
         ctx.beginPath();
@@ -684,11 +695,7 @@ const upperLength = baseSize * 0.035;
         ctx.lineTo(baseSize * 0.35, -baseSize * 0.66);
         ctx.stroke();
         
-        const tipGlow = ctx.createRadialGradient(baseSize * 0.08, -baseSize * 1.44, 0, baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2);
-        tipGlow.addColorStop(0, 'rgba(204, 136, 0, 0.8)');
-        tipGlow.addColorStop(1, 'rgba(204, 136, 0, 0)');
-        
-        ctx.fillStyle = tipGlow;
+        ctx.fillStyle = this._tipGlow;
         ctx.beginPath();
         ctx.arc(baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2, 0, Math.PI * 2);
         ctx.fill();

@@ -150,24 +150,34 @@ export class TowerForge extends Building {
             this.nextSmokeTime = 0.3 + Math.random() * 0.4;
         }
         
-        // Update particles
-        this.sparks = this.sparks.filter(spark => {
+        // Update particles (compact in-place)
+        let spWrite = 0;
+        for (let i = 0; i < this.sparks.length; i++) {
+            const spark = this.sparks[i];
             spark.x += spark.vx * deltaTime;
             spark.y += spark.vy * deltaTime;
             spark.life -= deltaTime;
             spark.vy += 150 * deltaTime;
             spark.size = Math.max(0, spark.size - deltaTime * 2);
-            return spark.life > 0 && spark.size > 0;
-        });
+            if (spark.life > 0 && spark.size > 0) {
+                this.sparks[spWrite++] = spark;
+            }
+        }
+        this.sparks.length = spWrite;
         
-        this.smokeParticles = this.smokeParticles.filter(smoke => {
+        let smWrite = 0;
+        for (let i = 0; i < this.smokeParticles.length; i++) {
+            const smoke = this.smokeParticles[i];
             smoke.x += smoke.vx * deltaTime;
             smoke.y += smoke.vy * deltaTime;
             smoke.life -= deltaTime;
             smoke.size += deltaTime * 3;
             smoke.vx *= 0.99;
-            return smoke.life > 0;
-        });
+            if (smoke.life > 0) {
+                this.smokeParticles[smWrite++] = smoke;
+            }
+        }
+        this.smokeParticles.length = smWrite;
         
         // Update flash opacity (fade out slowly over 0.4 seconds for balanced effect)
         this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 1.5);

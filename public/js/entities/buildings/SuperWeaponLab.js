@@ -184,33 +184,53 @@ export class SuperWeaponLab extends Building {
             });
         }
         
-        // Update particles
-        this.magicParticles = this.magicParticles.filter(particle => {
+        // Update particles (compact in-place)
+        let mpWrite = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            return particle.life > 0;
-        });
+            if (particle.life > 0) {
+                this.magicParticles[mpWrite++] = particle;
+            }
+        }
+        this.magicParticles.length = mpWrite;
         
-        // Update falling meteors
-        this.fallingMeteors = this.fallingMeteors.filter(meteor => {
+        // Update falling meteors (compact in-place)
+        let mtWrite = 0;
+        for (let i = 0; i < this.fallingMeteors.length; i++) {
+            const meteor = this.fallingMeteors[i];
             meteor.y += meteor.vy * deltaTime;
             meteor.life -= deltaTime;
-            return meteor.life > 0;
-        });
+            if (meteor.life > 0) {
+                this.fallingMeteors[mtWrite++] = meteor;
+            }
+        }
+        this.fallingMeteors.length = mtWrite;
         
-        // Update frozen nova effects
-        this.frozenNovaEffects = this.frozenNovaEffects.filter(effect => {
+        // Update frozen nova effects (compact in-place)
+        let fnWrite = 0;
+        for (let i = 0; i < this.frozenNovaEffects.length; i++) {
+            const effect = this.frozenNovaEffects[i];
             effect.life -= deltaTime;
-            return effect.life > 0;
-        });
+            if (effect.life > 0) {
+                this.frozenNovaEffects[fnWrite++] = effect;
+            }
+        }
+        this.frozenNovaEffects.length = fnWrite;
         
-        // Update chain lightning bolts
-        this.chainLightningBolts = this.chainLightningBolts.filter(bolt => {
+        // Update chain lightning bolts (compact in-place)
+        let clWrite = 0;
+        for (let i = 0; i < this.chainLightningBolts.length; i++) {
+            const bolt = this.chainLightningBolts[i];
             bolt.life -= deltaTime;
-            return bolt.life > 0;
-        });
+            if (bolt.life > 0) {
+                this.chainLightningBolts[clWrite++] = bolt;
+            }
+        }
+        this.chainLightningBolts.length = clWrite;
         
         // Update spell cast effect
         if (this.spellCastEffect) {

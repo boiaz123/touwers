@@ -238,32 +238,39 @@ export class TrainingGrounds extends Building {
             this.nextParticleTime = 0.2 + Math.random() * 0.4;
         }
         
-        // Update particles
-        this.trainingParticles = this.trainingParticles.filter(particle => {
+        // Update particles (compact-in-place to avoid allocation)
+        let writeIdx = 0;
+        for (let i = 0; i < this.trainingParticles.length; i++) {
+            const particle = this.trainingParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             // Only dust gets gravity; arrows fly straight to their target
             if (particle.type === 'dust') particle.vy += 120 * deltaTime;
             
+            let keep = particle.life > 0;
+            
             // Check if arrow hit its target
-            if (particle.type === 'arrow' && particle.targetX && particle.targetY) {
+            if (keep && particle.type === 'arrow' && particle.targetX && particle.targetY) {
                 const dx = particle.x - particle.targetX;
                 const dy = particle.y - particle.targetY;
                 const distance = Math.hypot(dx, dy);
                 
                 // If arrow is close to target, it hits and disappears
                 if (distance < particle.hitRadius) {
-                    return false; // Remove the arrow
+                    keep = false;
                 }
             }
             
-            if (particle.type === 'dust') {
+            if (keep && particle.type === 'dust') {
                 particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
             }
             
-            return particle.life > 0;
-        });
+            if (keep) {
+                this.trainingParticles[writeIdx++] = particle;
+            }
+        }
+        this.trainingParticles.length = writeIdx;
     }
     
     render(ctx, size) {

@@ -2073,7 +2073,7 @@ export class GameplayState {
                 const buildingSize = cellSize * building.size;
                 ctx.buildingManager = this.towerManager.buildingManager;
                 building.render(ctx, buildingSize);
-                delete ctx.buildingManager;
+                ctx.buildingManager = null;
             } else if (ent.type === 'enemy') {
                 const enemy = ent.source;
                 enemy.render(ctx);

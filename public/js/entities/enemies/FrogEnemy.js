@@ -292,13 +292,16 @@ export class FrogEnemy extends BaseEnemy {
         this.drawFrogBackLeg(ctx, -baseSize * 0.4, baseSize * 0.4, baseSize, false);
         this.drawFrogBackLeg(ctx, baseSize * 0.4, baseSize * 0.4, baseSize, true);
         
-        // Main body (rounded, more compact)
-        const bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
-        bodyGradient.addColorStop(0, FrogEnemy.getCachedColor(this.skinColor, 'lighten'));
-        bodyGradient.addColorStop(0.6, this.skinColor);
-        bodyGradient.addColorStop(1, this.cachedDarken2Color);
+        // Main body (rounded, more compact) - cache gradient per instance (baseSize is fixed during gameplay)
+        if (!this._bodyGradient || this._gradBaseSize !== baseSize) {
+            this._gradBaseSize = baseSize;
+            this._bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
+            this._bodyGradient.addColorStop(0, FrogEnemy.getCachedColor(this.skinColor, 'lighten'));
+            this._bodyGradient.addColorStop(0.6, this.skinColor);
+            this._bodyGradient.addColorStop(1, this.cachedDarken2Color);
+        }
         
-        ctx.fillStyle = bodyGradient;
+        ctx.fillStyle = this._bodyGradient;
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -425,11 +428,10 @@ export class FrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES ---
         
-        const particleColors = [
-            'rgba(100, 200, 255, ',
-            'rgba(150, 255, 100, ',
-            'rgba(255, 200, 100, '
-        ];
+        if (!this._particleColors) {
+            this._particleColors = ['rgba(100, 200, 255, ', 'rgba(150, 255, 100, ', 'rgba(255, 200, 100, '];
+        }
+        const particleColors = this._particleColors;
         
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
@@ -566,13 +568,20 @@ export class FrogEnemy extends BaseEnemy {
     }
     
     drawWizardHat(ctx, baseSize) {
-        // Hat body - large pointy cone
-        const hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
-        hatGradient.addColorStop(0, '#2A5FD8');
-        hatGradient.addColorStop(0.6, '#1A3A7A');
-        hatGradient.addColorStop(1, '#0F1F4F');
+        // Hat body - large pointy cone (cache gradients per instance)
+        if (!this._hatGradient || this._hatGradBaseSize !== baseSize) {
+            this._hatGradBaseSize = baseSize;
+            this._hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
+            this._hatGradient.addColorStop(0, '#2A5FD8');
+            this._hatGradient.addColorStop(0.6, '#1A3A7A');
+            this._hatGradient.addColorStop(1, '#0F1F4F');
+            
+            this._tipGlow = ctx.createRadialGradient(baseSize * 0.08, -baseSize * 1.44, 0, baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2);
+            this._tipGlow.addColorStop(0, 'rgba(255, 215, 0, 0.7)');
+            this._tipGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+        }
         
-        ctx.fillStyle = hatGradient;
+        ctx.fillStyle = this._hatGradient;
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.32, -baseSize * 0.72);
         ctx.lineTo(baseSize * 0.32, -baseSize * 0.72);
@@ -605,11 +614,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Hat tip - glowing star
-        const tipGlow = ctx.createRadialGradient(baseSize * 0.08, -baseSize * 1.44, 0, baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2);
-        tipGlow.addColorStop(0, 'rgba(255, 215, 0, 0.7)');
-        tipGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
-        
-        ctx.fillStyle = tipGlow;
+        ctx.fillStyle = this._tipGlow;
         ctx.beginPath();
         ctx.arc(baseSize * 0.08, -baseSize * 1.44, baseSize * 0.2, 0, Math.PI * 2);
         ctx.fill();

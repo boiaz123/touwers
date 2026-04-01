@@ -521,14 +521,18 @@ export class MageEnemy extends BaseEnemy {
         ctx.fill();
 
         // Magic particles (local space)
-        const particleColors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
-        this.magicParticles.forEach(particle => {
+        if (!this._particleColors) {
+            this._particleColors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
+        }
+        const particleColors = this._particleColors;
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             const alpha = (particle.life / particle.maxLife) * 0.8;
             ctx.fillStyle = particleColors[particle.colorIdx] + alpha + ')';
             ctx.beginPath();
             ctx.arc(particle.localX, particle.localY, particle.size, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
 
         ctx.restore();
 

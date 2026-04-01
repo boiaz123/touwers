@@ -99,14 +99,19 @@ export class MagicAcademy extends Building {
             });
         }
         
-        // Update magic particles
-        this.magicParticles = this.magicParticles.filter(particle => {
+        // Update magic particles (compact in-place)
+        let mpWrite = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            return particle.life > 0 && particle.size > 0;
-        });
+            if (particle.life > 0 && particle.size > 0) {
+                this.magicParticles[mpWrite++] = particle;
+            }
+        }
+        this.magicParticles.length = mpWrite;
         
         // Generate water ripples (CONSTRAINED to smaller moat area)
         this.nextRippleTime -= deltaTime;
@@ -124,12 +129,17 @@ export class MagicAcademy extends Building {
             this.nextRippleTime = 0.5 + Math.random() * 1.5;
         }
         
-        // Update water ripples
-        this.waterRipples = this.waterRipples.filter(ripple => {
+        // Update water ripples (compact in-place)
+        let wrWrite = 0;
+        for (let i = 0; i < this.waterRipples.length; i++) {
+            const ripple = this.waterRipples[i];
             ripple.life -= deltaTime;
             ripple.radius = ripple.maxRadius * (1 - ripple.life / ripple.maxLife);
-            return ripple.life > 0;
-        });
+            if (ripple.life > 0) {
+                this.waterRipples[wrWrite++] = ripple;
+            }
+        }
+        this.waterRipples.length = wrWrite;
     }
     
     render(ctx, size) {

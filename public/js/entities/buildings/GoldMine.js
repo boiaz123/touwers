@@ -342,14 +342,19 @@ export class GoldMine extends Building {
             this.nextSmokeTime = 2.0 + Math.random() * 2.0;
         }
         
-        // PERF: Update smoke/dust - filter is efficient
-        this.smokePuffs = this.smokePuffs.filter(smoke => {
+        // Update smoke/dust (compact in-place)
+        let spWrite = 0;
+        for (let i = 0; i < this.smokePuffs.length; i++) {
+            const smoke = this.smokePuffs[i];
             smoke.x += smoke.vx * deltaTime;
             smoke.y += smoke.vy * deltaTime;
             smoke.life -= deltaTime;
             smoke.size += deltaTime * 0.3;
-            return smoke.life > 0;
-        });
+            if (smoke.life > 0) {
+                this.smokePuffs[spWrite++] = smoke;
+            }
+        }
+        this.smokePuffs.length = spWrite;
         
         // Update gold pile glimmer
         this.goldPiles.forEach(pile => {
@@ -370,12 +375,17 @@ export class GoldMine extends Building {
             }
         }
         
-        // Update floating texts
-        this.floatingTexts = this.floatingTexts.filter(text => {
-            text.y -= deltaTime * 40; // Rise upward
+        // Update floating texts (compact in-place)
+        let ftWrite = 0;
+        for (let i = 0; i < this.floatingTexts.length; i++) {
+            const text = this.floatingTexts[i];
+            text.y -= deltaTime * 40;
             text.life -= deltaTime;
-            return text.life > 0;
-        });
+            if (text.life > 0) {
+                this.floatingTexts[ftWrite++] = text;
+            }
+        }
+        this.floatingTexts.length = ftWrite;
         
         // Update flash opacity (very subtle fade)
         this.flashOpacity = Math.max(0, this.flashOpacity - deltaTime * 1.2);
