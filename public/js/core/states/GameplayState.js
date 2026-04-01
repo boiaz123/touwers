@@ -2093,6 +2093,11 @@ export class GameplayState {
                 this.enemyManager.orphanedSplatters[i].render(ctx);
             }
         }
+
+        // Render foreground terrain (vegetation in front of the castle gate, i.e. higher Y).
+        // This must happen after all entities so that trees/bushes south of the castle
+        // correctly appear on top of it, while those north remain behind it (in bg canvas).
+        this.level.renderForegroundTerrain(ctx);
         
         // Render defender if active (after all main entities)
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {

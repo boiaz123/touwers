@@ -32,7 +32,8 @@ export class LevelBase {
         this.pathTextureGenerated = false;
         this.pathLeaves = [];
         this.backgroundCanvas = null; // Cache for pre-rendered background
-        this.terrainCanvas = null;   // Cache for pre-rendered terrain (rocks, water, rivers, path, vegetation)
+        this.terrainCanvas = null;   // Cache for pre-rendered terrain (rocks, water, rivers, path, bg vegetation)
+        this.terrainFgCanvas = null; // Cache for foreground vegetation (rendered after entities for Z-order)
         
         this.castle = null;
     }
@@ -236,6 +237,7 @@ export class LevelBase {
             // CRITICAL: Clear the cached background canvas so it gets rerendered with new visuals
             this.backgroundCanvas = null;
             this.terrainCanvas = null;
+            this.terrainFgCanvas = null;
             
             this.lastCanvasWidth = canvasWidth;
             this.lastCanvasHeight = canvasHeight;
@@ -696,26 +698,45 @@ export class LevelBase {
     }
     
     renderTerrainLayer(ctx) {
-        // PRE-RENDER OPTIMIZATION: Cache all static terrain (rocks, water, rivers, path, vegetation)
-        // to an offscreen canvas. These elements never change during gameplay, saving ~60-130
-        // draw calls per frame.
+        // PRE-RENDER OPTIMIZATION: Cache static terrain to offscreen canvases.
+        // Background canvas: rocks, water, rivers, path, and vegetation that sits
+        // ABOVE (lower Y than) the castle front so it renders behind entities.
+        // Foreground canvas: vegetation at Y >= castle front, rendered after entities.
         if (!this.terrainCanvas) {
+            // Determine the Y threshold: vegetation at or below this Y is foreground.
+            // Use pathEnd.y (= castle gate Y) as the split point.
+            const pathEnd = this.path.length > 0 ? this.path[this.path.length - 1] : null;
+            const fgThresholdY = pathEnd ? pathEnd.y : Infinity;
+
             this.terrainCanvas = document.createElement('canvas');
             this.terrainCanvas.width = ctx.canvas.width;
             this.terrainCanvas.height = ctx.canvas.height;
             const tCtx = this.terrainCanvas.getContext('2d');
-            // Propagate resolutionManager so terrain elements can scale correctly
             tCtx.resolutionManager = ctx.resolutionManager;
-            
-            // Render terrain in the correct order onto the offscreen canvas
+
+            // Background: rocks, water, rivers, path, and bg vegetation
             this.renderTerrainElementsByType(tCtx, ['rock', 'water']);
             this.renderRiverSmooth(tCtx);
             this.renderPath(tCtx);
-            this.renderTerrainElementsByType(tCtx, ['vegetation', 'tree', 'cactus', 'drybush']);
+            this.renderTerrainElementsByType(tCtx, ['vegetation', 'tree', 'cactus', 'drybush'], -Infinity, fgThresholdY);
+
+            // Foreground: vegetation in front of (at or below) the castle gate
+            this.terrainFgCanvas = document.createElement('canvas');
+            this.terrainFgCanvas.width = ctx.canvas.width;
+            this.terrainFgCanvas.height = ctx.canvas.height;
+            const fgCtx = this.terrainFgCanvas.getContext('2d');
+            fgCtx.resolutionManager = ctx.resolutionManager;
+            this.renderTerrainElementsByType(fgCtx, ['vegetation', 'tree', 'cactus', 'drybush'], fgThresholdY, Infinity);
         }
-        
-        // Single drawImage call replaces all terrain rendering
+
+        // Single drawImage call replaces all background terrain rendering
         ctx.drawImage(this.terrainCanvas, 0, 0);
+    }
+
+    renderForegroundTerrain(ctx) {
+        if (this.terrainFgCanvas) {
+            ctx.drawImage(this.terrainFgCanvas, 0, 0);
+        }
     }
     
     _renderBackgroundToCanvas(ctx) {
@@ -1525,60 +1546,69 @@ export class LevelBase {
     }
     
     /**
-     * Create castle at the end of the path
-     * Returns a Promise that resolves when castle is ready
+     * Create castle at the end of the path.
+     * Castle is always rendered upright (no rotation). The gate (bottom-center of
+     * the wall, at local y = +wallHeight/2 = +40) is positioned at the path end point.
+     * Returns a Promise that resolves when castle is ready.
      */
     createCastle() {
         return new Promise((resolve, reject) => {
-            const pathEnd = this.path[this.path.length - 1];
-            const castleGridX = Math.floor(pathEnd.x / this.cellSize) + 2;
-            const castleGridY = Math.floor(pathEnd.y / this.cellSize) - 2;
-            
-            const castleScreenX = (castleGridX + 1.5) * this.cellSize;
-            const castleScreenY = (castleGridY + 1.5) * this.cellSize;
-            
+            const pathLen = this.path.length;
+            const pathEnd = this.path[pathLen - 1];
+
+            // Castle always upright — gate is at the bottom (local y = +40).
+            // Center the castle so its gate aligns with the path end.
+            const wallHalfH = 40; // wallHeight / 2
+            const castleScreenX = pathEnd.x;
+            const castleScreenY = pathEnd.y - wallHalfH;
+
+            // Grid blocking: 8 cells wide (horizontal), 4 cells tall (vertical),
+            // centered horizontally on pathEnd.x, placed 4 cells above pathEnd.y.
+            const blockW = 8;
+            const blockH = 4;
+            const blockGridX = Math.round(pathEnd.x / this.cellSize) - Math.floor(blockW / 2);
+            const blockGridY = Math.round(pathEnd.y / this.cellSize) - blockH;
+
+            // Mark castle cells as occupied for tower placement
+            for (let x = blockGridX; x < blockGridX + blockW; x++) {
+                for (let y = blockGridY; y < blockGridY + blockH; y++) {
+                    this.occupiedCells.add(`${x},${y}`);
+                }
+            }
+
             // Load the real Castle class and create instance
             import('../buildings/Castle.js').then(module => {
-                this.castle = new module.Castle(castleScreenX, castleScreenY, castleGridX, castleGridY);
+                this.castle = new module.Castle(castleScreenX, castleScreenY, blockGridX, blockGridY);
+                this.castle.gateAngle = 0;
+                this.castle.gridWidth = blockW;
+                this.castle.gridHeight = blockH;
                 resolve();
             }).catch(err => {
                 console.error('Level: Could not load Castle:', err);
-                // Create fallback placeholder with render method
                 this.castle = {
                     x: castleScreenX,
                     y: castleScreenY,
-                    gridX: castleGridX,
-                    gridY: castleGridY,
+                    gridX: blockGridX,
+                    gridY: blockGridY,
+                    gridWidth: blockW,
+                    gridHeight: blockH,
+                    gateAngle: 0,
                     health: 100,
                     maxHealth: 100,
                     defender: null,
                     defenderDeadCooldown: 0,
                     maxDefenderCooldown: 10,
-                    takeDamage: function(amount) {
-                        this.health -= amount;
-                    },
-                    isDestroyed: function() {
-                        return this.health <= 0;
-                    },
+                    takeDamage: function(amount) { this.health -= amount; },
+                    isDestroyed: function() { return this.health <= 0; },
                     render: function(ctx) {
-                        // Minimal fallback render - just shows a red square
                         ctx.fillStyle = '#cc0000';
                         ctx.fillRect(this.x - 40, this.y - 40, 80, 80);
                     },
-                    update: function(deltaTime) {
-                        // Fallback update
-                    }
+                    update: function(deltaTime) {}
                 };
                 reject(err);
             });
-            
-            // Mark castle cells as occupied immediately (3x3 size)
-            for (let x = castleGridX; x < castleGridX + 3; x++) {
-                for (let y = castleGridY; y < castleGridY + 3; y++) {
-                    this.occupiedCells.add(`${x},${y}`);
-                }
-            }
-        }); // End of Promise constructor
+        });
     }
     
     render(ctx) {
@@ -1822,7 +1852,7 @@ export class LevelBase {
         });
     }
 
-    renderTerrainElementsByType(ctx, typeFilters) {
+    renderTerrainElementsByType(ctx, typeFilters, minScreenY = -Infinity, maxScreenY = Infinity) {
         if (!this.terrainElements || this.terrainElements.length === 0) {
             return;
         }
@@ -1834,8 +1864,13 @@ export class LevelBase {
                 return;
             }
 
-            const screenX = element.gridX * this.cellSize;
+            // Y-range filter for foreground/background splitting
             const screenY = element.gridY * this.cellSize;
+            if (screenY < minScreenY || screenY >= maxScreenY) {
+                return;
+            }
+
+            const screenX = element.gridX * this.cellSize;
             const baseSize = element.size * this.cellSize;
             const sizeScale = (element.type !== 'water' && campaign !== 'forest') ? 1.5 : 0.75;
             const size = element.type === 'water' ? baseSize : baseSize * sizeScale;

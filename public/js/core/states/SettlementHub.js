@@ -5485,9 +5485,9 @@ class UpgradesMenu {
         }
         
         // Check close button
-        const closeX = panelX + panelWidth - 52;
-        const closeY = panelY + 12;
-        this.closeButtonHovered = x >= closeX && x <= closeX + 38 && y >= closeY && y <= closeY + 38;
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 9;
+        this.closeButtonHovered = x >= closeX && x <= closeX + 32 && y >= closeY && y <= closeY + 32;
         
         // Check arrow buttons
         const arrowY = panelY + panelHeight - 62;
@@ -5546,9 +5546,9 @@ class UpgradesMenu {
         const panelY = (canvas.height - panelHeight) / 2;
         
         // Check close button
-        const closeX = panelX + panelWidth - 52;
-        const closeY = panelY + 12;
-        if (x >= closeX && x <= closeX + 38 && y >= closeY && y <= closeY + 38) {
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 9;
+        if (x >= closeX && x <= closeX + 32 && y >= closeY && y <= closeY + 32) {
             this.close();
             return;
         }
@@ -6084,18 +6084,18 @@ class UpgradesMenu {
         this.renderGoldDisplay(ctx, panelX + 20, panelY + 10);
         
         // Close button
-        const closeX = panelX + panelWidth - 52;
-        const closeY = panelY + 12;
+        const closeX = panelX + panelWidth - 40;
+        const closeY = panelY + 9;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
-        ctx.fillRect(closeX, closeY, 38, 38);
+        ctx.fillRect(closeX, closeY, 32, 32);
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(closeX, closeY, 38, 38);
+        ctx.strokeRect(closeX, closeY, 32, 32);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 27px Arial';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('×', closeX + 19, closeY + 19);
+        ctx.fillText('×', closeX + 16, closeY + 16);
         
         // Tabs
         const tabY = panelY + 49;
@@ -7963,9 +7963,9 @@ class ArcaneLibraryMenu {
         const menuHeight = 500;
         
         // Close button
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
+        const closeButtonX = menuX + menuWidth - 40;
+        const closeButtonY = menuY + 2;
+        const closeButtonSize = 32;
         
         this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
@@ -8121,9 +8121,9 @@ class ArcaneLibraryMenu {
         const menuHeight = 500;
         
         // Close button
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
+        const closeButtonX = menuX + menuWidth - 40;
+        const closeButtonY = menuY + 2;
+        const closeButtonSize = 32;
         
         if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
             y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
@@ -8409,9 +8409,9 @@ class ArcaneLibraryMenu {
         }
         
         // Red X close button at top right
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
+        const closeButtonX = menuX + menuWidth - 40;
+        const closeButtonY = menuY + 2;
+        const closeButtonSize = 32;
         
         ctx.save();
         ctx.globalAlpha = 1;
@@ -8422,10 +8422,10 @@ class ArcaneLibraryMenu {
         ctx.lineWidth = 2;
         ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('\xD7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.fillText('\u00d7', closeButtonX + 16, closeButtonY + 16);
         ctx.restore();
         
         ctx.globalAlpha = 1;

@@ -118,8 +118,14 @@ export class BuildingManager {
     
     // Mark castle as occupied (call after castle is created)
     reserveCastleSpace(castle) {
-        if (castle && castle.gridX !== undefined && castle.gridY !== undefined && castle.size !== undefined) {
-            this.markBuildingPosition(castle.gridX, castle.gridY, castle.size);
+        if (castle && castle.gridX !== undefined && castle.gridY !== undefined) {
+            const w = castle.gridWidth || castle.size || 3;
+            const h = castle.gridHeight || castle.size || 3;
+            for (let x = castle.gridX; x < castle.gridX + w; x++) {
+                for (let y = castle.gridY; y < castle.gridY + h; y++) {
+                    this.occupiedPositions.add(`${x},${y}`);
+                }
+            }
         }
     }
     

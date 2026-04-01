@@ -7,6 +7,9 @@ export class Castle {
         this.gridX = gridX;
         this.gridY = gridY;
         this.size = 3;
+        this.gridWidth = 3;  // Updated by createCastle based on approach direction
+        this.gridHeight = 3; // Updated by createCastle based on approach direction
+        this.gateAngle = 0;  // Rotation so gate faces the path end (radians, CCW)
         this.animationTime = 0;
         
         // Castle health system
@@ -100,6 +103,7 @@ export class Castle {
     render(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
+        if (this.gateAngle) ctx.rotate(this.gateAngle);
         
         // Damage flash effect
         if (this.damageFlashTimer > 0) {
