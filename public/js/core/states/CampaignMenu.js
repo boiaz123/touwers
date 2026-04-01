@@ -291,21 +291,60 @@ export class CampaignMenu {
     }
 
     _renderBackground(ctx, canvas) {
-        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        g.addColorStop(0, '#211408');
-        g.addColorStop(1, '#120a04');
-        ctx.fillStyle = g;
+        // Base coat
+        ctx.fillStyle = '#100802';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Subtle diagonal line texture
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.03)';
-        ctx.lineWidth = 1;
-        for (let i = -canvas.height; i < canvas.width; i += 40) {
+        // Wood planks - horizontal bands with alternating tones
+        const plankHeight = 88;
+        const plankTones = ['#1c1005', '#1a0f05', '#1e1106', '#190e04', '#1b1005'];
+        const planksCount = Math.ceil(canvas.height / plankHeight) + 1;
+        for (let p = 0; p < planksCount; p++) {
+            const py = p * plankHeight;
+            const tone = plankTones[p % plankTones.length];
+            ctx.fillStyle = tone;
+            ctx.fillRect(0, py, canvas.width, plankHeight);
+
+            // Top plank shadow line
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fillRect(0, py, canvas.width, 2);
+            // Highlight just below seam
+            ctx.fillStyle = 'rgba(200, 130, 60, 0.04)';
+            ctx.fillRect(0, py + 2, canvas.width, 5);
+
+            // Wood grain lines — subtle horizontal curves
+            const grainLines = 5 + (p % 3);
+            ctx.save();
             ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i + canvas.height, canvas.height);
-            ctx.stroke();
+            ctx.rect(0, py, canvas.width, plankHeight);
+            ctx.clip();
+            for (let g = 0; g < grainLines; g++) {
+                const grainY = py + (plankHeight / (grainLines + 1)) * (g + 1);
+                const waveA = Math.sin(p * 1.3 + g * 0.7) * 6;
+                const waveB = Math.cos(p * 0.9 + g * 1.1) * 4;
+                ctx.strokeStyle = 'rgba(70, 35, 8, 0.22)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, grainY + waveA);
+                ctx.bezierCurveTo(
+                    canvas.width * 0.3, grainY + waveA + waveB,
+                    canvas.width * 0.7, grainY - waveA + waveB,
+                    canvas.width, grainY - waveA * 0.5
+                );
+                ctx.stroke();
+            }
+            ctx.restore();
         }
+
+        // Vignette — darkens edges for depth
+        const vign = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.15,
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.9
+        );
+        vign.addColorStop(0, 'rgba(0,0,0,0)');
+        vign.addColorStop(1, 'rgba(0,0,0,0.72)');
+        ctx.fillStyle = vign;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     _renderTitle(ctx, canvas) {
@@ -321,13 +360,6 @@ export class CampaignMenu {
         ctx.strokeText('CAMPAIGNS', leftPadding, titleY);
         ctx.fillText('CAMPAIGNS', leftPadding, titleY);
 
-        // Gold rule under title
-        ctx.strokeStyle = '#6a501e';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(leftPadding, titleY + 34);
-        ctx.lineTo(leftPadding + cardWidth, titleY + 34);
-        ctx.stroke();
     }
 
     _renderCard(ctx, campaign, index) {
@@ -568,6 +600,59 @@ export class CampaignMenu {
         const storyText = campaign.story || 'A great adventure awaits...';
         cy = this._wrapTextCapped(ctx, storyText, cx, cy, cw, 15, 4);
         cy += 10;
+
+        // Completion section — shown only when campaign is fully cleared
+        if (campaign.progress >= 100) {
+            this._drawDivider(ctx, cx, cy, cw, biome.accent);
+            cy += 12;
+
+            // Completion badge
+            ctx.font = 'bold 13px serif';
+            ctx.fillStyle = '#7edd6e';
+            ctx.fillText('\u2714  Campaign Completed', cx, cy);
+            cy += 20;
+
+            // Completion story if available
+            if (campaign.completionStory) {
+                ctx.font = 'italic 11px serif';
+                ctx.fillStyle = '#b8c8a8';
+                cy = this._wrapTextCapped(ctx, campaign.completionStory, cx, cy, cw, 14, 4);
+                cy += 8;
+            }
+
+            // Unlocks / rewards
+            if (campaign.rewards) {
+                this._drawDivider(ctx, cx, cy, cw, biome.accent);
+                cy += 12;
+                ctx.font = 'bold 12px serif';
+                ctx.fillStyle = '#d4af37';
+                ctx.fillText('\u2726  Unlocks', cx, cy);
+                cy += 18;
+
+                if (campaign.rewards.unlocks && campaign.rewards.unlocks.length > 0) {
+                    ctx.font = '11px serif';
+                    ctx.fillStyle = '#c9a876';
+                    for (const unlockName of campaign.rewards.unlocks) {
+                        if (cy > panel.y + panel.height - 90) break;
+                        ctx.fillText('\u25B6  ' + unlockName, cx + 8, cy);
+                        cy += 15;
+                    }
+                }
+
+                // Next campaign hint
+                const unlockChain = CampaignRegistry.UNLOCK_CHAIN;
+                const unlockedCampaignId = unlockChain[campaign.id];
+                if (unlockedCampaignId) {
+                    const unlockedCamp = CampaignRegistry.getCampaign(unlockedCampaignId);
+                    if (unlockedCamp) {
+                        cy += 4;
+                        ctx.font = 'bold 11px serif';
+                        ctx.fillStyle = '#7edd6e';
+                        ctx.fillText('\u25B6  Unlocked: ' + unlockedCamp.name, cx + 8, cy);
+                    }
+                }
+            }
+        }
 
         // Start button
         this._renderStartButton(ctx, campaign);

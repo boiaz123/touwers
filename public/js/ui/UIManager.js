@@ -5161,36 +5161,13 @@ export class UIManager {
         // Close pause menu
         this.closePauseMenu();
         
-        // CRITICAL: Save settlement state before quitting (gold, inventory, marketplace, stats)
-        if (this.gameplayState && this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
-            // Update settlement data with current level progress
-            this.stateManager.currentSaveData.playerGold = this.stateManager.playerGold || 0;
-            this.stateManager.currentSaveData.playerInventory = this.stateManager.playerInventory || [];
-            
-            // Save upgrades and marketplace with consumed items
-            if (this.stateManager.upgradeSystem) {
-                this.stateManager.currentSaveData.upgrades = this.stateManager.upgradeSystem.serialize();
-            }
-            if (this.stateManager.marketplaceSystem) {
-                this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
-            }
-            
-            // Save statistics so far in this level
-            if (this.stateManager.gameStatistics) {
-                this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
-            }
-            
-            // Save the quit state
-            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
-        }
-        
         // Unpause the game before quitting
         this.gameplayState.setPaused(false);
         
         // Small delay to ensure menu closes visually before state change
         setTimeout(() => {
-            // Change to settlement state (this will also call GameplayState.exit())
-            this.stateManager.changeState('settlementHub');
+            // Return to the campaign map (levelSelect) the player came from
+            this.stateManager.changeState('levelSelect');
         }, 100);
     }
 

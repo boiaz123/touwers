@@ -326,32 +326,14 @@ export class SettlementHub {
     }
 
     exit() {
-        // Record settlement time to statistics
+        // Record settlement time to statistics (in-memory only, not saved here)
         if (this.stateManager.gameStatistics && this.settlementStartTime > 0) {
             const settlementPlaytime = (Date.now() / 1000) - this.settlementStartTime;
             this.stateManager.gameStatistics.addPlaytime(settlementPlaytime);
         }
         
-        // Save all settlement data when exiting the settlement hub
-        // This captures current state of gold, inventory, upgrades, marketplace, and campaign progress
-        if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
-            const settlementData = {
-                // Current settlement state
-                playerGold: this.stateManager.playerGold,
-                playerInventory: this.stateManager.playerInventory,
-                upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
-                marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
-                statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
-                // Campaign state from current save data
-                lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
-                unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
-                completedLevels: this.stateManager.currentSaveData.completedLevels,
-                unlockSystem: this.stateManager.currentSaveData.unlockSystem
-            };
-            
-            // Use helper to save while preserving commander name
-            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
-        }
+        // NO auto-save on exit — saves happen only via explicit player action
+        // (SAVE SETTLEMENT button, SAVE & QUIT button, or level defeat/victory)
         
         // Clear manual music selection flag when exiting settlement
         if (this.stateManager.audioManager) {
@@ -6973,7 +6955,22 @@ class SettlementOptionsMenu {
 
     handleButtonClick(action) {
         if (action === 'save') {
-            SaveSystem.saveGame(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
+            if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+                const settlementData = {
+                    playerGold: this.stateManager.playerGold || 0,
+                    playerInventory: this.stateManager.playerInventory || [],
+                    upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                    marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                    statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                    lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
+                    unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
+                    completedLevels: this.stateManager.currentSaveData.completedLevels,
+                    completedCampaigns: this.stateManager.currentSaveData.completedCampaigns,
+                    unlockedCampaigns: this.stateManager.currentSaveData.unlockedCampaigns,
+                    unlockSystem: this.stateManager.currentSaveData.unlockSystem
+                };
+                SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+            }
         } else if (action === 'load') {
             this.stateManager.changeState('loadGame');
         } else if (action === 'menu') {
@@ -7260,6 +7257,7 @@ class ManageSettlementMenu {
         this.animationProgress = 0;
         this.openTime = 0; // Track when menu was opened to prevent click-through
         this.activeWarningDialog = null; // 'quitSettlement', 'quitTouwers', or null
+        this.warningDialogOpenTime = 0; // Timestamp when warning dialog was shown
         
         this.buttons = [
             { label: 'SAVE SETTLEMENT', action: 'save', hovered: false },
@@ -7411,6 +7409,10 @@ class ManageSettlementMenu {
     }
 
     handleWarningDialogClick(x, y) {
+        // Prevent click-through from the button that opened the warning dialog
+        if (Date.now() - this.warningDialogOpenTime < 300) {
+            return;
+        }
         const canvas = this.stateManager.canvas;
         const dialogWidth = 480;
         const dialogHeight = 220;
@@ -7470,9 +7472,11 @@ class ManageSettlementMenu {
                 break;
             case 'quitSettlement':
                 this.activeWarningDialog = 'quitSettlement';
+                this.warningDialogOpenTime = Date.now();
                 break;
             case 'quitTouwers':
                 this.activeWarningDialog = 'quitTouwers';
+                this.warningDialogOpenTime = Date.now();
                 break;
             case 'close':
                 this.close();
@@ -7481,11 +7485,22 @@ class ManageSettlementMenu {
     }
 
     saveSettlement() {
-        // Save the current game state
-        if (this.stateManager.saveSystem) {
-            // Save to the current slot (we need to track which slot was used)
-            const currentSlot = SaveSystem.getCurrentSlot ? SaveSystem.getCurrentSlot() : 1;
-            SaveSystem.saveGame(currentSlot);
+        // Save the current settlement state to the active save slot
+        if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+            const settlementData = {
+                playerGold: this.stateManager.playerGold || 0,
+                playerInventory: this.stateManager.playerInventory || [],
+                upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
+                unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
+                completedLevels: this.stateManager.currentSaveData.completedLevels,
+                completedCampaigns: this.stateManager.currentSaveData.completedCampaigns,
+                unlockedCampaigns: this.stateManager.currentSaveData.unlockedCampaigns,
+                unlockSystem: this.stateManager.currentSaveData.unlockSystem
+            };
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
         }
         
         // Close the menu
@@ -7520,9 +7535,22 @@ class ManageSettlementMenu {
                 }
                 break;
             case 'saveAndQuit':
-                if (this.stateManager.saveSystem) {
-                    const currentSlot = SaveSystem.getCurrentSlot ? SaveSystem.getCurrentSlot() : 1;
-                    SaveSystem.saveGame(currentSlot);
+                // Save settlement state before quitting
+                if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+                    const settlementData = {
+                        playerGold: this.stateManager.playerGold || 0,
+                        playerInventory: this.stateManager.playerInventory || [],
+                        upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
+                        marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                        statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                        lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
+                        unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
+                        completedLevels: this.stateManager.currentSaveData.completedLevels,
+                        completedCampaigns: this.stateManager.currentSaveData.completedCampaigns,
+                        unlockedCampaigns: this.stateManager.currentSaveData.unlockedCampaigns,
+                        unlockSystem: this.stateManager.currentSaveData.unlockSystem
+                    };
+                    SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
                 }
                 if (this.activeWarningDialog === 'quitSettlement') {
                     this.quitSettlement();

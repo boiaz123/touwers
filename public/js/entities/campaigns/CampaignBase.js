@@ -17,8 +17,9 @@ export class CampaignBase {
         this.campaignName = 'Unknown Campaign';
         this.levels = [];
         
-        // Exit button
-        this.hoveredExitButton = false;
+        // Nav buttons (top-right)
+        this.hoveredCampaignBtn = false;
+        this.hoveredSettlementBtn = false;
         
         // Terrain and visuals - override in subclasses
         this.terrainData = null;
@@ -42,7 +43,8 @@ export class CampaignBase {
         this.selectedLevel = this.levels.findIndex(l => l.unlocked);
         if (this.selectedLevel === -1) this.selectedLevel = 0;
         
-        this.hoveredExitButton = false;
+        this.hoveredCampaignBtn = false;
+        this.hoveredSettlementBtn = false;
         
         // Play campaign-specific music
         if (this.stateManager.audioManager && this.campaignId) {
@@ -61,18 +63,20 @@ export class CampaignBase {
     // ============ GAMEPAD BUTTON NAVIGATION ============
 
     getButtonCount() {
-        // Unlocked levels + exit button
+        // Unlocked levels + 2 nav buttons
         const unlockedCount = this.levels ? this.levels.filter(l => l.unlocked && !l.id.startsWith('placeholder-')).length : 0;
-        return unlockedCount + 1; // +1 for exit
+        return unlockedCount + 2; // +2 for campaign select + settlement
     }
 
     getFocusedButtonIndex() {
-        if (this.hoveredExitButton) {
-            return this.getButtonCount() - 1; // Last item is exit
+        const unlockedLevels = this._getUnlockedLevelIndices();
+        if (this.hoveredCampaignBtn) {
+            return unlockedLevels.length;
+        }
+        if (this.hoveredSettlementBtn) {
+            return unlockedLevels.length + 1;
         }
         if (this.hoveredLevel >= 0) {
-            // Map hoveredLevel (slot index) to our unlocked-only index
-            const unlockedLevels = this._getUnlockedLevelIndices();
             return unlockedLevels.indexOf(this.hoveredLevel);
         }
         return -1;
@@ -80,21 +84,27 @@ export class CampaignBase {
 
     focusButton(index) {
         this.hoveredLevel = -1;
-        this.hoveredExitButton = false;
+        this.hoveredCampaignBtn = false;
+        this.hoveredSettlementBtn = false;
         const unlockedLevels = this._getUnlockedLevelIndices();
-        const exitIdx = unlockedLevels.length;
 
         if (index >= 0 && index < unlockedLevels.length) {
             this.hoveredLevel = unlockedLevels[index];
-        } else if (index === exitIdx) {
-            this.hoveredExitButton = true;
+        } else if (index === unlockedLevels.length) {
+            this.hoveredCampaignBtn = true;
+        } else if (index === unlockedLevels.length + 1) {
+            this.hoveredSettlementBtn = true;
         }
     }
 
     activateFocusedButton() {
         if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
-        if (this.hoveredExitButton) {
+        if (this.hoveredCampaignBtn) {
             this.stateManager.changeState('campaignMenu');
+            return;
+        }
+        if (this.hoveredSettlementBtn) {
+            this.stateManager.changeState('settlementHub');
             return;
         }
         if (this.hoveredLevel >= 0 && this.levelSlots && this.levelSlots[this.hoveredLevel]) {
@@ -144,11 +154,22 @@ export class CampaignBase {
         }
     }
     
-    getExitButtonBounds() {
+    getCampaignBtnBounds() {
+        const canvas = this.stateManager.canvas;
         return {
-            x: this.stateManager.canvas.width - 140,
-            y: 30,
-            width: 110,
+            x: canvas.width - 322,
+            y: 14,
+            width: 158,
+            height: 44
+        };
+    }
+
+    getSettlementBtnBounds() {
+        const canvas = this.stateManager.canvas;
+        return {
+            x: canvas.width - 154,
+            y: 14,
+            width: 140,
             height: 44
         };
     }
@@ -175,13 +196,19 @@ export class CampaignBase {
         const y = (e.clientY - rect.top) * scaleY;
         
         this.hoveredLevel = -1;
-        this.hoveredExitButton = false;
+        this.hoveredCampaignBtn = false;
+        this.hoveredSettlementBtn = false;
         
-        // Check exit button
-        const exitBtn = this.getExitButtonBounds();
-        if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
-            y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
-            this.hoveredExitButton = true;
+        // Check nav buttons
+        const campaignBtn = this.getCampaignBtnBounds();
+        if (x >= campaignBtn.x && x <= campaignBtn.x + campaignBtn.width &&
+            y >= campaignBtn.y && y <= campaignBtn.y + campaignBtn.height) {
+            this.hoveredCampaignBtn = true;
+        }
+        const settlementBtn = this.getSettlementBtnBounds();
+        if (x >= settlementBtn.x && x <= settlementBtn.x + settlementBtn.width &&
+            y >= settlementBtn.y && y <= settlementBtn.y + settlementBtn.height) {
+            this.hoveredSettlementBtn = true;
         }
         
         // Check level slots using circular hit detection
@@ -205,15 +232,23 @@ export class CampaignBase {
         }
         
         this.stateManager.canvas.style.cursor = 
-            (this.hoveredLevel !== -1 || this.hoveredExitButton) ? 'pointer' : 'default';
+            (this.hoveredLevel !== -1 || this.hoveredCampaignBtn || this.hoveredSettlementBtn) ? 'pointer' : 'default';
     }
     
     handleClick(x, y) {
-        // Check exit button
-        const exitBtn = this.getExitButtonBounds();
-        if (x >= exitBtn.x && x <= exitBtn.x + exitBtn.width &&
-            y >= exitBtn.y && y <= exitBtn.y + exitBtn.height) {
+        // Check nav buttons
+        const campaignBtn = this.getCampaignBtnBounds();
+        if (x >= campaignBtn.x && x <= campaignBtn.x + campaignBtn.width &&
+            y >= campaignBtn.y && y <= campaignBtn.y + campaignBtn.height) {
+            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
             this.stateManager.changeState('campaignMenu');
+            return;
+        }
+        const settlementBtn = this.getSettlementBtnBounds();
+        if (x >= settlementBtn.x && x <= settlementBtn.x + settlementBtn.width &&
+            y >= settlementBtn.y && y <= settlementBtn.y + settlementBtn.height) {
+            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+            this.stateManager.changeState('settlementHub');
             return;
         }
         
@@ -264,8 +299,8 @@ export class CampaignBase {
         // Render title
         this.renderTitle(ctx, canvas);
         
-        // Render exit button
-        this.renderExitButton(ctx);
+        // Render nav buttons
+        this.renderNavButtons(ctx);
     }
     
     renderBackground(ctx, canvas) {
@@ -371,11 +406,13 @@ export class CampaignBase {
         ctx.fillText(this.campaignName.toUpperCase(), canvas.width / 2, 50);
     }
     
-    renderExitButton(ctx) {
-        const btn = this.getExitButtonBounds();
-        const isHovered = this.hoveredExitButton;
-        
-        const gradient = ctx.createLinearGradient(btn.y, btn.y + btn.height, 0, 0);
+    renderNavButtons(ctx) {
+        this._renderNavBtn(ctx, this.getCampaignBtnBounds(), 'CAMPAIGNS', this.hoveredCampaignBtn);
+        this._renderNavBtn(ctx, this.getSettlementBtnBounds(), 'SETTLEMENT', this.hoveredSettlementBtn);
+    }
+
+    _renderNavBtn(ctx, btn, label, isHovered) {
+        const gradient = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
         if (isHovered) {
             gradient.addColorStop(0, '#8b7355');
             gradient.addColorStop(0.5, '#a89968');
@@ -391,7 +428,6 @@ export class CampaignBase {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(btn.x, btn.y, btn.width, 2);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(btn.x, btn.y, btn.width, 3);
         ctx.fillRect(btn.x, btn.y + btn.height - 3, btn.width, 3);
         
         ctx.strokeStyle = isHovered ? '#ffd700' : '#d4af37';
@@ -402,13 +438,13 @@ export class CampaignBase {
         ctx.lineWidth = 1;
         ctx.strokeRect(btn.x + 1, btn.y + 1, btn.width - 2, btn.height - 2);
         
-        ctx.font = 'bold 14px serif';
+        ctx.font = 'bold 13px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillText('EXIT', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+        ctx.fillText(label, btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
         ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-        ctx.fillText('EXIT', btn.x + btn.width / 2, btn.y + btn.height / 2);
+        ctx.fillText(label, btn.x + btn.width / 2, btn.y + btn.height / 2);
     }
     
     update(deltaTime) {

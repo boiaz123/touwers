@@ -173,6 +173,15 @@ export class ResultsScreen {
         
         // Transfer loot to inventory
         this.transferLootToInventory();
+
+        // Save game state after loot transfer for all non-retry actions
+        // This ensures loot and level results are persisted at the moment of level completion
+        if (action !== 'retry' && this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
+            const saveData = this.stateManager.currentSaveData;
+            saveData.playerInventory = this.stateManager.playerInventory || [];
+            saveData.playerGold = this.stateManager.playerGold || 0;
+            SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
+        }
         
         // Execute action
         switch (action) {
