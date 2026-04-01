@@ -219,16 +219,13 @@ export class LevelBase {
             // Create a more complex, meandering path that uses more of the map
             this.createMeanderingPath(canvasWidth, canvasHeight);
             
-            // Create castle at the end of the path
-            this.castleLoadPromise = this.createCastle();
-            
-            // Don't wait for castle here - it will load asynchronously
-            // The castleLoadPromise can be awaited if needed
-            
             // Clear and recalculate occupied cells
             this.occupiedCells.clear();
             this.markPathCells();
             this.markTerrainCells();
+            
+            // Create castle AFTER marking occupied cells so castle blocking is not erased
+            this.castleLoadPromise = this.createCastle();
             
             // Reset path texture so it regenerates for new canvas dimensions
             this.pathTextureGenerated = false;
@@ -1562,12 +1559,12 @@ export class LevelBase {
             const castleScreenX = pathEnd.x;
             const castleScreenY = pathEnd.y - wallHalfH;
 
-            // Grid blocking: 8 cells wide (horizontal), 4 cells tall (vertical),
-            // centered horizontally on pathEnd.x, placed 4 cells above pathEnd.y.
+            // Grid blocking: 8 cells wide (horizontal), 2 cells tall (vertical),
+            // centered horizontally on pathEnd.x, placed at the castle base.
             const blockW = 8;
-            const blockH = 4;
+            const blockH = 2;
             const blockGridX = Math.round(pathEnd.x / this.cellSize) - Math.floor(blockW / 2);
-            const blockGridY = Math.round(pathEnd.y / this.cellSize) - blockH;
+            const blockGridY = Math.round(pathEnd.y / this.cellSize) - 1;
 
             // Mark castle cells as occupied for tower placement
             for (let x = blockGridX; x < blockGridX + blockW; x++) {

@@ -99,11 +99,14 @@ export class LootManager {
             this.lootBags[i].update(deltaTime, canvasHeight, canvasWidth);
         }
 
-        // Remove collected loot (compact in-place)
+        // Remove collected loot and expired loot (compact in-place)
         let lbWrite = 0;
         for (let i = 0; i < this.lootBags.length; i++) {
-            if (!this.lootBags[i].isCollected()) {
-                this.lootBags[lbWrite++] = this.lootBags[i];
+            const bag = this.lootBags[i];
+            // Keep bags that are still alive (not collected and not expired)
+            const expired = bag.lifetime > 0 && bag.age >= bag.lifetime && !bag.isCollecting;
+            if (!bag.isCollected() && !expired) {
+                this.lootBags[lbWrite++] = bag;
             }
         }
         this.lootBags.length = lbWrite;

@@ -126,26 +126,33 @@ export class LootBag {
             return;
         }
 
+        // Don't render expired bags
+        if (this.lifetime > 0 && this.age >= this.lifetime) {
+            return;
+        }
+
         const x = this.x;
         const yOffset = this.onGround ? this.bobAmount : 0;
         const y = this.y + yOffset;
 
+        // Fade out during collect animation or near expiry
+        let opacity = 1;
         if (this.isCollecting) {
-            // Fade out animation
             const fadeProgress = Math.min(this.collectAnimationTime / 0.5, 1);
-            const opacity = 1 - fadeProgress;
-            
-            if (ctx.globalAlpha !== undefined) {
-                ctx.globalAlpha = opacity;
-            }
+            opacity = 1 - fadeProgress;
+        } else if (this.lifetime > 0 && this.age > this.lifetime - 15) {
+            // Blink/fade in last 15 seconds of lifetime
+            const timeLeft = this.lifetime - this.age;
+            const blinkRate = timeLeft < 5 ? 4 : 2; // Faster blink in last 5 seconds
+            opacity = 0.4 + 0.6 * Math.abs(Math.sin(this.age * blinkRate));
+        }
 
-            this.renderBag(ctx, x, y);
-
-            if (ctx.globalAlpha !== undefined) {
-                ctx.globalAlpha = 1;
-            }
-        } else {
-            this.renderBag(ctx, x, y);
+        if (ctx.globalAlpha !== undefined) {
+            ctx.globalAlpha = opacity;
+        }
+        this.renderBag(ctx, x, y);
+        if (ctx.globalAlpha !== undefined) {
+            ctx.globalAlpha = 1;
         }
     }
 

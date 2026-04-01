@@ -109,6 +109,8 @@ export class SettlementHub {
         // Detect if we've switched save slots
         const saveSlotChanged = this.lastLoadedSaveSlot !== this.stateManager.currentSaveSlot;
         const returningFromLevel = this.stateManager.previousState === 'game';
+        // Detect explicit load-game reload — must always re-initialize session state from save
+        const comingFromLoad = this.stateManager.previousState === 'loadGame';
         
         if (currentSaveData) {
             // Initialize player gold from save data, but not if we're returning from a level
@@ -123,8 +125,8 @@ export class SettlementHub {
                 this.stateManager.playerInventory = currentSaveData.playerInventory || [];
             }
             
-            // Initialize upgrade system - always reinitialize if save slot changed
-            if (saveSlotChanged || !this.stateManager.upgradeSystem) {
+            // Initialize upgrade system - always reinitialize if save slot changed or explicit reload
+            if (saveSlotChanged || !this.stateManager.upgradeSystem || comingFromLoad) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
                 if (currentSaveData.upgrades) {
                     this.stateManager.upgradeSystem.restoreFromSave(currentSaveData.upgrades);
@@ -132,8 +134,8 @@ export class SettlementHub {
             }
             
             // Initialize marketplace system
-            // ALWAYS reinitialize if save slot changed, or if returning from a level
-            if (saveSlotChanged || !this.stateManager.marketplaceSystem || returningFromLevel) {
+            // ALWAYS reinitialize if save slot changed, returning from a level, or explicit reload
+            if (saveSlotChanged || !this.stateManager.marketplaceSystem || returningFromLevel || comingFromLoad) {
                 this.stateManager.marketplaceSystem = new MarketplaceSystem();
                 if (currentSaveData.marketplace) {
                     this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
@@ -7963,16 +7965,16 @@ class ArcaneLibraryMenu {
         const menuHeight = 500;
         
         // Close button
-        const closeButtonX = menuX + menuWidth - 40;
-        const closeButtonY = menuY + 2;
-        const closeButtonSize = 32;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
         
         this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
         
         // Tab buttons
         const tabHeight = 35;
-        const tabStartY = menuY + 35;
+        const tabStartY = menuY + 50;
         const tabButtonWidth = menuWidth / 4;
         
         this.tabs.forEach((tab, index) => {
@@ -8121,9 +8123,9 @@ class ArcaneLibraryMenu {
         const menuHeight = 500;
         
         // Close button
-        const closeButtonX = menuX + menuWidth - 40;
-        const closeButtonY = menuY + 2;
-        const closeButtonSize = 32;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
         
         if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
             y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
@@ -8133,7 +8135,7 @@ class ArcaneLibraryMenu {
         
         // Tab buttons
         const tabHeight = 35;
-        const tabStartY = menuY + 35;
+        const tabStartY = menuY + 50;
         const tabButtonWidth = menuWidth / 4;
         
         for (let i = 0; i < this.tabs.length; i++) {
@@ -8359,7 +8361,7 @@ class ArcaneLibraryMenu {
         
         // Render tabs
         const tabHeight = 35;
-        const tabStartY = menuY + 35;
+        const tabStartY = menuY + 50;
         const tabButtonWidth = menuWidth / 4;
         
         this.tabs.forEach((tab, index) => {
@@ -8409,23 +8411,22 @@ class ArcaneLibraryMenu {
         }
         
         // Red X close button at top right
-        const closeButtonX = menuX + menuWidth - 40;
-        const closeButtonY = menuY + 2;
-        const closeButtonSize = 32;
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
         
         ctx.save();
         ctx.globalAlpha = 1;
-        ctx.setTransform ? ctx.setTransform(1, 0, 0, 1, 0, 0) : undefined;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
         ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
         ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 20px Arial';
+        ctx.font = 'bold 18px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('\u00d7', closeButtonX + 16, closeButtonY + 16);
+        ctx.fillText('\u00d7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
         ctx.restore();
         
         ctx.globalAlpha = 1;
