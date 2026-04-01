@@ -936,8 +936,8 @@ export class TowerManager {
         // Base stats per tower type (from constructors)
         const baseStats = {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
-            'archer':      { damage: 20,  range: 155, fireRate: 1.8 },
-            'cannon':      { damage: 70,  range: 155, fireRate: 0.4, splashRadius: 50 },
+            'archer':      { damage: 35,  range: 155, fireRate: 1.5 },
+            'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
             'barricade':   { damage: 0,   range: 120, fireRate: 0.5, capacity: 4, duration: 4.0 },
             'poison':      { damage: 10,  range: 130, fireRate: 0.4 },
             'magic':       { damage: 40,  range: 130, fireRate: 1.0 },
@@ -954,7 +954,7 @@ export class TowerManager {
         if (base.splashRadius) result.baseSplashRadius = base.splashRadius;
         if (base.capacity) { result.baseCapacity = base.capacity; result.baseDuration = base.duration; }
         
-        // 1. Apply building presence multipliers (forge existence gives 1.25x dmg, 1.15x range)
+        // 1. Apply building presence multipliers (defaults to 1.0; other buildings may modify)
         const upgrades = this.buildingManager.towerUpgrades;
         result.damage = base.damage * upgrades.damage;
         result.range = base.range * upgrades.range;

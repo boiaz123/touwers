@@ -15,8 +15,8 @@ import { GuardPost } from './GuardPost.js';
 export class TowerRegistry {
     static #registry = {
         'basic': { class: BasicTower, cost: 50 },
-        'cannon': { class: CannonTower, cost: 160 },
-        'archer': { class: ArcherTower, cost: 90 },
+        'cannon': { class: CannonTower, cost: 250 },
+        'archer': { class: ArcherTower, cost: 150 },
         'magic': { class: MagicTower, cost: 175 },
         'barricade': { class: BarricadeTower, cost: 90 },
         'poison': { class: PoisonArcherTower, cost: 120 },

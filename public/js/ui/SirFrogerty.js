@@ -876,15 +876,6 @@ export class SirFrogerty {
             { x: -12 * s, y: -12 * s, r: 3.5 * s },
         ].forEach(sp => this._drawStar(ctx, sp.x, sp.y, sp.r, '#f8d420'));
 
-        // ── Jewel at band centre ──
-        ctx.beginPath();
-        ctx.arc(0, -3 * s, 5 * s, 0, Math.PI * 2);
-        ctx.fillStyle   = '#cc2244';
-        ctx.fill();
-        ctx.strokeStyle = '#ff6688';
-        ctx.lineWidth   = 1 * s;
-        ctx.stroke();
-
         ctx.restore();
     }
 

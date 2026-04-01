@@ -46,7 +46,7 @@ export class TowerForge extends Building {
             'poison': { level: 0, baseCost: 100, effect: [2, 3, 3, 4, 6] },
             
             // Cannon upgrades - available at forge level 3+
-            'cannon': { level: 0, baseCost: 120, damageEffect: 10, radiusEffect: 5 }
+            'cannon': { level: 0, baseCost: 120, damageEffect: 25, radiusEffect: 5 }
         };
         
         // Pre-computed grass blade positions to prevent per-frame flickering
@@ -1095,7 +1095,7 @@ export class TowerForge extends Building {
             name: 'Watch Tower Upgrade',
             description: `Increase Watch Tower damage by ${this.upgrades.basic.effect} per level`,
             level: this.upgrades.basic.level,
-            maxLevel: this.forgeLevel, // Capped at forge level
+            maxLevel: this.maxForgeLevel,
             baseCost: this.upgrades.basic.baseCost,
             cost: this.calculateUpgradeCost('basic'),
             icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">'
@@ -1108,7 +1108,7 @@ export class TowerForge extends Building {
             name: 'Barricade Tower Upgrade',
             description: `Increases enemies slowed per rubble and slow duration`,
             level: this.upgrades.barricade_effectiveness.level,
-            maxLevel: this.forgeLevel, // Capped at forge level
+            maxLevel: this.maxForgeLevel,
             baseCost: this.upgrades.barricade_effectiveness.baseCost,
             cost: this.calculateUpgradeCost('barricade_effectiveness'),
             icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
@@ -1120,7 +1120,7 @@ export class TowerForge extends Building {
             name: 'Archer Tower Upgrade',
             description: `+${this.upgrades.archer.damageEffect} damage & +${this.upgrades.archer.pierceEffect}% armor pierce per level`,
             level: this.upgrades.archer.level,
-            maxLevel: this.forgeLevel, // Capped at forge level
+            maxLevel: this.maxForgeLevel,
             baseCost: this.upgrades.archer.baseCost,
             cost: this.calculateUpgradeCost('archer'),
             icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">'
@@ -1133,7 +1133,7 @@ export class TowerForge extends Building {
                 name: 'Poison Archer Tower Upgrade',
                 description: `Increase Poison Archer Tower poison tick damage (cumulative: +2, +5, +8, +12, +18)`,
                 level: this.upgrades.poison.level,
-                maxLevel: this.forgeLevel, // Capped at forge level
+                maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.poison.baseCost,
                 cost: this.calculateUpgradeCost('poison'),
                 icon: '<img src="assets/towers/poison.png" class="upgrade-tower-icon">'
@@ -1147,7 +1147,7 @@ export class TowerForge extends Building {
                 name: 'Trebuchet Tower Upgrade',
                 description: `+${this.upgrades.cannon.damageEffect} damage & +${this.upgrades.cannon.radiusEffect} blast radius per level`,
                 level: this.upgrades.cannon.level,
-                maxLevel: this.forgeLevel, // Capped at forge level
+                maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.cannon.baseCost,
                 cost: this.calculateUpgradeCost('cannon'),
                 icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">'
@@ -1284,10 +1284,6 @@ export class TowerForge extends Building {
     }
     
     applyEffect(buildingManager) {
-        // Base forge effect
-        buildingManager.towerUpgrades.damage *= 1.25;
-        buildingManager.towerUpgrades.range *= 1.15;
-        
         // Apply mine income multiplier based on forge level
         const mineIncomeMultiplier = this.getMineIncomeMultiplier();
         if (buildingManager.mineIncomeMultiplier) {

@@ -4,7 +4,7 @@ export class CannonTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 155;
-        this.damage = 70;
+        this.damage = 100;
         this.splashRadius = 50;
         this.originalSplashRadius = 50; // Store original for upgrades
         this.fireRate = 0.4;
@@ -513,10 +513,10 @@ export class CannonTower extends Tower {
         return {
             name: 'Trebuchet Tower',
             description: 'Powerful stone tower with a massive trebuchet. Deals heavy area damage at long range.',
-            damage: '70 (AoE)',
+            damage: '100 (AoE)',
             range: '155',
             fireRate: '0.4/sec',
-            cost: 160,
+            cost: 250,
             icon: ''
         };
     }

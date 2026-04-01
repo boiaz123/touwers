@@ -1726,7 +1726,7 @@ export class UIManager {
             }
             
             if (forge.forgeLevel >= 3 && forge.upgrades.cannon.level > 0) {
-                effectsList.push(`Trebuchet: +${forge.upgrades.cannon.level * 10}`);
+                effectsList.push(`Trebuchet: +${forge.upgrades.cannon.level * 25}`);
             }
             
             // Calculate forge-level benefits (matches UnlockSystem.getMaxMines() logic)
@@ -1791,10 +1791,10 @@ export class UIManager {
             // Define base tower stats
             const baseTowerStats = {
                 'basic': { damage: 20 },
-                'archer': { damage: 15 },
+                'archer': { damage: 35 },
                 'barricade_effectiveness': { capacity: 4 },
                 'poison': { damage: 18 },
-                'cannon': { damage: 40, radius: 35 },
+                'cannon': { damage: 100, radius: 50 },
 
             };
             
@@ -1839,8 +1839,8 @@ export class UIManager {
                 } else if (upgrade.id === 'cannon') {
                     const baseDmg = baseTowerStats.cannon.damage;
                     const baseRadius = baseTowerStats.cannon.radius;
-                    const currentDmgBonus = forge.upgrades.cannon.level * 10;
-                    const nextDmgBonus = (forge.upgrades.cannon.level + 1) * 10;
+                    const currentDmgBonus = forge.upgrades.cannon.level * 25;
+                    const nextDmgBonus = (forge.upgrades.cannon.level + 1) * 25;
                     const currentRadius = baseRadius + (forge.upgrades.cannon.level * 5);
                     const nextRadius = baseRadius + ((forge.upgrades.cannon.level + 1) * 5);
                     currentValue = `${baseDmg + currentDmgBonus} (R${currentRadius})`;
@@ -1876,7 +1876,7 @@ export class UIManager {
                 } else if (upgrade.id === 'cannon') {
                     const baseDmg = baseTowerStats.cannon.damage;
                     const baseRad = baseTowerStats.cannon.radius;
-                    const curDmg = forge.upgrades.cannon.level * 10;
+                    const curDmg = forge.upgrades.cannon.level * 25;
                     const curRad = forge.upgrades.cannon.level * 5;
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
                     tooltipText += `<div>◯ Blast Radius: <span style="color: #FFD700;">${baseRad + curRad}px</span></div>`;
@@ -1898,7 +1898,7 @@ export class UIManager {
                         const nextInc = poisonEffects[forge.upgrades.poison.level] || 0;
                         tooltipText += `<div>Damage: +${nextInc}</div>`;
                     } else if (upgrade.id === 'cannon') {
-                        tooltipText += `<div>Damage: +10</div>`;
+                        tooltipText += `<div>Damage: +25</div>`;
                         tooltipText += `<div>Blast Radius: +5px</div>`;
                     }
                     if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
@@ -3189,7 +3189,7 @@ export class UIManager {
             case 'ArcherTower': {
                 const pierce = tower.armorPiercingPercent || 0;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 15)}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 35)}</span>
                     <span class="effect-badge">${sv(tower.range, tower.originalRange || 140)}</span>
                     <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/s')}</span>
                     ${pierce > 0 ? `<span class="effect-badge">${pierce}%</span>` : ''}
@@ -3197,10 +3197,10 @@ export class UIManager {
                 break;
             }
             case 'CannonTower': {
-                const radius = tower.splashRadius || 35;
-                const baseRadius = tower.originalSplashRadius || 35;
+                const radius = tower.splashRadius || 50;
+                const baseRadius = tower.originalSplashRadius || 50;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 40)}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 100)}</span>
                     <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
                     <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
                     <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
