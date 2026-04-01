@@ -53,7 +53,7 @@ export class Castle {
         // NEW: Castle upgrade system
         this.isSelected = false;
         this.fortificationLevel = 0;
-        this.maxFortificationLevel = 5;
+        this.maxFortificationLevel = 3;
         this.catapultLevel = 0;
         this.maxCatapultLevel = 3;
         this.reinforcementLevel = 0; // Unlocked at TowerForge level 5
@@ -695,23 +695,37 @@ export class Castle {
     }
     
     getUpgradeOptions() {
+        const healthIncrease = [50, 50, 100];
+        const healthAfterLevel = [150, 200, 300];
+        const nextIncrease = healthIncrease[this.fortificationLevel];
+        const description = this.fortificationLevel >= this.maxFortificationLevel
+            ? 'Castle walls at maximum strength'
+            : `Strengthen castle walls (+${nextIncrease} max health, total: ${healthAfterLevel[this.fortificationLevel]})`;
         const options = [
             {
                 id: 'fortification',
                 name: 'Fortification',
-                description: `Strengthen castle walls (+${50} max health)`,
+                description: description,
                 level: this.fortificationLevel,
                 maxLevel: this.maxFortificationLevel,
                 cost: this.calculateFortificationCost(),
                 icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><rect x='2' y='20' width='36' height='18' fill='#8B7355' stroke='#3D3020' stroke-width='1.2'/><rect x='2' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><rect x='16' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><rect x='30' y='12' width='8' height='8' fill='#7A6345' stroke='#3D3020' stroke-width='1'/><line x1='2' y1='27' x2='38' y2='27' stroke='#3D3020' stroke-width='0.8'/><line x1='2' y1='33' x2='38' y2='33' stroke='#3D3020' stroke-width='0.8'/><line x1='10' y1='20' x2='10' y2='38' stroke='#3D3020' stroke-width='0.8'/><line x1='20' y1='20' x2='20' y2='38' stroke='#3D3020' stroke-width='0.8'/><line x1='30' y1='20' x2='30' y2='38' stroke='#3D3020' stroke-width='0.8'/><path d='M16 38 L16 29 Q20 24 24 29 L24 38 Z' fill='#1A0A00' stroke='#3D3020' stroke-width='0.8'/><rect x='3' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/><rect x='17' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/><rect x='31' y='13' width='3' height='3' rx='0.5' fill='rgba(255,200,50,0.25)'/></svg>",
-                currentEffect: `Max Health: ${this.maxHealth}`
+                currentEffect: `Max Health: ${this.maxHealth}`,
+                forgeRequirements: [2, 3, 5]
             }
         ];
         return options;
     }
     
+    getMaxFortificationAllowed(forgeLevel) {
+        if (forgeLevel >= 5) return 3;
+        if (forgeLevel >= 3) return 2;
+        if (forgeLevel >= 2) return 1;
+        return 0;
+    }
+
     calculateFortificationCost() {
-        const costs = [400, 600, 900, 1300, 1800];
+        const costs = [500, 1000, 1750];
         if (this.fortificationLevel >= this.maxFortificationLevel) return null;
         return costs[this.fortificationLevel] || null;
     }
@@ -726,9 +740,9 @@ export class Castle {
         return Math.floor(500 * Math.pow(1.5, this.reinforcementLevel));
     }
     
-    purchaseUpgrade(upgradeId, gameState) {
+    purchaseUpgrade(upgradeId, gameState, forgeLevel = 0) {
         if (upgradeId === 'fortification') {
-            return this.purchaseFortification(gameState);
+            return this.purchaseFortification(gameState, forgeLevel);
         } else if (upgradeId === 'catapult') {
             return this.purchaseCatapult(gameState);
         } else if (upgradeId === 'reinforce_wall') {
@@ -737,16 +751,18 @@ export class Castle {
         return false;
     }
     
-    purchaseFortification(gameState) {
+    purchaseFortification(gameState, forgeLevel = 0) {
+        const allowedLevel = this.getMaxFortificationAllowed(forgeLevel);
         const cost = this.calculateFortificationCost();
         
-        if (!cost || gameState.gold < cost || this.fortificationLevel >= this.maxFortificationLevel) {
+        if (!cost || gameState.gold < cost || this.fortificationLevel >= this.maxFortificationLevel || this.fortificationLevel >= allowedLevel) {
             return false;
         }
         
+        const healthValues = [150, 200, 300];
         gameState.gold -= cost;
         this.fortificationLevel++;
-        this.maxHealth += 50;
+        this.maxHealth = healthValues[this.fortificationLevel - 1];
         this.health = this.maxHealth;
         
         return true;

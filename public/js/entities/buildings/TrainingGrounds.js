@@ -28,7 +28,7 @@ export class TrainingGrounds extends Building {
         
         // Tower-specific fire rate upgrades
         this.upgrades = {
-            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 }, // Fire rate: 0.5 → 1.0 at level 5
+            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 }, // Fire rate: 0.33 → 0.83 at level 5
             poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.08 } // Fire rate: 0.4 → 0.8 at level 5
         };
         
@@ -1125,7 +1125,7 @@ export class TrainingGrounds extends Building {
                 id: 'barricadeFireRate',
                 registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
-                description: `Increase Barricade Tower barrel rolling speed (0.5 → 1.0 at level 5)`,
+                description: `Increase Barricade Tower barrel rolling speed (0.33 → 0.83 at level 5)`,
                 icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
             {

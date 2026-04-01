@@ -188,23 +188,15 @@ export class PoisonArcherTower extends Tower {
         // Skip entirely if no poisoned enemies (early exit)
         if (this.poisonedEnemies.size === 0) return;
         
-        // Single pass: check duration and apply damage at tick times
+        // Single pass: apply poison damage on tick, remove if enemy dead or reached end
         for (const [enemy, state] of this.poisonedEnemies) {
-            // Direct health check
-            if (enemy.health <= 0) {
+            // Remove poison when enemy is dead or has left the map
+            if (enemy.health <= 0 || enemy.reachedEnd) {
                 this.poisonedEnemies.delete(enemy);
                 continue;
             }
             
-            // Decrement duration once per frame
-            state.duration -= deltaTime;
-            if (state.duration <= 0) {
-                this.poisonedEnemies.delete(enemy);
-                continue;
-            }
-            
-            // Use timestamp-based ticking instead of decrementing timer
-            // Avoids float arithmetic every frame - only check elapsed time
+            // Poison is permanent - tick damage every 2 seconds until death
             state.elapsedSinceTick += deltaTime;
             if (state.elapsedSinceTick >= 2.0) {
                 const poisonDamage = state.baseDamage + towerForgeBonus;
@@ -215,18 +207,13 @@ export class PoisonArcherTower extends Tower {
     }
     
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
-        const basePoisonDamage = 8;
-        const poisonDuration = 20.0;
+        const basePoisonDamage = 13;
         
-        // Refresh poison if already applied, or create new poison effect
-        if (this.poisonedEnemies.has(enemy)) {
-            const state = this.poisonedEnemies.get(enemy);
-            state.duration = poisonDuration;
-        } else {
+        // Apply poison if not already poisoned - poison lasts until enemy dies
+        if (!this.poisonedEnemies.has(enemy)) {
             this.poisonedEnemies.set(enemy, {
-                duration: poisonDuration,
                 baseDamage: basePoisonDamage,
-                elapsedSinceTick: 0 // Damage immediately on first tick
+                elapsedSinceTick: 0
             });
         }
     }
@@ -527,8 +514,8 @@ export class PoisonArcherTower extends Tower {
     static getInfo() {
         return {
             name: 'Poison Archer',
-            description: 'Ranger shoots poison arrows that apply a powerful toxin, dealing heavy damage over time. Low fire rate but devastating sustained DPS.',
-            damage: '10 direct + 8 poison/2s',
+            description: 'Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies.',
+            damage: '10 direct + 13 poison/2s',
             range: '130',
             fireRate: '0.4/sec',
             cost: 120,

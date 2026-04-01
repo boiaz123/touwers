@@ -938,14 +938,14 @@ export class TowerManager {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
             'archer':      { damage: 35,  range: 155, fireRate: 1.5 },
             'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
-            'barricade':   { damage: 0,   range: 120, fireRate: 0.5, capacity: 4, duration: 4.0 },
+            'barricade':   { damage: 0,   range: 120, fireRate: 1/3, capacity: 4, duration: 4.0 },
             'poison':      { damage: 10,  range: 130, fireRate: 0.4 },
             'magic':       { damage: 40,  range: 130, fireRate: 1.0 },
             'guard-post':  { damage: 0,   range: 0,   fireRate: 0 },
             'combination': { damage: 55,  range: 140, fireRate: 0.9 }
         };
         
-        const BASE_POISON_TICK_DAMAGE = 8; // Base poison damage per tick (every 2s)
+        const BASE_POISON_TICK_DAMAGE = 13; // Base poison damage per tick (every 2s)
         
         const base = baseStats[type];
         if (!base) return null;

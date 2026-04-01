@@ -717,7 +717,7 @@ export class UIManager {
             case 'poison':
                 statsHTML = `
                     <div><span>Hit Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Poison Tick:</span> ${statVal(s.poisonTickDamage || 8, s.basePoisonTickDamage || 8, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(20s duration)</span></div>
+                    <div><span>Poison Tick:</span> ${statVal(s.poisonTickDamage || 13, s.basePoisonTickDamage || 13, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(permanent)</span></div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
@@ -1711,14 +1711,16 @@ export class UIManager {
             }
             
             if (forge.upgrades.barricade_effectiveness.level > 0) {
-                const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
-                const duration = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
+                const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
+                const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
+                const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
+                const duration = 4 + forge.upgrades.barricade_effectiveness.level * durEffect;
                 effectsList.push(`Barricade: ${capacity} (${duration.toFixed(1)}s)`);
             }
             
             if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
                 let poisonDamage = 0;
-                const poisonEffects = [1, 2, 2, 3, 5];
+                const poisonEffects = [5, 5, 5, 5, 5];
                 for (let i = 0; i < forge.upgrades.poison.level && i < poisonEffects.length; i++) {
                     poisonDamage += poisonEffects[i];
                 }
@@ -1762,6 +1764,10 @@ export class UIManager {
                                     <span class="forge-benefit-label">Income:</span>
                                     <span class="forge-benefit-value">x${incomeMultiplier.toFixed(1)}</span>
                                 </div>
+                                <div class="forge-benefit-item">
+                                    <span class="forge-benefit-label">Fortification:</span>
+                                    <span class="forge-benefit-value">Max Level ${forge.forgeLevel >= 5 ? 3 : (forge.forgeLevel >= 3 ? 2 : (forge.forgeLevel >= 2 ? 1 : 0))}/3</span>
+                                </div>
                                 ${forge.forgeLevel >= 4 ? `<div class="forge-benefit-item">
                                     <span class="forge-benefit-label">Magic Academy:</span>
                                     <span class="forge-benefit-value">Unlocked</span>
@@ -1793,7 +1799,7 @@ export class UIManager {
                 'basic': { damage: 20 },
                 'archer': { damage: 35 },
                 'barricade_effectiveness': { capacity: 4 },
-                'poison': { damage: 18 },
+                'poison': { damage: 13 },
                 'cannon': { damage: 100, radius: 50 },
 
             };
@@ -1823,11 +1829,13 @@ export class UIManager {
                     nextValue = `${baseDmg + nextDmgBonus} (+${nextPierce}%)`;
                 } else if (upgrade.id === 'barricade_effectiveness') {
                     const baseCapacity = baseTowerStats.barricade_effectiveness.capacity;
-                    const currentCapacity = baseCapacity + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
-                    const nextCapacity = baseCapacity + Math.round((forge.upgrades.barricade_effectiveness.level + 1) * 1.8);
+                    const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
+                    const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
+                    const currentCapacity = baseCapacity + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
+                    const nextCapacity = baseCapacity + Math.round((forge.upgrades.barricade_effectiveness.level + 1) * capEffect);
                     const baseDuration = 4; // Base slow duration in seconds
-                    const currentDuration = baseDuration + forge.upgrades.barricade_effectiveness.level * 1.0;
-                    const nextDuration = baseDuration + (forge.upgrades.barricade_effectiveness.level + 1) * 1.0;
+                    const currentDuration = baseDuration + forge.upgrades.barricade_effectiveness.level * durEffect;
+                    const nextDuration = baseDuration + (forge.upgrades.barricade_effectiveness.level + 1) * durEffect;
                     currentValue = `${currentCapacity} (${currentDuration.toFixed(1)}s)`;
                     nextValue = `${nextCapacity} (${nextDuration.toFixed(1)}s)`;
                 } else if (upgrade.id === 'poison') {
@@ -1865,8 +1873,10 @@ export class UIManager {
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
                     tooltipText += `<div>Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
                 } else if (upgrade.id === 'barricade_effectiveness') {
-                    const curCap = baseTowerStats.barricade_effectiveness.capacity + Math.round(forge.upgrades.barricade_effectiveness.level * 1.8);
-                    const curDur = 4 + forge.upgrades.barricade_effectiveness.level * 1.0;
+                    const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
+                    const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
+                    const curCap = baseTowerStats.barricade_effectiveness.capacity + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
+                    const curDur = 4 + forge.upgrades.barricade_effectiveness.level * durEffect;
                     tooltipText += `<div>Enemies Slowed: <span style="color: #FFD700;">${curCap}</span></div>`;
                     tooltipText += `<div>Slow Duration: <span style="color: #FFD700;">${curDur.toFixed(1)}s</span></div>`;
                 } else if (upgrade.id === 'poison') {
@@ -1891,12 +1901,12 @@ export class UIManager {
                         tooltipText += `<div>Damage: +8</div>`;
                         tooltipText += `<div>Armor Pierce: +5%</div>`;
                     } else if (upgrade.id === 'barricade_effectiveness') {
-                        tooltipText += `<div>Enemies Slowed: +~2</div>`;
-                        tooltipText += `<div>Slow Duration: +1.0s</div>`;
+                        const capEff = forge.upgrades.barricade_effectiveness.effect.capacity;
+                        const durEff = forge.upgrades.barricade_effectiveness.effect.duration;
+                        tooltipText += `<div>Enemies Slowed: +${capEff.toFixed(1)} (~${Math.round(capEff)})</div>`;
+                        tooltipText += `<div>Slow Duration: +${durEff.toFixed(1)}s</div>`;
                     } else if (upgrade.id === 'poison') {
-                        const poisonEffects = [1, 2, 2, 3, 5];
-                        const nextInc = poisonEffects[forge.upgrades.poison.level] || 0;
-                        tooltipText += `<div>Damage: +${nextInc}</div>`;
+                        tooltipText += `<div>Damage: +5</div>`;
                     } else if (upgrade.id === 'cannon') {
                         tooltipText += `<div>Damage: +25</div>`;
                         tooltipText += `<div>Blast Radius: +5px</div>`;
@@ -1942,7 +1952,7 @@ export class UIManager {
     }
 
     calculatePoisonBonus(level) {
-        const poisonEffects = [1, 2, 2, 3, 5];
+        const poisonEffects = [5, 5, 5, 5, 5];
         let total = 0;
         for (let i = 0; i < level && i < poisonEffects.length; i++) {
             total += poisonEffects[i];
@@ -3222,9 +3232,9 @@ export class UIManager {
             }
             case 'PoisonArcherTower': {
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 18)}</span>
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 10)}</span>
                     <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.8, '/s')}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
                 `;
                 break;
             }
@@ -3897,9 +3907,16 @@ export class UIManager {
         if (castleUpgrades.length > 0) {
             contentHTML += `<div class="upgrade-category"><div class="upgrade-category-header">Castle Upgrades</div>`;
             
+            const fortReqLabels = ['Forge Lv2', 'Forge Lv3', 'Forge Lv5'];
+            const fortHealthValues = [150, 200, 300];
+            const fortCosts = [500, 1000, 1750];
+            const maxFortAllowed = castle.getMaxFortificationAllowed(forgeLevel);
+            
             castleUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
-                const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const isLocked = !isMaxed && upgrade.level >= maxFortAllowed;
+                const canAfford = !isLocked && upgrade.cost && this.gameState.gold >= upgrade.cost;
+                const reqLabel = !isMaxed ? fortReqLabels[upgrade.level] : '';
                 
                 contentHTML += `
                     <div class="panel-upgrade-item ${isMaxed ? 'maxed' : ''}">
@@ -3915,16 +3932,17 @@ export class UIManager {
                                     </div>
                                 </div>
                                 <div style="font-size: 0.8rem; color: rgba(200, 200, 200, 0.8); margin-top: 0.3rem;">${upgrade.currentEffect}</div>
+                                ${!isMaxed ? `<div style="font-size: 0.75rem; color: ${isLocked ? '#ff9966' : '#aaffaa'}; margin-top: 0.2rem;">${isLocked ? `Locked - Requires ${reqLabel}` : `Available (${reqLabel})`}</div>` : ''}
                             </div>
                         </div>
                         <div class="upgrade-action-row">
                             <div class="upgrade-cost-display ${isMaxed ? 'maxed' : canAfford ? 'affordable' : ''}">
-                                ${isMaxed ? 'MAX' : upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : 'N/A'}
+                                ${isMaxed ? 'MAX' : isLocked ? `Locked` : upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : 'N/A'}
                             </div>
                             <button class="upgrade-button panel-upgrade-btn" 
                                     data-castle-upgrade="${upgrade.id}" 
-                                    ${isMaxed || !canAfford ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : 'Upgrade'}
+                                    ${isMaxed || isLocked || !canAfford ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : isLocked ? 'Locked' : 'Upgrade'}
                             </button>
                         </div>
                     </div>
@@ -3992,7 +4010,7 @@ export class UIManager {
         document.querySelectorAll('[data-castle-upgrade]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const upgradeId = btn.dataset.castleUpgrade;
-                if (castle.purchaseUpgrade(upgradeId, this.gameState)) {
+                if (castle.purchaseUpgrade(upgradeId, this.gameState, forgeLevel)) {
                     // Play upgrade SFX
                     if (this.stateManager.audioManager) {
                         this.stateManager.audioManager.playSFX('upgrade');

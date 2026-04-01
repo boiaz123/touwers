@@ -4,7 +4,7 @@ export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 120;
-        this.fireRate = 0.5; // Fires a barrel every 2 seconds
+        this.fireRate = 1/3; // Fires a barrel every 3 seconds
         
         this.defenders = [
             { angle: 0, pushAnimation: 0, hasBarrel: true, barrelReloadTimer: 0 },
@@ -658,7 +658,7 @@ export class BarricadeTower extends Tower {
             description: 'Defenders roll barrels to create rubble clouds that slow enemies. Multiple clouds can exist simultaneously.',
             damage: 'None',
             range: '120',
-            fireRate: '0.5/sec',
+            fireRate: '0.33/sec',
             cost: 90,
             icon: ''
         };

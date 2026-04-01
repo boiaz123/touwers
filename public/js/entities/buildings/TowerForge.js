@@ -38,12 +38,12 @@ export class TowerForge extends Building {
         this.upgrades = {
             // Basic towers - always available at forge level 1
             'basic': { level: 0, baseCost: 80, effect: 8 },
-            'barricade_effectiveness': { level: 0, baseCost: 150, effect: { capacity: 1.8, duration: 1.0 } }, // Capacity: 4→13, Duration: 4s→9s
+            'barricade_effectiveness': { level: 0, baseCost: 125, effect: { capacity: 2.0, duration: 1.5 } }, // Capacity: 4→14, Duration: 4s→11.5s
             'archer': { level: 0, baseCost: 100, damageEffect: 8, pierceEffect: 5 },
             
             // Poison upgrades - available at forge level 2+
-            // Tick damage upgrades: +2, +3, +3, +4, +6 (cumulative: 2, 5, 8, 12, 18)
-            'poison': { level: 0, baseCost: 100, effect: [2, 3, 3, 4, 6] },
+            // Tick damage upgrades: +5 per level (base: 13, cumulative: 18, 23, 28, 33, 38)
+            'poison': { level: 0, baseCost: 200, effect: [5, 5, 5, 5, 5] },
             
             // Cannon upgrades - available at forge level 3+
             'cannon': { level: 0, baseCost: 120, damageEffect: 25, radiusEffect: 5 }
@@ -1131,7 +1131,7 @@ export class TowerForge extends Building {
             options.push({
                 id: 'poison',
                 name: 'Poison Archer Tower Upgrade',
-                description: `Increase Poison Archer Tower poison tick damage (cumulative: +2, +5, +8, +12, +18)`,
+                description: `Increase Poison Archer Tower poison tick damage (+5 per upgrade, base: 13)`,
                 level: this.upgrades.poison.level,
                 maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.poison.baseCost,
@@ -1165,20 +1165,20 @@ export class TowerForge extends Building {
         let nextUnlock = "";
         
         if (isMaxed) {
-            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nMagic Academy Unlocked";
+            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nMagic Academy Unlocked\nCastle Fortification Level 3 available";
         } else {
             switch(nextLevel) {
                 case 2:
-                    nextUnlock = "Unlocks: Poison Archer Tower and doubles Mine income";
+                    nextUnlock = "Unlocks: Poison Archer Tower, doubles Mine income\nCastle Fortification Level 1 available (500g)";
                     break;
                 case 3:
-                    nextUnlock = "Unlocks: Trebuchet Tower, an additional Gold Mine and 2.5x Mine Income";
+                    nextUnlock = "Unlocks: Trebuchet Tower, an additional Gold Mine and 2.5x Mine Income\nCastle Fortification Level 2 available (1000g)";
                     break;
                 case 4:
                     nextUnlock = "Unlocks: Magic Academy Building and 3x Mine Income";
                     break;
                 case 5:
-                    nextUnlock = "Unlocks: Additional Gold Mine, Magic Academy and 3.5x Mine Income\nMagic Academy now available to build (Maximum Level)";
+                    nextUnlock = "Unlocks: Additional Gold Mine, Magic Academy and 3.5x Mine Income\nCastle Fortification Level 3 available (1750g) (Maximum Level)";
                     break;
                 default:
                     nextUnlock = "Max Level Reached";
@@ -1209,10 +1209,10 @@ export class TowerForge extends Building {
         if (!upgrade || upgrade.level >= this.forgeLevel) return null;
         const costTables = {
             'basic':                    [100, 150, 250, 375, 550],
-            'archer':                   [100, 175, 275, 425, 625],
-            'barricade_effectiveness':  [150, 250, 400, 600, 900],
-            'poison':                   [100, 175, 275, 425, 625],
-            'cannon':                   [125, 200, 325, 500, 750]
+            'archer':                   [150, 275, 450, 800, 1225],
+            'barricade_effectiveness':  [125, 250, 500, 750, 1000],
+            'poison':                   [200, 300, 500, 830, 1350],
+            'cannon':                   [225, 450, 800, 1215, 1525]
         };
         const table = costTables[upgradeType];
         if (!table) return null;
