@@ -716,8 +716,7 @@ export class UIManager {
                 break;
             case 'poison':
                 statsHTML = `
-                    <div><span>Hit Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Poison Tick:</span> ${statVal(s.poisonTickDamage || 13, s.basePoisonTickDamage || 13, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(permanent)</span></div>
+                    <div><span>Poison Damage:</span> ${statVal(s.poisonTickDamage || 13, s.basePoisonTickDamage || 13, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(permanent)</span></div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
@@ -1612,9 +1611,9 @@ export class UIManager {
                 costDisplay.textContent = tower.defenderDeadCooldown.toFixed(1) + 's';
             }
         } else if (hasDefender) {
-            const costDisplay = gpPanel.querySelector('.upgrade-cost-display');
-            if (costDisplay && costDisplay.textContent.includes('HP')) {
-                costDisplay.textContent = `${tower.defender.health}/${tower.defender.maxHealth} HP`;
+            const costDisplay = gpPanel.querySelector('#guard-post-defender-hp');
+            if (costDisplay) {
+                costDisplay.textContent = `${Math.round(tower.defender.health)}/${Math.round(tower.defender.maxHealth)} HP`;
             }
         } else if (canHire) {
             // Update hire button affordability
@@ -1644,12 +1643,12 @@ export class UIManager {
         // Update castle health display
         const panel = document.getElementById('castle-panel');
         if (panel) {
-            const healthBar = panel.querySelector('.upgrade-level-bar-fill');
-            const healthText = panel.querySelector('.upgrade-level-display');
+            const healthBar = panel.querySelector('#castle-hp-bar');
+            const healthText = panel.querySelector('#castle-hp-text');
             if (healthBar && healthText) {
                 const pct = (castle.health / castle.maxHealth) * 100;
                 healthBar.style.width = pct + '%';
-                healthText.innerHTML = `Health: ${castle.health}/${castle.maxHealth}<div class="upgrade-level-bar"><div class="upgrade-level-bar-fill" style="width: ${pct}%"></div></div>`;
+                healthText.textContent = `${Math.round(castle.health)}/${Math.round(castle.maxHealth)} HP`;
             }
         }
 
@@ -3094,7 +3093,7 @@ export class UIManager {
                             </div>
                         </div>
                         <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display">${tower.defender.health}/${tower.defender.maxHealth} HP</div>
+                            <div class="upgrade-cost-display" id="guard-post-defender-hp">${Math.round(tower.defender.health)}/${Math.round(tower.defender.maxHealth)} HP</div>
                         </div>
                     </div>
                 </div>
@@ -3231,8 +3230,15 @@ export class UIManager {
                 break;
             }
             case 'PoisonArcherTower': {
+                let poisonForgeBonus = 0;
+                if (this.towerManager.cachedForges && this.towerManager.cachedForges.length > 0) {
+                    const fm = this.towerManager.cachedForges[0].getUpgradeMultipliers();
+                    poisonForgeBonus = fm.poisonDamageBonus || 0;
+                }
+                const poisonTickDmg = 13 + poisonForgeBonus;
+                const basePoisonTickDmg = 13;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 10)}</span>
+                    <span class="effect-badge">${sv(poisonTickDmg, basePoisonTickDmg, '/2s')}</span>
                     <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
                     <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
                 `;
@@ -3889,11 +3895,11 @@ export class UIManager {
                             <div class="forge-name">Castle</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">${currentHealth}/${maxHealth} HP</span>
+                            <span class="effect-badge" id="castle-hp-text">${Math.round(currentHealth)}/${Math.round(maxHealth)} HP</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem;">
                             <div style="flex: 1; height: 8px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid #666;">
-                                <div style="height: 100%; width: ${healthPercent}%; background: linear-gradient(90deg, #ff4444, #ff9900);"></div>
+                                <div id="castle-hp-bar" style="height: 100%; width: ${healthPercent}%; background: linear-gradient(90deg, #ff4444, #ff9900);"></div>
                             </div>
                         </div>
                     </div>

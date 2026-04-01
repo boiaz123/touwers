@@ -4917,7 +4917,8 @@ class UpgradesMenu {
             {
                 id: 'training-gear',
                 name: 'Training Gear',
-                description: 'Unlocks the ability to build Training Grounds in levels',
+                description: 'An old armory crate salvaged from the barracks. The gear inside is worn but reliable — enough to train a handful of brave volunteers to stand guard.',
+                effect: 'Unlocks Training Grounds building in levels\nAllows hiring combat defenders to protect towers\nDefenders fight enemies and respawn for a fee',
                 cost: 500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -4942,7 +4943,8 @@ class UpgradesMenu {
             {
                 id: 'musical-equipment',
                 name: 'Musical Equipment',
-                description: 'Places a Bard on the settlement square who plays your unlocked music when clicked',
+                description: 'A finely crafted lyre and carrying case, left behind by a traveling minstrel. With the right instrument, even a siege feels less grim.',
+                effect: 'Permanently adds Niels the Bard to your settlement\nSpeak to him to access your music collection\nUnlocks music playback from the Arcane Library',
                 cost: 300,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -4993,7 +4995,8 @@ class UpgradesMenu {
             {
                 id: 'wooden-chest',
                 name: 'Wooden Chest',
-                description: 'Increase starting gold by 100',
+                description: 'A battered supply chest recovered from an abandoned outpost. The coins inside smell of old campaigns.',
+                effect: 'Permanently grants +100 starting gold in every level\nStacks with other gold chest bonuses\nGold is added at the very start of each battle',
                 cost: 250,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5021,7 +5024,8 @@ class UpgradesMenu {
             {
                 id: 'golden-chest',
                 name: 'Golden Chest',
-                description: 'Increase starting gold by another 100',
+                description: 'A heavily reinforced chest bearing the royal seal. The lock is already broken — whoever owned this left in quite a hurry.',
+                effect: 'Permanently grants +100 starting gold in every level\nStacks with the Wooden Chest bonus\nGold is added at the very start of each battle',
                 cost: 400,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5060,7 +5064,8 @@ class UpgradesMenu {
             {
                 id: 'platinum-chest',
                 name: 'Platinum Chest',
-                description: 'Increase starting gold by another 100',
+                description: 'A seamless chest carved from polished platinum ore. Enchanted to stay sealed — until it recognized you.',
+                effect: 'Permanently grants +100 starting gold in every level\nStacks with previous gold bonuses\nGold is added at the very start of each battle',
                 cost: 600,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5103,7 +5108,8 @@ class UpgradesMenu {
             {
                 id: 'diamond-pickaxe',
                 name: 'Diamond Pickaxe',
-                description: 'Increase gem mining chance in gold mines',
+                description: 'Forged from compressed diamond crystals. The miners say it hums softly near gemstone veins, as if drawn to them.',
+                effect: 'Increases gem drop chance from Gold Mines\nGems are used at the Forge for tower upgrades\nHigher gem yields mean more powerful enhancements',
                 cost: 800,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5130,7 +5136,8 @@ class UpgradesMenu {
             {
                 id: 'magic-academy-unlock',
                 name: 'Academy Blueprints',
-                description: 'Unlocks the ability to build the Magic Academy in levels',
+                description: 'Detailed schematics for an arcane academy, scrawled in a language only mages can read. Someone has helpfully added illustrations.',
+                effect: 'Unlocks Magic Academy building in levels\nEnables construction of advanced arcane towers\nUnlocks gem-powered tower enhancements at the Forge',
                 cost: 1500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5165,7 +5172,8 @@ class UpgradesMenu {
             {
                 id: 'superweapon-lab-unlock',
                 name: 'Super Weapon Lab Plans',
-                description: 'Unlocks the ability to build the Super Weapon Lab in levels',
+                description: 'Classified engineering documents wrapped in wax paper. The diagrams show devices that probably should not exist, and almost certainly work.',
+                effect: 'Unlocks Super Weapon Lab building in levels\nEnables construction of combination towers\nUnlocks powerful siege weapons for your defense',
                 cost: 2500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5227,6 +5235,7 @@ class UpgradesMenu {
                 drawIcon: upgrade.drawIcon,
                 category: upgrade.category,
                 type: 'upgrade',
+                effect: upgrade.effect,
                 hovered: false,
                 isPurchased: isPurchased,
                 canPurchase: canPurchase,

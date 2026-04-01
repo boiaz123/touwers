@@ -515,10 +515,10 @@ export class PoisonArcherTower extends Tower {
         return {
             name: 'Poison Archer',
             description: 'Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies.',
-            damage: '10 direct + 13 poison/2s',
+            damage: '13 poison/2s',
             range: '130',
             fireRate: '0.4/sec',
-            cost: 120,
+            cost: 200,
             icon: ''
         };
     }

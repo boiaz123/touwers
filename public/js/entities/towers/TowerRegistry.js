@@ -17,10 +17,10 @@ export class TowerRegistry {
         'basic': { class: BasicTower, cost: 50 },
         'cannon': { class: CannonTower, cost: 250 },
         'archer': { class: ArcherTower, cost: 150 },
-        'magic': { class: MagicTower, cost: 175 },
+        'magic': { class: MagicTower, cost: 450 },
         'barricade': { class: BarricadeTower, cost: 90 },
-        'poison': { class: PoisonArcherTower, cost: 120 },
-        'combination': { class: CombinationTower, cost: 275 },
+        'poison': { class: PoisonArcherTower, cost: 200 },
+        'combination': { class: CombinationTower, cost: 750 },
         'guard-post': { class: GuardPost, cost: 150 }
     };
 

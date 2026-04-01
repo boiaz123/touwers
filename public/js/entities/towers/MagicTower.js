@@ -572,7 +572,7 @@ export class MagicTower extends Tower {
             damage: '40 + elemental bonuses',
             range: '130',
             fireRate: '1.0/sec',
-            cost: 175,
+            cost: 450,
             icon: ''
         };
     }
