@@ -839,9 +839,9 @@ export class Castle {
             case 1:
                 return 200;
             case 2:
-                return 350;
+                return 300;
             case 3:
-                return 500;
+                return 450;
             default:
                 return null;
         }
@@ -867,7 +867,7 @@ export class Castle {
             return [{
                 id: 'defender_active',
                 name: `Defender Level ${this.defender.level} Active`,
-                description: `Your defender is actively protecting the castle (${this.defender.health}/${this.defender.maxHealth} HP)`,
+                description: `Your defender is actively protecting the castle (${Math.round(this.defender.health)}/${this.defender.maxHealth} HP)`,
                 type: 'defender_status',
                 canHire: false,
                 icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 22 22'><path d='M11 2 L19 5 L19 12 Q19 17 11 20 Q3 17 3 12 L3 5 Z' fill='#4A7A5A' stroke='#253A2D' stroke-width='1.2'/><path d='M11 5 L17 7.5 L17 12 Q17 16 11 18.5 Q5 16 5 12 L5 7.5 Z' fill='#6A9A7A'/><line x1='11' y1='5' x2='11' y2='18.5' stroke='#3A5A4A' stroke-width='1'/></svg>"
@@ -902,7 +902,7 @@ export class Castle {
         options.push({
             id: 'defender_1',
             name: 'Hire Level 1 Defender',
-            description: 'Light armored soldier with sword and shield (150 HP, 8 DMG)',
+            description: 'Light armored soldier with sword and shield (70 HP, 15 DMG)',
             type: 'defender_hire',
             level: 1,
             cost: this.calculateDefenderCost(1),
@@ -915,7 +915,7 @@ export class Castle {
             options.push({
                 id: 'defender_2',
                 name: 'Hire Level 2 Defender',
-                description: 'Medium armored knight with two-handed sword (300 HP, 15 DMG)',
+                description: 'Medium armored knight with two-handed sword (100 HP, 20 DMG)',
                 type: 'defender_hire',
                 level: 2,
                 cost: this.calculateDefenderCost(2),
@@ -929,7 +929,7 @@ export class Castle {
             options.push({
                 id: 'defender_3',
                 name: 'Hire Level 3 Defender',
-                description: 'Heavy armored tank with massive sword (500 HP, 25 DMG)',
+                description: 'Heavy armored tank with massive sword (140 HP, 30 DMG)',
                 type: 'defender_hire',
                 level: 3,
                 cost: this.calculateDefenderCost(3),

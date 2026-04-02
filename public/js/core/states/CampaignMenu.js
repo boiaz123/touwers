@@ -1,12 +1,12 @@
 ﻿import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 
-// Biome colours for each campaign card background
+// Unified stone base with campaign-specific accent colours
 const CAMPAIGN_BIOME = {
-    'campaign-1': { from: '#122a12', to: '#0a160a', accent: '#4a8c3f' },  // Woodland green
-    'campaign-2': { from: '#141e30', to: '#0a1020', accent: '#6a85b5' },  // Mountain blue-grey
-    'campaign-3': { from: '#2e1c06', to: '#180e03', accent: '#c9803a' },  // Desert amber
-    'campaign-4': { from: '#1b0a2e', to: '#0f0416', accent: '#8a44c8' },  // Frog King purple
-    'campaign-5': { from: '#1a1a1a', to: '#0f0f0f', accent: '#888888' },  // Sandbox neutral
+    'campaign-1': { from: '#1c1810', to: '#130f09', accent: '#4e8c42' },  // Forest emerald accent
+    'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
+    'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
+    'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
+    'campaign-5': { from: '#1c1810', to: '#130f09', accent: '#8a7a60' },  // Sandbox pewter accent
 };
 
 export class CampaignMenu {
@@ -369,14 +369,14 @@ export class CampaignMenu {
         const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
 
         // Drop shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(b.x + 5, b.y + 5, b.width, b.height);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(b.x + 4, b.y + 4, b.width, b.height);
 
-        // Card background gradient
-        const bg = ctx.createLinearGradient(b.x, b.y, b.x + b.width * 0.6, b.y + b.height);
+        // Card background — unified dark stone for all campaigns
+        const bg = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.height);
         if (isSelected) {
-            bg.addColorStop(0, this._lighten(biome.from, 18));
-            bg.addColorStop(1, biome.from);
+            bg.addColorStop(0, '#28201a');
+            bg.addColorStop(1, '#1a140e');
         } else {
             bg.addColorStop(0, biome.from);
             bg.addColorStop(1, biome.to);
@@ -384,41 +384,80 @@ export class CampaignMenu {
         ctx.fillStyle = bg;
         ctx.fillRect(b.x, b.y, b.width, b.height);
 
-        // Right-side dark fade overlay for readability
-        const fade = ctx.createLinearGradient(b.x + b.width * 0.55, b.y, b.x + b.width, b.y);
+        // Subtle horizontal stone grain lines
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(b.x, b.y, b.width, b.height);
+        ctx.clip();
+        for (let g = 0; g < 4; g++) {
+            const gy = b.y + (b.height / 5) * (g + 1);
+            ctx.strokeStyle = 'rgba(255,220,150,0.028)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(b.x, gy);
+            ctx.lineTo(b.x + b.width, gy);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // Right-side dark fade
+        const fade = ctx.createLinearGradient(b.x + b.width * 0.6, b.y, b.x + b.width, b.y);
         fade.addColorStop(0, 'rgba(0,0,0,0)');
-        fade.addColorStop(1, 'rgba(0,0,0,0.45)');
+        fade.addColorStop(1, 'rgba(0,0,0,0.40)');
         ctx.fillStyle = fade;
         ctx.fillRect(b.x, b.y, b.width, b.height);
 
-        // Bottom progress bar strip (always rendered)
+        // Bottom progress strip
         const stripH = 22;
         const stripY = b.y + b.height - stripH;
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillStyle = 'rgba(0,0,0,0.38)';
         ctx.fillRect(b.x, stripY, b.width, stripH);
 
-        // Border
+        // Outer border
         if (isSelected) {
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
         } else if (isHovered) {
-            ctx.strokeStyle = biome.accent + 'dd';
+            ctx.strokeStyle = biome.accent + 'cc';
             ctx.lineWidth = 1.5;
         } else {
-            ctx.strokeStyle = biome.accent + '66';
+            ctx.strokeStyle = 'rgba(160,130,80,0.38)';
             ctx.lineWidth = 1;
         }
         ctx.strokeRect(b.x, b.y, b.width, b.height);
 
+        // Inner accent border (selected only)
+        if (isSelected) {
+            ctx.strokeStyle = 'rgba(212,175,55,0.20)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6);
+        }
+
         // Left accent bar
-        ctx.fillStyle = isSelected ? '#ffd700' : biome.accent + 'dd';
-        ctx.fillRect(b.x, b.y, isSelected ? 5 : 3, b.height);
+        ctx.fillStyle = isSelected ? '#d4af37' : biome.accent + 'cc';
+        ctx.fillRect(b.x, b.y, isSelected ? 5 : 4, b.height);
+
+        // Corner ornament (diamond) on accent bar edge
+        const oc = isSelected ? '#d4af37' : biome.accent + 'aa';
+        this._drawCornerOrnament(ctx, b.x + 2, b.y + Math.floor((b.height - stripH) / 2), 4, oc);
 
         this._renderUnlockedCard(ctx, campaign, b, isSelected, biome);
     }
 
     _renderLockedCard(ctx, campaign, b) {
         // No-op: locked cards are not displayed in the campaign list
+    }
+
+    /** Small diamond ornament for card decoration */
+    _drawCornerOrnament(ctx, x, y, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - r);
+        ctx.lineTo(x + r, y);
+        ctx.lineTo(x, y + r);
+        ctx.lineTo(x - r, y);
+        ctx.closePath();
+        ctx.fill();
     }
 
     _renderUnlockedCard(ctx, campaign, b, isSelected, biome) {
@@ -445,10 +484,11 @@ export class CampaignMenu {
         ctx.fillStyle = isSelected ? '#ffd700' : '#e8d49a';
         ctx.fillText(campaign.name, textX, nameY);
 
-        // Difficulty dot + text
-        ctx.font = '13px serif';
-        ctx.fillStyle = this._difficultyColor(campaign.difficulty);
-        ctx.fillText(`\u25CF  ${campaign.difficulty}`, textX, nameY + 28);
+        // Difficulty — crossed swords icon with muted period-appropriate colour
+        const diffColor = this._difficultyColor(campaign.difficulty);
+        ctx.font = '12px serif';
+        ctx.fillStyle = diffColor;
+        ctx.fillText(`\u2694  ${campaign.difficulty}`, textX, nameY + 28);
 
         // Level count (top right of card)
         const totalLevels = campaign.levelCount || 5;
@@ -555,7 +595,7 @@ export class CampaignMenu {
 
         ctx.font = '12px serif';
         ctx.fillStyle = this._difficultyColor(campaign.difficulty);
-        ctx.fillText(`\u25CF ${campaign.difficulty}`, cx + 48, cy + 30);
+        ctx.fillText(`\u2694 ${campaign.difficulty}`, cx + 48, cy + 30);
         cy += 56;
 
         // Divider
@@ -809,12 +849,12 @@ export class CampaignMenu {
 
     _difficultyColor(difficulty) {
         switch (difficulty) {
-            case 'Apprentice':   return '#4CAF50';
-            case 'Warrior':      return '#FFC107';
-            case 'Champion':     return '#FF7043';
-            case 'Legendary':    return '#AB47BC';
-            case 'Testing':      return '#78909C';
-            default:             return '#d4af37';
+            case 'Apprentice':   return '#7ab870';  // muted sage green
+            case 'Warrior':      return '#c8a030';  // warm amber gold
+            case 'Champion':     return '#c06040';  // muted terracotta
+            case 'Legendary':    return '#9055b0';  // deep mauve
+            case 'Testing':      return '#8a7a60';  // parchment grey-brown
+            default:             return '#c8a878';
         }
     }
 

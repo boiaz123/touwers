@@ -593,6 +593,11 @@ export class UIManager {
         // Clear building selection
         this.gameplayState.selectedBuildingType = null;
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
+
+        // Trigger placement preview immediately at last known mouse position
+        if (this.gameplayState.level) {
+            this.gameplayState.refreshPlacementPreview();
+        }
     }
 
     selectBuilding(btn) {
@@ -631,6 +636,11 @@ export class UIManager {
         // Clear tower selection
         this.gameplayState.selectedTowerType = null;
         this.gameplayState.selectedBuildingType = buildingType;
+
+        // Trigger placement preview immediately at last known mouse position
+        if (this.gameplayState.level) {
+            this.gameplayState.refreshPlacementPreview();
+        }
     }
 
     showTowerInfo(towerType) {
@@ -3043,12 +3053,12 @@ export class UIManager {
             } else {
                 // Show hiring options for available defender levels
                 const maxDefenderLevel = (trainingGrounds && trainingGrounds.defenderMaxLevel) ? trainingGrounds.defenderMaxLevel : 1;
-                const defenderCosts = [100, 150, 200];
+                const defenderCosts = [200, 300, 450];
                 const defenderLabels = ['Level 1', 'Level 2 - Medium', 'Level 3 - Heavy'];
                 const defenderDescriptions = [
-                    'Fast, weak defender. Good for early game.',
-                    'Balanced defender with moderate stats.',
-                    'Slow, heavily armored tank. Maximum strength.'
+                    'Fast defender (70 HP, 15 DMG). Good for early game.',
+                    'Balanced defender (100 HP, 20 DMG). Moderate stats.',
+                    'Heavily armored tank (140 HP, 30 DMG). Maximum strength.'
                 ];
                 const defenderIcons = [
                     "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><line x1='10' y1='35' x2='30' y2='8' stroke='#C8A030' stroke-width='3' stroke-linecap='round'/><rect x='6' y='20' width='12' height='3' rx='1.5' fill='#8A5A10' stroke='#3A2005' stroke-width='1' transform='rotate(-44 12 21.5)'/><circle cx='10' cy='35' r='3.5' fill='#7A4A10' stroke='#3A2005' stroke-width='1'/></svg>",

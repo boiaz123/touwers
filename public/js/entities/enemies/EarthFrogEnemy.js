@@ -50,6 +50,9 @@ export class EarthFrogEnemy extends BaseEnemy {
         // Update base animations and cooldowns
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+
+        // Don't move while engaged with a defender
+        if (this.isAttackingDefender) { return; }
         
         // Particle effects
         this.particleSpawnCounter += deltaTime;

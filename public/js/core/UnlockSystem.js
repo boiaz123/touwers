@@ -76,6 +76,8 @@ export class UnlockSystem {
     onTrainingGroundsBuilt() {
         if (this.trainingGroundsCount < 1) {
             this.trainingGroundsCount++;
+            this.unlockedTowers.add('guard-post');
+            this.maxGuardPosts = 1;
             return true;
         }
         return false;
@@ -137,9 +139,7 @@ export class UnlockSystem {
     onTrainingGroundsUpgraded(newLevel) {
         switch(newLevel) {
             case 4:
-                // Training Grounds level 4 unlocks Guard Post tower
-                this.unlockedTowers.add('guard-post');
-                this.maxGuardPosts = 1;
+                // Guard post is now unlocked at placement, nothing special for level 4
                 break;
             case 5:
                 // Training Grounds level 5 keeps guard post limit at 1

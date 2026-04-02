@@ -35,7 +35,7 @@ export class GuardPost extends Tower {
         this.clickBoxHeight = 80;
         
         // Build cost
-        this.buildCost = 150;
+        this.buildCost = 250;
         
         // Defender spawning position - will be set based on path
         this.defenderSpawnX = x - 35;
@@ -136,7 +136,7 @@ export class GuardPost extends Tower {
         }
         
         // Cost to hire - increases with level
-        const costs = { 1: 100, 2: 150, 3: 200 };
+        const costs = { 1: 200, 2: 300, 3: 450 };
         const cost = costs[level] || 100;
         
         if (gameState.gold < cost) {

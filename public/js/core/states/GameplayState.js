@@ -733,17 +733,19 @@ export class GameplayState {
     }
     
     handleMouseMove(e) {
-        if (!this.selectedTowerType && !this.selectedBuildingType) {
-            this.level.setPlacementPreview(0, 0, false);
-            return;
-        }
-        
         const rect = this.stateManager.canvas.getBoundingClientRect();
         // Account for CSS scaling
         const scaleX = this.stateManager.canvas.width / rect.width;
         const scaleY = this.stateManager.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
+        this.lastMouseX = x;
+        this.lastMouseY = y;
+
+        if (!this.selectedTowerType && !this.selectedBuildingType) {
+            this.level.setPlacementPreview(0, 0, false);
+            return;
+        }
         
         let size = 2; // Default tower size
         if (this.selectedBuildingType) {
@@ -753,11 +755,27 @@ export class GameplayState {
         }
         this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
     }
+
+    refreshPlacementPreview() {
+        if (!this.selectedTowerType && !this.selectedBuildingType) return;
+        if (!this.level) return;
+        let size = 2;
+        if (this.selectedBuildingType) {
+            const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
+            size = buildingType?.size || 4;
+        }
+        const x = this.lastMouseX || 0;
+        const y = this.lastMouseY || 0;
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
+    }
     
     /**
      * Handle touch move for placement preview (coordinates already in canvas space)
      */
     handleTouchMove(x, y) {
+        this.lastMouseX = x;
+        this.lastMouseY = y;
+
         if (!this.selectedTowerType && !this.selectedBuildingType) {
             this.level.setPlacementPreview(0, 0, false);
             return;
@@ -1783,8 +1801,21 @@ export class GameplayState {
             
             // Handle damage to defenders and castle
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
-                enemy.attackDefender(enemy.defenderTarget, adjustedDeltaTime);
-            } else if (enemy.reachedEnd) {
+                if (enemy.defenderTarget.isDead()) {
+                    // Defender died - clear combat state so enemy can transition
+                    const wasPathDefender = enemy.defenderTarget.type === 'path';
+                    enemy.isAttackingDefender = false;
+                    enemy.defenderTarget = null;
+                    if (wasPathDefender) {
+                        // Path defender was mid-path: resume movement along path
+                        enemy.reachedEnd = false;
+                    }
+                    // Castle defender case: reachedEnd stays true, transitions next block
+                } else {
+                    enemy.attackDefender(enemy.defenderTarget, adjustedDeltaTime);
+                }
+            }
+            if (!enemy.isAttackingDefender && enemy.reachedEnd) {
                 // Enemy has reached end of path - check what's ahead of them
                 let targetDefender = null;
                 
@@ -1822,7 +1853,10 @@ export class GameplayState {
                 }
                 
                 // CASTLE DEFENDER LOGIC: If no path defenders block, engage castle defender
-                if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+                // Only engage when enemy has legitimately reached the castle end (isAttackingCastle = true)
+                // This prevents enemies stopped mid-path by a guard post from being incorrectly
+                // assigned to the castle defender before they physically reach the castle.
+                if (enemy.isAttackingCastle && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
                     targetDefender = this.level.castle.defender;
                     enemy.isAttackingDefender = true;
                     enemy.defenderTarget = targetDefender;

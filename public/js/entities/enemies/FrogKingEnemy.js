@@ -109,6 +109,9 @@ export class FrogKingEnemy extends BaseEnemy {
         // Update base animations and cooldowns
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+
+        // Don't move while engaged with a defender
+        if (this.isAttackingDefender) { return; }
         
         // Update vulnerability rotation
         this.vulnerabilityRotationTimer += deltaTime;

@@ -21,7 +21,7 @@ export class TowerRegistry {
         'barricade': { class: BarricadeTower, cost: 90 },
         'poison': { class: PoisonArcherTower, cost: 200 },
         'combination': { class: CombinationTower, cost: 750 },
-        'guard-post': { class: GuardPost, cost: 150 }
+        'guard-post': { class: GuardPost, cost: 250 }
     };
 
     /**

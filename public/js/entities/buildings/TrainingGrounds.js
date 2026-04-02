@@ -15,8 +15,8 @@ export class TrainingGrounds extends Building {
         this.defenderMaxLevel = 1; // Upgraded to level 2 at training level 4, level 3 at training level 5
         
         // Guard Post system unlock and limits
-        this.guardPostUnlocked = false; // Unlocked at training level 4
-        this.maxGuardPosts = 0; // 1 at level 4, stays at 1 at level 5 (no additional posts)
+        this.guardPostUnlocked = true; // Unlocked when training grounds is placed
+        this.maxGuardPosts = 1; // 1 guard post allowed from placement
         
         // Range upgrades for manned towers - each tower has 5 levels
         // Towers: ArcherTower, BasicTower, CannonTower (PoisonArcherTower and BarricadeTower use fire rate instead)
@@ -1173,7 +1173,7 @@ export class TrainingGrounds extends Building {
         let nextUnlock = "";
         
         if (isMaxed) {
-            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nCastle Defender Level 3 Unlocked\nGuard Posts Unlocked";
+            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nCastle Defender Level 3 Unlocked";
         } else {
             switch(nextLevel) {
                 case 2:
@@ -1183,7 +1183,7 @@ export class TrainingGrounds extends Building {
                     nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers\nCastle Defender Level 1 Unlocked (hire elite knights)";
                     break;
                 case 4:
-                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers\nCastle Defender Level 2 Unlocked (medium armor)\nGuard Posts Buildable (place on path)";
+                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers\nCastle Defender Level 2 Unlocked (medium armor)";
                     break;
                 case 5:
                     nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers\nCastle Defender Level 3 Unlocked (heavy tank)\nMaximum Training Level";
@@ -1287,10 +1287,8 @@ export class TrainingGrounds extends Building {
             this.defenderMaxLevel = 1;
         }
         
-        // Check for guard post unlock at level 4
+        // Check for guard post unlock at level 4 - now unlocked at placement, just upgrade defender
         if (this.trainingLevel === 4) {
-            this.guardPostUnlocked = true;
-            this.maxGuardPosts = 1;
             this.defenderMaxLevel = 2;
         }
         

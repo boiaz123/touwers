@@ -2755,6 +2755,10 @@ body {
     white-space: nowrap;
     text-align: center;
     min-width: 60px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 
 .upgrade-cost-display.affordable {
