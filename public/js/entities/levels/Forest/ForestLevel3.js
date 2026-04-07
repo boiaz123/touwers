@@ -356,8 +356,8 @@ export class ForestLevel3 extends LevelBase {
         // Wave 10
         , { 
             enemyCount: 1, 
-            enemyHealth_multiplier: 2.5, 
-            enemySpeed: 75, 
+            enemyHealth_multiplier: 2.0, 
+            enemySpeed: 55, 
             spawnInterval: 7, 
             pattern: ['knight'] 
         }
