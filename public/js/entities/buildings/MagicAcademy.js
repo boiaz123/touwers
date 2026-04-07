@@ -34,44 +34,37 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // More pine trees within 4x4 grid using barricade tower style (±64px from center)
+        // Trees at back and sides — all at Y <= 10 so they stand behind/beside the main tower.
+        // More trees restore the forested academy feel without appearing "in front" of the building.
         this.trees = [
-            { x: -55, y: -55, size: 0.8 },
-            { x: -25, y: -60, size: 0.6 },
-            { x: 5, y: -58, size: 0.5 },
-            { x: 35, y: -50, size: 0.7 },
-            { x: 55, y: -45, size: 0.5 },
-            { x: -60, y: -15, size: 0.9 },
-            { x: -35, y: -25, size: 0.4 },
-            { x: -5, y: -30, size: 0.6 },
-            { x: 20, y: -30, size: 0.6 },
-            { x: 50, y: -20, size: 0.7 },
-            { x: -50, y: 20, size: 0.8 },
-            { x: -20, y: 15, size: 0.5 },
-            { x: 10, y: 10, size: 0.4 },
-            { x: 25, y: 25, size: 0.6 },
-            { x: 55, y: 30, size: 0.7 },
-            { x: -45, y: 50, size: 0.6 },
-            { x: -15, y: 55, size: 0.8 },
-            { x: 15, y: 45, size: 0.5 },
-            { x: 30, y: 50, size: 0.5 },
-            { x: 45, y: 55, size: 0.9 }
+            // Back row
+            { x: -55, y: -58, size: 0.85 },
+            { x: -28, y: -62, size: 0.65 },
+            { x:   3, y: -60, size: 0.55 },
+            { x:  32, y: -54, size: 0.70 },
+            { x:  58, y: -48, size: 0.60 },
+            // Mid-back row
+            { x: -62, y: -24, size: 0.80 },
+            { x: -40, y: -30, size: 0.50 },
+            { x:  45, y: -28, size: 0.65 },
+            { x:  64, y: -18, size: 0.55 },
+            // Side tufts (beside the building at near-zero Y)
+            { x: -68, y:  -4, size: 0.70 },
+            { x:  68, y:  -6, size: 0.65 },
+            { x: -62, y:  10, size: 0.55 },
+            { x:  62, y:   8, size: 0.50 }
         ];
         
-        // Bush positions (CONSTRAINED to 4x4 grid)
+        // Bushes at back and sides only
         this.bushes = [
-            { x: -40, y: -35, size: 8 },
-            { x: -10, y: -40, size: 6 },
-            { x: 15, y: -45, size: 7 },
-            { x: 40, y: -35, size: 8 },
-            { x: -45, y: -5, size: 7 },
-            { x: -15, y: -10, size: 6 },
-            { x: 10, y: -5, size: 8 },
-            { x: 35, y: 5, size: 7 },
-            { x: -35, y: 35, size: 8 },
-            { x: -5, y: 30, size: 6 },
-            { x: 20, y: 40, size: 7 },
-            { x: 40, y: 35, size: 8 }
+            { x: -46, y: -40, size: 8 },
+            { x: -14, y: -46, size: 6 },
+            { x:  18, y: -48, size: 7 },
+            { x:  44, y: -38, size: 8 },
+            { x: -52, y:  -6, size: 7 },
+            { x:  50, y:  -6, size: 7 },
+            { x: -48, y:  10, size: 6 },
+            { x:  48, y:  10, size: 6 }
         ];
     }
     
@@ -113,20 +106,28 @@ export class MagicAcademy extends Building {
         }
         this.magicParticles.length = mpWrite;
         
-        // Generate water ripples (CONSTRAINED to smaller moat area)
+        // Generate water ripples inside the perspective moat ring
+        // Moat centered at (this.x, this.y - size*0.10)  outer (size*0.48 × size*0.20)
         this.nextRippleTime -= deltaTime;
         if (this.nextRippleTime <= 0) {
+            // nominal size=116 (scale=29 × 4)
+            const nomSize = 116;
+            const cx = this.x;
+            const cy = this.y - nomSize * 0.10;
+            const outerRX = nomSize * 0.48, outerRY = nomSize * 0.20;
+            const innerRX = nomSize * 0.26, innerRY = nomSize * 0.11;
+            // Spawn at a random angle, random fraction between inner and outer radii
             const angle = Math.random() * Math.PI * 2;
-            const distance = 40 + Math.random() * 15; // Reduced from 70+20 to fit grid
+            const t = 0.3 + Math.random() * 0.55;  // 0 = inner edge, 1 = outer edge
             this.waterRipples.push({
-                x: this.x + Math.cos(angle) * distance,
-                y: this.y + Math.sin(angle) * distance,
+                x: cx + Math.cos(angle) * (innerRX + (outerRX - innerRX) * t),
+                y: cy + Math.sin(angle) * (innerRY + (outerRY - innerRY) * t),
                 radius: 0,
-                maxRadius: 10 + Math.random() * 8, // Reduced from 15+10
-                life: 2,
-                maxLife: 2
+                maxRadius: 4 + Math.random() * 5,
+                life: 1.8,
+                maxLife: 1.8
             });
-            this.nextRippleTime = 0.5 + Math.random() * 1.5;
+            this.nextRippleTime = 0.5 + Math.random() * 1.0;
         }
         
         // Update water ripples (compact in-place)
@@ -143,68 +144,152 @@ export class MagicAcademy extends Building {
     }
     
     render(ctx, size) {
-        // Render surrounding elements first
+        // 1. Perspective water moat — drawn first so building walls sit above it
         this.renderWaterMoat(ctx, size);
-        
-        // Render fortress base (cobblestone and gate - below trees)
-        this.renderCobblestoneBase(ctx, size);
-        
-        // Render trees and bushes - they appear in front of the base
+
+        // 2. Stone bridge / paved approach over the moat front
+        this.renderPavementPlaza(ctx, size);
+
+        // 3. Trees and bushes at back/sides (trunks covered by walls below)
         this.renderTrees(ctx, size);
         this.renderBushes(ctx, size);
-        
-        // Render the upper fortress structures (towers, spires, details - above trees)
-        this.renderCentralTower(ctx, size);
+
+        // 4. Stone fortress walls — grounded at this.y
+        this.renderCobblestoneBase(ctx, size);
+
+        // 5. Side spires emerge from the fortress base
         this.renderSideSpires(ctx, size);
-        
-        // Render magic effects
+
+        // 6. Central tower rises above everything
+        this.renderCentralTower(ctx, size);
+
+        // 7. Magic particles float above the structure
         this.renderMagicEffects(ctx, size);
     }
-    
-    renderWaterMoat(ctx, size) {
-        // Water moat around the fortress (CONSTRAINED to 4x4 grid)
-        const moatRadius = size * 0.45; // Reduced from 0.7 to fit in grid
-        const innerRadius = size * 0.3;  // Reduced from 0.45
-        
-        // Water base
-        const waterGradient = ctx.createRadialGradient(
-            this.x, this.y, innerRadius,
-            this.x, this.y, moatRadius
-        );
-        waterGradient.addColorStop(0, 'rgba(64, 164, 223, 0)');
-        waterGradient.addColorStop(0.3, 'rgba(64, 164, 223, 0.4)');
-        waterGradient.addColorStop(0.7, 'rgba(30, 144, 255, 0.6)');
-        waterGradient.addColorStop(1, 'rgba(0, 100, 200, 0.8)');
-        
-        ctx.fillStyle = waterGradient;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, moatRadius, 0, Math.PI * 2);
-        ctx.arc(this.x, this.y, innerRadius, 0, Math.PI * 2, true);
-        ctx.fill();
-        
-        // Water surface shimmer
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2 + this.animationTime * 0.5;
-            const radius = innerRadius + (moatRadius - innerRadius) * 0.5;
-            const shimmerX = this.x + Math.cos(angle) * radius;
-            const shimmerY = this.y + Math.sin(angle) * radius;
-            const alpha = (Math.sin(this.animationTime * 3 + i) + 1) * 0.2;
-            
-            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+
+    renderPavementPlaza(ctx, size) {
+        // Cobblestone bridge / paved approach in front of the moat entrance
+        // This sits at ground level (this.y) and extends slightly forward
+        const wallHeight = size * 0.32;
+        const baseTop    = this.y - wallHeight;
+
+        // Bridge slab spanning the moat — slightly wider than the gate
+        const bridgeW = size * 0.28;
+        const bridgeH = size * 0.18;
+        const bridgeX = this.x - bridgeW / 2;
+        const bridgeY = this.y;   // ground line
+
+        // Stone bridge surface
+        const bridgeGrad = ctx.createLinearGradient(bridgeX, bridgeY, bridgeX, bridgeY + bridgeH);
+        bridgeGrad.addColorStop(0, '#9a9080');
+        bridgeGrad.addColorStop(1, '#7a7060');
+        ctx.fillStyle = bridgeGrad;
+        ctx.fillRect(bridgeX, bridgeY, bridgeW, bridgeH);
+
+        // Flagstone joints on the bridge deck
+        ctx.strokeStyle = '#5a5040';
+        ctx.lineWidth = 0.8;
+        // Horizontal joints
+        for (let r = 1; r < 3; r++) {
             ctx.beginPath();
-            ctx.arc(shimmerX, shimmerY, 2, 0, Math.PI * 2);
+            ctx.moveTo(bridgeX, bridgeY + (bridgeH / 3) * r);
+            ctx.lineTo(bridgeX + bridgeW, bridgeY + (bridgeH / 3) * r);
+            ctx.stroke();
+        }
+        // Vertical joints (alternating offset)
+        const colW = bridgeW / 3;
+        for (let row = 0; row < 3; row++) {
+            const offset = (row % 2) * colW * 0.5;
+            for (let c = 1; c < 4; c++) {
+                const jx = bridgeX + offset + c * colW;
+                if (jx > bridgeX && jx < bridgeX + bridgeW) {
+                    ctx.beginPath();
+                    ctx.moveTo(jx, bridgeY + (bridgeH / 3) * row);
+                    ctx.lineTo(jx, bridgeY + (bridgeH / 3) * (row + 1));
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Bridge stone side rail / edging
+        ctx.fillStyle = '#888070';
+        ctx.fillRect(bridgeX - 3, bridgeY, 4, bridgeH);
+        ctx.fillRect(bridgeX + bridgeW - 1, bridgeY, 4, bridgeH);
+
+        // Fade edge
+        const fadeGrad = ctx.createLinearGradient(0, bridgeY + bridgeH, 0, bridgeY + bridgeH + 5);
+        fadeGrad.addColorStop(0, 'rgba(0,0,0,0.15)');
+        fadeGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = fadeGrad;
+        ctx.fillRect(bridgeX, bridgeY + bridgeH, bridgeW, 5);
+    }
+
+    renderWaterMoat(ctx, size) {
+        // Perspective-flattened moat ring surrounding the fortress base.
+        // An elliptical donut drawn using the even-odd winding rule.
+        const cx = this.x;
+        const cy = this.y - size * 0.10;  // slightly above ground plane
+        const outerRX = size * 0.50;
+        const outerRY = size * 0.21;  // flattened for top-down perspective
+        const innerRX = size * 0.26;
+        const innerRY = size * 0.11;
+
+        // Outer ground shadow under the moat
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(cx + 4, cy + 4, outerRX, outerRY, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Moat bank / stone rim (slightly larger than outer water)
+        ctx.fillStyle = '#8a8060';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, outerRX + 4, outerRY + 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, innerRX - 3, innerRY - 1.5, 0, 0, Math.PI * 2, true);
+        ctx.fill('evenodd');
+
+        // Water fill (gradient outer→inner)
+        const waterGrad = ctx.createRadialGradient(
+            cx - outerRX * 0.2, cy - outerRY * 0.3, innerRX * 0.4,
+            cx, cy, outerRX
+        );
+        waterGrad.addColorStop(0, 'rgba(80, 170, 230, 0.92)');
+        waterGrad.addColorStop(0.4, 'rgba(40, 120, 200, 0.88)');
+        waterGrad.addColorStop(0.75, 'rgba(20, 80, 160, 0.92)');
+        waterGrad.addColorStop(1,   'rgba(10, 50, 120, 0.95)');
+        ctx.fillStyle = waterGrad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, outerRX, outerRY, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, innerRX, innerRY, 0, 0, Math.PI * 2, true);
+        ctx.fill('evenodd');
+
+        // Surface shimmer
+        for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2 + this.animationTime * 0.4;
+            const t = 0.35 + (i % 3) * 0.22;  // spread between inner and outer
+            const sx = cx + Math.cos(angle) * (innerRX + (outerRX - innerRX) * t);
+            const sy = cy + Math.sin(angle) * (innerRY + (outerRY - innerRY) * t);
+            const alpha = (Math.sin(this.animationTime * 2.8 + i * 0.9) + 1) * 0.12;
+            ctx.fillStyle = `rgba(180, 220, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.ellipse(sx, sy, 4, 1.8, 0, 0, Math.PI * 2);
             ctx.fill();
         }
-        
-        // Render water ripples (CONSTRAINED to moat area)
+
+        // Ripples clipped to moat ring
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, outerRX, outerRY, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy, innerRX, innerRY, 0, 0, Math.PI * 2, true);
+        ctx.clip('evenodd');
         this.waterRipples.forEach(ripple => {
-            const alpha = ripple.life / ripple.maxLife * 0.3;
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-            ctx.lineWidth = 2;
+            const alpha = (ripple.life / ripple.maxLife) * 0.4;
+            ctx.strokeStyle = `rgba(200, 230, 255, ${alpha})`;
+            ctx.lineWidth = 1.2;
             ctx.beginPath();
-            ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+            ctx.ellipse(ripple.x, ripple.y, ripple.radius, ripple.radius * 0.45, 0, 0, Math.PI * 2);
             ctx.stroke();
         });
+        ctx.restore();
     }
     
     renderTrees(ctx, size) {
@@ -383,100 +468,131 @@ export class MagicAcademy extends Building {
     }
     
     renderCobblestoneBase(ctx, size) {
-        const baseWidth = size * 0.8;
-        const baseHeight = size * 0.6;
-        const wallHeight = size * 0.3;
-        
-        // Main fortress wall gradient
+        const baseWidth = size * 0.82;
+        const wallHeight = size * 0.32;
+        // Base is GROUNDED at this.y — it extends upward from the ground plane
+        const baseTop = this.y - wallHeight;
+        const baseBottom = this.y;
+
+        // Main fortress wall gradient — left-lit for 3/4 perspective
         const wallGradient = ctx.createLinearGradient(
-            this.x - baseWidth/2, this.y - wallHeight,
-            this.x + baseWidth/4, this.y
+            this.x - baseWidth / 2, baseTop,
+            this.x + baseWidth / 4, baseBottom
         );
-        wallGradient.addColorStop(0, '#A9A9A9');
-        wallGradient.addColorStop(0.5, '#808080');
-        wallGradient.addColorStop(1, '#696969');
-        
-        // Fortress base
+        wallGradient.addColorStop(0, '#B0B0B0');
+        wallGradient.addColorStop(0.45, '#848484');
+        wallGradient.addColorStop(1, '#606060');
+
         ctx.fillStyle = wallGradient;
-        ctx.fillRect(this.x - baseWidth/2, this.y - wallHeight/2, baseWidth, wallHeight);
-        
-        // Cobblestone pattern - improved with better edge alignment
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        
-        const stoneWidth = baseWidth / 12;
-        const stoneHeight = wallHeight / 8;
-        
-        for (let row = 0; row < 8; row++) {
-            const offsetX = (row % 2) * stoneWidth/2;
-            const rowY = this.y - wallHeight/2 + (row * stoneHeight);
-            
-            for (let col = 0; col < 12; col++) {
-                const stoneX = this.x - baseWidth/2 + offsetX + (col * stoneWidth);
-                
-                // Stone color variation - deterministic hash for consistent natural look
-                const hashVal = ((row * 11 + col * 7) % 13) / 13;
-                const stoneShade = 0.75 + hashVal * 0.22;
-                ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
-                
-                ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
-                ctx.strokeRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
-                
-                // Stone highlight with better gradation
-                ctx.fillStyle = `rgba(210, 210, 210, ${0.25 * stoneShade})`;
-                ctx.fillRect(stoneX + 1, rowY + 1, stoneWidth / 3 - 1, stoneHeight / 3 - 1);
-                
-                // Stone shadow for depth (bottom-right corner)
-                ctx.fillStyle = `rgba(60, 60, 60, ${0.18 * stoneShade})`;
-                ctx.fillRect(stoneX + stoneWidth - 3, rowY + stoneHeight - 3, 2, 2);
+        ctx.fillRect(this.x - baseWidth / 2, baseTop, baseWidth, wallHeight);
+
+        // Cobblestone block pattern
+        const stoneW = baseWidth / 12;
+        const stoneH = wallHeight / 7;
+        ctx.lineWidth = 0.8;
+
+        for (let row = 0; row < 7; row++) {
+            const offsetX = (row % 2) * stoneW * 0.5;
+            const rowY = baseTop + row * stoneH;
+
+            for (let col = 0; col < 13; col++) {
+                const sx = this.x - baseWidth / 2 + offsetX + col * stoneW;
+                const sx1 = Math.max(sx, this.x - baseWidth / 2);
+                const sx2 = Math.min(sx + stoneW - 1, this.x + baseWidth / 2);
+                if (sx2 <= sx1) continue;
+
+                const hash = ((row * 11 + col * 7) % 13) / 13;
+                const shade = 0.78 + hash * 0.20;
+                ctx.fillStyle = `rgb(${Math.floor(170 * shade)},${Math.floor(170 * shade)},${Math.floor(170 * shade)})`;
+                ctx.fillRect(sx1, rowY, sx2 - sx1, stoneH - 1);
+
+                ctx.strokeStyle = '#383838';
+                ctx.strokeRect(sx1, rowY, sx2 - sx1, stoneH - 1);
+
+                // Top-left highlight
+                ctx.fillStyle = `rgba(220,220,220,${0.22 * shade})`;
+                ctx.fillRect(sx1 + 1, rowY + 1, (sx2 - sx1) * 0.3, stoneH * 0.35);
             }
         }
-        
-        // Wall edges (left and right borders for finished look)
-        ctx.strokeStyle = '#1C1C1C';
+
+        // Thick left and right wall edges
+        ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(this.x - baseWidth/2, this.y - wallHeight/2);
-        ctx.lineTo(this.x - baseWidth/2, this.y + wallHeight/2);
+        ctx.moveTo(this.x - baseWidth / 2, baseTop);
+        ctx.lineTo(this.x - baseWidth / 2, baseBottom);
         ctx.stroke();
-        
         ctx.beginPath();
-        ctx.moveTo(this.x + baseWidth/2, this.y - wallHeight/2);
-        ctx.lineTo(this.x + baseWidth/2, this.y + wallHeight/2);
+        ctx.moveTo(this.x + baseWidth / 2, baseTop);
+        ctx.lineTo(this.x + baseWidth / 2, baseBottom);
         ctx.stroke();
-        
-        // Top and bottom edge finishing
-        ctx.strokeStyle = '#4F4F4F';
+
+        // Bottom edge — the ground line
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - baseWidth / 2, baseBottom);
+        ctx.lineTo(this.x + baseWidth / 2, baseBottom);
+        ctx.stroke();
+
+        // Crenellations (merlons) along the wall top — connecting the spires visually
+        const merlonW = stoneW * 1.2;
+        const merlonH = wallHeight * 0.12;
+        const merlonCount = 9;
+        const merlonSpacing = baseWidth / merlonCount;
+        ctx.fillStyle = '#909090';
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < merlonCount; i++) {
+            if (i % 2 === 0) {
+                const mx = this.x - baseWidth / 2 + i * merlonSpacing + merlonSpacing * 0.1;
+                ctx.fillRect(mx, baseTop - merlonH, merlonW, merlonH);
+                ctx.strokeRect(mx, baseTop - merlonH, merlonW, merlonH);
+            }
+        }
+
+        // Gate archway — in the lower centre of the front face, sitting at ground level
+        const gateW = size * 0.14;
+        const gateH = wallHeight * 0.72;
+        const gateX = this.x - gateW / 2;
+        const gateY = baseBottom - gateH;
+
+        // Gate surround (darker stone frame)
+        ctx.fillStyle = '#484848';
+        ctx.fillRect(gateX - 3, gateY - gateH * 0.12, gateW + 6, gateH + gateH * 0.12);
+
+        // Gate opening
+        ctx.fillStyle = '#1A1A1A';
+        ctx.fillRect(gateX, gateY, gateW, gateH);
+
+        // Arched top
+        ctx.fillStyle = '#1A1A1A';
+        ctx.beginPath();
+        ctx.arc(this.x, gateY, gateW / 2, Math.PI, 0);
+        ctx.fill();
+
+        // Wooden door planks
+        ctx.fillStyle = '#3D2410';
+        ctx.fillRect(gateX + 1, gateY, gateW - 2, gateH - 1);
+        ctx.strokeStyle = '#251408';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(this.x - baseWidth/2, this.y - wallHeight/2);
-        ctx.lineTo(this.x + baseWidth/2, this.y - wallHeight/2);
+        ctx.moveTo(this.x, gateY);
+        ctx.lineTo(this.x, gateY + gateH);
         ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(this.x - baseWidth/2, this.y + wallHeight/2);
-        ctx.lineTo(this.x + baseWidth/2, this.y + wallHeight/2);
-        ctx.stroke();
-        
-        // Fortress gate
-        const gateWidth = size * 0.15;
-        const gateHeight = size * 0.2;
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(this.x - gateWidth/2, this.y - gateHeight/2, gateWidth, gateHeight);
-        
-        // Gate arch
-        ctx.fillStyle = '#1C1C1C';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - gateHeight/2, gateWidth/2, 0, Math.PI, true);
-        ctx.fill();
-        
-        // Gate details
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y - gateHeight/2);
-        ctx.lineTo(this.x, this.y + gateHeight/2);
-        ctx.stroke();
+        for (let p = 1; p < 4; p++) {
+            ctx.beginPath();
+            ctx.moveTo(gateX + 1, gateY + (gateH / 4) * p);
+            ctx.lineTo(gateX + gateW - 1, gateY + (gateH / 4) * p);
+            ctx.stroke();
+        }
+
+        // Stone step at the base front
+        ctx.fillStyle = '#787878';
+        ctx.fillRect(this.x - gateW * 0.9, baseBottom, gateW * 1.8, 4);
+        ctx.strokeStyle = '#404040';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x - gateW * 0.9, baseBottom, gateW * 1.8, 4);
     }
     
     renderCentralTower(ctx, size) {

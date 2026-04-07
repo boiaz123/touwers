@@ -242,33 +242,37 @@ export class SettlementHub {
         // Other buildings spread naturally INSIDE the boundary
         this.settlementBuildings = [
             // === MAIN INTERACTIVE BUILDINGS ===
-            // Training Grounds - positioned at the black square (far left)
+            // Training Grounds - EXTERIOR: outside the wall to the left
             {
                 building: new TrainingGrounds(centerX - 720, centerY - 0, 0, 0),
                 scale: 1,
                 clickable: true,
-                action: 'levelSelect'
+                action: 'levelSelect',
+                exterior: true
             },
-            // Tower Forge - inside upper right area
+            // Tower Forge - INTERIOR: inside upper right area
             {
                 building: new TowerForge(centerX + 160, centerY - 50, 1, 0),
                 scale: 30,
                 clickable: true,
-                action: 'upgrades'
+                action: 'upgrades',
+                exterior: false
             },
-            // Arcane Library - positioned at purple circle arrow
+            // Arcane Library - INTERIOR: inside upper left area
             {
                 building: new MagicAcademy(centerX - 130, centerY - 55, 1, 0),
                 scale: 29,
                 clickable: true,
-                action: 'arcaneLibrary'
+                action: 'arcaneLibrary',
+                exterior: false
             },
-            // Castle - positioned to the right side of settlement (clickable)
+            // Castle - EXTERIOR: outside the wall to the right
             {
                 building: new Castle(centerX + 700, centerY - 80, 0, 0),
                 scale: 29,
                 clickable: true,
-                action: 'options'
+                action: 'options',
+                exterior: true
             },
 
             // === GUARD POST QUARTERS (BARRACKS) ===
@@ -1670,18 +1674,24 @@ export class SettlementHub {
         this.renderSettlementDetails(ctx, centerX, centerY);
         ctx.restore();
 
-        // Render interior decorative buildings clipped well inside the wall inner face
+        // Render ALL interior buildings (forge, academy, guard posts) in one Y-sorted pass.
+        // Use a very tall clip (radiusY=300) so tower tops are never cut off, while the wide
+        // radiusX=356 still keeps buildings horizontally inside the wall.
+        // Y-sorting (painter's algorithm) ensures correct depth between all buildings.
         ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 356, 136);
-        this.renderSettlementBuildings(ctx, canvas, true);
+        this.createEllipseClipPath(ctx, centerX, centerY, 356, 300);
+        this.renderSettlementBuildings(ctx, canvas, 'interior-all');
         ctx.restore();
 
         // Re-render front-arc wall posts + horizontal rail + gate + guard towers on top of
-        // all interior content so they correctly occlude interior buildings
+        // all interior content so they correctly occlude lower building portions.
         this.renderFrontWallOverlay(ctx, canvas, centerX, centerY);
 
-        // Render exterior/clickable buildings without clipping (TrainingGrounds, Castle — intentionally outside)
-        this.renderSettlementBuildings(ctx, canvas, false);
+        // Render exterior buildings (TrainingGrounds, Castle — intentionally outside the wall)
+        this.renderSettlementBuildings(ctx, canvas, 'exterior');
+
+        // Render name labels for interior clickable buildings above the wall (unclipped)
+        this.renderSettlementBuildings(ctx, canvas, 'headers');
 
         // Render bard character near the fountain (only if musical-equipment upgrade purchased)
         const upgradeSystem = this.stateManager?.upgradeSystem;
@@ -2625,11 +2635,10 @@ export class SettlementHub {
         ctx.fillRect(x + 15, y + 15, 6, 12);
     }
 
-    renderSettlementBuildings(ctx, canvas, interiorOnly) {
-        // Render all actual building instances with settlement-specific visuals
-        // interiorOnly=true  → render only non-clickable decorative interior buildings (clipped)
-        // interiorOnly=false → render only clickable exterior buildings (not clipped)
-        // interiorOnly=undefined → render everything (legacy call, not used in renderSettlementScene)
+    renderSettlementBuildings(ctx, canvas, mode) {
+        // mode='interior-all' → ALL non-exterior buildings, Y-sorted (painter's algorithm), in clipped pass
+        // mode='exterior'     → only exterior buildings (Castle, TrainingGrounds), unclipped, with headers
+        // mode='headers'      → only name labels for interior clickable buildings, unclipped (above wall)
         const headers = {
             'TrainingGrounds': 'Campaign',
             'MagicAcademy': 'Arcane Library',
@@ -2637,67 +2646,72 @@ export class SettlementHub {
             'Castle': 'Manage Settlement'
         };
 
-        this.settlementBuildings.forEach(item => {
-            if (item.building) {
-                // Interior pass (clipped): only non-clickable decorative buildings
-                // Exterior pass (unclipped): all clickable buildings (headers must render above walls)
-                if (interiorOnly === true && item.clickable) return;
-                if (interiorOnly === false && !item.clickable) return;
-
-                ctx.globalAlpha = this.contentOpacity;
-                
-                // Special handling for TrainingGrounds: render scaled-down version at 70% for settlement
-                if (item.building instanceof TrainingGrounds) {
-                    this.renderTrainingGroundsSettlement(ctx, item.building);
-                } else {
-                    const size = item.scale * 4; // Convert scale to building size (4x4 grid)
-                    
-                    // Use SettlementBuildingVisuals for custom settlement rendering
-                    const visuals = new SettlementBuildingVisuals(item.building);
-                    visuals.render(ctx, size);
-                }
-                
-                // Render header for clickable buildings
-                if (item.clickable && item.action) {
-                    const buildingType = item.building.constructor.name;
-                    const headerText = headers[buildingType] || '';
-                    
-                    if (headerText) {
-                        const headerX = item.building.x;
-                        const headerY = item.building.y - 120;
-                        
-                        // Special handling for TowerForge with line break
-                        if (buildingType === 'TowerForge') {
-                            // Header text shadow
-                            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                            ctx.font = 'bold 22px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText('Upgrades &', headerX + 1, headerY - 15 + 1);
-                            ctx.fillText('Marketplace', headerX + 1, headerY + 15 + 1);
-                            
-                            // Header text
-                            ctx.fillStyle = '#FFD700';
-                            ctx.fillText('Upgrades &', headerX, headerY - 15);
-                            ctx.fillText('Marketplace', headerX, headerY + 15);
-                        } else {
-                            // Header text shadow
-                            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                            ctx.font = 'bold 24px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(headerText, headerX + 1, headerY + 1);
-                            
-                            // Header text
-                            ctx.fillStyle = '#FFD700';
-                            ctx.fillText(headerText, headerX, headerY);
-                        }
-                    }
-                }
-                
-                ctx.globalAlpha = 1;
+        const renderBody = (item) => {
+            ctx.globalAlpha = this.contentOpacity;
+            if (item.building instanceof TrainingGrounds) {
+                this.renderTrainingGroundsSettlement(ctx, item.building);
+            } else {
+                const size = item.scale * 4;
+                const visuals = new SettlementBuildingVisuals(item.building);
+                visuals.render(ctx, size);
             }
-        });
+            ctx.globalAlpha = 1;
+        };
+
+        if (mode === 'interior-all') {
+            // All non-exterior buildings Y-sorted so farther-back (lower Y) draw first
+            const items = this.settlementBuildings.filter(item => !item.exterior && item.building);
+            items.sort((a, b) => a.building.y - b.building.y);
+            items.forEach(renderBody);
+
+        } else if (mode === 'exterior') {
+            this.settlementBuildings
+                .filter(item => item.exterior && item.building)
+                .forEach(item => {
+                    renderBody(item);
+                    if (item.clickable && item.action) {
+                        this.renderBuildingHeader(ctx, item, headers);
+                    }
+                });
+
+        } else if (mode === 'headers') {
+            this.settlementBuildings
+                .filter(item => !item.exterior && item.clickable && item.action && item.building)
+                .forEach(item => {
+                    ctx.globalAlpha = this.contentOpacity;
+                    this.renderBuildingHeader(ctx, item, headers);
+                    ctx.globalAlpha = 1;
+                });
+        }
+    }
+
+    renderBuildingHeader(ctx, item, headers) {
+        const buildingType = item.building.constructor.name;
+        const headerText = headers[buildingType] || '';
+        if (!headerText) return;
+
+        const headerX = item.building.x;
+        const headerY = item.building.y - 120;
+
+        if (buildingType === 'TowerForge') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.font = 'bold 22px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Upgrades &', headerX + 1, headerY - 15 + 1);
+            ctx.fillText('Marketplace', headerX + 1, headerY + 15 + 1);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText('Upgrades &', headerX, headerY - 15);
+            ctx.fillText('Marketplace', headerX, headerY + 15);
+        } else {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(headerText, headerX + 1, headerY + 1);
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText(headerText, headerX, headerY);
+        }
     }
 
     renderTrainingGroundsSettlement(ctx, building) {
