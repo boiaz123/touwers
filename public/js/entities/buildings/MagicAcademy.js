@@ -144,27 +144,42 @@ export class MagicAcademy extends Building {
     }
     
     render(ctx, size) {
-        // 1. Perspective water moat — drawn first so building walls sit above it
+        // In-game only: soft ground patch marks the occupied 4×4 footprint.
+        // ctx.buildingManager is only set by BuildingManager.renderBuilding (in-game),
+        // so settlement rendering is unaffected.
+        if (ctx && ctx.buildingManager) {
+            this.renderGroundFootprint(ctx, size);
+        }
+
+        // All layers render naturally — tower tops and trees extend beyond the
+        // placement square just like towers do, no clip applied.
         this.renderWaterMoat(ctx, size);
-
-        // 2. Stone bridge / paved approach over the moat front
         this.renderPavementPlaza(ctx, size);
-
-        // 3. Trees and bushes at back/sides (trunks covered by walls below)
         this.renderTrees(ctx, size);
         this.renderBushes(ctx, size);
-
-        // 4. Stone fortress walls — grounded at this.y
         this.renderCobblestoneBase(ctx, size);
-
-        // 5. Side spires emerge from the fortress base
         this.renderSideSpires(ctx, size);
-
-        // 6. Central tower rises above everything
         this.renderCentralTower(ctx, size);
-
-        // 7. Magic particles float above the structure
         this.renderMagicEffects(ctx, size);
+    }
+
+    renderGroundFootprint(ctx, size) {
+        // Soft earthy-purple ground patch that fades out at the edges — no hard borders.
+        // Centred in the lower portion of the 4×4 area so terrain shows but the
+        // claimed space is clearly a different material from the surrounding grass.
+        const half = size / 2;
+        const cx = this.x;
+        const cy = this.y + size * 0.12;  // slightly below grid centre
+
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, half * 0.92);
+        grad.addColorStop(0,    'rgba(32, 18, 52, 0.80)');
+        grad.addColorStop(0.45, 'rgba(24, 13, 40, 0.60)');
+        grad.addColorStop(0.75, 'rgba(15,  8,  28, 0.30)');
+        grad.addColorStop(1,    'rgba(0,   0,   0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, half * 0.92, half * 0.84, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderPavementPlaza(ctx, size) {
@@ -293,11 +308,13 @@ export class MagicAcademy extends Building {
     }
     
     renderTrees(ctx, size) {
+        // Scale tree positions and sizes relative to the nominal design size of 128
+        const sf = size / 128;
         // Render trees naturally - fortress will cover lower portions
         this.trees.forEach((tree, index) => {
-            const treeX = this.x + tree.x;
-            const treeY = this.y + tree.y;
-            const scale = tree.size * 40;
+            const treeX = this.x + tree.x * sf;
+            const treeY = this.y + tree.y * sf;
+            const scale = tree.size * 40 * sf;
             
             // Tree shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
@@ -436,33 +453,35 @@ export class MagicAcademy extends Building {
     }
     
     renderBushes(ctx, size) {
+        const sf = size / 128;
         this.bushes.forEach(bush => {
             ctx.save();
-            ctx.translate(this.x + bush.x, this.y + bush.y);
-            
+            ctx.translate(this.x + bush.x * sf, this.y + bush.y * sf);
+            const bs = bush.size * sf;
+
             // Bush shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
             ctx.beginPath();
-            ctx.ellipse(2, 2, bush.size, bush.size * 0.3, 0, 0, Math.PI * 2);
+            ctx.ellipse(2, 2, bs, bs * 0.3, 0, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Bush base
             ctx.fillStyle = '#228B22';
             ctx.beginPath();
-            ctx.arc(0, 0, bush.size, 0, Math.PI * 2);
+            ctx.arc(0, 0, bs, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Bush highlights
             ctx.fillStyle = '#32CD32';
             for (let i = 0; i < 3; i++) {
                 const angle = (i / 3) * Math.PI * 2;
-                const highlightX = Math.cos(angle) * bush.size * 0.4;
-                const highlightY = Math.sin(angle) * bush.size * 0.4;
+                const highlightX = Math.cos(angle) * bs * 0.4;
+                const highlightY = Math.sin(angle) * bs * 0.4;
                 ctx.beginPath();
-                ctx.arc(highlightX, highlightY, bush.size * 0.3, 0, Math.PI * 2);
+                ctx.arc(highlightX, highlightY, bs * 0.3, 0, Math.PI * 2);
                 ctx.fill();
             }
-            
+
             ctx.restore();
         });
     }
