@@ -488,9 +488,9 @@ export class BasicTower extends Tower {
     drawEnvironment(ctx, gridSize) {
         // Trees at the 4 corners of the 2x2 grid, scaled proportionally to gridSize
         const trees = [
-            { x: -gridSize * 0.36, y: gridSize * 0.28,  size: gridSize * 0.033, type: 'pine' },
+            { x: -gridSize * 0.36, y: gridSize * 0.28,  size: gridSize * 0.042, type: 'pine' },
             { x:  gridSize * 0.32, y: gridSize * 0.30,  size: gridSize * 0.040, type: 'round' },
-            { x: -gridSize * 0.37, y: -gridSize * 0.22, size: gridSize * 0.035, type: 'pine' },
+            { x: -gridSize * 0.37, y: -gridSize * 0.22, size: gridSize * 0.044, type: 'pine' },
             { x:  gridSize * 0.33, y: -gridSize * 0.28, size: gridSize * 0.038, type: 'round' }
         ];
         
@@ -512,21 +512,21 @@ export class BasicTower extends Tower {
             if (tree.type === 'pine') {
                 // Conifer – same colour palette as LevelBase renderTreeType1/4
                 ctx.fillStyle = '#5D4037';
-                ctx.fillRect(treeX - 1.1 * scale, treeY, 2.2 * scale, -5.5 * scale);
+                ctx.fillRect(treeX - 1.1 * scale, treeY, 2.2 * scale, -7 * scale);
                 ctx.fillStyle = '#3E2723'; // trunk shadow side
-                ctx.fillRect(treeX, treeY, 1.1 * scale, -5.5 * scale);
+                ctx.fillRect(treeX, treeY, 1.1 * scale, -7 * scale);
                 
                 const piLayers = [
-                    { dy: -9.5 * scale, hw: 7.5 * scale, color: '#0D3817' },
-                    { dy: -6.5 * scale, hw: 5.8 * scale, color: '#1B5E20' },
-                    { dy: -3.5 * scale, hw: 4.0 * scale, color: '#2E7D32' }
+                    { dy: -14 * scale, hw: 7.0 * scale, color: '#0D3817' },
+                    { dy: -10 * scale, hw: 5.5 * scale, color: '#1B5E20' },
+                    { dy: -6 * scale,  hw: 4.0 * scale, color: '#2E7D32' }
                 ];
                 piLayers.forEach(l => {
                     ctx.fillStyle = l.color;
                     ctx.beginPath();
                     ctx.moveTo(treeX,        treeY + l.dy);
-                    ctx.lineTo(treeX - l.hw, treeY + l.dy + l.hw * 0.75);
-                    ctx.lineTo(treeX + l.hw, treeY + l.dy + l.hw * 0.75);
+                    ctx.lineTo(treeX - l.hw, treeY + l.dy + l.hw * 1.3);
+                    ctx.lineTo(treeX + l.hw, treeY + l.dy + l.hw * 1.3);
                     ctx.closePath();
                     ctx.fill();
                     ctx.strokeStyle = '#0b2b0b';
