@@ -85,7 +85,7 @@ export class DesertLevel4 extends LevelBase {
 
     getWaveConfig(wave) {
         const waveConfigs = [
-            { enemyCount: 10, enemyHealth_multiplier: 1.0, enemySpeed: 35, spawnInterval: 1.5, pattern: ['villager'] }
+            { enemyCount: 10, enemyHealth_multiplier: 1.0, speedMultiplier: 0.70, spawnInterval: 1.5, pattern: ['villager'] }
         ];
         
         return (wave > 0 && wave <= waveConfigs.length) ? waveConfigs[wave - 1] : null;

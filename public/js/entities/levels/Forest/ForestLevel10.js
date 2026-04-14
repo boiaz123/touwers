@@ -283,7 +283,7 @@ export class ForestLevel10 extends LevelBase {
         { 
             enemyCount: 45, 
             enemyHealth_multiplier: 1, 
-            enemySpeed: 45, 
+            speedMultiplier: 0.90, 
             spawnInterval: 0.4, 
             pattern: ['basic', 'villager', 'basic', 'basic', 'villager'] 
         }
@@ -291,7 +291,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 60, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.30, 
             spawnInterval: 0.8, 
             pattern: ['basic', 'villager'] 
         }
@@ -299,7 +299,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 45, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 145, 
+            speedMultiplier: 2.42, 
             spawnInterval: 0.6, 
             pattern: ['archer'] 
         }
@@ -307,7 +307,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 40, 
             enemyHealth_multiplier: 3.55, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.58, 
             spawnInterval: 1.4, 
             pattern: ['beefyenemy'] 
         }
@@ -315,7 +315,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 12, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.57, 
             spawnInterval: 0.6, 
             pattern: ['shieldknight'] 
         }
@@ -323,7 +323,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 4, 
             enemyHealth_multiplier: 5, 
-            enemySpeed: 45, 
+            speedMultiplier: 1.29, 
             spawnInterval: 0.5, 
             pattern: ['shieldknight', 'shieldknight', 'shieldknight', 'knight'] 
         }
@@ -331,7 +331,7 @@ export class ForestLevel10 extends LevelBase {
         , { 
             enemyCount: 1, 
             enemyHealth_multiplier: 9, 
-            enemySpeed: 45, 
+            speedMultiplier: 1.13, 
             spawnInterval: 1.2, 
             pattern: ['knight'] 
         }

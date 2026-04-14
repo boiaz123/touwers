@@ -248,7 +248,7 @@ export class Level6 extends LevelBase {
         { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.70, 
             spawnInterval: 2.5, 
             pattern: ['basic', 'basic', 'villager', 'basic', 'villager', 'basic'] 
         }
@@ -256,7 +256,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1.1, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.70, 
             spawnInterval: 2.2, 
             pattern: ['villager', 'villager', 'basic', 'villager', 'basic', 'villager'] 
         }
@@ -264,7 +264,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 5, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 25, 
+            speedMultiplier: 0.63, 
             spawnInterval: 5, 
             pattern: ['knight'] 
         }
@@ -272,7 +272,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1.2, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.70, 
             spawnInterval: 1.5, 
             pattern: ['basic', 'villager', 'knight', 'basic', 'knight', 'villager'] 
         }
@@ -280,7 +280,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1.4, 
-            enemySpeed: 40, 
+            speedMultiplier: 0.80, 
             spawnInterval: 1.6, 
             pattern: ['basic', 'villager', 'knight', 'basic', 'knight', 'beefyenemy'] 
         }
@@ -288,7 +288,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 10, 
             enemyHealth_multiplier: 6, 
-            enemySpeed: 30, 
+            speedMultiplier: 0.75, 
             spawnInterval: 5, 
             pattern: ['knight'] 
         }
@@ -296,7 +296,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 26, 
             enemyHealth_multiplier: 1.6, 
-            enemySpeed: 47, 
+            speedMultiplier: 0.94, 
             spawnInterval: 0.7, 
             pattern: ['basic'] 
         }
@@ -304,7 +304,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 30, 
             enemyHealth_multiplier: 1.2, 
-            enemySpeed: 60, 
+            speedMultiplier: 1.00, 
             spawnInterval: 4, 
             pattern: ['archer'] 
         }
@@ -312,7 +312,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 32, 
             enemyHealth_multiplier: 1.8, 
-            enemySpeed: 40, 
+            speedMultiplier: 0.67, 
             spawnInterval: 1, 
             pattern: ['beefyenemy'] 
         }
@@ -320,7 +320,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 55, 
             enemyHealth_multiplier: 1.9, 
-            enemySpeed: 53, 
+            speedMultiplier: 1.06, 
             spawnInterval: 1, 
             pattern: ['villager'] 
         }
@@ -328,7 +328,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 80, 
             enemyHealth_multiplier: 1.3, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.10, 
             spawnInterval: 0.7, 
             pattern: ['villager'] 
         }
@@ -336,7 +336,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 45, 
             enemyHealth_multiplier: 2.1, 
-            enemySpeed: 50, 
+            speedMultiplier: 1.00, 
             spawnInterval: 1, 
             pattern: ['villager', 'knight', 'knight', 'basic', 'villager', 'knight'] 
         }
@@ -344,7 +344,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 15, 
             enemyHealth_multiplier: 8, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.88, 
             spawnInterval: 5, 
             pattern: ['knight'] 
         }
@@ -352,7 +352,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 40, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 70, 
+            speedMultiplier: 1.17, 
             spawnInterval: 2.5, 
             pattern: ['archer'] 
         }
@@ -360,7 +360,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 64, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 45, 
+            speedMultiplier: 0.75, 
             spawnInterval: 1, 
             pattern: ['beefyenemy'] 
         }
@@ -368,7 +368,7 @@ export class Level6 extends LevelBase {
         , { 
             enemyCount: 2, 
             enemyHealth_multiplier: 40, 
-            enemySpeed: 35, 
+            speedMultiplier: 1.00, 
             spawnInterval: 20, 
             pattern: ['shieldknight'] 
         }

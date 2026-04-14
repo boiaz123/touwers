@@ -192,7 +192,7 @@ export class ForestLevel12 extends LevelBase {
         { 
             enemyCount: 12, 
             enemyHealth_multiplier: 1.0, 
-            enemySpeed: 20, 
+            speedMultiplier: 0.36, 
             spawnInterval: 0.6, 
             pattern: ['frog'] 
         }
@@ -200,7 +200,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 24, 
             enemyHealth_multiplier: 1.0, 
-            enemySpeed: 60, 
+            speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
             pattern: ['archer'] 
         }
@@ -208,7 +208,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
             pattern: ['frog', 'villager', 'villager'] 
         }
@@ -216,7 +216,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 17, 
             enemyHealth_multiplier: 2, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.08, 
             spawnInterval: 0.8, 
             pattern: ['beefyenemy', 'beefyenemy', 'frog', 'beefyenemy', 'beefyenemy'] 
         }
@@ -224,7 +224,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 55, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 70, 
+            speedMultiplier: 1.17, 
             spawnInterval: 0.7, 
             pattern: ['archer'] 
         }
@@ -232,7 +232,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 45, 
             enemyHealth_multiplier: 3.5, 
-            enemySpeed: 75, 
+            speedMultiplier: 1.36, 
             spawnInterval: 0.4, 
             pattern: ['frog'] 
         }
@@ -240,7 +240,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 5, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.86, 
             spawnInterval: 0.7, 
             pattern: ['shieldknight', 'shieldknight', 'frog'] 
         }
@@ -248,7 +248,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 20, 
             enemyHealth_multiplier: 3.5, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.08, 
             spawnInterval: 0.3, 
             pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'frog'] 
         }
@@ -256,7 +256,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 32, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 55, 
+            speedMultiplier: 0.92, 
             spawnInterval: 0.8, 
             pattern: ['beefyenemy', 'archer', 'shieldknight', 'frog', 'archer'] 
         }
@@ -264,7 +264,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 16, 
             enemyHealth_multiplier: 6, 
-            enemySpeed: 55, 
+            speedMultiplier: 0.92, 
             spawnInterval: 0.5, 
             pattern: ['beefyenemy', 'shieldknight', 'beefyenemy', 'frog', 'beefyenemy', 'shieldknight'] 
         }
@@ -272,7 +272,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 42, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 85, 
+            speedMultiplier: 1.42, 
             spawnInterval: 0.4, 
             pattern: ['archer', 'frog', 'archer', 'archer'] 
         }
@@ -280,7 +280,7 @@ export class ForestLevel12 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 7, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.22, 
             spawnInterval: 0.5, 
             pattern: ['mage', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog'] 
         }

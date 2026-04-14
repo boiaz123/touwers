@@ -234,7 +234,7 @@ export class ForestLevel11 extends LevelBase {
         { 
             enemyCount: 25, 
             enemyHealth_multiplier: 1.2, 
-            enemySpeed: 45, 
+            speedMultiplier: 0.90, 
             spawnInterval: 1, 
             pattern: ['basic', 'villager'] 
         }
@@ -242,7 +242,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 30, 
             enemyHealth_multiplier: 1.2, 
-            enemySpeed: 50, 
+            speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
             pattern: ['basic', 'villager'] 
         }
@@ -250,7 +250,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 35, 
             enemyHealth_multiplier: 1.0, 
-            enemySpeed: 75, 
+            speedMultiplier: 1.25, 
             spawnInterval: 0.5, 
             pattern: ['archer'] 
         }
@@ -258,7 +258,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 20, 
             enemyHealth_multiplier: 1.5, 
-            enemySpeed: 70, 
+            speedMultiplier: 1.17, 
             spawnInterval: 1.1, 
             pattern: ['beefyenemy'] 
         }
@@ -266,7 +266,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 55, 
             enemyHealth_multiplier: 2, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.10, 
             spawnInterval: 1, 
             pattern: ['villager'] 
         }
@@ -274,7 +274,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 3, 
             enemyHealth_multiplier: 3.5, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.08, 
             spawnInterval: 0.2, 
             pattern: ['beefyenemy'] 
         }
@@ -282,7 +282,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 3, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.86, 
             spawnInterval: 1.5, 
             pattern: ['shieldknight'] 
         }
@@ -290,7 +290,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 30, 
             enemyHealth_multiplier: 2.5, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.30, 
             spawnInterval: 0.1, 
             pattern: ['basic', 'villager'] 
         }
@@ -298,7 +298,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 16, 
             enemyHealth_multiplier: 3, 
-            enemySpeed: 50, 
+            speedMultiplier: 0.83, 
             spawnInterval: 0.8, 
             pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'shieldknight', 'beefyenemy', 'knight', 'beefyenemy', 'shieldknight', 'beefyenemy', 'beefyenemy', 'beefyenemy'] 
         }
@@ -306,7 +306,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 1, 
             enemyHealth_multiplier: 6, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.63, 
             spawnInterval: 1, 
             pattern: ['knight'] 
         }
@@ -314,7 +314,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 45, 
             enemyHealth_multiplier: 2.7, 
-            enemySpeed: 55, 
+            speedMultiplier: 0.92, 
             spawnInterval: 0.8, 
             pattern: ['archer', 'basic', 'villager', 'beefyenemy', 'shieldknight', 'villager', 'archer', 'archer', 'villager', 'villager', 'shieldknight', 'villager', 'shieldknight', 'knight', 'basic'] 
         }
@@ -322,7 +322,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 15, 
             enemyHealth_multiplier: 4, 
-            enemySpeed: 175, 
+            speedMultiplier: 2.92, 
             spawnInterval: 0.5, 
             pattern: ['archer'] 
         }
@@ -330,7 +330,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 55, 
             enemyHealth_multiplier: 5, 
-            enemySpeed: 65, 
+            speedMultiplier: 1.30, 
             spawnInterval: 0.2, 
             pattern: ['basic', 'villager', 'archer'] 
         }
@@ -338,7 +338,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 6, 
             enemyHealth_multiplier: 4, 
-            enemySpeed: 55, 
+            speedMultiplier: 1.57, 
             spawnInterval: 0.3, 
             pattern: ['shieldknight', 'shieldknight', 'shieldknight', 'knight', 'shieldknight', 'shieldknight'] 
         }
@@ -346,7 +346,7 @@ export class ForestLevel11 extends LevelBase {
         , { 
             enemyCount: 3, 
             enemyHealth_multiplier: 10, 
-            enemySpeed: 35, 
+            speedMultiplier: 0.88, 
             spawnInterval: 0.4, 
             pattern: ['knight'] 
         }

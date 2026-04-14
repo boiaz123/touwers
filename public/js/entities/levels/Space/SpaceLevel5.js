@@ -78,7 +78,7 @@ export class SpaceLevel5 extends LevelBase {
 
     getWaveConfig(wave) {
         const waveConfigs = [
-            { enemyCount: 1, enemyHealth_multiplier: 1.0, enemySpeed: 15, spawnInterval: 1.5, pattern: ['frogking'] }
+            { enemyCount: 1, enemyHealth_multiplier: 1.0, speedMultiplier: 0.75, spawnInterval: 1.5, pattern: ['frogking'] }
         ];
         
         return (wave > 0 && wave <= waveConfigs.length) ? waveConfigs[wave - 1] : null;

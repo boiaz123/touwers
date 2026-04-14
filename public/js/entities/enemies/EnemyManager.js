@@ -33,12 +33,13 @@ export class EnemyManager {
         this.path = newPath;
     }
     
-    spawnWave(waveNumber, count, health = 50, speed = 50, spawnInterval = 1.0, enemyType = 'basic') {
+    spawnWave(waveNumber, count, health = 50, speed_multiplier = 1.0, spawnInterval = 1.0, enemyType = 'basic') {
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnQueueIndex = 0;
         this.spawnInterval = spawnInterval;
+        this.spawnTimer = this.spawnInterval; // First enemy spawns immediately
         this.waveStartSFXPlayed = false; // Reset flag for new wave
         
         // Play wave start SFX
@@ -50,17 +51,18 @@ export class EnemyManager {
             this.spawnQueue.push({
                 type: enemyType,
                 health: health,
-                speed: speed
+                speed_multiplier: speed_multiplier
             });
         }
     }
     
-    spawnWaveWithPattern(waveNumber, count, health_multiplier = 1, speed = 50, spawnInterval = 1.0, pattern) {
+    spawnWaveWithPattern(waveNumber, count, health_multiplier = 1, speed_multiplier = 1.0, spawnInterval = 1.0, pattern) {
         this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnQueueIndex = 0;
         this.spawnInterval = spawnInterval;
+        this.spawnTimer = this.spawnInterval; // First enemy spawns immediately
         this.waveStartSFXPlayed = false; // Reset flag for new wave
         
         // Play wave start SFX
@@ -73,7 +75,7 @@ export class EnemyManager {
             this.spawnQueue.push({
                 type: enemyType,
                 health_multiplier: health_multiplier,
-                speed: speed
+                speed_multiplier: speed_multiplier
             });
         }
     }
@@ -103,7 +105,7 @@ export class EnemyManager {
             this.spawnQueue.push({
                 type: enemyType,
                 health_multiplier: 1,
-                speed: defaultSpeed
+                speed_multiplier: 1.0
             });
             this.spawnPatternIndex++;
             
@@ -124,7 +126,9 @@ export class EnemyManager {
                 
                 // Normalize enemy data: handle both "health" (from spawnWave) and "health_multiplier" (from waves/continuous)
                 let healthMultiplier = enemyData.health_multiplier;
-                let speed = enemyData.speed;
+                const speedMul = enemyData.speed_multiplier !== undefined ? enemyData.speed_multiplier : 1.0;
+                const baseSpeed = EnemyRegistry.getDefaultSpeed(enemyData.type) || 50;
+                const actualSpeed = baseSpeed * speedMul;
                 
                 // If "health" is provided instead of "health_multiplier", convert it
                 if (enemyData.health !== undefined && healthMultiplier === undefined) {
@@ -140,7 +144,7 @@ export class EnemyManager {
                     enemyData.type,
                     this.path,
                     healthMultiplier,
-                    speed
+                    actualSpeed
                 );
                 
                 if (enemy) {

@@ -60,7 +60,7 @@ export class Level8 extends LevelBase {
         { 
             enemyCount: 100, 
             enemyHealth_multiplier: 0.1, 
-            enemySpeed: 35, 
+            speedMultiplier: 1.75, 
             spawnInterval: 2.5, 
             pattern: ['frogking'] 
         }

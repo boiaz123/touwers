@@ -1334,7 +1334,7 @@ export class GameplayState {
             return {
                 enemyCount: baseEnemies + Math.floor(wave * 1.2),
                 enemyHealth_multiplier: baseHealth_multiplier + (wave - 1) * 0.05,
-                enemySpeed: Math.min(100, baseSpeed + (wave - 1) * 2),
+                speedMultiplier: Math.min(2.0, 0.8 + (wave - 1) * 0.04),
                 spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03)
             };
         }
@@ -1346,7 +1346,7 @@ export class GameplayState {
                 return {
                     enemyCount: config.enemyCount,
                     enemyHealth_multiplier: config.enemyHealth_multiplier || 1,
-                    enemySpeed: config.enemySpeed || 30,
+                    speedMultiplier: config.speedMultiplier || 1.0,
                     spawnInterval: config.spawnInterval || 1.0,
                     wavePattern: config.pattern
                 };
@@ -1358,7 +1358,7 @@ export class GameplayState {
         return {
             enemyCount: 10,
             enemyHealth_multiplier: 1,
-            enemySpeed: 30,
+            speedMultiplier: 1.0,
             spawnInterval: 1.0
         };
     }
@@ -1391,7 +1391,7 @@ export class GameplayState {
                         this.gameState.wave,
                         waveConfig.enemyCount,
                         waveConfig.enemyHealth_multiplier,
-                        waveConfig.enemySpeed,
+                        waveConfig.speedMultiplier,
                         waveConfig.spawnInterval,
                         waveConfig.wavePattern
                     );
@@ -1401,7 +1401,7 @@ export class GameplayState {
                         this.gameState.wave, 
                         waveConfig.enemyCount,
                         waveConfig.enemyHealth_multiplier,
-                        waveConfig.enemySpeed,
+                        waveConfig.speedMultiplier,
                         waveConfig.spawnInterval
                     );
                 }
