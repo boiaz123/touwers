@@ -2720,181 +2720,301 @@ export class LevelBase {
     }
 
     renderMountainPineType1(ctx, x, y, size) {
-        // Tall pine with heavy snow
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.45;
+        // Tall classic spruce - 5 stacked tiers with natural variation
+        // x = horizontal center, y = trunk start (foliage grows up, trunk grows down)
+        // Seeded variation: small pseudo-random from position so each tree looks unique
+        const v = ((x * 127 + y * 311) & 0xfff) / 0xfff;  // 0..1 deterministic
+        const v2 = ((x * 293 + y * 61) & 0xfff) / 0xfff;
+        const heightMult = 0.90 + v * 0.22;   // 0.90 - 1.12× height variation
+        const spreadMult = 0.88 + v2 * 0.24; // 0.88 - 1.12× width variation
+        const trunkW = size * (0.065 + v * 0.018);
+        const trunkH = size * 0.38 * heightMult;
 
-        // Trunk
-        ctx.fillStyle = '#654321';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
 
-        // Tree shape - dark green cone
-        ctx.fillStyle = '#1a4d2e';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.65);
-        ctx.lineTo(x + size * 0.4, y - size * 0.05);
-        ctx.lineTo(x - size * 0.4, y - size * 0.05);
-        ctx.closePath();
-        ctx.fill();
+        const h1 = heightMult, s1 = spreadMult;
+        const T = [
+            { t: y - size*0.06*h1, b: y + size*0.12*h1, s: size*0.44*s1 },
+            { t: y - size*0.20*h1, b: y + size*0.01*h1, s: size*0.36*s1 },
+            { t: y - size*0.33*h1, b: y - size*0.12*h1, s: size*0.27*s1 },
+            { t: y - size*0.45*h1, b: y - size*0.24*h1, s: size*0.19*s1 },
+            { t: y - size*0.56*h1, b: y - size*0.34*h1, s: size*0.12*s1 }
+        ];
 
-        // Mid-layer
-        ctx.fillStyle = '#2d5a3d';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.35, y + size * 0.15);
-        ctx.lineTo(x - size * 0.35, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
+        T.forEach(t => {
+            ctx.fillStyle = '#183d24';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t);
+            ctx.lineTo(x + t.s, t.b);
+            ctx.lineTo(x - t.s, t.b);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#2a5c38';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t);
+            ctx.lineTo(x, t.b);
+            ctx.lineTo(x - t.s, t.b);
+            ctx.closePath();
+            ctx.fill();
+        });
 
-        // Snow cap
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x + size * 0.12, y - size * 0.4);
-        ctx.lineTo(x - size * 0.12, y - size * 0.4);
-        ctx.closePath();
-        ctx.fill();
-
-        // Snow on middle branches
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.15, y - size * 0.2);
-        ctx.lineTo(x + size * 0.28, y);
-        ctx.lineTo(x + size * 0.08, y);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.15, y - size * 0.2);
-        ctx.lineTo(x - size * 0.28, y);
-        ctx.lineTo(x - size * 0.08, y);
-        ctx.closePath();
-        ctx.fill();
+        // Snow depth varies per tier (outer tiers hold more snow)
+        T.forEach((t, i) => {
+            const h = t.b - t.t;
+            const snowLoad = 0.20 + (1 - i / T.length) * 0.14 + v * 0.08;
+            const sw = t.s * (0.68 + v2 * 0.14);
+            const sd = h * snowLoad;
+            const sy = t.t + sd;
+            ctx.fillStyle = 'rgba(232, 244, 255, 0.94)';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t + h * 0.03);
+            ctx.lineTo(x + sw, sy - sd * 0.18);
+            ctx.quadraticCurveTo(x + sw + t.s * 0.07, sy + sd * 0.28, x + sw * 0.72, sy + sd * 0.10);
+            ctx.lineTo(x - sw * 0.72, sy + sd * 0.10);
+            ctx.quadraticCurveTo(x - sw - t.s * 0.07, sy + sd * 0.28, x - sw, sy - sd * 0.18);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.beginPath();
+            ctx.arc(x - sw * 0.32, t.t + sd * 0.55, sd * 0.20, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 
     renderMountainPineType2(ctx, x, y, size) {
-        // Medium pine with layered tiers and flat snow on branch tips
-        const trunkW = size * 0.14;
-        // Trunk
-        ctx.fillStyle = '#704020';
-        ctx.fillRect(x - trunkW * 0.5, y, trunkW, size * 0.38);
-        // Three branch tiers (bottom to top)
-        const tiers = [
-            { cy: y - size*0.10, w: size*0.38, h: size*0.22 },
-            { cy: y - size*0.30, w: size*0.28, h: size*0.20 },
-            { cy: y - size*0.50, w: size*0.18, h: size*0.18 }
+        // Wide fir - 4 broad flat tiers with heavy snow ledges, asymmetric variation
+        // x = horizontal center, y = trunk start
+        const v  = ((x * 179 + y * 233) & 0xfff) / 0xfff;
+        const v2 = ((x * 431 + y * 97)  & 0xfff) / 0xfff;
+        const heightMult = 0.88 + v * 0.20;
+        const spreadMult = 0.90 + v2 * 0.20;
+        // Slight leftward lean for a natural feel
+        const lean = (v - 0.5) * size * 0.04;
+        const trunkW = size * (0.072 + v * 0.016);
+        const trunkH = size * 0.36 * heightMult;
+
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(x + lean - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + lean + trunkW * 0.1, y, trunkW * 0.38, trunkH);
+
+        const h1 = heightMult, s1 = spreadMult;
+        // Right side can differ slightly from left for asymmetry
+        const T = [
+            { t: y - size*0.06*h1, b: y + size*0.14*h1, sr: size*0.50*s1, sl: size*(0.50+v*0.04)*s1 },
+            { t: y - size*0.22*h1, b: y + size*0.02*h1, sr: size*0.40*s1, sl: size*(0.40+v2*0.04)*s1 },
+            { t: y - size*0.38*h1, b: y - size*0.12*h1, sr: size*0.28*s1, sl: size*0.28*s1 },
+            { t: y - size*0.52*h1, b: y - size*0.28*h1, sr: size*0.17*s1, sl: size*0.17*s1 }
         ];
-        tiers.forEach(t => {
-            ctx.fillStyle = '#2d5a3d';
+
+        T.forEach(t => {
+            const cx = x + lean;
+            ctx.fillStyle = '#1a4a2c';
             ctx.beginPath();
-            ctx.moveTo(x, t.cy - t.h);
-            ctx.lineTo(x + t.w, t.cy + t.h * 0.1);
-            ctx.lineTo(x - t.w, t.cy + t.h * 0.1);
-            ctx.closePath(); ctx.fill();
-            // Shadow side
-            ctx.fillStyle = '#1a3d28';
+            ctx.moveTo(cx, t.t);
+            ctx.lineTo(cx + t.sr, t.b);
+            ctx.lineTo(cx - t.sl, t.b);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#2e6642';
             ctx.beginPath();
-            ctx.moveTo(x, t.cy - t.h);
-            ctx.lineTo(x, t.cy + t.h * 0.1);
-            ctx.lineTo(x - t.w, t.cy + t.h * 0.1);
-            ctx.closePath(); ctx.fill();
+            ctx.moveTo(cx, t.t);
+            ctx.lineTo(cx, t.b);
+            ctx.lineTo(cx - t.sl, t.b);
+            ctx.closePath();
+            ctx.fill();
         });
-        // Flat snow cap on top tier
-        ctx.fillStyle = 'rgba(238,248,255,0.90)';
-        ctx.beginPath(); ctx.ellipse(x, tiers[2].cy - tiers[2].h*0.7, tiers[2].w*0.55, tiers[2].h*0.28, 0, 0, Math.PI*2); ctx.fill();
-        // Flat snow on lower branch tips
-        ctx.fillStyle = 'rgba(235,246,255,0.72)';
-        [[-tiers[0].w*0.78, tiers[0].cy+tiers[0].h*0.06, tiers[0].w*0.22, tiers[0].h*0.12],
-         [tiers[0].w*0.68, tiers[0].cy+tiers[0].h*0.06, tiers[0].w*0.22, tiers[0].h*0.12],
-         [-tiers[1].w*0.70, tiers[1].cy+tiers[1].h*0.06, tiers[1].w*0.20, tiers[1].h*0.11],
-         [tiers[1].w*0.60, tiers[1].cy+tiers[1].h*0.06, tiers[1].w*0.20, tiers[1].h*0.11]]
-        .forEach(([ox,oy,rw,rh]) => { ctx.beginPath(); ctx.ellipse(x+ox, oy, rw, rh, 0, 0, Math.PI*2); ctx.fill(); });
+
+        T.forEach((t, i) => {
+            const cx = x + lean;
+            const h = t.b - t.t;
+            const snowLoad = 0.20 + (1 - i / T.length) * 0.08 + v2 * 0.06;
+            const swr = t.sr * (0.72 + v * 0.12);
+            const swl = t.sl * (0.72 + v2 * 0.12);
+            const sd = h * snowLoad;
+            const sy = t.t + sd;
+            ctx.fillStyle = 'rgba(235, 246, 255, 0.93)';
+            ctx.beginPath();
+            ctx.moveTo(cx, t.t + h * 0.03);
+            ctx.lineTo(cx + swr, sy - sd * 0.10);
+            ctx.quadraticCurveTo(cx + swr + t.sr * 0.08, sy + sd * 0.32, cx + swr * 0.68, sy + sd * 0.14);
+            ctx.lineTo(cx - swl * 0.68, sy + sd * 0.14);
+            ctx.quadraticCurveTo(cx - swl - t.sl * 0.08, sy + sd * 0.32, cx - swl, sy - sd * 0.10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.42)';
+            ctx.beginPath();
+            ctx.arc(cx - swl * 0.30, t.t + sd * 0.60, sd * 0.21, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(220, 238, 255, 0.88)';
+            ctx.beginPath();
+            ctx.arc(cx + t.sr * 0.84, t.t + h * 0.28, h * 0.09, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx - t.sl * 0.84, t.t + h * 0.28, h * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 
     renderMountainPineType3(ctx, x, y, size) {
-        // Small shrubby pine
-        const trunkWidth = size * 0.15;
-        const trunkHeight = size * 0.35;
+        // Short young pine - 3 compact tiers, fresh snow, small sapling look
+        // x = horizontal center, y = trunk start
+        const v  = ((x * 523 + y * 149) & 0xfff) / 0xfff;
+        const v2 = ((x * 67  + y * 401) & 0xfff) / 0xfff;
+        const heightMult = 0.84 + v * 0.28;   // shorter-to-taller range
+        const spreadMult = 0.86 + v2 * 0.26;
+        const lean = (v2 - 0.5) * size * 0.03;
+        const trunkW = size * (0.062 + v * 0.016);
+        const trunkH = size * 0.30 * heightMult;
 
-        // Trunk
-        ctx.fillStyle = '#8b5a3c';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#7a4520';
+        ctx.fillRect(x + lean - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + lean + trunkW * 0.1, y, trunkW * 0.35, trunkH);
 
-        // Bushy tree shape
-        ctx.fillStyle = '#3d6d4d';
+        const h1 = heightMult, s1 = spreadMult;
+        const T = [
+            { t: y - size*0.05*h1, b: y + size*0.10*h1, s: size*0.38*s1 },
+            { t: y - size*0.20*h1, b: y - size*0.02*h1, s: size*0.27*s1 },
+            { t: y - size*0.34*h1, b: y - size*0.14*h1, s: size*0.16*s1 }
+        ];
+
+        T.forEach(t => {
+            const cx = x + lean;
+            ctx.fillStyle = '#183d24';
+            ctx.beginPath();
+            ctx.moveTo(cx, t.t);
+            ctx.lineTo(cx + t.s, t.b);
+            ctx.lineTo(cx - t.s, t.b);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#2a5c38';
+            ctx.beginPath();
+            ctx.moveTo(cx, t.t);
+            ctx.lineTo(cx, t.b);
+            ctx.lineTo(cx - t.s, t.b);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        T.forEach((t, i) => {
+            const cx = x + lean;
+            const h = t.b - t.t;
+            const snowLoad = 0.24 + v * 0.10 + (1 - i / T.length) * 0.06;
+            const sw = t.s * (0.74 + v2 * 0.12);
+            const sd = h * snowLoad;
+            const sy = t.t + sd;
+            ctx.fillStyle = 'rgba(236, 247, 255, 0.95)';
+            ctx.beginPath();
+            ctx.moveTo(cx, t.t + h * 0.03);
+            ctx.lineTo(cx + sw, sy - sd * 0.14);
+            ctx.quadraticCurveTo(cx + sw + t.s * 0.06, sy + sd * 0.30, cx + sw * 0.70, sy + sd * 0.12);
+            ctx.lineTo(cx - sw * 0.70, sy + sd * 0.12);
+            ctx.quadraticCurveTo(cx - sw - t.s * 0.06, sy + sd * 0.30, cx - sw, sy - sd * 0.14);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.48)';
+            ctx.beginPath();
+            ctx.arc(cx - sw * 0.30, t.t + sd * 0.58, sd * 0.21, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        const cx0 = x + lean;
+        ctx.fillStyle = 'rgba(215, 236, 255, 0.88)';
         ctx.beginPath();
-        ctx.ellipse(x, y - size * 0.2, size * 0.3, size * 0.4, 0, 0, Math.PI * 2);
+        ctx.arc(cx0 + T[0].s * 0.82, T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.045, 0, Math.PI * 2);
         ctx.fill();
-
-        // Dark shadow side
-        ctx.fillStyle = '#1a3d28';
         ctx.beginPath();
-        ctx.ellipse(x + size * 0.1, y - size * 0.2, size * 0.2, size * 0.35, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Snow patches
-        ctx.fillStyle = '#e8e8e8';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.15, y - size * 0.35, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.08, 0, Math.PI * 2);
+        ctx.arc(cx0 - T[0].s * (0.78 + v * 0.06), T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.040, 0, Math.PI * 2);
         ctx.fill();
     }
 
     renderMountainPineType4(ctx, x, y, size) {
-        // Thick, sturdy pine with minimal snow - new variation
-        const trunkWidth = size * 0.24;
-        const trunkHeight = size * 0.48;
+        // Old-growth conical spruce - smooth cone silhouette with snow patches at each branch level
+        // x = horizontal center, y = trunk start
+        const v  = ((x * 359 + y * 173) & 0xfff) / 0xfff;
+        const v2 = ((x * 83  + y * 467) & 0xfff) / 0xfff;
+        const heightMult = 0.88 + v * 0.24;
+        const widthMult  = 0.90 + v2 * 0.18;
+        const lean = (v2 - 0.5) * size * 0.035;
+        const trunkW = size * (0.070 + v * 0.018);
+        const trunkH = size * 0.35 * heightMult;
+        const coneH = size * 0.67 * heightMult;  // height of foliage cone
+        const coneW = size * 0.48 * widthMult;   // half-width of cone base
+        const apex = y - coneH;
 
-        // Trunk with deep shading
-        ctx.fillStyle = '#6b4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3a2418';
-        ctx.fillRect(x - trunkWidth * 0.15, y, trunkWidth * 0.15, trunkHeight);
+        const cx4 = x + lean;
 
-        // Dark green base
-        ctx.fillStyle = '#0d3817';
+        // Trunk
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(cx4 - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(cx4 + trunkW * 0.1, y, trunkW * 0.38, trunkH);
+
+        // Smooth cone - dark shadow shape
+        ctx.fillStyle = '#132e1a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.7);
-        ctx.lineTo(x + size * 0.42, y - size * 0.08);
-        ctx.lineTo(x - size * 0.42, y - size * 0.08);
+        ctx.moveTo(cx4, apex);
+        ctx.bezierCurveTo(cx4 + coneW * 0.28, y - coneH * 0.65, cx4 + coneW * 0.90, y - coneH * 0.14, cx4 + coneW, y);
+        ctx.lineTo(cx4 - coneW, y);
+        ctx.bezierCurveTo(cx4 - coneW * 0.90, y - coneH * 0.14, cx4 - coneW * 0.28, y - coneH * 0.65, cx4, apex);
         ctx.closePath();
         ctx.fill();
 
-        // Mid section
-        ctx.fillStyle = '#1a5a2a';
+        // Lit left face
+        ctx.fillStyle = '#1e4a2a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.38, y + size * 0.1);
-        ctx.lineTo(x - size * 0.38, y + size * 0.1);
+        ctx.moveTo(cx4, apex);
+        ctx.bezierCurveTo(cx4 - coneW * 0.10, y - coneH * 0.68, cx4 - coneW * 0.80, y - coneH * 0.18, cx4 - coneW, y);
+        ctx.lineTo(cx4, y);
         ctx.closePath();
         ctx.fill();
 
-        // Darker shading on right
-        ctx.fillStyle = '#0d3817';
+        // Horizontal branch lines (suggest tiers without hard shapes)
+        ctx.strokeStyle = 'rgba(10, 28, 16, 0.70)';
+        ctx.lineWidth = size * 0.016;
+        [0.20, 0.38, 0.56, 0.74].forEach(frac => {
+            const ly = y - coneH * frac;
+            const lw = coneW * (1.0 - frac * 0.85);
+            ctx.beginPath();
+            ctx.moveTo(cx4 - lw, ly);
+            ctx.lineTo(cx4 + lw, ly);
+            ctx.stroke();
+        });
+
+        // Snow cap size varies with v (heavy or lighter snow year)
+        const capFrac = 0.38 + v * 0.14;
+        const capBot = y - coneH * capFrac;
+        const capW = coneW * (1.0 - capFrac * 0.85);
+        ctx.fillStyle = 'rgba(232, 245, 255, 0.93)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.38);
-        ctx.lineTo(x + size * 0.38, y + size * 0.1);
-        ctx.lineTo(x + size * 0.1, y + size * 0.1);
+        ctx.moveTo(cx4, apex);
+        ctx.bezierCurveTo(cx4 + capW * 0.38, apex + coneH * 0.18, cx4 + capW * 0.88, capBot - coneH * 0.04, cx4 + capW, capBot);
+        ctx.quadraticCurveTo(cx4 + capW * 0.58, capBot + coneH * 0.05, cx4 - capW * 0.58, capBot + coneH * 0.05);
+        ctx.bezierCurveTo(cx4 - capW * 0.88, capBot - coneH * 0.04, cx4 - capW * 0.38, apex + coneH * 0.18, cx4, apex);
         ctx.closePath();
         ctx.fill();
-
-        // Small snow cap on top
-        ctx.fillStyle = '#f5f5f5';
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.68, size * 0.1, 0, Math.PI * 2);
+        ctx.arc(cx4 - capW * 0.15, apex + coneH * 0.08, coneH * 0.04, 0, Math.PI * 2);
         ctx.fill();
 
-        // Slight snow accent on upper branches
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.2, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
+        // Mid-level snow patches at branch tips - vary their radius with v2
+        [0.38, 0.60].forEach(frac => {
+            const ly = y - coneH * frac;
+            const lw = coneW * (1.0 - frac * 0.85);
+            const r = lw * (0.12 + v2 * 0.06);
+            ctx.fillStyle = 'rgba(220, 240, 255, 0.82)';
+            ctx.beginPath();
+            ctx.arc(cx4 + lw * 0.80, ly + coneH * 0.022, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx4 - lw * 0.80, ly + coneH * 0.022, r, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 
     renderSpaceCrystalType1(ctx, x, y, size) {

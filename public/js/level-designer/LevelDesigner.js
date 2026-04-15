@@ -3406,142 +3406,213 @@ export class LevelDesigner {
     }
 
     drawMountainVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 3 : Math.floor(x * 0.5 + y * 0.7) % 3;
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
         switch(seed) {
             case 0: this.drawMountainPine1(x, y, size); break;
             case 1: this.drawMountainPine2(x, y, size); break;
-            default: this.drawMountainPine3(x, y, size);
+            case 2: this.drawMountainPine3(x, y, size); break;
+            default: this.drawMountainPine4(x, y, size);
         }
     }
 
     drawMountainPine1(x, y, size) {
-        // Tall pine with heavy snow
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.45;
+        // Tall classic spruce - 5 stacked tiers
+        const ctx = this.ctx;
+        const trunkW = size * 0.075;
+        const trunkH = size * 0.38;
 
-        // Trunk
-        this.ctx.fillStyle = '#654321';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
 
-        // Tree shape - dark green cone
-        this.ctx.fillStyle = '#1a4d2e';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.65);
-        this.ctx.lineTo(x + size * 0.4, y - size * 0.05);
-        this.ctx.lineTo(x - size * 0.4, y - size * 0.05);
-        this.ctx.closePath();
-        this.ctx.fill();
+        const T = [
+            { t: y - size*0.06, b: y + size*0.12, s: size*0.44 },
+            { t: y - size*0.20, b: y + size*0.01, s: size*0.36 },
+            { t: y - size*0.33, b: y - size*0.12, s: size*0.27 },
+            { t: y - size*0.45, b: y - size*0.24, s: size*0.19 },
+            { t: y - size*0.56, b: y - size*0.34, s: size*0.12 }
+        ];
 
-        // Mid-layer
-        this.ctx.fillStyle = '#2d5a3d';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.35, y + size * 0.15);
-        this.ctx.lineTo(x - size * 0.35, y + size * 0.15);
-        this.ctx.closePath();
-        this.ctx.fill();
+        T.forEach(t => {
+            ctx.fillStyle = '#183d24';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#2a5c38';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+        });
 
-        // Snow cap - white frosting on top
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.62);
-        this.ctx.lineTo(x + size * 0.12, y - size * 0.4);
-        this.ctx.lineTo(x - size * 0.12, y - size * 0.4);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Snow on middle branches
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + size * 0.15, y - size * 0.2);
-        this.ctx.lineTo(x + size * 0.28, y);
-        this.ctx.lineTo(x + size * 0.08, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.15, y - size * 0.2);
-        this.ctx.lineTo(x - size * 0.28, y);
-        this.ctx.lineTo(x - size * 0.08, y);
-        this.ctx.closePath();
-        this.ctx.fill();
+        T.forEach(t => {
+            const h = t.b - t.t, sw = t.s * 0.76, sd = h * 0.26, sy = t.t + sd;
+            ctx.fillStyle = 'rgba(232, 244, 255, 0.94)';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t + h * 0.03);
+            ctx.lineTo(x + sw, sy - sd * 0.18);
+            ctx.quadraticCurveTo(x + sw + t.s * 0.07, sy + sd * 0.28, x + sw * 0.72, sy + sd * 0.10);
+            ctx.lineTo(x - sw * 0.72, sy + sd * 0.10);
+            ctx.quadraticCurveTo(x - sw - t.s * 0.07, sy + sd * 0.28, x - sw, sy - sd * 0.18);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.beginPath();
+            ctx.arc(x - sw * 0.32, t.t + sd * 0.55, sd * 0.20, 0, Math.PI * 2); ctx.fill();
+        });
     }
 
     drawMountainPine2(x, y, size) {
-        // Medium pine, less snow
-        const trunkWidth = size * 0.18;
-        const trunkHeight = size * 0.4;
+        // Wide fir - 4 broad tiers with snow ledges and tip blobs
+        const ctx = this.ctx;
+        const trunkW = size * 0.08, trunkH = size * 0.36;
 
-        // Trunk
-        this.ctx.fillStyle = '#704020';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
 
-        // Main tree cone
-        this.ctx.fillStyle = '#2d5a3d';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.55);
-        this.ctx.lineTo(x + size * 0.35, y);
-        this.ctx.lineTo(x - size * 0.35, y);
-        this.ctx.closePath();
-        this.ctx.fill();
+        const T = [
+            { t: y - size*0.06, b: y + size*0.14, s: size*0.50 },
+            { t: y - size*0.22, b: y + size*0.02, s: size*0.40 },
+            { t: y - size*0.38, b: y - size*0.12, s: size*0.28 },
+            { t: y - size*0.52, b: y - size*0.28, s: size*0.17 }
+        ];
 
-        // Darker accent
-        this.ctx.fillStyle = '#1a3d28';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.15, y - size * 0.3);
-        this.ctx.lineTo(x + size * 0.15, y - size * 0.3);
-        this.ctx.lineTo(x - size * 0.28, y + size * 0.1);
-        this.ctx.closePath();
-        this.ctx.fill();
+        T.forEach(t => {
+            ctx.fillStyle = '#1a4a2c';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#2e6642';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+        });
 
-        // Light snow cap
-        this.ctx.fillStyle = '#f5f5f5';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - size * 0.5, size * 0.08, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Snow on edges
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        for (let i = 0; i < 2; i++) {
-            const angle = (i / 2) * Math.PI;
-            const px = x + Math.cos(angle - Math.PI / 2) * size * 0.25;
-            const py = y - size * 0.15;
-            this.ctx.beginPath();
-            this.ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
+        T.forEach(t => {
+            const h = t.b - t.t, sw = t.s * 0.78, sd = h * 0.24, sy = t.t + sd;
+            ctx.fillStyle = 'rgba(235, 246, 255, 0.93)';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t + h * 0.03);
+            ctx.lineTo(x + sw, sy - sd * 0.10);
+            ctx.quadraticCurveTo(x + sw + t.s * 0.08, sy + sd * 0.32, x + sw * 0.68, sy + sd * 0.14);
+            ctx.lineTo(x - sw * 0.68, sy + sd * 0.14);
+            ctx.quadraticCurveTo(x - sw - t.s * 0.08, sy + sd * 0.32, x - sw, sy - sd * 0.10);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.42)';
+            ctx.beginPath();
+            ctx.arc(x - sw * 0.30, t.t + sd * 0.60, sd * 0.21, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(220, 238, 255, 0.88)';
+            ctx.beginPath();
+            ctx.arc(x + t.s * 0.84, t.t + h * 0.28, h * 0.09, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - t.s * 0.84, t.t + h * 0.28, h * 0.09, 0, Math.PI * 2); ctx.fill();
+        });
     }
 
     drawMountainPine3(x, y, size) {
-        // Small shrubby pine
-        const trunkWidth = size * 0.15;
-        const trunkHeight = size * 0.35;
+        // Short young pine - 3 compact tiers with fresh snow
+        const ctx = this.ctx;
+        const trunkW = size * 0.07, trunkH = size * 0.30;
 
-        // Trunk
-        this.ctx.fillStyle = '#8b5a3c';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#7a4520';
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.35, trunkH);
 
-        // Bushy tree shape
-        this.ctx.fillStyle = '#3d6d4d';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x, y - size * 0.2, size * 0.3, size * 0.4, 0, 0, Math.PI * 2);
-        this.ctx.fill();
+        const T = [
+            { t: y - size*0.05, b: y + size*0.10, s: size*0.38 },
+            { t: y - size*0.20, b: y - size*0.02, s: size*0.27 },
+            { t: y - size*0.34, b: y - size*0.14, s: size*0.16 }
+        ];
 
-        // Dark shadow side
-        this.ctx.fillStyle = '#1a3d28';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + size * 0.1, y - size * 0.2, size * 0.2, size * 0.35, 0, 0, Math.PI * 2);
-        this.ctx.fill();
+        T.forEach(t => {
+            ctx.fillStyle = '#183d24';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#2a5c38';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
+            ctx.closePath(); ctx.fill();
+        });
 
-        // Snow patches
-        this.ctx.fillStyle = '#e8e8e8';
-        this.ctx.beginPath();
-        this.ctx.arc(x - size * 0.15, y - size * 0.35, size * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
+        T.forEach(t => {
+            const h = t.b - t.t, sw = t.s * 0.80, sd = h * 0.30, sy = t.t + sd;
+            ctx.fillStyle = 'rgba(236, 247, 255, 0.95)';
+            ctx.beginPath();
+            ctx.moveTo(x, t.t + h * 0.03);
+            ctx.lineTo(x + sw, sy - sd * 0.14);
+            ctx.quadraticCurveTo(x + sw + t.s * 0.06, sy + sd * 0.30, x + sw * 0.70, sy + sd * 0.12);
+            ctx.lineTo(x - sw * 0.70, sy + sd * 0.12);
+            ctx.quadraticCurveTo(x - sw - t.s * 0.06, sy + sd * 0.30, x - sw, sy - sd * 0.14);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.48)';
+            ctx.beginPath();
+            ctx.arc(x - sw * 0.30, t.t + sd * 0.58, sd * 0.21, 0, Math.PI * 2); ctx.fill();
+        });
 
-        this.ctx.beginPath();
-        this.ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.08, 0, Math.PI * 2);
-        this.ctx.fill();
+        ctx.fillStyle = 'rgba(215, 236, 255, 0.88)';
+        ctx.beginPath();
+        ctx.arc(x + T[0].s * 0.82, T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.045, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - T[0].s * 0.82, T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.045, 0, Math.PI * 2); ctx.fill();
+    }
+
+    drawMountainPine4(x, y, size) {
+        // Old-growth conical spruce - smooth bezier cone with snow cap and branch patches
+        const ctx = this.ctx;
+        const trunkW = size * 0.08, trunkH = size * 0.35;
+        const coneH = size * 0.67, coneW = size * 0.48;
+        const apex = y - coneH;
+
+        ctx.fillStyle = '#6b3d1a';
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
+
+        ctx.fillStyle = '#132e1a';
+        ctx.beginPath();
+        ctx.moveTo(x, apex);
+        ctx.bezierCurveTo(x + coneW * 0.28, y - coneH * 0.65, x + coneW * 0.90, y - coneH * 0.14, x + coneW, y);
+        ctx.lineTo(x - coneW, y);
+        ctx.bezierCurveTo(x - coneW * 0.90, y - coneH * 0.14, x - coneW * 0.28, y - coneH * 0.65, x, apex);
+        ctx.closePath(); ctx.fill();
+
+        ctx.fillStyle = '#1e4a2a';
+        ctx.beginPath();
+        ctx.moveTo(x, apex);
+        ctx.bezierCurveTo(x - coneW * 0.10, y - coneH * 0.68, x - coneW * 0.80, y - coneH * 0.18, x - coneW, y);
+        ctx.lineTo(x, y);
+        ctx.closePath(); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(10, 28, 16, 0.70)';
+        ctx.lineWidth = size * 0.016;
+        [0.20, 0.38, 0.56, 0.74].forEach(frac => {
+            const ly = y - coneH * frac, lw = coneW * (1.0 - frac * 0.85);
+            ctx.beginPath(); ctx.moveTo(x - lw, ly); ctx.lineTo(x + lw, ly); ctx.stroke();
+        });
+
+        const capBot = y - coneH * 0.44, capW = coneW * (1.0 - 0.44 * 0.85);
+        ctx.fillStyle = 'rgba(232, 245, 255, 0.93)';
+        ctx.beginPath();
+        ctx.moveTo(x, apex);
+        ctx.bezierCurveTo(x + capW * 0.38, apex + coneH * 0.18, x + capW * 0.88, capBot - coneH * 0.04, x + capW, capBot);
+        ctx.quadraticCurveTo(x + capW * 0.58, capBot + coneH * 0.05, x - capW * 0.58, capBot + coneH * 0.05);
+        ctx.bezierCurveTo(x - capW * 0.88, capBot - coneH * 0.04, x - capW * 0.38, apex + coneH * 0.18, x, apex);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.beginPath();
+        ctx.arc(x - capW * 0.15, apex + coneH * 0.08, coneH * 0.04, 0, Math.PI * 2); ctx.fill();
+
+        [0.38, 0.60].forEach(frac => {
+            const ly = y - coneH * frac, lw = coneW * (1.0 - frac * 0.85);
+            ctx.fillStyle = 'rgba(220, 240, 255, 0.82)';
+            ctx.beginPath();
+            ctx.arc(x + lw * 0.80, ly + coneH * 0.022, lw * 0.15, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - lw * 0.80, ly + coneH * 0.022, lw * 0.15, 0, Math.PI * 2); ctx.fill();
+        });
     }
 
     drawDesertVegetation(x, y, size, variant) {
