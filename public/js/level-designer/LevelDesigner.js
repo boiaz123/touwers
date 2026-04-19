@@ -2512,75 +2512,233 @@ export class LevelDesigner {
     drawSnowRock(x, y, size, rockColor, rockAccent, seed) {
         switch(seed % 4) {
             case 0: {
-                // Rounded boulder with snow cap
-                this.ctx.fillStyle = rockColor;
-                this.ctx.beginPath(); this.ctx.arc(x, y, size * 0.30, 0, Math.PI * 2); this.ctx.fill();
-                this.ctx.fillStyle = rockAccent;
-                this.ctx.beginPath(); this.ctx.arc(x + size * 0.10, y + size * 0.10, size * 0.28, 0, Math.PI * 2); this.ctx.fill();
-                this.ctx.fillStyle = '#e8f4f8';
+                // Rounded grey boulder with natural irregular shape and snow cap
+                this.ctx.fillStyle = '#6a7880';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.28, y - size * 0.02);
-                this.ctx.bezierCurveTo(x - size * 0.22, y - size * 0.26, x + size * 0.22, y - size * 0.26, x + size * 0.28, y - size * 0.02);
-                this.ctx.lineTo(x + size * 0.24, y + size * 0.12);
-                this.ctx.bezierCurveTo(x + size * 0.16, y + size * 0.18, x - size * 0.16, y + size * 0.18, x - size * 0.24, y + size * 0.12);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(232,244,248,0.65)';
-                this.ctx.beginPath(); this.ctx.arc(x - size * 0.08, y - size * 0.12, size * 0.09, 0, Math.PI * 2); this.ctx.fill();
+                this.ctx.moveTo(x - size * 0.28, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                this.ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Dark shadow face on right
+                this.ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.12, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                this.ctx.lineTo(x + size * 0.04, y + size * 0.06);
+                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Highlight on upper left
+                this.ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.18, y - size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
+                this.ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Organic snow cap
+                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.88)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.22, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.26, x + size * 0.06, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x + size * 0.22, y - size * 0.20, x + size * 0.24, y - size * 0.10);
+                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.08, x - size * 0.04, y - size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.18, y - size * 0.08, x - size * 0.22, y - size * 0.16);
+                this.ctx.closePath();
+                this.ctx.fill();
                 break;
             }
             case 1: {
-                // Angular flat slab with snow layer on top edge
-                const hw = size * 0.32, hh = size * 0.20;
-                this.ctx.fillStyle = rockColor;
+                // Angular slab with faceted faces and snow on top ledge
+                const hw = size * 0.34, hh = size * 0.22;
+                this.ctx.fillStyle = '#586470';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x - hw, y + hh * 0.5); this.ctx.lineTo(x - hw * 0.65, y - hh);
-                this.ctx.lineTo(x + hw * 0.65, y - hh * 0.8); this.ctx.lineTo(x + hw, y + hh * 0.5);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = rockAccent;
+                this.ctx.moveTo(x - hw, y + hh * 0.5);
+                this.ctx.lineTo(x - hw * 0.72, y - hh);
+                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw, y + hh * 0.3);
+                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Dark right face
+                this.ctx.fillStyle = '#3a4550';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x + hw * 0.65, y - hh * 0.8); this.ctx.lineTo(x + hw, y + hh * 0.5);
-                this.ctx.lineTo(x + hw * 0.45, y + hh * 0.5); this.ctx.lineTo(x + hw * 0.30, y - hh * 0.55);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(235,248,255,0.92)';
+                this.ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw, y + hh * 0.3);
+                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                this.ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Lighter top face
+                this.ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.72, y - hh * 0.82); this.ctx.lineTo(x - hw * 0.65, y - hh);
-                this.ctx.lineTo(x + hw * 0.65, y - hh * 0.8); this.ctx.lineTo(x + hw * 0.52, y - hh * 0.52);
-                this.ctx.closePath(); this.ctx.fill();
+                this.ctx.moveTo(x - hw * 0.72, y - hh);
+                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Crack detail
+                this.ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
+                this.ctx.lineWidth = size * 0.012;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
+                this.ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
+                this.ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
+                this.ctx.stroke();
+                // Snow on top ledge
+                this.ctx.fillStyle = 'rgba(235, 248, 255, 0.90)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - hw * 0.78, y - hh * 0.90);
+                this.ctx.quadraticCurveTo(x - hw * 0.30, y - hh * 1.16, x + hw * 0.20, y - hh * 1.06);
+                this.ctx.quadraticCurveTo(x + hw * 0.68, y - hh * 0.92, x + hw * 0.60, y - hh * 0.72);
+                this.ctx.quadraticCurveTo(x + hw * 0.20, y - hh * 0.56, x - hw * 0.20, y - hh * 0.65);
+                this.ctx.quadraticCurveTo(x - hw * 0.60, y - hh * 0.70, x - hw * 0.78, y - hh * 0.90);
+                this.ctx.closePath();
+                this.ctx.fill();
                 break;
             }
             case 2: {
-                // Two overlapping boulders with snow
-                this.ctx.fillStyle = rockColor;
-                this.ctx.beginPath(); this.ctx.arc(x - size * 0.12, y + size * 0.05, size * 0.22, 0, Math.PI * 2); this.ctx.fill();
-                this.ctx.fillStyle = '#7a8e9c';
-                this.ctx.beginPath(); this.ctx.arc(x + size * 0.12, y - size * 0.04, size * 0.18, 0, Math.PI * 2); this.ctx.fill();
-                this.ctx.fillStyle = rockAccent;
-                this.ctx.beginPath(); this.ctx.arc(x - size * 0.04, y + size * 0.12, size * 0.20, 0, Math.PI * 2); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(240,248,255,0.78)';
-                this.ctx.beginPath(); this.ctx.arc(x - size * 0.14, y - size * 0.10, size * 0.14, 0, Math.PI, true); this.ctx.fill();
-                this.ctx.beginPath(); this.ctx.arc(x + size * 0.12, y - size * 0.14, size * 0.11, 0, Math.PI, true); this.ctx.fill();
+                // Two overlapping boulders with snow caps
+                // Smaller boulder (behind)
+                this.ctx.fillStyle = '#708090';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.02, y - size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on smaller boulder
+                this.ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.18, y - size * 0.20);
+                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
+                this.ctx.lineTo(x + size * 0.20, y - size * 0.06);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Larger boulder (front)
+                this.ctx.fillStyle = '#6a7a84';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.30, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on larger boulder
+                this.ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.10, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Highlight on larger boulder
+                this.ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.20, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Snow cap on larger boulder
+                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.86)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.24, y - size * 0.12);
+                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.22, x + size * 0.06, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x + size * 0.12, y - size * 0.12, x + size * 0.08, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.04, x - size * 0.18, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.28, y - size * 0.06, x - size * 0.24, y - size * 0.12);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Snow cap on smaller boulder
+                this.ctx.fillStyle = 'rgba(235, 246, 255, 0.80)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.08, y - size * 0.14);
+                this.ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.20, x + size * 0.24, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x + size * 0.28, y - size * 0.10, x + size * 0.22, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.06, x + size * 0.08, y - size * 0.14);
+                this.ctx.closePath();
+                this.ctx.fill();
                 break;
             }
             default: {
-                // Narrow ice column / pillar
-                const pw = size * 0.16, ph = size * 0.38;
-                this.ctx.fillStyle = '#8090a0';
+                // Cluster of small stones with varied shapes and snow patches
+                // Main stone
+                this.ctx.fillStyle = '#6a7880';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x - pw, y + ph * 0.5); this.ctx.lineTo(x - pw * 1.2, y - ph * 0.2);
-                this.ctx.lineTo(x - pw * 0.5, y - ph); this.ctx.lineTo(x + pw * 0.5, y - ph);
-                this.ctx.lineTo(x + pw * 1.2, y - ph * 0.2); this.ctx.lineTo(x + pw, y + ph * 0.5);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = rockAccent;
+                this.ctx.moveTo(x - size * 0.26, y + size * 0.14);
+                this.ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                this.ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on main stone
+                this.ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x + pw * 0.5, y - ph); this.ctx.lineTo(x + pw * 1.2, y - ph * 0.2);
-                this.ctx.lineTo(x + pw, y + ph * 0.5); this.ctx.lineTo(x + pw * 0.3, y + ph * 0.5);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(235,248,255,0.90)';
+                this.ctx.moveTo(x + size * 0.04, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                this.ctx.lineTo(x - size * 0.02, y + size * 0.04);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Second stone
+                this.ctx.fillStyle = '#5e6e78';
                 this.ctx.beginPath();
-                this.ctx.moveTo(x - pw, y - ph * 0.15); this.ctx.lineTo(x - pw * 0.5, y - ph);
-                this.ctx.lineTo(x + pw * 0.5, y - ph); this.ctx.lineTo(x + pw, y - ph * 0.15);
-                this.ctx.lineTo(x + pw * 0.5, y - ph * 0.40); this.ctx.lineTo(x - pw * 0.5, y - ph * 0.35);
-                this.ctx.closePath(); this.ctx.fill();
+                this.ctx.moveTo(x + size * 0.06, y + size * 0.08);
+                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Third stone
+                this.ctx.fillStyle = '#74848c';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.04, y + size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Fourth small stone
+                this.ctx.fillStyle = '#667682';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.08, y - size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
+                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Snow on main stone
+                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.82)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.20, y - size * 0.02);
+                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.10, x + size * 0.02, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x, y + size * 0.02, x - size * 0.12, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x - size * 0.22, y + size * 0.02, x - size * 0.20, y - size * 0.02);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Snow on second stone
+                this.ctx.fillStyle = 'rgba(235, 246, 255, 0.78)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.10, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.08, x + size * 0.22, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.02, x + size * 0.12, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.08, y, x + size * 0.10, y - size * 0.04);
+                this.ctx.closePath();
+                this.ctx.fill();
                 break;
             }
         }
@@ -3603,63 +3761,63 @@ export class LevelDesigner {
     }
 
     drawMountainPine3(x, y, size) {
-        // Short bushy pine with rounded foliage clusters — matches LevelBase Type3
+        // Short young pine — 2 wide triangle tiers, compact and squat
         const ctx = this.ctx;
-        const trunkW = size * 0.20;
-        const trunkH = size * 0.38;
+        const trunkW = size * 0.18;
+        const trunkH = size * 0.32;
         ctx.fillStyle = '#553216';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.10, trunkW, trunkH);
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.02, trunkW, trunkH);
         ctx.fillStyle = '#301a08';
-        ctx.fillRect(x + trunkW * 0.12, y - size * 0.10, trunkW * 0.38, trunkH);
+        ctx.fillRect(x + trunkW * 0.10, y - size * 0.02, trunkW * 0.40, trunkH);
 
-        ctx.fillStyle = '#0e3018';
+        ctx.fillStyle = '#0c2e1a';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.08, size * 0.35, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.lineTo(x + size * 0.38, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#1a4c2a';
+        ctx.fillStyle = '#1a4a2e';
         ctx.beginPath();
-        ctx.arc(x - size * 0.06, y - size * 0.08, size * 0.32, Math.PI, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = '#103820';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.32, size * 0.28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1c5632';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.04, y - size * 0.32, size * 0.25, Math.PI, 2 * Math.PI);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.lineTo(x, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#124228';
+        ctx.fillStyle = '#0e3620';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.52, size * 0.18, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.lineTo(x + size * 0.28, y + size * 0.04);
+        ctx.lineTo(x - size * 0.28, y + size * 0.04);
+        ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#1e5e36';
+        ctx.fillStyle = '#1c5234';
         ctx.beginPath();
-        ctx.arc(x - size * 0.03, y - size * 0.52, size * 0.16, Math.PI, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(238, 250, 255, 0.94)';
-        ctx.beginPath();
-        ctx.ellipse(x, y - size * 0.62, size * 0.14, size * 0.06, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(234, 247, 255, 0.90)';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.04, y - size * 0.48, size * 0.20, size * 0.07, 0.15, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.lineTo(x, y + size * 0.04);
+        ctx.lineTo(x - size * 0.28, y + size * 0.04);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = 'rgba(230, 244, 255, 0.85)';
+        ctx.fillStyle = 'rgba(236, 249, 255, 0.94)';
         ctx.beginPath();
-        ctx.ellipse(x - size * 0.02, y - size * 0.30, size * 0.22, size * 0.06, -0.1, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.14, x + size * 0.24, y - size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.01, x, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.01, x - size * 0.24, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.14, x, y - size * 0.28);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = 'rgba(226, 240, 252, 0.72)';
+        ctx.fillStyle = 'rgba(230, 244, 255, 0.75)';
         ctx.beginPath();
-        ctx.ellipse(x + size * 0.22, y - size * 0.02, size * 0.08, size * 0.04, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.24, y + size * 0.01, size * 0.07, size * 0.04, -0.2, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.08, x + size * 0.32, y + size * 0.12);
+        ctx.quadraticCurveTo(x + size * 0.14, y + size * 0.16, x, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.14, y + size * 0.16, x - size * 0.32, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.20, y + size * 0.08, x, y - size * 0.04);
+        ctx.closePath();
         ctx.fill();
     }
 

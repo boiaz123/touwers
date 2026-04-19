@@ -2913,67 +2913,66 @@ export class LevelBase {
     }
 
     renderMountainPineType3(ctx, x, y, size) {
-        // Short bushy pine — 3 rounded foliage clusters, compact and young-looking
-        const trunkW = size * 0.20;
-        const trunkH = size * 0.38;
+        // Short young pine — 2 wide triangle tiers, compact and squat
+        const trunkW = size * 0.18;
+        const trunkH = size * 0.32;
         ctx.fillStyle = '#553216';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.10, trunkW, trunkH);
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.02, trunkW, trunkH);
         ctx.fillStyle = '#301a08';
-        ctx.fillRect(x + trunkW * 0.12, y - size * 0.10, trunkW * 0.38, trunkH);
+        ctx.fillRect(x + trunkW * 0.10, y - size * 0.02, trunkW * 0.40, trunkH);
 
-        // Bottom foliage cluster — wide
-        ctx.fillStyle = '#0e3018';
+        // Bottom tier — wide and squat
+        ctx.fillStyle = '#0c2e1a';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.08, size * 0.35, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.lineTo(x + size * 0.38, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#1a4c2a';
+        ctx.fillStyle = '#1a4a2e';
         ctx.beginPath();
-        ctx.arc(x - size * 0.06, y - size * 0.08, size * 0.32, Math.PI, 2 * Math.PI);
-        ctx.fill();
-
-        // Middle foliage cluster
-        ctx.fillStyle = '#103820';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.32, size * 0.28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1c5632';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.04, y - size * 0.32, size * 0.25, Math.PI, 2 * Math.PI);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.lineTo(x, y + size * 0.18);
+        ctx.lineTo(x - size * 0.38, y + size * 0.18);
+        ctx.closePath();
         ctx.fill();
 
-        // Top foliage cluster — small
-        ctx.fillStyle = '#124228';
+        // Top tier — also wide for a stubby look
+        ctx.fillStyle = '#0e3620';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.52, size * 0.18, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.lineTo(x + size * 0.28, y + size * 0.04);
+        ctx.lineTo(x - size * 0.28, y + size * 0.04);
+        ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#1e5e36';
+        ctx.fillStyle = '#1c5234';
         ctx.beginPath();
-        ctx.arc(x - size * 0.03, y - size * 0.52, size * 0.16, Math.PI, 2 * Math.PI);
-        ctx.fill();
-
-        // Snow patches — rounded blobs sitting on top of each cluster
-        ctx.fillStyle = 'rgba(238, 250, 255, 0.94)';
-        ctx.beginPath();
-        ctx.ellipse(x, y - size * 0.62, size * 0.14, size * 0.06, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(234, 247, 255, 0.90)';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.04, y - size * 0.48, size * 0.20, size * 0.07, 0.15, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.lineTo(x, y + size * 0.04);
+        ctx.lineTo(x - size * 0.28, y + size * 0.04);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = 'rgba(230, 244, 255, 0.85)';
+        // Snow cap on top tier
+        ctx.fillStyle = 'rgba(236, 249, 255, 0.94)';
         ctx.beginPath();
-        ctx.ellipse(x - size * 0.02, y - size * 0.30, size * 0.22, size * 0.06, -0.1, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.14, x + size * 0.24, y - size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.01, x, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.01, x - size * 0.24, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.14, x, y - size * 0.28);
+        ctx.closePath();
         ctx.fill();
 
-        // Snow dusting on the lower cluster edges
-        ctx.fillStyle = 'rgba(226, 240, 252, 0.72)';
+        // Light dusting on bottom tier
+        ctx.fillStyle = 'rgba(230, 244, 255, 0.75)';
         ctx.beginPath();
-        ctx.ellipse(x + size * 0.22, y - size * 0.02, size * 0.08, size * 0.04, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(x - size * 0.24, y + size * 0.01, size * 0.07, size * 0.04, -0.2, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.08, x + size * 0.32, y + size * 0.12);
+        ctx.quadraticCurveTo(x + size * 0.14, y + size * 0.16, x, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.14, y + size * 0.16, x - size * 0.32, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.20, y + size * 0.08, x, y - size * 0.04);
+        ctx.closePath();
         ctx.fill();
     }
 
@@ -3396,68 +3395,234 @@ export class LevelBase {
     }
 
     renderMountainRock0(ctx, x, y, size) {
-        // Rounded grey boulder with snow dusting on top
+        // Rounded grey boulder with natural irregular shape, shading, and snow cap
+        // Main body — irregular polygon instead of perfect ellipse
         ctx.fillStyle = '#6a7880';
-        ctx.beginPath(); ctx.ellipse(x, y, size*0.32, size*0.26, 0.2, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = 'rgba(40,50,60,0.50)';
-        ctx.beginPath(); ctx.ellipse(x+size*0.10, y+size*0.10, size*0.28, size*0.22, 0.2, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = 'rgba(190,205,220,0.55)';
-        ctx.beginPath(); ctx.ellipse(x-size*0.10, y-size*0.10, size*0.16, size*0.12, 0.2, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = 'rgba(240,248,255,0.82)';
-        ctx.beginPath(); ctx.ellipse(x-size*0.04, y-size*0.13, size*0.20, size*0.09, -0.1, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+        ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        // Shadow/dark face on right side
+        ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.12, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+        ctx.lineTo(x + size * 0.04, y + size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
+        ctx.closePath();
+        ctx.fill();
+        // Highlight on upper-left
+        ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y - size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
+        ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+        // Snow on top
+        ctx.fillStyle = 'rgba(238, 248, 255, 0.88)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.22, y - size * 0.16);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.26, x + size * 0.06, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.22, y - size * 0.20, x + size * 0.24, y - size * 0.10);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.08, x - size * 0.04, y - size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.18, y - size * 0.08, x - size * 0.22, y - size * 0.16);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderMountainRock1(ctx, x, y, size) {
-        // Flat angular slab with snow on top edge
-        const hw = size*0.34, hh = size*0.20;
+        // Angular slab with faceted faces and snow on top ledge
+        const hw = size * 0.34, hh = size * 0.22;
+        // Main face
         ctx.fillStyle = '#586470';
         ctx.beginPath();
-        ctx.moveTo(x-hw, y+hh*0.5);
-        ctx.lineTo(x-hw*0.7, y-hh);
-        ctx.lineTo(x+hw*0.7, y-hh*0.8);
-        ctx.lineTo(x+hw, y+hh*0.5);
-        ctx.closePath(); ctx.fill();
+        ctx.moveTo(x - hw, y + hh * 0.5);
+        ctx.lineTo(x - hw * 0.72, y - hh);
+        ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+        ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw, y + hh * 0.3);
+        ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        // Dark right face
         ctx.fillStyle = '#3a4550';
         ctx.beginPath();
-        ctx.moveTo(x+hw*0.7, y-hh*0.8); ctx.lineTo(x+hw, y+hh*0.5);
-        ctx.lineTo(x+hw*0.5, y+hh*0.5); ctx.lineTo(x+hw*0.4, y-hh*0.6);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(235,248,255,0.90)';
+        ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw, y + hh * 0.3);
+        ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+        ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        // Lighter top face
+        ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
         ctx.beginPath();
-        ctx.moveTo(x-hw*0.8, y-hh*0.85); ctx.lineTo(x-hw*0.7, y-hh);
-        ctx.lineTo(x+hw*0.7, y-hh*0.8); ctx.lineTo(x+hw*0.6, y-hh*0.58);
-        ctx.closePath(); ctx.fill();
+        ctx.moveTo(x - hw * 0.72, y - hh);
+        ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+        ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
+        ctx.closePath();
+        ctx.fill();
+        // Crack detail
+        ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
+        ctx.lineWidth = size * 0.012;
+        ctx.beginPath();
+        ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
+        ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
+        ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
+        ctx.stroke();
+        // Snow on top ledge
+        ctx.fillStyle = 'rgba(235, 248, 255, 0.90)';
+        ctx.beginPath();
+        ctx.moveTo(x - hw * 0.78, y - hh * 0.90);
+        ctx.quadraticCurveTo(x - hw * 0.30, y - hh * 1.16, x + hw * 0.20, y - hh * 1.06);
+        ctx.quadraticCurveTo(x + hw * 0.68, y - hh * 0.92, x + hw * 0.60, y - hh * 0.72);
+        ctx.quadraticCurveTo(x + hw * 0.20, y - hh * 0.56, x - hw * 0.20, y - hh * 0.65);
+        ctx.quadraticCurveTo(x - hw * 0.60, y - hh * 0.70, x - hw * 0.78, y - hh * 0.90);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderMountainRock2(ctx, x, y, size) {
-        // Two overlapping boulders
-        const drawBoulder = (ox, oy, sw, sh, ang) => {
-            ctx.fillStyle = '#708090';
-            ctx.beginPath(); ctx.ellipse(x+ox, y+oy, sw, sh, ang, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(40,50,60,0.45)';
-            ctx.beginPath(); ctx.ellipse(x+ox+sw*0.28, y+oy+sh*0.28, sw*0.75, sh*0.75, ang, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(195,210,228,0.50)';
-            ctx.beginPath(); ctx.ellipse(x+ox-sw*0.22, y+oy-sh*0.22, sw*0.40, sh*0.38, ang, 0, Math.PI*2); ctx.fill();
-        };
-        drawBoulder(-size*0.14, size*0.05, size*0.22, size*0.18, -0.3);
-        drawBoulder(size*0.14, -size*0.04, size*0.18, size*0.15, 0.4);
-        ctx.fillStyle = 'rgba(240,248,255,0.75)';
-        ctx.beginPath(); ctx.ellipse(x-size*0.14, y-size*0.10, size*0.15, size*0.07, -0.2, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(x+size*0.14, y-size*0.14, size*0.12, size*0.06, 0.3, 0, Math.PI*2); ctx.fill();
+        // Two overlapping boulders with natural shapes and snow caps
+        // Back boulder (slightly behind)
+        ctx.fillStyle = '#708090';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+        ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        // Back boulder shadow face
+        ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.18, y - size * 0.20);
+        ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
+        ctx.lineTo(x + size * 0.20, y - size * 0.06);
+        ctx.closePath();
+        ctx.fill();
+        // Front boulder (overlapping)
+        ctx.fillStyle = '#6a7a84';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.30, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
+        ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        // Front boulder shadow
+        ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.10, y - size * 0.16);
+        ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+        ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
+        ctx.closePath();
+        ctx.fill();
+        // Front highlight
+        ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.20, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Snow on front boulder
+        ctx.fillStyle = 'rgba(238, 248, 255, 0.86)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.24, y - size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.22, x + size * 0.06, y - size * 0.18);
+        ctx.quadraticCurveTo(x + size * 0.12, y - size * 0.12, x + size * 0.08, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.04, x - size * 0.18, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.28, y - size * 0.06, x - size * 0.24, y - size * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        // Snow on back boulder
+        ctx.fillStyle = 'rgba(235, 246, 255, 0.80)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.08, y - size * 0.14);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.20, x + size * 0.24, y - size * 0.16);
+        ctx.quadraticCurveTo(x + size * 0.28, y - size * 0.10, x + size * 0.22, y - size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.06, x + size * 0.08, y - size * 0.14);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderMountainRock3(ctx, x, y, size) {
-        // Cluster of small stones with snow patches
-        [[-0.16,0.08,0.17,0.12,-0.2],[0.13,-0.06,0.15,0.10,0.3],[0.0,0.15,0.12,0.09,0.1],[-0.06,-0.12,0.11,0.08,-0.1]]
-        .forEach(([ox,oy,sw,sh,ang]) => {
-            ctx.fillStyle = '#6a7880';
-            ctx.beginPath(); ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, ang, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(40,52,62,0.40)';
-            ctx.beginPath(); ctx.ellipse(x+ox*size+sw*size*0.25, y+oy*size+sh*size*0.25, sw*size*0.65, sh*size*0.65, ang, 0, Math.PI*2); ctx.fill();
-        });
-        ctx.fillStyle = 'rgba(240,248,255,0.80)';
-        [[-0.16,-0.04,0.08,0.04],[0.13,-0.12,0.07,0.03],[0.0,0.06,0.08,0.035]]
-        .forEach(([ox,oy,sw,sh]) => { ctx.beginPath(); ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, 0, 0, Math.PI*2); ctx.fill(); });
+        // Cluster of small stones with varied shapes and snow patches
+        // Stone 1 — largest, front-left
+        ctx.fillStyle = '#6a7880';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.26, y + size * 0.14);
+        ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.04, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+        ctx.lineTo(x - size * 0.02, y + size * 0.04);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 2 — right
+        ctx.fillStyle = '#5e6e78';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.06, y + size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 3 — small, front-center
+        ctx.fillStyle = '#74848c';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.04, y + size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
+        ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 4 — tiny, back
+        ctx.fillStyle = '#667682';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.08, y - size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        // Snow on stone 1
+        ctx.fillStyle = 'rgba(238, 248, 255, 0.82)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.20, y - size * 0.02);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.10, x + size * 0.02, y - size * 0.06);
+        ctx.quadraticCurveTo(x, y + size * 0.02, x - size * 0.12, y + size * 0.02);
+        ctx.quadraticCurveTo(x - size * 0.22, y + size * 0.02, x - size * 0.20, y - size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        // Snow on stone 2
+        ctx.fillStyle = 'rgba(235, 246, 255, 0.78)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.10, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.08, x + size * 0.22, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.02, x + size * 0.12, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.08, y, x + size * 0.10, y - size * 0.04);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderDesertRock(ctx, x, y, size, gridX, gridY, variant) {
