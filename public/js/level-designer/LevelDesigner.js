@@ -3416,203 +3416,339 @@ export class LevelDesigner {
     }
 
     drawMountainPine1(x, y, size) {
-        // Tall classic spruce - 5 stacked tiers
+        // Classic triangle pine with snow caps — matches LevelBase Type1
         const ctx = this.ctx;
-        const trunkW = size * 0.075;
-        const trunkH = size * 0.38;
+        const trunkW = size * 0.16;
+        const trunkH = size * 0.40;
+        ctx.fillStyle = '#4a2c12';
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.08, trunkW, trunkH);
+        ctx.fillStyle = '#2e1a08';
+        ctx.fillRect(x + trunkW * 0.10, y - size * 0.08, trunkW * 0.40, trunkH);
 
-        ctx.fillStyle = '#6b3d1a';
-        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
-        ctx.fillStyle = '#3a2010';
-        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
+        ctx.fillStyle = '#0c2e1a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.08);
+        ctx.lineTo(x + size * 0.34, y + size * 0.14);
+        ctx.lineTo(x - size * 0.34, y + size * 0.14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1a4a2e';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.08);
+        ctx.lineTo(x, y + size * 0.14);
+        ctx.lineTo(x - size * 0.34, y + size * 0.14);
+        ctx.closePath();
+        ctx.fill();
 
-        const T = [
-            { t: y - size*0.06, b: y + size*0.12, s: size*0.44 },
-            { t: y - size*0.20, b: y + size*0.01, s: size*0.36 },
-            { t: y - size*0.33, b: y - size*0.12, s: size*0.27 },
-            { t: y - size*0.45, b: y - size*0.24, s: size*0.19 },
-            { t: y - size*0.56, b: y - size*0.34, s: size*0.12 }
-        ];
+        ctx.fillStyle = '#0e3620';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.30);
+        ctx.lineTo(x + size * 0.26, y - size * 0.02);
+        ctx.lineTo(x - size * 0.26, y - size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1c5234';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.30);
+        ctx.lineTo(x, y - size * 0.02);
+        ctx.lineTo(x - size * 0.26, y - size * 0.02);
+        ctx.closePath();
+        ctx.fill();
 
-        T.forEach(t => {
-            ctx.fillStyle = '#183d24';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#2a5c38';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-        });
+        ctx.fillStyle = '#104028';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.52);
+        ctx.lineTo(x + size * 0.18, y - size * 0.20);
+        ctx.lineTo(x - size * 0.18, y - size * 0.20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1e5a3a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.52);
+        ctx.lineTo(x, y - size * 0.20);
+        ctx.lineTo(x - size * 0.18, y - size * 0.20);
+        ctx.closePath();
+        ctx.fill();
 
-        T.forEach(t => {
-            const h = t.b - t.t, sw = t.s * 0.76, sd = h * 0.26, sy = t.t + sd;
-            ctx.fillStyle = 'rgba(232, 244, 255, 0.94)';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t + h * 0.03);
-            ctx.lineTo(x + sw, sy - sd * 0.18);
-            ctx.quadraticCurveTo(x + sw + t.s * 0.07, sy + sd * 0.28, x + sw * 0.72, sy + sd * 0.10);
-            ctx.lineTo(x - sw * 0.72, sy + sd * 0.10);
-            ctx.quadraticCurveTo(x - sw - t.s * 0.07, sy + sd * 0.28, x - sw, sy - sd * 0.18);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.45)';
-            ctx.beginPath();
-            ctx.arc(x - sw * 0.32, t.t + sd * 0.55, sd * 0.20, 0, Math.PI * 2); ctx.fill();
-        });
+        ctx.fillStyle = 'rgba(236, 249, 255, 0.95)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.52);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.38, x + size * 0.16, y - size * 0.28);
+        ctx.quadraticCurveTo(x + size * 0.06, y - size * 0.22, x, y - size * 0.28);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.22, x - size * 0.16, y - size * 0.28);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.38, x, y - size * 0.52);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(232, 246, 255, 0.90)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.30);
+        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.16, x + size * 0.22, y - size * 0.10);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.04, x, y - size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.04, x - size * 0.22, y - size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.14, y - size * 0.16, x, y - size * 0.30);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(228, 242, 255, 0.80)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.04, x + size * 0.28, y + size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.12, x, y + size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.12, x - size * 0.28, y + size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.04, x, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
     }
 
     drawMountainPine2(x, y, size) {
-        // Wide fir - 4 broad tiers with snow ledges and tip blobs
+        // Wider 4-tier pine with heavy snow — matches LevelBase Type2
         const ctx = this.ctx;
-        const trunkW = size * 0.08, trunkH = size * 0.36;
+        const trunkW = size * 0.18;
+        const trunkH = size * 0.42;
+        ctx.fillStyle = '#4a2c12';
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.05, trunkW, trunkH);
+        ctx.fillStyle = '#2e1a08';
+        ctx.fillRect(x + trunkW * 0.08, y - size * 0.05, trunkW * 0.42, trunkH);
 
-        ctx.fillStyle = '#6b3d1a';
-        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
-        ctx.fillStyle = '#3a2010';
-        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
+        ctx.fillStyle = '#0c2e1a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.40, y + size * 0.18);
+        ctx.lineTo(x - size * 0.40, y + size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1a4a2e';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x, y + size * 0.18);
+        ctx.lineTo(x - size * 0.40, y + size * 0.18);
+        ctx.closePath();
+        ctx.fill();
 
-        const T = [
-            { t: y - size*0.06, b: y + size*0.14, s: size*0.50 },
-            { t: y - size*0.22, b: y + size*0.02, s: size*0.40 },
-            { t: y - size*0.38, b: y - size*0.12, s: size*0.28 },
-            { t: y - size*0.52, b: y - size*0.28, s: size*0.17 }
-        ];
+        ctx.fillStyle = '#0e3620';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.32, y + size * 0.02);
+        ctx.lineTo(x - size * 0.32, y + size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1c5234';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x, y + size * 0.02);
+        ctx.lineTo(x - size * 0.32, y + size * 0.02);
+        ctx.closePath();
+        ctx.fill();
 
-        T.forEach(t => {
-            ctx.fillStyle = '#1a4a2c';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#2e6642';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-        });
+        ctx.fillStyle = '#104028';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.46);
+        ctx.lineTo(x + size * 0.22, y - size * 0.15);
+        ctx.lineTo(x - size * 0.22, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1e5a3a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.46);
+        ctx.lineTo(x, y - size * 0.15);
+        ctx.lineTo(x - size * 0.22, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
 
-        T.forEach(t => {
-            const h = t.b - t.t, sw = t.s * 0.78, sd = h * 0.24, sy = t.t + sd;
-            ctx.fillStyle = 'rgba(235, 246, 255, 0.93)';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t + h * 0.03);
-            ctx.lineTo(x + sw, sy - sd * 0.10);
-            ctx.quadraticCurveTo(x + sw + t.s * 0.08, sy + sd * 0.32, x + sw * 0.68, sy + sd * 0.14);
-            ctx.lineTo(x - sw * 0.68, sy + sd * 0.14);
-            ctx.quadraticCurveTo(x - sw - t.s * 0.08, sy + sd * 0.32, x - sw, sy - sd * 0.10);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.42)';
-            ctx.beginPath();
-            ctx.arc(x - sw * 0.30, t.t + sd * 0.60, sd * 0.21, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = 'rgba(220, 238, 255, 0.88)';
-            ctx.beginPath();
-            ctx.arc(x + t.s * 0.84, t.t + h * 0.28, h * 0.09, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x - t.s * 0.84, t.t + h * 0.28, h * 0.09, 0, Math.PI * 2); ctx.fill();
-        });
+        ctx.fillStyle = '#14503a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x + size * 0.13, y - size * 0.38);
+        ctx.lineTo(x - size * 0.13, y - size * 0.38);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#226844';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x, y - size * 0.38);
+        ctx.lineTo(x - size * 0.13, y - size * 0.38);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(237, 249, 255, 0.96)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.50, x + size * 0.12, y - size * 0.44);
+        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.40, x, y - size * 0.44);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.40, x - size * 0.12, y - size * 0.44);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.50, x, y - size * 0.62);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(234, 247, 255, 0.94)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.46);
+        ctx.quadraticCurveTo(x + size * 0.13, y - size * 0.32, x + size * 0.20, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.18, x, y - size * 0.24);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.18, x - size * 0.20, y - size * 0.24);
+        ctx.quadraticCurveTo(x - size * 0.13, y - size * 0.32, x, y - size * 0.46);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(230, 244, 255, 0.78)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.12, x + size * 0.26, y - size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.01, x, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.01, x - size * 0.26, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.12, x, y - size * 0.25);
+        ctx.closePath();
+        ctx.fill();
     }
 
     drawMountainPine3(x, y, size) {
-        // Short young pine - 3 compact tiers with fresh snow
+        // Short bushy pine with rounded foliage clusters — matches LevelBase Type3
         const ctx = this.ctx;
-        const trunkW = size * 0.07, trunkH = size * 0.30;
+        const trunkW = size * 0.20;
+        const trunkH = size * 0.38;
+        ctx.fillStyle = '#553216';
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.10, trunkW, trunkH);
+        ctx.fillStyle = '#301a08';
+        ctx.fillRect(x + trunkW * 0.12, y - size * 0.10, trunkW * 0.38, trunkH);
 
-        ctx.fillStyle = '#7a4520';
-        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
-        ctx.fillStyle = '#3a2010';
-        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.35, trunkH);
-
-        const T = [
-            { t: y - size*0.05, b: y + size*0.10, s: size*0.38 },
-            { t: y - size*0.20, b: y - size*0.02, s: size*0.27 },
-            { t: y - size*0.34, b: y - size*0.14, s: size*0.16 }
-        ];
-
-        T.forEach(t => {
-            ctx.fillStyle = '#183d24';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x + t.s, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = '#2a5c38';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t); ctx.lineTo(x, t.b); ctx.lineTo(x - t.s, t.b);
-            ctx.closePath(); ctx.fill();
-        });
-
-        T.forEach(t => {
-            const h = t.b - t.t, sw = t.s * 0.80, sd = h * 0.30, sy = t.t + sd;
-            ctx.fillStyle = 'rgba(236, 247, 255, 0.95)';
-            ctx.beginPath();
-            ctx.moveTo(x, t.t + h * 0.03);
-            ctx.lineTo(x + sw, sy - sd * 0.14);
-            ctx.quadraticCurveTo(x + sw + t.s * 0.06, sy + sd * 0.30, x + sw * 0.70, sy + sd * 0.12);
-            ctx.lineTo(x - sw * 0.70, sy + sd * 0.12);
-            ctx.quadraticCurveTo(x - sw - t.s * 0.06, sy + sd * 0.30, x - sw, sy - sd * 0.14);
-            ctx.closePath(); ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.48)';
-            ctx.beginPath();
-            ctx.arc(x - sw * 0.30, t.t + sd * 0.58, sd * 0.21, 0, Math.PI * 2); ctx.fill();
-        });
-
-        ctx.fillStyle = 'rgba(215, 236, 255, 0.88)';
+        ctx.fillStyle = '#0e3018';
         ctx.beginPath();
-        ctx.arc(x + T[0].s * 0.82, T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.045, 0, Math.PI * 2); ctx.fill();
+        ctx.arc(x, y - size * 0.08, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1a4c2a';
         ctx.beginPath();
-        ctx.arc(x - T[0].s * 0.82, T[0].t + (T[0].b - T[0].t) * 0.45, size * 0.045, 0, Math.PI * 2); ctx.fill();
+        ctx.arc(x - size * 0.06, y - size * 0.08, size * 0.32, Math.PI, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#103820';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.32, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1c5632';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.04, y - size * 0.32, size * 0.25, Math.PI, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#124228';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.52, size * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1e5e36';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.03, y - size * 0.52, size * 0.16, Math.PI, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(238, 250, 255, 0.94)';
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.62, size * 0.14, size * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(234, 247, 255, 0.90)';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.04, y - size * 0.48, size * 0.20, size * 0.07, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(230, 244, 255, 0.85)';
+        ctx.beginPath();
+        ctx.ellipse(x - size * 0.02, y - size * 0.30, size * 0.22, size * 0.06, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(226, 240, 252, 0.72)';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.22, y - size * 0.02, size * 0.08, size * 0.04, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - size * 0.24, y + size * 0.01, size * 0.07, size * 0.04, -0.2, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawMountainPine4(x, y, size) {
-        // Old-growth conical spruce - smooth bezier cone with snow cap and branch patches
+        // Tall narrow columnar pine with snow down one side — matches LevelBase Type4
         const ctx = this.ctx;
-        const trunkW = size * 0.08, trunkH = size * 0.35;
-        const coneH = size * 0.67, coneW = size * 0.48;
-        const apex = y - coneH;
+        const trunkW = size * 0.15;
+        const trunkH = size * 0.52;
+        ctx.fillStyle = '#4a2c12';
+        ctx.fillRect(x - trunkW * 0.5, y - size * 0.15, trunkW, trunkH);
+        ctx.fillStyle = '#2a1508';
+        ctx.fillRect(x + trunkW * 0.15, y - size * 0.15, trunkW * 0.35, trunkH);
 
-        ctx.fillStyle = '#6b3d1a';
-        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
-        ctx.fillStyle = '#3a2010';
-        ctx.fillRect(x + trunkW * 0.1, y, trunkW * 0.38, trunkH);
-
-        ctx.fillStyle = '#132e1a';
+        ctx.fillStyle = '#0c2e1a';
         ctx.beginPath();
-        ctx.moveTo(x, apex);
-        ctx.bezierCurveTo(x + coneW * 0.28, y - coneH * 0.65, x + coneW * 0.90, y - coneH * 0.14, x + coneW, y);
-        ctx.lineTo(x - coneW, y);
-        ctx.bezierCurveTo(x - coneW * 0.90, y - coneH * 0.14, x - coneW * 0.28, y - coneH * 0.65, x, apex);
-        ctx.closePath(); ctx.fill();
-
-        ctx.fillStyle = '#1e4a2a';
+        ctx.moveTo(x, y - size * 0.22);
+        ctx.lineTo(x + size * 0.26, y + size * 0.10);
+        ctx.lineTo(x - size * 0.26, y + size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1a4a2e';
         ctx.beginPath();
-        ctx.moveTo(x, apex);
-        ctx.bezierCurveTo(x - coneW * 0.10, y - coneH * 0.68, x - coneW * 0.80, y - coneH * 0.18, x - coneW, y);
-        ctx.lineTo(x, y);
-        ctx.closePath(); ctx.fill();
+        ctx.moveTo(x, y - size * 0.22);
+        ctx.lineTo(x, y + size * 0.10);
+        ctx.lineTo(x - size * 0.26, y + size * 0.10);
+        ctx.closePath();
+        ctx.fill();
 
-        ctx.strokeStyle = 'rgba(10, 28, 16, 0.70)';
-        ctx.lineWidth = size * 0.016;
-        [0.20, 0.38, 0.56, 0.74].forEach(frac => {
-            const ly = y - coneH * frac, lw = coneW * (1.0 - frac * 0.85);
-            ctx.beginPath(); ctx.moveTo(x - lw, ly); ctx.lineTo(x + lw, ly); ctx.stroke();
-        });
-
-        const capBot = y - coneH * 0.44, capW = coneW * (1.0 - 0.44 * 0.85);
-        ctx.fillStyle = 'rgba(232, 245, 255, 0.93)';
+        ctx.fillStyle = '#0e3620';
         ctx.beginPath();
-        ctx.moveTo(x, apex);
-        ctx.bezierCurveTo(x + capW * 0.38, apex + coneH * 0.18, x + capW * 0.88, capBot - coneH * 0.04, x + capW, capBot);
-        ctx.quadraticCurveTo(x + capW * 0.58, capBot + coneH * 0.05, x - capW * 0.58, capBot + coneH * 0.05);
-        ctx.bezierCurveTo(x - capW * 0.88, capBot - coneH * 0.04, x - capW * 0.38, apex + coneH * 0.18, x, apex);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.moveTo(x, y - size * 0.44);
+        ctx.lineTo(x + size * 0.20, y - size * 0.10);
+        ctx.lineTo(x - size * 0.20, y - size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1c5234';
         ctx.beginPath();
-        ctx.arc(x - capW * 0.15, apex + coneH * 0.08, coneH * 0.04, 0, Math.PI * 2); ctx.fill();
+        ctx.moveTo(x, y - size * 0.44);
+        ctx.lineTo(x, y - size * 0.10);
+        ctx.lineTo(x - size * 0.20, y - size * 0.10);
+        ctx.closePath();
+        ctx.fill();
 
-        [0.38, 0.60].forEach(frac => {
-            const ly = y - coneH * frac, lw = coneW * (1.0 - frac * 0.85);
-            ctx.fillStyle = 'rgba(220, 240, 255, 0.82)';
-            ctx.beginPath();
-            ctx.arc(x + lw * 0.80, ly + coneH * 0.022, lw * 0.15, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x - lw * 0.80, ly + coneH * 0.022, lw * 0.15, 0, Math.PI * 2); ctx.fill();
-        });
+        ctx.fillStyle = '#104028';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x + size * 0.14, y - size * 0.30);
+        ctx.lineTo(x - size * 0.14, y - size * 0.30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1e5a3a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x, y - size * 0.30);
+        ctx.lineTo(x - size * 0.14, y - size * 0.30);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(236, 249, 255, 0.95)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.48, x - size * 0.13, y - size * 0.38);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.34, x, y - size * 0.40);
+        ctx.quadraticCurveTo(x - size * 0.05, y - size * 0.48, x, y - size * 0.62);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(232, 246, 255, 0.92)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.44);
+        ctx.quadraticCurveTo(x - size * 0.14, y - size * 0.28, x - size * 0.18, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.12, x, y - size * 0.20);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.30, x, y - size * 0.44);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(228, 242, 255, 0.82)';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.08, x - size * 0.22, y + size * 0.02);
+        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.06, x, y - size * 0.02);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.12, x, y - size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(240, 252, 255, 0.98)';
+        ctx.beginPath();
+        ctx.ellipse(x, y - size * 0.63, size * 0.04, size * 0.03, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     drawDesertVegetation(x, y, size, variant) {
