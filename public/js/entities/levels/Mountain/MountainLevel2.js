@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class MountainLevel2 extends LevelBase {
     static levelMetadata = {
-        name: 'Morwen's Deep',
+        name: 'Morwen\'s Deep',
         difficulty: 'Medium',
         order: 2,
         campaign: 'mountain'
