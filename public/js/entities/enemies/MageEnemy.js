@@ -2,7 +2,7 @@ import { BaseEnemy } from './BaseEnemy.js';
 
 export class MageEnemy extends BaseEnemy {
     static BASE_STATS = {
-        health: 110,
+        health: 750,
         speed: 45,
         armour: 4,
         magicResistance: 0.5
