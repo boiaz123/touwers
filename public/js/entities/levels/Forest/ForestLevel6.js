@@ -154,9 +154,9 @@ export class ForestLevel6 extends LevelBase {
             { type: 'vegetation', gridX: 4.00, gridY: 2.00, size: 2.5, variant: 0 },
             { type: 'vegetation', gridX: 3.00, gridY: 7.00, size: 2.5, variant: 0 },
             { type: 'vegetation', gridX: 14.00, gridY: 2.00, size: 2.5, variant: 0 },
-            { type: 'vegetation', gridX: 6.00, gridY: 9.00, size: 3.5, variant: 0 },
-            { type: 'vegetation', gridX: 13.00, gridY: 4.00, size: 3.5, variant: 0 },
-            { type: 'vegetation', gridX: 13.00, gridY: 10.00, size: 3.5, variant: 0 },
+            { type: 'vegetation', gridX: 6.00, gridY: 9.00, size: 3, variant: 0 },
+            { type: 'vegetation', gridX: 13.00, gridY: 4.00, size: 3, variant: 0 },
+            { type: 'vegetation', gridX: 13.00, gridY: 10.00, size: 3, variant: 0 },
             { type: 'vegetation', gridX: 17.00, gridY: 6.00, size: 2, variant: 3 },
             { type: 'vegetation', gridX: 7.00, gridY: 7.00, size: 2, variant: 3 },
             { type: 'vegetation', gridX: 4.00, gridY: 9.00, size: 2, variant: 3 },
@@ -192,7 +192,7 @@ export class ForestLevel6 extends LevelBase {
             { type: 'vegetation', gridX: 22.00, gridY: 9.00, size: 1.5, variant: 0 },
             { type: 'rock', gridX: 38.00, gridY: 1.00, size: 1.5, variant: 3 },
             { type: 'rock', gridX: 41.00, gridY: 1.00, size: 3, variant: 3 },
-            { type: 'rock', gridX: 40.00, gridY: 2.00, size: 1, variant: 2 }
+            { type: 'rock', gridX: 40.00, gridY: 2.00, size: 1.5, variant: 2 }
         ];
     }
 

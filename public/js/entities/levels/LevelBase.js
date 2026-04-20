@@ -1855,7 +1855,11 @@ export class LevelBase {
         }
 
         const campaign = this.getCampaign();
-        this.terrainElements.forEach(element => {
+        // Sort by gridY ascending so elements higher on screen (closer to horizon) are
+        // drawn first and elements lower on screen (closer to camera) are drawn on top —
+        // correct top-down perspective with horizon at the top of the playing field.
+        const sortedElements = [...this.terrainElements].sort((a, b) => a.gridY - b.gridY);
+        sortedElements.forEach(element => {
             // Only render elements that match the type filters
             if (!typeFilters.includes(element.type)) {
                 return;

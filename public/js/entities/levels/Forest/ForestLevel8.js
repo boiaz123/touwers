@@ -91,7 +91,7 @@ export class ForestLevel8 extends LevelBase {
             { type: 'rock', gridX: 3.00, gridY: 11.00, size: 2, variant: 0 },
             { type: 'rock', gridX: 55.00, gridY: 33.00, size: 2, variant: 0 },
             { type: 'rock', gridX: 57.00, gridY: 1.00, size: 1.5, variant: 0 },
-            { type: 'rock', gridX: 31.00, gridY: 15.00, size: 4, variant: 3 },
+            { type: 'rock', gridX: 31.00, gridY: 15.00, size: 3, variant: 3 },
             { type: 'rock', gridX: 30.00, gridY: 16.00, size: 2.5, variant: 2 },
             { type: 'rock', gridX: 34.00, gridY: 14.00, size: 1.5, variant: 1 },
             { type: 'rock', gridX: 27.00, gridY: 13.00, size: 2, variant: 0 },
@@ -104,8 +104,8 @@ export class ForestLevel8 extends LevelBase {
             { type: 'vegetation', gridX: 33.00, gridY: 14.00, size: 2, variant: 3 },
             { type: 'water', gridX: 28.00, gridY: 18.00, size: 2, waterType: 'lake' },
             { type: 'vegetation', gridX: 27.00, gridY: 19.00, size: 2, variant: 0 },
-            { type: 'rock', gridX: 26.00, gridY: 18.00, size: 1, variant: 0 },
-            { type: 'rock', gridX: 28.00, gridY: 17.00, size: 1, variant: 0 }
+            { type: 'rock', gridX: 26.00, gridY: 18.00, size: 1.5, variant: 0 },
+            { type: 'rock', gridX: 28.00, gridY: 17.00, size: 1.5, variant: 0 }
         ];
     }
 

@@ -19,14 +19,14 @@ export class ForestLevel9 extends LevelBase {
 
         // Set terrain elements (prevent tower placement on these areas)
         this.terrainElements = [
-            { type: 'rock', gridX: 31.00, gridY: 26.00, size: 4, variant: 3 },
-            { type: 'rock', gridX: 22.00, gridY: 5.00, size: 4, variant: 1 },
-            { type: 'rock', gridX: 2.00, gridY: 14.00, size: 4, variant: 2 },
-            { type: 'rock', gridX: 10.00, gridY: 29.00, size: 4, variant: 0 },
+            { type: 'rock', gridX: 31.00, gridY: 26.00, size: 3, variant: 3 },
+            { type: 'rock', gridX: 22.00, gridY: 5.00, size: 3, variant: 1 },
+            { type: 'rock', gridX: 2.00, gridY: 14.00, size: 3, variant: 2 },
+            { type: 'rock', gridX: 10.00, gridY: 29.00, size: 3, variant: 0 },
             { type: 'rock', gridX: 4.00, gridY: 14.00, size: 2, variant: 0 },
             { type: 'rock', gridX: 24.00, gridY: 6.00, size: 2, variant: 1 },
             { type: 'rock', gridX: 12.00, gridY: 29.00, size: 2, variant: 2 },
-            { type: 'rock', gridX: 29.00, gridY: 27.00, size: 1, variant: 0 },
+            { type: 'rock', gridX: 29.00, gridY: 27.00, size: 1.5, variant: 0 },
             { type: 'rock', gridX: 29.00, gridY: 26.00, size: 1.5, variant: 0 },
             { type: 'vegetation', gridX: 24.00, gridY: 4.00, size: 2, variant: 0 },
             { type: 'vegetation', gridX: 20.00, gridY: 5.00, size: 2, variant: 0 },
