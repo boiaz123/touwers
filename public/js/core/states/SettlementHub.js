@@ -1588,115 +1588,213 @@ export class SettlementHub {
         const H = canvas.height;
         const groundY = H * 0.57;
 
-        // === Far layer: palest, most atmospheric distant peaks ===
-        const farGrad = ctx.createLinearGradient(0, H * 0.16, 0, groundY);
-        farGrad.addColorStop(0, '#9fb8cc');
-        farGrad.addColorStop(1, '#7a9aae');
+        // === Far layer: pale atmospheric distant peaks ===
+        const farGrad = ctx.createLinearGradient(0, H * 0.12, 0, groundY);
+        farGrad.addColorStop(0, '#aec8d8');
+        farGrad.addColorStop(1, '#88aabf');
         ctx.fillStyle = farGrad;
         ctx.beginPath();
         ctx.moveTo(0, groundY);
-        ctx.lineTo(0, H * 0.36);
-        ctx.bezierCurveTo(W * 0.06, H * 0.24, W * 0.12, H * 0.28, W * 0.17, H * 0.32);
-        ctx.bezierCurveTo(W * 0.22, H * 0.24, W * 0.27, H * 0.19, W * 0.33, H * 0.25);
-        ctx.bezierCurveTo(W * 0.39, H * 0.31, W * 0.44, H * 0.26, W * 0.50, H * 0.18);
-        ctx.bezierCurveTo(W * 0.56, H * 0.26, W * 0.62, H * 0.31, W * 0.67, H * 0.23);
-        ctx.bezierCurveTo(W * 0.73, H * 0.16, W * 0.79, H * 0.22, W * 0.85, H * 0.28);
-        ctx.bezierCurveTo(W * 0.90, H * 0.22, W * 0.95, H * 0.29, W, H * 0.34);
+        ctx.lineTo(0, H * 0.40);
+        // Gently rolling distant ridge with a few modest peaks
+        ctx.bezierCurveTo(W * 0.08, H * 0.38, W * 0.14, H * 0.33, W * 0.18, H * 0.36);
+        ctx.bezierCurveTo(W * 0.22, H * 0.29, W * 0.26, H * 0.24, W * 0.30, H * 0.28);
+        ctx.bezierCurveTo(W * 0.35, H * 0.34, W * 0.40, H * 0.30, W * 0.45, H * 0.22);
+        ctx.bezierCurveTo(W * 0.50, H * 0.16, W * 0.54, H * 0.12, W * 0.57, H * 0.15);
+        ctx.bezierCurveTo(W * 0.60, H * 0.19, W * 0.65, H * 0.27, W * 0.70, H * 0.32);
+        ctx.bezierCurveTo(W * 0.75, H * 0.25, W * 0.80, H * 0.20, W * 0.84, H * 0.23);
+        ctx.bezierCurveTo(W * 0.88, H * 0.28, W * 0.93, H * 0.34, W, H * 0.38);
         ctx.lineTo(W, groundY);
         ctx.closePath();
         ctx.fill();
 
-        // Snow on tallest far peaks
-        ctx.fillStyle = 'rgba(235, 248, 255, 0.80)';
+        // Snow cap on tallest far peak
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#edf6ff';
         ctx.beginPath();
-        ctx.moveTo(W * 0.44, H * 0.265);
-        ctx.lineTo(W * 0.50, H * 0.18);
-        ctx.lineTo(W * 0.56, H * 0.265);
-        ctx.quadraticCurveTo(W * 0.50, H * 0.235, W * 0.44, H * 0.265);
+        ctx.moveTo(W * 0.43, H * 0.235);
+        ctx.bezierCurveTo(W * 0.47, H * 0.195, W * 0.51, H * 0.148, W * 0.57, H * 0.15);
+        ctx.bezierCurveTo(W * 0.60, H * 0.165, W * 0.63, H * 0.205, W * 0.65, H * 0.238);
+        ctx.bezierCurveTo(W * 0.61, H * 0.215, W * 0.57, H * 0.182, W * 0.53, H * 0.215);
         ctx.closePath();
         ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(W * 0.67, H * 0.24);
-        ctx.lineTo(W * 0.73, H * 0.16);
-        ctx.lineTo(W * 0.79, H * 0.235);
-        ctx.quadraticCurveTo(W * 0.73, H * 0.20, W * 0.67, H * 0.24);
-        ctx.closePath();
-        ctx.fill();
+        ctx.restore();
 
-        // === Mid layer: main visible mountain range ===
-        const midGrad = ctx.createLinearGradient(0, H * 0.28, 0, groundY);
-        midGrad.addColorStop(0, '#5c7486');
-        midGrad.addColorStop(0.7, '#4a6070');
-        midGrad.addColorStop(1, '#3e5560');
+        // === Mid layer: main mountain range ===
+        const midGrad = ctx.createLinearGradient(0, H * 0.22, 0, groundY);
+        midGrad.addColorStop(0, '#5e7080');
+        midGrad.addColorStop(0.6, '#4a5e6c');
+        midGrad.addColorStop(1, '#3c5058');
         ctx.fillStyle = midGrad;
         ctx.beginPath();
         ctx.moveTo(0, groundY);
-        ctx.lineTo(0, H * 0.45);
-        ctx.quadraticCurveTo(W * 0.06, H * 0.36, W * 0.13, H * 0.40);
-        ctx.quadraticCurveTo(W * 0.20, H * 0.32, W * 0.28, H * 0.38);
-        ctx.quadraticCurveTo(W * 0.35, H * 0.44, W * 0.42, H * 0.36);
-        ctx.quadraticCurveTo(W * 0.49, H * 0.30, W * 0.56, H * 0.37);
-        ctx.quadraticCurveTo(W * 0.63, H * 0.44, W * 0.70, H * 0.35);
-        ctx.quadraticCurveTo(W * 0.77, H * 0.28, W * 0.84, H * 0.36);
-        ctx.quadraticCurveTo(W * 0.91, H * 0.44, W, H * 0.47);
+        ctx.lineTo(0, H * 0.48);
+        ctx.bezierCurveTo(W * 0.06, H * 0.44, W * 0.10, H * 0.40, W * 0.14, H * 0.43);
+        ctx.bezierCurveTo(W * 0.19, H * 0.36, W * 0.23, H * 0.30, W * 0.27, H * 0.34);
+        ctx.bezierCurveTo(W * 0.31, H * 0.39, W * 0.36, H * 0.44, W * 0.40, H * 0.36);
+        ctx.bezierCurveTo(W * 0.44, H * 0.28, W * 0.48, H * 0.22, W * 0.52, H * 0.17);
+        ctx.bezierCurveTo(W * 0.56, H * 0.22, W * 0.60, H * 0.29, W * 0.64, H * 0.35);
+        ctx.bezierCurveTo(W * 0.68, H * 0.41, W * 0.72, H * 0.45, W * 0.76, H * 0.38);
+        ctx.bezierCurveTo(W * 0.80, H * 0.30, W * 0.84, H * 0.24, W * 0.87, H * 0.20);
+        ctx.bezierCurveTo(W * 0.91, H * 0.26, W * 0.95, H * 0.34, W, H * 0.42);
         ctx.lineTo(W, groundY);
         ctx.closePath();
         ctx.fill();
 
-        // === Near layer: dark rolling foreground hills blending into green ground ===
-        const nearGrad = ctx.createLinearGradient(0, H * 0.43, 0, groundY);
-        nearGrad.addColorStop(0, '#364a50');
-        nearGrad.addColorStop(0.5, '#344a3c');
-        nearGrad.addColorStop(1, '#2e4234');
+        // Snow caps on the two dominant mid-range peaks
+        ctx.save();
+        ctx.globalAlpha = 0.90;
+        ctx.fillStyle = '#f2f9ff';
+        // Central peak
+        ctx.beginPath();
+        ctx.moveTo(W * 0.44, H * 0.265);
+        ctx.bezierCurveTo(W * 0.46, H * 0.240, W * 0.49, H * 0.210, W * 0.52, H * 0.17);
+        ctx.bezierCurveTo(W * 0.55, H * 0.210, W * 0.58, H * 0.240, W * 0.60, H * 0.268);
+        ctx.bezierCurveTo(W * 0.57, H * 0.242, W * 0.52, H * 0.205, W * 0.52, H * 0.205);
+        ctx.bezierCurveTo(W * 0.49, H * 0.222, W * 0.47, H * 0.245, W * 0.44, H * 0.265);
+        ctx.closePath();
+        ctx.fill();
+        // Right peak
+        ctx.beginPath();
+        ctx.moveTo(W * 0.82, H * 0.278);
+        ctx.bezierCurveTo(W * 0.84, H * 0.252, W * 0.85, H * 0.232, W * 0.87, H * 0.20);
+        ctx.bezierCurveTo(W * 0.90, H * 0.232, W * 0.92, H * 0.258, W * 0.93, H * 0.278);
+        ctx.bezierCurveTo(W * 0.91, H * 0.254, W * 0.87, H * 0.222, W * 0.87, H * 0.222);
+        ctx.bezierCurveTo(W * 0.86, H * 0.242, W * 0.84, H * 0.258, W * 0.82, H * 0.278);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // === Near layer: smooth rolling foothills fading into the green ground ===
+        const nearGrad = ctx.createLinearGradient(0, H * 0.44, 0, groundY);
+        nearGrad.addColorStop(0, '#384e50');
+        nearGrad.addColorStop(0.5, '#324a3e');
+        nearGrad.addColorStop(1, '#2c4030');
         ctx.fillStyle = nearGrad;
         ctx.beginPath();
         ctx.moveTo(0, groundY);
-        ctx.lineTo(0, H * 0.525);
-        ctx.quadraticCurveTo(W * 0.10, H * 0.455, W * 0.20, H * 0.495);
-        ctx.quadraticCurveTo(W * 0.30, H * 0.535, W * 0.38, H * 0.475);
-        ctx.quadraticCurveTo(W * 0.46, H * 0.440, W * 0.54, H * 0.478);
-        ctx.quadraticCurveTo(W * 0.62, H * 0.520, W * 0.70, H * 0.464);
-        ctx.quadraticCurveTo(W * 0.78, H * 0.438, W * 0.86, H * 0.474);
-        ctx.quadraticCurveTo(W * 0.93, H * 0.520, W, H * 0.505);
+        ctx.lineTo(0, H * 0.535);
+        ctx.bezierCurveTo(W * 0.12, H * 0.468, W * 0.22, H * 0.500, W * 0.32, H * 0.478);
+        ctx.bezierCurveTo(W * 0.42, H * 0.455, W * 0.50, H * 0.465, W * 0.58, H * 0.448);
+        ctx.bezierCurveTo(W * 0.66, H * 0.462, W * 0.74, H * 0.495, W * 0.84, H * 0.468);
+        ctx.bezierCurveTo(W * 0.92, H * 0.448, W * 0.97, H * 0.478, W, H * 0.510);
         ctx.lineTo(W, groundY);
         ctx.closePath();
         ctx.fill();
 
-        // AO shadow at mountain base transitioning to green ground
-        const aoGrad = ctx.createLinearGradient(0, groundY - 25, 0, groundY + 12);
-        aoGrad.addColorStop(0, 'rgba(0, 10, 5, 0.22)');
+        // Soft AO shadow at base
+        const aoGrad = ctx.createLinearGradient(0, groundY - 20, 0, groundY + 8);
+        aoGrad.addColorStop(0, 'rgba(0, 8, 4, 0.22)');
         aoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = aoGrad;
-        ctx.fillRect(0, groundY - 25, W, 37);
+        ctx.fillRect(0, groundY - 20, W, 28);
     }
 
     renderMidGroundForest(ctx, canvas) {
-        // Treeline planted on the green field right at the horizon edge
+        // Full-width horizon treeline with natural clustering and size variation
         const W = canvas.width;
         const H = canvas.height;
         const trees = [
-            // Left side — progressively larger towards center-screen
-            { x: W * 0.002, y: H * 0.598, size: 20, gx: 0,  gy: 11 },
-            { x: W * 0.038, y: H * 0.605, size: 25, gx: 2,  gy: 12 },
-            { x: W * 0.080, y: H * 0.600, size: 23, gx: 4,  gy: 12 },
-            { x: W * 0.122, y: H * 0.610, size: 27, gx: 6,  gy: 12 },
-            { x: W * 0.018, y: H * 0.620, size: 30, gx: 1,  gy: 13 },
-            { x: W * 0.062, y: H * 0.628, size: 33, gx: 3,  gy: 13 },
-            { x: W * 0.106, y: H * 0.635, size: 31, gx: 5,  gy: 13 },
-            { x: W * 0.155, y: H * 0.624, size: 28, gx: 8,  gy: 12 },
-            { x: W * 0.143, y: H * 0.645, size: 36, gx: 7,  gy: 14 },
-            { x: W * 0.190, y: H * 0.650, size: 38, gx: 9,  gy: 14 },
-            // Right side — mirrored with slight variation
-            { x: W * 0.998, y: H * 0.598, size: 20, gx: 19, gy: 11 },
-            { x: W * 0.962, y: H * 0.605, size: 25, gx: 17, gy: 12 },
-            { x: W * 0.920, y: H * 0.600, size: 23, gx: 15, gy: 12 },
-            { x: W * 0.878, y: H * 0.610, size: 27, gx: 13, gy: 12 },
-            { x: W * 0.982, y: H * 0.620, size: 30, gx: 18, gy: 13 },
-            { x: W * 0.938, y: H * 0.628, size: 33, gx: 16, gy: 13 },
-            { x: W * 0.894, y: H * 0.635, size: 31, gx: 14, gy: 13 },
-            { x: W * 0.845, y: H * 0.624, size: 28, gx: 12, gy: 12 },
-            { x: W * 0.857, y: H * 0.645, size: 36, gx: 13, gy: 14 },
-            { x: W * 0.810, y: H * 0.650, size: 38, gx: 11, gy: 14 },
+            // Dense left edge cluster
+            { x: W * 0.002, y: H * 0.595, size: 18, gx: 0,  gy: 10 },
+            { x: W * 0.020, y: H * 0.601, size: 22, gx: 1,  gy: 11 },
+            { x: W * 0.038, y: H * 0.598, size: 20, gx: 2,  gy: 11 },
+            { x: W * 0.055, y: H * 0.606, size: 26, gx: 3,  gy: 12 },
+            { x: W * 0.012, y: H * 0.616, size: 28, gx: 1,  gy: 12 },
+            { x: W * 0.032, y: H * 0.620, size: 24, gx: 2,  gy: 12 },
+            { x: W * 0.072, y: H * 0.612, size: 25, gx: 3,  gy: 12 },
+            { x: W * 0.090, y: H * 0.600, size: 22, gx: 4,  gy: 11 },
+            { x: W * 0.108, y: H * 0.608, size: 27, gx: 5,  gy: 12 },
+            { x: W * 0.065, y: H * 0.628, size: 32, gx: 3,  gy: 13 },
+            { x: W * 0.042, y: H * 0.634, size: 30, gx: 2,  gy: 13 },
+            { x: W * 0.020, y: H * 0.628, size: 29, gx: 1,  gy: 13 },
+            { x: W * 0.085, y: H * 0.636, size: 34, gx: 4,  gy: 14 },
+            { x: W * 0.122, y: H * 0.614, size: 26, gx: 6,  gy: 12 },
+            { x: W * 0.140, y: H * 0.624, size: 30, gx: 7,  gy: 13 },
+            { x: W * 0.158, y: H * 0.618, size: 28, gx: 8,  gy: 12 },
+            { x: W * 0.102, y: H * 0.632, size: 33, gx: 5,  gy: 13 },
+            { x: W * 0.175, y: H * 0.630, size: 31, gx: 9,  gy: 13 },
+            { x: W * 0.192, y: H * 0.644, size: 36, gx: 9,  gy: 14 },
+            { x: W * 0.155, y: H * 0.645, size: 35, gx: 8,  gy: 14 },
+            // Mid-left sparse scatter
+            { x: W * 0.215, y: H * 0.600, size: 21, gx: 10, gy: 11 },
+            { x: W * 0.240, y: H * 0.612, size: 24, gx: 11, gy: 12 },
+            { x: W * 0.260, y: H * 0.598, size: 19, gx: 12, gy: 11 },
+            { x: W * 0.228, y: H * 0.626, size: 29, gx: 11, gy: 13 },
+            { x: W * 0.255, y: H * 0.636, size: 32, gx: 12, gy: 13 },
+            { x: W * 0.278, y: H * 0.622, size: 27, gx: 13, gy: 12 },
+            { x: W * 0.295, y: H * 0.610, size: 23, gx: 14, gy: 12 },
+            // Central strip — behind settlement (renders behind settlement)
+            { x: W * 0.320, y: H * 0.596, size: 18, gx: 15, gy: 11 },
+            { x: W * 0.345, y: H * 0.604, size: 21, gx: 16, gy: 11 },
+            { x: W * 0.368, y: H * 0.598, size: 20, gx: 17, gy: 11 },
+            { x: W * 0.390, y: H * 0.606, size: 22, gx: 18, gy: 12 },
+            { x: W * 0.335, y: H * 0.618, size: 26, gx: 16, gy: 12 },
+            { x: W * 0.360, y: H * 0.624, size: 28, gx: 17, gy: 12 },
+            { x: W * 0.408, y: H * 0.616, size: 24, gx: 19, gy: 12 },
+            { x: W * 0.430, y: H * 0.600, size: 19, gx: 20, gy: 11 },
+            { x: W * 0.450, y: H * 0.610, size: 22, gx: 21, gy: 12 },
+            { x: W * 0.415, y: H * 0.628, size: 27, gx: 19, gy: 13 },
+            { x: W * 0.460, y: H * 0.622, size: 25, gx: 21, gy: 12 },
+            { x: W * 0.478, y: H * 0.600, size: 18, gx: 22, gy: 11 },
+            { x: W * 0.500, y: H * 0.606, size: 20, gx: 23, gy: 11 },
+            { x: W * 0.520, y: H * 0.598, size: 19, gx: 24, gy: 11 },
+            { x: W * 0.490, y: H * 0.618, size: 24, gx: 22, gy: 12 },
+            { x: W * 0.512, y: H * 0.626, size: 27, gx: 23, gy: 12 },
+            { x: W * 0.540, y: H * 0.610, size: 22, gx: 25, gy: 12 },
+            { x: W * 0.558, y: H * 0.600, size: 20, gx: 26, gy: 11 },
+            { x: W * 0.575, y: H * 0.612, size: 23, gx: 26, gy: 12 },
+            { x: W * 0.530, y: H * 0.632, size: 29, gx: 24, gy: 13 },
+            { x: W * 0.562, y: H * 0.624, size: 26, gx: 26, gy: 12 },
+            // Mid-right sparse scatter
+            { x: W * 0.590, y: H * 0.600, size: 18, gx: 27, gy: 11 },
+            { x: W * 0.608, y: H * 0.610, size: 21, gx: 28, gy: 12 },
+            { x: W * 0.628, y: H * 0.598, size: 19, gx: 29, gy: 11 },
+            { x: W * 0.598, y: H * 0.622, size: 25, gx: 27, gy: 12 },
+            { x: W * 0.620, y: H * 0.628, size: 28, gx: 28, gy: 13 },
+            { x: W * 0.645, y: H * 0.612, size: 23, gx: 30, gy: 12 },
+            { x: W * 0.662, y: H * 0.600, size: 20, gx: 31, gy: 11 },
+            { x: W * 0.680, y: H * 0.610, size: 24, gx: 32, gy: 12 },
+            { x: W * 0.635, y: H * 0.636, size: 31, gx: 29, gy: 13 },
+            { x: W * 0.668, y: H * 0.624, size: 27, gx: 31, gy: 12 },
+            { x: W * 0.700, y: H * 0.600, size: 19, gx: 33, gy: 11 },
+            { x: W * 0.715, y: H * 0.612, size: 22, gx: 33, gy: 12 },
+            { x: W * 0.695, y: H * 0.622, size: 26, gx: 32, gy: 12 },
+            { x: W * 0.728, y: H * 0.618, size: 24, gx: 34, gy: 12 },
+            { x: W * 0.705, y: H * 0.634, size: 30, gx: 33, gy: 13 },
+            { x: W * 0.740, y: H * 0.606, size: 21, gx: 35, gy: 11 },
+            { x: W * 0.758, y: H * 0.598, size: 18, gx: 36, gy: 11 },
+            { x: W * 0.720, y: H * 0.628, size: 28, gx: 34, gy: 13 },
+            { x: W * 0.745, y: H * 0.622, size: 25, gx: 35, gy: 12 },
+            { x: W * 0.778, y: H * 0.600, size: 19, gx: 37, gy: 11 },
+            { x: W * 0.795, y: H * 0.610, size: 22, gx: 37, gy: 12 },
+            { x: W * 0.772, y: H * 0.622, size: 27, gx: 36, gy: 12 },
+            { x: W * 0.812, y: H * 0.598, size: 20, gx: 38, gy: 11 },
+            { x: W * 0.800, y: H * 0.626, size: 29, gx: 38, gy: 13 },
+            { x: W * 0.830, y: H * 0.612, size: 24, gx: 39, gy: 12 },
+            { x: W * 0.820, y: H * 0.634, size: 31, gx: 38, gy: 13 },
+            // Dense right edge cluster
+            { x: W * 0.852, y: H * 0.618, size: 26, gx: 40, gy: 12 },
+            { x: W * 0.870, y: H * 0.600, size: 22, gx: 41, gy: 11 },
+            { x: W * 0.888, y: H * 0.610, size: 25, gx: 41, gy: 12 },
+            { x: W * 0.842, y: H * 0.628, size: 30, gx: 40, gy: 13 },
+            { x: W * 0.862, y: H * 0.638, size: 34, gx: 40, gy: 14 },
+            { x: W * 0.906, y: H * 0.598, size: 21, gx: 43, gy: 11 },
+            { x: W * 0.922, y: H * 0.606, size: 24, gx: 44, gy: 11 },
+            { x: W * 0.895, y: H * 0.618, size: 28, gx: 42, gy: 12 },
+            { x: W * 0.878, y: H * 0.630, size: 33, gx: 41, gy: 13 },
+            { x: W * 0.912, y: H * 0.628, size: 30, gx: 43, gy: 13 },
+            { x: W * 0.938, y: H * 0.600, size: 22, gx: 44, gy: 11 },
+            { x: W * 0.955, y: H * 0.610, size: 26, gx: 45, gy: 12 },
+            { x: W * 0.942, y: H * 0.624, size: 31, gx: 44, gy: 12 },
+            { x: W * 0.972, y: H * 0.598, size: 20, gx: 46, gy: 11 },
+            { x: W * 0.988, y: H * 0.606, size: 23, gx: 47, gy: 11 },
+            { x: W * 0.965, y: H * 0.618, size: 28, gx: 45, gy: 12 },
+            { x: W * 0.980, y: H * 0.628, size: 32, gx: 46, gy: 13 },
+            { x: W * 0.998, y: H * 0.616, size: 24, gx: 47, gy: 12 },
+            { x: W * 0.928, y: H * 0.638, size: 35, gx: 43, gy: 14 },
+            { x: W * 0.958, y: H * 0.640, size: 36, gx: 45, gy: 14 },
         ];
         trees.sort((a, b) => a.y - b.y);
         trees.forEach(tree => {

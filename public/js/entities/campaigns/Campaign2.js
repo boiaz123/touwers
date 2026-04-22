@@ -830,12 +830,12 @@ export class Campaign2 extends CampaignBase {
     
     renderPath(ctx) {
         if (!this.pathPoints || this.pathPoints.length < 2) return;
-        
+
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        
-        // Layer 1: Dark shadow base for depth
-        ctx.strokeStyle = 'rgba(40, 40, 50, 0.6)';
+
+        // Shadow base
+        ctx.strokeStyle = 'rgba(20, 25, 40, 0.55)';
         ctx.lineWidth = 54;
         ctx.globalAlpha = 1;
         ctx.beginPath();
@@ -844,10 +844,10 @@ export class Campaign2 extends CampaignBase {
             ctx.lineTo(this.pathPoints[i].x + 3, this.pathPoints[i].y + 3);
         }
         ctx.stroke();
-        
-        // Layer 2: Main stone/packed snow path - lighter gray
-        ctx.strokeStyle = '#b8c4d8';
-        ctx.lineWidth = 50;
+
+        // Main stone road surface — cool blue-grey packed stone
+        ctx.strokeStyle = '#a0b0c0';
+        ctx.lineWidth = 48;
         ctx.globalAlpha = 1;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
@@ -855,40 +855,18 @@ export class Campaign2 extends CampaignBase {
             ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
         }
         ctx.stroke();
-        
-        // Layer 2b: Dark edge for natural boundary
-        ctx.strokeStyle = '#7a8a9a';
-        ctx.lineWidth = 50;
-        ctx.globalAlpha = 0.4;
+
+        // Worn lighter center — polished by travel
+        ctx.strokeStyle = '#c8d8e4';
+        ctx.lineWidth = 20;
+        ctx.globalAlpha = 0.65;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
         for (let i = 1; i < this.pathPoints.length; i++) {
             ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
         }
         ctx.stroke();
-        ctx.globalAlpha = 1;
-        
-        // Layer 3: Lighter center stripe - worn from travel
-        ctx.strokeStyle = '#d0dce8';
-        ctx.lineWidth = 24;
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        
-        // Layer 4: Road edge highlights
-        ctx.strokeStyle = '#e8f0f8';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
+
         ctx.globalAlpha = 1;
     }
     

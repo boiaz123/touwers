@@ -1171,12 +1171,13 @@ export class Campaign1 extends CampaignBase {
     
     renderPath(ctx) {
         if (!this.pathPoints || this.pathPoints.length < 2) return;
-        
-        // Layer 1: Dark shadow base for depth and grounding
-        ctx.strokeStyle = 'rgba(40, 30, 25, 0.5)';
-        ctx.lineWidth = 50;
+
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+
+        // Shadow base
+        ctx.strokeStyle = 'rgba(30, 20, 10, 0.50)';
+        ctx.lineWidth = 52;
         ctx.globalAlpha = 1;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x + 3, this.pathPoints[0].y + 3);
@@ -1184,12 +1185,10 @@ export class Campaign1 extends CampaignBase {
             ctx.lineTo(this.pathPoints[i].x + 3, this.pathPoints[i].y + 3);
         }
         ctx.stroke();
-        
-        // Layer 2: Main dirt road color
-        ctx.strokeStyle = '#8b7355';
+
+        // Main dirt road surface — warm earthy brown
+        ctx.strokeStyle = '#7a6040';
         ctx.lineWidth = 46;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
         ctx.globalAlpha = 1;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
@@ -1197,53 +1196,18 @@ export class Campaign1 extends CampaignBase {
             ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
         }
         ctx.stroke();
-        
-        // Layer 2b: Dark grass border - natural edge of road
-        ctx.strokeStyle = '#5a5038';
-        ctx.lineWidth = 48;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.5;
+
+        // Worn lighter center — foot traffic polish
+        ctx.strokeStyle = '#a08060';
+        ctx.lineWidth = 20;
+        ctx.globalAlpha = 0.65;
         ctx.beginPath();
         ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
         for (let i = 1; i < this.pathPoints.length; i++) {
             ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
         }
         ctx.stroke();
-        ctx.globalAlpha = 1;
-        
-        // Layer 3: Lighter center stripe - worn from foot traffic
-        ctx.strokeStyle = '#a8927a';
-        ctx.lineWidth = 22;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x, this.pathPoints[0].y);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x, this.pathPoints[i].y);
-        }
-        ctx.stroke();
-        
-        // Layer 4: Road edge highlights - natural weathering
-        ctx.strokeStyle = '#b5a484';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x - 19, this.pathPoints[0].y - 19);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x - 19, this.pathPoints[i].y - 19);
-        }
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(this.pathPoints[0].x + 19, this.pathPoints[0].y + 19);
-        for (let i = 1; i < this.pathPoints.length; i++) {
-            ctx.lineTo(this.pathPoints[i].x + 19, this.pathPoints[i].y + 19);
-        }
-        ctx.stroke();
+
         ctx.globalAlpha = 1;
     }
 
