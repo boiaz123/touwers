@@ -3375,16 +3375,9 @@ export class LevelBase {
                 this.renderSpaceRock(ctx, x, y, size, gridX, gridY, variant);
                 break;
             case 'forest':
-            default: {
-                const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
-                switch(seed) {
-                    case 0: this.renderRockType1(ctx, x, y, size); break;
-                    case 1: this.renderRockType2(ctx, x, y, size); break;
-                    case 2: this.renderRockType3(ctx, x, y, size); break;
-                    default: this.renderRockType4(ctx, x, y, size);
-                }
+            default:
+                this.renderForestRock(ctx, x, y, size, gridX, gridY, variant);
                 break;
-            }
         }
     }
 
@@ -3989,6 +3982,189 @@ export class LevelBase {
             x + size * 0.3, y - size * 0.1
         );
         ctx.stroke();
+    }
+
+    renderForestRock(ctx, x, y, size, gridX, gridY, variant) {
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+        switch(seed) {
+            case 0: this.renderForestRock0(ctx, x, y, size); break;
+            case 1: this.renderForestRock1(ctx, x, y, size); break;
+            case 2: this.renderForestRock2(ctx, x, y, size); break;
+            default: this.renderForestRock3(ctx, x, y, size);
+        }
+    }
+
+    renderForestRock0(ctx, x, y, size) {
+        // Rounded grey boulder with natural irregular shape and shading
+        ctx.fillStyle = '#6a7880';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.28, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+        ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        // Shadow/dark face on right side
+        ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.12, y - size * 0.24);
+        ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+        ctx.lineTo(x + size * 0.04, y + size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
+        ctx.closePath();
+        ctx.fill();
+        // Highlight on upper-left
+        ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.18, y - size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
+        ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderForestRock1(ctx, x, y, size) {
+        // Angular slab with faceted faces
+        const hw = size * 0.34, hh = size * 0.22;
+        // Main face
+        ctx.fillStyle = '#586470';
+        ctx.beginPath();
+        ctx.moveTo(x - hw, y + hh * 0.5);
+        ctx.lineTo(x - hw * 0.72, y - hh);
+        ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+        ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw, y + hh * 0.3);
+        ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        // Dark right face
+        ctx.fillStyle = '#3a4550';
+        ctx.beginPath();
+        ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw, y + hh * 0.3);
+        ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+        ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        // Lighter top face
+        ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
+        ctx.beginPath();
+        ctx.moveTo(x - hw * 0.72, y - hh);
+        ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+        ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+        ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
+        ctx.closePath();
+        ctx.fill();
+        // Crack detail
+        ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
+        ctx.lineWidth = size * 0.012;
+        ctx.beginPath();
+        ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
+        ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
+        ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
+        ctx.stroke();
+    }
+
+    renderForestRock2(ctx, x, y, size) {
+        // Two overlapping boulders with natural shapes
+        // Back boulder (slightly behind)
+        ctx.fillStyle = '#708090';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+        ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+        ctx.closePath();
+        ctx.fill();
+        // Back boulder shadow face
+        ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.18, y - size * 0.20);
+        ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
+        ctx.lineTo(x + size * 0.20, y - size * 0.06);
+        ctx.closePath();
+        ctx.fill();
+        // Front boulder (overlapping)
+        ctx.fillStyle = '#6a7a84';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.30, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
+        ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        // Front boulder shadow
+        ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.10, y - size * 0.16);
+        ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+        ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
+        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
+        ctx.closePath();
+        ctx.fill();
+        // Front highlight
+        ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.20, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderForestRock3(ctx, x, y, size) {
+        // Cluster of small stones with varied shapes
+        // Stone 1 — largest, front-left
+        ctx.fillStyle = '#6a7880';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.26, y + size * 0.14);
+        ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.04, y - size * 0.04);
+        ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+        ctx.lineTo(x - size * 0.02, y + size * 0.04);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 2 — right
+        ctx.fillStyle = '#5e6e78';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.06, y + size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
+        ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
+        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 3 — small, front-center
+        ctx.fillStyle = '#74848c';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.04, y + size * 0.18);
+        ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
+        ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
+        ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
+        ctx.closePath();
+        ctx.fill();
+        // Stone 4 — tiny, back
+        ctx.fillStyle = '#667682';
+        ctx.beginPath();
+        ctx.moveTo(x - size * 0.08, y - size * 0.10);
+        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
+        ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderRockType1(ctx, x, y, size) {

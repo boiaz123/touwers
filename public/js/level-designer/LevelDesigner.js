@@ -2500,12 +2500,7 @@ export class LevelDesigner {
                 this.drawAlienRock(x, y, size, rockColor, rockAccent, seed);
                 break;
             default: // forest
-                switch(seed) {
-                    case 0: this.drawRockType1(x, y, size, rockColor, rockAccent); break;
-                    case 1: this.drawRockType2(x, y, size, rockColor, rockAccent); break;
-                    case 2: this.drawRockType3(x, y, size, rockColor, rockAccent); break;
-                    default: this.drawRockType4(x, y, size, rockColor, rockAccent);
-                }
+                this.drawForestRock(x, y, size, rockColor, rockAccent, seed);
         }
     }
 
@@ -3114,6 +3109,184 @@ export class LevelDesigner {
             x + size * 0.3, y - size * 0.1
         );
         this.ctx.stroke();
+    }
+
+    drawForestRock(x, y, size, rockColor, rockAccent, seed) {
+        switch(seed % 4) {
+            case 0: {
+                // Rounded grey boulder with natural irregular shape and shading
+                this.ctx.fillStyle = '#6a7880';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.28, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                this.ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Dark shadow face on right
+                this.ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.12, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                this.ctx.lineTo(x + size * 0.04, y + size * 0.06);
+                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Highlight on upper left
+                this.ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.18, y - size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
+                this.ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
+                this.ctx.closePath();
+                this.ctx.fill();
+                break;
+            }
+            case 1: {
+                // Angular slab with faceted faces
+                const hw = size * 0.34, hh = size * 0.22;
+                this.ctx.fillStyle = '#586470';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - hw, y + hh * 0.5);
+                this.ctx.lineTo(x - hw * 0.72, y - hh);
+                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw, y + hh * 0.3);
+                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Dark right face
+                this.ctx.fillStyle = '#3a4550';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw, y + hh * 0.3);
+                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                this.ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Lighter top face
+                this.ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - hw * 0.72, y - hh);
+                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                this.ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Crack detail
+                this.ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
+                this.ctx.lineWidth = size * 0.012;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
+                this.ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
+                this.ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
+                this.ctx.stroke();
+                break;
+            }
+            case 2: {
+                // Two overlapping boulders
+                // Smaller boulder (behind)
+                this.ctx.fillStyle = '#708090';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.02, y - size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on smaller boulder
+                this.ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.18, y - size * 0.20);
+                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
+                this.ctx.lineTo(x + size * 0.20, y - size * 0.06);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Larger boulder (front)
+                this.ctx.fillStyle = '#6a7a84';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.30, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on larger boulder
+                this.ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.10, y - size * 0.16);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                this.ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
+                this.ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Highlight on larger boulder
+                this.ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.20, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
+                this.ctx.closePath();
+                this.ctx.fill();
+                break;
+            }
+            default: {
+                // Cluster of small stones with varied shapes
+                // Main stone
+                this.ctx.fillStyle = '#6a7880';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.26, y + size * 0.14);
+                this.ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                this.ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Shadow on main stone
+                this.ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.04, y - size * 0.04);
+                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                this.ctx.lineTo(x - size * 0.02, y + size * 0.04);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Second stone
+                this.ctx.fillStyle = '#5e6e78';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + size * 0.06, y + size * 0.08);
+                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
+                this.ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
+                this.ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Third stone
+                this.ctx.fillStyle = '#74848c';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.04, y + size * 0.18);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
+                this.ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
+                this.ctx.closePath();
+                this.ctx.fill();
+                // Fourth small stone
+                this.ctx.fillStyle = '#667682';
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - size * 0.08, y - size * 0.10);
+                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
+                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
+                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
+                this.ctx.closePath();
+                this.ctx.fill();
+                break;
+            }
+        }
     }
 
     drawRockType1(x, y, size, primaryColor, accentColor) {
