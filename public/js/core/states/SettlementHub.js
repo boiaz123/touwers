@@ -1260,7 +1260,6 @@ export class SettlementHub {
         ctx.fillRect(0, 0, W, H * 0.7);
 
         this.renderSun(ctx, canvas);
-        this.renderClouds(ctx, canvas);
 
         // Atmospheric haze near horizon
         const hazeGradient = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.62);
@@ -1271,6 +1270,9 @@ export class SettlementHub {
 
         // Mountain backdrop
         this.renderDistantHills(ctx, canvas);
+
+        // Clouds in front of mountains
+        this.renderClouds(ctx, canvas);
 
         // Green ground — starts at 57% to give the treeline room at the horizon
         const groundGradient = ctx.createLinearGradient(0, H * 0.57, 0, H);
@@ -1609,14 +1611,16 @@ export class SettlementHub {
         ctx.fill();
 
         // Snow cap on tallest far peak
+        // Far peak actual apex is at approx W*0.549, H*0.139 (bezier crest)
+        // Left slope meets snow line (~H*0.194) at x≈W*0.471; right at x≈W*0.602
         ctx.save();
-        ctx.globalAlpha = 0.75;
+        ctx.globalAlpha = 0.72;
         ctx.fillStyle = '#edf6ff';
         ctx.beginPath();
-        ctx.moveTo(W * 0.43, H * 0.235);
-        ctx.bezierCurveTo(W * 0.47, H * 0.195, W * 0.51, H * 0.148, W * 0.57, H * 0.15);
-        ctx.bezierCurveTo(W * 0.60, H * 0.165, W * 0.63, H * 0.205, W * 0.65, H * 0.238);
-        ctx.bezierCurveTo(W * 0.61, H * 0.215, W * 0.57, H * 0.182, W * 0.53, H * 0.215);
+        ctx.moveTo(W * 0.471, H * 0.194);
+        ctx.bezierCurveTo(W * 0.500, H * 0.162, W * 0.536, H * 0.138, W * 0.549, H * 0.139);
+        ctx.bezierCurveTo(W * 0.561, H * 0.140, W * 0.590, H * 0.166, W * 0.602, H * 0.195);
+        ctx.bezierCurveTo(W * 0.572, H * 0.204, W * 0.502, H * 0.205, W * 0.471, H * 0.194);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -1643,25 +1647,35 @@ export class SettlementHub {
         ctx.fill();
 
         // Snow caps on the two dominant mid-range peaks
+        // Central peak (apex W*0.52, H*0.17): left slope at H*0.228 → x≈W*0.481; right → x≈W*0.562
         ctx.save();
-        ctx.globalAlpha = 0.90;
+        ctx.globalAlpha = 0.92;
         ctx.fillStyle = '#f2f9ff';
-        // Central peak
         ctx.beginPath();
-        ctx.moveTo(W * 0.44, H * 0.265);
-        ctx.bezierCurveTo(W * 0.46, H * 0.240, W * 0.49, H * 0.210, W * 0.52, H * 0.17);
-        ctx.bezierCurveTo(W * 0.55, H * 0.210, W * 0.58, H * 0.240, W * 0.60, H * 0.268);
-        ctx.bezierCurveTo(W * 0.57, H * 0.242, W * 0.52, H * 0.205, W * 0.52, H * 0.205);
-        ctx.bezierCurveTo(W * 0.49, H * 0.222, W * 0.47, H * 0.245, W * 0.44, H * 0.265);
+        ctx.moveTo(W * 0.481, H * 0.228);
+        ctx.bezierCurveTo(W * 0.494, H * 0.210, W * 0.508, H * 0.186, W * 0.520, H * 0.170);
+        ctx.bezierCurveTo(W * 0.533, H * 0.186, W * 0.548, H * 0.210, W * 0.562, H * 0.228);
+        ctx.bezierCurveTo(W * 0.540, H * 0.236, W * 0.503, H * 0.236, W * 0.481, H * 0.228);
         ctx.closePath();
         ctx.fill();
-        // Right peak
+        // Cold-shadow on right face of central peak snow
+        ctx.globalAlpha = 0.20;
+        ctx.fillStyle = '#8aa0c8';
         ctx.beginPath();
-        ctx.moveTo(W * 0.82, H * 0.278);
-        ctx.bezierCurveTo(W * 0.84, H * 0.252, W * 0.85, H * 0.232, W * 0.87, H * 0.20);
-        ctx.bezierCurveTo(W * 0.90, H * 0.232, W * 0.92, H * 0.258, W * 0.93, H * 0.278);
-        ctx.bezierCurveTo(W * 0.91, H * 0.254, W * 0.87, H * 0.222, W * 0.87, H * 0.222);
-        ctx.bezierCurveTo(W * 0.86, H * 0.242, W * 0.84, H * 0.258, W * 0.82, H * 0.278);
+        ctx.moveTo(W * 0.520, H * 0.170);
+        ctx.bezierCurveTo(W * 0.533, H * 0.186, W * 0.548, H * 0.210, W * 0.562, H * 0.228);
+        ctx.bezierCurveTo(W * 0.552, H * 0.234, W * 0.538, H * 0.234, W * 0.526, H * 0.228);
+        ctx.bezierCurveTo(W * 0.525, H * 0.210, W * 0.522, H * 0.186, W * 0.520, H * 0.170);
+        ctx.closePath();
+        ctx.fill();
+        // Right peak (apex W*0.87, H*0.20): left slope at H*0.252 → x≈W*0.840; right → x≈W*0.904
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = '#f2f9ff';
+        ctx.beginPath();
+        ctx.moveTo(W * 0.840, H * 0.252);
+        ctx.bezierCurveTo(W * 0.852, H * 0.232, W * 0.862, H * 0.216, W * 0.870, H * 0.200);
+        ctx.bezierCurveTo(W * 0.882, H * 0.218, W * 0.893, H * 0.236, W * 0.904, H * 0.252);
+        ctx.bezierCurveTo(W * 0.884, H * 0.262, W * 0.858, H * 0.262, W * 0.840, H * 0.252);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
