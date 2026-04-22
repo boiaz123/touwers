@@ -491,19 +491,41 @@ export class Campaign2 extends CampaignBase {
         
         // Render the path on the ground
         this.renderPath(ctx);
-        
-        // Render all trees - sorted by Y for 2.5D perspective
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        this.renderBackground(ctx, canvas);
+        this.renderTerrain(ctx);
+
+        // Depth-sorted interleave of trees and level-slot castles
+        const renderables = [];
         if (this.terrainDetails && this.terrainDetails.trees) {
-            const sortedTrees = [...this.terrainDetails.trees].sort((a, b) => a.y - b.y);
-            for (const tree of sortedTrees) {
-                this.drawMountainTree(ctx, tree.x, tree.y, tree.size, tree.gridX, tree.gridY);
+            for (const tree of this.terrainDetails.trees) {
+                renderables.push({ type: 'tree', y: tree.y, data: tree });
             }
         }
-        
-        // Snow particles on top of everything
+        if (this.levelSlots) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                const slot = this.levelSlots[i];
+                if (slot && slot.level) {
+                    renderables.push({ type: 'castle', y: slot.y, index: i });
+                }
+            }
+        }
+        renderables.sort((a, b) => a.y - b.y);
+        for (const r of renderables) {
+            if (r.type === 'tree') {
+                this.drawMountainTree(ctx, r.data.x, r.data.y, r.data.size, r.data.gridX, r.data.gridY);
+            } else {
+                this.renderLevelSlot(ctx, r.index);
+            }
+        }
         this.renderSnowflakes(ctx);
+        this.renderTitle(ctx);
+        this.renderNavButtons(ctx);
     }
-    
+
     drawFullMountainRange(ctx, canvas) {
         const width = canvas.width;
         const height = canvas.height;

@@ -477,18 +477,42 @@ export class Campaign1 extends CampaignBase {
         // Render all trees on top of the path - sorted by Y for 2.5D perspective
         // Lower Y (top of screen) renders first, appears behind
         // Higher Y (bottom of screen) renders last, appears in front
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        this.renderBackground(ctx, canvas);
+        this.renderTerrain(ctx);
+
+        // Depth-sorted interleave of trees and level-slot castles
+        const renderables = [];
         if (this.terrainDetails && this.terrainDetails.trees) {
-            const sortedTrees = [...this.terrainDetails.trees].sort((a, b) => a.y - b.y);
-            for (const tree of sortedTrees) {
-                this.drawTreeTopDown(ctx, tree.x, tree.y, tree.size, tree.variant);
+            for (const tree of this.terrainDetails.trees) {
+                renderables.push({ type: 'tree', y: tree.y, data: tree });
             }
         }
-        
-        // Render falling leaves particle effect on top
+        if (this.levelSlots) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                const slot = this.levelSlots[i];
+                if (slot && slot.level) {
+                    renderables.push({ type: 'castle', y: slot.y, index: i });
+                }
+            }
+        }
+        renderables.sort((a, b) => a.y - b.y);
+        for (const r of renderables) {
+            if (r.type === 'tree') {
+                this.drawTreeTopDown(ctx, r.data.x, r.data.y, r.data.size, r.data.variant);
+            } else {
+                this.renderLevelSlot(ctx, r.index);
+            }
+        }
         this.updateAndRenderFallingLeaves(ctx);
+        this.renderTitle(ctx, canvas);
+        this.renderNavButtons(ctx);
     }
-    
-    
+
+
     drawSmallRock(ctx, x, y, size, opacity) {
         ctx.globalAlpha = opacity;
         ctx.fillStyle = '#8b7d6b';

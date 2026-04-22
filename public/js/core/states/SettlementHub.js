@@ -1249,41 +1249,43 @@ export class SettlementHub {
     }
 
     renderBackground(ctx, canvas) {
-        // Deep sky with gradient
-        const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.7);
-        skyGradient.addColorStop(0, '#1a4d7a');      // Deep blue sky
-        skyGradient.addColorStop(0.4, '#4d9dcc');    // Mid blue
-        skyGradient.addColorStop(0.7, '#99ccff');    // Light blue horizon
+        const H = canvas.height;
+        const W = canvas.width;
+        // Deep sky
+        const skyGradient = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+        skyGradient.addColorStop(0, '#1a4d7a');
+        skyGradient.addColorStop(0.4, '#4d9dcc');
+        skyGradient.addColorStop(0.7, '#99ccff');
         ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height * 0.7);
+        ctx.fillRect(0, 0, W, H * 0.7);
 
-        // Render sun and sky colors
         this.renderSun(ctx, canvas);
         this.renderClouds(ctx, canvas);
 
-        // Atmospheric haze at horizon
-        const hazeGradient = ctx.createLinearGradient(0, canvas.height * 0.5, 0, canvas.height * 0.75);
+        // Atmospheric haze near horizon
+        const hazeGradient = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.62);
         hazeGradient.addColorStop(0, 'rgba(200, 220, 255, 0)');
-        hazeGradient.addColorStop(1, 'rgba(200, 220, 255, 0.3)');
+        hazeGradient.addColorStop(1, 'rgba(200, 220, 255, 0.22)');
         ctx.fillStyle = hazeGradient;
-        ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.25);
+        ctx.fillRect(0, H * 0.45, W, H * 0.17);
 
-        // Distant hills/mountains
+        // Mountain backdrop
         this.renderDistantHills(ctx, canvas);
 
-        // Mid-ground forest with depth
-        this.renderMidGroundForest(ctx, canvas);
-
-        // Ground terrain with perspective
-        const groundGradient = ctx.createLinearGradient(0, canvas.height * 0.6, 0, canvas.height);
-        groundGradient.addColorStop(0, '#5fa366');     // Mid grass
-        groundGradient.addColorStop(0.4, '#4a8a52');   // Darker grass
-        groundGradient.addColorStop(1, '#3d6b42');     // Dark foreground
+        // Green ground — starts at 57% to give the treeline room at the horizon
+        const groundGradient = ctx.createLinearGradient(0, H * 0.57, 0, H);
+        groundGradient.addColorStop(0, '#5a9960');
+        groundGradient.addColorStop(0.25, '#438a4e');
+        groundGradient.addColorStop(0.65, '#317840');
+        groundGradient.addColorStop(1, '#246232');
         ctx.fillStyle = groundGradient;
-        ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+        ctx.fillRect(0, H * 0.57, W, H - H * 0.57);
 
-        // Ground texture/detail
+        // Forest floor texture overlay
         this.renderGroundDetail(ctx, canvas);
+
+        // Horizon treeline — rendered on top of green ground
+        this.renderMidGroundForest(ctx, canvas);
     }
 
     renderSun(ctx, canvas) {
@@ -1582,70 +1584,166 @@ export class SettlementHub {
     }
 
     renderDistantHills(ctx, canvas) {
-        // Far background hills with atmospheric perspective
-        ctx.fillStyle = '#5a7d8a';
+        const W = canvas.width;
+        const H = canvas.height;
+        const groundY = H * 0.57;
+
+        // === Far layer: palest, most atmospheric distant peaks ===
+        const farGrad = ctx.createLinearGradient(0, H * 0.16, 0, groundY);
+        farGrad.addColorStop(0, '#9fb8cc');
+        farGrad.addColorStop(1, '#7a9aae');
+        ctx.fillStyle = farGrad;
         ctx.beginPath();
-        ctx.moveTo(0, canvas.height * 0.45);
-        ctx.quadraticCurveTo(canvas.width * 0.2, canvas.height * 0.35, canvas.width * 0.4, canvas.height * 0.42);
-        ctx.quadraticCurveTo(canvas.width * 0.6, canvas.height * 0.32, canvas.width * 0.8, canvas.height * 0.43);
-        ctx.quadraticCurveTo(canvas.width * 0.9, canvas.height * 0.38, canvas.width, canvas.height * 0.45);
-        ctx.lineTo(canvas.width, canvas.height * 0.6);
-        ctx.lineTo(0, canvas.height * 0.6);
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(0, H * 0.36);
+        ctx.bezierCurveTo(W * 0.06, H * 0.24, W * 0.12, H * 0.28, W * 0.17, H * 0.32);
+        ctx.bezierCurveTo(W * 0.22, H * 0.24, W * 0.27, H * 0.19, W * 0.33, H * 0.25);
+        ctx.bezierCurveTo(W * 0.39, H * 0.31, W * 0.44, H * 0.26, W * 0.50, H * 0.18);
+        ctx.bezierCurveTo(W * 0.56, H * 0.26, W * 0.62, H * 0.31, W * 0.67, H * 0.23);
+        ctx.bezierCurveTo(W * 0.73, H * 0.16, W * 0.79, H * 0.22, W * 0.85, H * 0.28);
+        ctx.bezierCurveTo(W * 0.90, H * 0.22, W * 0.95, H * 0.29, W, H * 0.34);
+        ctx.lineTo(W, groundY);
+        ctx.closePath();
         ctx.fill();
 
-        // Hill shadow/depth
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        // Snow on tallest far peaks
+        ctx.fillStyle = 'rgba(235, 248, 255, 0.80)';
         ctx.beginPath();
-        ctx.moveTo(0, canvas.height * 0.48);
-        ctx.quadraticCurveTo(canvas.width * 0.5, canvas.height * 0.38, canvas.width, canvas.height * 0.48);
-        ctx.lineTo(canvas.width, canvas.height * 0.6);
-        ctx.lineTo(0, canvas.height * 0.6);
+        ctx.moveTo(W * 0.44, H * 0.265);
+        ctx.lineTo(W * 0.50, H * 0.18);
+        ctx.lineTo(W * 0.56, H * 0.265);
+        ctx.quadraticCurveTo(W * 0.50, H * 0.235, W * 0.44, H * 0.265);
+        ctx.closePath();
         ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(W * 0.67, H * 0.24);
+        ctx.lineTo(W * 0.73, H * 0.16);
+        ctx.lineTo(W * 0.79, H * 0.235);
+        ctx.quadraticCurveTo(W * 0.73, H * 0.20, W * 0.67, H * 0.24);
+        ctx.closePath();
+        ctx.fill();
+
+        // === Mid layer: main visible mountain range ===
+        const midGrad = ctx.createLinearGradient(0, H * 0.28, 0, groundY);
+        midGrad.addColorStop(0, '#5c7486');
+        midGrad.addColorStop(0.7, '#4a6070');
+        midGrad.addColorStop(1, '#3e5560');
+        ctx.fillStyle = midGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(0, H * 0.45);
+        ctx.quadraticCurveTo(W * 0.06, H * 0.36, W * 0.13, H * 0.40);
+        ctx.quadraticCurveTo(W * 0.20, H * 0.32, W * 0.28, H * 0.38);
+        ctx.quadraticCurveTo(W * 0.35, H * 0.44, W * 0.42, H * 0.36);
+        ctx.quadraticCurveTo(W * 0.49, H * 0.30, W * 0.56, H * 0.37);
+        ctx.quadraticCurveTo(W * 0.63, H * 0.44, W * 0.70, H * 0.35);
+        ctx.quadraticCurveTo(W * 0.77, H * 0.28, W * 0.84, H * 0.36);
+        ctx.quadraticCurveTo(W * 0.91, H * 0.44, W, H * 0.47);
+        ctx.lineTo(W, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        // === Near layer: dark rolling foreground hills blending into green ground ===
+        const nearGrad = ctx.createLinearGradient(0, H * 0.43, 0, groundY);
+        nearGrad.addColorStop(0, '#364a50');
+        nearGrad.addColorStop(0.5, '#344a3c');
+        nearGrad.addColorStop(1, '#2e4234');
+        ctx.fillStyle = nearGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.lineTo(0, H * 0.525);
+        ctx.quadraticCurveTo(W * 0.10, H * 0.455, W * 0.20, H * 0.495);
+        ctx.quadraticCurveTo(W * 0.30, H * 0.535, W * 0.38, H * 0.475);
+        ctx.quadraticCurveTo(W * 0.46, H * 0.440, W * 0.54, H * 0.478);
+        ctx.quadraticCurveTo(W * 0.62, H * 0.520, W * 0.70, H * 0.464);
+        ctx.quadraticCurveTo(W * 0.78, H * 0.438, W * 0.86, H * 0.474);
+        ctx.quadraticCurveTo(W * 0.93, H * 0.520, W, H * 0.505);
+        ctx.lineTo(W, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        // AO shadow at mountain base transitioning to green ground
+        const aoGrad = ctx.createLinearGradient(0, groundY - 25, 0, groundY + 12);
+        aoGrad.addColorStop(0, 'rgba(0, 10, 5, 0.22)');
+        aoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = aoGrad;
+        ctx.fillRect(0, groundY - 25, W, 37);
     }
 
     renderMidGroundForest(ctx, canvas) {
-        // Trees in middle distance with scale
+        // Treeline planted on the green field right at the horizon edge
+        const W = canvas.width;
+        const H = canvas.height;
         const trees = [
-            { x: 40, y: canvas.height * 0.48, scale: 0.6, opacity: 0.7 },
-            { x: 80, y: canvas.height * 0.52, scale: 0.7, opacity: 0.75 },
-            { x: canvas.width - 60, y: canvas.height * 0.50, scale: 0.65, opacity: 0.72 },
-            { x: canvas.width - 120, y: canvas.height * 0.54, scale: 0.75, opacity: 0.78 },
+            // Left side — progressively larger towards center-screen
+            { x: W * 0.002, y: H * 0.598, size: 20, gx: 0,  gy: 11 },
+            { x: W * 0.038, y: H * 0.605, size: 25, gx: 2,  gy: 12 },
+            { x: W * 0.080, y: H * 0.600, size: 23, gx: 4,  gy: 12 },
+            { x: W * 0.122, y: H * 0.610, size: 27, gx: 6,  gy: 12 },
+            { x: W * 0.018, y: H * 0.620, size: 30, gx: 1,  gy: 13 },
+            { x: W * 0.062, y: H * 0.628, size: 33, gx: 3,  gy: 13 },
+            { x: W * 0.106, y: H * 0.635, size: 31, gx: 5,  gy: 13 },
+            { x: W * 0.155, y: H * 0.624, size: 28, gx: 8,  gy: 12 },
+            { x: W * 0.143, y: H * 0.645, size: 36, gx: 7,  gy: 14 },
+            { x: W * 0.190, y: H * 0.650, size: 38, gx: 9,  gy: 14 },
+            // Right side — mirrored with slight variation
+            { x: W * 0.998, y: H * 0.598, size: 20, gx: 19, gy: 11 },
+            { x: W * 0.962, y: H * 0.605, size: 25, gx: 17, gy: 12 },
+            { x: W * 0.920, y: H * 0.600, size: 23, gx: 15, gy: 12 },
+            { x: W * 0.878, y: H * 0.610, size: 27, gx: 13, gy: 12 },
+            { x: W * 0.982, y: H * 0.620, size: 30, gx: 18, gy: 13 },
+            { x: W * 0.938, y: H * 0.628, size: 33, gx: 16, gy: 13 },
+            { x: W * 0.894, y: H * 0.635, size: 31, gx: 14, gy: 13 },
+            { x: W * 0.845, y: H * 0.624, size: 28, gx: 12, gy: 12 },
+            { x: W * 0.857, y: H * 0.645, size: 36, gx: 13, gy: 14 },
+            { x: W * 0.810, y: H * 0.650, size: 38, gx: 11, gy: 14 },
         ];
-
+        trees.sort((a, b) => a.y - b.y);
         trees.forEach(tree => {
-            ctx.globalAlpha = this.contentOpacity * tree.opacity;
-            this.renderDistantTree(ctx, tree.x, tree.y, tree.scale);
+            this.renderTree(ctx, tree.x, tree.y, tree.size, tree.gx, tree.gy);
         });
-        ctx.globalAlpha = this.contentOpacity;
-    }
-
-    renderDistantTree(ctx, x, y, scale) {
-        // Simplified distant tree with perspective
-        ctx.fillStyle = '#2d5a2d';
-        ctx.beginPath();
-        ctx.arc(x, y - 15 * scale, 18 * scale, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Trunk
-        ctx.fillStyle = '#4d3d2d';
-        ctx.fillRect(x - 3 * scale, y - 5 * scale, 6 * scale, 12 * scale);
     }
 
     renderGroundDetail(ctx, canvas) {
-        // Add subtle grass texture
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.lineWidth = 1;
-
-        for (let i = 0; i < 50; i++) {
-            const x = Math.random() * canvas.width;
-            const y = canvas.height * 0.65 + Math.random() * (canvas.height * 0.35);
-            const length = 3 + Math.random() * 8;
-
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + 1, y - length);
-            ctx.stroke();
-        }
+        const W = canvas.width;
+        const H = canvas.height;
+        // Soft radial darker patches — simulate canopy shadows / ground variation
+        const patches = [
+            [0.10, 0.68, 0.18, 0.055], [0.28, 0.74, 0.14, 0.050],
+            [0.45, 0.65, 0.20, 0.060], [0.62, 0.72, 0.16, 0.048],
+            [0.78, 0.66, 0.18, 0.055], [0.92, 0.75, 0.13, 0.045],
+            [0.05, 0.80, 0.16, 0.052], [0.38, 0.82, 0.19, 0.058],
+            [0.55, 0.78, 0.15, 0.050], [0.72, 0.85, 0.17, 0.055],
+            [0.20, 0.90, 0.20, 0.060], [0.85, 0.88, 0.14, 0.048],
+            [0.48, 0.92, 0.22, 0.065], [0.15, 0.61, 0.12, 0.040],
+            [0.70, 0.62, 0.10, 0.038], [0.34, 0.60, 0.11, 0.035],
+        ];
+        patches.forEach(([fx, fy, fr, alpha]) => {
+            const cx = W * fx;
+            const cy = H * fy;
+            const r = W * fr;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(0, 20, 5, ${alpha})`);
+            grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        });
+        // Sun-dapple lighter clearings
+        const dapples = [
+            [0.22, 0.69, 0.09, 0.038], [0.50, 0.67, 0.08, 0.035],
+            [0.75, 0.71, 0.10, 0.040], [0.07, 0.85, 0.08, 0.032],
+            [0.65, 0.88, 0.09, 0.036], [0.40, 0.95, 0.10, 0.040],
+        ];
+        dapples.forEach(([fx, fy, fr, alpha]) => {
+            const cx = W * fx;
+            const cy = H * fy;
+            const r = W * fr;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(120, 200, 60, ${alpha})`);
+            grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        });
     }
 
     renderSettlementScene(ctx, canvas) {
@@ -3702,13 +3800,17 @@ export class SettlementHub {
         ];
 
         // Render trees with proper z-ordering (by Y position)
-        treePositions.sort((a, b) => a.y - b.y);
-        
-        treePositions.forEach((treePos, index) => {
-            // Generate a consistent seed for tree type variation based on position
+        // Filter out trees above the green field boundary (horizon zone)
+        const horizonY = canvas.height * 0.62;
+        const filteredTrees = treePositions.filter(t => t.y >= horizonY);
+        filteredTrees.sort((a, b) => a.y - b.y);
+
+        filteredTrees.forEach((treePos) => {
             const gridX = Math.floor(treePos.x / 50);
             const gridY = Math.floor(treePos.y / 50);
-            this.renderTree(ctx, treePos.x, treePos.y, treePos.size, gridX, gridY);
+            // Deterministic size variation for natural look
+            const sizeJitter = 1.0 + Math.sin(treePos.x * 0.031 + treePos.y * 0.047) * 0.15;
+            this.renderTree(ctx, treePos.x, treePos.y, treePos.size * sizeJitter, gridX, gridY);
         });
 
     }
@@ -4677,6 +4779,14 @@ export class SettlementHub {
         ctx.lineTo(x - size * 0.25, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
+        // Right-side shadow for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x + size * 0.02, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderTreeType2(ctx, x, y, size) {
@@ -4753,10 +4863,88 @@ export class SettlementHub {
         ctx.lineTo(x - size * 0.12, y - size * 0.45);
         ctx.closePath();
         ctx.fill();
+        // Right-side shadow on lowest layer for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x + size * 0.02, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType5(ctx, x, y, size) {
+        // Tall columnar tree with narrow form
+        const trunkWidth = size * 0.15;
+        ctx.fillStyle = '#704214';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.55);
+        ctx.fillStyle = '#4a2511';
+        ctx.fillRect(x + trunkWidth * 0.15, y - size * 0.15, trunkWidth * 0.35, size * 0.55);
+        ctx.fillStyle = '#0f3d1f';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x - size * 0.28, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#1a5a2a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.42);
+        ctx.lineTo(x + size * 0.22, y - size * 0.08);
+        ctx.lineTo(x - size * 0.22, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2d7a3d';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.55);
+        ctx.lineTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x - size * 0.15, y - size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+        // Right-side shadow on lowest layer
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.02, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderTreeType6(ctx, x, y, size) {
+        // Broad oak/maple style tree with wide crown
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
+        ctx.fillStyle = '#8B6434';
+        ctx.fillRect(x - trunkWidth * 0.3, y - size * 0.1, trunkWidth * 0.35, size * 0.5);
+        ctx.fillStyle = '#0d4a1a';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.25, size * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1b6b2f';
+        ctx.beginPath();
+        ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2d8b3f';
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
     }
 
     renderTree(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX + gridY) % 4;
+        const seed = Math.floor(gridX + gridY) % 6;
+        // Ground shadow
+        ctx.save();
+        ctx.globalAlpha = 0.52;
+        ctx.fillStyle = '#010a01';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.06, y + size * 0.43, size * 0.38, size * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         switch(seed) {
             case 0:
                 this.renderTreeType1(ctx, x, y, size);
@@ -4767,8 +4955,14 @@ export class SettlementHub {
             case 2:
                 this.renderTreeType3(ctx, x, y, size);
                 break;
-            default:
+            case 3:
                 this.renderTreeType4(ctx, x, y, size);
+                break;
+            case 4:
+                this.renderTreeType5(ctx, x, y, size);
+                break;
+            default:
+                this.renderTreeType6(ctx, x, y, size);
         }
     }
 }

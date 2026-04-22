@@ -2451,14 +2451,6 @@ export class LevelBase {
                 this.renderMountainPineType4(ctx, x, y, scaledSize);
                 break;
         }
-        // Trunk AO
-        ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = '#020408';
-        ctx.beginPath();
-        ctx.ellipse(x + scaledSize * 0.02, y + scaledSize * 0.04, scaledSize * 0.16, scaledSize * 0.04, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
     }
 
     renderSpaceVegetation(ctx, x, y, size, gridX, gridY, variant) {
@@ -3207,14 +3199,6 @@ export class LevelBase {
             default:
                 this.renderTreeType6(ctx, x, y, size);
         }
-        // Trunk-to-foliage ambient occlusion
-        ctx.save();
-        ctx.globalAlpha = 0.38;
-        ctx.fillStyle = '#000d00';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.02, y + size * 0.04, size * 0.16, size * 0.04, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
     }
 
     renderTreeType1(ctx, x, y, size) {
