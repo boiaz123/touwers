@@ -1,6 +1,7 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
+import { LevelBase } from '../levels/LevelBase.js';
 // Import level classes - they auto-register when imported
 import { ForestLevel1 } from '../levels/Forest/ForestLevel1.js';
 import { ForestLevel2 } from '../levels/Forest/ForestLevel2.js';
@@ -182,6 +183,7 @@ export class Campaign1 extends CampaignBase {
     
     generateTerrainCache() {
         // Generate all terrain variations once on enter for a dense forest look
+        if (!this._levelBase) this._levelBase = new LevelBase();
         this.terrainDetails = {
             forests: [],
             rocks: [],
@@ -254,15 +256,19 @@ export class Campaign1 extends CampaignBase {
         // Generate scattered trees with natural distribution - very dense forest
         const scatteredTrees = [];
         const waterRegions = this.terrainDetails.water;
-        const minTreeSpacing = 40; // Even smaller spacing for much denser forest
         
-        // Massive number of placement attempts to create very dense forest
+        // Placement attempts - perspective-aware sizing (front trees larger)
         const attempts = 15000;
         for (let attempt = 0; attempt < attempts; attempt++) {
             const x = Math.random() * width;
             const y = Math.random() * height;
             
-            // Check if too close to water - allow trees closer to lakes
+            // Perspective factor: 0 = top of screen (far), 1 = bottom (close)
+            const perspectiveFactor = Math.min(1, Math.max(0, y / height));
+            // Trees closer to camera are larger - matches 2.5D level rendering
+            const treeSize = 30 + perspectiveFactor * 42 + Math.random() * 10;
+            
+            // Check if too close to water
             let tooCloseToWater = false;
             for (const water of waterRegions) {
                 const dist = Math.hypot(x - water.x, y - water.y);
@@ -278,18 +284,19 @@ export class Campaign1 extends CampaignBase {
             let tooCloseToRoad = false;
             for (const roadPoint of this.pathPoints) {
                 const dist = Math.hypot(x - roadPoint.x, y - roadPoint.y);
-                if (dist < 75) {
+                if (dist < 55) {
                     tooCloseToRoad = true;
                     break;
                 }
             }
             if (tooCloseToRoad) continue;
             
-            // Check if too close to other scattered trees
+            // Check spacing using combined tree sizes for natural perspective spacing
             let tooCloseToOtherTree = false;
             for (const tree of scatteredTrees) {
                 const dist = Math.hypot(x - tree.x, y - tree.y);
-                if (dist < minTreeSpacing) {
+                const minDist = (treeSize + tree.size) * 0.40;
+                if (dist < minDist) {
                     tooCloseToOtherTree = true;
                     break;
                 }
@@ -299,7 +306,7 @@ export class Campaign1 extends CampaignBase {
             scatteredTrees.push({
                 x: x,
                 y: y,
-                size: 32 + Math.random() * 40, // Much bigger trees (32-72px)
+                size: treeSize,
                 variant: Math.floor(Math.random() * 6)
             });
         }
@@ -312,9 +319,132 @@ export class Campaign1 extends CampaignBase {
     
     
     renderBackground(ctx, canvas) {
-        // Base grass - render once
-        ctx.fillStyle = '#4a9d4a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Cache the forest backdrop to an offscreen canvas — render once, blit every frame
+        if (!this.backgroundCanvas) {
+            this.backgroundCanvas = document.createElement('canvas');
+            this.backgroundCanvas.width = canvas.width;
+            this.backgroundCanvas.height = canvas.height;
+            const bgCtx = this.backgroundCanvas.getContext('2d');
+            this._renderForestBackdrop(bgCtx, canvas.width, canvas.height);
+        }
+        ctx.drawImage(this.backgroundCanvas, 0, 0);
+    }
+
+    _renderForestBackdrop(ctx, w, h) {
+        // Forest floor — rich layered greens matching the in-level forest backdrop
+        const ground = ctx.createLinearGradient(0, 0, 0, h);
+        ground.addColorStop(0,    '#2a6012');
+        ground.addColorStop(0.32, '#1c460a');
+        ground.addColorStop(0.68, '#123206');
+        ground.addColorStop(1,    '#081a02');
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 0, w, h);
+
+        // Large colour variation — dark shadow pools and lighter open clearings
+        [
+            [0.25, 0.18, 0.22, 'rgba(10,30,4,0.18)'],
+            [0.72, 0.24, 0.20, 'rgba(10,30,4,0.14)'],
+            [0.48, 0.50, 0.26, 'rgba(8,26,2,0.16)'],
+            [0.12, 0.64, 0.18, 'rgba(10,30,4,0.14)'],
+            [0.84, 0.58, 0.20, 'rgba(10,30,4,0.18)'],
+            [0.36, 0.80, 0.22, 'rgba(8,26,2,0.13)'],
+        ].forEach(([fx, fy, frad, col]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, col);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        });
+
+        // Dappled canopy light — warm golden pools filtering through leaves
+        [
+            [0.10, 0.09, 0.11, 0.13],
+            [0.42, 0.06, 0.09, 0.12],
+            [0.70, 0.12, 0.10, 0.11],
+            [0.90, 0.07, 0.08, 0.12],
+            [0.26, 0.32, 0.10, 0.11],
+            [0.60, 0.26, 0.09, 0.10],
+            [0.82, 0.36, 0.10, 0.12],
+            [0.08, 0.54, 0.09, 0.10],
+            [0.46, 0.50, 0.11, 0.13],
+            [0.74, 0.56, 0.09, 0.11],
+            [0.32, 0.72, 0.10, 0.11],
+            [0.64, 0.76, 0.09, 0.10],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(200,195,100,${alpha})`);
+            grd.addColorStop(0.50, `rgba(140,160,50,${alpha * 0.38})`);
+            grd.addColorStop(1,   'rgba(60,100,10,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        });
+
+        // Sparse exposed dirt patches
+        [
+            [0.16, 0.20, 0.08, 0.18],
+            [0.52, 0.16, 0.07, 0.16],
+            [0.80, 0.28, 0.09, 0.17],
+            [0.06, 0.42, 0.07, 0.15],
+            [0.38, 0.44, 0.08, 0.17],
+            [0.68, 0.48, 0.07, 0.15],
+            [0.92, 0.52, 0.08, 0.16],
+            [0.24, 0.68, 0.09, 0.18],
+            [0.58, 0.70, 0.07, 0.15],
+            [0.84, 0.74, 0.08, 0.17],
+            [0.14, 0.84, 0.07, 0.14],
+            [0.46, 0.86, 0.09, 0.16],
+        ].forEach(([fx, fy, frad, alpha]) => {
+            const cx = w * fx, cy = h * fy, r = w * frad;
+            const t = Math.abs(Math.sin(fx * 19.1 + fy * 11.3));
+            const rb = 100 + Math.floor(t * 30);
+            const gb = 62 + Math.floor(t * 18);
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            grd.addColorStop(0, `rgba(${rb},${gb},18,${alpha})`);
+            grd.addColorStop(1, `rgba(${rb},${gb},18,0)`);
+            ctx.fillStyle = grd;
+            ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+        });
+
+        // Leaf litter — pointillist amber/rust/brown colour noise on the floor
+        [
+            [0.06,0.08],[0.14,0.13],[0.24,0.06],[0.35,0.11],[0.46,0.05],[0.57,0.10],[0.68,0.07],[0.79,0.12],[0.90,0.06],[0.97,0.10],
+            [0.04,0.22],[0.13,0.28],[0.22,0.20],[0.32,0.26],[0.44,0.18],[0.54,0.25],[0.65,0.21],[0.76,0.27],[0.87,0.19],[0.95,0.24],
+            [0.09,0.38],[0.20,0.34],[0.30,0.40],[0.41,0.36],[0.53,0.33],[0.62,0.39],[0.73,0.35],[0.83,0.41],[0.93,0.37],
+            [0.07,0.55],[0.18,0.60],[0.28,0.52],[0.40,0.58],[0.51,0.54],[0.61,0.60],[0.72,0.53],[0.82,0.59],[0.92,0.55],
+            [0.11,0.70],[0.23,0.75],[0.36,0.68],[0.48,0.73],[0.60,0.67],[0.71,0.74],[0.81,0.69],[0.94,0.72],
+            [0.08,0.84],[0.20,0.88],[0.34,0.82],[0.47,0.87],[0.59,0.83],[0.72,0.89],[0.85,0.84],[0.96,0.86],
+        ].forEach(([fx, fy]) => {
+            const t = Math.abs(Math.sin(fx * 37.1 + fy * 23.9));
+            let r, g, b;
+            if (t < 0.33)      { r = 130; g = 78;  b = 20; }
+            else if (t < 0.66) { r = 112; g = 58;  b = 12; }
+            else               { r = 96;  g = 82;  b = 28; }
+            const alpha = 0.22 + t * 0.18;
+            const sz = t < 0.25 ? 2 : 1;
+            ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+            ctx.fillRect(Math.floor(w * fx), Math.floor(h * fy), sz, sz);
+        });
+
+        // Foreground depth shadow — darker near camera
+        const vgn = ctx.createLinearGradient(0, h * 0.78, 0, h);
+        vgn.addColorStop(0, 'rgba(0,8,0,0)');
+        vgn.addColorStop(1, 'rgba(0,8,0,0.46)');
+        ctx.fillStyle = vgn;
+        ctx.fillRect(0, h * 0.78, w, h * 0.22);
+
+        // Side vignette — canopy shadow at edges
+        const vigL = ctx.createLinearGradient(0, 0, w * 0.08, 0);
+        vigL.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigL.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigL;
+        ctx.fillRect(0, 0, w * 0.08, h);
+        const vigR = ctx.createLinearGradient(w, 0, w * 0.92, 0);
+        vigR.addColorStop(0, 'rgba(0,12,0,0.28)');
+        vigR.addColorStop(1, 'rgba(0,12,0,0)');
+        ctx.fillStyle = vigR;
+        ctx.fillRect(w * 0.92, 0, w * 0.08, h);
     }
     
     renderTerrain(ctx) {
@@ -463,33 +593,12 @@ export class Campaign1 extends CampaignBase {
         ctx.ellipse(radiusX * 0.2, radiusY * 0.2, radiusX * 0.4, radiusY * 0.3, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Water edge - subtle wave effect
-        ctx.strokeStyle = 'rgba(100, 180, 220, 0.2)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, radiusX * 0.95, radiusY * 0.95, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
         ctx.restore();
     }
     
     drawRock(ctx, x, y, size) {
-        // Use level-based rock rendering with seed-based variation
-        // Rocks on campaign map don't have grid coordinates, so use position-based seed
         const seed = Math.floor(x * 0.5 + y * 0.7) % 4;
-        switch(seed) {
-            case 0:
-                this.drawRockType1(ctx, x, y, size);
-                break;
-            case 1:
-                this.drawRockType2(ctx, x, y, size);
-                break;
-            case 2:
-                this.drawRockType3(ctx, x, y, size);
-                break;
-            default:
-                this.drawRockType4(ctx, x, y, size);
-        }
+        this._levelBase.renderForestRock(ctx, x, y, size, null, null, seed);
     }
 
     drawRockType1(ctx, x, y, size) {
@@ -819,29 +928,24 @@ export class Campaign1 extends CampaignBase {
     }
     
     drawTreeTopDown(ctx, x, y, size, variant = 0) {
-        // Use level-based tree rendering with seed-based variation
-        // Seed based on position for consistent variation
         const seed = Math.floor(x + y) % 6;
-        const treeVariant = seed;
-        
-        switch(treeVariant) {
-            case 0:
-                this.drawTreeType1(ctx, x, y, size);
-                break;
-            case 1:
-                this.drawTreeType2(ctx, x, y, size);
-                break;
-            case 2:
-                this.drawTreeType3(ctx, x, y, size);
-                break;
-            case 3:
-                this.drawTreeType4(ctx, x, y, size);
-                break;
-            case 4:
-                this.drawTreeType5(ctx, x, y, size);
-                break;
-            default:
-                this.drawTreeType6(ctx, x, y, size);
+
+        // Ground shadow — dark ellipse cast onto forest floor beneath the tree
+        ctx.save();
+        ctx.globalAlpha = 0.52;
+        ctx.fillStyle = '#010a01';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.06, y + size * 0.43, size * 0.38, size * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        switch(seed) {
+            case 0: this.drawTreeType1(ctx, x, y, size); break;
+            case 1: this.drawTreeType2(ctx, x, y, size); break;
+            case 2: this.drawTreeType3(ctx, x, y, size); break;
+            case 3: this.drawTreeType4(ctx, x, y, size); break;
+            case 4: this.drawTreeType5(ctx, x, y, size); break;
+            default: this.drawTreeType6(ctx, x, y, size); break;
         }
     }
 
@@ -852,6 +956,7 @@ export class Campaign1 extends CampaignBase {
         ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
         ctx.fillStyle = '#3E2723';
         ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        // Layered foliage triangles — darkest at top, lighter at bottom
         ctx.fillStyle = '#0D3817';
         ctx.beginPath();
         ctx.moveTo(x, y - size * 0.6);
@@ -873,6 +978,14 @@ export class Campaign1 extends CampaignBase {
         ctx.lineTo(x - size * 0.25, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
+        // Right-side shadow on lowest layer for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x + size * 0.02, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
     }
 
     drawTreeType2(ctx, x, y, size) {
@@ -882,6 +995,7 @@ export class Campaign1 extends CampaignBase {
         ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
         ctx.fillStyle = '#8B5A3C';
         ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        // Canopy circles — dark base, mid, bright top
         ctx.fillStyle = '#1B5E20';
         ctx.beginPath();
         ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
@@ -909,65 +1023,106 @@ export class Campaign1 extends CampaignBase {
         ctx.beginPath();
         ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
         ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.arc(x + size * 0.25, y - size * 0.25, size * 0.28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.08, y + size * 0.1, size * 0.22, 0, Math.PI * 2);
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
         ctx.fill();
     }
 
     drawTreeType4(ctx, x, y, size) {
-        // Compact round tree
+        // Pine/Spruce style with layered triangles
         const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#6D4C41';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
         ctx.fillStyle = '#0D3817';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.38, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1B5E20';
         ctx.beginPath();
-        ctx.arc(x, y - size * 0.08, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y + size * 0.15, size * 0.32, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    drawTreeType5(ctx, x, y, size) {
-        // Tall conical tree
-        const trunkWidth = size * 0.16;
-        ctx.fillStyle = '#8D6E63';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.55);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.55);
-        ctx.lineTo(x + size * 0.32, y - size * 0.15);
-        ctx.lineTo(x - size * 0.32, y - size * 0.15);
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.36, y + size * 0.08);
-        ctx.lineTo(x - size * 0.36, y + size * 0.08);
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#43A047';
         ctx.beginPath();
-        ctx.arc(x, y + size * 0.15, size * 0.28, 0, Math.PI * 2);
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.12, y - size * 0.45);
+        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.closePath();
+        ctx.fill();
+        // Right-side shadow on lowest layer for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x + size * 0.02, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    drawTreeType5(ctx, x, y, size) {
+        // Tall columnar spruce — three stacked narrow triangles matching level renders
+        const trunkWidth = size * 0.15;
+        ctx.fillStyle = '#704214';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.55);
+        // Trunk shadow side
+        ctx.fillStyle = '#4a2511';
+        ctx.fillRect(x + trunkWidth * 0.15, y - size * 0.15, trunkWidth * 0.35, size * 0.55);
+        // Bottom triangle (darkest)
+        ctx.fillStyle = '#0f3d1f';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x - size * 0.28, y + size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Mid triangle
+        ctx.fillStyle = '#1a5a2a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.42);
+        ctx.lineTo(x + size * 0.22, y - size * 0.08);
+        ctx.lineTo(x - size * 0.22, y - size * 0.08);
+        ctx.closePath();
+        ctx.fill();
+        // Top narrow triangle (lightest)
+        ctx.fillStyle = '#2d7a3d';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.55);
+        ctx.lineTo(x + size * 0.15, y - size * 0.28);
+        ctx.lineTo(x - size * 0.15, y - size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+        // Right-side shadow on lowest layer
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.02, y + size * 0.08);
+        ctx.closePath();
         ctx.fill();
     }
 
     drawTreeType6(ctx, x, y, size) {
-        // Wide spreading tree
+        // Wide spreading oak/maple — broad overlapping crown
         const trunkWidth = size * 0.2;
         ctx.fillStyle = '#795548';
         ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
+        // Dark base crown
         ctx.fillStyle = '#0D3817';
         ctx.beginPath();
         ctx.arc(x - size * 0.2, y - size * 0.25, size * 0.35, 0, Math.PI * 2);
@@ -975,15 +1130,15 @@ export class Campaign1 extends CampaignBase {
         ctx.beginPath();
         ctx.arc(x + size * 0.2, y - size * 0.2, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
+        // Mid green crown
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
         ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.beginPath();
         ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
-        
+        // Top center lighter circle
         ctx.fillStyle = '#2d8b3f';
         ctx.beginPath();
         ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);

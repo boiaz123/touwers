@@ -2429,6 +2429,14 @@ export class LevelBase {
     renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant) {
         const scaledSize = size;
         const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
+        // Ground shadow — cold dark tint under mountain pine
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#05080f';
+        ctx.beginPath();
+        ctx.ellipse(x + scaledSize * 0.06, y + scaledSize * 0.43, scaledSize * 0.38, scaledSize * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         switch(seed) {
             case 0:
                 this.renderMountainPineType1(ctx, x, y, scaledSize);
@@ -2443,6 +2451,14 @@ export class LevelBase {
                 this.renderMountainPineType4(ctx, x, y, scaledSize);
                 break;
         }
+        // Trunk AO
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#020408';
+        ctx.beginPath();
+        ctx.ellipse(x + scaledSize * 0.02, y + scaledSize * 0.04, scaledSize * 0.16, scaledSize * 0.04, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     renderSpaceVegetation(ctx, x, y, size, gridX, gridY, variant) {
@@ -3164,6 +3180,14 @@ export class LevelBase {
 
     renderTree(ctx, x, y, size, gridX, gridY, variant) {
         const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(gridX + gridY) % 6;
+        // Ground shadow — cast onto forest floor beneath the tree
+        ctx.save();
+        ctx.globalAlpha = 0.52;
+        ctx.fillStyle = '#010a01';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.06, y + size * 0.43, size * 0.38, size * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         switch(seed) {
             case 0:
                 this.renderTreeType1(ctx, x, y, size);
@@ -3183,6 +3207,14 @@ export class LevelBase {
             default:
                 this.renderTreeType6(ctx, x, y, size);
         }
+        // Trunk-to-foliage ambient occlusion
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = '#000d00';
+        ctx.beginPath();
+        ctx.ellipse(x + size * 0.02, y + size * 0.04, size * 0.16, size * 0.04, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     renderTreeType1(ctx, x, y, size) {
@@ -3211,6 +3243,14 @@ export class LevelBase {
         ctx.moveTo(x, y - size * 0.15);
         ctx.lineTo(x + size * 0.25, y + size * 0.2);
         ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+        // Right-side shadow for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x + size * 0.02, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
     }
@@ -3291,6 +3331,14 @@ export class LevelBase {
         ctx.lineTo(x - size * 0.12, y - size * 0.45);
         ctx.closePath();
         ctx.fill();
+        // Right-side shadow on lowest layer for depth
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x + size * 0.02, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
     }
 
     renderTreeType5(ctx, x, y, size) {
@@ -3325,6 +3373,14 @@ export class LevelBase {
         ctx.moveTo(x, y - size * 0.55);
         ctx.lineTo(x + size * 0.15, y - size * 0.28);
         ctx.lineTo(x - size * 0.15, y - size * 0.28);
+        ctx.closePath();
+        ctx.fill();
+        // Right-side shadow on lowest layer
+        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.02, y - size * 0.25);
+        ctx.lineTo(x + size * 0.28, y + size * 0.08);
+        ctx.lineTo(x + size * 0.02, y + size * 0.08);
         ctx.closePath();
         ctx.fill();
     }

@@ -871,109 +871,106 @@ export class Campaign2 extends CampaignBase {
     }
     
     drawMountainTree(ctx, x, y, size, gridX, gridY) {
-        // Pick tree variant based on grid coordinates (same as LevelBase)
         const seed = Math.floor((gridX || x) * 0.5 + (gridY || y) * 0.7) % 4;
         const scaledSize = size * 1.8;
-        
+        // Ground shadow — cold dark tint under mountain pine
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#05080f';
+        ctx.beginPath();
+        const shadowY = seed === 2 ? scaledSize * 0.33 : scaledSize * 0.43;
+        ctx.ellipse(x + scaledSize * 0.06, y + shadowY, scaledSize * 0.38, scaledSize * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         switch(seed) {
-            case 0:
-                this.renderMountainPineType1(ctx, x, y, scaledSize);
-                break;
-            case 1:
-                this.renderMountainPineType2(ctx, x, y, scaledSize);
-                break;
-            case 2:
-                this.renderMountainPineType3(ctx, x, y, scaledSize);
-                break;
-            case 3:
-                this.renderMountainPineType4(ctx, x, y, scaledSize);
-                break;
+            case 0: this.renderMountainPineType1(ctx, x, y, scaledSize); break;
+            case 1: this.renderMountainPineType2(ctx, x, y, scaledSize); break;
+            case 2: this.renderMountainPineType3(ctx, x, y, scaledSize); break;
+            case 3: this.renderMountainPineType4(ctx, x, y, scaledSize); break;
         }
     }
     
-    // Mountain pine type 1 - classic triangle pine with snow caps
+    // Mountain pine type 1 - tall conifer matching LevelBase render
     renderMountainPineType1(ctx, x, y, size) {
-        const trunkW = size * 0.16;
-        const trunkH = size * 0.40;
+        const trunkW = size * 0.22;
+        const trunkH = size * 0.48;
         ctx.fillStyle = '#4a2c12';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.08, trunkW, trunkH);
+        ctx.fillRect(x - trunkW * 0.5, y, trunkW, trunkH);
         ctx.fillStyle = '#2e1a08';
-        ctx.fillRect(x + trunkW * 0.10, y - size * 0.08, trunkW * 0.40, trunkH);
-
-        // 3 layered triangles — cold blue-greens
+        ctx.fillRect(x + trunkW * 0.08, y, trunkW * 0.42, trunkH);
+        // Bottom tier
         ctx.fillStyle = '#0c2e1a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.lineTo(x + size * 0.34, y + size * 0.14);
-        ctx.lineTo(x - size * 0.34, y + size * 0.14);
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.34, y + size * 0.20);
+        ctx.lineTo(x - size * 0.34, y + size * 0.20);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1a4a2e';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.lineTo(x, y + size * 0.14);
-        ctx.lineTo(x - size * 0.34, y + size * 0.14);
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x, y + size * 0.20);
+        ctx.lineTo(x - size * 0.34, y + size * 0.20);
         ctx.closePath();
         ctx.fill();
-
+        // Middle tier
         ctx.fillStyle = '#0e3620';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.lineTo(x + size * 0.26, y - size * 0.02);
-        ctx.lineTo(x - size * 0.26, y - size * 0.02);
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x + size * 0.28, y + size * 0.02);
+        ctx.lineTo(x - size * 0.28, y + size * 0.02);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1c5234';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.lineTo(x, y - size * 0.02);
-        ctx.lineTo(x - size * 0.26, y - size * 0.02);
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.lineTo(x, y + size * 0.02);
+        ctx.lineTo(x - size * 0.28, y + size * 0.02);
         ctx.closePath();
         ctx.fill();
-
+        // Top tier
         ctx.fillStyle = '#104028';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.lineTo(x + size * 0.18, y - size * 0.20);
-        ctx.lineTo(x - size * 0.18, y - size * 0.20);
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x + size * 0.20, y - size * 0.14);
+        ctx.lineTo(x - size * 0.20, y - size * 0.14);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1e5a3a';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.lineTo(x, y - size * 0.20);
-        ctx.lineTo(x - size * 0.18, y - size * 0.20);
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x, y - size * 0.14);
+        ctx.lineTo(x - size * 0.20, y - size * 0.14);
         ctx.closePath();
         ctx.fill();
-
-        // Snow caps on each tier
-        ctx.fillStyle = 'rgba(236, 249, 255, 0.95)';
+        // Top snow
+        ctx.fillStyle = 'rgba(235, 248, 255, 0.95)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.38, x + size * 0.16, y - size * 0.28);
-        ctx.quadraticCurveTo(x + size * 0.06, y - size * 0.22, x, y - size * 0.28);
-        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.22, x - size * 0.16, y - size * 0.28);
-        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.38, x, y - size * 0.52);
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.quadraticCurveTo(x + size * 0.12, y - size * 0.42, x + size * 0.18, y - size * 0.32);
+        ctx.quadraticCurveTo(x + size * 0.06, y - size * 0.28, x, y - size * 0.34);
+        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.28, x - size * 0.18, y - size * 0.32);
+        ctx.quadraticCurveTo(x - size * 0.12, y - size * 0.42, x, y - size * 0.62);
         ctx.closePath();
         ctx.fill();
-
-        ctx.fillStyle = 'rgba(232, 246, 255, 0.90)';
+        // Middle snow
+        ctx.fillStyle = 'rgba(232, 245, 255, 0.92)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.16, x + size * 0.22, y - size * 0.10);
-        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.04, x, y - size * 0.10);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.04, x - size * 0.22, y - size * 0.10);
-        ctx.quadraticCurveTo(x - size * 0.14, y - size * 0.16, x, y - size * 0.30);
+        ctx.moveTo(x, y - size * 0.38);
+        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.20, x + size * 0.25, y - size * 0.12);
+        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.06, x, y - size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.06, x - size * 0.25, y - size * 0.12);
+        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.20, x, y - size * 0.38);
         ctx.closePath();
         ctx.fill();
-
-        ctx.fillStyle = 'rgba(228, 242, 255, 0.80)';
+        // Bottom snow
+        ctx.fillStyle = 'rgba(228, 242, 255, 0.85)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.04, x + size * 0.28, y + size * 0.08);
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.02, x + size * 0.30, y + size * 0.08);
         ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.12, x, y + size * 0.06);
-        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.12, x - size * 0.28, y + size * 0.08);
-        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.04, x, y - size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.12, x - size * 0.30, y + size * 0.08);
+        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.02, x, y - size * 0.15);
         ctx.closePath();
         ctx.fill();
     }
