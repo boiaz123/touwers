@@ -185,7 +185,7 @@ export class SettlementHub {
         // Show Sir Frogerty campaign-completion dialogue when returning from a completed campaign
         const justCompletedCampaign = this.stateManager.justCompletedCampaignId;
         if (justCompletedCampaign && !isNewGame) {
-            const completionPages = this.getCampaignCompletionPages(justCompletedCampaign);
+            const completionPages = this.sirFrogerty.getCampaignCompletionPages(justCompletedCampaign);
             if (completionPages) {
                 this.sirFrogerty.showWithPages(completionPages);
             }
@@ -1025,121 +1025,6 @@ export class SettlementHub {
             [arr[0], arr[swapIdx]] = [arr[swapIdx], arr[0]];
         }
         return arr;
-    }
-
-    /**
-     * Returns Sir Frogerty dialogue pages for a given campaign completion event.
-     * @param {string} campaignId
-     * @returns {Array<{title:string,lines:string[]}>|null}
-     */
-    getCampaignCompletionPages(campaignId) {
-        switch (campaignId) {
-            case 'campaign-1':
-                return [
-                    {
-                        title: 'The Woodlands Are Saved!',
-                        lines: [
-                            'Magnificent, Commander! The Verdant Woodlands stand!',
-                            "Thine enemies hath retreated — for now. But mine",
-                            "royal nose doth detect a foul whiff upon the breeze:",
-                            "more of mine former king's soldiers approach from the",
-                            "mountains. Fear not — thou art now stronger than ever!",
-                        ]
-                    },
-                    {
-                        title: 'New Paths Open Before Thee!',
-                        lines: [
-                            "The Ironstone Mountains now lie within thy reach!",
-                            "Head to the Campaign Map and challenge those peaks.",
-                            '',
-                            "Also: mine schematics for the grand Magic Academy",
-                            "are now available to purchase in the Upgrades shop!",
-                            "A worthy investment, I assure thee. *ribbit*",
-                        ]
-                    }
-                ];
-
-            case 'campaign-2':
-                return [
-                    {
-                        title: 'The Mountains Are Yours!',
-                        lines: [
-                            "By the great lily pad! Thou hath conquered the peaks!",
-                            "The cold winds carry the scent of sand and ancient dust —",
-                            "the Scorching Sands await thee beyond the passes.",
-                            '',
-                            "Each victory hath grown thy renown, Commander.",
-                            "The realm speaks thy name in hushed, awed tones.",
-                        ]
-                    },
-                    {
-                        title: 'Powerful New Weapons Await!',
-                        lines: [
-                            "The Super Weapon Lab Plans are now for sale!",
-                            "Purchase them in the Upgrades shop to unlock",
-                            "the most devastating ordnance the realm hath seen.",
-                            '',
-                            "Also, the Strange Talisman may now be found in the",
-                            "Marketplace — tis most useful for rare loot. *ribbit*",
-                        ]
-                    }
-                ];
-
-            case 'campaign-3':
-                return [
-                    {
-                        title: 'The Sands Are Crossed!',
-                        lines: [
-                            "Thou FOUND it, Commander! The artifact of legend!",
-                            "Its power thrums even as I speak… I confess,",
-                            "even I — thine most distinguished adviser — feel",
-                            "a shiver of awe. These frogs are not of this world.",
-                            '',
-                            "And mine former king… hath noticed thee. Prepare.",
-                        ]
-                    },
-                    {
-                        title: 'The Final Frontier!',
-                        lines: [
-                            "The Frog King's Domain is now accessible!",
-                            "I need not tell thee that this shall be the",
-                            "most dangerous campaign thou hath faced.",
-                            '',
-                            "Stock up well at the Marketplace, Commander.",
-                            "And keep mine counsel close. *nervous ribbit*",
-                        ]
-                    }
-                ];
-
-            case 'campaign-4':
-                return [
-                    {
-                        title: 'VICTORY! The King Is Defeated!',
-                        lines: [
-                            "I… I cannot believe mine own eyes. Thou hath",
-                            "done it, Commander. The Frog King falleth!",
-                            "His domain crumbles, the rifts seal shut, and",
-                            "his armies lay down their arms across every realm.",
-                            '',
-                            "I, Sir Frogerty, weep tears of absolute joy.",
-                        ]
-                    },
-                    {
-                        title: 'A Legend Is Born!',
-                        lines: [
-                            "History shall remember this day, Commander.",
-                            "Thou hath saved not one realm, but ALL realms —",
-                            "including mine slimy homeland. I owe thee a debt",
-                            "that no amount of advice can ever repay.",
-                            '',
-                            "Until the next adventure... *celebratory ribbit*",
-                        ]
-                    }
-                ];
-
-            default:
-                return null;
-        }
     }
 
     update(deltaTime) {
