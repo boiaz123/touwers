@@ -7049,22 +7049,23 @@ class UpgradesMenu {
         const coinRadius = 8;
         
         if (isSellButton) {
-            // Sell button: "SELL" label on left, coin+price on right
+            // Sell button: "SELL" label on left, coin+price right-aligned on right
             const labelColor = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#a0cc80');
+            const priceColor = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
             ctx.font = 'bold 14px Arial';
             ctx.fillStyle = labelColor;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillText('SELL', buttonX + 6, buttonCenterY);
-            // Coin + price on right side
-            const coinX = buttonX + buttonWidth - 37;
-            const priceTextX = coinX + coinRadius + 3;
-            this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius,
-                                      isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37'));
-            ctx.font = 'bold 17px Arial';
-            ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
-            ctx.textAlign = 'left';
-            ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
+            // Coin + price: right-aligned so any digit count fits within button bounds
+            const priceText = displayPrice.toString();
+            const priceWidth = ctx.measureText(priceText).width;
+            const groupRight = buttonX + buttonWidth - 5;
+            const coinX = groupRight - priceWidth - 5 - coinRadius;
+            this.renderCoinIconInline(ctx, coinX, buttonCenterY, coinRadius, priceColor);
+            ctx.fillStyle = priceColor;
+            ctx.textAlign = 'right';
+            ctx.fillText(priceText, groupRight, buttonCenterY);
         } else {
             // Buy button: coin icon + price centered
             ctx.font = 'bold 19px Arial';

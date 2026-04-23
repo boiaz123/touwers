@@ -1160,6 +1160,8 @@ export class UIManager {
             
             // Clear the force rebuild flag after rebuilding
             this.forceSpellUIRebuild = false;
+            // Refresh hotkey badges now that buttons exist in the DOM
+            this.updateHotkeyBadges();
         }
         
         // Update button states (cooldown/ready) without recreating
