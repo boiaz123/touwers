@@ -300,67 +300,59 @@ export class ForestLevel5 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 64, 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.60, 
             spawnInterval: 3, 
-            pattern: ['basic', 'villager'] 
+            pattern: [{ type: 'basic', count: 32 }, { type: 'villager', count: 32 }] 
         }
         // Wave 2
         , { 
-            enemyCount: 43, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 2.50, 
             spawnInterval: 1.8, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 43 }] 
         }
         // Wave 3
         , { 
-            enemyCount: 70, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 0.70, 
             spawnInterval: 1, 
-            pattern: ['basic', 'villager', 'basic'] 
+            pattern: [{ type: 'basic', count: 47 }, { type: 'villager', count: 23 }] 
         }
         // Wave 4
         , { 
-            enemyCount: 25, 
             enemyHealth_multiplier: 2.5, 
             speedMultiplier: 0.75, 
             spawnInterval: 7, 
-            pattern: ['beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 25 }] 
         }
         // Wave 5
         , { 
-            enemyCount: 50, 
             enemyHealth_multiplier: 2.4, 
             speedMultiplier: 1.10, 
             spawnInterval: 0.8, 
-            pattern: ['villager', 'basic'] 
+            pattern: [{ type: 'villager', count: 25 }, { type: 'basic', count: 25 }] 
         }
         // Wave 6
         , { 
-            enemyCount: 1, 
             enemyHealth_multiplier: 4.8, 
             speedMultiplier: 1.25, 
             spawnInterval: 2, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 1 }] 
         }
         // Wave 7
         , { 
-            enemyCount: 2, 
             enemyHealth_multiplier: 6, 
             speedMultiplier: 1.50, 
             spawnInterval: 30, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 2 }] 
         }
         // Wave 8
         , { 
-            enemyCount: 2, 
             enemyHealth_multiplier: 6, 
             speedMultiplier: 1.13, 
             spawnInterval: 0.5, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 2 }] 
         }
         ];
 

@@ -70,13 +70,26 @@ export class EnemyManager {
             this.audioManager.playSFX('wave-start');
         }
         
-        for (let i = 0; i < count; i++) {
-            const enemyType = pattern[i % pattern.length];
-            this.spawnQueue.push({
-                type: enemyType,
-                health_multiplier: health_multiplier,
-                speed_multiplier: speed_multiplier
-            });
+        // Support both old format (array of strings) and new format (array of {type, count} objects)
+        if (pattern.length > 0 && typeof pattern[0] === 'object') {
+            for (const entry of pattern) {
+                for (let i = 0; i < entry.count; i++) {
+                    this.spawnQueue.push({
+                        type: entry.type,
+                        health_multiplier: health_multiplier,
+                        speed_multiplier: speed_multiplier
+                    });
+                }
+            }
+        } else {
+            for (let i = 0; i < count; i++) {
+                const enemyType = pattern[i % pattern.length];
+                this.spawnQueue.push({
+                    type: enemyType,
+                    health_multiplier: health_multiplier,
+                    speed_multiplier: speed_multiplier
+                });
+            }
         }
     }
     

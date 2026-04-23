@@ -1342,14 +1342,21 @@ export class GameplayState {
         // Get wave config from the level itself
         if (this.level && typeof this.level.getWaveConfig === 'function') {
             const config = this.level.getWaveConfig(wave);
-            if (config && config.enemyCount && config.enemyCount > 0) {
-                return {
-                    enemyCount: config.enemyCount,
-                    enemyHealth_multiplier: config.enemyHealth_multiplier || 1,
-                    speedMultiplier: config.speedMultiplier || 1.0,
-                    spawnInterval: config.spawnInterval || 1.0,
-                    wavePattern: config.pattern
-                };
+            if (config) {
+                let enemyCount = config.enemyCount;
+                // For new pattern format (array of {type,count} objects), derive enemyCount from sum
+                if (!enemyCount && config.pattern && config.pattern.length > 0 && typeof config.pattern[0] === 'object') {
+                    enemyCount = config.pattern.reduce((sum, e) => sum + e.count, 0);
+                }
+                if (enemyCount && enemyCount > 0) {
+                    return {
+                        enemyCount,
+                        enemyHealth_multiplier: config.enemyHealth_multiplier || 1,
+                        speedMultiplier: config.speedMultiplier || 1.0,
+                        spawnInterval: config.spawnInterval || 1.0,
+                        wavePattern: config.pattern
+                    };
+                }
             }
         }
         

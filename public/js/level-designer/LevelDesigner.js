@@ -628,11 +628,10 @@ export class LevelDesigner {
     createDefaultWave() {
         this.waves.push({
             id: 1,
-            enemyCount: 5,
             enemyHealthMultiplier: 1.0,
             speedMultiplier: 0.70,
             spawnInterval: 1.5,
-            pattern: ['basic']
+            pattern: [{ type: 'basic', count: 5 }]
         });
         this.renderWavesList();
     }
@@ -641,11 +640,10 @@ export class LevelDesigner {
         const newId = this.waves.length + 1;
         this.waves.push({
             id: newId,
-            enemyCount: 5 + (newId * 3),
             enemyHealthMultiplier: 1.0 + ((newId - 1) * 0.1),
             speedMultiplier: parseFloat((0.70 + (newId - 1) * 0.04).toFixed(2)),
             spawnInterval: Math.max(1.0, 1.5 - (newId * 0.1)),
-            pattern: ['basic']
+            pattern: [{ type: 'basic', count: 5 + (newId * 3) }]
         });
         this.renderWavesList();
         this.updateGeneratedCode();
@@ -663,11 +661,10 @@ export class LevelDesigner {
             const newId = Math.max(...this.waves.map(w => w.id), 0) + 1;
             this.waves.push({
                 id: newId,
-                enemyCount: waveToClone.enemyCount,
                 enemyHealthMultiplier: waveToClone.enemyHealthMultiplier,
                 speedMultiplier: waveToClone.speedMultiplier,
                 spawnInterval: waveToClone.spawnInterval,
-                pattern: [...waveToClone.pattern]
+                pattern: waveToClone.pattern.map(e => ({ type: e.type, count: e.count }))
             });
             this.renderWavesList();
             this.updateGeneratedCode();
@@ -683,7 +680,6 @@ export class LevelDesigner {
             // Edit mode
             const wave = this.waves.find(w => w.id === waveId);
             document.getElementById('modalTitle').textContent = `Edit Wave ${waveId}`;
-            document.getElementById('modalEnemyCount').value = wave.enemyCount;
             document.getElementById('modalHealthMultiplier').value = wave.enemyHealthMultiplier.toFixed(2);
             document.getElementById('modalEnemySpeed').value = wave.speedMultiplier;
             document.getElementById('modalSpawnInterval').value = wave.spawnInterval.toFixed(2);
@@ -694,12 +690,11 @@ export class LevelDesigner {
             // Add new wave mode
             const newId = this.waves.length + 1;
             document.getElementById('modalTitle').textContent = 'Add New Wave';
-            document.getElementById('modalEnemyCount').value = 5 + (newId * 3);
             document.getElementById('modalHealthMultiplier').value = (1.0 + ((newId - 1) * 0.1)).toFixed(2);
             document.getElementById('modalEnemySpeed').value = parseFloat((0.70 + (newId - 1) * 0.04).toFixed(2));
             document.getElementById('modalSpawnInterval').value = Math.max(1.0, 1.5 - (newId * 0.1)).toFixed(2);
             
-            this.refreshModalPattern(['basic']);
+            this.refreshModalPattern([{ type: 'basic', count: 5 + (newId * 3) }]);
         }
 
         modal.classList.add('active');
@@ -710,61 +705,71 @@ export class LevelDesigner {
         this.currentEditingWaveId = null;
     }
 
-    refreshModalPattern(pattern = ['basic']) {
+    refreshModalPattern(pattern = [{ type: 'basic', count: 5 }]) {
         const patternList = document.getElementById('modalPatternList');
         patternList.innerHTML = '';
 
-        pattern.forEach((enemy, idx) => {
+        pattern.forEach((entry, idx) => {
             const item = document.createElement('div');
             item.className = 'pattern-item';
             item.innerHTML = `
-                <select onchange="window.levelDesigner.updateModalPattern(${idx}, this.value)">
-                    ${this.enemies.map(e => `<option value="${e}" ${e === enemy ? 'selected' : ''}>${e}</option>`).join('')}
+                <select onchange="window.levelDesigner.updateModalPatternType(${idx}, this.value)">
+                    ${this.enemies.map(e => `<option value="${e}" ${e === entry.type ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
-                <button onclick="window.levelDesigner.removeModalPattern(${idx})">✕</button>
+                <input type="number" min="1" value="${entry.count}" style="width:60px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" onchange="window.levelDesigner.updateModalPatternCount(${idx}, parseInt(this.value))">
+                <button onclick="window.levelDesigner.removeModalPattern(${idx})">x</button>
             `;
             patternList.appendChild(item);
         });
     }
 
-    updateModalPattern(idx, enemy) {
-        // Get current pattern from modal
-        const selects = document.querySelectorAll('#modalPatternList select');
-        const pattern = Array.from(selects).map(s => s.value);
-        pattern[idx] = enemy;
-        
+    getModalPatternFromDOM() {
+        const items = document.querySelectorAll('#modalPatternList .pattern-item');
+        return Array.from(items).map(item => ({
+            type: item.querySelector('select').value,
+            count: parseInt(item.querySelector('input[type=number]').value) || 1
+        }));
+    }
+
+    updateModalPatternType(idx, value) {
         if (this.currentEditingWaveId) {
             const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
+            const pattern = this.getModalPatternFromDOM();
+            if (pattern[idx]) pattern[idx].type = value;
+            wave.pattern = pattern;
+        }
+    }
+
+    updateModalPatternCount(idx, count) {
+        if (this.currentEditingWaveId) {
+            const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
+            const pattern = this.getModalPatternFromDOM();
+            if (pattern[idx]) pattern[idx].count = Math.max(1, count || 1);
             wave.pattern = pattern;
         }
     }
 
     removeModalPattern(idx) {
-        const selects = document.querySelectorAll('#modalPatternList select');
-        const pattern = Array.from(selects).map(s => s.value);
+        const pattern = this.getModalPatternFromDOM();
         pattern.splice(idx, 1);
         this.refreshModalPattern(pattern);
     }
 
     addPatternToModal() {
-        const selects = document.querySelectorAll('#modalPatternList select');
-        const pattern = Array.from(selects).map(s => s.value);
-        pattern.push('basic');
+        const pattern = this.getModalPatternFromDOM();
+        pattern.push({ type: 'basic', count: 1 });
         this.refreshModalPattern(pattern);
     }
 
     saveWaveFromModal() {
-        const enemyCount = parseInt(document.getElementById('modalEnemyCount').value);
         const healthMultiplier = parseFloat(document.getElementById('modalHealthMultiplier').value);
         const speedMultiplier = parseFloat(document.getElementById('modalEnemySpeed').value);
         const spawnInterval = parseFloat(document.getElementById('modalSpawnInterval').value);
-        const selects = document.querySelectorAll('#modalPatternList select');
-        const pattern = Array.from(selects).map(s => s.value);
+        const pattern = this.getModalPatternFromDOM();
 
         if (this.currentEditingWaveId) {
             // Update existing wave
             const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
-            wave.enemyCount = enemyCount;
             wave.enemyHealthMultiplier = healthMultiplier;
             wave.speedMultiplier = speedMultiplier;
             wave.spawnInterval = spawnInterval;
@@ -774,7 +779,6 @@ export class LevelDesigner {
             const newId = this.waves.length > 0 ? Math.max(...this.waves.map(w => w.id), 0) + 1 : 1;
             this.waves.push({
                 id: newId,
-                enemyCount,
                 enemyHealthMultiplier: healthMultiplier,
                 speedMultiplier,
                 spawnInterval,
@@ -795,12 +799,13 @@ export class LevelDesigner {
             const waveCard = document.createElement('div');
             waveCard.className = 'wave-card';
             
-            const patternStr = wave.pattern.join(' → ');
+            const totalCount = wave.pattern.reduce((s, e) => s + e.count, 0);
+            const patternStr = wave.pattern.map(e => `${e.type}x${e.count}`).join(' + ');
             
             waveCard.innerHTML = `
                 <div class="wave-card-info">
                     <div class="wave-card-title">Wave ${wave.id}</div>
-                    <div class="wave-card-meta">Count: ${wave.enemyCount} | Health: ${wave.enemyHealthMultiplier.toFixed(2)}x | Speed: ${wave.speedMultiplier.toFixed(2)}x | ${wave.spawnInterval.toFixed(2)}s</div>
+                    <div class="wave-card-meta">Count: ${totalCount} | Health: ${wave.enemyHealthMultiplier.toFixed(2)}x | Speed: ${wave.speedMultiplier.toFixed(2)}x | ${wave.spawnInterval.toFixed(2)}s</div>
                     <div class="wave-card-meta" style="color:#90b890">Pattern: ${patternStr}</div>
                 </div>
                 <div class="wave-card-actions">
@@ -4785,11 +4790,10 @@ export class LevelDesigner {
         const wavesCode = this.waves.map((wave, idx) => `
         // Wave ${wave.id}
         ${idx > 0 ? ', ' : ''}{ 
-            enemyCount: ${wave.enemyCount}, 
             enemyHealth_multiplier: ${wave.enemyHealthMultiplier}, 
             speedMultiplier: ${wave.speedMultiplier}, 
             spawnInterval: ${wave.spawnInterval}, 
-            pattern: [${wave.pattern.map(e => `'${e}'`).join(', ')}] 
+            pattern: [${wave.pattern.map(e => `{ type: '${e.type}', count: ${e.count} }`).join(', ')}] 
         }`).join('');
 
         // Convert riverPaths to terrain cells for export (matching in-game format)
@@ -5178,13 +5182,25 @@ ${pathCode}
                 let waveIndex = 1;
                 let waveConfig = level.getWaveConfig(waveIndex);
                 while (waveConfig) {
+                    let pattern = waveConfig.pattern || [{ type: 'basic', count: 5 }];
+                    // Convert old string-array pattern to new {type, count} format
+                    if (pattern.length > 0 && typeof pattern[0] === 'string') {
+                        const oldCount = waveConfig.enemyCount || 5;
+                        const typeCounts = {};
+                        const typeOrder = [];
+                        for (let i = 0; i < oldCount; i++) {
+                            const t = pattern[i % pattern.length];
+                            if (!typeCounts[t]) { typeCounts[t] = 0; typeOrder.push(t); }
+                            typeCounts[t]++;
+                        }
+                        pattern = typeOrder.map(t => ({ type: t, count: typeCounts[t] }));
+                    }
                     this.waves.push({
                         id: waveIndex,
-                        enemyCount: waveConfig.enemyCount || 5,
                         enemyHealthMultiplier: waveConfig.enemyHealth_multiplier || waveConfig.enemyHealthMultiplier || 1.0,
                         speedMultiplier: waveConfig.speedMultiplier || 0.70,
                         spawnInterval: waveConfig.spawnInterval || 1.5,
-                        pattern: waveConfig.pattern || ['basic']
+                        pattern
                     });
                     waveIndex++;
                     waveConfig = level.getWaveConfig(waveIndex);
