@@ -149,6 +149,9 @@ export class Game {
             
             const campaign4 = new Campaign4(this.stateManager);
             this.stateManager.addState('campaign-4', campaign4);
+
+            const campaign5 = new Campaign5(this.stateManager);
+            this.stateManager.addState('campaign-5', campaign5);
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);

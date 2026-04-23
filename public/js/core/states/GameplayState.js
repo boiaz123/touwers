@@ -1648,14 +1648,14 @@ export class GameplayState {
         this.pendingDamage.length = pendingAlive;
         
         // Update castle first so it's ready for defender positioning
-        if (this.level.castle) {
+        if (this.level && this.level.castle) {
             this.level.castle.update(adjustedDeltaTime);
             this.level.castle.checkDefenderDeath();
         }
         
         // Update castle defender position BEFORE checking enemy engagement
         // This ensures the defender position is current when distance checks happen
-        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+        if (this.level && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             const defender = this.level.castle.defender;
             // Position defender in front of castle
             defender.x = this.level.castle.x - 60;
