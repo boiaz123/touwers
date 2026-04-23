@@ -5541,9 +5541,16 @@ class UpgradesMenu {
             this.stateManager.saveSystem.save(this.stateManager.currentSaveSlot, this.stateManager.getSaveData());
         }
         this.showingPortalConfirm = false;
+        this._portalConfirmBounds = null;
         this.isOpen = false;
-        this.stateManager.selectedLevelId = 'frog-kings-realm';
-        this.stateManager.selectedCampaignId = 'campaign-5';
+        // Set level info using the proper selectedLevelInfo property (what GameplayState reads)
+        this.stateManager.selectedLevelInfo = {
+            id: 'frog-kings-realm',
+            campaignId: 'campaign-5',
+            type: 'campaign',
+            name: "Frog King's Realm",
+            unlocked: true
+        };
         this.stateManager.changeState('game');
     }
 
@@ -5833,9 +5840,12 @@ class UpgradesMenu {
             }
             if (x >= b.noX && x <= b.noX + b.btnW && y >= b.btnY && y <= b.btnY + b.btnH) {
                 this.showingPortalConfirm = false;
+                this._portalConfirmBounds = null;
+                this.sellItems = this.buildSellItems(); // Refresh inventory view
                 return;
             }
             this.showingPortalConfirm = false;
+            this._portalConfirmBounds = null;
             return;
         }
         
@@ -6514,83 +6524,99 @@ class UpgradesMenu {
     }
 
     _renderPortalConfirmModal(ctx, canvas) {
-        const t = Date.now() / 600;
-        const pulse = 0.7 + 0.3 * Math.sin(t);
-        const mw = 520;
-        const mh = 260;
+        const t = Date.now() / 800;
+        const pulse = 0.6 + 0.4 * Math.sin(t * 1.4);
+
+        const mw = 560;
+        const mh = 310;
         const mx = (canvas.width - mw) / 2;
         const my = (canvas.height - mh) / 2;
 
-        // Dim backdrop
-        ctx.globalAlpha = 0.75;
+        // Dim backdrop (same opacity as main panel)
+        ctx.globalAlpha = 0.6;
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
 
-        // Modal background
-        ctx.fillStyle = '#0d0820';
+        // Panel background - same dark brown as the game's panels
+        ctx.fillStyle = '#2a1a0f';
         ctx.fillRect(mx, my, mw, mh);
 
-        // Magical border
-        ctx.shadowColor = '#AA44FF';
-        ctx.shadowBlur = 18 * pulse;
-        ctx.strokeStyle = '#AA44FF';
-        ctx.lineWidth = 2;
+        // Panel border - golden brown like main panel
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 3;
         ctx.strokeRect(mx, my, mw, mh);
-        ctx.shadowBlur = 0;
 
-        // Decorative top stripe
-        const stripe = ctx.createLinearGradient(mx, my, mx + mw, my);
-        stripe.addColorStop(0, 'rgba(0,255,200,0)');
-        stripe.addColorStop(0.5, `rgba(170,68,255,${0.5 * pulse})`);
-        stripe.addColorStop(1, 'rgba(0,255,200,0)');
-        ctx.fillStyle = stripe;
-        ctx.fillRect(mx, my, mw, 3);
+        // Corner trims - reuse same style as the main menu panels
+        this.drawCornerTrim(ctx, mx, my, 20, true, false, false, false);
+        this.drawCornerTrim(ctx, mx + mw, my, 20, false, true, false, false);
+        this.drawCornerTrim(ctx, mx, my + mh, 20, false, false, true, false);
+        this.drawCornerTrim(ctx, mx + mw, my + mh, 20, false, false, false, true);
 
-        // Title
-        ctx.font = 'bold 22px Arial';
-        ctx.fillStyle = '#FFD700';
+        // Decorative top divider line (teal glow hint for magic)
+        const divAlpha = 0.4 + 0.2 * pulse;
+        const topBar = ctx.createLinearGradient(mx, my, mx + mw, my);
+        topBar.addColorStop(0, 'rgba(0,200,160,0)');
+        topBar.addColorStop(0.5, `rgba(0,200,160,${divAlpha})`);
+        topBar.addColorStop(1, 'rgba(0,200,160,0)');
+        ctx.fillStyle = topBar;
+        ctx.fillRect(mx + 20, my + 46, mw - 40, 2);
+
+        // Title - matching main panel style (bold serif, gold)
+        ctx.font = 'bold 26px serif';
+        ctx.fillStyle = '#ffd700';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.shadowColor = '#FF8800';
-        ctx.shadowBlur = 8;
-        ctx.fillText("The Frog King's Realm", mx + mw / 2, my + 22);
-        ctx.shadowBlur = 0;
+        ctx.fillText("The Frog King's Realm", mx + mw / 2, my + 13);
+
+        // Subtitle - slightly magical teal colour
+        ctx.font = 'italic 14px serif';
+        ctx.fillStyle = `rgba(0,220,170,${0.7 + 0.3 * pulse})`;
+        ctx.fillText('A portal shard glows in your hand...', mx + mw / 2, my + 52);
 
         // Body text
-        ctx.font = '15px Arial';
-        ctx.fillStyle = '#DDCCFF';
-        ctx.fillText('Teleport your troops to the Frog King\'s Realm?', mx + mw / 2, my + 66);
-        ctx.font = '13px Arial';
-        ctx.fillStyle = '#AA99CC';
-        ctx.fillText('This will consume your Portal Shard.', mx + mw / 2, my + 90);
-        ctx.fillText('No towers may be built. Spells have no cooldown.', mx + mw / 2, my + 110);
-        ctx.fillText('Defeat the frogs and claim their riches!', mx + mw / 2, my + 130);
+        ctx.font = '15px serif';
+        ctx.fillStyle = '#d4c9a8'; // warm parchment
+        ctx.fillText('Teleport your troops to the Frog King\'s Realm?', mx + mw / 2, my + 84);
 
-        // YES button
-        const btnW = 150;
-        const btnH = 44;
-        const yesX = mx + mw / 2 - btnW - 20;
-        const noX = mx + mw / 2 + 20;
-        const btnY = my + mh - 70;
+        ctx.font = '13px serif';
+        ctx.fillStyle = '#a89070'; // muted warm brown
+        ctx.fillText('Your Portal Shard will be consumed on entry.', mx + mw / 2, my + 112);
+        ctx.fillText('No towers may be built. All spells are free to cast.', mx + mw / 2, my + 132);
+        ctx.fillText('The frogs carry riches — claim them or let them pass.', mx + mw / 2, my + 152);
+        ctx.fillText('You cannot lose this level.', mx + mw / 2, my + 170);
 
-        ctx.fillStyle = this.portalConfirmYesHovered ? '#005533' : '#003322';
+        // Buttons
+        const btnW = 170;
+        const btnH = 46;
+        const btnGap = 24;
+        const yesX = mx + mw / 2 - btnW - btnGap / 2;
+        const noX = mx + mw / 2 + btnGap / 2;
+        const btnY = my + mh - 72;
+
+        // ENTER REALM button - warm olive/green with gold border
+        const yesBg = this.portalConfirmYesHovered ? '#4a5a1a' : '#2f3a12';
+        const yesBorder = this.portalConfirmYesHovered ? '#d4af37' : '#8b7a2a';
+        ctx.fillStyle = yesBg;
         ctx.fillRect(yesX, btnY, btnW, btnH);
-        ctx.strokeStyle = this.portalConfirmYesHovered ? '#00FFAA' : '#00AA66';
+        ctx.strokeStyle = yesBorder;
         ctx.lineWidth = 2;
         ctx.strokeRect(yesX, btnY, btnW, btnH);
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = this.portalConfirmYesHovered ? '#00FFAA' : '#00CC88';
+        ctx.font = 'bold 15px serif';
+        ctx.fillStyle = this.portalConfirmYesHovered ? '#ffd700' : '#c8b84a';
         ctx.textBaseline = 'middle';
         ctx.fillText('ENTER REALM', yesX + btnW / 2, btnY + btnH / 2);
 
-        // NO button
-        ctx.fillStyle = this.portalConfirmNoHovered ? '#440011' : '#2a0011';
+        // STAY button - darker muted red-brown
+        const noBg = this.portalConfirmNoHovered ? '#3a1a0f' : '#251208';
+        const noBorder = this.portalConfirmNoHovered ? '#cc7744' : '#6a3a20';
+        ctx.fillStyle = noBg;
         ctx.fillRect(noX, btnY, btnW, btnH);
-        ctx.strokeStyle = this.portalConfirmNoHovered ? '#FF4466' : '#882233';
+        ctx.strokeStyle = noBorder;
         ctx.lineWidth = 2;
         ctx.strokeRect(noX, btnY, btnW, btnH);
-        ctx.fillStyle = this.portalConfirmNoHovered ? '#FF4466' : '#CC4466';
+        ctx.fillStyle = this.portalConfirmNoHovered ? '#cc9966' : '#8b6040';
+        ctx.font = 'bold 15px serif';
         ctx.fillText('STAY', noX + btnW / 2, btnY + btnH / 2);
 
         // Store button bounds for click handling

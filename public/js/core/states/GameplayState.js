@@ -327,14 +327,18 @@ export class GameplayState {
         // Apply level-specific flags (e.g. no-tower-building, auto-placed superweapon)
         if (this.level && this.level.levelFlags) {
             const flags = this.level.levelFlags;
-            if (flags.noTowerBuilding) {
-                this.uiManager.hideAllPlacementButtons();
-            }
+            // Place the lab first so updateUIAvailability can detect it for spell UI
             if (flags.autoPlaceSuperWeaponLab) {
                 this._autoPlaceRealmLab(flags.autoPlaceSuperWeaponLab);
             }
             if (flags.realmLootConfig) {
                 this.enemyManager.campaignLootConfig = flags.realmLootConfig;
+            }
+            // Re-run availability so the spell-buttons-container becomes visible
+            this.uiManager.updateUIAvailability();
+            // Now hide tower/building buttons (must happen after updateUIAvailability)
+            if (flags.noTowerBuilding) {
+                this.uiManager.hideAllPlacementButtons();
             }
         }
         
@@ -1874,6 +1878,15 @@ export class GameplayState {
                 }
             }
             if (!enemy.isAttackingDefender && enemy.reachedEnd) {
+                // No-loss level: enemies that reach the end escape silently without attacking the castle
+                if (this.level.levelFlags?.noLoss) {
+                    enemy.health = -1;
+                    enemy.lootDropChance = 0;
+                    enemy.rareLootDropChance = 0;
+                    if (enemy.realmShardDropChance !== undefined) enemy.realmShardDropChance = 0;
+                    enemy.goldReward = 0;
+                    continue;
+                }
                 // Enemy has reached end of path - check what's ahead of them
                 let targetDefender = null;
                 

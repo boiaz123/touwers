@@ -12,6 +12,7 @@ export class UIManager {
         this.level = gameplayState.level;
         this.activeMenu = null;
         this.currentForgeData = null;
+        this.noTowerBuilding = false; // Set to true in realm level to hide all build buttons
         
         // Menu refresh tracking
         this.activeMenuType = null; // 'superweapon', 'academy', 'forge', etc.
@@ -37,6 +38,14 @@ export class UIManager {
      * based on unlock status, resource availability, and build limits
      */
     updateButtonStates() {
+        // In no-tower-building levels, keep all placement buttons hidden
+        if (this.noTowerBuilding) {
+            document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+                btn.style.display = 'none';
+                btn.disabled = true;
+            });
+            return;
+        }
         // Update tower buttons
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const towerType = btn.dataset.type;
@@ -1237,8 +1246,18 @@ export class UIManager {
     }
 
     updateUIAvailability() {
+        // In no-tower-building levels, keep all placement buttons hidden
+        if (this.noTowerBuilding) {
+            document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+                btn.style.display = 'none';
+                btn.disabled = true;
+            });
+            // Still update spell button visibility below
+        }
+
         const unlockSystem = this.towerManager.getUnlockSystem();
-        
+
+        if (!this.noTowerBuilding) {
         // Update tower button states - show only when unlocked, disable based on resources
         document.querySelectorAll('.tower-btn').forEach(btn => {
             const type = btn.dataset.type;
@@ -1318,7 +1337,8 @@ export class UIManager {
                     }
                 }
             }
-        });
+        }); // end building-btn loop
+        } // end if (!this.noTowerBuilding)
         
         // Update spell buttons visibility - only show when spells are actually unlocked
         const spellButtonsContainer = document.getElementById('spell-buttons-container');
@@ -1339,6 +1359,7 @@ export class UIManager {
     }
 
     hideAllPlacementButtons() {
+        this.noTowerBuilding = true;
         document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
             btn.style.display = 'none';
             btn.disabled = true;
