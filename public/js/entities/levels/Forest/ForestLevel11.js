@@ -232,123 +232,108 @@ export class ForestLevel11 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 25, 
             enemyHealth_multiplier: 1.2, 
             speedMultiplier: 0.90, 
             spawnInterval: 1, 
-            pattern: ['basic', 'villager'] 
+            pattern: [{ type: 'basic', count: 13 }, { type: 'villager', count: 12 }] 
         }
         // Wave 2
         , { 
-            enemyCount: 30, 
             enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
-            pattern: ['basic', 'villager'] 
+            pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
         }
         // Wave 3
         , { 
-            enemyCount: 35, 
             enemyHealth_multiplier: 1.0, 
             speedMultiplier: 1.25, 
             spawnInterval: 0.5, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 35 }] 
         }
         // Wave 4
         , { 
-            enemyCount: 20, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.17, 
             spawnInterval: 1.1, 
-            pattern: ['beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 20 }] 
         }
         // Wave 5
         , { 
-            enemyCount: 55, 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1.10, 
             spawnInterval: 1, 
-            pattern: ['villager'] 
+            pattern: [{ type: 'villager', count: 55 }] 
         }
         // Wave 6
         , { 
-            enemyCount: 3, 
             enemyHealth_multiplier: 3.5, 
             speedMultiplier: 1.08, 
             spawnInterval: 0.2, 
-            pattern: ['beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 3 }] 
         }
         // Wave 7
         , { 
-            enemyCount: 3, 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1.86, 
             spawnInterval: 1.5, 
-            pattern: ['shieldknight'] 
+            pattern: [{ type: 'shieldknight', count: 3 }] 
         }
         // Wave 8
         , { 
-            enemyCount: 30, 
             enemyHealth_multiplier: 2.5, 
             speedMultiplier: 1.30, 
             spawnInterval: 0.1, 
-            pattern: ['basic', 'villager'] 
+            pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
         }
         // Wave 9
         , { 
-            enemyCount: 16, 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 0.83, 
             spawnInterval: 0.8, 
-            pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'shieldknight', 'beefyenemy', 'knight', 'beefyenemy', 'shieldknight', 'beefyenemy', 'beefyenemy', 'beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 12 }, { type: 'shieldknight', count: 3 }, { type: 'knight', count: 1 }] 
         }
         // Wave 10
         , { 
-            enemyCount: 1, 
             enemyHealth_multiplier: 6, 
             speedMultiplier: 1.63, 
             spawnInterval: 1, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 1 }] 
         }
         // Wave 11
         , { 
-            enemyCount: 45, 
             enemyHealth_multiplier: 2.7, 
             speedMultiplier: 0.92, 
             spawnInterval: 0.8, 
-            pattern: ['archer', 'basic', 'villager', 'beefyenemy', 'shieldknight', 'villager', 'archer', 'archer', 'villager', 'villager', 'shieldknight', 'villager', 'shieldknight', 'knight', 'basic'] 
+            pattern: [{ type: 'archer', count: 9 }, { type: 'basic', count: 6 }, { type: 'villager', count: 15 }, { type: 'beefyenemy', count: 3 }, { type: 'shieldknight', count: 9 }, { type: 'knight', count: 3 }] 
         }
         // Wave 12
         , { 
-            enemyCount: 15, 
             enemyHealth_multiplier: 4, 
             speedMultiplier: 2.92, 
             spawnInterval: 0.5, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 15 }] 
         }
         // Wave 13
         , { 
-            enemyCount: 55, 
             enemyHealth_multiplier: 5, 
             speedMultiplier: 1.30, 
             spawnInterval: 0.2, 
-            pattern: ['basic', 'villager', 'archer'] 
+            pattern: [{ type: 'basic', count: 19 }, { type: 'villager', count: 18 }, { type: 'archer', count: 18 }] 
         }
         // Wave 14
         , { 
-            enemyCount: 6, 
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1.57, 
             spawnInterval: 0.3, 
-            pattern: ['shieldknight', 'shieldknight', 'shieldknight', 'knight', 'shieldknight', 'shieldknight'] 
+            pattern: [{ type: 'shieldknight', count: 5 }, { type: 'knight', count: 1 }] 
         }
         // Wave 15
         , { 
-            enemyCount: 3, 
             enemyHealth_multiplier: 10, 
             speedMultiplier: 0.88, 
             spawnInterval: 0.4, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 3 }] 
         }
         ];
 

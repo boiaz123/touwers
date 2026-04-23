@@ -266,43 +266,38 @@ export class ForestLevel7 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 75, 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.90, 
             spawnInterval: 1.5, 
-            pattern: ['basic', 'villager', 'archer'] 
+            pattern: [{ type: 'basic', count: 25 }, { type: 'villager', count: 25 }, { type: 'archer', count: 25 }] 
         }
         // Wave 2
         , { 
-            enemyCount: 55, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 2.08, 
             spawnInterval: 0.6, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 55 }] 
         }
         // Wave 3
         , { 
-            enemyCount: 12, 
             enemyHealth_multiplier: 2.5, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.7, 
-            pattern: ['beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 12 }] 
         }
         // Wave 4
         , { 
-            enemyCount: 5, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.13, 
             spawnInterval: 2, 
-            pattern: ['knight'] 
+            pattern: [{ type: 'knight', count: 5 }] 
         }
         // Wave 5
         , { 
-            enemyCount: 1, 
             enemyHealth_multiplier: 10, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.8, 
-            pattern: ['shieldknight'] 
+            pattern: [{ type: 'shieldknight', count: 1 }] 
         }
         ];
 

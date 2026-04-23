@@ -94,7 +94,7 @@ Game (game.js)
 
 **Levels**:
 - Base: `LevelBase.js` - grid config, path, visual generation, wave data
-- Subclasses: `Level1.js` - `Level5.js` (define specific level layouts)
+- Subclasses: `Level1.js` etc (define specific level layouts)
 - Constructor accepts `resolutionManager` to scale visuals appropriately
 - Key properties: `this.path` (array of waypoints), `this.waves` (enemy spawning data)
 

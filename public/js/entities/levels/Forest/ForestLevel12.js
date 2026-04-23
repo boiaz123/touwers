@@ -190,99 +190,87 @@ export class ForestLevel12 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyCount: 12, 
             enemyHealth_multiplier: 1.0, 
             speedMultiplier: 0.36, 
             spawnInterval: 0.6, 
-            pattern: ['frog'] 
+            pattern: [{ type: 'frog', count: 12 }] 
         }
         // Wave 2
         , { 
-            enemyCount: 24, 
             enemyHealth_multiplier: 1.0, 
             speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 24 }] 
         }
         // Wave 3
         , { 
-            enemyCount: 35, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.00, 
             spawnInterval: 0.8, 
-            pattern: ['frog', 'villager', 'villager'] 
+            pattern: [{ type: 'frog', count: 12 }, { type: 'villager', count: 23 }] 
         }
         // Wave 4
         , { 
-            enemyCount: 17, 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1.08, 
             spawnInterval: 0.8, 
-            pattern: ['beefyenemy', 'beefyenemy', 'frog', 'beefyenemy', 'beefyenemy'] 
+            pattern: [{ type: 'beefyenemy', count: 14 }, { type: 'frog', count: 3 }] 
         }
         // Wave 5
         , { 
-            enemyCount: 55, 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.17, 
             spawnInterval: 0.7, 
-            pattern: ['archer'] 
+            pattern: [{ type: 'archer', count: 55 }] 
         }
         // Wave 6
         , { 
-            enemyCount: 45, 
             enemyHealth_multiplier: 3.5, 
             speedMultiplier: 1.36, 
             spawnInterval: 0.4, 
-            pattern: ['frog'] 
+            pattern: [{ type: 'frog', count: 45 }] 
         }
         // Wave 7
         , { 
-            enemyCount: 5, 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1.86, 
             spawnInterval: 0.7, 
-            pattern: ['shieldknight', 'shieldknight', 'frog'] 
+            pattern: [{ type: 'shieldknight', count: 4 }, { type: 'frog', count: 1 }] 
         }
         // Wave 8
         , { 
-            enemyCount: 20, 
             enemyHealth_multiplier: 3.5, 
             speedMultiplier: 1.08, 
             spawnInterval: 0.3, 
-            pattern: ['beefyenemy', 'beefyenemy', 'beefyenemy', 'frog'] 
+            pattern: [{ type: 'beefyenemy', count: 15 }, { type: 'frog', count: 5 }] 
         }
         // Wave 9
         , { 
-            enemyCount: 32, 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 0.92, 
             spawnInterval: 0.8, 
-            pattern: ['beefyenemy', 'archer', 'shieldknight', 'frog', 'archer'] 
+            pattern: [{ type: 'beefyenemy', count: 7 }, { type: 'archer', count: 13 }, { type: 'shieldknight', count: 6 }, { type: 'frog', count: 6 }] 
         }
         // Wave 10
         , { 
-            enemyCount: 16, 
             enemyHealth_multiplier: 6, 
             speedMultiplier: 0.92, 
             spawnInterval: 0.5, 
-            pattern: ['beefyenemy', 'shieldknight', 'beefyenemy', 'frog', 'beefyenemy', 'shieldknight'] 
+            pattern: [{ type: 'beefyenemy', count: 8 }, { type: 'shieldknight', count: 5 }, { type: 'frog', count: 3 }] 
         }
         // Wave 11
         , { 
-            enemyCount: 42, 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1.42, 
             spawnInterval: 0.4, 
-            pattern: ['archer', 'frog', 'archer', 'archer'] 
+            pattern: [{ type: 'archer', count: 31 }, { type: 'frog', count: 11 }] 
         }
         // Wave 12
         , { 
-            enemyCount: 35, 
             enemyHealth_multiplier: 7, 
             speedMultiplier: 1.22, 
             spawnInterval: 0.5, 
-            pattern: ['mage', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog', 'frog'] 
+            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 34 }] 
         }
         ];
 
