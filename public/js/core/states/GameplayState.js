@@ -941,9 +941,10 @@ export class GameplayState {
         }
         
         this.uiManager.updateSpellUI();
-        // If the level has no-cooldown spells, reset all spell cooldowns immediately
-        if (this.level && this.level.levelFlags && this.level.levelFlags.spellsNoCooldown && this.superWeaponLab) {
-            Object.values(this.superWeaponLab.spells).forEach(s => { s.currentCooldown = 0; });
+        // If the level overrides spell cooldowns, apply the override after casting
+        if (this.level && this.level.levelFlags && this.level.levelFlags.spellCooldownOverride != null && this.superWeaponLab) {
+            const cd = this.level.levelFlags.spellCooldownOverride;
+            Object.values(this.superWeaponLab.spells).forEach(s => { s.currentCooldown = cd; });
             this.uiManager.updateSpellUI();
         }
         // Cancel spell targeting after successful cast to return to normal mode

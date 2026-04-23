@@ -16,10 +16,10 @@ export class FrogKingsRealmLevel extends LevelBase {
         this.campaign = 'mountain';
         this.maxWaves = 1;
 
-        // Level flags: no tower building, no-cooldown spells, auto-place superweapon, no loss
+        // Level flags: no tower building, 1-second spell cooldown, auto-place superweapon, no loss
         this.levelFlags = {
             noTowerBuilding: true,
-            spellsNoCooldown: true,
+            spellCooldownOverride: 1,
             noLoss: true,
             autoPlaceSuperWeaponLab: { gridX: 33, gridY: 12 },
             realmLootConfig: { normalChance: 0.12, rareChance: 0.05, realmShardChance: 0 }
@@ -277,10 +277,10 @@ export class FrogKingsRealmLevel extends LevelBase {
     getWaveConfig(wave) {
         if (wave === 1) {
             return {
-                enemyHealth_multiplier: 10.0,
+                enemyHealth_multiplier: 8.0,
                 speedMultiplier: 1.0,
-                spawnInterval: 0.3,
-                pattern: [{ type: 'frog', count: 100 }]
+                spawnInterval: 0.45,
+                pattern: [{ type: 'frog', count: 50 }]
             };
         }
         return null;
@@ -586,35 +586,6 @@ export class FrogKingsRealmLevel extends LevelBase {
             travelG.addColorStop(1,   'rgba(0,0,0,0)');
             ctx.fillStyle = travelG;
             ctx.fillRect(orbX - orbR, pathY - orbR, orbR * 2, orbR * 2);
-        });
-
-        // ---- FLOATING RUNE SYMBOLS ----
-        const runeData = [
-            { gx: 6,  gy: 7  }, { gx: 16, gy: 5  }, { gx: 26, gy: 9  },
-            { gx: 36, gy: 6  }, { gx: 46, gy: 8  }, { gx: 56, gy: 5  },
-            { gx: 8,  gy: 32 }, { gx: 18, gy: 34 }, { gx: 28, gy: 31 },
-            { gx: 38, gy: 33 }, { gx: 48, gy: 30 }, { gx: 58, gy: 34 },
-            { gx: 66, gy: 31 }
-        ];
-        runeData.forEach((pos, idx) => {
-            const rx = pos.gx * cs;
-            const ry = pos.gy * cs;
-            const phase = t * 0.7 + idx * 0.9;
-            const alpha = 0.28 + 0.22 * Math.sin(phase);
-            const [r, g, b] = idx % 3 === 0 ? [0, 220, 160] :
-                              idx % 3 === 1 ? [190, 0, 255] :
-                                              [255, 200, 0];
-            const color = `rgba(${r},${g},${b},${alpha})`;
-            const runeR = cs * (0.38 + 0.12 * Math.sin(phase * 0.6));
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.1;
-            ctx.beginPath(); ctx.arc(rx, ry, runeR, 0, Math.PI * 2); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(rx - runeR * 0.72, ry); ctx.lineTo(rx + runeR * 0.72, ry); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(rx, ry - runeR * 0.72); ctx.lineTo(rx, ry + runeR * 0.72); ctx.stroke();
-            // Faint outer ring
-            ctx.strokeStyle = `rgba(${r},${g},${b},${alpha * 0.35})`;
-            ctx.lineWidth = 0.6;
-            ctx.beginPath(); ctx.arc(rx, ry, runeR * 1.7, 0, Math.PI * 2); ctx.stroke();
         });
 
         ctx.restore();
