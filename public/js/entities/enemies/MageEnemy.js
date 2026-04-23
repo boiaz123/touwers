@@ -18,8 +18,8 @@ export class MageEnemy extends BaseEnemy {
         this.robeColor = '#1A3A7A';
         this.sizeMultiplier = 1.1;
         
-        this.attackDamage = 6;
-        this.attackSpeed = 1.2;
+        this.attackDamage = 20;
+        this.attackSpeed = 2.0;
         
         // Optimized particle system - reduced particle generation
         this.magicParticles = [];

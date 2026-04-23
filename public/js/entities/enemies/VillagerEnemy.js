@@ -6,7 +6,7 @@ export class VillagerEnemy extends BaseEnemy {
 
     static BASE_STATS = {
         health: 100,
-        speed: 50,
+        speed: 55,
         armour: 10,
         magicResistance: 0
     };

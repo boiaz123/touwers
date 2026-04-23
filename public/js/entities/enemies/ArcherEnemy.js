@@ -3,7 +3,7 @@ import { BaseEnemy } from './BaseEnemy.js';
 export class ArcherEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 120,
-        speed: 60,
+        speed: 75,
         armour: 8,
         magicResistance: 0
     };

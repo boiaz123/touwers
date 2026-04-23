@@ -21,7 +21,7 @@ export class FrogEnemy extends BaseEnemy {
         this.skinColor = this.getRandomSkinColor();
         this.sizeMultiplier = 1.0;
         
-        this.attackDamage = 10;
+        this.attackDamage = 7;
         this.attackSpeed = 1.0;
         
         this.magicParticles = [];

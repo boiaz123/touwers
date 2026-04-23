@@ -3,7 +3,7 @@ import { BaseEnemy } from './BaseEnemy.js';
 export class KnightEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 1500,
-        speed: 40,
+        speed: 35,
         armour: 65,
         magicResistance: -0.2
     };
@@ -19,7 +19,7 @@ export class KnightEnemy extends BaseEnemy {
         this.armorColor = '#4A5568';
         this.sizeMultiplier = 1.15;
         
-        this.attackDamage = 7;
+        this.attackDamage = 10;
         this.attackSpeed = 0.7;
         
     }
