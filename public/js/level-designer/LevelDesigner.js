@@ -34,6 +34,16 @@ export class LevelDesigner {
         this.selectedTreeVariant = 0;
         this.selectedRockVariant = 0;
         
+        // Tree brush properties
+        this.treeBrushActive = false;
+        this.treeBrushSize = 3;
+        this.treeBrushMinSize = 1.0;
+        this.treeBrushMaxSize = 3.0;
+        this.isBrushPainting = false;
+        this.lastBrushPaintPos = null;
+        // Wave drag-and-drop state
+        this.draggedWaveIndex = null;
+        
         // Path texture cache (invalidated when path changes)
         this.designerPathTexture = [];
         this.designerPathLeaves = [];
@@ -94,7 +104,7 @@ export class LevelDesigner {
             this.isDrawingRiver = false;
             this.render();
         });
-        window.addEventListener('mouseup', () => { this.isDrawingRiver = false; this.lastRiverDragPos = null; });
+        window.addEventListener('mouseup', () => { this.isDrawingRiver = false; this.lastRiverDragPos = null; this.isBrushPainting = false; this.lastBrushPaintPos = null; });
         
         window.addEventListener('resize', () => this.handleResize());
 
@@ -131,6 +141,28 @@ export class LevelDesigner {
             this.terrainElementSize = parseFloat(e.target.value);
             const label = document.getElementById('terrainSizeLabel');
             if (label) label.textContent = this.terrainElementSize.toFixed(1);
+        });
+
+        // Tree brush controls
+        document.getElementById('treeBrushToggle')?.addEventListener('click', () => {
+            this.treeBrushActive = !this.treeBrushActive;
+            document.getElementById('treeBrushToggle')?.classList.toggle('active', this.treeBrushActive);
+            this.render();
+        });
+        document.getElementById('treeBrushRadius')?.addEventListener('input', (e) => {
+            this.treeBrushSize = parseFloat(e.target.value);
+            const lbl = document.getElementById('treeBrushRadiusLabel');
+            if (lbl) lbl.textContent = this.treeBrushSize.toFixed(1);
+        });
+        document.getElementById('treeBrushMinSize')?.addEventListener('input', (e) => {
+            this.treeBrushMinSize = parseFloat(e.target.value);
+            const lbl = document.getElementById('treeBrushMinSizeLabel');
+            if (lbl) lbl.textContent = this.treeBrushMinSize.toFixed(1);
+        });
+        document.getElementById('treeBrushMaxSize')?.addEventListener('input', (e) => {
+            this.treeBrushMaxSize = parseFloat(e.target.value);
+            const lbl = document.getElementById('treeBrushMaxSizeLabel');
+            if (lbl) lbl.textContent = this.treeBrushMaxSize.toFixed(1);
         });
 
         // Copy code button
@@ -222,13 +254,16 @@ export class LevelDesigner {
 
         const waterControls = document.getElementById('waterControls');
         if (waterControls) waterControls.style.display = 'none';
-        
-        const pathInfo = document.getElementById('pathInfo');
-        if (newMode === 'path') {
-            pathInfo.textContent = 'Path mode -- Click to add waypoints. Right-click to remove last. Click "Finish Path" when done.';
-        } else {
-            pathInfo.textContent = 'Select a tool mode from the toolbar.';
-        }
+
+        // Hide size group and brush controls when switching main mode
+        const terrainSizeGroup = document.getElementById('terrainSizeGroup');
+        if (terrainSizeGroup) terrainSizeGroup.style.display = 'none';
+        const treeBrushControls = document.getElementById('treeBrushControls');
+        if (treeBrushControls) treeBrushControls.style.display = 'none';
+        this.treeBrushActive = false;
+        document.getElementById('treeBrushToggle')?.classList.remove('active');
+
+        this.updateStatusBar();
     }
 
     setTerrainMode(terrainType) {
@@ -254,11 +289,21 @@ export class LevelDesigner {
         // Show water controls when water is selected
         const waterControls = document.getElementById('waterControls');
         if (waterControls) waterControls.style.display = terrainType === 'water' ? 'flex' : 'none';
-        
-        const pathInfo = document.getElementById('pathInfo');
-        const names = { vegetation: 'Trees', rock: 'Rocks', water: 'Water' };
-        pathInfo.textContent = `Click to place ${names[terrainType]}. Right-click to erase.`;
+
+        // Show size slider for vegetation and rock, hide for water
+        const terrainSizeGroup = document.getElementById('terrainSizeGroup');
+        if (terrainSizeGroup) terrainSizeGroup.style.display = (terrainType === 'vegetation' || terrainType === 'rock') ? 'flex' : 'none';
+
+        // Show brush controls only for vegetation
+        const treeBrushControls = document.getElementById('treeBrushControls');
+        if (treeBrushControls) treeBrushControls.style.display = terrainType === 'vegetation' ? 'flex' : 'none';
+        if (terrainType !== 'vegetation') {
+            this.treeBrushActive = false;
+            document.getElementById('treeBrushToggle')?.classList.remove('active');
+        }
+
         this.updateVariantPicker();
+        this.updateStatusBar();
     }
 
     updateVariantPicker() {
@@ -289,15 +334,17 @@ export class LevelDesigner {
         if (finishRiverControl) {
             finishRiverControl.style.display = mode === 'river' ? 'flex' : 'none';
         }
-        
-        const pathInfo = document.getElementById('pathInfo');
+
+        // Show size slider only for lake mode
+        const terrainSizeGroup = document.getElementById('terrainSizeGroup');
+        if (terrainSizeGroup) terrainSizeGroup.style.display = mode === 'lake' ? 'flex' : 'none';
+
         if (mode === 'river') {
-            pathInfo.textContent = 'River mode -- Click and drag to draw freehand, or single-click for waypoints. Click "Finish River" when done.';
             this.riverPoints = []; // Always start fresh when entering river mode
         } else if (mode === 'lake') {
-            pathInfo.textContent = 'Lake mode -- Click to place a lake. Use the Size slider to control lake size. Right-click to remove last element.';
             this.riverPoints = [];
         }
+        this.updateStatusBar();
     }
 
     updateTerrainButtonsForCampaign() {
@@ -356,6 +403,21 @@ export class LevelDesigner {
                 }
             }
         }
+
+        // Tree brush painting — place trees while mouse is held and dragged
+        if (this.isBrushPainting && this.mode === 'terrain' && this.terrainMode === 'vegetation' && this.treeBrushActive) {
+            if (this.lastBrushPaintPos) {
+                const dist = Math.hypot(
+                    gridCoords.gridX - this.lastBrushPaintPos.gridX,
+                    gridCoords.gridY - this.lastBrushPaintPos.gridY
+                );
+                if (dist >= this.treeBrushSize * 0.5) {
+                    this.paintBrush(gridCoords.gridX, gridCoords.gridY);
+                    this.lastBrushPaintPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+                    this.updateGeneratedCode();
+                }
+            }
+        }
         
         // Lake painting — no longer used (lakes are terrain elements)
         
@@ -387,9 +449,11 @@ export class LevelDesigner {
                 const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
                 this.addTerrainElement(this.terrainMode, snapped.gridX, snapped.gridY, null, 'lake');
             } else {
-                // Regular terrain placement (snapped to grid)
-                const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
-                this.addTerrainElement(this.terrainMode, snapped.gridX, snapped.gridY);
+                // Regular terrain placement (snapped to grid) — skip for brush mode (handled via mousedown)
+                if (!(this.terrainMode === 'vegetation' && this.treeBrushActive)) {
+                    const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
+                    this.addTerrainElement(this.terrainMode, snapped.gridX, snapped.gridY);
+                }
             }
         }
 
@@ -410,6 +474,16 @@ export class LevelDesigner {
             this.lastRiverDragPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
             this.updateGeneratedCode();
             this.render();
+        } else if (this.mode === 'terrain' && this.terrainMode === 'vegetation' && this.treeBrushActive) {
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasX = e.clientX - rect.left;
+            const canvasY = e.clientY - rect.top;
+            const gridCoords = this.pixelToGrid(canvasX, canvasY);
+            this.isBrushPainting = true;
+            this.lastBrushPaintPos = { gridX: gridCoords.gridX, gridY: gridCoords.gridY };
+            this.paintBrush(gridCoords.gridX, gridCoords.gridY);
+            this.updateGeneratedCode();
+            this.render();
         } else if (this.mode === 'terrain' && this.waterMode === 'lake') {
             // Lake placement is handled by handleCanvasClick, not mousedown drag
         }
@@ -419,6 +493,10 @@ export class LevelDesigner {
         if (this.isDrawingRiver) {
             this.isDrawingRiver = false;
             this.lastRiverDragPos = null;
+        }
+        if (this.isBrushPainting) {
+            this.isBrushPainting = false;
+            this.lastBrushPaintPos = null;
         }
     }
 
@@ -794,15 +872,19 @@ export class LevelDesigner {
     renderWavesList() {
         const container = document.getElementById('wavesList');
         container.innerHTML = '';
+        this.draggedWaveIndex = null;
 
-        this.waves.forEach(wave => {
+        this.waves.forEach((wave, index) => {
             const waveCard = document.createElement('div');
             waveCard.className = 'wave-card';
-            
+            waveCard.setAttribute('draggable', 'true');
+            waveCard.dataset.index = index;
+
             const totalCount = wave.pattern.reduce((s, e) => s + e.count, 0);
             const patternStr = wave.pattern.map(e => `${e.type}x${e.count}`).join(' + ');
-            
+
             waveCard.innerHTML = `
+                <div class="wave-drag-handle" title="Drag to reorder">&#9776;</div>
                 <div class="wave-card-info">
                     <div class="wave-card-title">Wave ${wave.id}</div>
                     <div class="wave-card-meta">Count: ${totalCount} | Health: ${wave.enemyHealthMultiplier.toFixed(2)}x | Speed: ${wave.speedMultiplier.toFixed(2)}x | ${wave.spawnInterval.toFixed(2)}s</div>
@@ -814,8 +896,62 @@ export class LevelDesigner {
                     <button onclick="window.levelDesigner.removeWave(${wave.id})" style="font-size:10px;padding:3px 7px;background:#c0392b">Del</button>
                 </div>
             `;
+
+            waveCard.addEventListener('dragstart', (e) => {
+                this.draggedWaveIndex = index;
+                waveCard.classList.add('wave-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index);
+            });
+            waveCard.addEventListener('dragend', () => {
+                waveCard.classList.remove('wave-dragging');
+                container.querySelectorAll('.wave-card').forEach(c => c.classList.remove('wave-drop-target'));
+                this.draggedWaveIndex = null;
+            });
+            waveCard.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (this.draggedWaveIndex !== null && this.draggedWaveIndex !== index) {
+                    container.querySelectorAll('.wave-card').forEach(c => c.classList.remove('wave-drop-target'));
+                    waveCard.classList.add('wave-drop-target');
+                }
+            });
+            waveCard.addEventListener('dragleave', () => {
+                waveCard.classList.remove('wave-drop-target');
+            });
+            waveCard.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (this.draggedWaveIndex !== null && this.draggedWaveIndex !== index) {
+                    this.reorderWaves(this.draggedWaveIndex, index);
+                }
+            });
+
             container.appendChild(waveCard);
         });
+    }
+
+    reorderWaves(fromIndex, toIndex) {
+        const waves = [...this.waves];
+        const [moved] = waves.splice(fromIndex, 1);
+        waves.splice(toIndex, 0, moved);
+        waves.forEach((w, i) => { w.id = i + 1; });
+        this.waves = waves;
+        this.renderWavesList();
+        this.updateGeneratedCode();
+    }
+
+    paintBrush(gridX, gridY) {
+        const count = Math.max(2, Math.floor(this.treeBrushSize * 2));
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.sqrt(Math.random()) * this.treeBrushSize;
+            const tx = gridX + Math.cos(angle) * dist;
+            const ty = gridY + Math.sin(angle) * dist;
+            const cx = Math.max(0, Math.min(this.gridWidth - 1, Math.round(tx)));
+            const cy = Math.max(0, Math.min(this.gridHeight - 1, Math.round(ty)));
+            const size = this.treeBrushMinSize + Math.random() * Math.max(0, this.treeBrushMaxSize - this.treeBrushMinSize);
+            this.terrainElements.push({ type: 'vegetation', gridX: cx, gridY: cy, size, variant: this.selectedTreeVariant });
+        }
     }
 
     render() {
@@ -845,8 +981,8 @@ export class LevelDesigner {
         // Draw castle
         this.drawCastle();
 
-        // Draw unified mode and terrain info overlay
-        this.drawModeOverlay();
+        // Update status bar with current mode info
+        this.updateStatusBar();
     }
 
     drawBackground() {
@@ -1324,121 +1460,43 @@ export class LevelDesigner {
     drawDesignerGrassPatches() {}
     drawDesignerFlowers() {}
 
-    drawModeOverlay() {
-        // Coordinate display is handled by the DOM element (#coordDisplay)
+    updateStatusBar() {
+        const pathInfo = document.getElementById('pathInfo');
+        if (!pathInfo) return;
 
-        // Unified mode and terrain information overlay - consistent format across all modes
-        
-        // No mode selected
         if (this.mode === null) {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            this.ctx.fillRect(10, 10, 280, 50);
-            
-            this.ctx.fillStyle = '#ffa500';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText('[T] Select a tool to begin', 15, 20);
-            
-            this.ctx.fillStyle = '#b0b0b0';
-            this.ctx.font = '11px Arial';
-            this.ctx.fillText('Choose Path, Terrain, or Water mode', 15, 38);
+            pathInfo.textContent = 'Select a tool to begin.';
             return;
         }
-        
-        // Path mode
+
         if (this.mode === 'path') {
-            // Main mode label
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            this.ctx.fillRect(10, 10, 200, 40);
-            
-            this.ctx.fillStyle = '#58c4dc';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText('>> Mode: PATH', 15, 15);
-            
-            // Waypoint counter box (if editing)
-            if (this.pathPoints && !this.pathLocked) {
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                this.ctx.fillRect(10, 55, 250, 70);
-                
-                this.ctx.fillStyle = '#58c4dc';
-                this.ctx.font = 'bold 14px Arial';
-                this.ctx.fillText(`Waypoints: ${this.pathPoints.length}`, 15, 60);
-                
-                this.ctx.fillStyle = '#90caf9';
-                this.ctx.font = '11px Arial';
-                this.ctx.fillText('Right-click to remove last', 15, 78);
-                this.ctx.fillText('Click "Finish Path" button when done', 15, 92);
+            if (this.pathLocked) {
+                pathInfo.textContent = `Path finished (${this.pathPoints.length} waypoints). Castle placed at path end. Add terrain then export.`;
+            } else {
+                const c = this.pathPoints.length;
+                pathInfo.textContent = `Path mode — ${c} waypoint${c !== 1 ? 's' : ''} placed. Right-click to remove last. Click "Finish Path" when done.`;
             }
             return;
         }
-        
-        // Terrain mode
-        if (this.mode === 'terrain' && this.terrainMode) {
-            const theme = CampaignThemeConfig.getTheme(this.currentCampaign);
-            const terrainDefaults = theme.terrainDefaults;
-            
-            let modeLabel = '';
-            let modeColor = '';
-            let secondaryInfo = '';
 
+        if (this.mode === 'terrain' && this.terrainMode) {
             if (this.terrainMode === 'vegetation') {
-                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Trees`;
-                modeColor = terrainDefaults.treeColor;
+                const count = this.terrainElements.filter(e => e.type === 'vegetation').length;
+                const brushStr = this.treeBrushActive ? ` | Brush on (radius: ${this.treeBrushSize})` : '';
+                pathInfo.textContent = `Trees — Click to place${brushStr}. Right-click to erase. Placed: ${count}`;
             } else if (this.terrainMode === 'rock') {
-                modeLabel = `Placing ${this.currentCampaign.toUpperCase()} Rocks`;
-                modeColor = terrainDefaults.rockColor;
+                const count = this.terrainElements.filter(e => e.type === 'rock').length;
+                pathInfo.textContent = `Rocks — Click to place. Right-click to erase. Placed: ${count}`;
             } else if (this.terrainMode === 'water') {
                 if (this.waterMode === 'river') {
-                    modeLabel = 'Mode: RIVER';
-                    modeColor = '#1e90ff';
                     const pts = this.riverPoints ? this.riverPoints.length : 0;
-                    secondaryInfo = `Drawing: ${pts} pt${pts !== 1 ? 's' : ''} • ${this.riverPaths.length} saved`;
+                    pathInfo.textContent = `River — Drawing: ${pts} pt${pts !== 1 ? 's' : ''} \u2022 ${this.riverPaths.length} saved. Right-click to remove last. Click "Finish River" when done.`;
                 } else if (this.waterMode === 'lake') {
-                    modeLabel = 'Mode: LAKES';
-                    modeColor = '#0277bd';
+                    const count = this.terrainElements.filter(e => e.type === 'water' && e.waterType === 'lake').length;
+                    pathInfo.textContent = `Lakes — Click to place. Use Size slider to control lake size. Placed: ${count}`;
                 } else {
-                    modeLabel = 'Water (select type)';
-                    modeColor = '#4a6ba6';
+                    pathInfo.textContent = 'Water — Select River or Lake sub-mode from toolbar.';
                 }
-            }
-            
-            // Main terrain label with icon
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            this.ctx.fillRect(10, 10, 300, 45);
-            
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.textBaseline = 'top';
-            this.ctx.fillText(modeLabel, 15, 15);
-            
-            // Color preview circle for terrain types
-            if (this.terrainMode !== 'water' || this.waterMode === 'lake') {
-                this.ctx.fillStyle = modeColor;
-                this.ctx.beginPath();
-                this.ctx.arc(285, 28, 10, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.strokeStyle = '#ffffff';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
-            }
-            
-            // Secondary info box for water modes with waypoints
-            if (secondaryInfo) {
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                this.ctx.fillRect(10, 60, 250, 70);
-                
-                this.ctx.fillStyle = modeColor;
-                this.ctx.font = 'bold 14px Arial';
-                this.ctx.fillText(secondaryInfo, 15, 65);
-                
-                this.ctx.fillStyle = '#90caf9';
-                this.ctx.font = '11px Arial';
-                this.ctx.fillText('Right-click to remove last', 15, 83);
-                this.ctx.fillText('Click "Finish River" button when done', 15, 97);
             }
         }
     }
@@ -1480,16 +1538,33 @@ export class LevelDesigner {
         const x = gridX * cellWidthPixels;
         const y = gridY * cellHeightPixels;
 
-        // Draw a highlight circle at the hovered cell position
-        this.ctx.fillStyle = 'rgba(255, 200, 100, 0.6)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, 12, 0, Math.PI * 2);
-        this.ctx.fill();
+        if (this.mode === 'terrain' && this.terrainMode === 'vegetation' && this.treeBrushActive) {
+            // Draw brush radius circle preview
+            const avgCell = (cellWidthPixels + cellHeightPixels) / 2;
+            const brushRadiusPx = this.treeBrushSize * avgCell;
+            this.ctx.strokeStyle = 'rgba(100, 220, 100, 0.8)';
+            this.ctx.lineWidth = 1.5;
+            this.ctx.setLineDash([4, 4]);
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, brushRadiusPx, 0, Math.PI * 2);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+            this.ctx.fillStyle = 'rgba(100, 220, 100, 0.07)';
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, brushRadiusPx, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else {
+            // Draw a highlight circle at the hovered cell position
+            this.ctx.fillStyle = 'rgba(255, 200, 100, 0.6)';
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 12, 0, Math.PI * 2);
+            this.ctx.fill();
 
-        // Draw a subtle cell outline
-        this.ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x - cellWidthPixels / 2, y - cellHeightPixels / 2, cellWidthPixels, cellHeightPixels);
+            // Draw a subtle cell outline
+            this.ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x - cellWidthPixels / 2, y - cellHeightPixels / 2, cellWidthPixels, cellHeightPixels);
+        }
     }
 
     drawPath() {

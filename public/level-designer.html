@@ -299,6 +299,10 @@
             color: #8ab0cc;
             line-height: 1.5;
         }
+        .wave-card[draggable] { cursor: grab; user-select: none; }
+        .wave-card.wave-dragging { opacity: 0.4; }
+        .wave-card.wave-drop-target { border-left-color: #f0a030; box-shadow: inset 0 2px 0 #f0a030; }
+        .wave-drag-handle { color: var(--text-dim); font-size: 14px; padding-right: 6px; flex-shrink: 0; cursor: grab; }
     </style>
 </head>
 <body>
@@ -341,12 +345,31 @@
                 <button class="tool-btn" id="waterRiverBtn" title="Draw a river — click and drag for freehand, or click waypoints. Click Finish River when done.">River</button>
                 <button class="tool-btn" id="waterLakeBtn"  title="Click and drag to paint lake cells. Right-click to erase.">Lake</button>
             </div>
-            <div class="tool-sep"></div>
-            <div class="tool-group">
+            <div class="tool-group" id="terrainSizeGroup" style="display:none; align-items:center; gap:4px;">
+                <div class="tool-sep"></div>
                 <span class="tool-label">Size</span>
                 <div class="slider-row">
                     <input type="range" id="terrainSizeSlider" min="1" max="4" step="0.5" value="2">
                     <span class="val" id="terrainSizeLabel">2.0</span>
+                </div>
+            </div>
+            <div class="tool-group" id="treeBrushControls" style="display:none; align-items:center; gap:4px;">
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="treeBrushToggle" title="Toggle brush mode — paint multiple trees at once">Brush</button>
+                <div class="slider-row">
+                    <label style="font-size:10px;color:var(--text-dim);">Radius</label>
+                    <input type="range" id="treeBrushRadius" min="1" max="8" step="0.5" value="3">
+                    <span class="val" id="treeBrushRadiusLabel">3.0</span>
+                </div>
+                <div class="slider-row">
+                    <label style="font-size:10px;color:var(--text-dim);">Min</label>
+                    <input type="range" id="treeBrushMinSize" min="0.5" max="3" step="0.5" value="1">
+                    <span class="val" id="treeBrushMinSizeLabel">1.0</span>
+                </div>
+                <div class="slider-row">
+                    <label style="font-size:10px;color:var(--text-dim);">Max</label>
+                    <input type="range" id="treeBrushMaxSize" min="1" max="5" step="0.5" value="3">
+                    <span class="val" id="treeBrushMaxSizeLabel">3.0</span>
                 </div>
             </div>
             <div class="tool-sep"></div>
