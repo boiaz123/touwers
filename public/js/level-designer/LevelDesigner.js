@@ -33,6 +33,7 @@ export class LevelDesigner {
         this.currentMouseGridPos = null; // Current mouse grid position for coordinate display
         this.selectedTreeVariant = 0;
         this.selectedRockVariant = 0;
+        this.brushTreeVariants = new Set([0]); // Which tree variants are active in brush mode
         
         // Tree brush properties
         this.treeBrushActive = false;
@@ -59,8 +60,20 @@ export class LevelDesigner {
         // Wire variant picker buttons
         for (let i = 0; i < 4; i++) {
             document.getElementById(`variantBtn${i}`)?.addEventListener('click', () => {
-                if (this.terrainMode === 'vegetation') this.selectedTreeVariant = i;
-                else if (this.terrainMode === 'rock') this.selectedRockVariant = i;
+                if (this.terrainMode === 'vegetation' && this.treeBrushActive) {
+                    // Brush mode: toggle multi-select, always keep at least one active
+                    if (this.brushTreeVariants.has(i)) {
+                        if (this.brushTreeVariants.size > 1) this.brushTreeVariants.delete(i);
+                    } else {
+                        this.brushTreeVariants.add(i);
+                    }
+                    this.selectedTreeVariant = i; // keep last clicked as primary for non-brush placement
+                } else if (this.terrainMode === 'vegetation') {
+                    this.selectedTreeVariant = i;
+                    this.brushTreeVariants = new Set([i]); // sync brush set to match single selection
+                } else if (this.terrainMode === 'rock') {
+                    this.selectedRockVariant = i;
+                }
                 this.updateVariantPicker();
                 this.render();
             });
@@ -146,7 +159,12 @@ export class LevelDesigner {
         // Tree brush controls
         document.getElementById('treeBrushToggle')?.addEventListener('click', () => {
             this.treeBrushActive = !this.treeBrushActive;
+            if (this.treeBrushActive) {
+                // Sync brush set to current single selection when enabling brush
+                this.brushTreeVariants = new Set([this.selectedTreeVariant]);
+            }
             document.getElementById('treeBrushToggle')?.classList.toggle('active', this.treeBrushActive);
+            this.updateVariantPicker();
             this.render();
         });
         document.getElementById('treeBrushRadius')?.addEventListener('input', (e) => {
@@ -315,10 +333,15 @@ export class LevelDesigner {
         row.style.display = 'flex';
         row.style.alignItems = 'center';
         row.style.gap = '2px';
-        const activeVariant = isVeg ? this.selectedTreeVariant : this.selectedRockVariant;
         for (let i = 0; i < 4; i++) {
             const btn = document.getElementById(`variantBtn${i}`);
-            if (btn) btn.classList.toggle('active', i === activeVariant);
+            if (!btn) continue;
+            if (isVeg && this.treeBrushActive) {
+                btn.classList.toggle('active', this.brushTreeVariants.has(i));
+            } else {
+                const activeVariant = isVeg ? this.selectedTreeVariant : this.selectedRockVariant;
+                btn.classList.toggle('active', i === activeVariant);
+            }
         }
         const lbl = document.getElementById('variantPickerLabel');
         if (lbl) lbl.textContent = isVeg ? 'Tree' : 'Rock';
@@ -942,6 +965,7 @@ export class LevelDesigner {
 
     paintBrush(gridX, gridY) {
         const count = Math.max(2, Math.floor(this.treeBrushSize * 2));
+        const variantPool = Array.from(this.brushTreeVariants);
         for (let i = 0; i < count; i++) {
             const angle = Math.random() * Math.PI * 2;
             const dist = Math.sqrt(Math.random()) * this.treeBrushSize;
@@ -950,7 +974,8 @@ export class LevelDesigner {
             const cx = Math.max(0, Math.min(this.gridWidth - 1, Math.round(tx)));
             const cy = Math.max(0, Math.min(this.gridHeight - 1, Math.round(ty)));
             const size = this.treeBrushMinSize + Math.random() * Math.max(0, this.treeBrushMaxSize - this.treeBrushMinSize);
-            this.terrainElements.push({ type: 'vegetation', gridX: cx, gridY: cy, size, variant: this.selectedTreeVariant });
+            const variant = variantPool[Math.floor(Math.random() * variantPool.length)];
+            this.terrainElements.push({ type: 'vegetation', gridX: cx, gridY: cy, size, variant });
         }
     }
 
