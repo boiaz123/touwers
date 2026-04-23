@@ -323,6 +323,20 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.updateUIAvailability(); // Update button visibility based on unlocks
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
+
+        // Apply level-specific flags (e.g. no-tower-building, auto-placed superweapon)
+        if (this.level && this.level.levelFlags) {
+            const flags = this.level.levelFlags;
+            if (flags.noTowerBuilding) {
+                this.uiManager.hideAllPlacementButtons();
+            }
+            if (flags.autoPlaceSuperWeaponLab) {
+                this._autoPlaceRealmLab(flags.autoPlaceSuperWeaponLab);
+            }
+            if (flags.realmLootConfig) {
+                this.enemyManager.campaignLootConfig = flags.realmLootConfig;
+            }
+        }
         
         // CRITICAL: Ensure wave countdown container is visible for new level
         const waveCountdownContainer = document.getElementById('wave-countdown-container');
@@ -353,12 +367,12 @@ export class GameplayState {
      */
     getCampaignLootConfig(campaignId) {
         switch (campaignId) {
-            case 'campaign-1': return { normalChance: 0.0225,  rareChance: 0.0    };
-            case 'campaign-2': return { normalChance: 0.0225,  rareChance: 0.003  }; 
-            case 'campaign-3': return { normalChance: 0.04, rareChance: 0.004 }; 
-            case 'campaign-4': return { normalChance: 0.07,  rareChance: 0.006  }; 
-            case 'campaign-5': return { normalChance: 0.02,  rareChance: 0.002  }; 
-            default:           return { normalChance: 0.01,  rareChance: 0.001  };
+            case 'campaign-1': return { normalChance: 0.0225,  rareChance: 0.0,   realmShardChance: 0      };
+            case 'campaign-2': return { normalChance: 0.0225,  rareChance: 0.003, realmShardChance: 0.002      }; 
+            case 'campaign-3': return { normalChance: 0.04, rareChance: 0.004,    realmShardChance: 0.002      }; 
+            case 'campaign-4': return { normalChance: 0.07,  rareChance: 0.006,   realmShardChance: 0.002  }; 
+            case 'campaign-5': return { normalChance: 0.02,  rareChance: 0.002,   realmShardChance: 0.002  }; 
+            default:           return { normalChance: 0.01,  rareChance: 0.001,   realmShardChance: 0      };
         }
     }
 
@@ -923,8 +937,40 @@ export class GameplayState {
         }
         
         this.uiManager.updateSpellUI();
+        // If the level has no-cooldown spells, reset all spell cooldowns immediately
+        if (this.level && this.level.levelFlags && this.level.levelFlags.spellsNoCooldown && this.superWeaponLab) {
+            Object.values(this.superWeaponLab.spells).forEach(s => { s.currentCooldown = 0; });
+            this.uiManager.updateSpellUI();
+        }
         // Cancel spell targeting after successful cast to return to normal mode
         this.cancelSpellTargeting();
+    }
+
+    _autoPlaceRealmLab(config) {
+        const { gridX, gridY } = config;
+        const cellSize = this.level.cellSize;
+        const screenX = gridX * cellSize + cellSize * 2;
+        const screenY = gridY * cellSize + cellSize * 2;
+        const building = BuildingRegistry.createBuilding('superweapon', screenX, screenY, gridX, gridY);
+        if (!building) return;
+        // Unlock all spells
+        building.labLevel = 4;
+        if (building.spells) {
+            if (building.spells.frostNova) building.spells.frostNova.unlocked = true;
+            if (building.spells.meteorStrike) building.spells.meteorStrike.unlocked = true;
+            if (building.spells.chainLightning) building.spells.chainLightning.unlocked = true;
+        }
+        const bm = this.towerManager.buildingManager;
+        bm.buildings.push(building);
+        if (!bm._sortedBuildings) bm._sortedBuildings = [];
+        bm._sortedBuildings.push(building);
+        bm._sortedBuildings.sort((a, b) => a.y - b.y);
+        if (bm.markBuildingPosition) bm.markBuildingPosition(gridX, gridY, building.size || 4);
+        bm.superWeaponUnlocked = true;
+        if (bm._upgradesDirty !== undefined) bm._upgradesDirty = true;
+        if (building.applyEffect) building.applyEffect(bm);
+        this.superWeaponLab = building;
+        if (this.uiManager) this.uiManager.updateSpellUI();
     }
     
     createSpellEffect(type, x, y, spell, targets) {
@@ -1710,6 +1756,11 @@ export class GameplayState {
             this.enemyManager.update(adjustedDeltaTime);
             if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
         }
+
+        // Update level-specific special effects (e.g. realm particles)
+        if (this.level && typeof this.level.updateRealmEffects === 'function') {
+            this.level.updateRealmEffects(adjustedDeltaTime);
+        }
         
         // SECOND: Update defenders AFTER enemies have moved to them
         // This ensures defenders see current enemy positions and can attack
@@ -1906,7 +1957,11 @@ export class GameplayState {
         
         // Spawn loot bags on the ground
         for (const lootDrop of processedLootDrops) {
-            this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
+            if (lootDrop.isRealmShard) {
+                this.lootManager.spawnRealmShard(lootDrop.x, lootDrop.y, lootDrop.lootId);
+            } else {
+                this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
+            }
         }
         
         if (goldFromEnemies > 0) {

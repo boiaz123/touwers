@@ -327,3 +327,241 @@ export class LootBag {
         }
     }
 }
+
+/**
+ * RealmShardDrop - Special visual drop for Frog King's Realm Shards
+ * Appears as a magical crystalline shard with glowing particles
+ */
+export class RealmShardDrop {
+    constructor(x, y, lootId) {
+        this.x = x;
+        this.y = y;
+        this.lootId = lootId;
+        this.isRare = false; // Not a bag so rarity doesn't apply the same way
+
+        // Physics - floats upward initially then settles
+        this.vx = (Math.random() - 0.5) * 80;
+        this.vy = -220;
+        this.gravity = 400;
+        this.onGround = false;
+        this.groundLevel = null;
+
+        // Animation
+        this.animationTime = 0;
+        this.collectAnimationTime = 0;
+        this.isCollecting = false;
+        this.particles = [];
+
+        // Size
+        this.width = 30;
+        this.height = 36;
+        this.radius = 24;
+
+        // Lifetime
+        this.lifetime = 0; // No expiry for shards
+        this.age = 0;
+    }
+
+    update(deltaTime, canvasHeight = 800, canvasWidth = 1200) {
+        if (this.isCollecting) {
+            this.collectAnimationTime += deltaTime;
+            return;
+        }
+
+        this.age += deltaTime;
+        this.animationTime += deltaTime;
+
+        if (!this.onGround) {
+            this.vy += this.gravity * deltaTime;
+            this.y += this.vy * deltaTime;
+            this.x += this.vx * deltaTime;
+            this.vx *= 0.97;
+            const groundLevel = Math.max(50, canvasHeight - 100);
+            if (this.y + this.radius >= groundLevel) {
+                this.onGround = true;
+                this.y = groundLevel - this.radius;
+                this.vy = 0;
+                this.vx = 0;
+            }
+            if (this.x - this.radius < 0) { this.x = this.radius; this.vx *= -0.3; }
+            if (this.x + this.radius > canvasWidth) { this.x = canvasWidth - this.radius; this.vx *= -0.3; }
+        }
+
+        // Spawn ambient particles when on ground
+        if (this.onGround && Math.random() < 0.3) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 15 + Math.random() * 25;
+            this.particles.push({
+                x: this.x + (Math.random() - 0.5) * 14,
+                y: this.y + (Math.random() - 0.5) * 8,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 30,
+                life: 0.6 + Math.random() * 0.5,
+                maxLife: 1.1,
+                color: Math.random() < 0.5 ? '#00FFCC' : '#FF80FF',
+                size: 1.5 + Math.random() * 2
+            });
+        }
+
+        // Update particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.life -= deltaTime;
+            p.x += p.vx * deltaTime;
+            p.y += p.vy * deltaTime;
+            p.vy += 60 * deltaTime;
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
+    }
+
+    isClickable() {
+        return this.onGround && !this.isCollecting;
+    }
+
+    collect() {
+        this.isCollecting = true;
+        this.collectAnimationTime = 0;
+    }
+
+    isCollected() {
+        return this.isCollecting && this.collectAnimationTime > 0.6;
+    }
+
+    getScreenBounds() {
+        return { x: this.x - this.radius, y: this.y - this.radius, width: this.width, height: this.height };
+    }
+
+    render(ctx) {
+        if (this.isCollected()) return;
+
+        const x = this.x;
+        const bobY = this.onGround ? Math.sin(this.animationTime * 2.5) * 3 : 0;
+        const y = this.y + bobY;
+
+        let opacity = 1;
+        if (this.isCollecting) {
+            opacity = Math.max(0, 1 - this.collectAnimationTime / 0.6);
+        }
+
+        // Render particles first (behind shard)
+        for (const p of this.particles) {
+            const alpha = (p.life / p.maxLife) * opacity;
+            if (ctx.globalAlpha !== undefined) ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (ctx.globalAlpha !== undefined) ctx.globalAlpha = opacity;
+        this._renderShard(ctx, x, y);
+        if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
+    }
+
+    _renderShard(ctx, x, y) {
+        const t = this.animationTime;
+        const pulse = 0.65 + 0.35 * Math.sin(t * 3.5);
+        ctx.save();
+        ctx.translate(x, y);
+
+        const tilt = Math.sin(t * 1.8) * 0.12;
+        ctx.rotate(tilt);
+
+        // Large outer glow
+        const glowColor = this.lootId === 'realm-shard-top' ? '#FF80FF' : '#00FFCC';
+        if (ctx.createRadialGradient) {
+            const outerGlow = ctx.createRadialGradient(0, 0, 2, 0, 0, 28);
+            outerGlow.addColorStop(0, `rgba(255,220,50,${0.55 * pulse})`);
+            outerGlow.addColorStop(0.4, `${glowColor}44`);
+            outerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = outerGlow;
+            ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill();
+        }
+
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 14 * pulse;
+
+        // Crystal body
+        ctx.beginPath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(10, -6);
+        ctx.lineTo(12, 4);
+        ctx.lineTo(6, 14);
+        ctx.lineTo(0, 18);
+        ctx.lineTo(-6, 14);
+        ctx.lineTo(-12, 4);
+        ctx.lineTo(-10, -6);
+        ctx.closePath();
+
+        const cg = ctx.createLinearGradient(-12, -16, 12, 18);
+        if (this.lootId === 'realm-shard-top') {
+            cg.addColorStop(0, '#FFCCFF');
+            cg.addColorStop(0.45, '#CC44CC');
+            cg.addColorStop(1, '#440044');
+        } else {
+            cg.addColorStop(0, '#AAFFEE');
+            cg.addColorStop(0.45, '#00CCAA');
+            cg.addColorStop(1, '#003322');
+        }
+        ctx.fillStyle = cg;
+        ctx.fill();
+        ctx.strokeStyle = glowColor;
+        ctx.lineWidth = 1.5 * pulse;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner highlight facet
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(-10, -6);
+        ctx.lineTo(-12, 4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(-2, 2);
+        ctx.stroke();
+
+        // Fracture line (jagged cut)
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(-12, 1);
+        ctx.lineTo(-6, -3);
+        ctx.lineTo(0, 1);
+        ctx.lineTo(6, -4);
+        ctx.lineTo(12, 0);
+        ctx.stroke();
+
+        // Floating sparkle dots around the shard
+        const sparkAngles = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5];
+        sparkAngles.forEach((baseA, i) => {
+            const a = baseA + t * 1.5;
+            const r = 16 + 4 * Math.sin(t * 2 + i);
+            const sx = Math.cos(a) * r;
+            const sy = Math.sin(a) * r * 0.5;
+            const alpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2.5 + i * 0.8));
+            ctx.fillStyle = i % 2 === 0 ? `rgba(0,255,200,${alpha})` : `rgba(255,120,255,${alpha})`;
+            ctx.beginPath(); ctx.arc(sx, sy, 2 + Math.sin(t * 3 + i) * 0.8, 0, Math.PI * 2); ctx.fill();
+        });
+
+        // "Realm Shard!" text popup on spawn
+        if (this.animationTime < 0.8) {
+            const floatOffset = (1 - this.animationTime / 0.8) * 24;
+            ctx.save();
+            ctx.translate(0, -22 - floatOffset);
+            const textAlpha = this.animationTime < 0.5 ? 1 : (1 - (this.animationTime - 0.5) / 0.3);
+            ctx.globalAlpha = textAlpha;
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = '#FF8800';
+            ctx.shadowBlur = 6;
+            ctx.fillText('Realm Shard!', 0, 0);
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+}

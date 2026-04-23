@@ -5020,9 +5020,12 @@ class UpgradesMenu {
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
         this.rightArrowHovered = false;
+        this.showingPortalConfirm = false;
+        this.portalConfirmYesHovered = false;
+        this.portalConfirmNoHovered = false;
         this.tabButtons = [
             { label: 'BUY', action: 'buy', hovered: false },
-            { label: 'SELL', action: 'sell', hovered: false }
+            { label: 'INVENTORY', action: 'sell', hovered: false }
         ];
     }
 
@@ -5460,8 +5463,11 @@ class UpgradesMenu {
     buildSellItems() {
         const items = [];
         const inventory = this.stateManager.playerInventory || [];
+        const SHARD_IDS = new Set(['realm-shard-bottom', 'realm-shard-top', 'portal-shard']);
         
-        
+        const hasBottom = inventory.some(i => i.lootId === 'realm-shard-bottom' && (i.count || 1) > 0);
+        const hasTop = inventory.some(i => i.lootId === 'realm-shard-top' && (i.count || 1) > 0);
+
         // Create items from inventory
         for (const inventoryItem of inventory) {
             const lootInfo = this.getLootInfo(inventoryItem.lootId);
@@ -5469,7 +5475,7 @@ class UpgradesMenu {
                 console.warn('Could not find loot info for lootId:', inventoryItem.lootId);
                 continue;
             }
-            items.push({
+            const item = {
                 id: inventoryItem.lootId,
                 name: lootInfo.name,
                 description: lootInfo.description || `A valuable treasure. Sell for ${lootInfo.sellValue} gold.`,
@@ -5479,10 +5485,66 @@ class UpgradesMenu {
                 lootId: inventoryItem.lootId,
                 count: inventoryItem.count || 1,
                 hovered: false
-            });
+            };
+            if (SHARD_IDS.has(inventoryItem.lootId)) {
+                item.isRealmShard = true;
+                item.sellPrice = 0;
+                if (inventoryItem.lootId === 'portal-shard') {
+                    item.shardType = 'portal';
+                } else {
+                    item.shardType = 'fragment';
+                    item.combineEnabled = hasBottom && hasTop;
+                }
+            }
+            items.push(item);
         }
         
         return items;
+    }
+
+    _combineRealmShards() {
+        const inv = this.stateManager.playerInventory;
+        const removeOne = (id) => {
+            const idx = inv.findIndex(i => i.lootId === id);
+            if (idx !== -1) {
+                inv[idx].count -= 1;
+                if (inv[idx].count <= 0) inv.splice(idx, 1);
+            }
+        };
+        removeOne('realm-shard-bottom');
+        removeOne('realm-shard-top');
+        const existing = inv.find(i => i.lootId === 'portal-shard');
+        if (existing) {
+            existing.count = (existing.count || 1) + 1;
+        } else {
+            inv.push({ lootId: 'portal-shard', count: 1 });
+        }
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.playSFX('upgrade');
+        }
+    }
+
+    _openPortalPrompt() {
+        this.showingPortalConfirm = true;
+    }
+
+    _confirmOpenPortal() {
+        // Consume the portal shard
+        const inv = this.stateManager.playerInventory;
+        const idx = inv.findIndex(i => i.lootId === 'portal-shard');
+        if (idx !== -1) {
+            inv[idx].count -= 1;
+            if (inv[idx].count <= 0) inv.splice(idx, 1);
+        }
+        // Save and launch the realm level
+        if (this.stateManager.saveSystem) {
+            this.stateManager.saveSystem.save(this.stateManager.currentSaveSlot, this.stateManager.getSaveData());
+        }
+        this.showingPortalConfirm = false;
+        this.isOpen = false;
+        this.stateManager.selectedLevelId = 'frog-kings-realm';
+        this.stateManager.selectedCampaignId = 'campaign-5';
+        this.stateManager.changeState('game');
     }
 
     getLootInfo(lootId) {
@@ -5668,6 +5730,15 @@ class UpgradesMenu {
     }
 
     updateHoverState(x, y) {
+        // Handle portal confirm modal hover state first
+        if (this.showingPortalConfirm && this._portalConfirmBounds) {
+            const b = this._portalConfirmBounds;
+            this.portalConfirmYesHovered = x >= b.yesX && x <= b.yesX + b.btnW && y >= b.btnY && y <= b.btnY + b.btnH;
+            this.portalConfirmNoHovered = x >= b.noX && x <= b.noX + b.btnW && y >= b.btnY && y <= b.btnY + b.btnH;
+            this.stateManager.canvas.style.cursor = (this.portalConfirmYesHovered || this.portalConfirmNoHovered) ? 'pointer' : 'default';
+            return;
+        }
+
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
         const baseHeight = canvas.height - 60;
@@ -5750,6 +5821,21 @@ class UpgradesMenu {
         // Prevent registering clicks for 200ms after opening to avoid click-through
         const timeSinceOpen = Date.now() - this.openTime;
         if (timeSinceOpen < 200) {
+            return;
+        }
+
+        // Handle portal confirm modal clicks first
+        if (this.showingPortalConfirm && this._portalConfirmBounds) {
+            const b = this._portalConfirmBounds;
+            if (x >= b.yesX && x <= b.yesX + b.btnW && y >= b.btnY && y <= b.btnY + b.btnH) {
+                this._confirmOpenPortal();
+                return;
+            }
+            if (x >= b.noX && x <= b.noX + b.btnW && y >= b.btnY && y <= b.btnY + b.btnH) {
+                this.showingPortalConfirm = false;
+                return;
+            }
+            this.showingPortalConfirm = false;
             return;
         }
         
@@ -5948,6 +6034,19 @@ class UpgradesMenu {
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
         } else if (this.activeTab === 'sell') {
+            // Handle realm shard items specially
+            if (item.isRealmShard) {
+                if (item.shardType === 'fragment') {
+                    if (item.combineEnabled) {
+                        this._combineRealmShards();
+                        this.sellItems = this.buildSellItems();
+                    }
+                } else if (item.shardType === 'portal') {
+                    this._openPortalPrompt();
+                }
+                return;
+            }
+
             // Sell the loot item
             this.playerGold += item.sellPrice;
             this.stateManager.playerGold = this.playerGold;
@@ -6406,7 +6505,96 @@ class UpgradesMenu {
         // Render visual effects
         this.renderEffects(ctx);
         
+        // Render portal confirm modal on top if active
+        if (this.showingPortalConfirm) {
+            this._renderPortalConfirmModal(ctx, canvas);
+        }
+        
         ctx.globalAlpha = 1;
+    }
+
+    _renderPortalConfirmModal(ctx, canvas) {
+        const t = Date.now() / 600;
+        const pulse = 0.7 + 0.3 * Math.sin(t);
+        const mw = 520;
+        const mh = 260;
+        const mx = (canvas.width - mw) / 2;
+        const my = (canvas.height - mh) / 2;
+
+        // Dim backdrop
+        ctx.globalAlpha = 0.75;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+
+        // Modal background
+        ctx.fillStyle = '#0d0820';
+        ctx.fillRect(mx, my, mw, mh);
+
+        // Magical border
+        ctx.shadowColor = '#AA44FF';
+        ctx.shadowBlur = 18 * pulse;
+        ctx.strokeStyle = '#AA44FF';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(mx, my, mw, mh);
+        ctx.shadowBlur = 0;
+
+        // Decorative top stripe
+        const stripe = ctx.createLinearGradient(mx, my, mx + mw, my);
+        stripe.addColorStop(0, 'rgba(0,255,200,0)');
+        stripe.addColorStop(0.5, `rgba(170,68,255,${0.5 * pulse})`);
+        stripe.addColorStop(1, 'rgba(0,255,200,0)');
+        ctx.fillStyle = stripe;
+        ctx.fillRect(mx, my, mw, 3);
+
+        // Title
+        ctx.font = 'bold 22px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.shadowColor = '#FF8800';
+        ctx.shadowBlur = 8;
+        ctx.fillText("The Frog King's Realm", mx + mw / 2, my + 22);
+        ctx.shadowBlur = 0;
+
+        // Body text
+        ctx.font = '15px Arial';
+        ctx.fillStyle = '#DDCCFF';
+        ctx.fillText('Teleport your troops to the Frog King\'s Realm?', mx + mw / 2, my + 66);
+        ctx.font = '13px Arial';
+        ctx.fillStyle = '#AA99CC';
+        ctx.fillText('This will consume your Portal Shard.', mx + mw / 2, my + 90);
+        ctx.fillText('No towers may be built. Spells have no cooldown.', mx + mw / 2, my + 110);
+        ctx.fillText('Defeat the frogs and claim their riches!', mx + mw / 2, my + 130);
+
+        // YES button
+        const btnW = 150;
+        const btnH = 44;
+        const yesX = mx + mw / 2 - btnW - 20;
+        const noX = mx + mw / 2 + 20;
+        const btnY = my + mh - 70;
+
+        ctx.fillStyle = this.portalConfirmYesHovered ? '#005533' : '#003322';
+        ctx.fillRect(yesX, btnY, btnW, btnH);
+        ctx.strokeStyle = this.portalConfirmYesHovered ? '#00FFAA' : '#00AA66';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(yesX, btnY, btnW, btnH);
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = this.portalConfirmYesHovered ? '#00FFAA' : '#00CC88';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ENTER REALM', yesX + btnW / 2, btnY + btnH / 2);
+
+        // NO button
+        ctx.fillStyle = this.portalConfirmNoHovered ? '#440011' : '#2a0011';
+        ctx.fillRect(noX, btnY, btnW, btnH);
+        ctx.strokeStyle = this.portalConfirmNoHovered ? '#FF4466' : '#882233';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(noX, btnY, btnW, btnH);
+        ctx.fillStyle = this.portalConfirmNoHovered ? '#FF4466' : '#CC4466';
+        ctx.fillText('STAY', noX + btnW / 2, btnY + btnH / 2);
+
+        // Store button bounds for click handling
+        this._portalConfirmBounds = { yesX, noX, btnY, btnW, btnH };
     }
 
     renderGoldDisplay(ctx, x, y) {
@@ -6771,6 +6959,46 @@ class UpgradesMenu {
         
         // Sell tab uses a slightly different button color scheme (amber-green) to indicate receiving gold
         const isSellButton = this.activeTab === 'sell';
+
+        // Realm shard items get special COMBINE / OPEN buttons
+        if (isSellButton && item.isRealmShard) {
+            if (item.shardType === 'portal') {
+                // OPEN button - gold/magical
+                const btnActive = !isDisabled;
+                ctx.fillStyle = item.hovered && btnActive ? '#7a4a00' : '#4a2a00';
+                ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                ctx.strokeStyle = item.hovered && btnActive ? '#FFD700' : '#AA8800';
+                ctx.lineWidth = item.hovered && btnActive ? 2 : 1;
+                ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                const buttonCenterY = buttonY + buttonHeight / 2;
+                ctx.font = 'bold 15px Arial';
+                ctx.fillStyle = item.hovered && btnActive ? '#FFD700' : '#CC9900';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('OPEN PORTAL', buttonX + buttonWidth / 2, buttonCenterY);
+            } else {
+                // COMBINE button - cyan/teal, only active if combineEnabled
+                const btnActive = item.combineEnabled && !isDisabled;
+                ctx.fillStyle = btnActive ? (item.hovered ? '#006655' : '#004433') : '#2a2a2a';
+                ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                ctx.strokeStyle = btnActive ? (item.hovered ? '#00FFCC' : '#00AA88') : '#444444';
+                ctx.lineWidth = item.hovered && btnActive ? 2 : 1;
+                ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+                const buttonCenterY = buttonY + buttonHeight / 2;
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = btnActive ? (item.hovered ? '#00FFCC' : '#00CC99') : '#666666';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(item.combineEnabled ? 'COMBINE' : 'COMBINE', buttonX + buttonWidth / 2, buttonCenterY);
+                if (!item.combineEnabled) {
+                    ctx.font = '10px Arial';
+                    ctx.fillStyle = '#888888';
+                    ctx.fillText('(need both halves)', buttonX + buttonWidth / 2, buttonCenterY + 14);
+                }
+            }
+            return;
+        }
+
         ctx.fillStyle = isDisabled ? '#4a4a4a' : (item.hovered ? (isSellButton ? '#4a6b3a' : '#8b6f47') : (isSellButton ? '#2a4a1e' : '#5a4a3a'));
         ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
         

@@ -571,6 +571,167 @@ export class LootRegistry {
                 ctx.shadowBlur = 0;
                 ctx.restore();
             }
+        },
+
+        // ============ LEGENDARY (Realm Shards - Frog King's Realm) ============
+        'realm-shard-bottom': {
+            name: 'Realm Shard (Bottom)',
+            type: 'gem',
+            rarity: 'legendary',
+            sellValue: 0,
+            description: 'The lower half of the Frog King\'s Realm Shard. Combine with the top half to open a portal.',
+            drawIcon(ctx, cx, cy, size) {
+                ctx.save();
+                const t = Date.now() / 800;
+                const pulse = 0.7 + 0.3 * Math.sin(t);
+                ctx.shadowColor = '#00FFCC'; ctx.shadowBlur = size * 0.7 * pulse;
+                // Bottom half crystal shape
+                ctx.beginPath();
+                ctx.moveTo(cx - size * 0.28, cy - size * 0.04);
+                ctx.lineTo(cx + size * 0.28, cy - size * 0.04);
+                ctx.lineTo(cx + size * 0.18, cy + size * 0.22);
+                ctx.lineTo(cx, cy + size * 0.48);
+                ctx.lineTo(cx - size * 0.18, cy + size * 0.22);
+                ctx.closePath();
+                const g = ctx.createLinearGradient(cx, cy - size * 0.04, cx, cy + size * 0.48);
+                g.addColorStop(0, '#80FFEE'); g.addColorStop(0.4, '#00CCAA'); g.addColorStop(1, '#004433');
+                ctx.fillStyle = g; ctx.fill();
+                ctx.strokeStyle = '#00FFCC'; ctx.lineWidth = 1.5 * pulse; ctx.stroke();
+                ctx.shadowBlur = 0;
+                // Inner facets
+                ctx.strokeStyle = 'rgba(200,255,240,0.5)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.04); ctx.lineTo(cx, cy + size * 0.48); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx - size * 0.28, cy - size * 0.04); ctx.lineTo(cx, cy + size * 0.12); ctx.lineTo(cx + size * 0.28, cy - size * 0.04); ctx.stroke();
+                // Jagged cut line at top (showing it's a broken shard)
+                ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(cx - size * 0.28, cy - size * 0.04);
+                ctx.lineTo(cx - size * 0.14, cy - size * 0.12);
+                ctx.lineTo(cx - size * 0.04, cy - size * 0.04);
+                ctx.lineTo(cx + size * 0.08, cy - size * 0.14);
+                ctx.lineTo(cx + size * 0.18, cy - size * 0.04);
+                ctx.lineTo(cx + size * 0.28, cy - size * 0.04);
+                ctx.stroke();
+                // Sparkle
+                ctx.fillStyle = `rgba(0,255,200,${0.4 + 0.6 * Math.abs(Math.sin(t * 1.3))})`;
+                ctx.beginPath(); ctx.arc(cx + size * 0.08, cy + size * 0.28, size * 0.04, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        },
+        'realm-shard-top': {
+            name: 'Realm Shard (Top)',
+            type: 'gem',
+            rarity: 'legendary',
+            sellValue: 0,
+            description: 'The upper half of the Frog King\'s Realm Shard. Combine with the bottom half to open a portal.',
+            drawIcon(ctx, cx, cy, size) {
+                ctx.save();
+                const t = Date.now() / 800;
+                const pulse = 0.7 + 0.3 * Math.sin(t + 1.2);
+                ctx.shadowColor = '#FF80FF'; ctx.shadowBlur = size * 0.7 * pulse;
+                // Top half crystal shape
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - size * 0.48);
+                ctx.lineTo(cx + size * 0.18, cy - size * 0.22);
+                ctx.lineTo(cx + size * 0.28, cy + size * 0.04);
+                ctx.lineTo(cx - size * 0.28, cy + size * 0.04);
+                ctx.lineTo(cx - size * 0.18, cy - size * 0.22);
+                ctx.closePath();
+                const g = ctx.createLinearGradient(cx, cy - size * 0.48, cx, cy + size * 0.04);
+                g.addColorStop(0, '#FFCCFF'); g.addColorStop(0.4, '#CC44CC'); g.addColorStop(1, '#660066');
+                ctx.fillStyle = g; ctx.fill();
+                ctx.strokeStyle = '#FF80FF'; ctx.lineWidth = 1.5 * pulse; ctx.stroke();
+                ctx.shadowBlur = 0;
+                // Inner facets
+                ctx.strokeStyle = 'rgba(255,220,255,0.5)'; ctx.lineWidth = 0.8;
+                ctx.beginPath(); ctx.moveTo(cx, cy - size * 0.48); ctx.lineTo(cx, cy + size * 0.04); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx - size * 0.28, cy + size * 0.04); ctx.lineTo(cx, cy - size * 0.12); ctx.lineTo(cx + size * 0.28, cy + size * 0.04); ctx.stroke();
+                // Jagged cut at bottom
+                ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(cx - size * 0.28, cy + size * 0.04);
+                ctx.lineTo(cx - size * 0.18, cy + size * 0.14);
+                ctx.lineTo(cx - size * 0.04, cy + size * 0.04);
+                ctx.lineTo(cx + size * 0.08, cy + size * 0.14);
+                ctx.lineTo(cx + size * 0.18, cy + size * 0.04);
+                ctx.lineTo(cx + size * 0.28, cy + size * 0.04);
+                ctx.stroke();
+                // Sparkle
+                ctx.fillStyle = `rgba(255,100,255,${0.4 + 0.6 * Math.abs(Math.sin(t * 0.9))})`;
+                ctx.beginPath(); ctx.arc(cx - size * 0.1, cy - size * 0.28, size * 0.04, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        },
+        'portal-shard': {
+            name: 'Portal Shard',
+            type: 'gem',
+            rarity: 'legendary',
+            sellValue: 0,
+            description: 'A fully assembled Realm Shard crackling with portal energy. Open it to enter the Frog King\'s Realm.',
+            drawIcon(ctx, cx, cy, size) {
+                ctx.save();
+                const t = Date.now() / 600;
+                const pulse = 0.6 + 0.4 * Math.sin(t);
+                const spin = t * 0.5;
+                // Outer magical aura
+                ctx.shadowColor = '#FFAA00'; ctx.shadowBlur = size * 1.2 * pulse;
+                const aura = ctx.createRadialGradient(cx, cy, size * 0.1, cx, cy, size * 0.56);
+                aura.addColorStop(0, `rgba(255,220,0,${0.3 * pulse})`);
+                aura.addColorStop(1, 'rgba(255,100,0,0)');
+                ctx.fillStyle = aura;
+                ctx.beginPath(); ctx.arc(cx, cy, size * 0.56, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+                // Full crystal (both halves together)
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - size * 0.48);
+                ctx.lineTo(cx + size * 0.28, cy - size * 0.18);
+                ctx.lineTo(cx + size * 0.32, cy + size * 0.1);
+                ctx.lineTo(cx + size * 0.18, cy + size * 0.36);
+                ctx.lineTo(cx, cy + size * 0.48);
+                ctx.lineTo(cx - size * 0.18, cy + size * 0.36);
+                ctx.lineTo(cx - size * 0.32, cy + size * 0.1);
+                ctx.lineTo(cx - size * 0.28, cy - size * 0.18);
+                ctx.closePath();
+                const cg = ctx.createLinearGradient(cx - size * 0.32, cy - size * 0.48, cx + size * 0.32, cy + size * 0.48);
+                cg.addColorStop(0, '#FFEEAA');
+                cg.addColorStop(0.25, '#FF8800');
+                cg.addColorStop(0.5, '#AA00FF');
+                cg.addColorStop(0.75, '#00FFCC');
+                cg.addColorStop(1, '#FFEEAA');
+                ctx.fillStyle = cg; ctx.fill();
+                ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 2 * pulse; ctx.stroke();
+                // Inner glow portal window
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - size * 0.48);
+                ctx.lineTo(cx + size * 0.28, cy - size * 0.18);
+                ctx.lineTo(cx + size * 0.32, cy + size * 0.1);
+                ctx.lineTo(cx + size * 0.18, cy + size * 0.36);
+                ctx.lineTo(cx, cy + size * 0.48);
+                ctx.lineTo(cx - size * 0.18, cy + size * 0.36);
+                ctx.lineTo(cx - size * 0.32, cy + size * 0.1);
+                ctx.lineTo(cx - size * 0.28, cy - size * 0.18);
+                ctx.closePath();
+                ctx.clip();
+                const portalGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.35);
+                portalGrad.addColorStop(0, `rgba(255,220,50,${0.7 * pulse})`);
+                portalGrad.addColorStop(0.5, `rgba(180,0,255,${0.5})`);
+                portalGrad.addColorStop(1, 'rgba(0,200,180,0)');
+                ctx.fillStyle = portalGrad; ctx.fill();
+                ctx.restore();
+                // Spinning star sparks
+                for (let i = 0; i < 6; i++) {
+                    const a = spin + (i / 6) * Math.PI * 2;
+                    const r = size * (0.22 + 0.06 * Math.sin(t * 2 + i));
+                    const sx = cx + Math.cos(a) * r;
+                    const sy = cy + Math.sin(a) * r;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t + i);
+                    ctx.beginPath(); ctx.arc(sx, sy, size * 0.03, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
         }
     };
 

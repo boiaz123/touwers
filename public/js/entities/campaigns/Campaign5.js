@@ -4,6 +4,7 @@ import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { SandboxLevel } from '../levels/Campaign5/SandboxLevel.js';
 import { Level6 } from '../levels/Campaign5/Level2.js';
 import { Level8 } from '../levels/Campaign5/Level8.js';
+import { FrogKingsRealmLevel } from '../levels/FrogKingsRealm/FrogKingsRealmLevel.js';
 
 /**
  * Campaign5: Level Testing Campaign
@@ -46,6 +47,7 @@ export class Campaign5 extends CampaignBase {
 
         // Register sandbox level in multiple slots for testing
         // Each SandboxLevel instance uses the same static metadata (Sandbox Mode, Endless)
+        registerLevel('frog-kings-realm', FrogKingsRealmLevel);
         registerLevel('sandbox-test-1', SandboxLevel);
         registerLevel('spiraling-into-control', Level6);
         registerLevel('My Level', Level8);

@@ -12,6 +12,7 @@ export class BaseEnemy {
         this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
         this.lootDropChance = 0.01; // 1/100 base chance to drop normal loot on death (0-1)
         this.rareLootDropChance = 0.001; // 1/1000 base chance to drop rare loot on death (0-1)
+        this.realmShardDropChance = 0; // Chance to drop a Frog King's Realm Shard
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
@@ -415,6 +416,20 @@ export class BaseEnemy {
             'frog-totem', 'void-shard'
         ];
         return rareLoot[Math.floor(Math.random() * rareLoot.length)];
+    }
+
+    /**
+     * Check if this enemy should drop a realm shard
+     */
+    shouldDropRealmShard() {
+        return this.realmShardDropChance > 0 && Math.random() < this.realmShardDropChance;
+    }
+
+    /**
+     * Get the realm shard loot ID - equal chance of bottom or top half
+     */
+    getDroppedRealmShard() {
+        return Math.random() < 0.5 ? 'realm-shard-bottom' : 'realm-shard-top';
     }
     
     render(ctx) {

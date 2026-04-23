@@ -165,6 +165,9 @@ export class EnemyManager {
                     if (this.campaignLootConfig) {
                         enemy.lootDropChance = this.campaignLootConfig.normalChance;
                         enemy.rareLootDropChance = this.campaignLootConfig.rareChance;
+                        if (this.campaignLootConfig.realmShardChance !== undefined) {
+                            enemy.realmShardDropChance = this.campaignLootConfig.realmShardChance;
+                        }
                     }
 
                     // Apply Rabbit's Foot modifier if active in marketplace
@@ -241,6 +244,18 @@ export class EnemyManager {
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
                 
+                // Check for realm shard drop (independent of regular loot)
+                if (enemy.shouldDropRealmShard && enemy.shouldDropRealmShard()) {
+                    const shardId = enemy.getDroppedRealmShard ? enemy.getDroppedRealmShard() : 'realm-shard-bottom';
+                    lootDrops.push({
+                        x: enemy.x,
+                        y: enemy.y,
+                        lootId: shardId,
+                        isRare: false,
+                        isRealmShard: true
+                    });
+                }
+
                 // Check for rare legendary loot drops first (very rare)
                 if (enemy.shouldDropRareLoot && enemy.shouldDropRareLoot()) {
                     const lootId = enemy.getDroppedRareLoot();

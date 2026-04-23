@@ -1338,6 +1338,13 @@ export class UIManager {
         }
     }
 
+    hideAllPlacementButtons() {
+        document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+            btn.style.display = 'none';
+            btn.disabled = true;
+        });
+    }
+
     setGameSpeedButtonState(speed) {
         // Update speed circles
         document.querySelectorAll('.speed-circle').forEach(circle => {

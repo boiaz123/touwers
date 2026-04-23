@@ -1,4 +1,4 @@
-import { LootBag } from './LootBag.js';
+import { LootBag, RealmShardDrop } from './LootBag.js';
 import { LootRegistry } from './LootRegistry.js';
 
 /**
@@ -30,6 +30,18 @@ export class LootManager {
         }
         
         return bag;
+    }
+
+    /**
+     * Spawn a realm shard drop (special magical crystal)
+     */
+    spawnRealmShard(x, y, lootId) {
+        const shard = new RealmShardDrop(x, y, lootId);
+        this.lootBags.push(shard);
+        if (this.audioManager) {
+            this.audioManager.playSFX('rare-loot-drop');
+        }
+        return shard;
     }
 
     /**
