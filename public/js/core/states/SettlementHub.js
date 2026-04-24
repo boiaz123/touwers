@@ -5032,7 +5032,7 @@ class UpgradesMenu {
     buildBuyItems() {
         const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
         const marketplaceSystem = this.stateManager.marketplaceSystem || { hasUsedConsumable: () => false, isBoonActive: () => false, getConsumableCount: () => 0 };
-        const unlockedCampaigns = this.stateManager.currentSaveData?.unlockedCampaigns || ['campaign-1', 'campaign-5'];
+        const unlockedCampaigns = this.stateManager.currentSaveData?.unlockedCampaigns || ['campaign-1'];
         
         const items = [];
         

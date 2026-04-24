@@ -2845,75 +2845,203 @@ export class LevelDesigner {
     }
 
     drawSandstoneRock(x, y, size, rockColor, rockAccent, seed) {
+        const ctx = this.ctx;
         switch(seed % 4) {
             case 0: {
-                // Smooth rounded sandstone boulder (port of renderDesertRock0)
-                this.ctx.fillStyle = '#c8944a';
-                this.ctx.beginPath(); this.ctx.ellipse(x, y, size*0.30, size*0.24, 0.15, 0, Math.PI*2); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(90,55,12,0.50)';
-                this.ctx.beginPath(); this.ctx.ellipse(x+size*0.10, y+size*0.08, size*0.26, size*0.20, 0.15, 0, Math.PI*2); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(228,182,112,0.65)';
-                this.ctx.beginPath(); this.ctx.ellipse(x-size*0.10, y-size*0.10, size*0.14, size*0.10, 0.15, 0, Math.PI*2); this.ctx.fill();
-                this.ctx.strokeStyle = 'rgba(100,65,18,0.28)'; this.ctx.lineWidth = 1;
-                this.ctx.beginPath(); this.ctx.ellipse(x, y, size*0.30, size*0.24, 0.15, 0, Math.PI*2); this.ctx.stroke();
+                // Rounded sandstone boulder — organic irregular shape
+                ctx.fillStyle = 'rgba(80,40,10,0.30)';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.28, y + size * 0.14);
+                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.14);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#c49050';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.28, y + size * 0.12);
+                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
+                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
+                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(80,40,10,0.48)';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.12, y - size * 0.24);
+                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
+                ctx.lineTo(x + size * 0.04, y + size * 0.06);
+                ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(220,178,96,0.45)';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.18, y - size * 0.22);
+                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
+                ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
+                ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
+                ctx.closePath();
+                ctx.fill();
                 break;
             }
             case 1: {
-                // Layered sandstone slab with visible strata (port of renderDesertRock1)
-                const hw = size*0.32, hh = size*0.22;
-                this.ctx.fillStyle = '#b88540';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x-hw, y+hh*0.6); this.ctx.lineTo(x-hw*0.8, y-hh*0.6);
-                this.ctx.lineTo(x+hw*0.8, y-hh*0.5); this.ctx.lineTo(x+hw, y+hh*0.6);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.strokeStyle = '#8a6020'; this.ctx.lineWidth = 1.5;
+                // Layered sandstone slab with strata
+                const hw = size * 0.34, hh = size * 0.22;
+                ctx.fillStyle = 'rgba(80,40,10,0.28)';
+                ctx.beginPath();
+                ctx.moveTo(x - hw, y + hh * 0.6);
+                ctx.lineTo(x - hw * 0.72, y - hh * 1.0);
+                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                ctx.lineTo(x + hw, y + hh * 0.4);
+                ctx.lineTo(x + hw * 0.60, y + hh * 0.7);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#b88540';
+                ctx.beginPath();
+                ctx.moveTo(x - hw, y + hh * 0.5);
+                ctx.lineTo(x - hw * 0.72, y - hh);
+                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                ctx.lineTo(x + hw, y + hh * 0.3);
+                ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#8a5e20';
+                ctx.beginPath();
+                ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
+                ctx.lineTo(x + hw, y + hh * 0.3);
+                ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
+                ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(210,168,80,0.55)';
+                ctx.beginPath();
+                ctx.moveTo(x - hw * 0.72, y - hh);
+                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
+                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
+                ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(80,45,8,0.35)';
+                ctx.lineWidth = size * 0.012;
                 for (let i = 0; i < 3; i++) {
-                    const ly = y - hh*0.35 + i * hh*0.48;
-                    this.ctx.beginPath(); this.ctx.moveTo(x-hw*0.78, ly); this.ctx.lineTo(x+hw*0.78, ly+hh*0.04); this.ctx.stroke();
+                    const ly = y - hh * 0.30 + i * hh * 0.46;
+                    ctx.beginPath();
+                    ctx.moveTo(x - hw * 0.78, ly);
+                    ctx.lineTo(x + hw * 0.60, ly + hh * 0.04);
+                    ctx.stroke();
                 }
-                this.ctx.fillStyle = 'rgba(208,162,86,0.62)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x-hw*0.8, y-hh*0.6); this.ctx.lineTo(x+hw*0.8, y-hh*0.5);
-                this.ctx.lineTo(x+hw*0.72, y-hh*0.22); this.ctx.lineTo(x-hw*0.7, y-hh*0.25);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(80,45,8,0.38)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x+hw*0.8, y-hh*0.5); this.ctx.lineTo(x+hw, y+hh*0.6);
-                this.ctx.lineTo(x+hw*0.6, y+hh*0.6); this.ctx.lineTo(x+hw*0.6, y-hh*0.32);
-                this.ctx.closePath(); this.ctx.fill();
                 break;
             }
             case 2: {
-                // Angular faceted sandstone rock (port of renderDesertRock2)
-                this.ctx.fillStyle = '#a87838';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x-size*0.22, y-size*0.14); this.ctx.lineTo(x+size*0.16, y-size*0.22);
-                this.ctx.lineTo(x+size*0.28, y+size*0.06); this.ctx.lineTo(x+size*0.12, y+size*0.26);
-                this.ctx.lineTo(x-size*0.20, y+size*0.24); this.ctx.lineTo(x-size*0.30, y+size*0.04);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(210,162,80,0.60)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x-size*0.22, y-size*0.14); this.ctx.lineTo(x+size*0.16, y-size*0.22);
-                this.ctx.lineTo(x+size*0.05, y-size*0.04); this.ctx.lineTo(x-size*0.15, y-size*0.02);
-                this.ctx.closePath(); this.ctx.fill();
-                this.ctx.fillStyle = 'rgba(70,40,8,0.42)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x+size*0.12, y+size*0.26); this.ctx.lineTo(x-size*0.20, y+size*0.24);
-                this.ctx.lineTo(x-size*0.10, y+size*0.10); this.ctx.lineTo(x+size*0.08, y+size*0.12);
-                this.ctx.closePath(); this.ctx.fill();
+                // Two overlapping sandstone boulders
+                ctx.fillStyle = 'rgba(80,40,10,0.28)';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.02, y - size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#d4a860';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.02, y - size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
+                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
+                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(80,42,10,0.42)';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.18, y - size * 0.20);
+                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
+                ctx.lineTo(x + size * 0.20, y - size * 0.06);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#c49050';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.30, y + size * 0.10);
+                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
+                ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
+                ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(80,40,10,0.42)';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.10, y - size * 0.16);
+                ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
+                ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
+                ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(220,178,96,0.40)';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.20, y - size * 0.18);
+                ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
+                ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
+                ctx.closePath();
+                ctx.fill();
                 break;
             }
             default: {
-                // Cluster of warm sandstone pebbles (port of renderDesertRock3)
-                [[-0.14,0.06,0.15,0.11,-0.2],[0.13,-0.05,0.13,0.09,0.3],[0.0,0.16,0.11,0.08,0.1]]
-                .forEach(([ox,oy,sw,sh,ang]) => {
-                    this.ctx.fillStyle = '#c49048';
-                    this.ctx.beginPath(); this.ctx.ellipse(x+ox*size, y+oy*size, sw*size, sh*size, ang, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.fillStyle = 'rgba(85,50,10,0.45)';
-                    this.ctx.beginPath(); this.ctx.ellipse(x+ox*size+sw*size*0.25, y+oy*size+sh*size*0.25, sw*size*0.68, sh*size*0.68, ang, 0, Math.PI*2); this.ctx.fill();
-                    this.ctx.fillStyle = 'rgba(212,170,92,0.58)';
-                    this.ctx.beginPath(); this.ctx.ellipse(x+ox*size-sw*size*0.20, y+oy*size-sh*size*0.22, sw*size*0.38, sh*size*0.32, ang, 0, Math.PI*2); this.ctx.fill();
-                });
+                // Cluster of small sandstone pebbles
+                ctx.fillStyle = '#c49050';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.26, y + size * 0.14);
+                ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
+                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
+                ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(80,40,10,0.38)';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.04, y - size * 0.04);
+                ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
+                ctx.lineTo(x - size * 0.02, y + size * 0.04);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#b88040';
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.06, y + size * 0.08);
+                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
+                ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
+                ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#d4aa62';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.04, y + size * 0.18);
+                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
+                ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
+                ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#c0924a';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.08, y - size * 0.10);
+                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
+                ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
+                ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(220,178,96,0.42)';
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.20, y - size * 0.02);
+                ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.10, x + size * 0.02, y - size * 0.06);
+                ctx.quadraticCurveTo(x, y + size * 0.02, x - size * 0.12, y + size * 0.02);
+                ctx.quadraticCurveTo(x - size * 0.22, y + size * 0.02, x - size * 0.20, y - size * 0.02);
+                ctx.closePath();
+                ctx.fill();
                 break;
             }
         }
@@ -4188,430 +4316,272 @@ export class LevelDesigner {
     }
 
     drawDesertVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(x * 0.5 + y * 0.7) % 6;
+        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
         switch(seed) {
             case 0: this.drawDesertCactusSaguaro(x, y, size); break;
             case 1: this.drawDesertCactusBarrel(x, y, size); break;
             case 2: this.drawDesertCactusPricklyPear(x, y, size); break;
-            case 3: this.drawDesertCactusColumnar(x, y, size); break;
-            case 4: this.drawDesertCactusCholla(x, y, size); break;
             default: this.drawDesertBush(x, y, size);
         }
     }
 
+    drawCactusBaseBushes(x, y, size) {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath(); ctx.arc(x - size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#a88a6a';
+        ctx.beginPath(); ctx.arc(x - size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath(); ctx.arc(x + size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#a88a6a';
+        ctx.beginPath(); ctx.arc(x + size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#8a7654';
+        ctx.beginPath(); ctx.arc(x - size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2); ctx.fill();
+    }
+
     drawDesertCactusSaguaro(x, y, size) {
-        // Desert saguaro — muted sage-green with natural desert coloring
+        const ctx = this.ctx;
         const mainHeight = size * 0.58;
         const mainWidth = size * 0.22;
 
-        // Ground shadow
-        this.ctx.fillStyle = 'rgba(60,30,10,0.28)';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + 1, y + 2, mainWidth * 0.9, size * 0.10, 0, 0, Math.PI * 2);
-        this.ctx.fill();
+        ctx.fillStyle = 'rgba(60,30,10,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + 2, mainWidth * 0.9, size * 0.10, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Main trunk — muted sage-green
-        this.ctx.fillStyle = '#5a8440';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - mainWidth * 0.26, y);
-        this.ctx.lineTo(x - mainWidth * 0.22, y - mainHeight * 0.72);
-        this.ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.22, y - mainHeight * 0.72);
-        this.ctx.lineTo(x + mainWidth * 0.26, y);
-        this.ctx.closePath();
-        this.ctx.fill();
+        ctx.fillStyle = '#5a8440';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.26, y);
+        ctx.lineTo(x - mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.lineTo(x + mainWidth * 0.26, y);
+        ctx.closePath();
+        ctx.fill();
 
-        // Trunk shadow side
-        this.ctx.fillStyle = '#3d6030';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + mainWidth * 0.04, y);
-        this.ctx.lineTo(x + mainWidth * 0.06, y - mainHeight * 0.65);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.18, y - mainHeight * 0.82, x + mainWidth * 0.22, y - mainHeight * 0.72);
-        this.ctx.lineTo(x + mainWidth * 0.26, y);
-        this.ctx.closePath();
-        this.ctx.fill();
+        ctx.fillStyle = '#3d6030';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.04, y);
+        ctx.lineTo(x + mainWidth * 0.06, y - mainHeight * 0.65);
+        ctx.quadraticCurveTo(x + mainWidth * 0.18, y - mainHeight * 0.82, x + mainWidth * 0.22, y - mainHeight * 0.72);
+        ctx.lineTo(x + mainWidth * 0.26, y);
+        ctx.closePath();
+        ctx.fill();
 
-        // Left arm — curves upward naturally
-        this.ctx.fillStyle = '#5a8440';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.70, y - mainHeight * 0.44, x - mainWidth * 0.74, y - mainHeight * 0.62);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.68, y - mainHeight * 0.80, x - mainWidth * 0.48, y - mainHeight * 0.80);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.32, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.fillStyle = '#3d6030';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.56, y - mainHeight * 0.40, x - mainWidth * 0.60, y - mainHeight * 0.50);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.54, y - mainHeight * 0.68, x - mainWidth * 0.48, y - mainHeight * 0.80);
-        this.ctx.quadraticCurveTo(x - mainWidth * 0.38, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
-        this.ctx.closePath();
-        this.ctx.fill();
+        ctx.fillStyle = '#5a8440';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
+        ctx.quadraticCurveTo(x - mainWidth * 0.70, y - mainHeight * 0.44, x - mainWidth * 0.74, y - mainHeight * 0.62);
+        ctx.quadraticCurveTo(x - mainWidth * 0.68, y - mainHeight * 0.80, x - mainWidth * 0.48, y - mainHeight * 0.80);
+        ctx.quadraticCurveTo(x - mainWidth * 0.32, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#3d6030';
+        ctx.beginPath();
+        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
+        ctx.quadraticCurveTo(x - mainWidth * 0.56, y - mainHeight * 0.40, x - mainWidth * 0.60, y - mainHeight * 0.50);
+        ctx.quadraticCurveTo(x - mainWidth * 0.54, y - mainHeight * 0.68, x - mainWidth * 0.48, y - mainHeight * 0.80);
+        ctx.quadraticCurveTo(x - mainWidth * 0.38, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
+        ctx.closePath();
+        ctx.fill();
 
-        // Right arm — curves upward naturally
-        this.ctx.fillStyle = '#5a8440';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.68, y - mainHeight * 0.36, x + mainWidth * 0.72, y - mainHeight * 0.55);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.66, y - mainHeight * 0.74, x + mainWidth * 0.46, y - mainHeight * 0.74);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.30, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.fillStyle = '#3d6030';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.52, y - mainHeight * 0.33, x + mainWidth * 0.56, y - mainHeight * 0.44);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.50, y - mainHeight * 0.64, x + mainWidth * 0.46, y - mainHeight * 0.74);
-        this.ctx.quadraticCurveTo(x + mainWidth * 0.32, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
-        this.ctx.closePath();
-        this.ctx.fill();
+        ctx.fillStyle = '#5a8440';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
+        ctx.quadraticCurveTo(x + mainWidth * 0.68, y - mainHeight * 0.36, x + mainWidth * 0.72, y - mainHeight * 0.55);
+        ctx.quadraticCurveTo(x + mainWidth * 0.66, y - mainHeight * 0.74, x + mainWidth * 0.46, y - mainHeight * 0.74);
+        ctx.quadraticCurveTo(x + mainWidth * 0.30, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#3d6030';
+        ctx.beginPath();
+        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
+        ctx.quadraticCurveTo(x + mainWidth * 0.52, y - mainHeight * 0.33, x + mainWidth * 0.56, y - mainHeight * 0.44);
+        ctx.quadraticCurveTo(x + mainWidth * 0.50, y - mainHeight * 0.64, x + mainWidth * 0.46, y - mainHeight * 0.74);
+        ctx.quadraticCurveTo(x + mainWidth * 0.32, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
+        ctx.closePath();
+        ctx.fill();
 
-        // Spine dots — scattered naturally along trunk edges
-        this.ctx.fillStyle = '#c8b870';
-        for (let i = 0; i < 10; i++) {
-            const sy = y - mainHeight * (0.08 + 0.075 * i);
-            const side = (i % 2 === 0) ? 1 : -1;
-            const xOff = mainWidth * (0.22 + (i % 3) * 0.04) * side;
-            this.ctx.beginPath(); this.ctx.arc(x + xOff, sy, 1.1, 0, Math.PI * 2); this.ctx.fill();
-            if (i % 3 !== 1) {
-                this.ctx.beginPath(); this.ctx.arc(x - xOff * 0.7, sy - mainHeight * 0.025, 0.9, 0, Math.PI * 2); this.ctx.fill();
-            }
-        }
+        // Spine dots — static positions, no loop
+        ctx.fillStyle = '#c8b870';
+        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.16, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.16, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.38, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.38, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.60, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.60, 1.2, 0, Math.PI * 2); ctx.fill();
+
+        this.drawCactusBaseBushes(x, y, size * 0.65);
     }
 
     drawDesertCactusBarrel(x, y, size) {
-        // Dry desert shrub — rounded crown of upward-spreading branches
         const ctx = this.ctx;
-        const baseR = size * 0.13;
+        // True barrel cactus — squat round ribbed body
+        const bw = size * 0.24;
+        const bh = size * 0.40;
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(60,30,10,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + 2, bw * 0.95, size * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Barrel body — rounded squat shape
+        ctx.fillStyle = '#5a7a3a';
+        ctx.beginPath();
+        ctx.moveTo(x - bw * 0.44, y - bh * 0.10);
+        ctx.quadraticCurveTo(x - bw * 0.56, y - bh * 0.50, x - bw * 0.42, y - bh * 0.90);
+        ctx.quadraticCurveTo(x - bw * 0.20, y - bh, x, y - bh);
+        ctx.quadraticCurveTo(x + bw * 0.20, y - bh, x + bw * 0.42, y - bh * 0.90);
+        ctx.quadraticCurveTo(x + bw * 0.56, y - bh * 0.50, x + bw * 0.44, y - bh * 0.10);
+        ctx.closePath();
+        ctx.fill();
+
+        // Right-side shadow panel
+        ctx.fillStyle = '#3d5a28';
+        ctx.beginPath();
+        ctx.moveTo(x + bw * 0.14, y - bh * 0.08);
+        ctx.quadraticCurveTo(x + bw * 0.52, y - bh * 0.50, x + bw * 0.42, y - bh * 0.90);
+        ctx.quadraticCurveTo(x + bw * 0.20, y - bh, x + bw * 0.10, y - bh * 0.92);
+        ctx.quadraticCurveTo(x + bw * 0.34, y - bh * 0.50, x + bw * 0.14, y - bh * 0.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Rib lines — curved to follow barrel shape (static, no loop)
+        ctx.strokeStyle = 'rgba(30,55,15,0.55)';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath(); ctx.moveTo(x - bw * 0.32, y - bh * 0.08); ctx.quadraticCurveTo(x - bw * 0.40, y - bh * 0.50, x - bw * 0.28, y - bh * 0.92); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - bw * 0.12, y - bh * 0.06); ctx.quadraticCurveTo(x - bw * 0.14, y - bh * 0.50, x - bw * 0.10, y - bh * 0.96); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + bw * 0.12, y - bh * 0.06); ctx.quadraticCurveTo(x + bw * 0.14, y - bh * 0.50, x + bw * 0.10, y - bh * 0.96); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + bw * 0.32, y - bh * 0.08); ctx.quadraticCurveTo(x + bw * 0.40, y - bh * 0.50, x + bw * 0.28, y - bh * 0.92); ctx.stroke();
+
+        // Spine dots at rib tops and midsection (static, no loop)
+        ctx.fillStyle = '#c8b870';
+        ctx.beginPath(); ctx.arc(x - bw * 0.46, y - bh * 0.26, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - bw * 0.32, y - bh * 0.18, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - bw * 0.12, y - bh * 0.16, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + bw * 0.12, y - bh * 0.16, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - bw * 0.46, y - bh * 0.56, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - bw * 0.32, y - bh * 0.50, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - bw * 0.12, y - bh * 0.48, 1.1, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + bw * 0.12, y - bh * 0.48, 1.1, 0, Math.PI * 2); ctx.fill();
+
+        this.drawCactusBaseBushes(x, y, size * 0.60);
+    }
+
+    drawDesertCactusPricklyPear(x, y, size) {
+        const ctx = this.ctx;
+        // Prickly pear — 4 static ellipse pads, no save/restore, no loops
+        const pw = size * 0.22;
+        const ph = size * 0.35;
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(30,60,15,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(x + 1, y + ph * 0.40, pw * 0.80, ph * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bottom pad — dark side
+        ctx.fillStyle = '#2d5a28';
+        ctx.beginPath();
+        ctx.ellipse(x, y + ph * 0.12, pw * 0.42, ph * 0.44, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Bottom pad — light side
+        ctx.fillStyle = '#4a8040';
+        ctx.beginPath();
+        ctx.ellipse(x - pw * 0.06, y + ph * 0.06, pw * 0.34, ph * 0.38, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left pad — dark side
+        ctx.fillStyle = '#2d5a28';
+        ctx.beginPath();
+        ctx.ellipse(x - pw * 0.44, y - ph * 0.06, pw * 0.38, ph * 0.46, -0.7, 0, Math.PI * 2);
+        ctx.fill();
+        // Left pad — light side
+        ctx.fillStyle = '#4a8040';
+        ctx.beginPath();
+        ctx.ellipse(x - pw * 0.40, y - ph * 0.10, pw * 0.30, ph * 0.38, -0.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right pad — dark side
+        ctx.fillStyle = '#2d5a28';
+        ctx.beginPath();
+        ctx.ellipse(x + pw * 0.44, y - ph * 0.08, pw * 0.38, ph * 0.44, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        // Right pad — light side
+        ctx.fillStyle = '#4a8040';
+        ctx.beginPath();
+        ctx.ellipse(x + pw * 0.40, y - ph * 0.12, pw * 0.30, ph * 0.36, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Top central pad — dark side
+        ctx.fillStyle = '#2d5a28';
+        ctx.beginPath();
+        ctx.ellipse(x, y - ph * 0.28, pw * 0.36, ph * 0.42, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+        // Top central pad — light side
+        ctx.fillStyle = '#4a8040';
+        ctx.beginPath();
+        ctx.ellipse(x - pw * 0.06, y - ph * 0.32, pw * 0.28, ph * 0.34, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highlight on top pad
+        ctx.fillStyle = 'rgba(120,180,80,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x - pw * 0.08, y - ph * 0.42, pw * 0.12, ph * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4 static spine dots (no loop)
+        ctx.fillStyle = '#3a6830';
+        ctx.beginPath(); ctx.arc(x, y + ph * 0.02, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - pw * 0.38, y - ph * 0.10, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + pw * 0.36, y - ph * 0.12, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y - ph * 0.32, 1.0, 0, Math.PI * 2); ctx.fill();
+
+        this.drawCactusBaseBushes(x, y, size * 0.5);
+    }
+
+    drawDesertBush(x, y, size) {
+        const ctx = this.ctx;
+        // Dry desert bush — overlapping arc clusters, no loops
+        const r = size * 0.28;
 
         // Ground shadow
         ctx.fillStyle = 'rgba(60,30,10,0.22)';
         ctx.beginPath();
-        ctx.ellipse(x, y + baseR * 0.3, baseR * 1.6, baseR * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 1, y + 2, r * 1.1, r * 0.30, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Woody base
-        ctx.fillStyle = '#5a3a14';
+        // Dark woody base
+        ctx.fillStyle = '#3c2410';
         ctx.beginPath();
-        ctx.ellipse(x, y, baseR * 0.7, baseR * 0.42, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#7a5020';
-        ctx.beginPath();
-        ctx.ellipse(x - baseR * 0.12, y - baseR * 0.06, baseR * 0.48, baseR * 0.24, -0.15, 0, Math.PI * 2);
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
 
-        // Main spreading branches — upward arc, varied angles
-        const branches = [
-            { ang: -1.96, len: size * 0.44, lw: 2.6 },
-            { ang: -1.57, len: size * 0.50, lw: 2.8 },
-            { ang: -1.18, len: size * 0.47, lw: 2.6 },
-            { ang: -0.78, len: size * 0.38, lw: 2.2 },
-            { ang: -2.36, len: size * 0.38, lw: 2.2 },
-            { ang: -2.75, len: size * 0.30, lw: 1.8 },
-            { ang: -0.40, len: size * 0.30, lw: 1.8 }
-        ];
+        // Main body — left cluster
+        ctx.fillStyle = '#9d7c54';
+        ctx.beginPath();
+        ctx.arc(x - r * 0.22, y - r * 0.20, r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main body — right cluster
+        ctx.beginPath();
+        ctx.arc(x + r * 0.18, y - r * 0.16, r * 0.68, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Upper lighter cluster
+        ctx.fillStyle = '#bfa878';
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.35, r * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3 static branch strokes (no loop)
+        ctx.strokeStyle = '#5c3b18';
+        ctx.lineWidth = 1.4;
         ctx.lineCap = 'round';
-        // Draw branches darkest first (back layer)
-        branches.forEach(b => {
-            const bx = x + Math.sin(b.ang - Math.PI/2 + 0.3) * b.len * 0.44;
-            const by = y + Math.cos(b.ang - Math.PI/2 + 0.3) * b.len * 0.44;
-            const ex = x + Math.cos(b.ang) * b.len;
-            const ey = y + Math.sin(b.ang) * b.len;
-            ctx.strokeStyle = '#6a4818';
-            ctx.lineWidth = b.lw + 0.8;
-            ctx.beginPath();
-            ctx.moveTo(x, y - baseR * 0.2);
-            ctx.quadraticCurveTo(bx, by, ex, ey);
-            ctx.stroke();
-        });
-        branches.forEach(b => {
-            const bx = x + Math.sin(b.ang - Math.PI/2 + 0.3) * b.len * 0.44;
-            const by = y + Math.cos(b.ang - Math.PI/2 + 0.3) * b.len * 0.44;
-            const ex = x + Math.cos(b.ang) * b.len;
-            const ey = y + Math.sin(b.ang) * b.len;
-            ctx.strokeStyle = '#8a601e';
-            ctx.lineWidth = b.lw;
-            ctx.beginPath();
-            ctx.moveTo(x, y - baseR * 0.2);
-            ctx.quadraticCurveTo(bx, by, ex, ey);
-            ctx.stroke();
-            // Pointed leaf shapes at branch tip — 3 leaves radiating from tip
-            const lr = b.lw * 1.6;
-            for (let li = 0; li < 3; li++) {
-                const la = b.ang + (li - 1) * 0.55;
-                const ltx = ex + Math.cos(la) * lr * 2.2;
-                const lty = ey + Math.sin(la) * lr * 2.2;
-                const lpx = ex + Math.cos(la + Math.PI / 2) * lr * 0.6;
-                const lpy = ey + Math.sin(la + Math.PI / 2) * lr * 0.6;
-                const lnx = ex + Math.cos(la - Math.PI / 2) * lr * 0.6;
-                const lny = ey + Math.sin(la - Math.PI / 2) * lr * 0.6;
-                ctx.fillStyle = li === 1 ? '#c49030' : '#a87828';
-                ctx.beginPath();
-                ctx.moveTo(ex, ey);
-                ctx.quadraticCurveTo(lpx, lpy, ltx, lty);
-                ctx.quadraticCurveTo(lnx, lny, ex, ey);
-                ctx.closePath();
-                ctx.fill();
-            }
-        });
-
-        // Short inner twigs for density
-        const twigs = [
-            { ang: -1.78, len: size * 0.26, lw: 1.4 },
-            { ang: -1.35, len: size * 0.24, lw: 1.4 },
-            { ang: -2.15, len: size * 0.22, lw: 1.2 }
-        ];
-        twigs.forEach(b => {
-            const bx = x + Math.sin(b.ang - Math.PI/2 + 0.2) * b.len * 0.4;
-            const by = y + Math.cos(b.ang - Math.PI/2 + 0.2) * b.len * 0.4;
-            const ex = x + Math.cos(b.ang) * b.len;
-            const ey = y + Math.sin(b.ang) * b.len;
-            ctx.strokeStyle = '#7a5218';
-            ctx.lineWidth = b.lw;
-            ctx.beginPath();
-            ctx.moveTo(x, y - baseR * 0.1);
-            ctx.quadraticCurveTo(bx, by, ex, ey);
-            ctx.stroke();
-            ctx.fillStyle = '#b07820';
-            ctx.beginPath(); ctx.arc(ex, ey, b.lw * 1.1, 0, Math.PI * 2); ctx.fill();
-        });
-    }
-
-    drawDesertCactusPricklyPear(x, y, size) {
-        // Helper function to draw organic leaf pad
-        const drawLeafPad = (x, y, width, height, rotation, color1, color2) => {
-            this.ctx.save();
-            this.ctx.translate(x, y);
-            this.ctx.rotate(rotation);
-
-            // Main organic leaf pad using bezier curves
-            this.ctx.fillStyle = color1;
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, -height * 0.5);
-            this.ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
-            this.ctx.quadraticCurveTo(width * 0.3, height * 0.4, 0, height * 0.5);
-            this.ctx.quadraticCurveTo(-width * 0.3, height * 0.4, -width * 0.4, 0);
-            this.ctx.quadraticCurveTo(-width * 0.35, -height * 0.35, 0, -height * 0.5);
-            this.ctx.closePath();
-            this.ctx.fill();
-
-            // Dark side shading
-            this.ctx.fillStyle = color2;
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, -height * 0.5);
-            this.ctx.quadraticCurveTo(width * 0.35, -height * 0.35, width * 0.4, 0);
-            this.ctx.quadraticCurveTo(width * 0.3, height * 0.4, width * 0.1, height * 0.5);
-            this.ctx.quadraticCurveTo(width * 0.05, height * 0.2, 0, -height * 0.5);
-            this.ctx.closePath();
-            this.ctx.fill();
-
-            // Spine clusters on pad
-            this.ctx.fillStyle = '#1e8449';
-            const spines = [
-                {x: 0, y: -height * 0.35},
-                {x: width * 0.15, y: -height * 0.15},
-                {x: -width * 0.15, y: -height * 0.15},
-                {x: width * 0.25, y: height * 0.15},
-                {x: -width * 0.25, y: height * 0.15},
-                {x: 0, y: height * 0.35}
-            ];
-            spines.forEach(spine => {
-                this.ctx.beginPath();
-                this.ctx.arc(spine.x, spine.y, 1.2, 0, Math.PI * 2);
-                this.ctx.fill();
-            });
-
-            this.ctx.restore();
-        };
-
-        const padWidth = size * 0.22;
-        const padHeight = size * 0.35;
-
-        // Main central pad
-        drawLeafPad(x, y - padHeight * 0.2, padWidth * 0.5, padHeight * 0.6, 0, '#3a8659', '#2d6b4f');
-
-        // Right side pad
-        drawLeafPad(x + padWidth * 0.42, y - padHeight * 0.1, padWidth * 0.45, padHeight * 0.5, Math.PI / 4.5, '#3a8659', '#2d6b4f');
-
-        // Left side pad
-        drawLeafPad(x - padWidth * 0.42, y + padHeight * 0.05, padWidth * 0.45, padHeight * 0.5, -Math.PI / 4.5, '#3a8659', '#2d6b4f');
-
-        // Lower pad (base)
-        drawLeafPad(x, y + padHeight * 0.3, padWidth * 0.48, padHeight * 0.5, Math.PI / 8, '#2d6b4f', '#1e4d35');
-
-        // Highlight on main pad
-        this.ctx.fillStyle = '#58d68d';
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.beginPath();
-        this.ctx.arc(x - padWidth * 0.15, y - padHeight * 0.35, padWidth * 0.12, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-    }
-
-    drawDesertCactusColumnar(x, y, size) {
-        // Tall columnar organ pipe cactus - increased scale
-        const height = size * 0.75;
-        const width = size * 0.28;
-
-        // Shadow
-        this.ctx.fillStyle = 'rgba(20, 80, 20, 0.3)';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + 1, y + 1, width * 0.4, size * 0.15, 0, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Main body
-        this.ctx.fillStyle = '#2ecc71';
-        this.ctx.fillRect(x - width * 0.3, y - height * 0.5, width * 0.6, height);
-
-        // Dark side
-        this.ctx.fillStyle = '#27ae60';
-        this.ctx.fillRect(x + width * 0.05, y - height * 0.5, width * 0.25, height);
-
-        // Vertical ridges
-        this.ctx.strokeStyle = '#1e8449';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 4; i++) {
-            const px = x - width * 0.2 + (i * width * 0.15);
-            this.ctx.beginPath();
-            this.ctx.moveTo(px, y - height * 0.5);
-            this.ctx.lineTo(px, y + height * 0.5);
-            this.ctx.stroke();
-        }
-
-        // Spine clusters
-        this.ctx.fillStyle = '#1e8449';
-        for (let row = 0; row < 5; row++) {
-            for (let col = 0; col < 2; col++) {
-                const px = x - width * 0.2 + (col * width * 0.4);
-                const py = y - height * 0.4 + (row * height * 0.2);
-                this.ctx.beginPath();
-                this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-        }
-
-        // Highlight stripe
-        this.ctx.fillStyle = '#58d68d';
-        this.ctx.fillRect(x - width * 0.15, y - height * 0.4, width * 0.1, height * 0.8);
-    }
-
-    drawDesertCactusCholla(x, y, size) {
-        // Cholla - spiky branching cactus - increased scale
-        const height = size * 0.65;
-        const width = size * 0.23;
-
-        // Main trunk
-        this.ctx.fillStyle = '#2ecc71';
-        this.ctx.fillRect(x - width * 0.25, y - height * 0.4, width * 0.5, height * 0.8);
-
-        // Dark side
-        this.ctx.fillStyle = '#27ae60';
-        this.ctx.fillRect(x + width * 0.05, y - height * 0.4, width * 0.2, height * 0.8);
-
-        // Upper left branch
-        this.ctx.fillStyle = '#2ecc71';
-        this.ctx.save();
-        this.ctx.translate(x - width * 0.4, y - height * 0.2);
-        this.ctx.rotate(-Math.PI / 3);
-        this.ctx.fillRect(-width * 0.2, -width * 0.15, width * 0.4, width * 0.3);
-        this.ctx.restore();
-
-        // Upper right branch
-        this.ctx.save();
-        this.ctx.translate(x + width * 0.4, y - height * 0.15);
-        this.ctx.rotate(Math.PI / 3);
-        this.ctx.fillRect(-width * 0.2, -width * 0.15, width * 0.4, width * 0.3);
-        this.ctx.restore();
-
-        // Lower branches
-        this.ctx.save();
-        this.ctx.translate(x - width * 0.35, y + height * 0.1);
-        this.ctx.rotate(-Math.PI / 4);
-        this.ctx.fillRect(-width * 0.15, -width * 0.12, width * 0.3, width * 0.24);
-        this.ctx.restore();
-
-        this.ctx.save();
-        this.ctx.translate(x + width * 0.35, y + height * 0.1);
-        this.ctx.rotate(Math.PI / 4);
-        this.ctx.fillRect(-width * 0.15, -width * 0.12, width * 0.3, width * 0.24);
-        this.ctx.restore();
-
-        // Dense spines
-        this.ctx.fillStyle = '#1e8449';
-        for (let i = 0; i < 15; i++) {
-            const angle = (i / 15) * Math.PI * 2;
-            const radius = size * 0.15;
-            const px = x + Math.cos(angle) * radius;
-            const py = y + Math.sin(angle) * radius;
-            this.ctx.beginPath();
-            this.ctx.arc(px, py, 1.5, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
-
-        // Highlight
-        this.ctx.fillStyle = '#58d68d';
-        this.ctx.beginPath();
-        this.ctx.arc(x - width * 0.12, y - height * 0.25, width * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawDesertBush(x, y, size) {
-        // Dry bush vegetation - irregular organic shape
-        const radius = size * 0.28;
-
-        // Main body with irregular outline
-        this.ctx.fillStyle = '#9d7c54';
-        this.ctx.beginPath();
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const variation = Math.sin(angle * 3) * 0.15 + Math.cos(angle * 5) * 0.1;
-            const r = radius * (0.85 + variation);
-            const px = x + Math.cos(angle) * r;
-            const py = y + Math.sin(angle) * r * 0.8;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Darker inner layer for depth
-        this.ctx.fillStyle = '#7a5c3f';
-        this.ctx.beginPath();
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const variation = Math.sin(angle * 3) * 0.08;
-            const r = radius * (0.5 + variation);
-            const px = x + Math.cos(angle) * r;
-            const py = y + Math.sin(angle) * r * 0.8;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Highlight on top
-        this.ctx.fillStyle = '#bfa878';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - radius * 0.2, y - radius * 0.3);
-        this.ctx.quadraticCurveTo(x, y - radius * 0.35, x + radius * 0.15, y - radius * 0.25);
-        this.ctx.quadraticCurveTo(x + radius * 0.1, y - radius * 0.15, x - radius * 0.1, y - radius * 0.2);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Branch structure - more realistic twigs
-        this.ctx.strokeStyle = '#5c4630';
-        this.ctx.lineWidth = 1.5;
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const startX = x + Math.cos(angle) * radius * 0.2;
-            const startY = y + Math.sin(angle) * radius * 0.15;
-            const midX = x + Math.cos(angle) * radius * 0.65;
-            const midY = y + Math.sin(angle) * radius * 0.6;
-            this.ctx.beginPath();
-            this.ctx.moveTo(startX, startY);
-            this.ctx.quadraticCurveTo(midX, midY - size * 0.05, midX + Math.cos(angle + 0.3) * size * 0.08, midY + Math.sin(angle + 0.3) * size * 0.08);
-            this.ctx.stroke();
-        }
+        ctx.beginPath(); ctx.moveTo(x - r * 0.10, y - r * 0.08); ctx.quadraticCurveTo(x - r * 0.36, y - r * 0.48, x - r * 0.56, y - r * 0.74); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + r * 0.08, y - r * 0.08); ctx.quadraticCurveTo(x + r * 0.34, y - r * 0.44, x + r * 0.52, y - r * 0.68); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y - r * 0.08); ctx.quadraticCurveTo(x - r * 0.12, y - r * 0.58, x - r * 0.14, y - r * 0.88); ctx.stroke();
     }
 
     drawSpaceVegetation(x, y, size, variant) {
@@ -4871,7 +4841,7 @@ export class LevelDesigner {
 
     generateLevelCode() {
         const levelName = document.getElementById('levelName').value;
-        const levelNumber = document.getElementById('levelNumber').value;
+        const levelNumber = document.getElementById('levelNumber')?.value || '1';
         const difficulty = document.getElementById('difficulty').value;
         const maxWaves = document.getElementById('maxWaves').value;
         const campaignTheme = document.getElementById('campaignTheme').value;
@@ -5018,7 +4988,7 @@ ${pathCode}
         }
 
         const code = this.generateLevelCode();
-        const levelNumber = document.getElementById('levelNumber').value;
+        const levelNumber = document.getElementById('levelNumber')?.value || '1';
         const levelName = document.getElementById('levelName').value;
 
         // Create download
@@ -5183,7 +5153,7 @@ ${pathCode}
             
             // Load level metadata
             if (level.levelName) document.getElementById('levelName').value = level.levelName;
-            if (level.levelNumber) document.getElementById('levelNumber').value = level.levelNumber;
+            const levelNumEl = document.getElementById('levelNumber'); if (level.levelNumber && levelNumEl) levelNumEl.value = level.levelNumber;
             if (level.difficulty) document.getElementById('difficulty').value = level.difficulty;
             if (level.maxWaves) document.getElementById('maxWaves').value = level.maxWaves;
             

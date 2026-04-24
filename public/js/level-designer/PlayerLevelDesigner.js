@@ -24,6 +24,31 @@ export class PlayerLevelDesigner extends LevelDesigner {
     // No-op: player designer has no code output panel
     updateGeneratedCode() {}
 
+    setupCanvas() {
+        const wrapper = this.canvas.parentElement;
+        const maxW = wrapper ? wrapper.clientWidth : this.canvas.offsetWidth;
+        const maxH = wrapper ? wrapper.clientHeight : this.canvas.offsetHeight;
+        const ratio = this.gridWidth / this.gridHeight; // 60 / 33.75 = 16:9
+        let w, h;
+        if (maxW / maxH > ratio) {
+            h = maxH;
+            w = Math.round(h * ratio);
+        } else {
+            w = maxW;
+            h = Math.round(w / ratio);
+        }
+        this.canvas.width = w;
+        this.canvas.height = h;
+        this.canvas.style.width = w + 'px';
+        this.canvas.style.height = h + 'px';
+        if (!this.castlePosition) {
+            this.castlePosition = {
+                gridX: this.gridWidth - 2,
+                gridY: this.gridHeight / 2
+            };
+        }
+    }
+
     setupEventListeners() {
         super.setupEventListeners();
 

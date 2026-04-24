@@ -469,6 +469,9 @@
             #designer-overlay .dov-modal-footer { display:flex; gap:7px; justify-content:flex-end; margin-top:14px; padding-top:14px; border-top:1px solid var(--dov-border); }
             #designer-overlay .save-slot-btn { display:block; width:100%; text-align:left; padding:10px 14px; margin-bottom:6px; background:var(--dov-bg-input); border:1px solid var(--dov-border); border-radius:3px; color:var(--dov-text); font-size:13px; cursor:pointer; transition:background 0.15s, border-color 0.15s; font-family:inherit; }
             #designer-overlay .save-slot-btn:hover { background:#404040; border-color:var(--dov-accent); color:#fff; }
+            #designer-overlay input[type=number]::-webkit-inner-spin-button,
+            #designer-overlay input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+            #designer-overlay input[type=number] { -moz-appearance:textfield; appearance:textfield; }
         </style>
 
         <!-- LEFT: Canvas section -->
@@ -577,15 +580,9 @@
                     </select>
                 </div>
 
-                <div class="dov-form-row">
-                    <div class="dov-form-field">
-                        <label>Level Name</label>
-                        <input type="text" id="levelName" value="My Level" placeholder="The Dark Forest">
-                    </div>
-                    <div class="dov-form-field">
-                        <label>Level Number</label>
-                        <input type="number" id="levelNumber" value="1" min="1" max="99">
-                    </div>
+                <div class="dov-form-field">
+                    <label>Level Name</label>
+                    <input type="text" id="levelName" value="My Level" placeholder="The Dark Forest">
                 </div>
 
                 <div class="dov-form-row">

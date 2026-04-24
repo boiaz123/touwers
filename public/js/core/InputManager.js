@@ -343,6 +343,12 @@ export class InputManager {
     }
 
     _handleKeydown(e) {
+        // Don't intercept keys when the user is typing in an input, textarea, or contenteditable
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+
         // Rebind mode: capture the next key press
         if (this.isListeningForRebind) {
             e.preventDefault();

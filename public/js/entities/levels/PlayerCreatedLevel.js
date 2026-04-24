@@ -12,6 +12,7 @@ export class PlayerCreatedLevel extends LevelBase {
         super(null);
         this._levelData = levelData || {};
         this.campaign = levelData.campaign || 'forest';
+        this.levelName = levelData.name || 'Custom Level';
         this.waves = [];
     }
 

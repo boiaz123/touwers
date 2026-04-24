@@ -8,7 +8,8 @@
  *   campaign-1 (Verdant Woodlands)  → campaign-2 (Ironstone Mountains)
  *   campaign-2                      → campaign-3 (Scorching Sands)
  *   campaign-3                      → campaign-4 (Frog King's Domain)
- *   campaign-5 (Testing)            — always unlocked
+ *   campaign-4 (Frog King's Domain)   → campaign-5 (Commander's Workshop)
+ *   campaign-5                         — unlocked by completing campaign-4
  */
 export class CampaignRegistry {
     static campaigns = {};
