@@ -2,6 +2,7 @@ import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { SandboxLevel } from '../levels/Campaign5/SandboxLevel.js';
 import { PlayerCreatedLevel } from '../levels/PlayerCreatedLevel.js';
+import { FrogKingsRealmLevel } from '../levels/FrogKingsRealm/FrogKingsRealmLevel.js';
 
 const LEGACY_STORAGE_KEY = 'touwers_player_levels';
 const SLOT_COUNT = 6;
@@ -33,6 +34,10 @@ export class PlayerWorkshop extends CampaignBase {
         const existing = LevelRegistry.getLevelsByCampaign('campaign-5');
         if (!existing.find(l => l.id === 'sandbox-workshop')) {
             LevelRegistry.registerLevel('campaign-5', 'sandbox-workshop', SandboxLevel, SandboxLevel.levelMetadata);
+        }
+        // Register frog-kings-realm so the portal shard can launch it via campaign-5
+        if (!existing.find(l => l.id === 'frog-kings-realm')) {
+            LevelRegistry.registerLevel('campaign-5', 'frog-kings-realm', FrogKingsRealmLevel, FrogKingsRealmLevel.levelMetadata);
         }
     }
 
