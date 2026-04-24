@@ -343,7 +343,7 @@ export class Campaign3 extends CampaignBase {
     
     renderCactusOnMap(ctx, cactus) {
         // Use LevelBase cactus rendering for consistency
-        const types = ['renderCactusSaguaro', 'renderCactusBarrel', 'renderCactusPricklyPear', 'renderCactusColumnar'];
+        const types = ['renderDesertSaguaro', 'renderDesertBarrel', 'renderDesertDryBush', 'renderDesertDeadTree'];
         const method = types[cactus.type % types.length];
         
         if (this.levelBase && typeof this.levelBase[method] === 'function') {

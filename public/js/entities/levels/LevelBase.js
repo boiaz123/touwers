@@ -1873,7 +1873,7 @@ export class LevelBase {
 
             const screenX = element.gridX * this.cellSize;
             const baseSize = element.size * this.cellSize;
-            const sizeScale = (element.type !== 'water' && campaign !== 'forest') ? 1.5 : 0.75;
+            const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
             const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
             switch (element.type) {
@@ -1923,299 +1923,142 @@ export class LevelBase {
     }
 
     renderDesertVegetation(ctx, x, y, size, gridX, gridY, variant) {
-        const scaledSize = size;
         const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         switch(seed) {
-            case 0:
-                this.renderCactusSaguaro(ctx, x, y, scaledSize);
-                break;
-            case 1:
-                this.renderCactusBarrel(ctx, x, y, scaledSize);
-                break;
-            case 2:
-                this.renderCactusPricklyPear(ctx, x, y, scaledSize);
-                break;
-            default:
-                this.renderDesertBush(ctx, x, y, scaledSize);
+            case 0: this.renderDesertSaguaro(ctx, x, y, size); break;
+            case 1: this.renderDesertBarrel(ctx, x, y, size); break;
+            case 2: this.renderDesertDryBush(ctx, x, y, size); break;
+            default: this.renderDesertDeadTree(ctx, x, y, size); break;
         }
     }
 
-    renderCactusBaseBushes(ctx, x, y, size) {
-        // Add bushes around the base of cacti for a more natural look
-        // Small bush cluster on left
-        ctx.fillStyle = '#9d7c54';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#a88a6a';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Small bush cluster on right
-        ctx.fillStyle = '#9d7c54';
-        ctx.beginPath();
-        ctx.arc(x + size * 0.25, y + size * 0.22, size * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#a88a6a';
-        ctx.beginPath();
-        ctx.arc(x + size * 0.35, y + size * 0.15, size * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Front center small bushes
-        ctx.fillStyle = '#8a7654';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.1, y + size * 0.25, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderCactusSaguaro(ctx, x, y, size) {
-        // Desert saguaro — muted sage-green with natural desert coloring
-        const mainHeight = size * 0.58;
-        const mainWidth = size * 0.22;
-
+    renderDesertSaguaro(ctx, x, y, size) {
+        const h = size * 0.65;
+        const tw = size * 0.11;
         // Ground shadow
-        ctx.fillStyle = 'rgba(60,30,10,0.28)';
+        ctx.fillStyle = 'rgba(80,50,10,0.22)';
         ctx.beginPath();
-        ctx.ellipse(x + 1, y + 2, mainWidth * 0.9, size * 0.10, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 1, tw * 2.2, size * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Main trunk — muted gray-sage green
-        ctx.fillStyle = '#5a8440';
-        ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.26, y);
-        ctx.lineTo(x - mainWidth * 0.22, y - mainHeight * 0.72);
-        ctx.quadraticCurveTo(x, y - mainHeight, x + mainWidth * 0.22, y - mainHeight * 0.72);
-        ctx.lineTo(x + mainWidth * 0.26, y);
-        ctx.closePath();
-        ctx.fill();
-
+        // Left arm: horizontal bar + upward tip (drawn before trunk so trunk overlaps)
+        ctx.fillStyle = '#4e7a30';
+        ctx.fillRect(x - tw * 3.2, y - h * 0.52, tw * 2.6, tw * 1.1);
+        ctx.fillRect(x - tw * 3.2, y - h * 0.52 - tw * 1.5, tw * 1.1, tw * 1.6);
+        // Right arm: horizontal bar + upward tip
+        ctx.fillRect(x + tw * 0.8, y - h * 0.40, tw * 2.4, tw * 1.0);
+        ctx.fillRect(x + tw * 2.2, y - h * 0.40 - tw * 1.4, tw * 1.0, tw * 1.5);
+        // Arm shadow strips
+        ctx.fillStyle = '#344f20';
+        ctx.fillRect(x - tw * 0.8, y - h * 0.52, tw * 0.5, tw * 1.1);
+        ctx.fillRect(x + tw * 2.8, y - h * 0.40, tw * 0.4, tw * 1.0);
+        // Main trunk
+        ctx.fillStyle = '#4e7a30';
+        ctx.fillRect(x - tw, y - h, tw * 2, h);
         // Trunk shadow side
-        ctx.fillStyle = '#3d6030';
-        ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.04, y);
-        ctx.lineTo(x + mainWidth * 0.06, y - mainHeight * 0.65);
-        ctx.quadraticCurveTo(x + mainWidth * 0.18, y - mainHeight * 0.82, x + mainWidth * 0.22, y - mainHeight * 0.72);
-        ctx.lineTo(x + mainWidth * 0.26, y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Left arm — curves upward naturally
-        ctx.fillStyle = '#5a8440';
-        ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
-        ctx.quadraticCurveTo(x - mainWidth * 0.70, y - mainHeight * 0.44, x - mainWidth * 0.74, y - mainHeight * 0.62);
-        ctx.quadraticCurveTo(x - mainWidth * 0.68, y - mainHeight * 0.80, x - mainWidth * 0.48, y - mainHeight * 0.80);
-        ctx.quadraticCurveTo(x - mainWidth * 0.32, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#3d6030';
-        ctx.beginPath();
-        ctx.moveTo(x - mainWidth * 0.22, y - mainHeight * 0.38);
-        ctx.quadraticCurveTo(x - mainWidth * 0.56, y - mainHeight * 0.40, x - mainWidth * 0.60, y - mainHeight * 0.50);
-        ctx.quadraticCurveTo(x - mainWidth * 0.54, y - mainHeight * 0.68, x - mainWidth * 0.48, y - mainHeight * 0.80);
-        ctx.quadraticCurveTo(x - mainWidth * 0.38, y - mainHeight * 0.80, x - mainWidth * 0.28, y - mainHeight * 0.38 + mainWidth * 0.12);
-        ctx.closePath();
-        ctx.fill();
-
-        // Right arm — curves upward naturally
-        ctx.fillStyle = '#5a8440';
-        ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
-        ctx.quadraticCurveTo(x + mainWidth * 0.68, y - mainHeight * 0.36, x + mainWidth * 0.72, y - mainHeight * 0.55);
-        ctx.quadraticCurveTo(x + mainWidth * 0.66, y - mainHeight * 0.74, x + mainWidth * 0.46, y - mainHeight * 0.74);
-        ctx.quadraticCurveTo(x + mainWidth * 0.30, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#3d6030';
-        ctx.beginPath();
-        ctx.moveTo(x + mainWidth * 0.22, y - mainHeight * 0.30);
-        ctx.quadraticCurveTo(x + mainWidth * 0.52, y - mainHeight * 0.33, x + mainWidth * 0.56, y - mainHeight * 0.44);
-        ctx.quadraticCurveTo(x + mainWidth * 0.50, y - mainHeight * 0.64, x + mainWidth * 0.46, y - mainHeight * 0.74);
-        ctx.quadraticCurveTo(x + mainWidth * 0.32, y - mainHeight * 0.74, x + mainWidth * 0.26, y - mainHeight * 0.30 + mainWidth * 0.10);
-        ctx.closePath();
-        ctx.fill();
-
-        // Spine dots — light tan (static positions, no loop)
-        ctx.fillStyle = '#c8b870';
-        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.16, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.16, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.38, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.38, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + mainWidth * 0.28, y - mainHeight * 0.60, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - mainWidth * 0.28, y - mainHeight * 0.60, 1.2, 0, Math.PI * 2); ctx.fill();
-
-        this.renderCactusBaseBushes(ctx, x, y, size * 0.65);
+        ctx.fillStyle = '#344f20';
+        ctx.fillRect(x + tw * 0.2, y - h, tw * 0.8, h);
+        // Spine dots
+        ctx.fillStyle = '#c4af60';
+        ctx.beginPath(); ctx.arc(x - tw * 1.05, y - h * 0.16, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + tw * 1.05, y - h * 0.16, 1.0, 0, Math.PI * 2); ctx.fill();
     }
 
-    renderCactusBarrel(ctx, x, y, size) {
-        // True barrel cactus — squat round ribbed body
-        const bw = size * 0.24;
-        const bh = size * 0.40;
-
+    renderDesertBarrel(ctx, x, y, size) {
+        const rx = size * 0.22;
+        const ry = size * 0.30;
+        const cy = y - ry * 0.60;
         // Ground shadow
-        ctx.fillStyle = 'rgba(60,30,10,0.28)';
+        ctx.fillStyle = 'rgba(80,50,10,0.22)';
         ctx.beginPath();
-        ctx.ellipse(x + 1, y + 2, bw * 0.95, size * 0.09, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 1, rx * 1.1, size * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Barrel body — rounded squat shape
-        ctx.fillStyle = '#5a7a3a';
+        // Main body
+        ctx.fillStyle = '#5a7a32';
         ctx.beginPath();
-        ctx.moveTo(x - bw * 0.44, y - bh * 0.10);
-        ctx.quadraticCurveTo(x - bw * 0.56, y - bh * 0.50, x - bw * 0.42, y - bh * 0.90);
-        ctx.quadraticCurveTo(x - bw * 0.20, y - bh, x, y - bh);
-        ctx.quadraticCurveTo(x + bw * 0.20, y - bh, x + bw * 0.42, y - bh * 0.90);
-        ctx.quadraticCurveTo(x + bw * 0.56, y - bh * 0.50, x + bw * 0.44, y - bh * 0.10);
-        ctx.closePath();
+        ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Right-side shadow panel
-        ctx.fillStyle = '#3d5a28';
+        // Shadow right half (overlap ellipse offset right)
+        ctx.fillStyle = '#3a5220';
         ctx.beginPath();
-        ctx.moveTo(x + bw * 0.14, y - bh * 0.08);
-        ctx.quadraticCurveTo(x + bw * 0.52, y - bh * 0.50, x + bw * 0.42, y - bh * 0.90);
-        ctx.quadraticCurveTo(x + bw * 0.20, y - bh, x + bw * 0.10, y - bh * 0.92);
-        ctx.quadraticCurveTo(x + bw * 0.34, y - bh * 0.50, x + bw * 0.14, y - bh * 0.08);
-        ctx.closePath();
+        ctx.ellipse(x + rx * 0.28, cy, rx * 0.72, ry, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Rib lines — curved to follow barrel shape (static, no loop)
-        ctx.strokeStyle = 'rgba(30,55,15,0.55)';
-        ctx.lineWidth = 0.9;
-        ctx.beginPath(); ctx.moveTo(x - bw * 0.32, y - bh * 0.08); ctx.quadraticCurveTo(x - bw * 0.40, y - bh * 0.50, x - bw * 0.28, y - bh * 0.92); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - bw * 0.12, y - bh * 0.06); ctx.quadraticCurveTo(x - bw * 0.14, y - bh * 0.50, x - bw * 0.10, y - bh * 0.96); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + bw * 0.12, y - bh * 0.06); ctx.quadraticCurveTo(x + bw * 0.14, y - bh * 0.50, x + bw * 0.10, y - bh * 0.96); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + bw * 0.32, y - bh * 0.08); ctx.quadraticCurveTo(x + bw * 0.40, y - bh * 0.50, x + bw * 0.28, y - bh * 0.92); ctx.stroke();
-
-        // Spine dots at rib tops and midsection (static, no loop)
-        ctx.fillStyle = '#c8b870';
-        ctx.beginPath(); ctx.arc(x - bw * 0.46, y - bh * 0.26, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - bw * 0.32, y - bh * 0.18, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - bw * 0.12, y - bh * 0.16, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + bw * 0.12, y - bh * 0.16, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - bw * 0.46, y - bh * 0.56, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - bw * 0.32, y - bh * 0.50, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - bw * 0.12, y - bh * 0.48, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + bw * 0.12, y - bh * 0.48, 1.1, 0, Math.PI * 2); ctx.fill();
-
-        this.renderCactusBaseBushes(ctx, x, y, size * 0.60);
+        // Top highlight
+        ctx.fillStyle = '#6d9040';
+        ctx.beginPath();
+        ctx.ellipse(x - rx * 0.14, cy - ry * 0.52, rx * 0.38, ry * 0.20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 2 rib lines
+        ctx.strokeStyle = 'rgba(25,45,8,0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(x - rx * 0.26, cy - ry * 0.98); ctx.lineTo(x - rx * 0.26, cy + ry * 0.98); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + rx * 0.26, cy - ry * 0.98); ctx.lineTo(x + rx * 0.26, cy + ry * 0.98); ctx.stroke();
+        // Spine dots
+        ctx.fillStyle = '#c4af60';
+        ctx.beginPath(); ctx.arc(x, cy - ry * 1.02, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - rx * 1.02, cy, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + rx * 1.02, cy, 1.2, 0, Math.PI * 2); ctx.fill();
     }
 
-    renderCactusPricklyPear(ctx, x, y, size) {
-        // Prickly pear — 4 static ellipse pads, no save/restore, no loops
-        const pw = size * 0.22;
-        const ph = size * 0.35;
-
-        // Ground shadow
-        ctx.fillStyle = 'rgba(30,60,15,0.22)';
-        ctx.beginPath();
-        ctx.ellipse(x + 1, y + ph * 0.40, pw * 0.80, ph * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Bottom pad — dark side
-        ctx.fillStyle = '#2d5a28';
-        ctx.beginPath();
-        ctx.ellipse(x, y + ph * 0.12, pw * 0.42, ph * 0.44, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-        // Bottom pad — light side
-        ctx.fillStyle = '#4a8040';
-        ctx.beginPath();
-        ctx.ellipse(x - pw * 0.06, y + ph * 0.06, pw * 0.34, ph * 0.38, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Left pad — dark side
-        ctx.fillStyle = '#2d5a28';
-        ctx.beginPath();
-        ctx.ellipse(x - pw * 0.44, y - ph * 0.06, pw * 0.38, ph * 0.46, -0.7, 0, Math.PI * 2);
-        ctx.fill();
-        // Left pad — light side
-        ctx.fillStyle = '#4a8040';
-        ctx.beginPath();
-        ctx.ellipse(x - pw * 0.40, y - ph * 0.10, pw * 0.30, ph * 0.38, -0.7, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Right pad — dark side
-        ctx.fillStyle = '#2d5a28';
-        ctx.beginPath();
-        ctx.ellipse(x + pw * 0.44, y - ph * 0.08, pw * 0.38, ph * 0.44, 0.7, 0, Math.PI * 2);
-        ctx.fill();
-        // Right pad — light side
-        ctx.fillStyle = '#4a8040';
-        ctx.beginPath();
-        ctx.ellipse(x + pw * 0.40, y - ph * 0.12, pw * 0.30, ph * 0.36, 0.7, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Top central pad — dark side
-        ctx.fillStyle = '#2d5a28';
-        ctx.beginPath();
-        ctx.ellipse(x, y - ph * 0.28, pw * 0.36, ph * 0.42, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-        // Top central pad — light side
-        ctx.fillStyle = '#4a8040';
-        ctx.beginPath();
-        ctx.ellipse(x - pw * 0.06, y - ph * 0.32, pw * 0.28, ph * 0.34, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Highlight on top pad
-        ctx.fillStyle = 'rgba(120,180,80,0.25)';
-        ctx.beginPath();
-        ctx.ellipse(x - pw * 0.08, y - ph * 0.42, pw * 0.12, ph * 0.14, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 4 static spine dots (no loop)
-        ctx.fillStyle = '#3a6830';
-        ctx.beginPath(); ctx.arc(x, y + ph * 0.02, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - pw * 0.38, y - ph * 0.10, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + pw * 0.36, y - ph * 0.12, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x, y - ph * 0.32, 1.0, 0, Math.PI * 2); ctx.fill();
-
-        this.renderCactusBaseBushes(ctx, x, y, size * 0.5);
-    }
-
-    renderDesertBush(ctx, x, y, size) {
-        // Dry desert bush — overlapping arc clusters, no loops
+    renderDesertDryBush(ctx, x, y, size) {
         const r = size * 0.28;
-
         // Ground shadow
-        ctx.fillStyle = 'rgba(60,30,10,0.22)';
+        ctx.fillStyle = 'rgba(80,50,10,0.20)';
         ctx.beginPath();
-        ctx.ellipse(x + 1, y + 2, r * 1.1, r * 0.30, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 2, r * 0.90, r * 0.18, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Dark woody base
-        ctx.fillStyle = '#3c2410';
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Main body — left cluster
-        ctx.fillStyle = '#9d7c54';
-        ctx.beginPath();
-        ctx.arc(x - r * 0.22, y - r * 0.20, r * 0.72, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Main body — right cluster
-        ctx.beginPath();
-        ctx.arc(x + r * 0.18, y - r * 0.16, r * 0.68, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Upper lighter cluster
-        ctx.fillStyle = '#bfa878';
-        ctx.beginPath();
-        ctx.arc(x, y - r * 0.35, r * 0.42, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 3 static branch strokes (no loop)
-        ctx.strokeStyle = '#5c3b18';
-        ctx.lineWidth = 1.4;
+        // Branches
+        ctx.strokeStyle = '#5c3820';
         ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x - r * 0.10, y - r * 0.08); ctx.quadraticCurveTo(x - r * 0.36, y - r * 0.48, x - r * 0.56, y - r * 0.74); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + r * 0.08, y - r * 0.08); ctx.quadraticCurveTo(x + r * 0.34, y - r * 0.44, x + r * 0.52, y - r * 0.68); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x, y - r * 0.08); ctx.quadraticCurveTo(x - r * 0.12, y - r * 0.58, x - r * 0.14, y - r * 0.88); ctx.stroke();
+        ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - r * 1.00, y - r * 0.90); ctx.stroke();
+        ctx.lineWidth = 2.0;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + r * 0.90, y - r * 0.80); ctx.stroke();
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - r * 0.10, y - r * 1.10); ctx.stroke();
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - r * 1.10, y - r * 0.38); ctx.stroke();
+        // Tip dots
+        ctx.fillStyle = '#7a5830';
+        ctx.beginPath(); ctx.arc(x - r * 1.00, y - r * 0.90, r * 0.09, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + r * 0.90, y - r * 0.80, r * 0.08, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - r * 0.10, y - r * 1.10, r * 0.09, 0, Math.PI * 2); ctx.fill();
+    }
+
+    renderDesertDeadTree(ctx, x, y, size) {
+        const h = size * 0.72;
+        const tw = size * 0.09;
+        // Ground shadow
+        ctx.fillStyle = 'rgba(80,50,10,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 1, tw * 2.2, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Main trunk
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(x - tw, y - h * 0.68, tw * 2, h * 0.68);
+        // Trunk highlight strip
+        ctx.fillStyle = '#5a3420';
+        ctx.fillRect(x - tw, y - h * 0.68, tw * 0.55, h * 0.68);
+        // Branches
+        ctx.strokeStyle = '#3a2010';
+        ctx.lineCap = 'round';
+        // Left major branch
+        ctx.lineWidth = tw * 1.6;
+        ctx.beginPath(); ctx.moveTo(x, y - h * 0.56); ctx.lineTo(x - tw * 4.2, y - h * 0.82); ctx.stroke();
+        ctx.lineWidth = tw * 0.8;
+        ctx.beginPath(); ctx.moveTo(x - tw * 4.2, y - h * 0.82); ctx.lineTo(x - tw * 3.4, y - h * 1.00); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - tw * 4.2, y - h * 0.82); ctx.lineTo(x - tw * 4.9, y - h * 0.96); ctx.stroke();
+        // Right major branch
+        ctx.lineWidth = tw * 1.4;
+        ctx.beginPath(); ctx.moveTo(x, y - h * 0.56); ctx.lineTo(x + tw * 3.8, y - h * 0.76); ctx.stroke();
+        ctx.lineWidth = tw * 0.8;
+        ctx.beginPath(); ctx.moveTo(x + tw * 3.8, y - h * 0.76); ctx.lineTo(x + tw * 2.9, y - h * 0.96); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + tw * 3.8, y - h * 0.76); ctx.lineTo(x + tw * 4.4, y - h * 0.90); ctx.stroke();
+        // Center branch
+        ctx.lineWidth = tw * 1.2;
+        ctx.beginPath(); ctx.moveTo(x, y - h * 0.58); ctx.lineTo(x, y - h); ctx.stroke();
+        ctx.lineWidth = tw * 0.7;
+        ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x - tw * 0.8, y - h * 1.10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + tw * 0.8, y - h * 1.08); ctx.stroke();
     }
 
     renderMountainVegetation(ctx, x, y, size, gridX, gridY, variant) {
