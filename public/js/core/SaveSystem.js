@@ -100,7 +100,7 @@ export class SaveSystem {
             unlockedLevels: settlementData.unlockedLevels || ['level1'],
             completedLevels: settlementData.completedLevels || [],
             completedCampaigns: settlementData.completedCampaigns || [],
-            unlockedCampaigns: settlementData.unlockedCampaigns || ['campaign-1', 'campaign-5'],
+            unlockedCampaigns: settlementData.unlockedCampaigns || ['campaign-1'],
             // Unlock system state (persistent unlocks across levels)
             unlockSystem: settlementData.unlockSystem || {
                 forgeLevel: 0,
@@ -119,7 +119,8 @@ export class SaveSystem {
                 unlockedBuildings: [],
                 unlockedUpgrades: [],
                 unlockedCombinationSpells: []
-            }
+            },
+            playerLevels: settlementData.playerLevels || []
         };
 
         try {
@@ -203,7 +204,7 @@ export class SaveSystem {
             unlockedLevels: updateData.unlockedLevels !== undefined ? updateData.unlockedLevels : (existingSave?.unlockedLevels || ['level1']),
             completedLevels: updateData.completedLevels !== undefined ? updateData.completedLevels : (existingSave?.completedLevels || []),
             completedCampaigns: updateData.completedCampaigns !== undefined ? updateData.completedCampaigns : (existingSave?.completedCampaigns || []),
-            unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1', 'campaign-5']),
+            unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1']),
             unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || {
                 forgeLevel: 0,
                 hasForge: false,
@@ -221,7 +222,8 @@ export class SaveSystem {
                 unlockedBuildings: [],
                 unlockedUpgrades: [],
                 unlockedCombinationSpells: []
-            }
+            },
+            playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || [])
         };
 
         const key = this.getSaveSlotKey(slotNumber);
@@ -337,7 +339,7 @@ export class SaveSystem {
             unlockedLevels: ['level1'],
             completedLevels: [],
             completedCampaigns: [],
-            unlockedCampaigns: ['campaign-1', 'campaign-5'],
+            unlockedCampaigns: ['campaign-1'],
             unlockSystem: {
                 forgeLevel: 0,
                 hasForge: false,
@@ -355,7 +357,8 @@ export class SaveSystem {
                 unlockedBuildings: [],
                 unlockedUpgrades: [],
                 unlockedCombinationSpells: []
-            }
+            },
+            playerLevels: []
         };
     }
 

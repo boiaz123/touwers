@@ -11,6 +11,7 @@ import { SpaceLevel5 } from '../levels/Space/SpaceLevel5.js';
 import { SpaceLevel6 } from '../levels/Space/SpaceLevel6.js';
 import { SpaceLevel7 } from '../levels/Space/SpaceLevel7.js';
 import { SpaceLevel8 } from '../levels/Space/SpaceLevel8.js';
+import { FrogKingsRealmLevel } from '../levels/FrogKingsRealm/FrogKingsRealmLevel.js';
 
 /**
  * Campaign4: The Frog King's Realm
@@ -64,6 +65,7 @@ export class Campaign4 extends CampaignBase {
         registerLevel('level6', SpaceLevel6);
         registerLevel('level7', SpaceLevel7);
         registerLevel('level8', SpaceLevel8);
+        registerLevel('frog-kings-realm', FrogKingsRealmLevel);
         // Levels 3-8 will be created as placeholders in enter()
         // when registerLevels() doesn't find them, generatePathAndSlots creates placeholder objects
     }

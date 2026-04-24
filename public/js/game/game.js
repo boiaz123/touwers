@@ -8,7 +8,8 @@ import { Campaign1 } from '../entities/campaigns/Campaign1.js';
 import { Campaign2 } from '../entities/campaigns/Campaign2.js';
 import { Campaign3 } from '../entities/campaigns/Campaign3.js';
 import { Campaign4 } from '../entities/campaigns/Campaign4.js';
-import { Campaign5 } from '../entities/campaigns/Campaign5.js';
+import { PlayerWorkshop } from '../entities/campaigns/PlayerWorkshop.js';
+import { LevelDesignerState } from '../core/states/LevelDesignerState.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SettlementHub } from '../core/states/SettlementHub.js';
 import { SaveSystem } from '../core/SaveSystem.js';
@@ -135,7 +136,7 @@ export class Game {
             LevelRegistry.registerLevel('sandbox', 'sandbox', SandboxLevel, SandboxLevel.levelMetadata);
             
             // Initialize campaign registry with campaign classes
-            CampaignRegistry.initialize({ Campaign1, Campaign2, Campaign3, Campaign4, Campaign5 });
+            CampaignRegistry.initialize({ Campaign1, Campaign2, Campaign3, Campaign4, Campaign5: PlayerWorkshop });
             
             // Add campaign states
             const campaign1 = new Campaign1(this.stateManager);
@@ -150,8 +151,11 @@ export class Game {
             const campaign4 = new Campaign4(this.stateManager);
             this.stateManager.addState('campaign-4', campaign4);
 
-            const campaign5 = new Campaign5(this.stateManager);
+            const campaign5 = new PlayerWorkshop(this.stateManager);
             this.stateManager.addState('campaign-5', campaign5);
+
+            const levelDesignerState = new LevelDesignerState(this.stateManager);
+            this.stateManager.addState('levelDesigner', levelDesignerState);
             
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);

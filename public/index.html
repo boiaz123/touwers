@@ -383,6 +383,316 @@
         </div>
     </div>
 
+    <!-- Level Designer Overlay (shown/hidden by LevelDesignerState) -->
+    <div id="designer-overlay" style="display:none; position:fixed; inset:0; z-index:200; background:#1a1a1a; flex-direction:row; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:#dedede;">
+
+        <style>
+            #designer-overlay { --dov-bg-dark:#1a1a1a; --dov-bg-mid:#222222; --dov-bg-panel:#292929; --dov-bg-input:#333333; --dov-border:#3e3e3e; --dov-text:#dedede; --dov-text-dim:#888; --dov-label:#7eb8e8; --dov-accent:#0e639c; --dov-accent-h:#1177bb; --dov-success:#1e9448; --dov-danger:#c0392b; }
+            #designer-overlay * { box-sizing:border-box; margin:0; padding:0; }
+            #designer-overlay .dov-canvas-section { flex:1; display:flex; flex-direction:column; min-width:0; background:var(--dov-bg-dark); border-right:2px solid var(--dov-border); }
+            #designer-overlay .dov-settings-section { width:370px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; background:var(--dov-bg-mid); }
+            #designer-overlay .dov-header { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:var(--dov-bg-panel); border-bottom:1px solid var(--dov-border); }
+            #designer-overlay .dov-header h1 { font-size:16px; font-weight:700; color:#58c4dc; }
+            #designer-overlay .dov-toolbar { display:flex; flex-wrap:wrap; gap:2px; padding:5px 8px; background:var(--dov-bg-panel); border-bottom:1px solid var(--dov-border); align-items:center; }
+            #designer-overlay .dov-tool-group { display:flex; gap:2px; align-items:center; }
+            #designer-overlay .dov-tool-sep { width:1px; height:20px; background:var(--dov-border); margin:0 4px; }
+            #designer-overlay .dov-tool-label { font-size:9px; font-weight:700; color:var(--dov-text-dim); text-transform:uppercase; letter-spacing:0.8px; margin-right:2px; }
+            #designer-overlay .tool-btn { padding:4px 9px; background:var(--dov-bg-input); color:var(--dov-text); border:1px solid var(--dov-border); border-radius:3px; cursor:pointer; font-size:11px; font-weight:600; transition:background 0.15s; white-space:nowrap; font-family:inherit; }
+            #designer-overlay .tool-btn:hover { background:#404040; border-color:#666; }
+            #designer-overlay .tool-btn.active { background:var(--dov-accent); border-color:#1488cc; color:#fff; }
+            #designer-overlay .tool-btn.t-success { background:var(--dov-success); border-color:#27ae60; color:#fff; }
+            #designer-overlay .tool-btn.t-danger  { background:var(--dov-danger); border-color:#e74c3c; color:#fff; }
+            #designer-overlay .tool-btn.t-danger:hover  { background:#e74c3c; }
+            #designer-overlay .tool-btn.t-success:hover { background:#27ae60; }
+            #designer-overlay .dov-back-btn { padding:4px 12px; background:#2a1a0a; color:#d4af37; border:1px solid #7a6038; border-radius:3px; cursor:pointer; font-size:11px; font-weight:700; transition:background 0.15s, border-color 0.15s; font-family:inherit; }
+            #designer-overlay .dov-back-btn:hover { background:#3a2a0e; border-color:#d4af37; color:#ffe700; }
+            #designer-overlay .dov-slider-row { display:flex; align-items:center; gap:4px; }
+            #designer-overlay .dov-slider-row label { font-size:10px; color:var(--dov-text-dim); white-space:nowrap; }
+            #designer-overlay .dov-slider-row input[type=range] { width:75px; cursor:pointer; }
+            #designer-overlay .dov-slider-row .val { font-size:10px; color:var(--dov-label); min-width:26px; }
+            #designer-overlay .dov-status-bar { padding:5px 10px; background:#1c2a1c; border-bottom:1px solid var(--dov-border); font-size:11px; color:#7ec86a; min-height:24px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            #designer-overlay .dov-canvas-wrapper { flex:1; position:relative; overflow:hidden; background:#111; }
+            #designer-overlay #designCanvas { display:block; width:100%; height:100%; cursor:crosshair; }
+            #designer-overlay .dov-coord-display { position:absolute; bottom:5px; right:8px; font-size:10px; color:rgba(255,255,255,0.38); pointer-events:none; font-family:'Courier New',monospace; }
+            #designer-overlay .dov-panel-tabs { display:flex; border-bottom:2px solid var(--dov-border); background:var(--dov-bg-panel); }
+            #designer-overlay .tab-btn { flex:1; padding:7px 4px; background:transparent; color:var(--dov-text-dim); border:none; border-bottom:2px solid transparent; cursor:pointer; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; transition:color 0.15s, border-color 0.15s; margin-bottom:-2px; font-family:inherit; }
+            #designer-overlay .tab-btn.active { color:#58c4dc; border-bottom-color:#58c4dc; }
+            #designer-overlay .tab-panel { display:none; overflow-y:auto; flex:1; padding:10px 12px; flex-direction:column; gap:9px; }
+            #designer-overlay .tab-panel.active { display:flex; }
+            #designer-overlay .tab-panel::-webkit-scrollbar { width:5px; }
+            #designer-overlay .tab-panel::-webkit-scrollbar-thumb { background:#444; border-radius:3px; }
+            #designer-overlay .dov-sec-title { font-size:9px; font-weight:700; color:#58c4dc; text-transform:uppercase; letter-spacing:0.8px; padding-bottom:4px; border-bottom:1px solid #333; }
+            #designer-overlay .dov-form-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+            #designer-overlay .dov-form-field { display:flex; flex-direction:column; gap:3px; }
+            #designer-overlay .dov-form-field label { font-size:9px; font-weight:700; color:var(--dov-label); text-transform:uppercase; letter-spacing:0.4px; }
+            #designer-overlay .dov-form-field input, #designer-overlay .dov-form-field select { padding:5px 6px; background:var(--dov-bg-input); color:var(--dov-text); border:1px solid var(--dov-border); border-radius:3px; font-family:inherit; font-size:12px; }
+            #designer-overlay .dov-form-field input:focus, #designer-overlay .dov-form-field select:focus { outline:none; border-color:var(--dov-accent); }
+            #designer-overlay .dov-form-field input[type=color] { height:27px; padding:2px 3px; cursor:pointer; }
+            #designer-overlay .dov-btn { padding:5px 11px; background:var(--dov-accent); color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:12px; font-weight:600; transition:background 0.15s; font-family:inherit; }
+            #designer-overlay .dov-btn:hover { background:var(--dov-accent-h); }
+            #designer-overlay .dov-btn.btn-success { background:var(--dov-success); }
+            #designer-overlay .dov-btn.btn-success:hover { background:#27ae60; }
+            #designer-overlay .dov-btn.btn-danger  { background:var(--dov-danger); }
+            #designer-overlay .dov-btn.btn-danger:hover  { background:#e74c3c; }
+            #designer-overlay .dov-btn.btn-neutral { background:#444; color:var(--dov-text); }
+            #designer-overlay .dov-btn.btn-neutral:hover { background:#555; }
+            #designer-overlay .dov-btn.btn-outline { background:transparent; border:1px solid var(--dov-accent); color:var(--dov-label); }
+            #designer-overlay .dov-btn.btn-outline:hover { background:rgba(14,99,156,0.15); }
+            #designer-overlay #tab-waves { overflow:hidden; }
+            #designer-overlay .waves-list { display:flex; flex-direction:column; gap:5px; flex:1; min-height:0; overflow-y:auto; }
+            #designer-overlay .waves-list::-webkit-scrollbar { width:5px; }
+            #designer-overlay .waves-list::-webkit-scrollbar-thumb { background:#444; border-radius:3px; }
+            #designer-overlay .wave-card { background:#2e2e2e; border-left:3px solid var(--dov-accent); border-radius:3px; padding:6px 9px; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+            #designer-overlay .wave-card-info { flex:1; }
+            #designer-overlay .wave-card-title { font-size:12px; font-weight:700; color:#58c4dc; margin-bottom:2px; }
+            #designer-overlay .wave-card-meta { font-size:10px; color:var(--dov-text-dim); }
+            #designer-overlay .wave-card-actions { display:flex; gap:3px; }
+            #designer-overlay .dov-hint { background:#19283a; border-left:3px solid #58c4dc; padding:6px 9px; border-radius:0 3px 3px 0; font-size:10px; color:#8ab0cc; line-height:1.5; }
+            #designer-overlay .wave-card[draggable] { cursor:grab; user-select:none; }
+            #designer-overlay .wave-card.wave-dragging { opacity:0.4; }
+            #designer-overlay .wave-card.wave-drop-target { border-left-color:#f0a030; box-shadow:inset 0 2px 0 #f0a030; }
+            #designer-overlay .wave-drag-handle { color:var(--dov-text-dim); font-size:14px; padding-right:6px; flex-shrink:0; cursor:grab; }
+            #designer-overlay .dov-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:1000; justify-content:center; align-items:center; }
+            #designer-overlay .dov-modal-overlay.active { display:flex; }
+            #designer-overlay .dov-modal-box { background:var(--dov-bg-panel); border:2px solid var(--dov-accent); border-radius:6px; padding:22px; max-width:560px; width:92%; max-height:90vh; overflow-y:auto; box-shadow:0 10px 50px rgba(0,0,0,0.9); }
+            #designer-overlay .dov-modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--dov-border); }
+            #designer-overlay .dov-modal-header h2 { font-size:17px; color:#58c4dc; }
+            #designer-overlay .dov-modal-close { background:#383838; border:none; color:var(--dov-text); width:30px; height:30px; border-radius:3px; cursor:pointer; font-size:16px; font-weight:700; font-family:inherit; }
+            #designer-overlay .dov-modal-close:hover { background:var(--dov-danger); color:#fff; }
+            #designer-overlay .dov-modal-body { display:flex; flex-direction:column; gap:12px; }
+            #designer-overlay .dov-modal-field { display:flex; flex-direction:column; gap:4px; }
+            #designer-overlay .dov-modal-field label { font-size:11px; font-weight:700; color:var(--dov-label); }
+            #designer-overlay .dov-modal-field input, #designer-overlay .dov-modal-field select { padding:7px; background:var(--dov-bg-input); color:var(--dov-text); border:1px solid var(--dov-border); border-radius:3px; font-size:13px; font-family:inherit; }
+            #designer-overlay .dov-pattern-list { background:#1a1a1a; border:1px solid var(--dov-border); border-radius:3px; padding:8px; display:flex; flex-direction:column; gap:6px; max-height:180px; overflow-y:auto; }
+            #designer-overlay .dov-pattern-item { display:flex; gap:7px; align-items:center; }
+            #designer-overlay .dov-pattern-item select { flex:1; padding:5px; font-size:12px; font-family:inherit; }
+            #designer-overlay .dov-modal-footer { display:flex; gap:7px; justify-content:flex-end; margin-top:14px; padding-top:14px; border-top:1px solid var(--dov-border); }
+            #designer-overlay .save-slot-btn { display:block; width:100%; text-align:left; padding:10px 14px; margin-bottom:6px; background:var(--dov-bg-input); border:1px solid var(--dov-border); border-radius:3px; color:var(--dov-text); font-size:13px; cursor:pointer; transition:background 0.15s, border-color 0.15s; font-family:inherit; }
+            #designer-overlay .save-slot-btn:hover { background:#404040; border-color:var(--dov-accent); color:#fff; }
+        </style>
+
+        <!-- LEFT: Canvas section -->
+        <div class="dov-canvas-section">
+            <div class="dov-header">
+                <h1>Level Designer</h1>
+                <div class="dov-tool-group">
+                    <button class="dov-back-btn" id="designerBackBtn">Back to Workshop</button>
+                    <div class="dov-tool-sep"></div>
+                    <button class="tool-btn t-success" id="saveToSlotBtn">Save Level</button>
+                </div>
+            </div>
+
+            <div class="dov-toolbar">
+                <div class="dov-tool-group">
+                    <span class="dov-tool-label">Draw</span>
+                    <button class="tool-btn active" id="drawPathBtn" title="Place waypoints to define the enemy path [P]">Path</button>
+                </div>
+                <div class="dov-tool-sep"></div>
+                <div class="dov-tool-group">
+                    <span class="dov-tool-label">Terrain</span>
+                    <button class="tool-btn" id="drawVegetationBtn" title="Place trees and vegetation [V]">Trees</button>
+                    <button class="tool-btn" id="drawRockBtn"       title="Place rocks and boulders [R]">Rocks</button>
+                    <button class="tool-btn" id="drawWaterBtn"      title="Place water features [W]">Water</button>
+                </div>
+                <div class="dov-tool-group" id="variantPickerRow" style="display:none">
+                    <div class="dov-tool-sep"></div>
+                    <span class="dov-tool-label" id="variantPickerLabel">Type</span>
+                    <button class="tool-btn" id="variantBtn0">1</button>
+                    <button class="tool-btn" id="variantBtn1">2</button>
+                    <button class="tool-btn" id="variantBtn2">3</button>
+                    <button class="tool-btn" id="variantBtn3">4</button>
+                </div>
+                <div class="dov-tool-group" id="waterControls" style="display:none">
+                    <div class="dov-tool-sep"></div>
+                    <button class="tool-btn" id="waterRiverBtn" title="Draw a river">River</button>
+                    <button class="tool-btn" id="waterLakeBtn"  title="Click and drag to paint lake cells">Lake</button>
+                </div>
+                <div class="dov-tool-group" id="terrainSizeGroup" style="display:none; align-items:center; gap:4px;">
+                    <div class="dov-tool-sep"></div>
+                    <span class="dov-tool-label">Size</span>
+                    <div class="dov-slider-row">
+                        <input type="range" id="terrainSizeSlider" min="1" max="4" step="0.5" value="2">
+                        <span class="val" id="terrainSizeLabel">2.0</span>
+                    </div>
+                </div>
+                <div class="dov-tool-group" id="treeBrushControls" style="display:none; align-items:center; gap:4px;">
+                    <div class="dov-tool-sep"></div>
+                    <button class="tool-btn" id="treeBrushToggle" title="Toggle brush mode">Brush</button>
+                    <div class="dov-slider-row">
+                        <label style="font-size:10px;color:var(--dov-text-dim);">Radius</label>
+                        <input type="range" id="treeBrushRadius" min="1" max="8" step="0.5" value="3">
+                        <span class="val" id="treeBrushRadiusLabel">3.0</span>
+                    </div>
+                    <div class="dov-slider-row">
+                        <label style="font-size:10px;color:var(--dov-text-dim);">Min</label>
+                        <input type="range" id="treeBrushMinSize" min="0.5" max="3" step="0.5" value="1">
+                        <span class="val" id="treeBrushMinSizeLabel">1.0</span>
+                    </div>
+                    <div class="dov-slider-row">
+                        <label style="font-size:10px;color:var(--dov-text-dim);">Max</label>
+                        <input type="range" id="treeBrushMaxSize" min="1" max="5" step="0.5" value="3">
+                        <span class="val" id="treeBrushMaxSizeLabel">3.0</span>
+                    </div>
+                </div>
+                <div class="dov-tool-sep"></div>
+                <div class="dov-tool-group" id="finishPathControl" style="display:none">
+                    <button class="tool-btn t-success" id="finishPathBtn">Finish Path</button>
+                </div>
+                <div class="dov-tool-group" id="finishRiverControl" style="display:none">
+                    <button class="tool-btn t-success" id="finishRiverBtn">Finish River</button>
+                </div>
+                <div class="dov-tool-sep"></div>
+                <div class="dov-tool-group" style="margin-left:auto">
+                    <button class="tool-btn" id="undoBtn" title="Undo last action [U]">Undo</button>
+                    <button class="tool-btn t-danger" id="clearBtn" title="Clear all">Clear All</button>
+                </div>
+            </div>
+
+            <div class="dov-status-bar" id="pathInfo">Path mode — Click to add waypoints. Right-click to remove last. Click Finish Path when done.</div>
+
+            <div class="dov-canvas-wrapper">
+                <canvas id="designCanvas"></canvas>
+                <div class="dov-coord-display" id="coordDisplay">x: -- y: --</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Settings panel -->
+        <div class="dov-settings-section">
+            <div class="dov-panel-tabs">
+                <button class="tab-btn active" data-tab="settings">Settings</button>
+                <button class="tab-btn" data-tab="waves">Waves</button>
+            </div>
+
+            <!-- SETTINGS TAB -->
+            <div class="tab-panel active" id="tab-settings">
+                <div class="dov-sec-title">Level Info</div>
+
+                <div class="dov-form-field">
+                    <label>Campaign Theme</label>
+                    <select id="campaignTheme">
+                        <option value="forest">Forest</option>
+                        <option value="mountain">Mountain</option>
+                        <option value="desert">Desert</option>
+                        <option value="space">Space</option>
+                    </select>
+                </div>
+
+                <div class="dov-form-row">
+                    <div class="dov-form-field">
+                        <label>Level Name</label>
+                        <input type="text" id="levelName" value="My Level" placeholder="The Dark Forest">
+                    </div>
+                    <div class="dov-form-field">
+                        <label>Level Number</label>
+                        <input type="number" id="levelNumber" value="1" min="1" max="99">
+                    </div>
+                </div>
+
+                <div class="dov-form-row">
+                    <div class="dov-form-field">
+                        <label>Difficulty</label>
+                        <select id="difficulty">
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                            <option value="Nightmare">Nightmare</option>
+                        </select>
+                    </div>
+                    <div class="dov-form-field">
+                        <label>Max Waves</label>
+                        <input type="number" id="maxWaves" value="10" min="1" max="50">
+                    </div>
+                </div>
+
+                <div class="dov-hint">
+                    Select a campaign theme. Draw the enemy path first, then add terrain. Click <strong>Save Level</strong> to save to a slot.<br>
+                    Shortcuts: P&nbsp;=&nbsp;Path &nbsp; V&nbsp;=&nbsp;Trees &nbsp; R&nbsp;=&nbsp;Rocks &nbsp; W&nbsp;=&nbsp;Water &nbsp; U&nbsp;=&nbsp;Undo
+                </div>
+            </div>
+
+            <!-- WAVES TAB -->
+            <div class="tab-panel" id="tab-waves">
+                <div class="dov-sec-title">Wave Configuration</div>
+                <button id="addWaveBtn" class="dov-btn btn-outline" style="margin-bottom:6px;">+ Add Wave</button>
+                <div class="waves-list" id="wavesList"></div>
+            </div>
+        </div>
+
+        <!-- Hidden stubs required by parent LevelDesigner event listeners -->
+        <button id="exportBtn" style="display:none"></button>
+        <button id="copyCodeBtn" style="display:none"></button>
+        <button id="loadLevelBtn" style="display:none"></button>
+        <div id="outputCode" style="display:none"></div>
+        <div id="loadLevelModal" style="display:none">
+            <button id="loadLevelCloseBtn"></button>
+            <button id="loadLevelCancelBtn"></button>
+            <button id="loadLevelConfirmBtn"></button>
+        </div>
+
+        <!-- Wave modal -->
+        <div class="dov-modal-overlay" id="waveModal">
+            <div class="dov-modal-box">
+                <div class="dov-modal-header">
+                    <h2 id="modalTitle">Add Wave</h2>
+                    <button class="dov-modal-close" id="modalCloseBtn">x</button>
+                </div>
+                <div class="dov-modal-body">
+                    <div class="dov-form-row">
+                        <div class="dov-modal-field"><label>Health Multiplier</label>
+                            <input type="number" id="modalHealthMultiplier" min="0.1" step="0.1" value="1.0">
+                        </div>
+                        <div class="dov-modal-field"><label>Speed Multiplier</label>
+                            <input type="number" id="modalEnemySpeed" min="0.1" step="0.05" value="0.70">
+                        </div>
+                        <div class="dov-modal-field"><label>Spawn Interval (s)</label>
+                            <input type="number" id="modalSpawnInterval" min="0.1" step="0.1" value="1.5">
+                        </div>
+                    </div>
+                    <div class="dov-modal-field">
+                        <label>Enemy Pattern (type + count per entry)</label>
+                        <div class="dov-pattern-list" id="modalPatternList"></div>
+                        <button class="dov-btn btn-outline" id="modalAddPatternBtn" style="margin-top:6px;">+ Add Enemy Type</button>
+                    </div>
+                </div>
+                <div class="dov-modal-footer">
+                    <button class="dov-btn btn-neutral" id="modalCancelBtn">Cancel</button>
+                    <button class="dov-btn btn-success" id="modalSaveBtn">Save Wave</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation modal -->
+        <div class="dov-modal-overlay" id="confirmationModal">
+            <div class="dov-modal-box" style="max-width:420px">
+                <div class="dov-modal-header">
+                    <h2 id="confirmationTitle">Confirm</h2>
+                </div>
+                <div class="dov-modal-body">
+                    <p id="confirmationMessage" style="font-size:13px; line-height:1.6; color:#dedede;"></p>
+                </div>
+                <div class="dov-modal-footer">
+                    <button class="dov-btn btn-neutral" id="confirmationCancel">Cancel</button>
+                    <button class="dov-btn btn-success" id="confirmationOk">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save slot modal -->
+        <div class="dov-modal-overlay" id="saveSlotModal">
+            <div class="dov-modal-box" style="max-width:440px">
+                <div class="dov-modal-header">
+                    <h2>Save Level to Slot</h2>
+                    <button class="dov-modal-close" id="saveSlotCloseBtn">x</button>
+                </div>
+                <div class="dov-modal-body">
+                    <div class="dov-hint">Choose a slot to save your level. Saving overwrites any existing level in that slot.</div>
+                    <div id="saveSlotList" style="margin-top:8px;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <script type="module" src="js/game/game.js"></script>
 </body>
 </html>

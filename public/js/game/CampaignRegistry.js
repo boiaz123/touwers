@@ -19,7 +19,7 @@ export class CampaignRegistry {
         'campaign-1': 'campaign-2',
         'campaign-2': 'campaign-3',
         'campaign-3': 'campaign-4',
-        'campaign-4': null
+        'campaign-4': 'campaign-5'
     };
 
     /**
@@ -352,74 +352,54 @@ export class CampaignRegistry {
             },
             'campaign-5': {
                 id: 'campaign-5',
-                name: 'Level Testing Sandbox',
-                description: 'A sandbox for testing and experimentation — everything unlocked.',
+                name: 'Commander\'s Workshop',
+                description: 'Design your own levels and test them in battle. Unlocked by defeating the Frog King.',
                 icon: '◈',
                 drawIcon(ctx, x, y, size) {
                     const s = size * 0.44;
-                    // Outer decorative ring
-                    ctx.strokeStyle = '#b09060'; ctx.lineWidth = s * 0.07;
-                    ctx.beginPath(); ctx.arc(x, y, s*0.92, 0, Math.PI*2); ctx.stroke();
-                    // Inner ring
-                    ctx.strokeStyle = '#806a40'; ctx.lineWidth = s * 0.035;
-                    ctx.beginPath(); ctx.arc(x, y, s*0.70, 0, Math.PI*2); ctx.stroke();
-                    // Tick marks around ring
-                    for (let i = 0; i < 16; i++) {
-                        const a = (i / 16) * Math.PI * 2;
-                        const r1 = s*0.94;
-                        const r2 = i % 4 === 0 ? s*0.73 : s*0.84;
-                        ctx.strokeStyle = i % 4 === 0 ? '#d4b050' : '#908060';
-                        ctx.lineWidth = i % 4 === 0 ? s*0.055 : s*0.035;
-                        ctx.beginPath();
-                        ctx.moveTo(x + Math.cos(a)*r1, y + Math.sin(a)*r1);
-                        ctx.lineTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2);
-                        ctx.stroke();
-                    }
-                    // Cross-hair lines
-                    ctx.strokeStyle = 'rgba(180,150,80,0.42)'; ctx.lineWidth = s*0.04;
-                    ctx.beginPath(); ctx.moveTo(x, y - s*0.64); ctx.lineTo(x, y + s*0.64); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(x - s*0.64, y); ctx.lineTo(x + s*0.64, y); ctx.stroke();
-                    // Diamond compass points
-                    [
-                        { a: -Math.PI/2, c: '#e8d080', r: s*0.14 },
-                        { a: 0,          c: '#b09050', r: s*0.11 },
-                        { a: Math.PI/2,  c: '#b09050', r: s*0.11 },
-                        { a: Math.PI,    c: '#b09050', r: s*0.11 },
-                    ].forEach(({ a, c, r }) => {
-                        const px = x + Math.cos(a)*s*0.76, py = y + Math.sin(a)*s*0.76;
-                        ctx.fillStyle = c;
-                        ctx.beginPath();
-                        ctx.moveTo(px + Math.cos(a)*r, py + Math.sin(a)*r);
-                        ctx.lineTo(px + Math.cos(a + Math.PI/2)*r*0.45, py + Math.sin(a + Math.PI/2)*r*0.45);
-                        ctx.lineTo(px - Math.cos(a)*r*0.55, py - Math.sin(a)*r*0.55);
-                        ctx.lineTo(px + Math.cos(a - Math.PI/2)*r*0.45, py + Math.sin(a - Math.PI/2)*r*0.45);
-                        ctx.closePath(); ctx.fill();
-                        ctx.strokeStyle = '#60481c'; ctx.lineWidth = 0.6; ctx.stroke();
+                    // Dark panel background
+                    const bgGrad = ctx.createRadialGradient(x, y, 0, x, y, s);
+                    bgGrad.addColorStop(0, '#1a2040');
+                    bgGrad.addColorStop(1, '#0a0e20');
+                    ctx.fillStyle = bgGrad;
+                    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill();
+                    // Outer ring
+                    ctx.strokeStyle = '#4080c0'; ctx.lineWidth = s * 0.06;
+                    ctx.beginPath(); ctx.arc(x, y, s * 0.88, 0, Math.PI * 2); ctx.stroke();
+                    // Pencil icon
+                    const pw = s * 0.14, pl = s * 0.55;
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(-Math.PI / 4);
+                    ctx.fillStyle = '#f0c040';
+                    ctx.fillRect(-pw / 2, -pl / 2, pw, pl * 0.78);
+                    ctx.fillStyle = '#e06030';
+                    ctx.beginPath();
+                    ctx.moveTo(-pw / 2, pl * 0.28);
+                    ctx.lineTo(pw / 2, pl * 0.28);
+                    ctx.lineTo(0, pl / 2);
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#a08020'; ctx.lineWidth = s * 0.025;
+                    ctx.strokeRect(-pw / 2, -pl / 2, pw, pl * 0.78);
+                    ctx.restore();
+                    // Corner stars (design grid dots)
+                    ctx.fillStyle = '#60a0ff';
+                    [[-s*0.52, -s*0.52], [s*0.52, -s*0.52], [-s*0.52, s*0.52], [s*0.52, s*0.52]].forEach(([dx, dy]) => {
+                        ctx.beginPath(); ctx.arc(x + dx, y + dy, s * 0.07, 0, Math.PI * 2); ctx.fill();
                     });
-                    // Center alchemical disc
-                    const cDisc5 = ctx.createRadialGradient(x - s*0.07, y - s*0.07, 0, x, y, s*0.20);
-                    cDisc5.addColorStop(0, '#ffe88a'); cDisc5.addColorStop(0.5, '#d4a820'); cDisc5.addColorStop(1, '#7a5010');
-                    ctx.fillStyle = cDisc5;
-                    ctx.beginPath(); ctx.arc(x, y, s*0.20, 0, Math.PI*2); ctx.fill();
-                    ctx.strokeStyle = '#e0c050'; ctx.lineWidth = s*0.045;
-                    ctx.beginPath(); ctx.arc(x, y, s*0.20, 0, Math.PI*2); ctx.stroke();
-                    // Center cross
-                    ctx.strokeStyle = '#3a2400'; ctx.lineWidth = s*0.05; ctx.lineCap = 'round';
-                    ctx.beginPath(); ctx.moveTo(x - s*0.11, y); ctx.lineTo(x + s*0.11, y); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(x, y - s*0.11); ctx.lineTo(x, y + s*0.11); ctx.stroke();
                 },
-                difficulty: 'Testing',
+                difficulty: 'Special',
                 class: campaignClasses.Campaign5,
                 rewards: {
                     gold: 0,
                     unlocks: []
                 },
-                unlockText: null,
-                story: 'A test environment for level design and gameplay mechanics. All buildings, towers, and upgrades are available. Campaign progression is not affected. Use this to experiment freely.',
+                unlockText: 'Defeat the Frog King to unlock this!',
+                story: 'You have proven yourself a master commander. The Frog King has fallen and the realm is at peace — but the forge of strategy never cools. Here, you can design your own battlegrounds and test your tactical mettle against waves of your own creation.',
                 completionStory: '',
-                lootStyle: { normalChance: 0.20, rareChance: 0.05 },
+                lootStyle: { normalChance: 0.10, rareChance: 0.02 },
                 progress: 0,
-                locked: false
+                locked: true
             }
         };
     }
@@ -434,12 +414,12 @@ export class CampaignRegistry {
         this.campaigns['campaign-2'].locked = true;
         this.campaigns['campaign-3'].locked = true;
         this.campaigns['campaign-4'].locked = true;
-        this.campaigns['campaign-5'].locked = false;
+        this.campaigns['campaign-5'].locked = true;
         this.campaigns['campaign-1'].locked = false;
 
         if (!saveData) return;
 
-        const unlockedCampaigns = saveData.unlockedCampaigns || ['campaign-1', 'campaign-5'];
+        const unlockedCampaigns = saveData.unlockedCampaigns || ['campaign-1'];
         const completedCampaigns = saveData.completedCampaigns || [];
 
         for (const id of unlockedCampaigns) {

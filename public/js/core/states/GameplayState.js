@@ -1547,13 +1547,13 @@ export class GameplayState {
                 'campaign-1': 'level12',
                 'campaign-2': 'level12',
                 'campaign-3': 'level10',
-                'campaign-4': 'level8'
+                'campaign-4': 'frog-kings-realm'
             };
             const lastLevelForCampaign = campaignLastLevel[this.currentCampaignId] || 'level12';
             const isLastLevel = (this.currentLevel === lastLevelForCampaign) && !this.isSandbox;
             if (isLastLevel && this.currentCampaignId) {
                 if (!saveData.completedCampaigns) saveData.completedCampaigns = [];
-                if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1', 'campaign-5'];
+                if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1'];
 
                 // Mark campaign as completed
                 saveData.completedCampaigns = SaveSystem.markCampaignCompleted(
@@ -1588,7 +1588,7 @@ export class GameplayState {
             'campaign-1': 'level12',
             'campaign-2': 'level12',
             'campaign-3': 'level10',
-            'campaign-4': 'level8'
+            'campaign-4': 'frog-kings-realm'
         };
         const lastLevelForCampaign2 = campaignLastLevel2[this.currentCampaignId] || 'level12';
         const isLastLevel2 = (this.currentLevel === lastLevelForCampaign2) && !this.isSandbox;
