@@ -258,21 +258,21 @@ export class ForestLevel4 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.60, 
             spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 6 }, { type: 'villager', count: 6 }] 
+            pattern: [{ type: 'basic', count: 5 }, { type: 'villager', count: 5 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.60, 
             spawnInterval: 1.8, 
-            pattern: [{ type: 'basic', count: 7 }, { type: 'villager', count: 7 }] 
+            pattern: [{ type: 'basic', count: 6 }, { type: 'villager', count: 6 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 1.1, 
             speedMultiplier: 0.70, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'basic', count: 10 }, { type: 'villager', count: 10 }] 
+            pattern: [{ type: 'basic', count: 8 }, { type: 'villager', count: 8 }] 
         }
         // Wave 4
         , { 
@@ -318,7 +318,7 @@ export class ForestLevel4 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 1.8, 
             speedMultiplier: 1.88, 
             spawnInterval: 7, 
             pattern: [{ type: 'knight', count: 1 }] 
@@ -374,8 +374,8 @@ export class ForestLevel4 extends LevelBase {
         }
         // Wave 18
         , { 
-            enemyHealth_multiplier: 7, 
-            speedMultiplier: 1.13, 
+            enemyHealth_multiplier: 4.5, 
+            speedMultiplier: 1.0, 
             spawnInterval: 2, 
             pattern: [{ type: 'knight', count: 3 }] 
         }

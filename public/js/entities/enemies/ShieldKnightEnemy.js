@@ -4,7 +4,7 @@ export class ShieldKnightEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 780,
         speed: 40,
-        armour: 75,
+        armour: 60,
         magicResistance: -0.2
     };
 

@@ -371,7 +371,7 @@ export class GameplayState {
      */
     getCampaignLootConfig(campaignId) {
         switch (campaignId) {
-            case 'campaign-1': return { normalChance: 0.0225,  rareChance: 0.0,   realmShardChance: 0      };
+            case 'campaign-1': return { normalChance: 0.0225,  rareChance: 0.0,   realmShardChance: 0.002      };
             case 'campaign-2': return { normalChance: 0.0225,  rareChance: 0.003, realmShardChance: 0.002      }; 
             case 'campaign-3': return { normalChance: 0.04, rareChance: 0.004,    realmShardChance: 0.002      }; 
             case 'campaign-4': return { normalChance: 0.07,  rareChance: 0.006,   realmShardChance: 0.002  }; 
