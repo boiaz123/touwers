@@ -147,6 +147,8 @@ export class SaveSystem {
         const key = this.getSaveSlotKey(slotNumber);
         try {
             localStorage.setItem(key, JSON.stringify(null));
+            // Also remove the .sav file — fire-and-forget
+            SaveSystem.deleteFile(slotNumber);
             return true;
         } catch (error) {
             console.error('SaveSystem: Failed to wipe save slot', slotNumber, ':', error);
@@ -472,5 +474,156 @@ export class SaveSystem {
         const defaults = ['campaign-1', 'campaign-5'];
         if (defaults.includes(campaignId)) return true;
         return Array.isArray(unlockedCampaigns) && unlockedCampaigns.includes(campaignId);
+    }
+
+    // -------------------------------------------------------------------------
+    // File-based save layer (Tauri desktop only)
+    //
+    // localStorage is the working copy — updated throughout gameplay.
+    // .sav files on disk are written ONLY on explicit player save actions and
+    // serve as the portable, integrity-protected canonical save files.
+    //
+    // Save file location (Windows):
+    //   %APPDATA%\com.touwers.game\saves\slot_1.sav  (and slot_2, slot_3)
+    // -------------------------------------------------------------------------
+
+    /** Salt mixed into the integrity hash. Embedded in code, deters casual edits. */
+    static INTEGRITY_SALT = 'touwers-save-v1-c7f2a9b4e3d8';
+
+    /** Returns true when running inside the Tauri desktop app. */
+    static isTauri() {
+        return typeof window !== 'undefined' && window.__TAURI_INTERNALS__ != null;
+    }
+
+    /** Returns the Tauri invoke function, or null when not in Tauri. */
+    static getTauriInvoke() {
+        if (!SaveSystem.isTauri()) return null;
+        return window.__TAURI_INTERNALS__.invoke;
+    }
+
+    /**
+     * Compute a SHA-256 integrity hash for a save data object.
+     * @param {Object} dataObj
+     * @returns {Promise<string>} hex digest
+     */
+    static async computeIntegrity(dataObj) {
+        const dataStr = JSON.stringify(dataObj) + SaveSystem.INTEGRITY_SALT;
+        const encoded = new TextEncoder().encode(dataStr);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    /**
+     * Verify the integrity hash of a loaded save file.
+     * @param {Object} dataObj
+     * @param {string} hash
+     * @returns {Promise<boolean>}
+     */
+    static async verifyIntegrity(dataObj, hash) {
+        const expected = await SaveSystem.computeIntegrity(dataObj);
+        return expected === hash;
+    }
+
+    /**
+     * Persist the current localStorage save for a slot to a .sav file on disk.
+     * Only call this on explicit player save actions (SAVE SETTLEMENT, SAVE & QUIT).
+     * @param {number} slotNumber
+     * @returns {Promise<boolean>} true on success
+     */
+    static async persistToFile(slotNumber) {
+        const invoke = SaveSystem.getTauriInvoke();
+        if (!invoke) return false;
+        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+
+        const data = SaveSystem.getSave(slotNumber);
+        if (!data) return false;
+
+        try {
+            const integrity = await SaveSystem.computeIntegrity(data);
+            const fileContent = JSON.stringify({ v: 1, d: data, i: integrity });
+            await invoke('write_save_file', { slot: slotNumber, content: fileContent });
+            return true;
+        } catch (e) {
+            console.error(`SaveSystem: Failed to persist slot ${slotNumber} to file:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * Load a .sav file for the given slot, verify its integrity, and write the
+     * verified data into localStorage (making it the working copy for this session).
+     * @param {number} slotNumber
+     * @returns {Promise<boolean>} true if file was found, verified, and applied
+     */
+    static async syncSlotFromFile(slotNumber) {
+        const invoke = SaveSystem.getTauriInvoke();
+        if (!invoke) return false;
+        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+
+        try {
+            const raw = await invoke('read_save_file', { slot: slotNumber });
+            const parsed = JSON.parse(raw);
+            if (!parsed || parsed.v !== 1 || !parsed.d || !parsed.i) {
+                console.error(`SaveSystem: Save file for slot ${slotNumber} has invalid format`);
+                return false;
+            }
+            const valid = await SaveSystem.verifyIntegrity(parsed.d, parsed.i);
+            if (!valid) {
+                console.error(`SaveSystem: Save file for slot ${slotNumber} failed integrity check — file may have been modified`);
+                return false;
+            }
+            const key = SaveSystem.getSaveSlotKey(slotNumber);
+            localStorage.setItem(key, JSON.stringify(parsed.d));
+            return true;
+        } catch (e) {
+            // File not found or slot is new — not an error
+            return false;
+        }
+    }
+
+    /**
+     * Sync all 3 save slots from their .sav files into localStorage.
+     * Called once at game startup so the files are always the source of truth.
+     * @returns {Promise<void>}
+     */
+    static async syncAllSlotsFromFiles() {
+        if (!SaveSystem.isTauri()) return;
+        for (let i = 1; i <= SaveSystem.NUM_SLOTS; i++) {
+            await SaveSystem.syncSlotFromFile(i);
+        }
+    }
+
+    /**
+     * Delete the .sav file for a slot (called alongside wipeSaveSlot).
+     * @param {number} slotNumber
+     * @returns {Promise<boolean>}
+     */
+    static async deleteFile(slotNumber) {
+        const invoke = SaveSystem.getTauriInvoke();
+        if (!invoke) return false;
+        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+        try {
+            await invoke('delete_save_file', { slot: slotNumber });
+            return true;
+        } catch (e) {
+            console.error(`SaveSystem: Failed to delete save file for slot ${slotNumber}:`, e);
+            return false;
+        }
+    }
+
+    /**
+     * Get the filesystem path where .sav files are stored.
+     * Useful for informing the player where their saves live.
+     * @returns {Promise<string|null>}
+     */
+    static async getSavesPath() {
+        const invoke = SaveSystem.getTauriInvoke();
+        if (!invoke) return null;
+        try {
+            return await invoke('get_saves_path');
+        } catch (e) {
+            return null;
+        }
     }
 }

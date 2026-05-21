@@ -98,8 +98,13 @@ export class Game {
             // Setup shutdown handler for graceful cleanup
             this.setupShutdownHandlers();
             
-            // Add states with comprehensive error handling
-            this.initializeStates();
+            // Initialize states and start game loop (async: syncs save files first)
+            this.initializeStates().catch(error => {
+                console.error('Game: Critical error during state initialization:', error);
+                if (this.canvas && this.ctx) {
+                    this.showError(error.message);
+                }
+            });
             
         } catch (error) {
             console.error('Game: Critical error during initialization:', error);
@@ -111,7 +116,7 @@ export class Game {
         }
     }
     
-    initializeStates() {
+    async initializeStates() {
         
         try {
             const loadGame = new LoadGame(this.stateManager);
@@ -160,6 +165,9 @@ export class Game {
             const gameplayState = new GameplayState(this.stateManager);
             this.stateManager.addState('game', gameplayState);
             
+            // Sync .sav files into localStorage before the player can interact
+            // This makes save files the source of truth on each startup
+            await SaveSystem.syncAllSlotsFromFiles();
             
             const stateChanged = this.stateManager.changeState('mainMenu');
             
@@ -169,7 +177,7 @@ export class Game {
             
             this.isInitialized = true;
             this.startGameLoop();
-            
+        
         } catch (error) {
             console.error('Game: Error initializing states:', error);
             throw error;

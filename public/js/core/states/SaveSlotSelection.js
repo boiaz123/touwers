@@ -193,7 +193,7 @@ export class SaveSlotSelection {
         this.warningSlotNumber = null;
     }
 
-    _confirmCommanderName() {
+    async _confirmCommanderName() {
         const name = this.commanderNameInput.trim();
         if (name.length === 0) return;
         // Create new game with commander name
@@ -203,6 +203,8 @@ export class SaveSlotSelection {
             SaveSystem.wipeSaveSlot(this.pendingSlotNumber);
         }
         SaveSystem.saveSettlementData(this.pendingSlotNumber, newGameData);
+        // Write initial save file to disk
+        await SaveSystem.persistToFile(this.pendingSlotNumber);
         this.stateManager.currentSaveSlot = this.pendingSlotNumber;
         this.stateManager.currentSaveData = newGameData;
         this.stateManager.changeState('settlementHub');
@@ -427,6 +429,9 @@ export class SaveSlotSelection {
                     SaveSystem.wipeSaveSlot(this.pendingSlotNumber);
                 }
                 SaveSystem.saveSettlementData(this.pendingSlotNumber, newGameData);
+                // Write initial save file to disk (async, intentionally not awaited here
+                // since changeState is safe to call while the write completes in background)
+                SaveSystem.persistToFile(this.pendingSlotNumber);
 
                 // Set as current slot
                 this.stateManager.currentSaveSlot = this.pendingSlotNumber;

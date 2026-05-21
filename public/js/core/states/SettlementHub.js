@@ -7424,7 +7424,7 @@ class SettlementOptionsMenu {
         });
     }
 
-    handleButtonClick(action) {
+    async handleButtonClick(action) {
         if (action === 'save') {
             if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
                 const settlementData = {
@@ -7441,6 +7441,8 @@ class SettlementOptionsMenu {
                     unlockSystem: this.stateManager.currentSaveData.unlockSystem
                 };
                 SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+                // Write to disk — explicit player save action
+                await SaveSystem.persistToFile(this.stateManager.currentSaveSlot);
             }
         } else if (action === 'load') {
             this.stateManager.changeState('loadGame');
@@ -7955,7 +7957,7 @@ class ManageSettlementMenu {
         }
     }
 
-    saveSettlement() {
+    async saveSettlement() {
         // Save the current settlement state to the active save slot
         if (this.stateManager.currentSaveSlot && this.stateManager.currentSaveData) {
             const settlementData = {
@@ -7972,6 +7974,8 @@ class ManageSettlementMenu {
                 unlockSystem: this.stateManager.currentSaveData.unlockSystem
             };
             SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+            // Write to disk — explicit player save action
+            await SaveSystem.persistToFile(this.stateManager.currentSaveSlot);
         }
         
         // Close the menu
@@ -7996,7 +8000,7 @@ class ManageSettlementMenu {
         this.stateManager.changeState('options');
     }
 
-    executeWarningAction(action) {
+    async executeWarningAction(action) {
         switch (action) {
             case 'quit':
                 if (this.activeWarningDialog === 'quitSettlement') {
@@ -8022,6 +8026,8 @@ class ManageSettlementMenu {
                         unlockSystem: this.stateManager.currentSaveData.unlockSystem
                     };
                     SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, settlementData);
+                    // Write to disk — explicit player save action
+                    await SaveSystem.persistToFile(this.stateManager.currentSaveSlot);
                 }
                 if (this.activeWarningDialog === 'quitSettlement') {
                     this.quitSettlement();
