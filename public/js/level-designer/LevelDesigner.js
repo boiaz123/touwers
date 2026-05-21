@@ -35,6 +35,8 @@ export class LevelDesigner {
         this.selectedRockVariant = 0;
         this.brushTreeVariants = new Set([0]); // Which tree variants are active in brush mode
         
+        this.hoveredTerrainElementIndex = null; // For delete mode hover detection
+
         // Tree brush properties
         this.treeBrushActive = false;
         this.treeBrushSize = 3;
@@ -142,6 +144,7 @@ export class LevelDesigner {
         document.getElementById('drawVegetationBtn')?.addEventListener('click', () => this.setTerrainMode('vegetation'));
         document.getElementById('drawRockBtn')?.addEventListener('click', () => this.setTerrainMode('rock'));
         document.getElementById('drawWaterBtn')?.addEventListener('click', () => this.setTerrainMode('water'));
+        document.getElementById('deleteTerrainBtn')?.addEventListener('click', () => this.setDeleteMode());
         
         // Water mode buttons
         document.getElementById('waterRiverBtn')?.addEventListener('click', () => this.setWaterMode('river'));
@@ -257,6 +260,7 @@ export class LevelDesigner {
         document.getElementById('drawVegetationBtn')?.classList.toggle('active', false);
         document.getElementById('drawRockBtn')?.classList.toggle('active', false);
         document.getElementById('drawWaterBtn')?.classList.toggle('active', false);
+        document.getElementById('deleteTerrainBtn')?.classList.toggle('active', false);
         
         // Show/hide finish path button
         const finishPathControl = document.getElementById('finishPathControl');
@@ -293,6 +297,7 @@ export class LevelDesigner {
         document.getElementById('drawVegetationBtn')?.classList.toggle('active', terrainType === 'vegetation');
         document.getElementById('drawRockBtn')?.classList.toggle('active', terrainType === 'rock');
         document.getElementById('drawWaterBtn')?.classList.toggle('active', terrainType === 'water');
+        document.getElementById('deleteTerrainBtn')?.classList.toggle('active', false);
         
         // Hide all finish controls when entering terrain mode
         const finishPathControl = document.getElementById('finishPathControl');
@@ -322,6 +327,88 @@ export class LevelDesigner {
 
         this.updateVariantPicker();
         this.updateStatusBar();
+    }
+
+    setDeleteMode() {
+        this.mode = 'deleteTerrain';
+        this.terrainMode = null;
+
+        document.getElementById('drawPathBtn').classList.toggle('active', false);
+        document.getElementById('drawVegetationBtn')?.classList.toggle('active', false);
+        document.getElementById('drawRockBtn')?.classList.toggle('active', false);
+        document.getElementById('drawWaterBtn')?.classList.toggle('active', false);
+        document.getElementById('deleteTerrainBtn')?.classList.toggle('active', true);
+
+        const finishPathControl = document.getElementById('finishPathControl');
+        if (finishPathControl) finishPathControl.style.display = 'none';
+        const finishRiverControl = document.getElementById('finishRiverControl');
+        if (finishRiverControl) finishRiverControl.style.display = 'none';
+        const waterControls = document.getElementById('waterControls');
+        if (waterControls) waterControls.style.display = 'none';
+        const terrainSizeGroup = document.getElementById('terrainSizeGroup');
+        if (terrainSizeGroup) terrainSizeGroup.style.display = 'none';
+        const treeBrushControls = document.getElementById('treeBrushControls');
+        if (treeBrushControls) treeBrushControls.style.display = 'none';
+        const variantPickerRow = document.getElementById('variantPickerRow');
+        if (variantPickerRow) variantPickerRow.style.display = 'none';
+
+        this.hoveredTerrainElementIndex = null;
+        this.updateStatusBar();
+    }
+
+    _findHoveredTerrainElement(gridX, gridY) {
+        const threshold = 1.2;
+        let bestIndex = null;
+        let bestDist = Infinity;
+        for (let i = 0; i < this.terrainElements.length; i++) {
+            const el = this.terrainElements[i];
+            if (el.type !== 'vegetation' && el.type !== 'rock') continue;
+            const dx = el.gridX - gridX;
+            const dy = el.gridY - gridY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < threshold && dist < bestDist) {
+                bestDist = dist;
+                bestIndex = i;
+            }
+        }
+        this.hoveredTerrainElementIndex = bestIndex;
+    }
+
+    _drawDeleteHover() {
+        if (this.hoveredTerrainElementIndex === null) return;
+        const el = this.terrainElements[this.hoveredTerrainElementIndex];
+        if (!el) return;
+        const cellWidthPixels = this.canvas.width / this.gridWidth;
+        const cellHeightPixels = this.canvas.height / this.gridHeight;
+        const x = el.gridX * cellWidthPixels;
+        const y = el.gridY * cellHeightPixels;
+        const avgCell = (cellWidthPixels + cellHeightPixels) / 2;
+        const r = el.size * avgCell * 0.55;
+
+        this.ctx.strokeStyle = 'rgba(255, 60, 60, 0.9)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([4, 3]);
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, r, 0, Math.PI * 2);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        this.ctx.fillStyle = 'rgba(255, 60, 60, 0.15)';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, r, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        const hs = avgCell * 0.22;
+        this.ctx.strokeStyle = 'rgba(255, 60, 60, 0.95)';
+        this.ctx.lineWidth = 2.5;
+        this.ctx.setLineDash([]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(x - hs, y - hs);
+        this.ctx.lineTo(x + hs, y + hs);
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + hs, y - hs);
+        this.ctx.lineTo(x - hs, y + hs);
+        this.ctx.stroke();
     }
 
     updateVariantPicker() {
@@ -406,7 +493,10 @@ export class LevelDesigner {
         if (coordEl) coordEl.textContent = `x: ${gridCoords.gridX.toFixed(1)}  y: ${gridCoords.gridY.toFixed(1)}`;
         
         // Only snap for terrain and path modes
-        if (this.mode === 'terrain' || (this.mode === 'path' && this.waterMode !== 'river') || this.mode === 'castle') {
+        if (this.mode === 'deleteTerrain') {
+            this.hoveredGridCell = null;
+            this._findHoveredTerrainElement(gridCoords.gridX, gridCoords.gridY);
+        } else if (this.mode === 'terrain' || (this.mode === 'path' && this.waterMode !== 'river') || this.mode === 'castle') {
             this.hoveredGridCell = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
         } else if (this.mode === 'path' || (this.mode === 'terrain' && this.waterMode === 'river')) {
             // For path and river, show the unsnapped position
@@ -458,7 +548,12 @@ export class LevelDesigner {
         // Convert to grid coordinates
         const gridCoords = this.pixelToGrid(canvasX, canvasY);
 
-        if (this.mode === 'path') {
+        if (this.mode === 'deleteTerrain') {
+            if (this.hoveredTerrainElementIndex !== null) {
+                this.terrainElements.splice(this.hoveredTerrainElementIndex, 1);
+                this.hoveredTerrainElementIndex = null;
+            }
+        } else if (this.mode === 'path') {
             // Snap path points to grid
             const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
             this.pathPoints.push(snapped);
@@ -1494,6 +1589,12 @@ export class LevelDesigner {
             return;
         }
 
+        if (this.mode === 'deleteTerrain') {
+            const count = this.terrainElements.filter(e => e.type === 'vegetation' || e.type === 'rock').length;
+            pathInfo.textContent = `Delete mode — hover over a tree or rock and click to remove it. Total: ${count}`;
+            return;
+        }
+
         if (this.mode === 'path') {
             if (this.pathLocked) {
                 pathInfo.textContent = `Path finished (${this.pathPoints.length} waypoints). Castle placed at path end. Add terrain then export.`;
@@ -1554,6 +1655,10 @@ export class LevelDesigner {
     }
 
     drawHoveredCell() {
+        if (this.mode === 'deleteTerrain') {
+            this._drawDeleteHover();
+            return;
+        }
         if (!this.hoveredGridCell) return;
 
         const cellWidthPixels = this.canvas.width / this.gridWidth;
@@ -2162,7 +2267,8 @@ export class LevelDesigner {
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
 
-        this.terrainElements.forEach(element => {
+        const sorted = [...this.terrainElements].sort((a, b) => a.gridY - b.gridY);
+        sorted.forEach(element => {
             const x = element.gridX * cellWidthPixels;
             const y = element.gridY * cellHeightPixels;
             const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
@@ -2170,7 +2276,7 @@ export class LevelDesigner {
 
             switch (element.type) {
                 case 'vegetation':
-                    this.drawVegetation(x, y, size, element.variant);
+                    this.drawVegetation(x, y - size * 0.45, size, element.variant);
                     break;
                 case 'rock':
                     this.drawRock(x, y, size, element.variant);

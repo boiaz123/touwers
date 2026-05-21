@@ -372,44 +372,44 @@ export class LevelBase {
         this.terrainElements.forEach((element, idx) => {
             const gridX = element.gridX;
             const gridY = element.gridY;
-            // Use provided size or default to 1.0 if not specified
-            const size = element.size || 1.0;
-            // Radius must be at least √0.5 ≈ 0.707 to mark the center cell
-            // (distance from cell center to terrain center is √0.5 for diagonals)
-            // Using 0.71 ensures size 1.0 blocks exactly 1 grid cell
-            const radius = size * 0.71;
-            
+            const type = element.type;
+
             if (typeof gridX !== 'number' || typeof gridY !== 'number') {
                 console.warn(`[${this.constructor.name}] Terrain element ${idx} missing gridX/gridY:`, element);
                 return;
             }
-            
+
+            // Trees, rocks, and vegetation always occupy exactly 1 grid cell regardless of visual size
+            if (type === 'tree' || type === 'vegetation' || type === 'rock' ||
+                type === 'cactus' || type === 'drybush') {
+                const x = Math.floor(gridX);
+                const y = Math.floor(gridY);
+                if (this.isValidGridPosition(x, y)) {
+                    this.occupiedCells.add(`${x},${y}`);
+                }
+                return;
+            }
+
+            // For water and other types, use size-based radius
+            const size = element.size || 1.0;
+            const radius = size * 0.71;
             let cellsMarked = 0;
-            
-            // Mark cells within the terrain element's radius
+
             for (let x = gridX - Math.ceil(radius); x <= gridX + Math.ceil(radius); x++) {
                 for (let y = gridY - Math.ceil(radius); y <= gridY + Math.ceil(radius); y++) {
                     if (!this.isValidGridPosition(x, y)) continue;
-                    
-                    // Calculate distance from cell center to terrain center
                     const cellCenterX = x + 0.5;
                     const cellCenterY = y + 0.5;
                     const distance = Math.hypot(cellCenterX - gridX, cellCenterY - gridY);
-                    
-                    // Mark cell if within radius
-                    // Apply same collision detection for all element types:
-                    // - trees, vegetation, cacti (type: 'tree', 'vegetation', 'cactus', 'drybush')
-                    // - rocks (type: 'rock')
-                    // - water (type: 'water')
                     if (distance <= radius) {
                         this.occupiedCells.add(`${x},${y}`);
                         cellsMarked++;
                     }
                 }
             }
-            
+
             if (cellsMarked === 0) {
-                console.warn(`[${this.constructor.name}] Element ${idx} (${element.type} at ${gridX},${gridY}, size=${size}) marked 0 cells! (radius=${radius})`);
+                console.warn(`[${this.constructor.name}] Element ${idx} (${type} at ${gridX},${gridY}, size=${size}) marked 0 cells! (radius=${radius})`);
             }
         });
         
@@ -695,44 +695,54 @@ export class LevelBase {
     }
     
     renderTerrainLayer(ctx) {
-        // PRE-RENDER OPTIMIZATION: Cache static terrain to offscreen canvases.
-        // Background canvas: rocks, water, rivers, path, and vegetation that sits
-        // ABOVE (lower Y than) the castle front so it renders behind entities.
-        // Foreground canvas: vegetation at Y >= castle front, rendered after entities.
+        // PRE-RENDER OPTIMIZATION: Cache static terrain (water, rivers, path) to offscreen canvas.
+        // Vegetation and rocks are rendered per-frame by GameplayState in entity-sorted order
+        // for correct depth ordering with towers and buildings.
         if (!this.terrainCanvas) {
-            // Determine the Y threshold: vegetation at or below this Y is foreground.
-            // Use pathEnd.y (= castle gate Y) as the split point.
-            const pathEnd = this.path.length > 0 ? this.path[this.path.length - 1] : null;
-            const fgThresholdY = pathEnd ? pathEnd.y : Infinity;
-
             this.terrainCanvas = document.createElement('canvas');
             this.terrainCanvas.width = ctx.canvas.width;
             this.terrainCanvas.height = ctx.canvas.height;
             const tCtx = this.terrainCanvas.getContext('2d');
             tCtx.resolutionManager = ctx.resolutionManager;
 
-            // Background: rocks, water, rivers, path, and bg vegetation
-            this.renderTerrainElementsByType(tCtx, ['rock', 'water']);
+            // Background: water, rivers, and path only
+            this.renderTerrainElementsByType(tCtx, ['water']);
             this.renderRiverSmooth(tCtx);
             this.renderPath(tCtx);
-            this.renderTerrainElementsByType(tCtx, ['vegetation', 'tree', 'cactus', 'drybush'], -Infinity, fgThresholdY);
-
-            // Foreground: vegetation in front of (at or below) the castle gate
-            this.terrainFgCanvas = document.createElement('canvas');
-            this.terrainFgCanvas.width = ctx.canvas.width;
-            this.terrainFgCanvas.height = ctx.canvas.height;
-            const fgCtx = this.terrainFgCanvas.getContext('2d');
-            fgCtx.resolutionManager = ctx.resolutionManager;
-            this.renderTerrainElementsByType(fgCtx, ['vegetation', 'tree', 'cactus', 'drybush'], fgThresholdY, Infinity);
         }
 
-        // Single drawImage call replaces all background terrain rendering
+        // Single drawImage call for all static background terrain
         ctx.drawImage(this.terrainCanvas, 0, 0);
     }
 
     renderForegroundTerrain(ctx) {
-        if (this.terrainFgCanvas) {
-            ctx.drawImage(this.terrainFgCanvas, 0, 0);
+        // No-op: vegetation and rocks are rendered by GameplayState in entity-sorted order
+    }
+
+    renderSingleTerrainElement(ctx, element) {
+        const campaign = this.getCampaign();
+        const screenX = element.gridX * this.cellSize;
+        const screenY = element.gridY * this.cellSize;
+        const baseSize = element.size * this.cellSize;
+        const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
+
+        switch (element.type) {
+            case 'vegetation':
+                this.renderVegetation(ctx, screenX, screenY - size * 0.45, size, element.gridX, element.gridY, element.variant);
+                break;
+            case 'tree':
+                this.renderTree(ctx, screenX, screenY - size * 0.45, size, element.gridX, element.gridY, element.variant);
+                break;
+            case 'rock':
+                this.renderRock(ctx, screenX, screenY, size, element.gridX, element.gridY, element.variant);
+                break;
+            case 'cactus':
+                this.renderCactus(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                break;
+            case 'drybush':
+                this.renderDryBush(ctx, screenX, screenY, size, element.gridX, element.gridY);
+                break;
         }
     }
     

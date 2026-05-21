@@ -2164,6 +2164,17 @@ export class GameplayState {
         if (this.level.castle) {
             getEntity(this.level.castle.y, this.level.castle, 'castle');
         }
+
+        // Add terrain elements (vegetation and rocks) for correct depth sorting with towers and buildings
+        if (this.level && this.level.terrainElements) {
+            const terrain = this.level.terrainElements;
+            for (let i = 0; i < terrain.length; i++) {
+                const el = terrain[i];
+                if (el.type !== 'water') {
+                    getEntity(el.gridY * this.level.cellSize, el, 'terrain');
+                }
+            }
+        }
         
         // Set the active length of the entities view into the object pool
         entities.length = entityIndex;
@@ -2192,6 +2203,8 @@ export class GameplayState {
                         enemy.hitSplatters[j].render(ctx);
                     }
                 }
+            } else if (ent.type === 'terrain') {
+                this.level.renderSingleTerrainElement(ctx, ent.source);
             } else {
                 ent.source.render(ctx);
             }
@@ -2204,11 +2217,6 @@ export class GameplayState {
             }
         }
 
-        // Render foreground terrain (vegetation in front of the castle gate, i.e. higher Y).
-        // This must happen after all entities so that trees/bushes south of the castle
-        // correctly appear on top of it, while those north remain behind it (in bg canvas).
-        this.level.renderForegroundTerrain(ctx);
-        
         // Render defender if active (after all main entities)
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             this.level.castle.defender.render(ctx);
