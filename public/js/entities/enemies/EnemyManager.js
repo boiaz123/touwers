@@ -76,8 +76,8 @@ export class EnemyManager {
                 for (let i = 0; i < entry.count; i++) {
                     this.spawnQueue.push({
                         type: entry.type,
-                        health_multiplier: health_multiplier,
-                        speed_multiplier: speed_multiplier
+                        health_multiplier: entry.healthMultiplier !== undefined ? entry.healthMultiplier : health_multiplier,
+                        speed_multiplier: entry.speedMultiplier !== undefined ? entry.speedMultiplier : speed_multiplier
                     });
                 }
             }

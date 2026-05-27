@@ -860,7 +860,12 @@ export class LevelDesigner {
                 enemyHealthMultiplier: waveToClone.enemyHealthMultiplier,
                 speedMultiplier: waveToClone.speedMultiplier,
                 spawnInterval: waveToClone.spawnInterval,
-                pattern: waveToClone.pattern.map(e => ({ type: e.type, count: e.count }))
+                pattern: waveToClone.pattern.map(e => {
+                    const copy = { type: e.type, count: e.count };
+                    if (e.healthMultiplier !== undefined) copy.healthMultiplier = e.healthMultiplier;
+                    if (e.speedMultiplier !== undefined) copy.speedMultiplier = e.speedMultiplier;
+                    return copy;
+                })
             });
             this.renderWavesList();
             this.updateGeneratedCode();
@@ -908,11 +913,17 @@ export class LevelDesigner {
         pattern.forEach((entry, idx) => {
             const item = document.createElement('div');
             item.className = 'pattern-item';
+            const hpVal = entry.healthMultiplier !== undefined ? entry.healthMultiplier : '';
+            const spdVal = entry.speedMultiplier !== undefined ? entry.speedMultiplier : '';
             item.innerHTML = `
                 <select onchange="window.levelDesigner.updateModalPatternType(${idx}, this.value)">
                     ${this.enemies.map(e => `<option value="${e}" ${e === entry.type ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
-                <input type="number" min="1" value="${entry.count}" style="width:60px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" onchange="window.levelDesigner.updateModalPatternCount(${idx}, parseInt(this.value))">
+                <input type="number" min="1" value="${entry.count}" style="width:60px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Count" onchange="window.levelDesigner.updateModalPatternCount(${idx}, parseInt(this.value))">
+                <label style="font-size:10px;color:#888;margin:0 2px">HP:</label>
+                <input type="number" min="0.1" step="0.1" value="${hpVal}" placeholder="wave" style="width:55px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Health multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternHealthMul(${idx}, this.value)">
+                <label style="font-size:10px;color:#888;margin:0 2px">SPD:</label>
+                <input type="number" min="0.1" step="0.05" value="${spdVal}" placeholder="wave" style="width:55px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Speed multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternSpeedMul(${idx}, this.value)">
                 <button onclick="window.levelDesigner.removeModalPattern(${idx})">x</button>
             `;
             patternList.appendChild(item);
@@ -921,10 +932,18 @@ export class LevelDesigner {
 
     getModalPatternFromDOM() {
         const items = document.querySelectorAll('#modalPatternList .pattern-item');
-        return Array.from(items).map(item => ({
-            type: item.querySelector('select').value,
-            count: parseInt(item.querySelector('input[type=number]').value) || 1
-        }));
+        return Array.from(items).map(item => {
+            const inputs = item.querySelectorAll('input[type=number]');
+            const entry = {
+                type: item.querySelector('select').value,
+                count: parseInt(inputs[0].value) || 1
+            };
+            const hpVal = inputs[1] ? inputs[1].value.trim() : '';
+            const spdVal = inputs[2] ? inputs[2].value.trim() : '';
+            if (hpVal !== '') entry.healthMultiplier = parseFloat(hpVal);
+            if (spdVal !== '') entry.speedMultiplier = parseFloat(spdVal);
+            return entry;
+        });
     }
 
     updateModalPatternType(idx, value) {
@@ -941,6 +960,36 @@ export class LevelDesigner {
             const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
             const pattern = this.getModalPatternFromDOM();
             if (pattern[idx]) pattern[idx].count = Math.max(1, count || 1);
+            wave.pattern = pattern;
+        }
+    }
+
+    updateModalPatternHealthMul(idx, value) {
+        if (this.currentEditingWaveId) {
+            const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
+            const pattern = this.getModalPatternFromDOM();
+            if (pattern[idx]) {
+                if (value.trim() === '') {
+                    delete pattern[idx].healthMultiplier;
+                } else {
+                    pattern[idx].healthMultiplier = parseFloat(value);
+                }
+            }
+            wave.pattern = pattern;
+        }
+    }
+
+    updateModalPatternSpeedMul(idx, value) {
+        if (this.currentEditingWaveId) {
+            const wave = this.waves.find(w => w.id === this.currentEditingWaveId);
+            const pattern = this.getModalPatternFromDOM();
+            if (pattern[idx]) {
+                if (value.trim() === '') {
+                    delete pattern[idx].speedMultiplier;
+                } else {
+                    pattern[idx].speedMultiplier = parseFloat(value);
+                }
+            }
             wave.pattern = pattern;
         }
     }
@@ -1006,11 +1055,17 @@ export class LevelDesigner {
             waveCard.dataset.index = index;
 
             const totalCount = wave.pattern.reduce((s, e) => s + e.count, 0);
-            const patternStr = wave.pattern.map(e => `${e.type}x${e.count}`).join(' + ');
+            const patternStr = wave.pattern.map(e => {
+                let s = `${e.type}x${e.count}`;
+                if (e.healthMultiplier !== undefined) s += `[HP:${e.healthMultiplier}x]`;
+                if (e.speedMultiplier !== undefined) s += `[SPD:${e.speedMultiplier}x]`;
+                return s;
+            }).join(' + ');
 
             const waveGold = wave.pattern.reduce((sum, entry) => {
                 const baseHealth = BASE_ENEMY_HEALTH[entry.type] || 100;
-                return sum + Math.ceil(baseHealth * wave.enemyHealthMultiplier / 10) * entry.count;
+                const effectiveHealthMul = entry.healthMultiplier !== undefined ? entry.healthMultiplier : wave.enemyHealthMultiplier;
+                return sum + Math.ceil(baseHealth * effectiveHealthMul / 10) * entry.count;
             }, 0);
             cumulativeGold += waveGold;
 
@@ -4992,7 +5047,13 @@ export class LevelDesigner {
             enemyHealth_multiplier: ${wave.enemyHealthMultiplier}, 
             speedMultiplier: ${wave.speedMultiplier}, 
             spawnInterval: ${wave.spawnInterval}, 
-            pattern: [${wave.pattern.map(e => `{ type: '${e.type}', count: ${e.count} }`).join(', ')}] 
+            pattern: [${wave.pattern.map(e => {
+                let entry = `{ type: '${e.type}', count: ${e.count}`;
+                if (e.healthMultiplier !== undefined) entry += `, healthMultiplier: ${e.healthMultiplier}`;
+                if (e.speedMultiplier !== undefined) entry += `, speedMultiplier: ${e.speedMultiplier}`;
+                entry += ' }';
+                return entry;
+            }).join(', ')}] 
         }`).join('');
 
         // Convert riverPaths to terrain cells for export (matching in-game format)
@@ -5393,6 +5454,14 @@ ${pathCode}
                             typeCounts[t]++;
                         }
                         pattern = typeOrder.map(t => ({ type: t, count: typeCounts[t] }));
+                    } else {
+                        // Preserve per-entry multipliers if present
+                        pattern = pattern.map(e => {
+                            const copy = { type: e.type, count: e.count };
+                            if (e.healthMultiplier !== undefined) copy.healthMultiplier = e.healthMultiplier;
+                            if (e.speedMultiplier !== undefined) copy.speedMultiplier = e.speedMultiplier;
+                            return copy;
+                        });
                     }
                     this.waves.push({
                         id: waveIndex,
