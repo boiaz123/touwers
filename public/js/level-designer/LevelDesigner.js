@@ -992,6 +992,13 @@ export class LevelDesigner {
         container.innerHTML = '';
         this.draggedWaveIndex = null;
 
+        const BASE_ENEMY_HEALTH = {
+            'basic': 100, 'villager': 100, 'archer': 120, 'beefyenemy': 200,
+            'knight': 1500, 'shieldknight': 780, 'mage': 750, 'frog': 85,
+            'earthfrog': 340, 'waterfrog': 340, 'firefrog': 340, 'airfrog': 340, 'frogking': 500
+        };
+        let cumulativeGold = 100;
+
         this.waves.forEach((wave, index) => {
             const waveCard = document.createElement('div');
             waveCard.className = 'wave-card';
@@ -1001,12 +1008,19 @@ export class LevelDesigner {
             const totalCount = wave.pattern.reduce((s, e) => s + e.count, 0);
             const patternStr = wave.pattern.map(e => `${e.type}x${e.count}`).join(' + ');
 
+            const waveGold = wave.pattern.reduce((sum, entry) => {
+                const baseHealth = BASE_ENEMY_HEALTH[entry.type] || 100;
+                return sum + Math.ceil(baseHealth * wave.enemyHealthMultiplier / 10) * entry.count;
+            }, 0);
+            cumulativeGold += waveGold;
+
             waveCard.innerHTML = `
                 <div class="wave-drag-handle" title="Drag to reorder">&#9776;</div>
                 <div class="wave-card-info">
                     <div class="wave-card-title">Wave ${wave.id}</div>
                     <div class="wave-card-meta">Count: ${totalCount} | Health: ${wave.enemyHealthMultiplier.toFixed(2)}x | Speed: ${wave.speedMultiplier.toFixed(2)}x | ${wave.spawnInterval.toFixed(2)}s</div>
                     <div class="wave-card-meta" style="color:#90b890">Pattern: ${patternStr}</div>
+                    <div class="wave-card-meta" style="color:#d4a840">Gold: +${waveGold} this wave | Cumulative: ${cumulativeGold} (start: 100)</div>
                 </div>
                 <div class="wave-card-actions">
                     <button onclick="window.levelDesigner.openWaveModal(${wave.id})" style="font-size:10px;padding:3px 7px">Edit</button>
