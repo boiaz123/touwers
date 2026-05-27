@@ -1,20 +1,20 @@
 import { LevelBase } from '../LevelBase.js';
 
-export class ForestLevel8 extends LevelBase {
+export class ForestLevel9 extends LevelBase {
     static levelMetadata = {
         name: 'Dimlador',
         difficulty: 'Easy',
-        order: 8,
+        order: 9,
         campaign: 'forest'
     };
 
     constructor() {
         super();
         // Derive instance properties from static metadata
-        this.levelName = ForestLevel8.levelMetadata.name;
-        this.levelNumber = ForestLevel8.levelMetadata.order;
-        this.difficulty = ForestLevel8.levelMetadata.difficulty;
-        this.campaign = ForestLevel8.levelMetadata.campaign;
+        this.levelName = ForestLevel9.levelMetadata.name;
+        this.levelNumber = ForestLevel9.levelMetadata.order;
+        this.difficulty = ForestLevel9.levelMetadata.difficulty;
+        this.campaign = ForestLevel9.levelMetadata.campaign;
         this.maxWaves = 11;
 
         // Set terrain elements (prevent tower placement on these areas)
@@ -290,7 +290,7 @@ export class ForestLevel8 extends LevelBase {
             enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1, 
             spawnInterval: 0.3, 
-            pattern: [{ type: 'knight', count: 35, healthMultiplier: 3 }, { type: 'beefyenemy', count: 1, healthMultiplier: 2.5 }] 
+            pattern: [{ type: 'knight', count: 1, healthMultiplier: 3 }, { type: 'beefyenemy', count: 14, healthMultiplier: 2.5 }] 
         }
         ];
 
