@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class ForestLevel11 extends LevelBase {
     static levelMetadata = {
-        name: 'WIP',
+        name: 'Maegavenon',
         difficulty: 'Easy',
         order: 11,
         campaign: 'forest'
@@ -112,7 +112,33 @@ export class ForestLevel11 extends LevelBase {
             { type: 'vegetation', gridX: 1.00, gridY: 22.00, size: 2.5049624909115114, variant: 2 },
             { type: 'vegetation', gridX: 5.00, gridY: 21.00, size: 3.1224503389445357, variant: 3 },
             { type: 'vegetation', gridX: 2.00, gridY: 19.00, size: 3.0312257546349515, variant: 1 },
-            { type: 'vegetation', gridX: 6.00, gridY: 22.00, size: 2.795657967862661, variant: 1 }
+            { type: 'vegetation', gridX: 6.00, gridY: 22.00, size: 2.795657967862661, variant: 1 },
+            { type: 'rock', gridX: 8.00, gridY: 18.00, size: 1.5, variant: 0 },
+            { type: 'rock', gridX: 15.00, gridY: 5.00, size: 1.5, variant: 0 },
+            { type: 'rock', gridX: 13.00, gridY: 13.00, size: 2.5, variant: 0 },
+            { type: 'rock', gridX: 54.00, gridY: 16.00, size: 2.5, variant: 1 },
+            { type: 'rock', gridX: 46.00, gridY: 28.00, size: 1.5, variant: 1 },
+            { type: 'rock', gridX: 49.00, gridY: 3.00, size: 2, variant: 2 },
+            { type: 'rock', gridX: 49.00, gridY: 32.00, size: 2, variant: 2 },
+            { type: 'rock', gridX: 2.00, gridY: 10.00, size: 2.5, variant: 3 },
+            { type: 'rock', gridX: 43.00, gridY: 2.00, size: 3, variant: 3 },
+            { type: 'water', gridX: 49.00, gridY: 16.00, size: 3.5, waterType: 'lake' },
+            { type: 'vegetation', gridX: 46.00, gridY: 15.00, size: 2.5, variant: 0 },
+            { type: 'vegetation', gridX: 49.00, gridY: 19.00, size: 2.5, variant: 0 },
+            { type: 'vegetation', gridX: 48.00, gridY: 12.00, size: 2.5, variant: 1 },
+            { type: 'vegetation', gridX: 59.00, gridY: 13.00, size: 2.5, variant: 1 },
+            { type: 'vegetation', gridX: 46.00, gridY: 2.00, size: 2.5, variant: 1 },
+            { type: 'vegetation', gridX: 2.00, gridY: 5.00, size: 2.5, variant: 1 },
+            { type: 'vegetation', gridX: 1.00, gridY: 24.00, size: 2.5, variant: 2 },
+            { type: 'vegetation', gridX: 14.00, gridY: 9.00, size: 2.5, variant: 2 },
+            { type: 'vegetation', gridX: 10.00, gridY: 3.00, size: 2.5, variant: 2 },
+            { type: 'vegetation', gridX: 42.00, gridY: 5.00, size: 2.5, variant: 3 },
+            { type: 'vegetation', gridX: 39.00, gridY: 4.00, size: 2.5, variant: 3 },
+            { type: 'vegetation', gridX: 41.00, gridY: 2.00, size: 2.5, variant: 3 },
+            { type: 'vegetation', gridX: 40.00, gridY: 5.00, size: 3.5, variant: 3 },
+            { type: 'vegetation', gridX: 53.00, gridY: 31.00, size: 3.5, variant: 3 },
+            { type: 'vegetation', gridX: 52.00, gridY: 25.00, size: 3.5, variant: 3 },
+            { type: 'vegetation', gridX: 37.00, gridY: 32.00, size: 3.5, variant: 3 }
         ];
     }
 
@@ -141,35 +167,35 @@ export class ForestLevel11 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.8, 
             speedMultiplier: 0.6, 
-            spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 5 }, { type: 'villager', count: 5 }] 
+            spawnInterval: 1.7, 
+            pattern: [{ type: 'basic', count: 13 }, { type: 'villager', count: 11 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 1, 
-            speedMultiplier: 0.6, 
-            spawnInterval: 1.8, 
-            pattern: [{ type: 'basic', count: 6 }, { type: 'villager', count: 6 }] 
+            enemyHealth_multiplier: 1.2, 
+            speedMultiplier: 0.7, 
+            spawnInterval: 1.4, 
+            pattern: [{ type: 'basic', count: 10 }, { type: 'villager', count: 9 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.1, 
-            speedMultiplier: 0.7, 
-            spawnInterval: 1.5, 
-            pattern: [{ type: 'basic', count: 8 }, { type: 'villager', count: 8 }] 
+            enemyHealth_multiplier: 2.3, 
+            speedMultiplier: 1, 
+            spawnInterval: 1.3, 
+            pattern: [{ type: 'beefyenemy', count: 4 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.2, 
-            speedMultiplier: 3.33, 
-            spawnInterval: 3, 
-            pattern: [{ type: 'archer', count: 22 }] 
+            enemyHealth_multiplier: 1, 
+            speedMultiplier: 2.9, 
+            spawnInterval: 2.4, 
+            pattern: [{ type: 'archer', count: 25 }] 
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 0.75, 
             spawnInterval: 5, 
             pattern: [{ type: 'beefyenemy', count: 9 }] 
@@ -179,21 +205,21 @@ export class ForestLevel11 extends LevelBase {
             enemyHealth_multiplier: 1.8, 
             speedMultiplier: 1, 
             spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 8 }, { type: 'villager', count: 8 }, { type: 'archer', count: 8 }] 
+            pattern: [{ type: 'basic', count: 9 }, { type: 'villager', count: 7 }, { type: 'archer', count: 10 }] 
         }
         // Wave 7
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 3.33, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'archer', count: 15 }] 
+            pattern: [{ type: 'archer', count: 12 }] 
         }
         // Wave 8
         , { 
             enemyHealth_multiplier: 1.5, 
-            speedMultiplier: 0.9, 
-            spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
+            speedMultiplier: 1, 
+            spawnInterval: 1.6, 
+            pattern: [{ type: 'beefyenemy', count: 5, healthMultiplier: 4 }, { type: 'villager', count: 15, speedMultiplier: 1.3 }] 
         }
         // Wave 9
         , { 
@@ -204,49 +230,49 @@ export class ForestLevel11 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 1.8, 
-            speedMultiplier: 1.88, 
+            enemyHealth_multiplier: 4, 
+            speedMultiplier: 1.2, 
             spawnInterval: 7, 
             pattern: [{ type: 'knight', count: 1 }] 
         }
         // Wave 11
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 1.42, 
-            spawnInterval: 3, 
+            speedMultiplier: 1.5, 
+            spawnInterval: 2, 
             pattern: [{ type: 'archer', count: 35 }] 
         }
         // Wave 12
         , { 
             enemyHealth_multiplier: 9, 
             speedMultiplier: 0.58, 
-            spawnInterval: 4.5, 
-            pattern: [{ type: 'beefyenemy', count: 5 }] 
+            spawnInterval: 5, 
+            pattern: [{ type: 'beefyenemy', count: 4 }] 
         }
         // Wave 13
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 0.7, 
+            speedMultiplier: 0.85, 
             spawnInterval: 1, 
-            pattern: [{ type: 'basic', count: 18 }, { type: 'villager', count: 17 }] 
+            pattern: [{ type: 'basic', count: 14 }, { type: 'villager', count: 19 }] 
         }
         // Wave 14
         , { 
             enemyHealth_multiplier: 4, 
             speedMultiplier: 0.88, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'knight', count: 2 }] 
+            pattern: [{ type: 'knight', count: 1, healthMultiplier: 3 }, { type: 'beefyenemy', count: 4, healthMultiplier: 4, speedMultiplier: 1 }, { type: 'basic', count: 8 }, { type: 'villager', count: 12 }, { type: 'archer', count: 6, speedMultiplier: 1.6 }] 
         }
         // Wave 15
         , { 
             enemyHealth_multiplier: 5, 
-            speedMultiplier: 0.88, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 1 }] 
+            speedMultiplier: 0.4, 
+            spawnInterval: 13, 
+            pattern: [{ type: 'knight', count: 3 }] 
         }
         // Wave 16
         , { 
-            enemyHealth_multiplier: 7, 
+            enemyHealth_multiplier: 9, 
             speedMultiplier: 0.88, 
             spawnInterval: 1, 
             pattern: [{ type: 'knight', count: 1 }] 
