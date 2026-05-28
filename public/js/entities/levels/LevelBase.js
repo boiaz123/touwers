@@ -728,9 +728,12 @@ export class LevelBase {
         const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
         switch (element.type) {
-            case 'vegetation':
-                this.renderVegetation(ctx, screenX, screenY - size * 0.45, size, element.gridX, element.gridY, element.variant);
+            case 'vegetation': {
+                // Mountain: anchor at screenY so trunk/shadow embed below the ground anchor (matching campaign map)
+                const vegY = campaign === 'mountain' ? screenY : screenY - size * 0.45;
+                this.renderVegetation(ctx, screenX, vegY, size, element.gridX, element.gridY, element.variant);
                 break;
+            }
             case 'tree':
                 this.renderTree(ctx, screenX, screenY - size * 0.45, size, element.gridX, element.gridY, element.variant);
                 break;
@@ -2075,11 +2078,13 @@ export class LevelBase {
         const scaledSize = size;
         const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(gridX * 0.5 + gridY * 0.7) % 4;
         // Ground shadow — cold dark tint under mountain pine
+        // Per-seed shadow Y matches Campaign2: type3 (seed=2) has shorter trunk so shadow is closer
+        const shadowY = seed === 2 ? scaledSize * 0.33 : scaledSize * 0.43;
         ctx.save();
         ctx.globalAlpha = 0.45;
         ctx.fillStyle = '#05080f';
         ctx.beginPath();
-        ctx.ellipse(x + scaledSize * 0.06, y + scaledSize * 0.43, scaledSize * 0.38, scaledSize * 0.09, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + scaledSize * 0.06, y + shadowY, scaledSize * 0.38, scaledSize * 0.09, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         switch(seed) {
