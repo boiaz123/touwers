@@ -283,14 +283,14 @@ export class MountainLevel6 extends LevelBase {
         { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.90, 
-            spawnInterval: 0.4, 
+            spawnInterval: 0.8, 
             pattern: [{ type: 'basic', count: 27 }, { type: 'villager', count: 18 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.30, 
-            spawnInterval: 0.8, 
+            spawnInterval: 0.7, 
             pattern: [{ type: 'basic', count: 30 }, { type: 'villager', count: 30 }] 
         }
         // Wave 3

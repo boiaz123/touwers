@@ -295,7 +295,7 @@ export class MountainLevel11 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1.2, 
-            spawnInterval: 0.4, 
+            spawnInterval: 0.6, 
             pattern: [{ type: 'archer', count: 25 }] 
         }
         // Wave 3

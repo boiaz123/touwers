@@ -345,14 +345,14 @@ export class MountainLevel10 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.67, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 12 }, { type: 'villager', count: 12 }, { type: 'basic', count: 12 }] 
         }
         // Wave 10
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 15 }, { type: 'villager', count: 15 }, { type: 'basic', count: 15 }] 
         }
         // Wave 11
@@ -366,21 +366,21 @@ export class MountainLevel10 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.6, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 4 }, { type: 'knight', count: 2 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 13
         , { 
             enemyHealth_multiplier: 2.7, 
             speedMultiplier: 0.78, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'mage', count: 1 }] 
         }
         // Wave 14
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.4, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'beefyenemy', count: 12 }] 
         }
         // Wave 15
@@ -408,7 +408,7 @@ export class MountainLevel10 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.6, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 17 }, { type: 'villager', count: 16 }, { type: 'basic', count: 16 }] 
         }
         // Wave 19
