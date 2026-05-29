@@ -342,33 +342,17 @@ export class Campaign3 extends CampaignBase {
     }
     
     renderCactusOnMap(ctx, cactus) {
-        // Use LevelBase cactus rendering for consistency
-        const types = ['renderDesertSaguaro', 'renderDesertBarrel', 'renderDesertDryBush', 'renderDesertDeadTree'];
-        const method = types[cactus.type % types.length];
-        
-        if (this.levelBase && typeof this.levelBase[method] === 'function') {
-            this.levelBase[method](ctx, cactus.x, cactus.y, cactus.size);
+        // Use LevelBase vegetation rendering for consistency with gameplay
+        if (this.levelBase) {
+            this.levelBase.renderDesertVegetation(ctx, cactus.x, cactus.y, cactus.size, cactus.x, cactus.y, cactus.type);
         }
     }
     
     renderRockOnMap(ctx, rock) {
-        // Draw a simple desert rock
-        ctx.fillStyle = '#8a7a5a';
-        ctx.beginPath();
-        ctx.ellipse(rock.x, rock.y, rock.size * 0.6, rock.size * 0.4, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Rock shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.beginPath();
-        ctx.ellipse(rock.x + 2, rock.y + 1, rock.size * 0.5, rock.size * 0.2, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Rock highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-        ctx.beginPath();
-        ctx.ellipse(rock.x - rock.size * 0.2, rock.y - rock.size * 0.15, rock.size * 0.2, rock.size * 0.15, 0, 0, Math.PI * 2);
-        ctx.fill();
+        // Use LevelBase desert rock rendering for consistency with gameplay
+        if (this.levelBase) {
+            this.levelBase.renderDesertRock(ctx, rock.x, rock.y, rock.size, rock.x, rock.y, rock.type || 0);
+        }
     }
     
     drawSun(ctx, x, y) {

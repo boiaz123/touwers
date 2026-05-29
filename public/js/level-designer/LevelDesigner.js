@@ -4491,11 +4491,13 @@ export class LevelDesigner {
     }
 
     drawDesertVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
+        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(x * 0.5 + y * 0.7) % 6;
         switch(seed) {
             case 0: this.drawDesertSaguaro(x, y, size); break;
-            case 1: this.drawDesertBarrel(x, y, size); break;
-            case 2: this.drawDesertDryBush(x, y, size); break;
+            case 1: this.drawDryDesertShrub(x, y, size); break;
+            case 2: this.drawDesertPricklyPear(x, y, size); break;
+            case 3: this.drawDesertTree(x, y, size); break;
+            case 4: this.drawDesertDryBush(x, y, size); break;
             default: this.drawDesertDeadTree(x, y, size); break;
         }
     }
@@ -4505,12 +4507,12 @@ export class LevelDesigner {
         const h = size * 0.70;
         const w = size * 0.15;
         // Ground shadow
-        ctx.fillStyle = 'rgba(80,50,10,0.25)';
+        ctx.fillStyle = 'rgba(60,40,10,0.25)';
         ctx.beginPath();
         ctx.ellipse(x, y + 1, w * 1.8, size * 0.07, 0, 0, Math.PI * 2);
         ctx.fill();
         // Left arm (drawn first, behind trunk)
-        ctx.fillStyle = '#4e7a30';
+        ctx.fillStyle = '#5a7850';
         ctx.beginPath();
         ctx.moveTo(x - w * 0.8, y - h * 0.38);
         ctx.quadraticCurveTo(x - w * 3.0, y - h * 0.44, x - w * 3.0, y - h * 0.65);
@@ -4520,7 +4522,7 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Left arm shadow
-        ctx.fillStyle = '#344f20';
+        ctx.fillStyle = '#3a5034';
         ctx.beginPath();
         ctx.moveTo(x - w * 1.6, y - h * 0.62);
         ctx.quadraticCurveTo(x - w * 2.2, y - h * 0.70, x - w * 3.0, y - h * 0.65);
@@ -4529,7 +4531,7 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Right arm
-        ctx.fillStyle = '#4e7a30';
+        ctx.fillStyle = '#5a7850';
         ctx.beginPath();
         ctx.moveTo(x + w * 0.8, y - h * 0.50);
         ctx.quadraticCurveTo(x + w * 2.8, y - h * 0.54, x + w * 2.8, y - h * 0.74);
@@ -4539,7 +4541,7 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Right arm shadow
-        ctx.fillStyle = '#344f20';
+        ctx.fillStyle = '#3a5034';
         ctx.beginPath();
         ctx.moveTo(x + w * 1.5, y - h * 0.72);
         ctx.quadraticCurveTo(x + w * 2.1, y - h * 0.80, x + w * 2.8, y - h * 0.74);
@@ -4548,7 +4550,7 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Main trunk
-        ctx.fillStyle = '#4e7a30';
+        ctx.fillStyle = '#5a7850';
         ctx.beginPath();
         ctx.moveTo(x - w, y);
         ctx.lineTo(x - w * 0.9, y - h);
@@ -4557,7 +4559,7 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Trunk shadow side
-        ctx.fillStyle = '#344f20';
+        ctx.fillStyle = '#3a5034';
         ctx.beginPath();
         ctx.moveTo(x + w * 0.12, y);
         ctx.lineTo(x + w * 0.12, y - h * 0.96);
@@ -4566,69 +4568,59 @@ export class LevelDesigner {
         ctx.closePath();
         ctx.fill();
         // Rib lines
-        ctx.strokeStyle = 'rgba(30,55,10,0.40)';
+        ctx.strokeStyle = 'rgba(20,40,10,0.35)';
         ctx.lineWidth = 0.8;
         ctx.beginPath(); ctx.moveTo(x - w * 0.50, y); ctx.lineTo(x - w * 0.46, y - h * 0.98); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(x + w * 0.50, y); ctx.lineTo(x + w * 0.46, y - h * 0.98); ctx.stroke();
-        // Spines
-        ctx.fillStyle = '#c4af60';
-        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.10, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.10, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.26, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.26, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - w * 3.05, y - h * 0.58, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 2.85, y - h * 0.66, 1.0, 0, Math.PI * 2); ctx.fill();
+        // Spine areoles — evenly spaced along trunk edges and arm tips
+        ctx.fillStyle = '#d4c484';
+        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.08, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.08, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.22, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.22, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.40, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.40, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x - w * 2.65, y - h * 0.76, 1.0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + w * 2.45, y - h * 0.84, 1.0, 0, Math.PI * 2); ctx.fill();
     }
 
-    drawDesertBarrel(x, y, size) {
+    drawDryDesertShrub(x, y, size) {
         const ctx = this.ctx;
-        const rx = size * 0.25;
-        const ry = size * 0.36;
-        const cy = y - ry * 0.64;
+        // Spreading dry desert shrub — creosote/brittlebush style
+        const baseY = y - size * 0.02;
         // Ground shadow
-        ctx.fillStyle = 'rgba(80,50,10,0.25)';
+        ctx.fillStyle = 'rgba(60,40,10,0.26)';
         ctx.beginPath();
-        ctx.ellipse(x, y + 1, rx * 1.15, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 1, size * 0.30, size * 0.07, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Main body
-        ctx.fillStyle = '#5a7a32';
+        ctx.lineCap = 'round';
+        const brS = (x1, y1, cpx, cpy, x2, y2, w, col) => {
+            ctx.strokeStyle = col; ctx.lineWidth = w;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cpx, cpy, x2, y2); ctx.stroke();
+        };
+        // 5 main branches fanning out from base
+        brS(x, baseY, x - size*0.14, baseY - size*0.10, x - size*0.27, baseY - size*0.18, size*0.085, '#7a5838');
+        brS(x, baseY, x - size*0.06, baseY - size*0.14, x - size*0.10, baseY - size*0.26, size*0.082, '#7a5838');
+        brS(x, baseY, x + size*0.01, baseY - size*0.16, x + size*0.02, baseY - size*0.28, size*0.080, '#7a5838');
+        brS(x, baseY, x + size*0.08, baseY - size*0.13, x + size*0.16, baseY - size*0.26, size*0.082, '#7a5838');
+        brS(x, baseY, x + size*0.15, baseY - size*0.09, x + size*0.27, baseY - size*0.17, size*0.083, '#7a5838');
+        // Sub-branches
+        brS(x - size*0.20, baseY - size*0.14, x - size*0.27, baseY - size*0.19, x - size*0.33, baseY - size*0.21, size*0.048, '#9a7050');
+        brS(x - size*0.09, baseY - size*0.20, x - size*0.13, baseY - size*0.27, x - size*0.16, baseY - size*0.31, size*0.044, '#9a7050');
+        brS(x + size*0.02, baseY - size*0.22, x - size*0.02, baseY - size*0.29, x - size*0.04, baseY - size*0.33, size*0.042, '#9a7050');
+        brS(x + size*0.13, baseY - size*0.21, x + size*0.17, baseY - size*0.27, x + size*0.20, baseY - size*0.30, size*0.044, '#9a7050');
+        brS(x + size*0.23, baseY - size*0.13, x + size*0.29, baseY - size*0.18, x + size*0.32, baseY - size*0.20, size*0.046, '#9a7050');
+        // Fine twigs
+        brS(x - size*0.31, baseY - size*0.19, x - size*0.34, baseY - size*0.25, x - size*0.36, baseY - size*0.27, size*0.024, '#b08860');
+        brS(x - size*0.14, baseY - size*0.28, x - size*0.18, baseY - size*0.34, x - size*0.20, baseY - size*0.36, size*0.022, '#b08860');
+        brS(x + size*0.19, baseY - size*0.27, x + size*0.22, baseY - size*0.33, x + size*0.24, baseY - size*0.35, size*0.023, '#b08860');
+        brS(x + size*0.31, baseY - size*0.18, x + size*0.35, baseY - size*0.23, x + size*0.36, baseY - size*0.25, size*0.024, '#b08860');
+        // Woody base at ground
+        ctx.fillStyle = '#5a3c20';
         ctx.beginPath();
-        ctx.ellipse(x, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, baseY, size * 0.10, size * 0.05, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Shadow right side
-        ctx.fillStyle = '#3a5220';
-        ctx.beginPath();
-        ctx.moveTo(x + rx * 0.08, cy - ry);
-        ctx.quadraticCurveTo(x + rx * 1.06, cy - ry * 0.1, x + rx * 1.06, cy + ry * 0.22);
-        ctx.quadraticCurveTo(x + rx * 1.06, cy + ry * 0.9, x + rx * 0.08, cy + ry);
-        ctx.quadraticCurveTo(x + rx * 0.46, cy + ry * 0.5, x + rx * 0.40, cy);
-        ctx.quadraticCurveTo(x + rx * 0.44, cy - ry * 0.5, x + rx * 0.08, cy - ry);
-        ctx.closePath();
-        ctx.fill();
-        // Top highlight
-        ctx.fillStyle = '#6d9040';
-        ctx.beginPath();
-        ctx.ellipse(x - rx * 0.12, cy - ry * 0.54, rx * 0.50, ry * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Rib lines
-        ctx.strokeStyle = 'rgba(25,45,8,0.50)';
-        ctx.lineWidth = 0.9;
-        ctx.beginPath(); ctx.moveTo(x - rx * 0.62, cy - ry * 0.94); ctx.quadraticCurveTo(x - rx * 0.78, cy, x - rx * 0.62, cy + ry * 0.94); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - rx * 0.22, cy - ry * 0.99); ctx.lineTo(x - rx * 0.22, cy + ry * 0.99); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + rx * 0.22, cy - ry * 0.99); ctx.lineTo(x + rx * 0.22, cy + ry * 0.99); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + rx * 0.62, cy - ry * 0.94); ctx.quadraticCurveTo(x + rx * 0.78, cy, x + rx * 0.62, cy + ry * 0.94); ctx.stroke();
-        // Spine tufts
-        ctx.fillStyle = '#c4af60';
-        ctx.beginPath(); ctx.arc(x - rx * 0.80, cy - ry * 0.46, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - rx * 0.80, cy + ry * 0.08, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - rx * 0.64, cy - ry * 0.82, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + rx * 0.64, cy - ry * 0.82, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + rx * 0.80, cy - ry * 0.46, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + rx * 0.80, cy + ry * 0.08, 1.2, 0, Math.PI * 2); ctx.fill();
-        // Crown spines
-        ctx.beginPath(); ctx.arc(x, cy - ry * 1.02, 1.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - rx * 0.28, cy - ry * 0.99, 1.2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + rx * 0.28, cy - ry * 0.99, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.lineCap = 'butt';
     }
 
     drawDesertDryBush(x, y, size) {
@@ -4682,6 +4674,112 @@ export class LevelDesigner {
         ctx.beginPath(); ctx.arc(x - r * 1.12, y - r * 1.07, r * 0.06, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(x + r * 0.94, y - r * 0.99, r * 0.06, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(x - r * 0.05, y - r * 1.30, r * 0.06, 0, Math.PI * 2); ctx.fill();
+    }
+
+    drawDesertPricklyPear(x, y, size) {
+        const ctx = this.ctx;
+        const padW = size * 0.22;
+        const padH = size * 0.34;
+        const drawPad = (px, py, rot, sc) => {
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(rot);
+            // Pad body — muted blue-green like real Opuntia
+            ctx.fillStyle = '#5a7a6a';
+            ctx.beginPath();
+            ctx.moveTo(0, -padH * sc * 0.5);
+            ctx.quadraticCurveTo(padW * sc * 0.40, -padH * sc * 0.30, padW * sc * 0.42, 0);
+            ctx.quadraticCurveTo(padW * sc * 0.32, padH * sc * 0.42, 0, padH * sc * 0.52);
+            ctx.quadraticCurveTo(-padW * sc * 0.32, padH * sc * 0.42, -padW * sc * 0.42, 0);
+            ctx.quadraticCurveTo(-padW * sc * 0.40, -padH * sc * 0.30, 0, -padH * sc * 0.5);
+            ctx.closePath();
+            ctx.fill();
+            // Shadow side
+            ctx.fillStyle = '#3a5248';
+            ctx.beginPath();
+            ctx.moveTo(0, -padH * sc * 0.5);
+            ctx.quadraticCurveTo(padW * sc * 0.40, -padH * sc * 0.30, padW * sc * 0.42, 0);
+            ctx.quadraticCurveTo(padW * sc * 0.32, padH * sc * 0.42, padW * sc * 0.10, padH * sc * 0.52);
+            ctx.quadraticCurveTo(padW * sc * 0.05, padH * sc * 0.20, 0, -padH * sc * 0.5);
+            ctx.closePath();
+            ctx.fill();
+            // Spine dots
+            ctx.fillStyle = '#d4c484';
+            const sp = [{x:0,y:-padH*sc*0.32},{x:padW*sc*0.24,y:-padH*sc*0.06},{x:-padW*sc*0.24,y:-padH*sc*0.06},{x:padW*sc*0.18,y:padH*sc*0.22},{x:-padW*sc*0.18,y:padH*sc*0.22},{x:0,y:padH*sc*0.38}];
+            sp.forEach(s => { ctx.beginPath(); ctx.arc(s.x, s.y, 1.0, 0, Math.PI*2); ctx.fill(); });
+            ctx.restore();
+        };
+        // Ground shadow
+        ctx.fillStyle = 'rgba(60,40,10,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 2, padW * 1.10, padH * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // 4 pads arranged naturally
+        drawPad(x, y - padH * 0.22, 0, 0.52);
+        drawPad(x + padW * 0.44, y - padH * 0.10, Math.PI / 4.2, 0.46);
+        drawPad(x - padW * 0.44, y + padH * 0.06, -Math.PI / 4.8, 0.46);
+        drawPad(x, y + padH * 0.30, Math.PI / 9, 0.48);
+    }
+
+    drawDesertTree(x, y, size) {
+        const ctx = this.ctx;
+        // Sparse gnarled desert tree — palo verde/desert willow style
+        const th = size * 0.66;
+        const tw = size * 0.082;
+        // Ground shadow
+        ctx.fillStyle = 'rgba(60,40,10,0.28)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 1, size * 0.18, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Trunk — warm gray-brown, gnarled slightly
+        ctx.fillStyle = '#8c6c48';
+        ctx.beginPath();
+        ctx.moveTo(x - tw, y);
+        ctx.quadraticCurveTo(x - tw * 1.08, y - th * 0.38, x - tw * 0.80, y - th * 0.72);
+        ctx.quadraticCurveTo(x - tw * 0.30, y - th * 0.84, x + tw * 0.15, y - th * 0.78);
+        ctx.quadraticCurveTo(x + tw * 0.70, y - th * 0.72, x + tw, y - th * 0.60);
+        ctx.lineTo(x + tw, y);
+        ctx.closePath();
+        ctx.fill();
+        // Trunk shadow stripe
+        ctx.fillStyle = '#5c4232';
+        ctx.beginPath();
+        ctx.moveTo(x + tw * 0.20, y);
+        ctx.quadraticCurveTo(x + tw * 0.38, y - th * 0.36, x + tw * 0.46, y - th * 0.70);
+        ctx.quadraticCurveTo(x + tw * 0.52, y - th * 0.74, x + tw, y - th * 0.60);
+        ctx.lineTo(x + tw, y);
+        ctx.closePath();
+        ctx.fill();
+        // Bark texture
+        ctx.strokeStyle = 'rgba(40,22,10,0.35)';
+        ctx.lineWidth = 0.7;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x - tw*0.5, y - th*0.10); ctx.quadraticCurveTo(x - tw*0.55, y - th*0.35, x - tw*0.42, y - th*0.60); ctx.stroke();
+        const forkY = y - th * 0.70;
+        const brT = (x1, y1, cpx, cpy, x2, y2, w, col) => {
+            ctx.strokeStyle = col; ctx.lineWidth = w;
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cpx, cpy, x2, y2); ctx.stroke();
+        };
+        // 3 main branches from upper trunk
+        brT(x - tw*0.4, forkY, x - size*0.09, forkY - size*0.07, x - size*0.20, forkY - size*0.14, tw * 1.30, '#8c6c48');
+        brT(x + tw*0.1, forkY, x + size*0.02, forkY - size*0.10, x + size*0.04, forkY - size*0.18, tw * 1.15, '#8c6c48');
+        brT(x + tw*0.4, forkY, x + size*0.10, forkY - size*0.06, x + size*0.19, forkY - size*0.12, tw * 1.10, '#8c6c48');
+        // Secondary branches
+        brT(x - size*0.14, forkY - size*0.09, x - size*0.19, forkY - size*0.14, x - size*0.24, forkY - size*0.16, tw * 0.65, '#7a5c3a');
+        brT(x + size*0.03, forkY - size*0.13, x + size*0.00, forkY - size*0.18, x - size*0.02, forkY - size*0.21, tw * 0.60, '#7a5c3a');
+        brT(x + size*0.15, forkY - size*0.09, x + size*0.20, forkY - size*0.14, x + size*0.24, forkY - size*0.17, tw * 0.60, '#7a5c3a');
+        // Small green leaf clusters at branch tips
+        const leafCluster = (lx, ly) => {
+            ctx.fillStyle = '#506040';
+            ctx.beginPath(); ctx.ellipse(lx, ly, size * 0.068, size * 0.045, -0.3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#688254';
+            ctx.beginPath(); ctx.ellipse(lx - size*0.038, ly - size*0.028, size * 0.040, size * 0.028, 0.4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(lx + size*0.030, ly - size*0.022, size * 0.034, size * 0.024, -0.5, 0, Math.PI * 2); ctx.fill();
+        };
+        leafCluster(x - size*0.24, forkY - size*0.16);
+        leafCluster(x - size*0.02, forkY - size*0.21);
+        leafCluster(x + size*0.24, forkY - size*0.17);
+        ctx.lineCap = 'butt';
     }
 
     drawDesertDeadTree(x, y, size) {
