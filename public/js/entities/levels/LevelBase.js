@@ -2030,12 +2030,12 @@ export class LevelBase {
     }
 
     renderDryDesertShrub(ctx, x, y, size) {
-        // Spreading dry desert shrub — twisting S-curve branches, thorns, dried seed heads
+        // Spreading dry desert shrub — thin S-curve branches, thorns, dried seed heads
         const baseY = y - size * 0.02;
         // Ground shadow
-        ctx.fillStyle = 'rgba(60,40,10,0.26)';
+        ctx.fillStyle = 'rgba(50,32,8,0.20)';
         ctx.beginPath();
-        ctx.ellipse(x, y + 1, size * 0.30, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 1, size * 0.30, size * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineCap = 'round';
         const brS = (x1, y1, cpx, cpy, x2, y2, w, col) => {
@@ -2049,7 +2049,7 @@ export class LevelBase {
             ctx.quadraticCurveTo(cpx2, cpy2, x2, y2); ctx.stroke();
         };
         const thorns = (tx, ty, r, cnt, col) => {
-            ctx.strokeStyle = col; ctx.lineWidth = 0.55;
+            ctx.strokeStyle = col; ctx.lineWidth = 0.5;
             for (let i = 0; i < cnt; i++) {
                 const a = (i / cnt) * Math.PI * 2;
                 ctx.beginPath(); ctx.moveTo(tx, ty);
@@ -2058,46 +2058,45 @@ export class LevelBase {
         };
         const seedHead = (fx, fy, r) => {
             ctx.fillStyle = '#7a5820';
-            ctx.beginPath(); ctx.arc(fx, fy, r * 0.55, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#c09848'; ctx.lineWidth = 0.7;
-            for (let i = 0; i < 7; i++) {
-                const a = (i / 7) * Math.PI * 2;
+            ctx.beginPath(); ctx.arc(fx, fy, r * 0.50, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#c09848'; ctx.lineWidth = 0.55;
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
                 ctx.beginPath();
-                ctx.moveTo(fx + Math.cos(a) * r * 0.55, fy + Math.sin(a) * r * 0.55);
-                ctx.lineTo(fx + Math.cos(a) * r * 1.4, fy + Math.sin(a) * r * 1.4);
+                ctx.moveTo(fx + Math.cos(a) * r * 0.50, fy + Math.sin(a) * r * 0.50);
+                ctx.lineTo(fx + Math.cos(a) * r * 1.3, fy + Math.sin(a) * r * 1.3);
                 ctx.stroke();
             }
         };
-        // 5 main S-curve branches fanning out from base
-        brC(x, baseY, x-size*0.10, baseY-size*0.06, x-size*0.20, baseY-size*0.10, x-size*0.24, baseY-size*0.18, x-size*0.28, baseY-size*0.16, size*0.085, '#7a5838');
-        brC(x, baseY, x-size*0.04, baseY-size*0.10, x-size*0.06, baseY-size*0.18, x-size*0.02, baseY-size*0.26, x-size*0.10, baseY-size*0.28, size*0.082, '#7a5838');
-        brC(x, baseY, x+size*0.02, baseY-size*0.12, x+size*0.01, baseY-size*0.20, x+size*0.05, baseY-size*0.28, x+size*0.00, baseY-size*0.32, size*0.080, '#7a5838');
-        brC(x, baseY, x+size*0.08, baseY-size*0.10, x+size*0.14, baseY-size*0.18, x+size*0.18, baseY-size*0.24, x+size*0.16, baseY-size*0.28, size*0.082, '#7a5838');
-        brC(x, baseY, x+size*0.14, baseY-size*0.06, x+size*0.22, baseY-size*0.12, x+size*0.26, baseY-size*0.16, x+size*0.28, baseY-size*0.15, size*0.083, '#7a5838');
+        // 5 main S-curve branches — thin, fanning out from base
+        brC(x, baseY, x-size*0.10, baseY-size*0.06, x-size*0.20, baseY-size*0.10, x-size*0.24, baseY-size*0.18, x-size*0.28, baseY-size*0.16, size*0.040, '#7a6040');
+        brC(x, baseY, x-size*0.04, baseY-size*0.10, x-size*0.06, baseY-size*0.18, x-size*0.02, baseY-size*0.26, x-size*0.10, baseY-size*0.28, size*0.038, '#7a6040');
+        brC(x, baseY, x+size*0.02, baseY-size*0.12, x+size*0.01, baseY-size*0.20, x+size*0.05, baseY-size*0.28, x+size*0.00, baseY-size*0.32, size*0.036, '#7a6040');
+        brC(x, baseY, x+size*0.08, baseY-size*0.10, x+size*0.14, baseY-size*0.18, x+size*0.18, baseY-size*0.24, x+size*0.16, baseY-size*0.28, size*0.037, '#7a6040');
+        brC(x, baseY, x+size*0.14, baseY-size*0.06, x+size*0.22, baseY-size*0.12, x+size*0.26, baseY-size*0.16, x+size*0.28, baseY-size*0.15, size*0.039, '#7a6040');
         // Sub-branches
-        brS(x-size*0.22, baseY-size*0.12, x-size*0.28, baseY-size*0.17, x-size*0.34, baseY-size*0.19, size*0.048, '#9a7050');
-        brS(x-size*0.08, baseY-size*0.20, x-size*0.13, baseY-size*0.26, x-size*0.16, baseY-size*0.30, size*0.044, '#9a7050');
-        brS(x+size*0.02, baseY-size*0.24, x-size*0.02, baseY-size*0.30, x-size*0.04, baseY-size*0.34, size*0.042, '#9a7050');
-        brS(x+size*0.14, baseY-size*0.20, x+size*0.18, baseY-size*0.26, x+size*0.21, baseY-size*0.29, size*0.044, '#9a7050');
-        brS(x+size*0.24, baseY-size*0.12, x+size*0.30, baseY-size*0.17, x+size*0.33, baseY-size*0.19, size*0.046, '#9a7050');
+        brS(x-size*0.22, baseY-size*0.12, x-size*0.28, baseY-size*0.17, x-size*0.34, baseY-size*0.19, size*0.023, '#9a7850');
+        brS(x-size*0.08, baseY-size*0.20, x-size*0.13, baseY-size*0.26, x-size*0.16, baseY-size*0.30, size*0.021, '#9a7850');
+        brS(x+size*0.02, baseY-size*0.24, x-size*0.02, baseY-size*0.30, x-size*0.04, baseY-size*0.34, size*0.020, '#9a7850');
+        brS(x+size*0.14, baseY-size*0.20, x+size*0.18, baseY-size*0.26, x+size*0.21, baseY-size*0.29, size*0.021, '#9a7850');
+        brS(x+size*0.24, baseY-size*0.12, x+size*0.30, baseY-size*0.17, x+size*0.33, baseY-size*0.19, size*0.022, '#9a7850');
         // Fine twigs
-        brS(x-size*0.32, baseY-size*0.17, x-size*0.35, baseY-size*0.23, x-size*0.37, baseY-size*0.25, size*0.024, '#b08860');
-        brS(x-size*0.14, baseY-size*0.27, x-size*0.18, baseY-size*0.33, x-size*0.20, baseY-size*0.36, size*0.022, '#b08860');
-        brS(x+size*0.20, baseY-size*0.26, x+size*0.23, baseY-size*0.32, x+size*0.24, baseY-size*0.35, size*0.023, '#b08860');
-        brS(x+size*0.31, baseY-size*0.17, x+size*0.35, baseY-size*0.22, x+size*0.36, baseY-size*0.24, size*0.024, '#b08860');
+        brS(x-size*0.32, baseY-size*0.17, x-size*0.35, baseY-size*0.23, x-size*0.37, baseY-size*0.25, size*0.012, '#b8986a');
+        brS(x-size*0.14, baseY-size*0.27, x-size*0.18, baseY-size*0.33, x-size*0.20, baseY-size*0.36, size*0.011, '#b8986a');
+        brS(x+size*0.20, baseY-size*0.26, x+size*0.23, baseY-size*0.32, x+size*0.24, baseY-size*0.35, size*0.011, '#b8986a');
+        brS(x+size*0.31, baseY-size*0.17, x+size*0.35, baseY-size*0.22, x+size*0.36, baseY-size*0.24, size*0.012, '#b8986a');
         // Thorn clusters at branch midpoints
-        thorns(x-size*0.20, baseY-size*0.12, size*0.026, 6, '#c0a060');
-        thorns(x+size*0.22, baseY-size*0.11, size*0.024, 6, '#c0a060');
-        thorns(x-size*0.06, baseY-size*0.20, size*0.022, 5, '#c0a060');
-        thorns(x+size*0.15, baseY-size*0.18, size*0.022, 5, '#c0a060');
+        thorns(x-size*0.20, baseY-size*0.12, size*0.022, 5, '#c8a868');
+        thorns(x+size*0.22, baseY-size*0.11, size*0.020, 5, '#c8a868');
+        thorns(x-size*0.06, baseY-size*0.20, size*0.018, 4, '#c8a868');
         // Dry seed heads at branch tips
-        seedHead(x-size*0.28, baseY-size*0.17, size*0.030);
-        seedHead(x-size*0.04, baseY-size*0.33, size*0.028);
-        seedHead(x+size*0.21, baseY-size*0.29, size*0.026);
-        // Woody base at ground
-        ctx.fillStyle = '#5a3c20';
+        seedHead(x-size*0.28, baseY-size*0.17, size*0.024);
+        seedHead(x-size*0.04, baseY-size*0.33, size*0.022);
+        seedHead(x+size*0.21, baseY-size*0.29, size*0.022);
+        // Tiny woody base — just a subtle point, no heavy blob
+        ctx.fillStyle = '#4e3018';
         ctx.beginPath();
-        ctx.ellipse(x, baseY, size * 0.10, size * 0.05, 0, 0, Math.PI * 2);
+        ctx.arc(x, baseY, size * 0.018, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineCap = 'butt';
     }
@@ -4939,12 +4938,12 @@ export class LevelBase {
     }
 
     renderDryBushType3(ctx, x, y, size) {
-        // Low spreading dry thorn bush — wide S-curve branches, thorns, dried seed tips
+        // Low spreading dry thorn bush — thin wide S-curve branches, thorns, dried seed tips
         const baseY = y - size * 0.01;
         // Ground shadow
-        ctx.fillStyle = 'rgba(80,40,20,0.26)';
+        ctx.fillStyle = 'rgba(50,28,8,0.20)';
         ctx.beginPath();
-        ctx.ellipse(x, y + 1, size * 0.30, size * 0.07, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + 1, size * 0.30, size * 0.06, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineCap = 'round';
         const brS = (x1, y1, cpx, cpy, x2, y2, w, col) => {
@@ -4958,7 +4957,7 @@ export class LevelBase {
             ctx.quadraticCurveTo(cpx2, cpy2, x2, y2); ctx.stroke();
         };
         const thorns = (tx, ty, r, cnt, col) => {
-            ctx.strokeStyle = col; ctx.lineWidth = 0.55;
+            ctx.strokeStyle = col; ctx.lineWidth = 0.5;
             for (let i = 0; i < cnt; i++) {
                 const a = (i / cnt) * Math.PI * 2;
                 ctx.beginPath(); ctx.moveTo(tx, ty);
@@ -4967,45 +4966,45 @@ export class LevelBase {
         };
         const seedHead = (fx, fy, r) => {
             ctx.fillStyle = '#7a5820';
-            ctx.beginPath(); ctx.arc(fx, fy, r * 0.55, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = '#c09848'; ctx.lineWidth = 0.65;
-            for (let i = 0; i < 7; i++) {
-                const a = (i / 7) * Math.PI * 2;
+            ctx.beginPath(); ctx.arc(fx, fy, r * 0.50, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#c09848'; ctx.lineWidth = 0.55;
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
                 ctx.beginPath();
-                ctx.moveTo(fx + Math.cos(a) * r * 0.55, fy + Math.sin(a) * r * 0.55);
-                ctx.lineTo(fx + Math.cos(a) * r * 1.4, fy + Math.sin(a) * r * 1.4);
+                ctx.moveTo(fx + Math.cos(a) * r * 0.50, fy + Math.sin(a) * r * 0.50);
+                ctx.lineTo(fx + Math.cos(a) * r * 1.3, fy + Math.sin(a) * r * 1.3);
                 ctx.stroke();
             }
         };
-        // Wide S-curve low branches
-        brC(x, baseY, x-size*0.10, baseY-size*0.02, x-size*0.20, baseY+size*0.00, x-size*0.28, baseY-size*0.02, x-size*0.36, baseY-size*0.06, size*0.074, '#7a5838');
-        brC(x, baseY, x+size*0.10, baseY-size*0.02, x+size*0.20, baseY+size*0.00, x+size*0.28, baseY-size*0.02, x+size*0.36, baseY-size*0.05, size*0.071, '#7a5838');
-        brC(x, baseY, x-size*0.04, baseY-size*0.08, x-size*0.02, baseY-size*0.16, x+size*0.04, baseY-size*0.18, x-size*0.07, baseY-size*0.26, size*0.066, '#7a5838');
-        brC(x, baseY, x+size*0.04, baseY-size*0.08, x+size*0.08, baseY-size*0.16, x+size*0.14, baseY-size*0.18, x+size*0.10, baseY-size*0.25, size*0.063, '#7a5838');
-        brS(x, baseY, x-size*0.14, baseY-size*0.07, x-size*0.24, baseY-size*0.16, size*0.060, '#7a5838');
+        // Wide S-curve low branches — thin
+        brC(x, baseY, x-size*0.10, baseY-size*0.02, x-size*0.20, baseY+size*0.00, x-size*0.28, baseY-size*0.02, x-size*0.36, baseY-size*0.06, size*0.036, '#7a6040');
+        brC(x, baseY, x+size*0.10, baseY-size*0.02, x+size*0.20, baseY+size*0.00, x+size*0.28, baseY-size*0.02, x+size*0.36, baseY-size*0.05, size*0.034, '#7a6040');
+        brC(x, baseY, x-size*0.04, baseY-size*0.08, x-size*0.02, baseY-size*0.16, x+size*0.04, baseY-size*0.18, x-size*0.07, baseY-size*0.26, size*0.032, '#7a6040');
+        brC(x, baseY, x+size*0.04, baseY-size*0.08, x+size*0.08, baseY-size*0.16, x+size*0.14, baseY-size*0.18, x+size*0.10, baseY-size*0.25, size*0.031, '#7a6040');
+        brS(x, baseY, x-size*0.14, baseY-size*0.07, x-size*0.24, baseY-size*0.16, size*0.030, '#7a6040');
         // Sub-branches
-        brS(x-size*0.34, baseY-size*0.06, x-size*0.40, baseY-size*0.12, x-size*0.42, baseY-size*0.16, size*0.036, '#9a7050');
-        brS(x+size*0.34, baseY-size*0.05, x+size*0.40, baseY-size*0.11, x+size*0.42, baseY-size*0.15, size*0.034, '#9a7050');
-        brS(x-size*0.06, baseY-size*0.22, x-size*0.11, baseY-size*0.27, x-size*0.13, baseY-size*0.30, size*0.032, '#9a7050');
-        brS(x+size*0.11, baseY-size*0.21, x+size*0.15, baseY-size*0.26, x+size*0.17, baseY-size*0.29, size*0.030, '#9a7050');
-        brS(x-size*0.22, baseY-size*0.14, x-size*0.27, baseY-size*0.19, x-size*0.29, baseY-size*0.21, size*0.032, '#9a7050');
+        brS(x-size*0.34, baseY-size*0.06, x-size*0.40, baseY-size*0.12, x-size*0.42, baseY-size*0.16, size*0.018, '#9a7850');
+        brS(x+size*0.34, baseY-size*0.05, x+size*0.40, baseY-size*0.11, x+size*0.42, baseY-size*0.15, size*0.017, '#9a7850');
+        brS(x-size*0.06, baseY-size*0.22, x-size*0.11, baseY-size*0.27, x-size*0.13, baseY-size*0.30, size*0.016, '#9a7850');
+        brS(x+size*0.11, baseY-size*0.21, x+size*0.15, baseY-size*0.26, x+size*0.17, baseY-size*0.29, size*0.015, '#9a7850');
+        brS(x-size*0.22, baseY-size*0.14, x-size*0.27, baseY-size*0.19, x-size*0.29, baseY-size*0.21, size*0.016, '#9a7850');
         // Fine end twigs
-        brS(x-size*0.40, baseY-size*0.16, x-size*0.44, baseY-size*0.21, x-size*0.45, baseY-size*0.23, size*0.018, '#b08860');
-        brS(x+size*0.40, baseY-size*0.15, x+size*0.44, baseY-size*0.20, x+size*0.45, baseY-size*0.22, size*0.017, '#b08860');
-        brS(x-size*0.12, baseY-size*0.27, x-size*0.15, baseY-size*0.32, x-size*0.16, baseY-size*0.34, size*0.016, '#b08860');
-        brS(x+size*0.16, baseY-size*0.26, x+size*0.19, baseY-size*0.31, x+size*0.20, baseY-size*0.33, size*0.016, '#b08860');
+        brS(x-size*0.40, baseY-size*0.16, x-size*0.44, baseY-size*0.21, x-size*0.45, baseY-size*0.23, size*0.010, '#b8986a');
+        brS(x+size*0.40, baseY-size*0.15, x+size*0.44, baseY-size*0.20, x+size*0.45, baseY-size*0.22, size*0.009, '#b8986a');
+        brS(x-size*0.12, baseY-size*0.27, x-size*0.15, baseY-size*0.32, x-size*0.16, baseY-size*0.34, size*0.009, '#b8986a');
+        brS(x+size*0.16, baseY-size*0.26, x+size*0.19, baseY-size*0.31, x+size*0.20, baseY-size*0.33, size*0.009, '#b8986a');
         // Thorn clusters at branch nodes
-        thorns(x-size*0.22, baseY-size*0.02, size*0.022, 6, '#c0a060');
-        thorns(x+size*0.22, baseY-size*0.01, size*0.021, 5, '#c0a060');
-        thorns(x-size*0.22, baseY-size*0.14, size*0.020, 5, '#c0a060');
-        thorns(x+size*0.11, baseY-size*0.18, size*0.019, 5, '#c0a060');
+        thorns(x-size*0.22, baseY-size*0.02, size*0.020, 5, '#c8a868');
+        thorns(x+size*0.22, baseY-size*0.01, size*0.019, 5, '#c8a868');
+        thorns(x-size*0.22, baseY-size*0.14, size*0.018, 4, '#c8a868');
+        thorns(x+size*0.11, baseY-size*0.18, size*0.017, 4, '#c8a868');
         // Dry seed heads at tallest tips
-        seedHead(x-size*0.07, baseY-size*0.26, size*0.026);
-        seedHead(x+size*0.10, baseY-size*0.24, size*0.024);
-        // Woody base
-        ctx.fillStyle = '#5a3c20';
+        seedHead(x-size*0.07, baseY-size*0.26, size*0.022);
+        seedHead(x+size*0.10, baseY-size*0.24, size*0.020);
+        // Tiny woody base
+        ctx.fillStyle = '#4e3018';
         ctx.beginPath();
-        ctx.ellipse(x, baseY, size * 0.08, size * 0.04, 0, 0, Math.PI * 2);
+        ctx.arc(x, baseY, size * 0.016, 0, Math.PI * 2);
         ctx.fill();
         ctx.lineCap = 'butt';
     }
