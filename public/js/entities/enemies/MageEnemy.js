@@ -4,8 +4,8 @@ export class MageEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 750,
         speed: 45,
-        armour: 4,
-        magicResistance: 0.5
+        armour: 75,
+        magicResistance: 0.2
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
@@ -28,6 +28,12 @@ export class MageEnemy extends BaseEnemy {
         this.staffPulse = 0;
         this.spellCastTimer = 0;
         this.isCastingSpell = false;
+
+        // Blockade spell - fires a projectile that disables a nearby tower for 5 seconds
+        this.blockadeSpellTimer = 8 + Math.random() * 10;
+        this.blockadeRange = 220;
+        this.blockadeProjectile = null;
+        this._towersRef = null;
     }
     
     update(deltaTime) {
@@ -68,7 +74,85 @@ export class MageEnemy extends BaseEnemy {
                 this.magicParticles.splice(i, 1);
             }
         }
-        
+
+        // === BLOCKADE SPELL: fire a dark orb to disable a nearby tower for 5 seconds ===
+        if (this._towersRef && !this.reachedEnd) {
+            this.blockadeSpellTimer -= deltaTime;
+            if (this.blockadeSpellTimer <= 0 && this.blockadeProjectile === null) {
+                let nearest = null;
+                let nearestDist = this.blockadeRange;
+                for (let i = 0; i < this._towersRef.length; i++) {
+                    const tower = this._towersRef[i];
+                    if (tower.isDisabled || tower.type === 'guard-post') continue;
+                    const dx = tower.x - this.x;
+                    const dy = tower.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < nearestDist) {
+                        nearest = tower;
+                        nearestDist = dist;
+                    }
+                }
+                if (nearest) {
+                    const dx = nearest.x - this.x;
+                    const dy = nearest.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const speed = 250;
+                    this.blockadeProjectile = {
+                        x: this.x,
+                        y: this.y - 20,
+                        vx: (dx / dist) * speed,
+                        vy: (dy / dist) * speed,
+                        targetTower: nearest,
+                        trail: [],
+                        age: 0
+                    };
+                }
+                this.blockadeSpellTimer = 12 + Math.random() * 8;
+            }
+        }
+
+        // Update blockade projectile
+        if (this.blockadeProjectile) {
+            const proj = this.blockadeProjectile;
+            proj.age += deltaTime;
+
+            // Accumulate trail points spaced ~5px apart
+            const lastT = proj.trail[proj.trail.length - 1];
+            if (!lastT || Math.hypot(proj.x - lastT.x, proj.y - lastT.y) > 5) {
+                proj.trail.push({ x: proj.x, y: proj.y, age: 0 });
+            }
+            for (let i = proj.trail.length - 1; i >= 0; i--) {
+                proj.trail[i].age += deltaTime;
+                if (proj.trail[i].age > 0.25) proj.trail.splice(i, 1);
+            }
+
+            // Home in on target tower
+            if (proj.targetTower && !proj.targetTower.isDisabled) {
+                const dx = proj.targetTower.x - proj.x;
+                const dy = proj.targetTower.y - proj.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const speed = 250;
+                proj.vx = (dx / dist) * speed;
+                proj.vy = (dy / dist) * speed;
+
+                if (dist <= 18) {
+                    proj.targetTower.isDisabled = true;
+                    proj.targetTower.disabledTimer = 5;
+                    this.blockadeProjectile = null;
+                }
+            } else {
+                this.blockadeProjectile = null;
+            }
+
+            if (this.blockadeProjectile) {
+                proj.x += proj.vx * deltaTime;
+                proj.y += proj.vy * deltaTime;
+                if (proj.age > 4) {
+                    this.blockadeProjectile = null;
+                }
+            }
+        }
+
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
         if (this.currentPathIndex >= this.path.length - 1) {
@@ -535,6 +619,47 @@ export class MageEnemy extends BaseEnemy {
         }
 
         ctx.restore();
+
+        // Draw blockade projectile (world space)
+        if (this.blockadeProjectile) {
+            const proj = this.blockadeProjectile;
+            const pulse = 0.5 + 0.5 * Math.sin(this.animationTime * 10);
+
+            // Trail
+            for (let i = 0; i < proj.trail.length; i++) {
+                const t = proj.trail[i];
+                const lifeRatio = 1 - t.age / 0.25;
+                ctx.fillStyle = `rgba(155, 0, 215, ${lifeRatio * 0.55})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 5 * lifeRatio, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Outer glow
+            ctx.fillStyle = `rgba(175, 0, 255, ${0.22 + pulse * 0.13})`;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main orb body
+            ctx.fillStyle = 'rgba(85, 0, 185, 0.92)';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Orb rim
+            ctx.strokeStyle = `rgba(215, 125, 255, ${0.65 + pulse * 0.35})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Specular highlight
+            ctx.fillStyle = `rgba(230, 155, 255, ${0.55 + pulse * 0.45})`;
+            ctx.beginPath();
+            ctx.arc(proj.x - 2.5, proj.y - 2.5, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // Health bar - positioned above hat tip
         const barWidth = baseSize * 3.2;

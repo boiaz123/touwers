@@ -1753,6 +1753,10 @@ export class GameplayState {
                         enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
                     }
                 }
+                // Wire towers array reference to mage enemies for blockade spell
+                if (enemy.type === 'mage' && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
+                    enemy._towersRef = this.towerManager.towers;
+                }
             }
         }
         

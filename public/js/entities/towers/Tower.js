@@ -21,12 +21,27 @@ export class Tower {
         this.originalDamage = null;
         this.originalRange = null;
         this.originalFireRate = null;
+
+        // Disabled state (applied by mage enemy blockade spell)
+        this.isDisabled = false;
+        this.disabledTimer = 0;
     }
     
     update(deltaTime, enemies) {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
-        
+
+        // Handle disabled state (mage blockade spell)
+        if (this.isDisabled) {
+            this.disabledTimer -= deltaTime;
+            if (this.disabledTimer <= 0) {
+                this.isDisabled = false;
+                this.disabledTimer = 0;
+            }
+            this.target = null;
+            return;
+        }
+
         // OPTIMIZATION: Only rescan enemies when needed
         // Keep current target if still alive and in range
         if (this.target) {
