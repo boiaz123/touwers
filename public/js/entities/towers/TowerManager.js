@@ -892,41 +892,7 @@ export class TowerManager {
     render(ctx) {
         // Render all towers (depth sorting handled by GameplayState)
         for (let i = 0; i < this.towers.length; i++) {
-            const tower = this.towers[i];
-            tower.render(ctx);
-
-            // Draw disabled overlay when tower is blocked by a mage blockade spell
-            if (tower.isDisabled) {
-                const towerSize = tower.getTowerSize ? tower.getTowerSize(ctx) : 64;
-                const half = towerSize / 2;
-                const pulse = 0.32 + 0.18 * Math.sin(Date.now() / 180);
-
-                // Dark purple fill
-                ctx.fillStyle = `rgba(55, 0, 90, ${pulse})`;
-                ctx.fillRect(tower.x - half, tower.y - half, towerSize, towerSize);
-
-                // X symbol
-                const xPad = half * 0.3;
-                ctx.strokeStyle = 'rgba(210, 70, 255, 0.92)';
-                ctx.lineWidth = 3;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(tower.x - half + xPad, tower.y - half + xPad);
-                ctx.lineTo(tower.x + half - xPad, tower.y + half - xPad);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(tower.x + half - xPad, tower.y - half + xPad);
-                ctx.lineTo(tower.x - half + xPad, tower.y + half - xPad);
-                ctx.stroke();
-
-                // Countdown bar (purple, depleting over 5 seconds)
-                const barY = tower.y - half - 7;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-                ctx.fillRect(tower.x - half, barY, towerSize, 4);
-                const ratio = Math.max(0, tower.disabledTimer / 5);
-                ctx.fillStyle = 'rgba(195, 55, 255, 0.9)';
-                ctx.fillRect(tower.x - half, barY, towerSize * ratio, 4);
-            }
+            this.towers[i].render(ctx);
         }
         
         // Render all buildings

@@ -186,6 +186,133 @@ export class Tower {
         }
     }
     
+    renderDisabledOverlay(ctx) {
+        const towerSize = this.getTowerSize(ctx);
+        const half = towerSize / 2;
+        const now = Date.now() / 1000;
+        const pulse = 0.5 + 0.5 * Math.sin(now * 2.0);
+        const slowPulse = 0.5 + 0.5 * Math.sin(now * 0.8);
+        const breathe = 0.5 + 0.5 * Math.sin(now * 1.2);
+
+        ctx.save();
+
+        // 1. Ground curse shadow - flat ellipse pooling beneath the tower
+        ctx.fillStyle = `rgba(18, 0, 42, ${0.52 + slowPulse * 0.18})`;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + half * 0.82, half * 1.25, half * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Ground curse ring - 3 broken arcs in flat perspective, slowly rotating
+        ctx.save();
+        ctx.translate(this.x, this.y + half * 0.85);
+        ctx.scale(1, 0.28);
+        ctx.strokeStyle = `rgba(110, 0, 185, ${0.28 + slowPulse * 0.14})`;
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'butt';
+        const cRot = now * 0.28;
+        for (let a = 0; a < 3; a++) {
+            const aStart = cRot + a * (Math.PI * 2 / 3);
+            ctx.beginPath();
+            ctx.arc(0, 0, half * 1.15, aStart, aStart + Math.PI * 0.48);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // 3. Dark fog layers - concentric low-opacity circles building depth
+        ctx.fillStyle = `rgba(38, 0, 78, ${0.10 + breathe * 0.06})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, half * 1.75, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(22, 0, 58, ${0.20 + breathe * 0.08})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, half * 1.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(14, 0, 38, ${0.34 + slowPulse * 0.12})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, half * 0.88, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Smoke wisps - 5 organic curling tendrils rising from the tower
+        ctx.lineCap = 'round';
+        for (let w = 0; w < 5; w++) {
+            const wPhase = now * 0.55 + w * 1.2566; // 2pi/5 apart
+            const sway = Math.sin(now * 1.1 + w * 2.3) * half * 0.28;
+
+            const startX = this.x + Math.sin(wPhase * 0.7) * half * 0.32;
+            const startY = this.y;
+            const cpX = this.x + Math.sin(wPhase * 1.4) * half * 0.48 + sway * 0.5;
+            const cpY = this.y - half * 0.95;
+            const endX = this.x + Math.cos(wPhase) * half * 0.55 + sway;
+            const endY = this.y - half * 1.85 - Math.abs(Math.sin(wPhase)) * half * 0.4;
+
+            const wAlpha = 0.16 + 0.10 * Math.sin(now * 1.8 + w);
+
+            // Soft outer glow of wisp
+            ctx.strokeStyle = `rgba(85, 0, 155, ${wAlpha})`;
+            ctx.lineWidth = 9 + Math.sin(now + w) * 3;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+            ctx.stroke();
+
+            // Brighter inner core
+            ctx.strokeStyle = `rgba(145, 25, 210, ${wAlpha * 0.65})`;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+            ctx.stroke();
+        }
+
+        // 5. Drifting smoke particles floating upward
+        for (let i = 0; i < 8; i++) {
+            const pCycle = (now * 0.38 + i / 8) % 1.0;
+            const pAngle = (i / 8) * Math.PI * 2 + now * 0.18 + i;
+            const pRadius = half * (0.28 + Math.sin(i * 1.7) * 0.18);
+            const px = this.x + Math.cos(pAngle) * pRadius + Math.sin(now * 0.65 + i) * half * 0.14;
+            const py = this.y + Math.sin(pAngle * 0.5) * half * 0.28 - pCycle * half * 2.1;
+            const pAlpha = Math.max(0, (1 - pCycle) * 0.36);
+            const pSize = (2.5 + pCycle * 8) * (0.7 + 0.3 * Math.sin(i * 2.1));
+
+            ctx.fillStyle = `rgba(55, 0, 115, ${pAlpha})`;
+            ctx.beginPath();
+            ctx.arc(px, py, pSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 6. Faint eerie glow at center — curse energy emanating from within
+        ctx.fillStyle = `rgba(95, 18, 175, ${0.09 + pulse * 0.06})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, half * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(125, 28, 195, ${0.22 + pulse * 0.18})`;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'butt';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, half * 0.90, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 7. Countdown indicator — thin bar, subtle
+        const barW = towerSize * 0.62;
+        const barH = 3;
+        const barX = this.x - barW / 2;
+        const barY = this.y - half - 9;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.52)';
+        ctx.fillRect(barX, barY, barW, barH);
+        const ratio = Math.max(0, this.disabledTimer / 5);
+        ctx.fillStyle = `rgba(140, 28, 205, ${0.78 + pulse * 0.22})`;
+        ctx.fillRect(barX, barY, barW * ratio, barH);
+        if (ratio > 0.02) {
+            ctx.fillStyle = 'rgba(205, 120, 255, 0.82)';
+            ctx.fillRect(barX + barW * ratio - 2, barY, 2, barH);
+        }
+
+        ctx.restore();
+    }
+
     getTowerSize(ctx) {
         // Use ResolutionManager if available (attached to canvas/ctx during initialization)
         if (ctx.resolutionManager) {

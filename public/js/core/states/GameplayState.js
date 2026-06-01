@@ -2211,6 +2211,9 @@ export class GameplayState {
                 this.level.renderSingleTerrainElement(ctx, ent.source);
             } else {
                 ent.source.render(ctx);
+                if (ent.type === 'tower' && ent.source.isDisabled) {
+                    ent.source.renderDisabledOverlay(ctx);
+                }
             }
         }
         
