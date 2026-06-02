@@ -434,7 +434,7 @@ body {
     background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
     cursor: crosshair;
     touch-action: none;
-    image-rendering: crisp-edges;
+    image-rendering: auto;
     /* Performance optimizations */
     will-change: contents;
     transform: translate3d(0, 0, 0);

@@ -49,9 +49,9 @@ export class Game {
             // Get native Canvas 2D context for direct rendering (no wrapper overhead)
             this.ctx = this.canvas.getContext('2d');
             
-            // Optimize image rendering
-            this.ctx.imageSmoothingEnabled = false;
-            this.ctx.imageSmoothingQuality = 'low';
+            // High-quality image rendering for crisp, smooth visuals
+            this.ctx.imageSmoothingEnabled = true;
+            this.ctx.imageSmoothingQuality = 'high';
             
             // Prevent infinite resize loops
             this.isResizing = false;
