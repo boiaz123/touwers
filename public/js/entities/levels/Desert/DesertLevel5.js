@@ -354,7 +354,7 @@ export class DesertLevel5 extends LevelBase {
             enemyHealth_multiplier: 10, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'firefrog', count: 12 }] 
+            pattern: [{ type: 'firefrog', count: 1 }] 
         }
         // Wave 28
         , { 
