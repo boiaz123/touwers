@@ -46,6 +46,8 @@ export class ArcherTower extends Tower {
         let arrowWrite = 0;
         for (let i = 0; i < this.arrows.length; i++) {
             const arrow = this.arrows[i];
+            const oldX = arrow.x;
+            const oldY = arrow.y;
             arrow.x += arrow.vx * deltaTime;
             arrow.y += arrow.vy * deltaTime;
             arrow.vy += 200 * deltaTime; // Gravity effect
@@ -53,12 +55,27 @@ export class ArcherTower extends Tower {
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
             
             let hit = false;
-            if (arrow.target) {
-                const dist = Math.hypot(arrow.x - arrow.target.x, arrow.y - arrow.target.y);
-                if (dist <= 15) hit = true;
-            } else if (arrow.fallbackX != null) {
-                const dist = Math.hypot(arrow.x - arrow.fallbackX, arrow.y - arrow.fallbackY);
-                if (dist <= 15) hit = true;
+            const targetX = arrow.target ? arrow.target.x : arrow.fallbackX;
+            const targetY = arrow.target ? arrow.target.y : arrow.fallbackY;
+            if (targetX != null) {
+                const dist = Math.hypot(arrow.x - targetX, arrow.y - targetY);
+                if (dist <= 15) {
+                    hit = true;
+                } else {
+                    // Swept collision: at high game speed the arrow can skip over the
+                    // enemy in one step — check the segment traversed this frame.
+                    const segDx = arrow.x - oldX;
+                    const segDy = arrow.y - oldY;
+                    const segLenSq = segDx * segDx + segDy * segDy;
+                    if (segLenSq > 0) {
+                        const toDx = targetX - oldX;
+                        const toDy = targetY - oldY;
+                        const proj = Math.max(0, Math.min(1, (toDx * segDx + toDy * segDy) / segLenSq));
+                        const closestX = oldX + proj * segDx;
+                        const closestY = oldY + proj * segDy;
+                        if (Math.hypot(closestX - targetX, closestY - targetY) <= 15) hit = true;
+                    }
+                }
             }
             
             if (!hit && arrow.life > 0) {

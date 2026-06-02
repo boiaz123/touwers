@@ -102,8 +102,11 @@ export class CannonTower extends Tower {
             const initialSpeedEstimate = Math.sqrt((distEstimate * gravity) / Math.sin(2 * launchAngle));
             const flightTimeEstimate = distEstimate / (initialSpeedEstimate * Math.cos(launchAngle));
             
-            // Predict where the target will be
-            const predicted = this.predictEnemyPosition(this.target, initialSpeedEstimate);
+            // Predict where the target will be.
+            // Pass the horizontal speed component so the quadratic intercept formula
+            // uses the correct flight time (horizontal range / horizontal speed).
+            const effectiveSpeedEstimate = initialSpeedEstimate * Math.cos(launchAngle);
+            const predicted = this.predictEnemyPosition(this.target, effectiveSpeedEstimate);
             
             const dx = predicted.x - this.x;
             const dy = predicted.y - this.y;

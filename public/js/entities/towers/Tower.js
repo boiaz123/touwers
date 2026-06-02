@@ -28,6 +28,7 @@ export class Tower {
     }
     
     update(deltaTime, enemies) {
+        const prevCooldown = this.cooldown;
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
 
@@ -50,7 +51,11 @@ export class Tower {
             } else {
                 const dx = this.target.x - this.x;
                 const dy = this.target.y - this.y;
-                if (dx * dx + dy * dy > this.range * this.range) {
+                // Do not drop an out-of-range target on the exact frame the cooldown
+                // triggers — the subclass fires this frame and needs the reference.
+                // It will be cleared next frame if still out of range.
+                const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
+                if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
                     this.target = null;
                 }
             }
@@ -102,14 +107,16 @@ export class Tower {
     }
 
     /**
-     * Predict where an enemy will be at a given time
-     * Used for accurate tower shooting at moving targets
-     * Accounts for enemy movement along path at various game speeds
+     * Predict where an enemy will be when a projectile can intercept it.
+     * Uses the exact quadratic intercept formula so the aim is correct even
+     * at high game speeds or with fast enemies:
+     *   (dx + vx*t)^2 + (dy + vy*t)^2 = (P*t)^2
+     * Solved for the smallest positive t, then predicted = enemy.pos + vel*t.
      */
     predictEnemyPosition(enemy, projectileSpeed) {
         if (!enemy) return null;
         
-        // Enemies move along a path, calculate their velocity based on path and speed
+        // Calculate enemy velocity from the current path segment direction
         let velocityX = 0;
         let velocityY = 0;
         
@@ -117,33 +124,61 @@ export class Tower {
             const currentPos = enemy.path[enemy.currentPathIndex];
             const nextPos = enemy.path[enemy.currentPathIndex + 1];
             
-            const dx = nextPos.x - currentPos.x;
-            const dy = nextPos.y - currentPos.y;
-            const distance = Math.hypot(dx, dy);
+            const segDx = nextPos.x - currentPos.x;
+            const segDy = nextPos.y - currentPos.y;
+            const segLen = Math.hypot(segDx, segDy);
             
-            if (distance > 0) {
-                // Velocity is enemy.speed in the direction of the next waypoint
-                const direction = enemy.speed / distance;
-                velocityX = dx * direction;
-                velocityY = dy * direction;
+            if (segLen > 0) {
+                velocityX = (segDx / segLen) * enemy.speed;
+                velocityY = (segDy / segLen) * enemy.speed;
             }
         }
         
-        // If no velocity calculated, return current position
-        const enemySpeed = Math.hypot(velocityX, velocityY);
-        if (enemySpeed === 0) {
+        // Stationary enemy — aim directly at current position
+        if (velocityX === 0 && velocityY === 0) {
             return { x: enemy.x, y: enemy.y };
         }
         
-        // Calculate time for projectile to reach enemy at current distance
-        const distToEnemy = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-        const timeToReach = distToEnemy / Math.max(projectileSpeed, 1);
+        // Quadratic intercept: find t > 0 satisfying
+        //   (dx + vx*t)^2 + (dy + vy*t)^2 = (P*t)^2
+        // Rearranged: (vx^2 + vy^2 - P^2)*t^2 + 2*(dx*vx + dy*vy)*t + (dx^2 + dy^2) = 0
+        const dx = enemy.x - this.x;
+        const dy = enemy.y - this.y;
+        const P = Math.max(projectileSpeed, 1);
         
-        // Predict where enemy will be after timeToReach seconds
-        const predictedX = enemy.x + velocityX * timeToReach;
-        const predictedY = enemy.y + velocityY * timeToReach;
+        const a = velocityX * velocityX + velocityY * velocityY - P * P;
+        const b = 2 * (dx * velocityX + dy * velocityY);
+        const c = dx * dx + dy * dy;
         
-        return { x: predictedX, y: predictedY };
+        let t = 0;
+        
+        if (Math.abs(a) < 0.001) {
+            // Projectile speed ≈ enemy speed — degenerate, use linear solution
+            if (Math.abs(b) > 0.001) t = -c / b;
+        } else {
+            const discriminant = b * b - 4 * a * c;
+            if (discriminant >= 0) {
+                const sqrtD = Math.sqrt(discriminant);
+                const t1 = (-b - sqrtD) / (2 * a);
+                const t2 = (-b + sqrtD) / (2 * a);
+                // Pick the smallest positive root
+                if (t1 > 0 && t2 > 0) {
+                    t = Math.min(t1, t2);
+                } else if (t1 > 0) {
+                    t = t1;
+                } else if (t2 > 0) {
+                    t = t2;
+                }
+            }
+        }
+        
+        // Cap lookahead at 5 game-seconds to avoid wildly overshooting
+        t = Math.max(0, Math.min(t, 5));
+        
+        return {
+            x: enemy.x + velocityX * t,
+            y: enemy.y + velocityY * t
+        };
     }
     
     shoot() {

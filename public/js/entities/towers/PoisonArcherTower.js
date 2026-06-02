@@ -94,6 +94,7 @@ export class PoisonArcherTower extends Tower {
     }
     
     update(deltaTime, enemies, towerForgeBonus = 0) {
+        const prevCooldown = this.cooldown;
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
         this.drawback = Math.max(0, this.drawback - deltaTime * 3);
@@ -105,7 +106,9 @@ export class PoisonArcherTower extends Tower {
             } else {
                 const dx = this.target.x - this.x;
                 const dy = this.target.y - this.y;
-                if (dx * dx + dy * dy > this.range * this.range) {
+                // Keep target on the exact frame a shot triggers (matches Tower.update behaviour)
+                const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
+                if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
                     this.target = null;
                 }
             }
