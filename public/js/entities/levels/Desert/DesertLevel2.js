@@ -256,7 +256,7 @@ export class DesertLevel2 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.8, 
             speedMultiplier: 1, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 16, speedMultiplier: 1.2 }, { type: 'villager', count: 10 }, { type: 'basic', count: 10 }] 
         }
         // Wave 10
