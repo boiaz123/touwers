@@ -14,11 +14,11 @@ export class UpgradeRegistry {
         },
         'musical-equipment': {
             name: 'Musical Equipment',
-            description: 'Places a Bard on the settlement square who plays your unlocked music tracks when clicked',
+            description: 'Places Joost the Bard on the settlement square. Click him to open your Musical Scores collection.',
             cost: 300,
             icon: '▹',
             category: 'ui',
-            effect: 'Adds a Bard to the settlement who plays music on click'
+            effect: 'Adds Joost the Bard to the settlement. Click him to open the Musical Scores screen.'
         },
         'wooden-chest': {
             name: 'Wooden Chest',
@@ -31,21 +31,21 @@ export class UpgradeRegistry {
         },
         'golden-chest': {
             name: 'Golden Chest',
-            description: 'Increase starting gold by another 100 (requires Wooden Chest)',
+            description: 'Increase starting gold by another 300 (requires Wooden Chest)',
             cost: 400,
             icon: '◎',
             category: 'gold',
-            effect: 'Increases starting gold by 100',
+            effect: 'Increases starting gold by 300',
             prerequisite: 'wooden-chest',
             campaignRequirement: 'campaign-2'
         },
         'platinum-chest': {
             name: 'Platinum Chest',
-            description: 'Increase starting gold by another 100 (requires Golden Chest)',
+            description: 'Increase starting gold by another 500 (requires Golden Chest)',
             cost: 600,
             icon: '●',
             category: 'gold',
-            effect: 'Increases starting gold by 100',
+            effect: 'Increases starting gold by 500',
             prerequisite: 'golden-chest',
             campaignRequirement: 'campaign-3'
         },

@@ -54,6 +54,7 @@ export class SettlementHub {
         this.upgradesPopup = null;
         this.optionsPopup = null;
         this.arcaneLibraryPopup = null;
+        this.musicalScoresPopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -406,6 +407,8 @@ export class SettlementHub {
             this.optionsPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
             this.arcaneLibraryPopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
+            this.musicalScoresPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             let isHoveringBuilding = false;
@@ -480,6 +483,9 @@ export class SettlementHub {
             return;
         } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
             this.arcaneLibraryPopup.handleClick(x, y);
+            return;
+        } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
+            this.musicalScoresPopup.handleClick(x, y);
             return;
         }
 
@@ -968,42 +974,11 @@ export class SettlementHub {
     }
 
     onBardClick() {
-        const audioManager = this.stateManager?.audioManager;
-        if (!audioManager) return;
-
-        // Settlement tracks are always available; marketplace extras are added on top
-        const settlementTracks = audioManager.getSettlementTracks();
-        const marketplaceSystem = this.stateManager?.marketplaceSystem;
-        const musicItems = MarketplaceRegistry.getItemsByCategory('music');
-        const purchasedExtras = Object.entries(musicItems)
-            .filter(([id]) => marketplaceSystem && marketplaceSystem.getConsumableCount(id) > 0)
-            .map(([, data]) => data.musicId)
-            .filter(id => id && !settlementTracks.includes(id));
-
-        const allTracks = [...settlementTracks, ...purchasedExtras];
-        if (allTracks.length === 0) return;
-        if (allTracks.length === 1) {
-            // Only one track available; play it (idempotent)
-            audioManager.isManualMusicSelection = true;
-            audioManager.playMusic(allTracks[0], true);
-            return;
+        this.activePopup = 'musicalScores';
+        if (!this.musicalScoresPopup) {
+            this.musicalScoresPopup = new MusicalScoresMenu(this.stateManager, this);
         }
-
-        // Rebuild shuffle queue when empty or when the available track list changes
-        const queueKey = allTracks.slice().sort().join(',');
-        if (!this.bardShuffleQueue || this.bardShuffleQueue.length === 0 || this._bardQueueKey !== queueKey) {
-            this._bardQueueKey = queueKey;
-            this.bardShuffleQueue = this._buildBardQueue(allTracks, audioManager.currentMusicTrack);
-        }
-
-        const track = this.bardShuffleQueue.shift();
-        audioManager.isManualMusicSelection = true;
-        audioManager.playMusic(track, true);
-
-        // When queue is exhausted, pre-build the next shuffled round (ensuring no immediate repeat)
-        if (this.bardShuffleQueue.length === 0) {
-            this.bardShuffleQueue = this._buildBardQueue(allTracks, track);
-        }
+        this.musicalScoresPopup.open();
     }
 
     /**
@@ -1043,6 +1018,8 @@ export class SettlementHub {
             this.optionsPopup.update(deltaTime);
         } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
             this.arcaneLibraryPopup.update(deltaTime);
+        } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
+            this.musicalScoresPopup.update(deltaTime);
         }
 
         // Update Sir Frogerty adviser
@@ -1106,6 +1083,8 @@ export class SettlementHub {
                 this.optionsPopup.render(ctx);
             } else if (this.activePopup === 'arcaneLibrary' && this.arcaneLibraryPopup) {
                 this.arcaneLibraryPopup.render(ctx);
+            } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
+                this.musicalScoresPopup.render(ctx);
             }
 
             // Professional fade-in overlay effect (soft, from dark to transparent)
@@ -5001,15 +4980,13 @@ class UpgradesMenu {
         // Category system for buy tab - now includes upgrades as a category
         this.allBuyItems = this.buildBuyItems();
         this.buyCategories = [
-            { label: 'ALL', id: 'all', hovered: false },
-            { label: 'BUILDINGS', id: 'building', hovered: false },
+            { label: 'UPGRADES', id: 'upgrade', hovered: false },
             { label: 'CONSUMABLES', id: 'consumable', hovered: false },
             { label: 'INTEL', id: 'intel', hovered: false },
-            { label: 'MUSIC', id: 'music', hovered: false },
-            { label: 'UPGRADES', id: 'upgrade', hovered: false }
+            { label: 'MUSIC', id: 'music', hovered: false }
         ];
-        this.activeBuyCategory = 'all';
-        this.buyItems = this.filterBuyItemsByCategory('all');
+        this.activeBuyCategory = 'upgrade';
+        this.buyItems = this.filterBuyItemsByCategory('upgrade');
         
         // Build all tabs
         this.sellItems = []; // Will be populated dynamically
@@ -5152,7 +5129,7 @@ class UpgradesMenu {
                 id: 'musical-equipment',
                 name: 'Musical Equipment',
                 description: 'A finely crafted lyre and carrying case, left behind by a traveling minstrel. With the right instrument, even a siege feels less grim.',
-                effect: 'Permanently adds Niels the Bard to your settlement\nSpeak to him to access your music collection\nUnlocks music playback from the Arcane Library',
+                effect: 'Permanently adds Joost the Bard to your settlement\nSpeak to him to access your music collection\nAllows selecting tracks from his Musical Scores screen',
                 cost: 300,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5233,7 +5210,7 @@ class UpgradesMenu {
                 id: 'golden-chest',
                 name: 'Golden Chest',
                 description: 'A heavily reinforced chest bearing the royal seal. The lock is already broken — whoever owned this left in quite a hurry.',
-                effect: 'Permanently grants +100 starting gold in every level\nStacks with the Wooden Chest bonus\nGold is added at the very start of each battle',
+                effect: 'Permanently grants +300 starting gold in every level\nStacks with the Wooden Chest bonus\nGold is added at the very start of each battle',
                 cost: 400,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5273,7 +5250,7 @@ class UpgradesMenu {
                 id: 'platinum-chest',
                 name: 'Platinum Chest',
                 description: 'A seamless chest carved from polished platinum ore. Enchanted to stay sealed — until it recognized you.',
-                effect: 'Permanently grants +100 starting gold in every level\nStacks with previous gold bonuses\nGold is added at the very start of each battle',
+                effect: 'Permanently grants +500 starting gold in every level\nStacks with previous gold bonuses\nGold is added at the very start of each battle',
                 cost: 600,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5455,8 +5432,8 @@ class UpgradesMenu {
     }
 
     filterBuyItemsByCategory(categoryId) {
-        if (categoryId === 'all') {
-            return this.allBuyItems;
+        if (categoryId === 'upgrade') {
+            return this.allBuyItems.filter(item => item.category === 'upgrade' || item.category === 'building');
         }
         return this.allBuyItems.filter(item => item.category === categoryId);
     }
@@ -8341,16 +8318,10 @@ class ArcaneLibraryMenu {
         // Tab system
         this.tabs = [
             { label: 'STATISTICS', id: 'statistics', hovered: false },
-            { label: 'MUSICAL SCORES', id: 'musical-scores', hovered: false },
             { label: 'ACHIEVEMENTS', id: 'achievements', hovered: false },
             { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false }
         ];
         this.activeTab = 'statistics';
-        
-        // Pagination for musical scores
-        this.musicCurrentPage = 0;
-        this.musicItemsPerPage = 6; // 2 rows x 3 columns
-        this.unlockedMusicTracks = new Map(); // Track which music the player owns
         
         // Pagination for enemy intel
         this.intelCurrentPage = 0;
@@ -8383,11 +8354,9 @@ class ArcaneLibraryMenu {
         this.animationProgress = 0;
         this.openTime = Date.now(); // Record when menu was opened
         this.activeTab = 'statistics';
-        this.musicCurrentPage = 0;
         this.intelCurrentPage = 0;
         this.selectedEnemyId = null;
         this.hoveredEnemyId = null;
-        this.buildUnlockedMusicList();
     }
 
     close() {
@@ -8403,25 +8372,6 @@ class ArcaneLibraryMenu {
                 img.onload = () => { this.enemyImageCache[id] = img; };
                 img.onerror = () => { this.enemyImageCache[id] = null; };
                 img.src = data.image;
-            }
-        }
-    }
-
-    buildUnlockedMusicList() {
-        this.unlockedMusicTracks.clear();
-        // Get purchased music items from marketplace system
-        if (this.stateManager.marketplaceSystem) {
-            const musicItems = MarketplaceRegistry.getItemsByCategory('music');
-            for (const [itemId, itemData] of Object.entries(musicItems)) {
-                const count = this.stateManager.marketplaceSystem.getConsumableCount(itemId);
-                if (count > 0) {
-                    this.unlockedMusicTracks.set(itemData.musicId, {
-                        id: itemId,
-                        name: itemData.name,
-                        musicId: itemData.musicId,
-                        isPlaying: false
-                    });
-                }
             }
         }
     }
@@ -8450,7 +8400,7 @@ class ArcaneLibraryMenu {
         // Tab buttons
         const tabHeight = 35;
         const tabStartY = menuY + 50;
-        const tabButtonWidth = menuWidth / 4;
+        const tabButtonWidth = menuWidth / 3;
         
         this.tabs.forEach((tab, index) => {
             const tabX = menuX + index * tabButtonWidth;
@@ -8458,67 +8408,6 @@ class ArcaneLibraryMenu {
             tab.hovered = x >= tabX && x <= tabX + tabButtonWidth &&
                          y >= tabY && y <= tabY + tabHeight;
         });
-        
-        // Content area hover detection for musical-scores tab
-        if (this.activeTab === 'musical-scores') {
-            const contentX = menuX + 20;
-            const contentY = tabStartY + tabHeight + 20;
-            const contentWidth = menuWidth - 40;
-            const contentHeight = menuHeight - tabHeight - 80;
-            
-            // Arrow buttons
-            this.leftArrowHovered = false;
-            this.rightArrowHovered = false;
-            
-            // Grid layout matching render method
-            const cols = 3;
-            const rows = 2;
-            const itemSize = 100;
-            const padding = 15;
-            const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
-            const startY = contentY + 20;
-            
-            const musicArray = Array.from(this.unlockedMusicTracks.values());
-            const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
-            const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
-            
-            // Check if hovering over a music item
-            let musicItemHovered = false;
-            for (let i = startIdx; i < endIdx; i++) {
-                const gridIdx = i - startIdx;
-                const col = gridIdx % cols;
-                const row = Math.floor(gridIdx / cols);
-                
-                const itemX = startX + col * (itemSize + padding);
-                const itemY = startY + row * (itemSize + padding);
-                
-                if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
-                    musicItemHovered = true;
-                    break;
-                }
-            }
-            
-            const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
-            if (totalPages > 1) {
-                const arrowSize = 30;
-                const leftArrowX = contentX - 40;
-                const rightArrowX = contentX + contentWidth + 10;
-                const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
-                
-                this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize &&
-                                      y >= arrowY && y <= arrowY + arrowSize &&
-                                      this.musicCurrentPage > 0;
-                
-                this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize &&
-                                        y >= arrowY && y <= arrowY + arrowSize &&
-                                        this.musicCurrentPage < totalPages - 1;
-            }
-            
-            this.stateManager.canvas.style.cursor =
-                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || 
-                 this.leftArrowHovered || this.rightArrowHovered || musicItemHovered) ? 'pointer' : 'default';
-            return;
-        }
         
         // Content area hover detection for enemy-intel tab
         if (this.activeTab === 'enemy-intel') {
@@ -8611,7 +8500,7 @@ class ArcaneLibraryMenu {
         // Tab buttons
         const tabHeight = 35;
         const tabStartY = menuY + 50;
-        const tabButtonWidth = menuWidth / 4;
+        const tabButtonWidth = menuWidth / 3;
         
         for (let i = 0; i < this.tabs.length; i++) {
             const tab = this.tabs[i];
@@ -8621,67 +8510,7 @@ class ArcaneLibraryMenu {
             if (x >= tabX && x <= tabX + tabButtonWidth &&
                 y >= tabY && y <= tabY + tabHeight) {
                 this.activeTab = tab.id;
-                this.musicCurrentPage = 0; // Reset pagination when switching tabs
                 return;
-            }
-        }
-        
-        // Handle content area clicks
-        if (this.activeTab === 'musical-scores') {
-            const contentX = menuX + 20;
-            const contentY = tabStartY + tabHeight + 20;
-            const contentWidth = menuWidth - 40;
-            const contentHeight = menuHeight - tabHeight - 80;
-            
-            // Grid layout matching render method
-            const cols = 3;
-            const rows = 2;
-            const itemSize = 100;
-            const padding = 15;
-            const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
-            const startY = contentY + 20;
-            
-            const musicArray = Array.from(this.unlockedMusicTracks.values());
-            const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
-            const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
-            
-            // Check if clicked on a music item
-            for (let i = startIdx; i < endIdx; i++) {
-                const gridIdx = i - startIdx;
-                const col = gridIdx % cols;
-                const row = Math.floor(gridIdx / cols);
-                
-                const itemX = startX + col * (itemSize + padding);
-                const itemY = startY + row * (itemSize + padding);
-                
-                if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
-                    const music = musicArray[i];
-                    this.playMusicTrack(music);
-                    return;
-                }
-            }
-            
-            // Check arrow clicks
-            const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
-            if (totalPages > 1) {
-                const arrowSize = 30;
-                const leftArrowX = contentX - 40;
-                const rightArrowX = contentX + contentWidth + 10;
-                const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
-                
-                if (x >= leftArrowX && x <= leftArrowX + arrowSize &&
-                    y >= arrowY && y <= arrowY + arrowSize &&
-                    this.musicCurrentPage > 0) {
-                    this.musicCurrentPage--;
-                    return;
-                }
-                
-                if (x >= rightArrowX && x <= rightArrowX + arrowSize &&
-                    y >= arrowY && y <= arrowY + arrowSize &&
-                    this.musicCurrentPage < totalPages - 1) {
-                    this.musicCurrentPage++;
-                    return;
-                }
             }
         }
         
@@ -8739,20 +8568,6 @@ class ArcaneLibraryMenu {
                     }
                 }
             }
-        }
-    }
-
-    playMusicTrack(music) {
-        // Stop playlist mode if active (to play single track on loop)
-        if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.musicPlaylistMode = false;
-        }
-
-        // Play the selected music track on loop
-        if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playMusic(music.musicId, false);
-            // Mark that we're in manual music selection mode (not auto settlement theme)
-            this.stateManager.audioManager.isManualMusicSelection = true;
         }
     }
 
@@ -8837,7 +8652,7 @@ class ArcaneLibraryMenu {
         // Render tabs
         const tabHeight = 35;
         const tabStartY = menuY + 50;
-        const tabButtonWidth = menuWidth / 4;
+        const tabButtonWidth = menuWidth / 3;
         
         this.tabs.forEach((tab, index) => {
             const tabX = menuX + index * tabButtonWidth;
@@ -8877,8 +8692,6 @@ class ArcaneLibraryMenu {
         // Render active tab content
         if (this.activeTab === 'statistics') {
             this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
-        } else if (this.activeTab === 'musical-scores') {
-            this.renderMusicalScoresTab(ctx, contentX, contentY, contentWidth, contentHeight);
         } else if (this.activeTab === 'achievements') {
             this.renderAchievementsTab(ctx, contentX, contentY, contentWidth, contentHeight);
         } else if (this.activeTab === 'enemy-intel') {
@@ -8949,162 +8762,6 @@ class ArcaneLibraryMenu {
             
             currentY += lineHeight;
         });
-    }
-
-    renderMusicalScoresTab(ctx, x, y, width, height) {
-        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
-        const hasMusicalEquipment = upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment');
-        if (!hasMusicalEquipment) {
-            ctx.font = '16px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Musical Equipment has not been purchased yet.', x + width / 2, y + height / 2 - 12);
-            ctx.fillText('Buy it in the Upgrades shop to bring a Bard to the square!', x + width / 2, y + height / 2 + 13);
-            return;
-        }
-        if (this.unlockedMusicTracks.size === 0) {
-            ctx.font = '16px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('No musical scores unlocked yet.', x + width / 2, y + height / 2);
-            ctx.fillText('Purchase scores at the Marketplace!', x + width / 2, y + height / 2 + 25);
-            return;
-        }
-        
-        // Grid layout: 3 columns, 2 rows per page
-        const cols = 3;
-        const rows = 2;
-        const itemSize = 100;
-        const padding = 15;
-        const startX = x + (width - cols * (itemSize + padding)) / 2;
-        const startY = y + 20;
-        
-        const musicArray = Array.from(this.unlockedMusicTracks.values());
-        const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
-        const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
-        
-        for (let i = startIdx; i < endIdx; i++) {
-            const music = musicArray[i];
-            const gridIdx = i - startIdx;
-            const col = gridIdx % cols;
-            const row = Math.floor(gridIdx / cols);
-            
-            const itemX = startX + col * (itemSize + padding);
-            const itemY = startY + row * (itemSize + padding);
-            
-            // Music tile background
-            ctx.fillStyle = '#3d2817';
-            ctx.fillRect(itemX, itemY, itemSize, itemSize);
-            
-            // Tile border
-            ctx.strokeStyle = '#8b7355';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(itemX, itemY, itemSize, itemSize);
-            
-            // Music icon - drawn with canvas
-            ctx.save();
-            const ncx = itemX + itemSize / 2;
-            const ncy = itemY + itemSize / 3;
-            const ns = 14;
-            ctx.fillStyle = '#d4af37';
-            ctx.strokeStyle = '#c8960a';
-            ctx.beginPath();
-            ctx.ellipse(ncx - ns * 0.08, ncy + ns * 0.28, ns * 0.13, ns * 0.09, -0.4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(ncx + ns * 0.05, ncy + ns * 0.2);
-            ctx.lineTo(ncx + ns * 0.05, ncy - ns * 0.28);
-            ctx.strokeStyle = '#d4af37';
-            ctx.lineWidth = ns * 0.04;
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(ncx + ns * 0.05, ncy - ns * 0.28);
-            ctx.quadraticCurveTo(ncx + ns * 0.35, ncy - ns * 0.05, ncx + ns * 0.22, ncy + ns * 0.12);
-            ctx.stroke();
-            ctx.restore();
-            
-            // Music title
-            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#ffd700';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            
-            // Wrap text
-            const words = music.name.split(' ');
-            let line = '';
-            let lineY = itemY + itemSize / 2;
-            
-            words.forEach(word => {
-                const testLine = line + (line ? ' ' : '') + word;
-                const metrics = ctx.measureText(testLine);
-                if (metrics.width > itemSize - 10 && line) {
-                    ctx.fillText(line, itemX + itemSize / 2, lineY);
-                    line = word;
-                    lineY += 12;
-                } else {
-                    line = testLine;
-                }
-            });
-            ctx.fillText(line, itemX + itemSize / 2, lineY);
-            
-            // Play button at bottom
-            const playButtonSize = 20;
-            const playButtonX = itemX + itemSize / 2 - playButtonSize / 2;
-            const playButtonY = itemY + itemSize - 25;
-            
-            // Play button background
-            ctx.fillStyle = '#d4af37';
-            ctx.fillRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
-            
-            // Play button border
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
-            
-            // Play icon (triangle)
-            ctx.fillStyle = '#1a0f0a';
-            ctx.beginPath();
-            ctx.moveTo(playButtonX + 6, playButtonY + 4);
-            ctx.lineTo(playButtonX + 6, playButtonY + 16);
-            ctx.lineTo(playButtonX + 16, playButtonY + 10);
-            ctx.closePath();
-            ctx.fill();
-        }
-        
-        // Pagination arrows if needed
-        const totalPages = Math.ceil(musicArray.length / this.musicItemsPerPage);
-        if (totalPages > 1) {
-            const arrowSize = 30;
-            const arrowY = y + height / 2 - arrowSize / 2;
-            
-            // Left arrow
-            if (this.musicCurrentPage > 0) {
-                ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
-                ctx.font = 'bold 24px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('<', x - 25, arrowY + arrowSize / 2);
-            }
-            
-            // Right arrow
-            if (this.musicCurrentPage < totalPages - 1) {
-                ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
-                ctx.font = 'bold 24px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('>', x + width + 15, arrowY + arrowSize / 2);
-            }
-            
-            // Page indicator
-            ctx.font = '12px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Page ${this.musicCurrentPage + 1} of ${totalPages}`, x + width / 2, y + height - 15);
-        }
     }
 
     wrapText(text, maxCharsPerLine) {
@@ -9497,6 +9154,390 @@ class ArcaneLibraryMenu {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('Collection feature coming soon...', x + width / 2, y + height / 2);
+    }
+}
+
+class MusicalScoresMenu {
+    constructor(stateManager, settlementHub) {
+        this.stateManager = stateManager;
+        this.settlementHub = settlementHub;
+        this.isOpen = false;
+        this.animationProgress = 0;
+        this.openTime = 0;
+
+        this.musicCurrentPage = 0;
+        this.musicItemsPerPage = 6;
+        this.unlockedMusicTracks = new Map();
+
+        this.closeButtonHovered = false;
+        this.leftArrowHovered = false;
+        this.rightArrowHovered = false;
+    }
+
+    open() {
+        this.isOpen = true;
+        this.animationProgress = 0;
+        this.openTime = Date.now();
+        this.musicCurrentPage = 0;
+        this.buildUnlockedMusicList();
+    }
+
+    close() {
+        this.isOpen = false;
+        this.settlementHub.closePopup();
+    }
+
+    buildUnlockedMusicList() {
+        this.unlockedMusicTracks.clear();
+        if (this.stateManager.marketplaceSystem) {
+            const musicItems = MarketplaceRegistry.getItemsByCategory('music');
+            for (const [itemId, itemData] of Object.entries(musicItems)) {
+                const count = this.stateManager.marketplaceSystem.getConsumableCount(itemId);
+                if (count > 0) {
+                    this.unlockedMusicTracks.set(itemData.musicId, {
+                        id: itemId,
+                        name: itemData.name,
+                        musicId: itemData.musicId,
+                        isPlaying: false
+                    });
+                }
+            }
+        }
+    }
+
+    playMusicTrack(music) {
+        if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.musicPlaylistMode = false;
+            this.stateManager.audioManager.playMusic(music.musicId, false);
+            this.stateManager.audioManager.isManualMusicSelection = true;
+        }
+    }
+
+    update(deltaTime) {
+        if (this.isOpen && this.animationProgress < 1) {
+            this.animationProgress += deltaTime * 2;
+        }
+    }
+
+    updateHoverState(x, y) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
+
+        const contentX = menuX + 20;
+        const contentY = menuY + 70;
+        const contentWidth = menuWidth - 40;
+        const contentHeight = menuHeight - 110;
+
+        const cols = 3;
+        const itemSize = 100;
+        const padding = 15;
+        const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+        const startY = contentY + 20;
+
+        const musicArray = Array.from(this.unlockedMusicTracks.values());
+        const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+        const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+
+        let musicItemHovered = false;
+        for (let i = startIdx; i < endIdx; i++) {
+            const gridIdx = i - startIdx;
+            const col = gridIdx % cols;
+            const row = Math.floor(gridIdx / cols);
+            const itemX = startX + col * (itemSize + padding);
+            const itemY = startY + row * (itemSize + padding);
+            if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
+                musicItemHovered = true;
+                break;
+            }
+        }
+
+        this.leftArrowHovered = false;
+        this.rightArrowHovered = false;
+        const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
+        if (totalPages > 1) {
+            const arrowSize = 30;
+            const leftArrowX = contentX - 40;
+            const rightArrowX = contentX + contentWidth + 10;
+            const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+            this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize &&
+                                    y >= arrowY && y <= arrowY + arrowSize &&
+                                    this.musicCurrentPage > 0;
+            this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize &&
+                                     y >= arrowY && y <= arrowY + arrowSize &&
+                                     this.musicCurrentPage < totalPages - 1;
+        }
+
+        this.stateManager.canvas.style.cursor =
+            (this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || musicItemHovered)
+                ? 'pointer' : 'default';
+    }
+
+    handleClick(x, y) {
+        const timeSinceOpen = Date.now() - this.openTime;
+        if (timeSinceOpen < 200) return;
+
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
+            this.close();
+            return;
+        }
+
+        const contentX = menuX + 20;
+        const contentY = menuY + 70;
+        const contentWidth = menuWidth - 40;
+
+        const cols = 3;
+        const itemSize = 100;
+        const padding = 15;
+        const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+        const startY = contentY + 20;
+
+        const musicArray = Array.from(this.unlockedMusicTracks.values());
+        const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+        const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const gridIdx = i - startIdx;
+            const col = gridIdx % cols;
+            const row = Math.floor(gridIdx / cols);
+            const itemX = startX + col * (itemSize + padding);
+            const itemY = startY + row * (itemSize + padding);
+            if (x >= itemX && x <= itemX + itemSize && y >= itemY && y <= itemY + itemSize) {
+                this.playMusicTrack(musicArray[i]);
+                return;
+            }
+        }
+
+        const contentHeight = menuHeight - 110;
+        const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
+        if (totalPages > 1) {
+            const arrowSize = 30;
+            const leftArrowX = contentX - 40;
+            const rightArrowX = contentX + contentWidth + 10;
+            const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+            if (x >= leftArrowX && x <= leftArrowX + arrowSize &&
+                y >= arrowY && y <= arrowY + arrowSize && this.musicCurrentPage > 0) {
+                this.musicCurrentPage--;
+                return;
+            }
+            if (x >= rightArrowX && x <= rightArrowX + arrowSize &&
+                y >= arrowY && y <= arrowY + arrowSize && this.musicCurrentPage < totalPages - 1) {
+                this.musicCurrentPage++;
+                return;
+            }
+        }
+    }
+
+    drawCornerTrim(ctx, x, y, size, isTopLeft, isTopRight, isBottomLeft, isBottomRight) {
+        ctx.fillStyle = '#d4af37';
+        if (isTopLeft) { ctx.fillRect(x, y, size, 3); ctx.fillRect(x, y, 3, size); }
+        else if (isTopRight) { ctx.fillRect(x - size, y, size, 3); ctx.fillRect(x - 3, y, 3, size); }
+        else if (isBottomLeft) { ctx.fillRect(x, y - 3, size, 3); ctx.fillRect(x, y - size, 3, size); }
+        else if (isBottomRight) { ctx.fillRect(x - size, y - 3, size, 3); ctx.fillRect(x - 3, y - size, 3, size); }
+        ctx.fillStyle = '#ffd700';
+        const g = 4;
+        if (isTopLeft) { ctx.beginPath(); ctx.arc(x + g, y + g, g / 2, 0, Math.PI * 2); ctx.fill(); }
+        else if (isTopRight) { ctx.beginPath(); ctx.arc(x - g, y + g, g / 2, 0, Math.PI * 2); ctx.fill(); }
+        else if (isBottomLeft) { ctx.beginPath(); ctx.arc(x + g, y - g, g / 2, 0, Math.PI * 2); ctx.fill(); }
+        else if (isBottomRight) { ctx.beginPath(); ctx.arc(x - g, y - g, g / 2, 0, Math.PI * 2); ctx.fill(); }
+    }
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        const menuX = canvas.width / 2 - 400;
+        const menuY = canvas.height / 2 - 250;
+        const menuWidth = 800;
+        const menuHeight = 500;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);
+        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);
+
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('MUSICAL SCORES', menuX + menuWidth / 2, menuY + 8);
+
+        const contentX = menuX + 20;
+        const contentY = menuY + 70;
+        const contentWidth = menuWidth - 40;
+        const contentHeight = menuHeight - 110;
+
+        ctx.fillStyle = '#1a0f0a';
+        ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(contentX, contentY, contentWidth, contentHeight);
+
+        this.renderContent(ctx, contentX, contentY, contentWidth, contentHeight);
+
+        const closeButtonX = menuX + menuWidth - 35;
+        const closeButtonY = menuY + 10;
+        const closeButtonSize = 25;
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\u00d7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.restore();
+
+        ctx.globalAlpha = 1;
+    }
+
+    renderContent(ctx, x, y, width, height) {
+        if (this.unlockedMusicTracks.size === 0) {
+            ctx.font = '16px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No musical scores unlocked yet.', x + width / 2, y + height / 2);
+            ctx.fillText('Purchase scores at the Marketplace!', x + width / 2, y + height / 2 + 25);
+            return;
+        }
+
+        const cols = 3;
+        const itemSize = 100;
+        const padding = 15;
+        const startX = x + (width - cols * (itemSize + padding)) / 2;
+        const startY = y + 20;
+
+        const musicArray = Array.from(this.unlockedMusicTracks.values());
+        const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
+        const endIdx = Math.min(startIdx + this.musicItemsPerPage, musicArray.length);
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const music = musicArray[i];
+            const gridIdx = i - startIdx;
+            const col = gridIdx % cols;
+            const row = Math.floor(gridIdx / cols);
+            const itemX = startX + col * (itemSize + padding);
+            const itemY = startY + row * (itemSize + padding);
+
+            ctx.fillStyle = '#3d2817';
+            ctx.fillRect(itemX, itemY, itemSize, itemSize);
+            ctx.strokeStyle = '#8b7355';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(itemX, itemY, itemSize, itemSize);
+
+            ctx.save();
+            const ncx = itemX + itemSize / 2;
+            const ncy = itemY + itemSize / 3;
+            const ns = 14;
+            ctx.fillStyle = '#d4af37';
+            ctx.strokeStyle = '#c8960a';
+            ctx.beginPath();
+            ctx.ellipse(ncx - ns * 0.08, ncy + ns * 0.28, ns * 0.13, ns * 0.09, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ncx + ns * 0.05, ncy + ns * 0.2);
+            ctx.lineTo(ncx + ns * 0.05, ncy - ns * 0.28);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = ns * 0.04;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ncx + ns * 0.05, ncy - ns * 0.28);
+            ctx.quadraticCurveTo(ncx + ns * 0.35, ncy - ns * 0.05, ncx + ns * 0.22, ncy + ns * 0.12);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#ffd700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const words = music.name.split(' ');
+            let line = '';
+            let lineY = itemY + itemSize / 2;
+            words.forEach(word => {
+                const testLine = line + (line ? ' ' : '') + word;
+                if (ctx.measureText(testLine).width > itemSize - 10 && line) {
+                    ctx.fillText(line, itemX + itemSize / 2, lineY);
+                    line = word;
+                    lineY += 12;
+                } else {
+                    line = testLine;
+                }
+            });
+            ctx.fillText(line, itemX + itemSize / 2, lineY);
+
+            const playButtonSize = 20;
+            const playButtonX = itemX + itemSize / 2 - playButtonSize / 2;
+            const playButtonY = itemY + itemSize - 25;
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
+            ctx.strokeStyle = '#ffd700';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(playButtonX, playButtonY, playButtonSize, playButtonSize);
+            ctx.fillStyle = '#1a0f0a';
+            ctx.beginPath();
+            ctx.moveTo(playButtonX + 6, playButtonY + 4);
+            ctx.lineTo(playButtonX + 6, playButtonY + 16);
+            ctx.lineTo(playButtonX + 16, playButtonY + 10);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        const totalPages = Math.ceil(musicArray.length / this.musicItemsPerPage);
+        if (totalPages > 1) {
+            const arrowSize = 30;
+            const arrowY = y + height / 2 - arrowSize / 2;
+            if (this.musicCurrentPage > 0) {
+                ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('<', x - 25, arrowY + arrowSize / 2);
+            }
+            if (this.musicCurrentPage < totalPages - 1) {
+                ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('>', x + width + 15, arrowY + arrowSize / 2);
+            }
+            ctx.font = '12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Page ${this.musicCurrentPage + 1} of ${totalPages}`, x + width / 2, y + height - 15);
+        }
     }
 }
 
