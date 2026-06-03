@@ -5558,7 +5558,7 @@ class UpgradesMenu {
         this.animationProgress = 0;
         this.activeTab = 'buy';
         this.currentPage = 0;
-        this.activeBuyCategory = 'all';
+        this.activeBuyCategory = 'upgrade';
         this.openTime = Date.now(); // Record when menu was opened
         
         // Refresh player gold from stateManager (in case it changed)
@@ -5569,7 +5569,7 @@ class UpgradesMenu {
         
         // Rebuild buy items to reflect current state
         this.allBuyItems = this.buildBuyItems();
-        this.buyItems = this.filterBuyItemsByCategory('all');
+        this.buyItems = this.filterBuyItemsByCategory('upgrade');
         
         // Refresh sell items when opening
         this.sellItems = this.buildSellItems();
@@ -5856,7 +5856,7 @@ class UpgradesMenu {
                 }
                 this.activeTab = tab.action;
                 this.currentPage = 0;
-                this.activeBuyCategory = 'all'; // Reset category filter when switching tabs
+                this.activeBuyCategory = 'upgrade'; // Reset category filter when switching tabs
                 
                 // Refresh sell items when switching to sell tab
                 if (tab.action === 'sell') {
@@ -9166,7 +9166,7 @@ class MusicalScoresMenu {
         this.openTime = 0;
 
         this.musicCurrentPage = 0;
-        this.musicItemsPerPage = 6;
+        this.musicItemsPerPage = 9;
         this.unlockedMusicTracks = new Map();
 
         this.closeButtonHovered = false;
@@ -9235,13 +9235,13 @@ class MusicalScoresMenu {
         const contentX = menuX + 20;
         const contentY = menuY + 70;
         const contentWidth = menuWidth - 40;
-        const contentHeight = menuHeight - 110;
+        const contentHeight = menuHeight - 150;
 
         const cols = 3;
         const itemSize = 100;
         const padding = 15;
         const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
-        const startY = contentY + 20;
+        const startY = contentY + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
         const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
@@ -9264,15 +9264,15 @@ class MusicalScoresMenu {
         this.rightArrowHovered = false;
         const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
         if (totalPages > 1) {
-            const arrowSize = 30;
-            const leftArrowX = contentX - 40;
-            const rightArrowX = contentX + contentWidth + 10;
-            const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+            const arrowSize = 38;
+            const paginationY = menuY + menuHeight - 68;
+            const leftArrowX = menuX + 20;
+            const rightArrowX = menuX + menuWidth - 58;
             this.leftArrowHovered = x >= leftArrowX && x <= leftArrowX + arrowSize &&
-                                    y >= arrowY && y <= arrowY + arrowSize &&
+                                    y >= paginationY && y <= paginationY + arrowSize &&
                                     this.musicCurrentPage > 0;
             this.rightArrowHovered = x >= rightArrowX && x <= rightArrowX + arrowSize &&
-                                     y >= arrowY && y <= arrowY + arrowSize &&
+                                     y >= paginationY && y <= paginationY + arrowSize &&
                                      this.musicCurrentPage < totalPages - 1;
         }
 
@@ -9308,7 +9308,7 @@ class MusicalScoresMenu {
         const itemSize = 100;
         const padding = 15;
         const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
-        const startY = contentY + 20;
+        const startY = contentY + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
         const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
@@ -9326,20 +9326,19 @@ class MusicalScoresMenu {
             }
         }
 
-        const contentHeight = menuHeight - 110;
         const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
         if (totalPages > 1) {
-            const arrowSize = 30;
-            const leftArrowX = contentX - 40;
-            const rightArrowX = contentX + contentWidth + 10;
-            const arrowY = contentY + (contentHeight / 2) - (arrowSize / 2);
+            const arrowSize = 38;
+            const paginationY = menuY + menuHeight - 68;
+            const leftArrowX = menuX + 20;
+            const rightArrowX = menuX + menuWidth - 58;
             if (x >= leftArrowX && x <= leftArrowX + arrowSize &&
-                y >= arrowY && y <= arrowY + arrowSize && this.musicCurrentPage > 0) {
+                y >= paginationY && y <= paginationY + arrowSize && this.musicCurrentPage > 0) {
                 this.musicCurrentPage--;
                 return;
             }
             if (x >= rightArrowX && x <= rightArrowX + arrowSize &&
-                y >= arrowY && y <= arrowY + arrowSize && this.musicCurrentPage < totalPages - 1) {
+                y >= paginationY && y <= paginationY + arrowSize && this.musicCurrentPage < totalPages - 1) {
                 this.musicCurrentPage++;
                 return;
             }
@@ -9391,7 +9390,7 @@ class MusicalScoresMenu {
         const contentX = menuX + 20;
         const contentY = menuY + 70;
         const contentWidth = menuWidth - 40;
-        const contentHeight = menuHeight - 110;
+        const contentHeight = menuHeight - 150;
 
         ctx.fillStyle = '#1a0f0a';
         ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
@@ -9400,6 +9399,50 @@ class MusicalScoresMenu {
         ctx.strokeRect(contentX, contentY, contentWidth, contentHeight);
 
         this.renderContent(ctx, contentX, contentY, contentWidth, contentHeight);
+
+        // Pagination controls (styled like marketplace)
+        const totalPages = Math.ceil(this.unlockedMusicTracks.size / this.musicItemsPerPage);
+        if (totalPages > 1) {
+            const arrowSize = 38;
+            const paginationY = menuY + menuHeight - 68;
+            const leftArrowX = menuX + 20;
+            const rightArrowX = menuX + menuWidth - 58;
+
+            // Left arrow
+            ctx.fillStyle = this.leftArrowHovered ? '#8b6f47' : '#5a4a3a';
+            ctx.fillRect(leftArrowX, paginationY, arrowSize, arrowSize);
+            ctx.fillStyle = this.leftArrowHovered ? '#9b7f57' : '#6a5a4a';
+            ctx.fillRect(leftArrowX, paginationY, arrowSize, 1);
+            ctx.strokeStyle = this.leftArrowHovered ? '#ffd700' : '#5a4a3a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(leftArrowX, paginationY, arrowSize, arrowSize);
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = this.musicCurrentPage > 0 ? (this.leftArrowHovered ? '#ffd700' : '#d4af37') : '#4a3a2a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('\u25c4', leftArrowX + arrowSize / 2, paginationY + arrowSize / 2);
+
+            // Right arrow
+            ctx.fillStyle = this.rightArrowHovered ? '#8b6f47' : '#5a4a3a';
+            ctx.fillRect(rightArrowX, paginationY, arrowSize, arrowSize);
+            ctx.fillStyle = this.rightArrowHovered ? '#9b7f57' : '#6a5a4a';
+            ctx.fillRect(rightArrowX, paginationY, arrowSize, 1);
+            ctx.strokeStyle = this.rightArrowHovered ? '#ffd700' : '#5a4a3a';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(rightArrowX, paginationY, arrowSize, arrowSize);
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = this.musicCurrentPage < totalPages - 1 ? (this.rightArrowHovered ? '#ffd700' : '#d4af37') : '#4a3a2a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('\u25ba', rightArrowX + arrowSize / 2, paginationY + arrowSize / 2);
+
+            // Page indicator
+            ctx.font = 'bold 18px Arial';
+            ctx.fillStyle = '#d4af37';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`Page ${this.musicCurrentPage + 1} / ${totalPages}`, menuX + menuWidth / 2, paginationY + arrowSize / 2);
+        }
 
         const closeButtonX = menuX + menuWidth - 35;
         const closeButtonY = menuY + 10;
@@ -9436,7 +9479,7 @@ class MusicalScoresMenu {
         const itemSize = 100;
         const padding = 15;
         const startX = x + (width - cols * (itemSize + padding)) / 2;
-        const startY = y + 20;
+        const startY = y + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
         const startIdx = this.musicCurrentPage * this.musicItemsPerPage;
@@ -9514,32 +9557,7 @@ class MusicalScoresMenu {
             ctx.closePath();
             ctx.fill();
         }
-
-        const totalPages = Math.ceil(musicArray.length / this.musicItemsPerPage);
-        if (totalPages > 1) {
-            const arrowSize = 30;
-            const arrowY = y + height / 2 - arrowSize / 2;
-            if (this.musicCurrentPage > 0) {
-                ctx.fillStyle = this.leftArrowHovered ? '#ffd700' : '#d4af37';
-                ctx.font = 'bold 24px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('<', x - 25, arrowY + arrowSize / 2);
-            }
-            if (this.musicCurrentPage < totalPages - 1) {
-                ctx.fillStyle = this.rightArrowHovered ? '#ffd700' : '#d4af37';
-                ctx.font = 'bold 24px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('>', x + width + 15, arrowY + arrowSize / 2);
-            }
-            ctx.font = '12px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Page ${this.musicCurrentPage + 1} of ${totalPages}`, x + width / 2, y + height - 15);
-        }
     }
 }
-
 
 

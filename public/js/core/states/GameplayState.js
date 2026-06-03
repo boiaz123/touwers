@@ -7,7 +7,7 @@ import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
-import { PerformanceMonitor } from '../PerformanceMonitor.js';
+
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
@@ -73,10 +73,6 @@ export class GameplayState {
         
         // Track level start time for statistics
         this.levelStartTime = 0;
-        
-        // Performance Monitor
-        this.performanceMonitor = new PerformanceMonitor();
-        this.performanceMonitor.enable(); // Enable by default to show FPS
         
         // Placement flags to prevent menu opening immediately after placement
         this.justPlacedTower = false;
@@ -2103,8 +2099,6 @@ export class GameplayState {
         // OPTIMIZATION: When results screen is showing, skip rendering all game entities
         // The update() already stops game logic; this stops the expensive render pass too
         if (this.resultsScreen && this.resultsScreen.isShowing) {
-            // Render performance monitor
-            this.performanceMonitor.render(ctx, 10, 10);
             // Render results screen on top
             this.resultsScreen.render(ctx);
             return;
@@ -2244,9 +2238,6 @@ export class GameplayState {
         
         // Render active boons
         this.renderActiveBoons(ctx);
-        
-        // Render performance monitor
-        this.performanceMonitor.render(ctx, 10, 10);
     }
     
     renderActiveBoons(ctx) {
