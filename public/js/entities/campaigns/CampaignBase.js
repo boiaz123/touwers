@@ -286,19 +286,22 @@ export class CampaignBase {
     
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        
+
         // Render background
         this.renderBackground(ctx, canvas);
-        
+
         // Render terrain (includes path rendering before trees)
         this.renderTerrain(ctx);
-        
-        // Render level slots
+
+        // Render level slots (castles only)
         this.renderLevelSlots(ctx);
-        
+
+        // Render level labels on top of all terrain/trees
+        this.renderAllLevelLabels(ctx);
+
         // Render title
         this.renderTitle(ctx, canvas);
-        
+
         // Render nav buttons
         this.renderNavButtons(ctx);
     }
@@ -326,6 +329,113 @@ export class CampaignBase {
                 this.renderLevelSlot(ctx, i);
             }
         }
+    }
+
+    renderAllLevelLabels(ctx) {
+        if (this.levelSlots && this.levelSlots.length > 0) {
+            for (let i = 0; i < this.levelSlots.length; i++) {
+                this.renderLevelLabel(ctx, i);
+            }
+        }
+    }
+
+    // Draw a themed ribbon banner with the level name hovering above the castle.
+    // Subclasses can override this.labelStyle to customise colours per campaign.
+    renderLevelLabel(ctx, index) {
+        if (!this.levelSlots || index >= this.levelSlots.length) return;
+        const slot = this.levelSlots[index];
+        if (!slot || !slot.level) return;
+
+        const level = slot.level;
+        const displayName = level.name || `Level ${index + 1}`;
+        const x = slot.x;
+        const y = slot.y - 78;  // hover just above castle top
+
+        const style = this.labelStyle || {};
+        const bg1    = style.bg1    || 'rgba(40, 25, 10, 0.93)';
+        const bg2    = style.bg2    || 'rgba(55, 35, 15, 0.97)';
+        const border = style.border || 'rgba(160, 120, 50, 0.85)';
+        const text   = style.text   || '#f0e0b0';
+
+        ctx.save();
+        ctx.font = 'bold 13px serif';
+        const textW   = ctx.measureText(displayName).width;
+        const bannerW = Math.max(textW + 36, 108);
+        const bannerH = 26;
+        const notch   = 9;
+
+        // Ribbon shape path (inward V-notch on each side)
+        const ribbonPath = () => {
+            ctx.beginPath();
+            ctx.moveTo(x - bannerW / 2,         y - bannerH / 2);
+            ctx.lineTo(x + bannerW / 2,         y - bannerH / 2);
+            ctx.lineTo(x + bannerW / 2,         y - notch);
+            ctx.lineTo(x + bannerW / 2 - notch, y);
+            ctx.lineTo(x + bannerW / 2,         y + notch);
+            ctx.lineTo(x + bannerW / 2,         y + bannerH / 2);
+            ctx.lineTo(x - bannerW / 2,         y + bannerH / 2);
+            ctx.lineTo(x - bannerW / 2,         y + notch);
+            ctx.lineTo(x - bannerW / 2 + notch, y);
+            ctx.lineTo(x - bannerW / 2,         y - notch);
+            ctx.closePath();
+        };
+
+        // Drop shadow
+        ctx.shadowColor   = 'rgba(0,0,0,0.65)';
+        ctx.shadowBlur    = 8;
+        ctx.shadowOffsetY = 3;
+
+        // Gradient fill
+        const grad = ctx.createLinearGradient(x, y - bannerH / 2, x, y + bannerH / 2);
+        grad.addColorStop(0,   bg1);
+        grad.addColorStop(0.5, bg2);
+        grad.addColorStop(1,   bg1);
+        ctx.fillStyle = grad;
+        ribbonPath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+        // Border
+        ctx.strokeStyle = border;
+        ctx.lineWidth   = 1.5;
+        ribbonPath();
+        ctx.stroke();
+
+        // Text shadow
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle    = 'rgba(0,0,0,0.55)';
+        ctx.fillText(displayName, x + 1, y + 1);
+
+        // Text
+        ctx.fillStyle = text;
+        ctx.fillText(displayName, x, y);
+
+        ctx.restore();
+    }
+
+    // Distribute totalSlots evenly along pathPoints by cumulative pixel distance.
+    // Returns an array of {x, y} position objects.
+    _distributeSlotsByDistance(pathPoints, totalSlots) {
+        const cum = [0];
+        for (let i = 1; i < pathPoints.length; i++) {
+            const dx = pathPoints[i].x - pathPoints[i - 1].x;
+            const dy = pathPoints[i].y - pathPoints[i - 1].y;
+            cum.push(cum[i - 1] + Math.hypot(dx, dy));
+        }
+        const total   = cum[cum.length - 1];
+        const spacing = total / (totalSlots + 1);
+        const result  = [];
+        for (let s = 0; s < totalSlots; s++) {
+            const target = (s + 1) * spacing;
+            let idx = pathPoints.length - 1;
+            for (let j = 1; j < cum.length; j++) {
+                if (cum[j] >= target) { idx = j; break; }
+            }
+            result.push({ ...pathPoints[idx] });
+        }
+        return result;
     }
     
     renderLevelSlot(ctx, index) {

@@ -6,7 +6,6 @@ const CAMPAIGN_BIOME = {
     'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
     'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
     'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
-    'campaign-5': { from: '#1c1810', to: '#130f09', accent: '#8a7a60' },  // Sandbox pewter accent
 };
 
 export class CampaignMenu {
@@ -366,7 +365,7 @@ export class CampaignMenu {
         const b = this.getCardBounds(index);
         const isSelected = this.selectedCampaignId === campaign.id;
         const isHovered = this.hoveredCampaignId === campaign.id;
-        const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+        const biome = CAMPAIGN_BIOME[campaign.id] || { from: '#1c1810', to: '#130f09', accent: '#7a6a5a' };
 
         // Drop shadow
         ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -576,7 +575,7 @@ export class CampaignMenu {
         const cx = panel.x + pad;
         const cw = panel.width - pad * 2;
         let cy = panel.y + pad;
-        const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+        const biome = CAMPAIGN_BIOME[campaign.id] || { from: '#1c1810', to: '#130f09', accent: '#7a6a5a' };
 
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';

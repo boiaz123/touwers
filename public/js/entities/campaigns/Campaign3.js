@@ -26,16 +26,24 @@ export class Campaign3 extends CampaignBase {
         this.campaignId = 'campaign-3';
         this.campaignName = 'The Desert Campaign';
         this.castleInstances = {};
-        
+
         // Animation time for castle flags
         this.animationTime = 0;
-        
+
         // Terrain cache
         this.terrainDetails = {
             oasis: null
         };
         this.pathPoints = [];
-        
+
+        // Desert-themed label banner: warm sandy tones, amber border
+        this.labelStyle = {
+            bg1:    'rgba(44, 26, 8, 0.94)',
+            bg2:    'rgba(62, 36, 12, 0.97)',
+            border: 'rgba(196, 124, 48, 0.88)',
+            text:   '#f5e2b0'
+        };
+
         // Register campaign levels once during construction
         this.registerLevels();
     }
@@ -98,53 +106,51 @@ export class Campaign3 extends CampaignBase {
         // Desert path - runs at ground level, curves around oasis below
         // Path positioned at bottom (height * 0.78) so it goes UNDER the oasis
         this.pathPoints = [
-            // Entry from left at ground level
+            // Entry from left at ground level — extended flat section gives level slots
+            // more horizontal separation before the path dips around the oasis
             { x: -20, y: height * 0.78 },
             { x: width * 0.05, y: height * 0.78 },
             { x: width * 0.10, y: height * 0.78 },
             { x: width * 0.15, y: height * 0.78 },
             { x: width * 0.20, y: height * 0.78 },
-            // Curve DOWN and LEFT to avoid oasis center
-            { x: width * 0.25, y: height * 0.79 },
-            { x: width * 0.30, y: height * 0.81 },
-            { x: width * 0.35, y: height * 0.83 },
-            { x: width * 0.40, y: height * 0.84 },  // Far left of oasis
-            { x: width * 0.45, y: height * 0.855 }, // Furthest left point
+            { x: width * 0.25, y: height * 0.78 },
+            { x: width * 0.30, y: height * 0.78 },
+            // Curve DOWN and around oasis center
+            { x: width * 0.34, y: height * 0.79 },
+            { x: width * 0.38, y: height * 0.81 },
+            { x: width * 0.42, y: height * 0.83 },
+            { x: width * 0.46, y: height * 0.84 },  // Far left of oasis
+            { x: width * 0.50, y: height * 0.855 }, // Furthest left point
             // Curve BACK UP and RIGHT around oasis bottom
-            { x: width * 0.50, y: height * 0.86 },  // Bottom center past oasis
-            { x: width * 0.55, y: height * 0.855 }, // Furthest right point
-            { x: width * 0.60, y: height * 0.84 },  // Far right of oasis
-            { x: width * 0.65, y: height * 0.83 },
+            { x: width * 0.54, y: height * 0.86 },  // Bottom center past oasis
+            { x: width * 0.58, y: height * 0.855 }, // Furthest right point
+            { x: width * 0.62, y: height * 0.84 },  // Far right of oasis
+            { x: width * 0.66, y: height * 0.83 },
             { x: width * 0.70, y: height * 0.81 },
             { x: width * 0.75, y: height * 0.79 },
             { x: width * 0.80, y: height * 0.78 },
-            // Final curve to exit
+            // Final stretch to exit
             { x: width * 0.85, y: height * 0.78 },
             { x: width * 0.90, y: height * 0.78 },
             { x: width * 0.95, y: height * 0.78 },
-            { x: width + 20, y: height * 0.78 }
+            { x: width + 200, y: height * 0.78 }
         ];
         
-        // Generate 10 level slots positioned evenly along the path with good spacing
+        // Generate 10 level slots distributed evenly by path distance
         this.levelSlots = [];
-        const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / 11; // 11 intervals for 10 slots, keeping margin from edges
-        
-        for (let i = 0; i < 10; i++) {
-            const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
-            const pathPoint = this.pathPoints[pathIndex];
-            
-            // Use existing level or create placeholder
+        const totalSlots = 10;
+        const positions = this._distributeSlotsByDistance(this.pathPoints, totalSlots);
+
+        for (let i = 0; i < totalSlots; i++) {
             const level = i < this.levels.length ? this.levels[i] : {
                 id: `placeholder-${i}`,
                 name: `Level ${i + 1}`,
                 unlocked: false,
                 completed: false
             };
-            
             this.levelSlots.push({
-                x: pathPoint.x,
-                y: pathPoint.y,
+                x: positions[i].x,
+                y: positions[i].y,
                 level: level,
                 levelIndex: i
             });
@@ -607,12 +613,6 @@ export class Campaign3 extends CampaignBase {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
         }
         
-        // Draw level name/number below
-        ctx.font = 'bold 12px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#3d2817';
-        const displayName = level.name || `Level ${index + 1}`;
-        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {

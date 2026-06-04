@@ -27,21 +27,29 @@ export class Campaign1 extends CampaignBase {
         
         this.campaignId = 'campaign-1';
         this.campaignName = 'The Forest Campaign';
-        
+
         // Castle instances for each level slot (for exact rendering consistency)
         this.castleInstances = {};
-        
+
         // Animation time for castle flags
         this.animationTime = 0;
-        
+
         // Terrain cache - generated once on enter to prevent flickering
         this.terrainDetails = null;
         this.pathPoints = [];
-        
+
         // Falling leaves particle effect
         this.fallingLeaves = [];
         this.maxLeaves = 40;
-        
+
+        // Forest-themed label banner: dark wood tones, green accent border
+        this.labelStyle = {
+            bg1:    'rgba(28, 18, 7, 0.94)',
+            bg2:    'rgba(42, 26, 10, 0.97)',
+            border: 'rgba(78, 140, 66, 0.88)',
+            text:   '#e8d4a0'
+        };
+
         // Register campaign levels once during construction
         this.registerLevels();
     }
@@ -150,20 +158,14 @@ export class Campaign1 extends CampaignBase {
             { x: width + 20, y: height * 0.50 }
         ];
         
-        // Generate 12 level slots positioned evenly along the path
+        // Generate 12 level slots distributed evenly by path distance (not index)
         const totalSlots = 12;
         this.levelSlots = [];
-        
-        // Spread slots evenly along path with margins from edges
-        const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / (totalSlots + 1); // Even distribution with margins
-        
+
+        const positions = this._distributeSlotsByDistance(this.pathPoints, totalSlots);
+
         for (let i = 0; i < totalSlots; i++) {
-            const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
-            const pathPoint = this.pathPoints[pathIndex];
-            
-            const pos = { ...pathPoint };
-            // Assign level if available, otherwise create a locked level
+            const pos = { ...positions[i] };
             if (i < this.levels.length) {
                 pos.level = this.levels[i];
             } else {
@@ -176,7 +178,6 @@ export class Campaign1 extends CampaignBase {
                 };
             }
             pos.levelIndex = i;
-            
             this.levelSlots.push(pos);
         }
     }
@@ -508,6 +509,8 @@ export class Campaign1 extends CampaignBase {
             }
         }
         this.updateAndRenderFallingLeaves(ctx);
+        // Level name banners rendered on top of all terrain, trees and leaves
+        this.renderAllLevelLabels(ctx);
         this.renderTitle(ctx, canvas);
         this.renderNavButtons(ctx);
     }
@@ -1229,12 +1232,6 @@ export class Campaign1 extends CampaignBase {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
         }
         
-        // Draw level name/number below
-        ctx.font = 'bold 12px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#1a0f05';
-        const displayName = level.name || `Level ${index + 1}`;
-        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {

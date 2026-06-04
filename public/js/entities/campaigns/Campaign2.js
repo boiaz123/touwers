@@ -33,11 +33,19 @@ export class Campaign2 extends CampaignBase {
             trees: [],
             rocks: []
         };
-        
+
         // Snow particle effect
         this.snowflakes = [];
         this.maxSnowflakes = 80;
-        
+
+        // Mountain-themed label banner: slate tones, icy blue border
+        this.labelStyle = {
+            bg1:    'rgba(18, 26, 42, 0.94)',
+            bg2:    'rgba(26, 36, 58, 0.97)',
+            border: 'rgba(100, 160, 220, 0.88)',
+            text:   '#d8eaf8'
+        };
+
         this.registerLevels();
     }
     
@@ -123,27 +131,21 @@ export class Campaign2 extends CampaignBase {
             { x: width + 20, y: height * 0.76 }
         ];
         
-        // Generate 10 level slots positioned evenly along the path with better spacing
+        // Generate 10 level slots distributed evenly by path distance
         this.levelSlots = [];
-        // Spread slots more evenly - use fractional indices for better distribution
-        const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / 11; // 11 intervals for 10 slots, keeping margin from edges
-        
-        for (let i = 0; i < 10; i++) {
-            const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
-            const pathPoint = this.pathPoints[pathIndex];
-            
-            // Use existing level or create placeholder
+        const totalSlots = 10;
+        const positions = this._distributeSlotsByDistance(this.pathPoints, totalSlots);
+
+        for (let i = 0; i < totalSlots; i++) {
             const level = i < this.levels.length ? this.levels[i] : {
                 id: `placeholder-${i}`,
                 name: `Level ${i + 1}`,
                 unlocked: false,
                 completed: false
             };
-            
             this.levelSlots.push({
-                x: pathPoint.x,
-                y: pathPoint.y,
+                x: positions[i].x,
+                y: positions[i].y,
                 level: level,
                 levelIndex: i
             });
@@ -522,6 +524,8 @@ export class Campaign2 extends CampaignBase {
             }
         }
         this.renderSnowflakes(ctx);
+        // Level name banners on top of all terrain, trees and snow
+        this.renderAllLevelLabels(ctx);
         this.renderTitle(ctx);
         this.renderNavButtons(ctx);
     }
@@ -1248,14 +1252,8 @@ export class Campaign2 extends CampaignBase {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
         }
         
-        // Draw level name/number below
-        ctx.font = 'bold 12px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#f5f5f5';
-        const displayName = level.name || `Level ${index + 1}`;
-        ctx.fillText(displayName, slot.x, slot.y + 80);
     }
-    
+
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {
         const scale = 0.45;
         ctx.save();

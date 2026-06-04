@@ -25,10 +25,10 @@ export class Campaign4 extends CampaignBase {
         this.campaignId = 'campaign-4';
         this.campaignName = 'The Frog King\'s Realm';
         this.castleInstances = {};
-        
+
         // Animation time for castle flags
         this.animationTime = 0;
-        
+
         // Terrain cache
         this.terrainDetails = {
             vegetation: [],
@@ -37,7 +37,15 @@ export class Campaign4 extends CampaignBase {
             shootingStars: []
         };
         this.pathPoints = [];
-        
+
+        // Space / alien-themed label banner: dark purple, arcane border
+        this.labelStyle = {
+            bg1:    'rgba(18, 8, 32, 0.94)',
+            bg2:    'rgba(32, 12, 52, 0.97)',
+            border: 'rgba(136, 64, 200, 0.88)',
+            text:   '#d4a8f8'
+        };
+
         // Register campaign levels once during construction
         this.registerLevels();
     }
@@ -100,63 +108,54 @@ export class Campaign4 extends CampaignBase {
         const width = canvas.width;
         const height = canvas.height;
         
-        // Frog Realm path - spiral/twisting pattern through the landscape
-        // Different from desert to create unique visual identity
+        // Frog Realm path — winding alien landscape, terminating at the boss castle
+        // (no exit off-screen; the road ends at the final fortress)
+        const bossX = width * 0.87;
+        const bossY = height * 0.58;  // elevated, imposing right-side position
         this.pathPoints = [
-            // Entry from left, starting at upper level
-            { x: -20, y: height * 0.70 },
-            { x: width * 0.05, y: height * 0.68 },
-            { x: width * 0.10, y: height * 0.72 },
-            { x: width * 0.15, y: height * 0.75 },
-            
-            // First spiral down-right
-            { x: width * 0.20, y: height * 0.78 },
-            { x: width * 0.25, y: height * 0.80 },
-            { x: width * 0.30, y: height * 0.82 },
-            
-            // Bottom left point - lowest point of path
-            { x: width * 0.35, y: height * 0.85 },
-            { x: width * 0.40, y: height * 0.86 },
-            
-            // Turn and spiral back up
-            { x: width * 0.45, y: height * 0.85 },
-            { x: width * 0.50, y: height * 0.82 },
-            
-            // Rise toward middle
-            { x: width * 0.55, y: height * 0.78 },
-            { x: width * 0.60, y: height * 0.75 },
-            
-            // Second spiral down-left
-            { x: width * 0.65, y: height * 0.78 },
-            { x: width * 0.70, y: height * 0.82 },
-            
-            // Bottom right point
-            { x: width * 0.75, y: height * 0.86 },
-            { x: width * 0.80, y: height * 0.85 },
-            
-            // Final rise toward exit
-            { x: width * 0.85, y: height * 0.80 },
-            { x: width * 0.90, y: height * 0.75 },
-            { x: width * 0.95, y: height * 0.70 },
-            
-            // Exit right
-            { x: width + 20, y: height * 0.70 }
+            // Entry from left
+            { x: -20,           y: height * 0.72 },
+            { x: width * 0.05,  y: height * 0.72 },
+            { x: width * 0.10,  y: height * 0.75 },
+            { x: width * 0.15,  y: height * 0.78 },
+
+            // First descent
+            { x: width * 0.22,  y: height * 0.82 },
+            { x: width * 0.28,  y: height * 0.85 },
+
+            // Deep valley bottom-left
+            { x: width * 0.35,  y: height * 0.87 },
+            { x: width * 0.42,  y: height * 0.86 },
+
+            // Rise and cross
+            { x: width * 0.48,  y: height * 0.81 },
+            { x: width * 0.53,  y: height * 0.76 },
+
+            // Second descent
+            { x: width * 0.58,  y: height * 0.80 },
+            { x: width * 0.63,  y: height * 0.85 },
+            { x: width * 0.68,  y: height * 0.86 },
+
+            // Turn and climb toward boss
+            { x: width * 0.73,  y: height * 0.82 },
+            { x: width * 0.78,  y: height * 0.76 },
+            { x: width * 0.82,  y: height * 0.70 },
+            { x: width * 0.85,  y: height * 0.64 },
+
+            // Arrives at the boss castle gate
+            { x: bossX,         y: bossY }
         ];
-        
-        // Generate 8 level slots positioned evenly along the path
-        const totalSlots = 8;
+
+        // All levels get a slot — last slot is the boss
+        const totalSlots = this.levels.length;
         this.levelSlots = [];
-        
-        // Spread slots evenly along path with margins from edges
-        const pathLength = this.pathPoints.length - 1;
-        const slotSpacing = pathLength / (totalSlots + 1); // Even distribution with margins
-        
+
+        const positions = this._distributeSlotsByDistance(this.pathPoints, totalSlots);
+        // Force last slot to the exact boss castle position
+        positions[totalSlots - 1] = { x: bossX, y: bossY };
+
         for (let i = 0; i < totalSlots; i++) {
-            const pathIndex = Math.min(Math.floor((i + 1) * slotSpacing), this.pathPoints.length - 1);
-            const pathPoint = this.pathPoints[pathIndex];
-            
-            const pos = { ...pathPoint };
-            // Assign level if available, otherwise create a locked level
+            const pos = { ...positions[i] };
             if (i < this.levels.length) {
                 pos.level = this.levels[i];
             } else {
@@ -169,7 +168,6 @@ export class Campaign4 extends CampaignBase {
                 };
             }
             pos.levelIndex = i;
-            
             this.levelSlots.push(pos);
         }
     }
@@ -747,27 +745,654 @@ export class Campaign4 extends CampaignBase {
     
     renderLevelSlot(ctx, index) {
         if (!this.levelSlots || index >= this.levelSlots.length) return;
-        
+
         const slot = this.levelSlots[index];
         if (!slot || !slot.level) return;
-        
-        const level = slot.level;
+
+        const level    = slot.level;
         const isHovered = index === this.hoveredLevel;
-        const isLocked = !level.unlocked;
-        
-        // Draw castle for this level
-        if (isLocked) {
+        const isLocked  = !level.unlocked;
+        const isBoss    = index === this.levelSlots.length - 1;
+
+        if (isBoss) {
+            if (isLocked) {
+                ctx.save();
+                ctx.globalAlpha = 0.65;
+                this.drawBossCastle(ctx, slot.x, slot.y, false);
+                ctx.restore();
+                // Lock icon over boss castle
+                ctx.save();
+                ctx.translate(slot.x, slot.y);
+                ctx.fillStyle = 'rgba(80, 0, 100, 0.7)';
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#cc88ff';
+                ctx.beginPath();
+                ctx.arc(0, -5, 8, Math.PI, 0, false);
+                ctx.strokeStyle = '#dd99ff';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.fillStyle = '#8844aa';
+                ctx.fillRect(-10, -6, 20, 16);
+                ctx.fillStyle = '#cc88ff';
+                ctx.beginPath();
+                ctx.arc(0, 1, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(-2, 2, 4, 6);
+                ctx.restore();
+            } else {
+                this.drawBossCastle(ctx, slot.x, slot.y, isHovered);
+            }
+        } else if (isLocked) {
             this.drawLockedCastleTopDown(ctx, slot.x, slot.y, isHovered);
         } else {
             this.drawCastleFromInstance(ctx, slot.x, slot.y, index, isHovered);
         }
-        
-        // Draw level name/number below
-        ctx.font = 'bold 12px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#d0c8a8';
-        const displayName = level.name || `Level ${index + 1}`;
-        ctx.fillText(displayName, slot.x, slot.y + 80);
+    }
+
+    renderLevelLabel(ctx, index) {
+        if (!this.levelSlots || index >= this.levelSlots.length) return;
+        const slot = this.levelSlots[index];
+        if (!slot || !slot.level) return;
+
+        const isBoss = index === this.levelSlots.length - 1;
+
+        if (isBoss) {
+            this._renderBossLabel(ctx, slot);
+            return;
+        }
+
+        // Regular space-themed label (delegated to base with this.labelStyle)
+        super.renderLevelLabel(ctx, index);
+    }
+
+    _renderBossLabel(ctx, slot) {
+        const displayName = slot.level.name || 'The Frog King\'s Realm';
+        const x = slot.x;
+        const y = slot.y - 195;  // above the boss castle spire (~178px at scale 0.68)
+        const t = this.animationTime;
+
+        ctx.save();
+        ctx.font = 'bold 14px serif';
+        const textW   = ctx.measureText(displayName).width;
+        const bannerW = Math.max(textW + 44, 130);
+        const bannerH = 30;
+        const notch   = 11;
+
+        const ribbonPath = () => {
+            ctx.beginPath();
+            ctx.moveTo(x - bannerW / 2,         y - bannerH / 2);
+            ctx.lineTo(x + bannerW / 2,         y - bannerH / 2);
+            ctx.lineTo(x + bannerW / 2,         y - notch);
+            ctx.lineTo(x + bannerW / 2 - notch, y);
+            ctx.lineTo(x + bannerW / 2,         y + notch);
+            ctx.lineTo(x + bannerW / 2,         y + bannerH / 2);
+            ctx.lineTo(x - bannerW / 2,         y + bannerH / 2);
+            ctx.lineTo(x - bannerW / 2,         y + notch);
+            ctx.lineTo(x - bannerW / 2 + notch, y);
+            ctx.lineTo(x - bannerW / 2,         y - notch);
+            ctx.closePath();
+        };
+
+        // Pulsing crimson outer glow
+        const pulse = Math.abs(Math.sin(t * 1.8)) * 0.55 + 0.25;
+        ctx.shadowColor   = `rgba(180, 0, 60, ${pulse})`;
+        ctx.shadowBlur    = 18;
+        ctx.shadowOffsetY = 0;
+
+        const grad = ctx.createLinearGradient(x, y - bannerH / 2, x, y + bannerH / 2);
+        grad.addColorStop(0,   'rgba(14, 4, 22, 0.97)');
+        grad.addColorStop(0.5, 'rgba(28, 6, 40, 0.99)');
+        grad.addColorStop(1,   'rgba(14, 4, 22, 0.97)');
+        ctx.fillStyle = grad;
+        ribbonPath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        // Animated blood-red border
+        const borderPulse = Math.abs(Math.sin(t * 2.2)) * 0.5 + 0.5;
+        ctx.strokeStyle = `rgba(200, 20, 50, ${borderPulse})`;
+        ctx.lineWidth   = 2;
+        ribbonPath();
+        ctx.stroke();
+
+        // Inner glow line
+        ctx.strokeStyle = `rgba(255, 80, 100, ${borderPulse * 0.4})`;
+        ctx.lineWidth   = 0.8;
+        ribbonPath();
+        ctx.stroke();
+
+        // Small rune marks at banner ends
+        const runeAlpha = Math.abs(Math.sin(t * 1.5)) * 0.5 + 0.5;
+        ctx.fillStyle   = `rgba(220, 60, 80, ${runeAlpha})`;
+        for (const rx of [x - bannerW / 2 + notch + 10, x + bannerW / 2 - notch - 10]) {
+            ctx.beginPath();
+            ctx.moveTo(rx, y - 7);
+            ctx.lineTo(rx + 5, y);
+            ctx.lineTo(rx, y + 7);
+            ctx.lineTo(rx - 5, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Text — white with crimson shadow
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle    = `rgba(220, 30, 60, 0.7)`;
+        ctx.fillText(displayName, x + 1, y + 1);
+        ctx.fillStyle    = '#ffe8e8';
+        ctx.fillText(displayName, x, y);
+
+        ctx.restore();
+    }
+
+    drawBossCastle(ctx, centerX, centerY, isHovered) {
+        const scale = 0.68;
+        const t = this.animationTime;
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(scale, scale);
+
+        // Layout constants
+        const BY = 78; // base / ground y
+        const OTW = 56, OTH = 238, OTSH = 88; // outer tower: width, height, spire height
+        const ITW = 44, ITH = 198, ITSH = 68; // inner tower
+        const OTX = 188, ITX = 112;            // tower center x offsets
+        const KW = 178, KH = 218;              // keep width, height
+        const KT = BY - KH;                    // keep top y
+        const CR_H = 24;                       // crenellation height
+        const CR_T = KT - CR_H;               // crenellation top y
+        const SP_H = 164;                      // spire height measured from keep-wall top (KT)
+        const SP_TOP = KT - SP_H;             // spire tip y (same absolute height as CR_T-140)
+
+        // ── Dark aura beneath the fortress ──────────────────────────────────
+        const auraPulse = Math.sin(t * 1.4) * 18;
+        const aura = ctx.createRadialGradient(0, 0, 40, 0, 0, 320 + auraPulse);
+        aura.addColorStop(0,    'rgba(80, 0, 120, 0.30)');
+        aura.addColorStop(0.45, 'rgba(40, 0, 70,  0.15)');
+        aura.addColorStop(1,    'rgba(10, 0, 25,  0)');
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(0, 0, 320 + auraPulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isHovered) {
+            const hg = ctx.createRadialGradient(0, 0, 60, 0, 0, 280);
+            hg.addColorStop(0, 'rgba(220, 0, 80, 0.28)');
+            hg.addColorStop(1, 'rgba(100, 0, 30, 0)');
+            ctx.fillStyle = hg;
+            ctx.beginPath();
+            ctx.arc(0, 0, 280, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+        ctx.beginPath();
+        ctx.ellipse(0, BY + 28, 230, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Outer flanking towers ───────────────────────────────────────────
+        for (const sx of [-OTX, OTX]) {
+            this._drawDarkTower(ctx, sx, OTW, OTH, OTSH, t);
+        }
+
+        // ── Connecting curtain walls  (outer tower → inner tower) ───────────
+        // Left: outer right edge (-OTX + OTW/2) → inner left edge (-ITX - ITW/2)
+        // Right: mirror
+        const outerRE = OTX - OTW / 2;  // 188-28=160
+        const innerLE = ITX + ITW / 2;  // 112+22=134
+        const cwW = outerRE - innerLE;   // 26
+        const cwH = 148;
+        for (const sx of [-1, 1]) {
+            const cwX = sx < 0 ? -(outerRE) : innerLE;
+            const cg = ctx.createLinearGradient(0, BY - cwH, 0, BY);
+            cg.addColorStop(0, '#38224a');
+            cg.addColorStop(1, '#261636');
+            ctx.fillStyle = cg;
+            ctx.fillRect(cwX, BY - cwH, cwW, cwH);
+            // Outline
+            ctx.strokeStyle = '#5c1480';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(cwX, BY - cwH, cwW, cwH);
+            // Brick rows on curtain wall
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cwX, BY - cwH, cwW, cwH);
+            ctx.clip();
+            ctx.strokeStyle = 'rgba(12, 4, 20, 0.8)';
+            ctx.lineWidth = 1;
+            const cwBH = 19;
+            for (let row = 0; row <= Math.ceil(cwH / cwBH); row++) {
+                const ry = BY - cwH + row * cwBH;
+                ctx.beginPath();
+                ctx.moveTo(cwX, ry); ctx.lineTo(cwX + cwW, ry);
+                ctx.stroke();
+                // single vertical every other row
+                if (row % 2 === 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(cwX + cwW / 2, ry); ctx.lineTo(cwX + cwW / 2, ry + cwBH);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+            // Crenellations on top of curtain wall
+            const ccW = cwW / 2;
+            for (let c = 0; c < 2; c++) {
+                if (c % 2 === 0) {
+                    ctx.fillStyle = '#38224a';
+                    ctx.fillRect(cwX + c * ccW, BY - cwH - 18, ccW, 18);
+                    ctx.strokeStyle = '#5c1480';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(cwX + c * ccW, BY - cwH - 18, ccW, 18);
+                }
+            }
+        }
+
+        // ── Inner flanking towers ───────────────────────────────────────────
+        for (const sx of [-ITX, ITX]) {
+            this._drawDarkTower(ctx, sx, ITW, ITH, ITSH, t);
+        }
+
+        // ── Base platform ───────────────────────────────────────────────────
+        const baseH = 50;
+        const baseGrad = ctx.createLinearGradient(0, BY, 0, BY + baseH);
+        baseGrad.addColorStop(0,   '#3e2a54');
+        baseGrad.addColorStop(0.5, '#2e1c3e');
+        baseGrad.addColorStop(1,   '#1c0e28');
+        ctx.fillStyle = baseGrad;
+        ctx.fillRect(-215, BY, 430, baseH);
+        ctx.strokeStyle = '#6c1898';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-215, BY, 430, baseH);
+        // Base brick courses
+        ctx.save();
+        ctx.beginPath(); ctx.rect(-215, BY, 430, baseH); ctx.clip();
+        const bpBW = 54, bpBH = 25;
+        ctx.strokeStyle = 'rgba(10, 3, 18, 0.85)';
+        ctx.lineWidth = 1;
+        for (let row = 0; row < 2; row++) {
+            const off = (row % 2) * (bpBW / 2);
+            const ry = BY + row * bpBH;
+            ctx.beginPath(); ctx.moveTo(-215, ry); ctx.lineTo(215, ry); ctx.stroke();
+            for (let bx = -215 + off; bx < 215; bx += bpBW) {
+                ctx.beginPath(); ctx.moveTo(bx, ry); ctx.lineTo(bx, ry + bpBH); ctx.stroke();
+            }
+        }
+        ctx.restore();
+        // Top highlight strip
+        ctx.fillStyle = 'rgba(110, 50, 170, 0.18)';
+        ctx.fillRect(-215, BY, 430, 4);
+
+        // ── Central keep ────────────────────────────────────────────────────
+        const kGrad = ctx.createLinearGradient(-KW / 2, 0, KW / 2, 0);
+        kGrad.addColorStop(0,   '#301a42');
+        kGrad.addColorStop(0.25,'#3e2456');
+        kGrad.addColorStop(0.5, '#4a2a66');
+        kGrad.addColorStop(0.75,'#3e2456');
+        kGrad.addColorStop(1,   '#301a42');
+        ctx.fillStyle = kGrad;
+        ctx.fillRect(-KW / 2, KT, KW, KH);
+        ctx.strokeStyle = '#701ab0';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(-KW / 2, KT, KW, KH);
+        // Keep brick mortar lines — clipped
+        ctx.save();
+        ctx.beginPath(); ctx.rect(-KW / 2, KT, KW, KH); ctx.clip();
+        const kBH = 19, kBW = 40;
+        ctx.strokeStyle = 'rgba(12, 3, 22, 0.80)';
+        ctx.lineWidth = 1;
+        for (let row = 0; row <= Math.ceil(KH / kBH) + 1; row++) {
+            const off = (row % 2) * (kBW / 2);
+            const ry = KT + row * kBH;
+            ctx.beginPath(); ctx.moveTo(-KW / 2, ry); ctx.lineTo(KW / 2, ry); ctx.stroke();
+            for (let bx = -KW / 2 + off; bx <= KW / 2; bx += kBW) {
+                ctx.beginPath(); ctx.moveTo(bx, ry); ctx.lineTo(bx, ry + kBH); ctx.stroke();
+            }
+        }
+        ctx.restore();
+        // Edge shadow strips for depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillRect(-KW / 2, KT, 6, KH);
+        ctx.fillRect(KW / 2 - 6, KT, 6, KH);
+        // Edge highlight
+        ctx.fillStyle = 'rgba(130, 60, 200, 0.18)';
+        ctx.fillRect(-KW / 2, KT, 3, KH);
+
+        // ── Central spire — drawn BEFORE battlements so merlons sit in front ────
+        // Base anchored at KT (keep-wall top) so the spire grows out of the wall
+        ctx.fillStyle = '#1c0c2a';
+        ctx.beginPath();
+        ctx.moveTo(-KW * 0.28, KT);
+        ctx.lineTo( KW * 0.28, KT);
+        ctx.lineTo(0, SP_TOP);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#8c18d0';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Ridge lines (horizontal striations up the spire faces)
+        ctx.strokeStyle = 'rgba(110, 30, 160, 0.45)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 6; i++) {
+            const prog = i / 7;
+            const sy  = KT - SP_H * prog;
+            const sx2 = KW * 0.28 * (1 - prog);
+            ctx.beginPath();
+            ctx.moveTo(-sx2, sy); ctx.lineTo(sx2, sy);
+            ctx.stroke();
+        }
+        // Left-face shadow for dimensionality
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.beginPath();
+        ctx.moveTo(-KW * 0.28, KT);
+        ctx.lineTo(0, KT);
+        ctx.lineTo(0, SP_TOP);
+        ctx.closePath();
+        ctx.fill();
+
+        // ── Keep battlements — 9 cells: M G M G M G M G M ───────────────────
+        // 5 merlons / 4 gaps, centre cell (c=4) is a merlon perfectly at x=0
+        const kCrW = KW / 9;
+        for (let c = 0; c < 9; c++) {
+            const cx = -KW / 2 + c * kCrW;
+            if (c % 2 === 0) {   // even index = solid merlon
+                const cg = ctx.createLinearGradient(cx, CR_T, cx + kCrW, CR_T);
+                cg.addColorStop(0,   '#3e2456');
+                cg.addColorStop(0.5, '#4c2e68');
+                cg.addColorStop(1,   '#3e2456');
+                ctx.fillStyle = cg;
+                ctx.fillRect(cx, CR_T, kCrW, CR_H);
+                ctx.strokeStyle = '#701ab0';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx, CR_T, kCrW, CR_H);
+                // Right-face shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+                ctx.fillRect(cx + kCrW * 0.55, CR_T, kCrW * 0.45, CR_H);
+            }
+        }
+
+        // Gem at spire tip
+        const gemAlpha = Math.abs(Math.sin(t * 2.2)) * 0.75 + 0.25;
+        const gGlow = ctx.createRadialGradient(0, SP_TOP, 0, 0, SP_TOP, 26);
+        gGlow.addColorStop(0, `rgba(255, 110, 255, ${gemAlpha})`);
+        gGlow.addColorStop(0.5, `rgba(180, 30, 220, ${gemAlpha * 0.55})`);
+        gGlow.addColorStop(1, 'rgba(100, 0, 180, 0)');
+        ctx.fillStyle = gGlow;
+        ctx.beginPath();
+        ctx.arc(0, SP_TOP, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(210, 70, 255, ${gemAlpha * 0.85})`;
+        ctx.beginPath();
+        ctx.arc(0, SP_TOP, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff8ff';
+        ctx.beginPath();
+        ctx.arc(0, SP_TOP, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Glowing windows ──────────────────────────────────────────────────
+        const wins = [
+            { x: -52, y: KT + 42, w: 18, h: 32 },
+            { x:  52, y: KT + 42, w: 18, h: 32 },
+            { x: -38, y: KT + 98, w: 16, h: 26 },
+            { x:  38, y: KT + 98, w: 16, h: 26 },
+        ];
+        for (const w of wins) {
+            const wp = Math.abs(Math.sin(t * 1.9 + w.x * 0.01)) * 0.55 + 0.45;
+            // Outer glow bloom
+            const wg = ctx.createRadialGradient(w.x, w.y + w.h / 2, 0, w.x, w.y + w.h / 2, w.w * 2.8);
+            wg.addColorStop(0,   `rgba(255, 40, 80,  ${wp * 0.75})`);
+            wg.addColorStop(0.5, `rgba(150, 10, 170, ${wp * 0.45})`);
+            wg.addColorStop(1,   'rgba(80, 0, 120, 0)');
+            ctx.fillStyle = wg;
+            ctx.beginPath();
+            ctx.arc(w.x, w.y + w.h / 2, w.w * 2.8, 0, Math.PI * 2);
+            ctx.fill();
+            // Stone frame recess
+            ctx.fillStyle = '#10061a';
+            ctx.fillRect(w.x - w.w / 2 - 3, w.y - 3, w.w + 6, w.h + 3);
+            ctx.beginPath();
+            ctx.arc(w.x, w.y + 9, w.w / 2 + 3, Math.PI, 0);
+            ctx.fill();
+            // Glass
+            ctx.fillStyle = `rgba(220, 40, 70, ${wp})`;
+            ctx.fillRect(w.x - w.w / 2, w.y, w.w, w.h);
+            ctx.beginPath();
+            ctx.arc(w.x, w.y + 9, w.w / 2, Math.PI, 0);
+            ctx.fill();
+            // Lead dividers
+            ctx.strokeStyle = `rgba(255, 190, 210, ${wp * 0.45})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(w.x, w.y + 6); ctx.lineTo(w.x, w.y + w.h);
+            ctx.stroke();
+        }
+
+        // ── Arch gate ────────────────────────────────────────────────────────
+        const gH = 62, gW = 64;
+        const gTop = BY - gH; // gate opening top
+        // Arch surround (stone frame)
+        ctx.fillStyle = '#200c34';
+        ctx.fillRect(-gW / 2 - 8, gTop - 18, gW + 16, gH + 18);
+        ctx.beginPath();
+        ctx.arc(0, gTop, gW / 2 + 8, Math.PI, 0);
+        ctx.fill();
+        // Gate void
+        ctx.fillStyle = '#070310';
+        ctx.fillRect(-gW / 2, gTop, gW, gH);
+        ctx.beginPath();
+        ctx.arc(0, gTop, gW / 2, Math.PI, 0);
+        ctx.fill();
+        // Arch border
+        ctx.strokeStyle = '#8020c0';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, gTop, gW / 2, Math.PI, 0);
+        ctx.moveTo(-gW / 2, gTop); ctx.lineTo(-gW / 2, BY);
+        ctx.moveTo( gW / 2, gTop); ctx.lineTo( gW / 2, BY);
+        ctx.stroke();
+        // Keystone
+        ctx.fillStyle = '#4a1070';
+        ctx.beginPath();
+        ctx.moveTo(-8, gTop - gW / 2 + 4);
+        ctx.lineTo( 8, gTop - gW / 2 + 4);
+        ctx.lineTo( 6, gTop - gW / 2 + 18);
+        ctx.lineTo(-6, gTop - gW / 2 + 18);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#9030d8';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Portcullis bars
+        ctx.strokeStyle = 'rgba(70, 10, 100, 0.75)';
+        ctx.lineWidth = 3;
+        for (let bar = -1; bar <= 1; bar++) {
+            ctx.beginPath();
+            ctx.moveTo(bar * 18, gTop); ctx.lineTo(bar * 18, BY);
+            ctx.stroke();
+        }
+        ctx.lineWidth = 2;
+        for (let row = 1; row <= 3; row++) {
+            ctx.beginPath();
+            ctx.moveTo(-gW / 2, gTop + row * (gH / 4));
+            ctx.lineTo( gW / 2, gTop + row * (gH / 4));
+            ctx.stroke();
+        }
+
+        // Evil eye above gate
+        const eyeY = gTop - 22;
+        const eyeP = Math.abs(Math.sin(t * 2.8)) * 0.65 + 0.35;
+        ctx.fillStyle = `rgba(190, 0, 55, ${eyeP})`;
+        ctx.beginPath();
+        ctx.ellipse(0, eyeY, 24, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#030106';
+        ctx.beginPath();
+        ctx.arc(0, eyeY, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255, 25, 80, ${eyeP})`;
+        ctx.beginPath();
+        ctx.arc(0, eyeY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(255, 80, 120, ${eyeP * 0.55})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(0, eyeY, 24, 13, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // ── Lightning arcs ────────────────────────────────────────────────────
+        const lightAlpha = 0.45 + Math.sin(t * 9) * 0.45;
+        ctx.strokeStyle = `rgba(215, 145, 255, ${lightAlpha})`;
+        ctx.lineWidth = 1.8;
+        const ltPairs = [
+            { sx: -OTX, sy: BY - OTH - OTSH, ex: 0, ey: SP_TOP },
+            { sx:  OTX, sy: BY - OTH - OTSH, ex: 0, ey: SP_TOP },
+            { sx: -ITX, sy: BY - ITH - ITSH, ex: 0, ey: SP_TOP },
+            { sx:  ITX, sy: BY - ITH - ITSH, ex: 0, ey: SP_TOP },
+        ];
+        for (const lp of ltPairs) {
+            ctx.beginPath();
+            ctx.moveTo(lp.sx, lp.sy);
+            const mx = (lp.sx + lp.ex) / 2 + Math.sin(t * 11 + lp.sx * 0.02) * 30;
+            const my = (lp.sy + lp.ey) / 2 + Math.cos(t *  9 + lp.sx * 0.02) * 30;
+            ctx.quadraticCurveTo(mx, my, lp.ex, lp.ey);
+            ctx.stroke();
+        }
+
+        // ── Orbiting particles ────────────────────────────────────────────────
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2 + t * 0.55;
+            const r  = 148 + Math.sin(t * 2 + i * 0.8) * 20;
+            const px = Math.cos(angle) * r;
+            const py = Math.sin(angle) * r - 50;
+            const pa = Math.max(0.1, Math.sin(t * 1.6 + i * 0.75) * 0.3 + 0.5);
+            ctx.fillStyle = `rgba(130, 35, 195, ${pa})`;
+            const ps = 9 + Math.sin(t * 2.2 + i) * 3;
+            ctx.beginPath();
+            ctx.arc(px, py, ps, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ── Wall runes ────────────────────────────────────────────────────────
+        const runeAlpha = Math.abs(Math.sin(t * 1.3)) * 0.6 + 0.4;
+        ctx.strokeStyle = `rgba(205, 100, 255, ${runeAlpha})`;
+        ctx.lineWidth = 2;
+        for (const rx of [-60, 0, 60]) {
+            const ry = KT + 168;
+            ctx.beginPath();
+            ctx.moveTo(rx,     ry - 12); ctx.lineTo(rx + 8,  ry);
+            ctx.lineTo(rx,     ry + 12); ctx.lineTo(rx - 8,  ry);
+            ctx.closePath();
+            ctx.moveTo(rx - 8, ry); ctx.lineTo(rx + 8, ry);
+            ctx.moveTo(rx,    ry - 12); ctx.lineTo(rx, ry + 12);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    _drawDarkTower(ctx, towerX, tw, th, sh, t) {
+        const BY = 78;
+
+        // Tower body
+        const g = ctx.createLinearGradient(towerX - tw / 2, 0, towerX + tw / 2, 0);
+        g.addColorStop(0,   '#301840');
+        g.addColorStop(0.35,'#3c2252');
+        g.addColorStop(0.65,'#3c2252');
+        g.addColorStop(1,   '#1e0e28');
+        ctx.fillStyle = g;
+        ctx.fillRect(towerX - tw / 2, BY - th, tw, th);
+        ctx.strokeStyle = '#5c1480';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(towerX - tw / 2, BY - th, tw, th);
+
+        // Brick mortar lines — clipped to tower rect
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(towerX - tw / 2, BY - th, tw, th);
+        ctx.clip();
+        const tbH = 18;
+        const halfW = tw / 2;
+        ctx.strokeStyle = 'rgba(12, 3, 20, 0.80)';
+        ctx.lineWidth = 1;
+        for (let row = 0; row <= Math.ceil(th / tbH) + 1; row++) {
+            const off = (row % 2) * (halfW / 2);
+            const ry  = BY - th + row * tbH;
+            ctx.beginPath(); ctx.moveTo(towerX - tw / 2, ry); ctx.lineTo(towerX + tw / 2, ry); ctx.stroke();
+            for (let bx = towerX - tw / 2 + off; bx < towerX + tw / 2; bx += halfW) {
+                ctx.beginPath(); ctx.moveTo(bx, ry); ctx.lineTo(bx, ry + tbH); ctx.stroke();
+            }
+        }
+        ctx.restore();
+
+        // Edge shadow / highlight for depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+        ctx.fillRect(towerX + tw / 2 - 5, BY - th, 5, th);
+        ctx.fillStyle = 'rgba(120, 55, 185, 0.14)';
+        ctx.fillRect(towerX - tw / 2, BY - th, 3, th);
+
+        // Crenellations — 5 cells: M G M G M (3 merlons, 2 gaps, symmetric)
+        const crH2 = 20;
+        const crW  = tw / 5;
+        for (let c = 0; c < 5; c++) {
+            const cx = towerX - tw / 2 + c * crW;
+            if (c % 2 === 0) {   // even = merlon
+                const cg = ctx.createLinearGradient(cx, BY - th - crH2, cx + crW, BY - th - crH2);
+                cg.addColorStop(0,   '#3c2252');
+                cg.addColorStop(0.5, '#482a62');
+                cg.addColorStop(1,   '#3c2252');
+                ctx.fillStyle = cg;
+                ctx.fillRect(cx, BY - th - crH2, crW, crH2);
+                ctx.strokeStyle = '#5c1480';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx, BY - th - crH2, crW, crH2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+                ctx.fillRect(cx + crW * 0.55, BY - th - crH2, crW * 0.45, crH2);
+            }
+        }
+
+        // Spire
+        ctx.fillStyle = '#1c0a28';
+        ctx.beginPath();
+        ctx.moveTo(towerX - tw * 0.32, BY - th);
+        ctx.lineTo(towerX + tw * 0.32, BY - th);
+        ctx.lineTo(towerX,             BY - th - sh);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#7020b8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // Left-face shadow on spire
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+        ctx.beginPath();
+        ctx.moveTo(towerX - tw * 0.32, BY - th);
+        ctx.lineTo(towerX,             BY - th);
+        ctx.lineTo(towerX,             BY - th - sh);
+        ctx.closePath();
+        ctx.fill();
+        // Centre ridge line
+        ctx.strokeStyle = 'rgba(120, 40, 180, 0.40)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(towerX, BY - th); ctx.lineTo(towerX, BY - th - sh);
+        ctx.stroke();
+
+        // Spire tip glow
+        const gp = Math.abs(Math.sin(t * 1.8 + towerX * 0.005)) * 0.6 + 0.2;
+        const tipG = ctx.createRadialGradient(towerX, BY - th - sh, 0, towerX, BY - th - sh, 14);
+        tipG.addColorStop(0, `rgba(210, 90, 255, ${gp})`);
+        tipG.addColorStop(1, 'rgba(120, 0, 180, 0)');
+        ctx.fillStyle = tipG;
+        ctx.beginPath();
+        ctx.arc(towerX, BY - th - sh, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255, 210, 255, ${gp * 0.9})`;
+        ctx.beginPath();
+        ctx.arc(towerX, BY - th - sh, 4, 0, Math.PI * 2);
+        ctx.fill();
     }
     
     drawPlaceholderSlot(ctx, centerX, centerY, isHovered) {
