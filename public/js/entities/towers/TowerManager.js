@@ -3,6 +3,16 @@ import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../../core/UnlockSystem.js';
 import { SpatialGrid } from '../../core/SpatialGrid.js';
 
+const TOWER_SOUND_MAP = {
+    'basic':       'basic-tower',
+    'barricade':   'barricade-tower',
+    'archer':      'arrow',
+    'magic':       'magic-tower',
+    'combination': 'combination-tower',
+    'poison':      'poison-tower',
+    'cannon':      'trebuchet-launch'
+};
+
 export class TowerManager {
     constructor(gameState, level) {
         this.gameState = gameState;
@@ -77,6 +87,9 @@ export class TowerManager {
                 this.towers.push(tower);
                 // Notify unlock system
                 this.unlockSystem.onGuardPostBuilt();
+                if (this.stateManager?.gameStatistics) {
+                    this.stateManager.gameStatistics.addTowersBuilt();
+                }
                 return true;
             }
             return false;
@@ -99,12 +112,16 @@ export class TowerManager {
             }
             
             this.towers.push(tower);
-            
+
             // Mark the 2x2 area as occupied by this tower
             this.markTowerPosition(gridX, gridY);
-            
+
             // Play tower build sound
             this.playTowerBuildSound(type);
+
+            if (this.stateManager?.gameStatistics) {
+                this.stateManager.gameStatistics.addTowersBuilt();
+            }
             
             return true;
         }
@@ -119,44 +136,20 @@ export class TowerManager {
             console.warn('TowerManager: audioManager not available for build sound');
             return;
         }
-        
-        const soundMap = {
-            'basic': 'basic-tower',
-            'barricade': 'barricade-tower',
-            'archer': 'arrow',
-            'magic': 'magic-tower',
-            'combination': 'combination-tower',
-            'poison': 'poison-tower',
-            'cannon': 'trebuchet-launch'
-        };
-        
-        const soundName = soundMap[type];
-        if (soundName) {
-            this.audioManager.playSFX(soundName);
-        }
+        const soundName = TOWER_SOUND_MAP[type];
+        if (soundName) this.audioManager.playSFX(soundName);
     }
-    
+
     /**
      * Play sound when a tower is selected (clicked)
      */
     playTowerSelectSound(tower) {
         if (!this.audioManager) return;
-        
-        const soundMap = {
-            'BasicTower': 'basic-tower',
-            'BarricadeTower': 'barricade-tower',
-            'ArcherTower': 'arrow',
-            'MagicTower': 'magic-tower',
-            'CombinationTower': 'combination-tower',
-            'PoisonArcherTower': 'poison-tower',
-            'CannonTower': 'trebuchet-launch'
-        };
-        
-        const soundName = soundMap[tower.constructor.name];
+        const soundName = TOWER_SOUND_MAP[tower.type];
         if (soundName) {
             this.audioManager.playSFX(soundName);
         } else {
-            console.warn(`TowerManager: No sound mapped for tower type ${tower.constructor.name}`);
+            console.warn(`TowerManager: No sound mapped for tower type ${tower.type}`);
         }
     }
     

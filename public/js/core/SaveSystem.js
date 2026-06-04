@@ -9,7 +9,48 @@
  */
 export class SaveSystem {
     static NUM_SLOTS = 3;
-    
+
+    static get DEFAULT_UNLOCK_STATE() {
+        return {
+            forgeLevel: 0,
+            hasForge: false,
+            forgeCount: 0,
+            mineCount: 0,
+            academyCount: 0,
+            trainingGroundsCount: 0,
+            superweaponCount: 0,
+            diamondPressCount: 0,
+            guardPostCount: 0,
+            maxGuardPosts: 0,
+            superweaponUnlocked: false,
+            gemMiningResearched: false,
+            unlockedTowers: [],
+            unlockedBuildings: [],
+            unlockedUpgrades: [],
+            unlockedCombinationSpells: []
+        };
+    }
+
+    static get DEFAULT_STATISTICS() {
+        return {
+            victories: 0,
+            defeats: 0,
+            totalEnemiesSlain: 0,
+            totalPlaytime: 0,
+            totalItemsConsumed: 0,
+            totalMoneySpentOnMarketplace: 0,
+            totalMoneyEarnedInMarketplace: 0
+        };
+    }
+
+    static _validateSlot(slotNumber) {
+        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) {
+            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Get the storage key for a specific save slot file
      * @param {number} slotNumber - Slot number (1-3)
@@ -39,10 +80,7 @@ export class SaveSystem {
      * @returns {Object|null} - Save data if slot contains a game, null if empty
      */
     static getSave(slotNumber) {
-        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
-            return null;
-        }
+        if (!SaveSystem._validateSlot(slotNumber)) return null;
 
         const key = this.getSaveSlotKey(slotNumber);
         const data = localStorage.getItem(key);
@@ -69,10 +107,7 @@ export class SaveSystem {
      * @returns {boolean} - Success status
      */
     static saveSettlementData(slotNumber, settlementData) {
-        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
-            return false;
-        }
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
 
         const key = this.getSaveSlotKey(slotNumber);
         
@@ -86,15 +121,8 @@ export class SaveSystem {
             playerInventory: settlementData.playerInventory || [],
             upgrades: settlementData.upgrades || { purchasedUpgrades: [] },
             marketplace: settlementData.marketplace || { consumables: {} },
-            statistics: settlementData.statistics || {
-                victories: 0,
-                defeats: 0,
-                totalEnemiesSlain: 0,
-                totalPlaytime: 0,
-                totalItemsConsumed: 0,
-                totalMoneySpentOnMarketplace: 0,
-                totalMoneyEarnedInMarketplace: 0
-            },
+            statistics: settlementData.statistics || SaveSystem.DEFAULT_STATISTICS,
+            achievements: settlementData.achievements || { unlockedIds: [] },
             // Campaign progression
             lastPlayedLevel: settlementData.lastPlayedLevel || 'level1',
             unlockedLevels: settlementData.unlockedLevels || ['level1'],
@@ -102,24 +130,7 @@ export class SaveSystem {
             completedCampaigns: settlementData.completedCampaigns || [],
             unlockedCampaigns: settlementData.unlockedCampaigns || ['campaign-1'],
             // Unlock system state (persistent unlocks across levels)
-            unlockSystem: settlementData.unlockSystem || {
-                forgeLevel: 0,
-                hasForge: false,
-                forgeCount: 0,
-                mineCount: 0,
-                academyCount: 0,
-                trainingGroundsCount: 0,
-                superweaponCount: 0,
-                diamondPressCount: 0,
-                guardPostCount: 0,
-                maxGuardPosts: 0,
-                superweaponUnlocked: false,
-                gemMiningResearched: false,
-                unlockedTowers: [],
-                unlockedBuildings: [],
-                unlockedUpgrades: [],
-                unlockedCombinationSpells: []
-            },
+            unlockSystem: settlementData.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: settlementData.playerLevels || []
         };
 
@@ -139,10 +150,7 @@ export class SaveSystem {
      * @returns {boolean} - Success status
      */
     static wipeSaveSlot(slotNumber) {
-        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
-            return false;
-        }
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
 
         const key = this.getSaveSlotKey(slotNumber);
         try {
@@ -173,10 +181,7 @@ export class SaveSystem {
      * @returns {boolean} - Success status
      */
     static updateAndSaveSettlementData(slotNumber, updateData) {
-        if (slotNumber < 1 || slotNumber > this.NUM_SLOTS) {
-            console.error(`SaveSystem: Invalid save slot: ${slotNumber}`);
-            return false;
-        }
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
 
         // Get existing save to preserve commander name and campaign progression
         const existingSave = this.getSave(slotNumber);
@@ -192,39 +197,15 @@ export class SaveSystem {
             playerInventory: updateData.playerInventory !== undefined ? updateData.playerInventory : (existingSave?.playerInventory || []),
             upgrades: updateData.upgrades || existingSave?.upgrades || { purchasedUpgrades: [] },
             marketplace: updateData.marketplace || existingSave?.marketplace || { consumables: {} },
-            statistics: updateData.statistics || existingSave?.statistics || {
-                victories: 0,
-                defeats: 0,
-                totalEnemiesSlain: 0,
-                totalPlaytime: 0,
-                totalItemsConsumed: 0,
-                totalMoneySpentOnMarketplace: 0,
-                totalMoneyEarnedInMarketplace: 0
-            },
+            statistics: updateData.statistics || existingSave?.statistics || SaveSystem.DEFAULT_STATISTICS,
+            achievements: updateData.achievements || existingSave?.achievements || { unlockedIds: [] },
             // Campaign progression - always preserve
             lastPlayedLevel: updateData.lastPlayedLevel !== undefined ? updateData.lastPlayedLevel : (existingSave?.lastPlayedLevel || 'level1'),
             unlockedLevels: updateData.unlockedLevels !== undefined ? updateData.unlockedLevels : (existingSave?.unlockedLevels || ['level1']),
             completedLevels: updateData.completedLevels !== undefined ? updateData.completedLevels : (existingSave?.completedLevels || []),
             completedCampaigns: updateData.completedCampaigns !== undefined ? updateData.completedCampaigns : (existingSave?.completedCampaigns || []),
             unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1']),
-            unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || {
-                forgeLevel: 0,
-                hasForge: false,
-                forgeCount: 0,
-                mineCount: 0,
-                academyCount: 0,
-                trainingGroundsCount: 0,
-                superweaponCount: 0,
-                diamondPressCount: 0,
-                guardPostCount: 0,
-                maxGuardPosts: 0,
-                superweaponUnlocked: false,
-                gemMiningResearched: false,
-                unlockedTowers: [],
-                unlockedBuildings: [],
-                unlockedUpgrades: [],
-                unlockedCombinationSpells: []
-            },
+            unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || [])
         };
 
@@ -328,38 +309,13 @@ export class SaveSystem {
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },
             marketplace: { consumables: {} },
-            statistics: {
-                victories: 0,
-                defeats: 0,
-                totalEnemiesSlain: 0,
-                totalPlaytime: 0,
-                totalItemsConsumed: 0,
-                totalMoneySpentOnMarketplace: 0,
-                totalMoneyEarnedInMarketplace: 0
-            },
+            statistics: SaveSystem.DEFAULT_STATISTICS,
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
             completedLevels: [],
             completedCampaigns: [],
             unlockedCampaigns: ['campaign-1'],
-            unlockSystem: {
-                forgeLevel: 0,
-                hasForge: false,
-                forgeCount: 0,
-                mineCount: 0,
-                academyCount: 0,
-                trainingGroundsCount: 0,
-                superweaponCount: 0,
-                diamondPressCount: 0,
-                guardPostCount: 0,
-                maxGuardPosts: 0,
-                superweaponUnlocked: false,
-                gemMiningResearched: false,
-                unlockedTowers: [],
-                unlockedBuildings: [],
-                unlockedUpgrades: [],
-                unlockedCombinationSpells: []
-            },
+            unlockSystem: SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: []
         };
     }
@@ -534,7 +490,7 @@ export class SaveSystem {
     static async persistToFile(slotNumber) {
         const invoke = SaveSystem.getTauriInvoke();
         if (!invoke) return false;
-        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
 
         const data = SaveSystem.getSave(slotNumber);
         if (!data) return false;
@@ -559,7 +515,7 @@ export class SaveSystem {
     static async syncSlotFromFile(slotNumber) {
         const invoke = SaveSystem.getTauriInvoke();
         if (!invoke) return false;
-        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
 
         try {
             const raw = await invoke('read_save_file', { slot: slotNumber });
@@ -602,7 +558,7 @@ export class SaveSystem {
     static async deleteFile(slotNumber) {
         const invoke = SaveSystem.getTauriInvoke();
         if (!invoke) return false;
-        if (slotNumber < 1 || slotNumber > SaveSystem.NUM_SLOTS) return false;
+        if (!SaveSystem._validateSlot(slotNumber)) return false;
         try {
             await invoke('delete_save_file', { slot: slotNumber });
             return true;

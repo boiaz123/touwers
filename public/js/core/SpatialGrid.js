@@ -24,7 +24,8 @@ export class SpatialGrid {
     insert(entity) {
         const cx = (entity.x * this.invCellSize) | 0;
         const cy = (entity.y * this.invCellSize) | 0;
-        const key = cx * 1000 + cy;
+        // Bitwise hash: collision-free up to 65,536 cells per axis
+        const key = (cx << 16) | (cy & 0xFFFF);
         let cell = this.cells.get(key);
         if (!cell) {
             cell = this._cellPool.length > 0 ? this._cellPool.pop() : [];
@@ -49,9 +50,13 @@ export class SpatialGrid {
         let count = 0;
         for (let cx = minCx; cx <= maxCx; cx++) {
             for (let cy = minCy; cy <= maxCy; cy++) {
-                const cell = this.cells.get(cx * 1000 + cy);
+                const cell = this.cells.get((cx << 16) | (cy & 0xFFFF));
                 if (cell) {
                     for (let i = 0; i < cell.length; i++) {
+                        // Grow buffer dynamically if needed
+                        if (count >= this._queryBuf.length) {
+                            this._queryBuf.length = count * 2;
+                        }
                         this._queryBuf[count++] = cell[i];
                     }
                 }

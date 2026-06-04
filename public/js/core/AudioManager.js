@@ -33,7 +33,7 @@ export class AudioManager {
         this._sfxPool = [];
         this._sfxPoolSize = 24;
         this._sfxPoolIndex = 0;
-        this._sfxThrottles = {};
+        this._sfxThrottles = new Map();
         this._sfxMinInterval = 80; // Min ms between same SFX name
         
         // Fade interval tracking
@@ -163,7 +163,6 @@ export class AudioManager {
         }
         
         this.isMusicPlaying = true;
-        // console.log(`AudioManager: Playing music '${trackName}'`);
         
         return true;
     }
@@ -290,57 +289,42 @@ export class AudioManager {
      * @param {number} duration - Duration in milliseconds
      */
     fadeInMusic(targetVolume, duration = 1000) {
-        if (this._fadeIntervalId) {
-            clearInterval(this._fadeIntervalId);
-            this._fadeIntervalId = null;
-        }
-        
-        const startVolume = this.musicElement.volume;
-        const startTime = Date.now();
-        
-        this._fadeIntervalId = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            this.musicElement.volume = startVolume + (targetVolume - startVolume) * progress;
-            
-            if (progress >= 1) {
-                clearInterval(this._fadeIntervalId);
-                this._fadeIntervalId = null;
-                this.musicElement.volume = targetVolume;
-            }
-        }, 16); // ~60fps
+        this._fade(this.musicElement.volume, targetVolume, duration, null);
     }
-    
+
     /**
      * Fade out music over time
      * @param {number} duration - Duration in milliseconds
      * @param {function} callback - Optional callback when fade completes
      */
     fadeOutMusic(duration = 500, callback = null) {
+        this._fade(this.musicElement.volume, 0, duration, () => {
+            this.musicElement.volume = 0;
+            if (callback) callback();
+        });
+    }
+
+    _fade(startVolume, targetVolume, duration, onComplete) {
         if (this._fadeIntervalId) {
             clearInterval(this._fadeIntervalId);
             this._fadeIntervalId = null;
         }
-        
-        const startVolume = this.musicElement.volume;
+
         const startTime = Date.now();
-        
+
         this._fadeIntervalId = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
-            this.musicElement.volume = startVolume * (1 - progress);
-            
+
+            this.musicElement.volume = startVolume + (targetVolume - startVolume) * progress;
+
             if (progress >= 1) {
                 clearInterval(this._fadeIntervalId);
                 this._fadeIntervalId = null;
-                this.musicElement.volume = 0;
-                if (callback) {
-                    callback();
-                }
+                this.musicElement.volume = targetVolume;
+                if (onComplete) onComplete();
             }
-        }, 16); // ~60fps
+        }, 16);
     }
     
     /**
@@ -360,11 +344,18 @@ export class AudioManager {
         // Throttle: skip if same SFX played too recently (except tunes)
         if (sfxName !== 'victory-tune' && sfxName !== 'defeat-tune') {
             const now = performance.now();
-            const lastPlayed = this._sfxThrottles[sfxName] || 0;
+            const lastPlayed = this._sfxThrottles.get(sfxName) || 0;
             if (now - lastPlayed < this._sfxMinInterval) {
                 return false;
             }
-            this._sfxThrottles[sfxName] = now;
+            this._sfxThrottles.set(sfxName, now);
+            // Prune stale entries when the map grows large
+            if (this._sfxThrottles.size > 50) {
+                const cutoff = now - 5000;
+                for (const [key, ts] of this._sfxThrottles) {
+                    if (ts < cutoff) this._sfxThrottles.delete(key);
+                }
+            }
         }
         
         try {
@@ -407,51 +398,32 @@ export class AudioManager {
      * @returns {string} Name of the selected track
      */
     playRandomSettlementTheme() {
-        const settlementTracks = this.getSettlementTracks();
-        if (settlementTracks.length === 0) {
-            console.warn('AudioManager: No settlement tracks found');
-            return null;
-        }
-        
-        // Pick a random settlement track
-        const randomTrack = settlementTracks[Math.floor(Math.random() * settlementTracks.length)];
-        
-        // Do NOT enable playlist mode for settlement - just play the single track on loop
+        const track = this._pickRandomTrack(this.getSettlementTracks());
+        if (!track) { console.warn('AudioManager: No settlement tracks found'); return null; }
         this.musicPlaylistMode = false;
         this.currentMusicCategory = null;
-        
-        // Play the track with looping enabled
-        return this.playMusic(randomTrack);
+        return this.playMusic(track);
     }
-    
+
     /**
      * Play a different settlement theme when returning from a level
      * Ensures we don't play the same track that might still be in memory
      * @returns {string} Name of the selected track
      */
     playDifferentSettlementTheme() {
-        const settlementTracks = this.getSettlementTracks();
-        if (settlementTracks.length === 0) {
-            console.warn('AudioManager: No settlement tracks found');
-            return null;
-        }
-        
-        // Filter out the currently playing track
-        const differentTracks = settlementTracks.filter(track => track !== this.currentMusicTrack);
-        
-        if (differentTracks.length === 0) {
-            // Only one track available, play it anyway
-            return this.playRandomSettlementTheme();
-        }
-        
-        // Pick a random different track
-        const randomTrack = differentTracks[Math.floor(Math.random() * differentTracks.length)];
-        
-        // Do NOT enable playlist mode - just play the single track on loop
+        const tracks = this.getSettlementTracks();
+        if (tracks.length === 0) { console.warn('AudioManager: No settlement tracks found'); return null; }
+        const track = this._pickRandomTrack(tracks, this.currentMusicTrack) || this._pickRandomTrack(tracks);
+        if (!track) return null;
         this.musicPlaylistMode = false;
         this.currentMusicCategory = null;
-        
-        return this.playMusic(randomTrack);
+        return this.playMusic(track);
+    }
+
+    _pickRandomTrack(trackList, exclude = null) {
+        const candidates = exclude ? trackList.filter(t => t !== exclude) : trackList;
+        if (candidates.length === 0) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
     }
     
     /**
@@ -593,7 +565,6 @@ export class AudioManager {
         if (this.musicElement) {
             this.musicElement.muted = true;
         }
-        // console.log('AudioManager: Muted');
     }
     
     /**
@@ -604,7 +575,6 @@ export class AudioManager {
         if (this.musicElement) {
             this.musicElement.muted = false;
         }
-        // console.log('AudioManager: Unmuted');
     }
     
     /**

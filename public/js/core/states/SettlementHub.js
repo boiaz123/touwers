@@ -1,5 +1,6 @@
 import { SaveSystem } from '../SaveSystem.js';
 import { GameStatistics } from '../GameStatistics.js';
+import { AchievementSystem } from '../AchievementSystem.js';
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
@@ -151,6 +152,18 @@ export class SettlementHub {
                     this.stateManager.gameStatistics.restoreFromSave(currentSaveData.statistics);
                 }
             }
+
+            // Initialize achievement system
+            if (saveSlotChanged || !this.stateManager.achievementSystem) {
+                this.stateManager.achievementSystem = new AchievementSystem();
+                if (currentSaveData.achievements) {
+                    this.stateManager.achievementSystem.restoreFromSave(currentSaveData.achievements);
+                }
+                // Silently mark any achievements already earned from prior play
+                this.stateManager.achievementSystem.checkAchievements(
+                    this.stateManager.gameStatistics, currentSaveData, true
+                );
+            }
         } else {
             // No save data found, initialize with defaults
             this.stateManager.playerGold = 0;
@@ -164,6 +177,8 @@ export class SettlementHub {
             this.stateManager.marketplaceSystem = new MarketplaceSystem();
             // Always create new statistics for empty slot
             this.stateManager.gameStatistics = new GameStatistics();
+            // Always create new achievement system for empty slot
+            this.stateManager.achievementSystem = new AchievementSystem();
         }
         
         // Remember which save slot is loaded
@@ -1042,6 +1057,11 @@ export class SettlementHub {
                 item.building.goldReady = true;
             }
         });
+
+        // Update achievement banner animation
+        if (this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem.update(deltaTime);
+        }
     }
 
     render(ctx) {
@@ -1097,6 +1117,11 @@ export class SettlementHub {
             // Sir Frogerty adviser overlay (always on top)
             if (this.sirFrogerty && !this.activePopup) {
                 this.sirFrogerty.render(ctx, canvas);
+            }
+
+            // Achievement banner (on top of everything including Sir Frogerty)
+            if (this.stateManager.achievementSystem) {
+                this.stateManager.achievementSystem.render(ctx, canvas);
             }
 
             ctx.globalAlpha = 1;
@@ -6016,7 +6041,14 @@ class UpgradesMenu {
             if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.totalMoneySpentOnMarketplace += item.cost;
             }
-            
+
+            // Check achievements after marketplace spend
+            if (this.stateManager.achievementSystem && this.stateManager.gameStatistics) {
+                this.stateManager.achievementSystem.checkAchievements(
+                    this.stateManager.gameStatistics, this.stateManager.currentSaveData
+                );
+            }
+
             // Rebuild buy items to reflect purchase restrictions and active status
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
@@ -6046,7 +6078,14 @@ class UpgradesMenu {
                 this.stateManager.gameStatistics.totalMoneyEarnedInMarketplace += item.sellPrice;
                 this.stateManager.gameStatistics.addItemsSold(1);
             }
-            
+
+            // Check achievements after selling
+            if (this.stateManager.achievementSystem && this.stateManager.gameStatistics) {
+                this.stateManager.achievementSystem.checkAchievements(
+                    this.stateManager.gameStatistics, this.stateManager.currentSaveData
+                );
+            }
+
             // Remove from inventory
             const inventoryIndex = this.stateManager.playerInventory.findIndex(
                 inv => inv.lootId === item.lootId
@@ -7410,6 +7449,7 @@ class SettlementOptionsMenu {
                     upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                     marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
                     statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                    achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                     lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
                     unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
                     completedLevels: this.stateManager.currentSaveData.completedLevels,
@@ -7860,7 +7900,7 @@ class ManageSettlementMenu {
 
     handleWarningDialogClick(x, y) {
         // Prevent click-through from the button that opened the warning dialog
-        if (Date.now() - this.warningDialogOpenTime < 300) {
+        if (Date.now() - this.warningDialogOpenTime < 150) {
             return;
         }
         const canvas = this.stateManager.canvas;
@@ -7871,39 +7911,48 @@ class ManageSettlementMenu {
         const buttonWidth = 130;
         const buttonHeight = 45;
         const buttonGap = 15;
-        
+
         // Button positions
         const totalButtonWidth = buttonWidth * 3 + buttonGap * 2;
         const buttonsStartX = dialogX + (dialogWidth - totalButtonWidth) / 2;
-        
+
         const cancelX = buttonsStartX;
         const cancelY = dialogY + 130;
-        
+
         const saveQuitX = buttonsStartX + buttonWidth + buttonGap;
         const saveQuitY = dialogY + 130;
-        
+
         const quitX = buttonsStartX + (buttonWidth + buttonGap) * 2;
         const quitY = dialogY + 130;
-        
-        // Play button click
-        if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.playSFX('button-click');
-        }
-        
-        // Check Cancel button
-        if (x >= cancelX && x <= cancelX + buttonWidth && y >= cancelY && y <= cancelY + buttonHeight) {
-            this.activeWarningDialog = null;
+
+        // Check Cancel button — also triggers on clicks outside the dialog entirely
+        const insideDialog = x >= dialogX && x <= dialogX + dialogWidth &&
+                             y >= dialogY && y <= dialogY + dialogHeight;
+        const onCancel = x >= cancelX && x <= cancelX + buttonWidth &&
+                         y >= cancelY && y <= cancelY + buttonHeight;
+
+        if (onCancel || !insideDialog) {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
+            this.close();
             return;
         }
-        
+
         // Check Save & Quit button
         if (x >= saveQuitX && x <= saveQuitX + buttonWidth && y >= saveQuitY && y <= saveQuitY + buttonHeight) {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.executeWarningAction('saveAndQuit');
             return;
         }
-        
+
         // Check Quit button
         if (x >= quitX && x <= quitX + buttonWidth && y >= quitY && y <= quitY + buttonHeight) {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('button-click');
+            }
             this.executeWarningAction('quit');
             return;
         }
@@ -7943,6 +7992,7 @@ class ManageSettlementMenu {
                 upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                 marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
                 statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                 lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
                 unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
                 completedLevels: this.stateManager.currentSaveData.completedLevels,
@@ -7995,6 +8045,7 @@ class ManageSettlementMenu {
                         upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                         marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
                         statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                        achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                         lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
                         unlockedLevels: this.stateManager.currentSaveData.unlockedLevels,
                         completedLevels: this.stateManager.currentSaveData.completedLevels,
@@ -8201,8 +8252,12 @@ class ManageSettlementMenu {
         const buttonHeight = 45;
         const buttonGap = 15;
 
-        // Semi-transparent background (darker)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        // Full-screen click-blocker overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Dialog background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
         ctx.fillRect(dialogX, dialogY, dialogWidth, dialogHeight);
 
         // Dialog border
@@ -8334,16 +8389,11 @@ class ArcaneLibraryMenu {
         this.enemyImageCache = {};
         this._loadEnemyImages();
         
-        // Achievements (placeholder achievements)
-        this.achievements = [
-            { id: 'first-victory', name: 'First Victory', description: 'Win your first level', icon: '●', unlocked: false },
-            { id: 'ten-victories', name: 'Victory Streak', description: 'Win 10 levels', icon: '●', unlocked: false },
-            { id: 'fifty-kills', name: 'Deadly Force', description: 'Slay 50 enemies', icon: '▸', unlocked: false },
-            { id: 'gold-hoarder', name: 'Gold Hoarder', description: 'Accumulate 5000 gold', icon: '◆', unlocked: false },
-            { id: 'collector', name: 'Collector', description: 'Sell 20 items', icon: '◈', unlocked: false },
-            { id: 'tower-master', name: 'Tower Master', description: 'Build 100 towers', icon: '■', unlocked: false }
-        ];
-        
+        // Achievement pagination (3 cols × 2 rows = 6 per page)
+        this.achievementCurrentPage = 0;
+        this.achievementLeftArrowHovered  = false;
+        this.achievementRightArrowHovered = false;
+
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
         this.rightArrowHovered = false;
@@ -8355,6 +8405,7 @@ class ArcaneLibraryMenu {
         this.openTime = Date.now(); // Record when menu was opened
         this.activeTab = 'statistics';
         this.intelCurrentPage = 0;
+        this.achievementCurrentPage = 0;
         this.selectedEnemyId = null;
         this.hoveredEnemyId = null;
     }
@@ -8409,16 +8460,17 @@ class ArcaneLibraryMenu {
                          y >= tabY && y <= tabY + tabHeight;
         });
         
+        // Shared content area coordinates (used by multiple tabs)
+        const contentX      = menuX + 20;
+        const contentY      = tabStartY + tabHeight + 20;
+        const contentWidth  = menuWidth - 40;
+        const contentHeight = menuHeight - tabHeight - 80;
+
         // Content area hover detection for enemy-intel tab
         if (this.activeTab === 'enemy-intel') {
             this.intelLeftArrowHovered = false;
             this.intelRightArrowHovered = false;
             this.hoveredEnemyId = null;
-            
-            const contentX = menuX + 20;
-            const contentY = tabStartY + tabHeight + 20;
-            const contentWidth = menuWidth - 40;
-            const contentHeight = menuHeight - tabHeight - 80;
 
             // List panel: left 230px
             const listW = 230;
@@ -8469,6 +8521,29 @@ class ArcaneLibraryMenu {
             return;
         }
         
+        // Achievement tab arrow hover detection
+        if (this.activeTab === 'achievements') {
+            this.achievementLeftArrowHovered  = false;
+            this.achievementRightArrowHovered = false;
+            const achievementList = this.stateManager.achievementSystem
+                ? this.stateManager.achievementSystem.getAchievements(
+                    this.stateManager.gameStatistics, this.stateManager.currentSaveData)
+                : [];
+            const totalPages = Math.ceil(achievementList.length / 6);
+            if (totalPages > 1) {
+                const arrowY    = contentY + contentHeight - 30;
+                const leftArrX  = contentX + 10;
+                const rightArrX = contentX + contentWidth - 36;
+                const arrW      = 26;
+                const arrH      = 22;
+                this.achievementLeftArrowHovered  = x >= leftArrX  && x <= leftArrX  + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0;
+                this.achievementRightArrowHovered = x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < totalPages - 1;
+            }
+            this.stateManager.canvas.style.cursor =
+                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || this.achievementLeftArrowHovered || this.achievementRightArrowHovered) ? 'pointer' : 'default';
+            return;
+        }
+
         // Default cursor for other tabs
         this.stateManager.canvas.style.cursor = (this.tabs.some(t => t.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
     }
@@ -8514,6 +8589,37 @@ class ArcaneLibraryMenu {
             }
         }
         
+        // Handle achievement tab pagination clicks
+        if (this.activeTab === 'achievements') {
+            const tabHeight    = 35;
+            const tabStartY    = menuY + 50;
+            const contentX     = menuX + 20;
+            const contentY     = tabStartY + tabHeight + 20;
+            const contentWidth = menuWidth - 40;
+            const contentHeight = menuHeight - tabHeight - 80;
+            const achievementList = this.stateManager.achievementSystem
+                ? this.stateManager.achievementSystem.getAchievements(
+                    this.stateManager.gameStatistics, this.stateManager.currentSaveData)
+                : [];
+            const totalPages = Math.ceil(achievementList.length / 6);
+            if (totalPages > 1) {
+                const arrowY    = contentY + contentHeight - 30;
+                const leftArrX  = contentX + 10;
+                const rightArrX = contentX + contentWidth - 36;
+                const arrW      = 26;
+                const arrH      = 22;
+                if (x >= leftArrX && x <= leftArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0) {
+                    this.achievementCurrentPage--;
+                    return;
+                }
+                if (x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < totalPages - 1) {
+                    this.achievementCurrentPage++;
+                    return;
+                }
+            }
+            return;
+        }
+
         // Handle enemy intel tab clicks
         if (this.activeTab === 'enemy-intel') {
             const contentX = menuX + 20;
@@ -8788,82 +8894,163 @@ class ArcaneLibraryMenu {
     }
 
     renderAchievementsTab(ctx, x, y, width, height) {
-        // Grid layout: 3 columns, 2 rows per page (matching the screenshot)
-        const cols = 3;
-        const rows = 2;
-        const itemWidth = 110;
-        const itemHeight = 160;
-        const padding = 15;
-        const startX = x + (width - cols * (itemWidth + padding)) / 2;
-        const startY = y + 20;
-        
-        for (let i = 0; i < this.achievements.length; i++) {
-            const achievement = this.achievements[i];
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            
-            const itemX = startX + col * (itemWidth + padding);
-            const itemY = startY + row * (itemHeight + padding);
-            
-            // Achievement tile background (greyed out if locked)
+        const achievementSystem = this.stateManager.achievementSystem;
+        const stats    = this.stateManager.gameStatistics;
+        const saveData = this.stateManager.currentSaveData;
+
+        const achievements = achievementSystem
+            ? achievementSystem.getAchievements(stats, saveData)
+            : [];
+
+        const COLS       = 3;
+        const PER_PAGE   = 6; // 3 cols × 2 rows
+        const totalPages = Math.max(1, Math.ceil(achievements.length / PER_PAGE));
+        const page       = Math.min(this.achievementCurrentPage, totalPages - 1);
+        const startIdx   = page * PER_PAGE;
+        const pageItems  = achievements.slice(startIdx, startIdx + PER_PAGE);
+
+        // Reserve bottom 30px for pagination arrows
+        const drawHeight = height - 34;
+        const itemW      = 110;
+        const itemH      = 160;
+        const gap        = 15;
+        const gridW      = COLS * itemW + (COLS - 1) * gap;
+        const startX     = x + (width - gridW) / 2;
+        const startY     = y + 10;
+
+        pageItems.forEach((achievement, i) => {
+            const col   = i % COLS;
+            const row   = Math.floor(i / COLS);
+            const itemX = startX + col * (itemW + gap);
+            const itemY = startY + row * (itemH + gap);
+
+            // Guard: don't draw outside the content area
+            if (itemY + itemH > y + drawHeight) return;
+
+            // ── Background ────────────────────────────────────────────────────
             ctx.fillStyle = achievement.unlocked ? '#3d2817' : '#2a1a0f';
-            ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
-            
-            // Tile border (gold if unlocked, brown if locked)
-            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#6a5a4a';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(itemX, itemY, itemWidth, itemHeight);
-            
-            // Achievement icon - larger and centered
-            ctx.font = 'bold 50px Arial';
-            ctx.textAlign = 'center';
+            ctx.fillRect(itemX, itemY, itemW, itemH);
+
+            // ── Border ────────────────────────────────────────────────────────
+            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#4a3a2a';
+            ctx.lineWidth   = achievement.unlocked ? 2 : 1;
+            ctx.strokeRect(itemX, itemY, itemW, itemH);
+
+            // ── Icon ──────────────────────────────────────────────────────────
+            ctx.font        = 'bold 42px Trebuchet MS, sans-serif';
+            ctx.textAlign   = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = achievement.unlocked ? '#ffd700' : '#5a4a3a';
-            ctx.fillText(achievement.icon, itemX + itemWidth / 2, itemY + 35);
-            
-            // Achievement name
-            ctx.font = 'bold 11px Trebuchet MS, sans-serif';
-            ctx.fillStyle = achievement.unlocked ? '#c9a876' : '#6a5a4a';
-            ctx.textAlign = 'center';
+            ctx.fillStyle   = achievement.unlocked ? '#ffd700' : '#4a3a2a';
+            ctx.fillText(achievement.icon || '●', itemX + itemW / 2, itemY + 34);
+
+            // ── Name ──────────────────────────────────────────────────────────
+            ctx.font        = 'bold 11px Trebuchet MS, sans-serif';
+            ctx.fillStyle   = achievement.unlocked ? '#c9a876' : '#5a4a3a';
+            ctx.textAlign   = 'center';
             ctx.textBaseline = 'top';
-            
-            const nameLines = this.wrapText(achievement.name, 11);
-            let nameY = itemY + 75;
+            const nameLines = this.wrapText(achievement.name, 12);
+            let nameY = itemY + 72;
             for (const line of nameLines) {
-                ctx.fillText(line, itemX + itemWidth / 2, nameY);
-                nameY += 12;
+                ctx.fillText(line, itemX + itemW / 2, nameY);
+                nameY += 13;
             }
-            
-            // Progress bar at bottom
-            const progressBarHeight = 8;
-            const progressBarWidth = itemWidth - 10;
-            const progressBarX = itemX + 5;
-            const progressBarY = itemY + itemHeight - 15;
-            
-            // Progress bar background
+
+            // ── Description ───────────────────────────────────────────────────
+            ctx.font      = '9px Trebuchet MS, sans-serif';
+            ctx.fillStyle = achievement.unlocked ? '#8b7355' : '#3a2a1a';
+            const descLines = this.wrapText(achievement.description, 14);
+            let descY = itemY + 103;
+            for (const line of descLines.slice(0, 2)) {
+                ctx.fillText(line, itemX + itemW / 2, descY);
+                descY += 11;
+            }
+
+            // ── Progress bar ──────────────────────────────────────────────────
+            const barH  = 8;
+            const barW  = itemW - 12;
+            const barX  = itemX + 6;
+            const barY  = itemY + itemH - 16;
+            const prog  = achievement.progress || { current: 0, max: 1 };
+            const ratio = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
+
             ctx.fillStyle = '#1a0f05';
-            ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
-            
-            // Progress bar border
-            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#6a5a4a';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
-            
-            // Progress text (placeholder: "0/10" for first, "0/100" for some, etc.)
-            const progressTexts = ['0/1', '0/10', '0/50', '0/5000', '0/20', '0/100'];
-            const progressText = progressTexts[i] || '0/1';
-            
-            ctx.font = 'bold 8px Trebuchet MS, sans-serif';
-            ctx.fillStyle = achievement.unlocked ? '#d4af37' : '#8b7355';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(progressText, itemX + itemWidth / 2, progressBarY + progressBarHeight / 2);
-            
-            // Locked indicator overlay (if not unlocked)
-            if (!achievement.unlocked) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.fillRect(itemX, itemY, itemWidth, itemHeight);
+            ctx.fillRect(barX, barY, barW, barH);
+
+            if (ratio > 0) {
+                ctx.fillStyle = achievement.unlocked ? '#d4af37' : '#5a7a3a';
+                ctx.fillRect(barX, barY, Math.round(barW * ratio), barH);
             }
+
+            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#4a3a2a';
+            ctx.lineWidth   = 1;
+            ctx.strokeRect(barX, barY, barW, barH);
+
+            ctx.font        = 'bold 7px Trebuchet MS, sans-serif';
+            ctx.fillStyle   = achievement.unlocked ? '#ffd700' : '#7a6a5a';
+            ctx.textAlign   = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${prog.current}/${prog.max}`, itemX + itemW / 2, barY + barH / 2);
+
+            // ── Locked overlay ────────────────────────────────────────────────
+            if (!achievement.unlocked) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+                ctx.fillRect(itemX, itemY, itemW, itemH);
+            }
+        });
+
+        // ── Empty state ───────────────────────────────────────────────────────
+        if (achievements.length === 0) {
+            ctx.font        = '13px Trebuchet MS, sans-serif';
+            ctx.fillStyle   = '#6a5a4a';
+            ctx.textAlign   = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No achievements found', x + width / 2, y + height / 2);
+            return;
+        }
+
+        // ── Pagination arrows ─────────────────────────────────────────────────
+        if (totalPages > 1) {
+            const arrowY    = y + height - 28;
+            const leftArrX  = x + 10;
+            const rightArrX = x + width - 36;
+            const arrW      = 26;
+            const arrH      = 22;
+
+            // Left arrow
+            const leftEnabled = page > 0;
+            ctx.fillStyle = leftEnabled
+                ? (this.achievementLeftArrowHovered ? '#d4af37' : '#8b6914')
+                : '#3a2a1a';
+            ctx.fillRect(leftArrX, arrowY, arrW, arrH);
+            ctx.strokeStyle = leftEnabled ? '#d4af37' : '#4a3a2a';
+            ctx.lineWidth   = 1;
+            ctx.strokeRect(leftArrX, arrowY, arrW, arrH);
+            ctx.font        = 'bold 14px Arial';
+            ctx.fillStyle   = leftEnabled ? '#ffd700' : '#5a4a3a';
+            ctx.textAlign   = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('‹', leftArrX + arrW / 2, arrowY + arrH / 2);
+
+            // Page indicator
+            ctx.font      = '11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${page + 1} / ${totalPages}`, x + width / 2, arrowY + arrH / 2);
+
+            // Right arrow
+            const rightEnabled = page < totalPages - 1;
+            ctx.fillStyle = rightEnabled
+                ? (this.achievementRightArrowHovered ? '#d4af37' : '#8b6914')
+                : '#3a2a1a';
+            ctx.fillRect(rightArrX, arrowY, arrW, arrH);
+            ctx.strokeStyle = rightEnabled ? '#d4af37' : '#4a3a2a';
+            ctx.lineWidth   = 1;
+            ctx.strokeRect(rightArrX, arrowY, arrW, arrH);
+            ctx.font        = 'bold 14px Arial';
+            ctx.fillStyle   = rightEnabled ? '#ffd700' : '#5a4a3a';
+            ctx.textAlign   = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('›', rightArrX + arrW / 2, arrowY + arrH / 2);
         }
     }
 

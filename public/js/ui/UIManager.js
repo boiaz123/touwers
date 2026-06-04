@@ -21,7 +21,10 @@ export class UIManager {
         this.lastGemValues = { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
         this.menuRefreshInterval = 0.1; // Refresh every 100ms to check resource changes
         this.menuRefreshTimer = 0;
-        
+        this._boundListeners = [];
+        this._towerBtns = [];
+        this._buildingBtns = [];
+
         // Prevent browser context menus on all panels
         this.setupPanelContextMenuHandlers();
     }
@@ -40,14 +43,14 @@ export class UIManager {
     updateButtonStates() {
         // In no-tower-building levels, keep all placement buttons hidden
         if (this.noTowerBuilding) {
-            document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+            [...this._towerBtns, ...this._buildingBtns].forEach(btn => {
                 btn.style.display = 'none';
                 btn.disabled = true;
             });
             return;
         }
         // Update tower buttons
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        this._towerBtns.forEach(btn => {
             const towerType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -104,7 +107,7 @@ export class UIManager {
         });
 
         // Update building buttons
-        document.querySelectorAll('.building-btn').forEach(btn => {
+        this._buildingBtns.forEach(btn => {
             const buildingType = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -194,8 +197,13 @@ export class UIManager {
         });
     }
 
+    _addListener(el, type, fn, options) {
+        el.addEventListener(type, fn, options);
+        this._boundListeners.push({ el, type, fn, options });
+    }
+
     // ============ SETUP ============
-    
+
     setupSpellUI() {
         // Spells are now integrated into the sidebar, no floating panel needed
         // Spell buttons will be created dynamically when super weapon lab is built
@@ -209,21 +217,19 @@ export class UIManager {
 
         // Tower button listeners
         document.querySelectorAll('.tower-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Play button click SFX
+            this._addListener(btn, 'click', (e) => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.selectTower(e.currentTarget);
             });
-            
-            btn.addEventListener('mouseenter', (e) => {
+
+            this._addListener(btn, 'mouseenter', (e) => {
                 this.showTowerInfo(e.currentTarget.dataset.type);
             });
-            
-            btn.addEventListener('touchstart', (e) => {
+
+            this._addListener(btn, 'touchstart', (e) => {
                 e.preventDefault();
-                // Select the tower and start drag-and-drop mode
                 this.selectTower(e.currentTarget);
                 if (this.gameplayState.selectedTowerType) {
                     this._touchDragActive = true;
@@ -235,21 +241,19 @@ export class UIManager {
         
         // Building button listeners
         document.querySelectorAll('.building-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Play button click SFX
+            this._addListener(btn, 'click', (e) => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.selectBuilding(e.currentTarget);
             });
-            
-            btn.addEventListener('mouseenter', (e) => {
+
+            this._addListener(btn, 'mouseenter', (e) => {
                 this.showBuildingInfo(e.currentTarget.dataset.type);
             });
-            
-            btn.addEventListener('touchstart', (e) => {
+
+            this._addListener(btn, 'touchstart', (e) => {
                 e.preventDefault();
-                // Select the building and start drag-and-drop mode
                 this.selectBuilding(e.currentTarget);
                 if (this.gameplayState.selectedBuildingType) {
                     this._touchDragActive = true;
@@ -298,8 +302,8 @@ export class UIManager {
                 }
             }
         };
-        document.addEventListener('touchmove', this._globalTouchMoveHandler, { passive: false });
-        document.addEventListener('touchend', this._globalTouchEndHandler, { passive: false });
+        this._addListener(document, 'touchmove', this._globalTouchMoveHandler, { passive: false });
+        this._addListener(document, 'touchend', this._globalTouchEndHandler, { passive: false });
 
         
         // Speed control circles - new bottom-left design
@@ -307,8 +311,7 @@ export class UIManager {
         
         if (speedCircles.length > 0) {
             speedCircles.forEach(circle => {
-                circle.addEventListener('click', (e) => {
-                    // Play button click SFX
+                this._addListener(circle, 'click', (e) => {
                     if (this.stateManager.audioManager) {
                         this.stateManager.audioManager.playSFX('button-click');
                     }
@@ -317,18 +320,15 @@ export class UIManager {
                     this.updateSpeedCircles(speed);
                 });
             });
-        } else {
         }
 
         // ============ WAVE COUNTDOWN BUTTON ============
         const waveCountdownBtn = document.getElementById('wave-countdown-btn');
         if (waveCountdownBtn) {
-            waveCountdownBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(waveCountdownBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                // Skip the cooldown and start the next wave immediately
                 this.gameplayState.skipWaveCooldown();
             });
         }
@@ -353,8 +353,7 @@ export class UIManager {
         }
 
         if (speedPauseBtn) {
-            speedPauseBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(speedPauseBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -363,8 +362,7 @@ export class UIManager {
         }
 
         if (menuBtn) {
-            menuBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(menuBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -373,8 +371,7 @@ export class UIManager {
         }
 
         if (resumeBtn) {
-            resumeBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(resumeBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -383,8 +380,7 @@ export class UIManager {
         }
 
         if (restartBtn) {
-            restartBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(restartBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -393,8 +389,7 @@ export class UIManager {
         }
 
         if (quitBtn) {
-            quitBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(quitBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -403,8 +398,7 @@ export class UIManager {
         }
 
         if (optionsBtn) {
-            optionsBtn.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(optionsBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -412,10 +406,8 @@ export class UIManager {
             });
         }
 
-        // Close modal when clicking overlay
         if (pauseMenuOverlay) {
-            pauseMenuOverlay.addEventListener('click', () => {
-                // Play button click SFX
+            this._addListener(pauseMenuOverlay, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -426,6 +418,10 @@ export class UIManager {
         // Setup in-game options panel
         this.setupInGameOptions();
 
+        // Cache button elements to avoid per-call DOM queries in updateButtonStates
+        this._towerBtns = [...document.querySelectorAll('.tower-btn')];
+        this._buildingBtns = [...document.querySelectorAll('.building-btn')];
+
         // Initial button state update
         this.updateButtonStates();
 
@@ -434,96 +430,10 @@ export class UIManager {
     }
 
     removeUIEventListeners() {
-        // Clean up tower, building, and spell buttons
-        document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
-            btn.replaceWith(btn.cloneNode(true));
-        });
-        
-        // Clean up pause and menu buttons by cloning them to remove all listeners
-        const speedPauseBtn = document.getElementById('speed-pause-btn');
-        if (speedPauseBtn) {
-            speedPauseBtn.replaceWith(speedPauseBtn.cloneNode(true));
+        for (const { el, type, fn, options } of this._boundListeners) {
+            el.removeEventListener(type, fn, options);
         }
-        
-        const menuBtn = document.getElementById('menu-btn');
-        if (menuBtn) {
-            menuBtn.replaceWith(menuBtn.cloneNode(true));
-        }
-        
-        const resumeBtn = document.getElementById('resume-btn');
-        if (resumeBtn) {
-            resumeBtn.replaceWith(resumeBtn.cloneNode(true));
-        }
-        
-        const restartBtn = document.getElementById('restart-btn');
-        if (restartBtn) {
-            restartBtn.replaceWith(restartBtn.cloneNode(true));
-        }
-        
-        const quitBtn = document.getElementById('quit-btn');
-        if (quitBtn) {
-            quitBtn.replaceWith(quitBtn.cloneNode(true));
-        }
-        
-        const optionsBtn = document.getElementById('options-btn');
-        if (optionsBtn) {
-            optionsBtn.replaceWith(optionsBtn.cloneNode(true));
-        }
-        
-        const pauseMenuOverlay = document.getElementById('pause-menu-overlay');
-        if (pauseMenuOverlay) {
-            pauseMenuOverlay.replaceWith(pauseMenuOverlay.cloneNode(true));
-        }
-
-        const ingameOptionsOverlay = document.getElementById('ingame-options-overlay');
-        if (ingameOptionsOverlay) {
-            ingameOptionsOverlay.replaceWith(ingameOptionsOverlay.cloneNode(true));
-        }
-
-        const ingameOptionsBackBtn = document.getElementById('ingame-options-back-btn');
-        if (ingameOptionsBackBtn) {
-            ingameOptionsBackBtn.replaceWith(ingameOptionsBackBtn.cloneNode(true));
-        }
-
-        const quitConfirmBtn = document.getElementById('quit-confirm-btn');
-        if (quitConfirmBtn) {
-            quitConfirmBtn.replaceWith(quitConfirmBtn.cloneNode(true));
-        }
-
-        const quitCancelBtn = document.getElementById('quit-cancel-btn');
-        if (quitCancelBtn) {
-            quitCancelBtn.replaceWith(quitCancelBtn.cloneNode(true));
-        }
-
-        const quitWarningOverlay = document.getElementById('quit-warning-overlay');
-        if (quitWarningOverlay) {
-            quitWarningOverlay.replaceWith(quitWarningOverlay.cloneNode(true));
-        }
-
-        const restartConfirmBtn = document.getElementById('restart-confirm-btn');
-        if (restartConfirmBtn) {
-            restartConfirmBtn.replaceWith(restartConfirmBtn.cloneNode(true));
-        }
-
-        const restartCancelBtn = document.getElementById('restart-cancel-btn');
-        if (restartCancelBtn) {
-            restartCancelBtn.replaceWith(restartCancelBtn.cloneNode(true));
-        }
-
-        const restartWarningOverlay = document.getElementById('restart-warning-overlay');
-        if (restartWarningOverlay) {
-            restartWarningOverlay.replaceWith(restartWarningOverlay.cloneNode(true));
-        }
-
-        const quitCloseBtn = document.getElementById('quit-close-btn');
-        if (quitCloseBtn) {
-            quitCloseBtn.replaceWith(quitCloseBtn.cloneNode(true));
-        }
-
-        const restartCloseBtn = document.getElementById('restart-close-btn');
-        if (restartCloseBtn) {
-            restartCloseBtn.replaceWith(restartCloseBtn.cloneNode(true));
-        }
+        this._boundListeners = [];
     }
 
     // ============ SPEED CONTROLS ============
@@ -1240,11 +1150,6 @@ export class UIManager {
         if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
         if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
         
-        // Debug logging for sandbox
-        if (this.gameplayState.isSandbox) {
-        }
-        
-        this.updateButtonStates();
     }
 
     updateUIAvailability() {
@@ -5155,6 +5060,7 @@ export class UIManager {
                 upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                 marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
                 statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
+                achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                 lastPlayedLevel: lastPlayedLevel,
                 unlockedLevels: unlockedLevels,
                 completedLevels: completedLevels,
@@ -5264,7 +5170,7 @@ export class UIManager {
         const ingameOptionsOverlay = document.getElementById('ingame-options-overlay');
         
         if (ingameOptionsBackBtn) {
-            ingameOptionsBackBtn.addEventListener('click', () => {
+            this._addListener(ingameOptionsBackBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5273,7 +5179,7 @@ export class UIManager {
         }
 
         if (ingameOptionsOverlay) {
-            ingameOptionsOverlay.addEventListener('click', () => {
+            this._addListener(ingameOptionsOverlay, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5281,13 +5187,12 @@ export class UIManager {
             });
         }
 
-        // Setup quit warning modal listeners
         const quitConfirmBtn = document.getElementById('quit-confirm-btn');
         const quitCancelBtn = document.getElementById('quit-cancel-btn');
         const quitWarningOverlay = document.getElementById('quit-warning-overlay');
 
         if (quitConfirmBtn) {
-            quitConfirmBtn.addEventListener('click', () => {
+            this._addListener(quitConfirmBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5296,7 +5201,7 @@ export class UIManager {
         }
 
         if (quitCancelBtn) {
-            quitCancelBtn.addEventListener('click', () => {
+            this._addListener(quitCancelBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5305,7 +5210,7 @@ export class UIManager {
         }
 
         if (quitWarningOverlay) {
-            quitWarningOverlay.addEventListener('click', () => {
+            this._addListener(quitWarningOverlay, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5313,10 +5218,9 @@ export class UIManager {
             });
         }
 
-        // New: ✕ close button for quit warning modal
         const quitCloseBtn = document.getElementById('quit-close-btn');
         if (quitCloseBtn) {
-            quitCloseBtn.addEventListener('click', () => {
+            this._addListener(quitCloseBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5324,13 +5228,12 @@ export class UIManager {
             });
         }
 
-        // Setup restart warning modal listeners
         const restartConfirmBtn = document.getElementById('restart-confirm-btn');
         const restartCancelBtn = document.getElementById('restart-cancel-btn');
         const restartWarningOverlay = document.getElementById('restart-warning-overlay');
 
         if (restartConfirmBtn) {
-            restartConfirmBtn.addEventListener('click', () => {
+            this._addListener(restartConfirmBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5339,7 +5242,7 @@ export class UIManager {
         }
 
         if (restartCancelBtn) {
-            restartCancelBtn.addEventListener('click', () => {
+            this._addListener(restartCancelBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5348,7 +5251,7 @@ export class UIManager {
         }
 
         if (restartWarningOverlay) {
-            restartWarningOverlay.addEventListener('click', () => {
+            this._addListener(restartWarningOverlay, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
@@ -5356,10 +5259,9 @@ export class UIManager {
             });
         }
 
-        // New: ✕ close button for restart warning modal
         const restartCloseBtn = document.getElementById('restart-close-btn');
         if (restartCloseBtn) {
-            restartCloseBtn.addEventListener('click', () => {
+            this._addListener(restartCloseBtn, 'click', () => {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }

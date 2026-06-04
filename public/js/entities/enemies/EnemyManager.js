@@ -237,7 +237,8 @@ export class EnemyManager {
         if (!this._lootDropBuffer) this._lootDropBuffer = [];
         const lootDrops = this._lootDropBuffer;
         lootDrops.length = 0;
-        
+
+        const startCount = this.enemies.length;
         let writeIdx = 0;
         for (let i = 0; i < this.enemies.length; i++) {
             const enemy = this.enemies[i];
@@ -289,8 +290,8 @@ export class EnemyManager {
             }
         }
         this.enemies.length = writeIdx;
-        
-        return { totalGold, lootDrops };
+
+        return { totalGold, lootDrops, killed: startCount - writeIdx };
     }
     
     render(ctx) {
@@ -323,15 +324,4 @@ export class EnemyManager {
         }
     }
 
-    /**
-     * Apply loot multiplier to all existing enemies
-     * Used for Rabbit's Foot which doubles normal loot drop chance
-     */
-    applyLootMultiplier(multiplier = 2) {
-        for (const enemy of this.enemies) {
-            if (enemy.lootDropChance !== undefined) {
-                enemy.lootDropChance *= multiplier;
-            }
-        }
-    }
 }

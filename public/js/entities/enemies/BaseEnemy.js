@@ -238,8 +238,10 @@ export class BaseEnemy {
         }
         
         // Check if defender is in range - works for both castle defenders and guard post defenders
-        const distance = Math.hypot(defender.x - this.x, defender.y - this.y);
-        if (distance < this.attackRange * 1.5) { // Slightly larger range for defender
+        const _ddx = defender.x - this.x;
+        const _ddy = defender.y - this.y;
+        const _rangeThreshold = this.attackRange * 1.5;
+        if (_ddx * _ddx + _ddy * _ddy < _rangeThreshold * _rangeThreshold) {
             this.isAttackingDefender = true;
             this.defenderTarget = defender;
             return true;

@@ -16,7 +16,8 @@ export class GameStatistics {
         this.totalItemsConsumed = 0;
         this.totalMoneySpentOnMarketplace = 0;
         this.totalMoneyEarnedInMarketplace = 0;
-        this.totalItemsSold = 0; // Track total items sold through marketplace
+        this.totalItemsSold = 0;
+        this.totalTowersBuilt = 0;
     }
 
     /**
@@ -81,6 +82,10 @@ export class GameStatistics {
         this.totalItemsSold += count;
     }
 
+    addTowersBuilt(count = 1) {
+        this.totalTowersBuilt += count;
+    }
+
     /**
      * Get formatted playtime string (e.g., "2h 30m 45s")
      */
@@ -118,7 +123,8 @@ export class GameStatistics {
             totalItemsConsumed: this.totalItemsConsumed,
             totalMoneySpentOnMarketplace: this.totalMoneySpentOnMarketplace,
             totalMoneyEarnedInMarketplace: this.totalMoneyEarnedInMarketplace,
-            totalItemsSold: this.totalItemsSold
+            totalItemsSold: this.totalItemsSold,
+            totalTowersBuilt: this.totalTowersBuilt
         };
     }
 
@@ -135,6 +141,7 @@ export class GameStatistics {
         this.totalMoneySpentOnMarketplace = data.totalMoneySpentOnMarketplace || 0;
         this.totalMoneyEarnedInMarketplace = data.totalMoneyEarnedInMarketplace || 0;
         this.totalItemsSold = data.totalItemsSold || 0;
+        this.totalTowersBuilt = data.totalTowersBuilt || 0;
     }
 
     /**

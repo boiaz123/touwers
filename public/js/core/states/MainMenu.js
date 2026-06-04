@@ -56,31 +56,7 @@ export class MainMenu {
                                   this.stateManager.previousState === 'loadGame' ||
                                   this.stateManager.previousState === 'saveSlotSelection';
         
-        if (returningFromMenu) {
-            // Skip to post-transition state (buttons visible and ready)
-            this.animationTime = 0;
-            this.showContinue = false;
-            this.titleOpacity = 1;
-            this.subtitleOpacity = 1;
-            this.continueOpacity = 0;
-            this.transitionActive = false;
-            this.transitionTime = 3;  // Jump to post-transition state
-            this.showButtons = true;
-            this.buttonsOpacity = 1;
-            this.swordSoundPlayed = false;
-        } else {
-            // Normal reset for initial entry - start with click to continue screen
-            this.animationTime = 0;
-            this.showContinue = false;
-            this.titleOpacity = 0;
-            this.subtitleOpacity = 0;
-            this.continueOpacity = 0;
-            this.transitionActive = false;
-            this.transitionTime = 0;
-            this.showButtons = false;
-            this.buttonsOpacity = 1;
-            this.swordSoundPlayed = false;
-        }
+        this._resetState(returningFromMenu);
         
         // Reset all button hover states when entering
         this.buttons.forEach(button => {
@@ -102,6 +78,27 @@ export class MainMenu {
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    _resetState(returningFromMenu) {
+        this.animationTime = 0;
+        this.showContinue = false;
+        this.continueOpacity = 0;
+        this.transitionActive = false;
+        this.buttonsOpacity = 1;
+        this.swordSoundPlayed = false;
+
+        if (returningFromMenu) {
+            this.titleOpacity = 1;
+            this.subtitleOpacity = 1;
+            this.transitionTime = 3;
+            this.showButtons = true;
+        } else {
+            this.titleOpacity = 0;
+            this.subtitleOpacity = 0;
+            this.transitionTime = 0;
+            this.showButtons = false;
+        }
     }
 
     // ============ GAMEPAD BUTTON NAVIGATION ============

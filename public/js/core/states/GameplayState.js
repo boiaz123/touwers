@@ -7,10 +7,15 @@ import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../SaveSystem.js';
+import { AchievementSystem } from '../AchievementSystem.js';
 
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+
+const INITIAL_WAVE_COOLDOWN = 30;
+const BETWEEN_WAVE_COOLDOWN = 15;
+const ENEMY_CLICK_RADIUS = 28;
 
 export class GameplayState {
     constructor(stateManager) {
@@ -30,8 +35,8 @@ export class GameplayState {
         this.superWeaponLab = null;
         
         // Wave cooldown system
-        this.waveCooldownTimer = 30; // 30 seconds at start, 15 between waves
-        this.waveCooldownDuration = 30; // Initial cooldown duration
+        this.waveCooldownTimer = INITIAL_WAVE_COOLDOWN;
+        this.waveCooldownDuration = INITIAL_WAVE_COOLDOWN;
         this.isInWaveCooldown = true; // Start in cooldown
         this.maxWavesForLevel = 10;
         
@@ -155,7 +160,15 @@ export class GameplayState {
         
         // Set reference to this GameplayState in stateManager so other systems can access it
         this.stateManager.gameplayState = this;
-        
+
+        // Ensure achievement system exists (normally created by SettlementHub on load)
+        if (!this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem = new AchievementSystem();
+        }
+        if (this.stateManager.audioManager) {
+            this.stateManager.achievementSystem.setAudioManager(this.stateManager.audioManager);
+        }
+
         // Reset pause state when entering a new level
         this.isPaused = false;
         
@@ -220,8 +233,8 @@ export class GameplayState {
         // CRITICAL: Reset all wave state to ensure fresh level start
         this.waveInProgress = false;
         this.waveCompleted = false;
-        this.waveCooldownTimer = 30.0; // Always start at 30 seconds
-        this.waveCooldownDuration = 30.0; // Reset duration to 30 seconds
+        this.waveCooldownTimer = INITIAL_WAVE_COOLDOWN;
+        this.waveCooldownDuration = INITIAL_WAVE_COOLDOWN;
         this.isInWaveCooldown = true; // Always start in cooldown
         this.lastWaveCooldownTime = 0; // Track real time for wave cooldown
         this.waveIndex = 0; // Reset wave index
@@ -697,7 +710,7 @@ export class GameplayState {
         this.spellEffects = [];
         this.waveInProgress = false;
         this.waveCompleted = false;
-        this.waveCooldownTimer = 30;
+        this.waveCooldownTimer = INITIAL_WAVE_COOLDOWN;
         this.isInWaveCooldown = true;
     }
     
@@ -730,11 +743,6 @@ export class GameplayState {
     }
     
     removeEventListeners() {
-        // Clean up event listeners properly
-        document.querySelectorAll('.tower-btn, .building-btn, .spell-btn').forEach(btn => {
-            btn.replaceWith(btn.cloneNode(true));
-        });
-        
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
             this.mouseMoveHandler = null;
@@ -1117,13 +1125,14 @@ export class GameplayState {
                     // After placing guard post, rebuild the enemy path to include the new waypoint
                     const enhancedPath = this.level.buildEnhancedPathWithGuardPosts(this.towerManager.towers);
                     this.enemyManager.updatePath(enhancedPath);
-                    
+
                     // Update all existing enemies to use the new path
                     this.enemyManager.enemies.forEach(enemy => {
                         enemy.path = enhancedPath;
                     });
-                    
+
                     this.uiManager.updateUI();
+                    this.uiManager.updateButtonStates();
                     
                     this.selectedTowerType = null;
                     document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
@@ -1142,6 +1151,7 @@ export class GameplayState {
                     if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
                         this.level.placeTower(gridX, gridY);
                         this.uiManager.updateUI();
+                        this.uiManager.updateButtonStates();
                         
                         this.selectedTowerType = null;
                         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
@@ -1331,11 +1341,10 @@ export class GameplayState {
 
     getEnemyAtPosition(x, y) {
         if (!this.enemyManager || !this.enemyManager.enemies) return null;
-        const clickRadius = 28;
         for (const enemy of this.enemyManager.enemies) {
             const dx = enemy.x - x;
             const dy = enemy.y - y;
-            if (dx * dx + dy * dy <= clickRadius * clickRadius) {
+            if (dx * dx + dy * dy <= ENEMY_CLICK_RADIUS * ENEMY_CLICK_RADIUS) {
                 return enemy;
             }
         }
@@ -1572,7 +1581,15 @@ export class GameplayState {
             // Clear mid-game state since level is complete
             saveData.isMidGameSave = false;
             delete saveData.midGameState;
-            
+
+            // Check achievements now that stats and campaign data are fully updated
+            if (this.stateManager.achievementSystem && this.stateManager.gameStatistics) {
+                this.stateManager.achievementSystem.checkAchievements(
+                    this.stateManager.gameStatistics, saveData
+                );
+                saveData.achievements = this.stateManager.achievementSystem.serialize();
+            }
+
             // Save to current slot if available using helper to ensure commander name is preserved
             if (this.stateManager.currentSaveSlot) {
                 SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
@@ -1602,25 +1619,113 @@ export class GameplayState {
     }
     
     update(deltaTime) {
-        // Update results screen if showing (but not during delay - game continues normally)
         if (this.resultsScreen && this.resultsScreen.isShowing) {
-            const realDeltaTime = this.getRealDeltaTime(deltaTime);
-            this.resultsScreen.update(realDeltaTime);
-            return; // Only stop game updates when screen is actually visible
+            this.resultsScreen.update(this.getRealDeltaTime(deltaTime));
+            return;
         }
-        
-        // Keep updating ResultsScreen during delay to count down (but don't skip game updates)
+
         if (this.resultsScreen && this.resultsScreen.showDelay > 0) {
-            const realDeltaTime = this.getRealDeltaTime(deltaTime);
-            this.resultsScreen.update(realDeltaTime);
-            // Continue to normal game updates below - don't return!
+            this.resultsScreen.update(this.getRealDeltaTime(deltaTime));
         }
-        
-        // Get the adjusted delta time for game mechanics
+
         const adjustedDeltaTime = this.getAdjustedDeltaTime(deltaTime);
-        
-        // Update wave cooldown timer with ADJUSTED time so it respects game speed
-        // Wave countdown should speed up/slow down with the game speed multiplier
+
+        this._updateWaveCooldown(adjustedDeltaTime);
+        this._updatePendingDamage(adjustedDeltaTime);
+        const guardPostTowers = this._updateDefenderPositions(adjustedDeltaTime);
+        this._updateGuardPostDefenderCache(guardPostTowers);
+
+        if (this.enemyManager) {
+            this.enemyManager.update(adjustedDeltaTime);
+            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
+        }
+
+        if (this.level && typeof this.level.updateRealmEffects === 'function') {
+            this.level.updateRealmEffects(adjustedDeltaTime);
+        }
+
+        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+            this.level.castle.defender.update(deltaTime, this.enemyManager.enemies);
+        }
+
+        if (guardPostTowers && this.enemyManager && this.enemyManager.enemies) {
+            for (let i = 0; i < guardPostTowers.length; i++) {
+                guardPostTowers[i].update(adjustedDeltaTime, this.enemyManager.enemies, this.gameState);
+            }
+        }
+
+        if (this.lootManager) {
+            this.lootManager.update(adjustedDeltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
+        }
+
+        if (this.towerManager && !this.uiManager.activeMenuType) {
+            if (this._hasSelection) {
+                const towers = this.towerManager.towers;
+                for (let i = 0; i < towers.length; i++) towers[i].isSelected = false;
+                const buildings = this.towerManager.buildingManager.buildings;
+                for (let i = 0; i < buildings.length; i++) {
+                    if (buildings[i].deselect) buildings[i].deselect();
+                }
+                this._hasSelection = false;
+            }
+        }
+
+        if (!this.enemyManager || !this.enemyManager.enemies) return;
+
+        this._updateEnemyCombat(deltaTime, adjustedDeltaTime);
+
+        if (this.level.castle && this.level.castle.isDestroyed()) {
+            if (this.stateManager.marketplaceSystem && this.stateManager.marketplaceSystem.hasFrogKingBane()) {
+                this.stateManager.marketplaceSystem.useFrogKingBaneBoon();
+                this.level.castle.revive();
+            } else {
+                this.gameOver();
+                return;
+            }
+        }
+
+        const deathResult = this.enemyManager.removeDeadEnemies();
+        const goldFromEnemies = deathResult.totalGold;
+        const lootDrops = deathResult.lootDrops || [];
+
+        if (deathResult.killed > 0) {
+            this.enemiesDefeated += deathResult.killed;
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.addEnemiesSlain(deathResult.killed);
+            }
+        }
+
+        this.goldEarnedThisLevel += goldFromEnemies;
+
+        const processedLootDrops = this.applyLootMultipliers(lootDrops);
+        for (const lootDrop of processedLootDrops) {
+            if (lootDrop.isRealmShard) {
+                this.lootManager.spawnRealmShard(lootDrop.x, lootDrop.y, lootDrop.lootId);
+            } else {
+                this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
+            }
+        }
+
+        if (goldFromEnemies > 0) {
+            this.gameState.gold += goldFromEnemies;
+            this.uiManager.updateUI();
+            this.uiManager.updateButtonStates();
+        }
+
+        if (this._checkWaveCompletion()) return;
+
+        this.uiManager.updateSpellUI();
+        this.uiManager.updateWaveCooldownDisplay();
+        this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
+
+        this._updateSpellEffects(adjustedDeltaTime);
+
+        if (this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem.update(deltaTime);
+        }
+    }
+
+    _updateWaveCooldown(adjustedDeltaTime) {
         if (this.isInWaveCooldown) {
             this.waveCooldownTimer -= adjustedDeltaTime;
             if (this.waveCooldownTimer <= 0) {
@@ -1629,8 +1734,9 @@ export class GameplayState {
                 this.startWave();
             }
         }
-        
-        // Process pending damage (delayed spell effects) - compact in-place
+    }
+
+    _updatePendingDamage(adjustedDeltaTime) {
         let pendingAlive = 0;
         for (let i = 0; i < this.pendingDamage.length; i++) {
             const damage = this.pendingDamage[i];
@@ -1643,93 +1749,83 @@ export class GameplayState {
             }
         }
         this.pendingDamage.length = pendingAlive;
-        
-        // Update castle first so it's ready for defender positioning
+    }
+
+    _updateDefenderPositions(adjustedDeltaTime) {
         if (this.level && this.level.castle) {
             this.level.castle.update(adjustedDeltaTime);
             this.level.castle.checkDefenderDeath();
         }
-        
-        // Update castle defender position BEFORE checking enemy engagement
-        // This ensures the defender position is current when distance checks happen
+
         if (this.level && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             const defender = this.level.castle.defender;
-            // Position defender in front of castle
             defender.x = this.level.castle.x - 60;
             defender.y = this.level.castle.y + 40;
         }
-        
-        // Update guard post defender positions BEFORE checking enemy engagement
-        // This ensures they're at the correct waypoint location for distance checks
+
         let guardPostTowers = null;
         if (this.towerManager && this.towerManager.towers) {
-            // OPTIMIZATION: Only rebuild guard post cache when tower count changes
             const currentTowerCount = this.towerManager.towers.length;
             if (this.lastGuardPostTowerCount !== currentTowerCount) {
                 this.cachedGuardPosts = this.towerManager.towers.filter(t => t.type === 'guard-post');
                 this.lastGuardPostTowerCount = currentTowerCount;
             }
-            
+
             guardPostTowers = this.cachedGuardPosts;
-            
+
             if (guardPostTowers && guardPostTowers.length > 0) {
                 for (let i = 0; i < guardPostTowers.length; i++) {
                     const tower = guardPostTowers[i];
                     if (tower.defender && !tower.defender.isDead()) {
-                        // Maintain defender position on the path
                         tower.defender.x = tower.defenderSpawnX;
                         tower.defender.y = tower.defenderSpawnY;
                     }
                 }
             }
         }
-        
-        // OPTIMIZATION: Only rebuild guard post defender cache when defender status changes
-        // Initialize persistent cache array once (enemies hold references to this same array)
+
+        return guardPostTowers;
+    }
+
+    _updateGuardPostDefenderCache(guardPostTowers) {
         if (!this.guardPostDefenderCache) {
             this.guardPostDefenderCache = [];
         }
-        
-        // Count active defenders to detect changes (hire/fire/death)
+
         let activeDefenderCount = 0;
         if (guardPostTowers && guardPostTowers.length > 0) {
             for (let i = 0; i < guardPostTowers.length; i++) {
                 const defender = guardPostTowers[i].getDefender();
-                if (defender && !defender.isDead()) {
-                    activeDefenderCount++;
-                }
+                if (defender && !defender.isDead()) activeDefenderCount++;
             }
         }
-        
+
         const guardPostCount = guardPostTowers ? guardPostTowers.length : 0;
         if (activeDefenderCount !== this._lastActiveDefenderCount || guardPostCount !== this._lastGuardPostCount) {
             this._lastActiveDefenderCount = activeDefenderCount;
             this._lastGuardPostCount = guardPostCount;
-            
-            // Clear in-place to preserve enemy references to this array
+
             this.guardPostDefenderCache.length = 0;
-            
+
             if (guardPostTowers && guardPostTowers.length > 0) {
                 guardPostTowers.forEach(tower => {
                     const defender = tower.getDefender();
                     if (defender) {
                         this.guardPostDefenderCache.push({
-                            defender: defender,
+                            defender,
                             waypoint: tower.getDefenderWaypoint(),
-                            tower: tower,
+                            tower,
                             pathIndex: tower.pathIndex
                         });
                     }
                 });
             }
-            
-            // When cache changes, update pathDefenders on all enemies
+
             if (this.enemyManager && this.enemyManager.enemies) {
                 for (let i = 0; i < this.enemyManager.enemies.length; i++) {
                     const enemy = this.enemyManager.enemies[i];
                     if (!enemy.pathDefenders) enemy.pathDefenders = [];
                     enemy.guardPostCache = this.guardPostDefenderCache;
-                    // Rebuild pathDefenders from current cache
                     enemy.pathDefenders.length = 0;
                     for (let j = 0; j < this.guardPostDefenderCache.length; j++) {
                         enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
@@ -1737,8 +1833,8 @@ export class GameplayState {
                 }
             }
         }
-        
-        // Assign cache to newly spawned enemies (those without it yet)
+
+        // Wire newly spawned enemies to the current cache
         if (this.enemyManager && this.enemyManager.enemies) {
             for (let i = 0; i < this.enemyManager.enemies.length; i++) {
                 const enemy = this.enemyManager.enemies[i];
@@ -1749,74 +1845,20 @@ export class GameplayState {
                         enemy.pathDefenders.push(this.guardPostDefenderCache[j].defender);
                     }
                 }
-                // Wire towers array reference to mage enemies for blockade spell
                 if ((enemy.type === 'mage' || enemy.type === 'frogking') && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
                     enemy._towersRef = this.towerManager.towers;
                 }
             }
         }
-        
-        // FIRST: Update enemy positions (enemies move to defenders)
-        if (this.enemyManager) {
-            this.enemyManager.update(adjustedDeltaTime);
-            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
-        }
+    }
 
-        // Update level-specific special effects (e.g. realm particles)
-        if (this.level && typeof this.level.updateRealmEffects === 'function') {
-            this.level.updateRealmEffects(adjustedDeltaTime);
-        }
-        
-        // SECOND: Update defenders AFTER enemies have moved to them
-        // This ensures defenders see current enemy positions and can attack
-        // Update castle defender
-        if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
-            const defender = this.level.castle.defender;
-            defender.update(deltaTime, this.enemyManager.enemies);
-        }
-        
-        // Update guard posts and their defenders
-        if (guardPostTowers && this.enemyManager && this.enemyManager.enemies) {
-            for (let i = 0; i < guardPostTowers.length; i++) {
-                guardPostTowers[i].update(adjustedDeltaTime, this.enemyManager.enemies, this.gameState);
-            }
-        }
-        
-        // Update loot bags
-        if (this.lootManager) {
-            this.lootManager.update(adjustedDeltaTime, this.stateManager.canvas.height, this.stateManager.canvas.width);
-        }
-        
-        // Deselect all towers and buildings during normal gameplay (no menu open)
-        // Only run the deselection pass when selection state actually needs clearing
-        if (this.towerManager && !this.uiManager.activeMenuType) {
-            if (this._hasSelection) {
-                const towers = this.towerManager.towers;
-                for (let i = 0; i < towers.length; i++) {
-                    towers[i].isSelected = false;
-                }
-                const buildings = this.towerManager.buildingManager.buildings;
-                for (let i = 0; i < buildings.length; i++) {
-                    if (buildings[i].deselect) buildings[i].deselect();
-                }
-                this._hasSelection = false;
-            }
-        }
-        
-        // OPTIMIZATION: Consolidate enemy updates into single loop to avoid multiple forEach passes
-        let hadGoldFromEnemies = false;
-        
-        // Only process if enemyManager is initialized
-        if (!this.enemyManager || !this.enemyManager.enemies) {
-            return;
-        }
-        
+    _updateEnemyCombat(deltaTime, adjustedDeltaTime) {
         const enemies = this.enemyManager.enemies;
-        
+
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
-            
-            // Clean up dead path defenders using compact-in-place (avoids splice overhead)
+
+            // Clean up dead path defenders (compact-in-place)
             if (enemy.pathDefenders && enemy.pathDefenders.length > 0) {
                 let aliveCount = 0;
                 for (let j = 0; j < enemy.pathDefenders.length; j++) {
@@ -1826,18 +1868,14 @@ export class GameplayState {
                     }
                 }
                 enemy.pathDefenders.length = aliveCount;
-                
-                // If all path defenders are dead, allow enemy to resume
-                if (aliveCount === 0) {
-                    if (enemy.isAttackingDefender) {
-                        // Defender died - reset combat state
-                        enemy.isAttackingDefender = false;
-                        enemy.defenderTarget = null;
-                        enemy.reachedEnd = false; // Resume moving
-                    }
+
+                if (aliveCount === 0 && enemy.isAttackingDefender) {
+                    enemy.isAttackingDefender = false;
+                    enemy.defenderTarget = null;
+                    enemy.reachedEnd = false;
                 }
             }
-            
+
             // Update freeze timers
             if (enemy.freezeTimer > 0) {
                 enemy.freezeTimer -= deltaTime;
@@ -1845,41 +1883,32 @@ export class GameplayState {
                     enemy.speed = enemy.originalSpeed;
                 }
             }
-            
+
             // Handle burn damage over time
             if (enemy.burnTimer > 0) {
                 enemy.burnTimer -= deltaTime;
                 enemy.burnTickTimer = (enemy.burnTickTimer || 0) - deltaTime;
-                
+
                 if (enemy.burnTickTimer <= 0) {
-                    const burnDamage = enemy.burnDamage || 2;
-                    enemy.takeDamage(burnDamage, 0, 'fire', true);
-                    enemy.burnTickTimer = 0.5; // Tick every 0.5 seconds
+                    enemy.takeDamage(enemy.burnDamage || 2, 0, 'fire', true);
+                    enemy.burnTickTimer = 0.5;
                 }
-                
-                if (enemy.burnTimer <= 0) {
-                    enemy.burnTimer = 0;
-                }
+
+                if (enemy.burnTimer <= 0) enemy.burnTimer = 0;
             }
-            
+
             // Handle damage to defenders and castle
             if (enemy.isAttackingDefender && enemy.defenderTarget) {
                 if (enemy.defenderTarget.isDead()) {
-                    // Defender died - clear combat state so enemy can transition
                     const wasPathDefender = enemy.defenderTarget.type === 'path';
                     enemy.isAttackingDefender = false;
                     enemy.defenderTarget = null;
-                    if (wasPathDefender) {
-                        // Path defender was mid-path: resume movement along path
-                        enemy.reachedEnd = false;
-                    }
-                    // Castle defender case: reachedEnd stays true, transitions next block
+                    if (wasPathDefender) enemy.reachedEnd = false;
                 } else {
                     enemy.attackDefender(enemy.defenderTarget, adjustedDeltaTime);
                 }
             }
             if (!enemy.isAttackingDefender && enemy.reachedEnd) {
-                // No-loss level: enemies that reach the end escape silently without attacking the castle
                 if (this.level.levelFlags?.noLoss) {
                     enemy.health = -1;
                     enemy.lootDropChance = 0;
@@ -1888,32 +1917,26 @@ export class GameplayState {
                     enemy.goldReward = 0;
                     continue;
                 }
-                // Enemy has reached end of path - check what's ahead of them
+
                 let targetDefender = null;
-                
-                // PATH DEFENDER LOGIC: Find the next alive guard post defender ahead of this enemy
+
                 if (enemy.guardPostCache && enemy.guardPostCache.length > 0 && this.level && this.level.path) {
-                    // Find the closest alive guard post ahead of the enemy's current position on the path
                     let nextGuardPostDefender = null;
                     let closestDefenderDistance = Infinity;
-                    
+
                     for (let cache of enemy.guardPostCache) {
                         if (!cache.defender.isDead() && cache.waypoint) {
-                            // Calculate distance to this guard post
                             const distance = Math.hypot(
                                 cache.waypoint.x - enemy.x,
                                 cache.waypoint.y - enemy.y
                             );
-                            
-                            // Only engage with defenders ahead on the path
-                            // Check if waypoint is ahead by comparing path indices or distance
                             if (distance < closestDefenderDistance && distance < 100) {
                                 closestDefenderDistance = distance;
                                 nextGuardPostDefender = cache.defender;
                             }
                         }
                     }
-                    
+
                     if (nextGuardPostDefender) {
                         targetDefender = nextGuardPostDefender;
                         enemy.isAttackingDefender = true;
@@ -1923,11 +1946,7 @@ export class GameplayState {
                         continue;
                     }
                 }
-                
-                // CASTLE DEFENDER LOGIC: If no path defenders block, engage castle defender
-                // Only engage when enemy has legitimately reached the castle end (isAttackingCastle = true)
-                // This prevents enemies stopped mid-path by a guard post from being incorrectly
-                // assigned to the castle defender before they physically reach the castle.
+
                 if (enemy.isAttackingCastle && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
                     targetDefender = this.level.castle.defender;
                     enemy.isAttackingDefender = true;
@@ -1935,86 +1954,34 @@ export class GameplayState {
                     enemy.isAttackingCastle = false;
                     enemy.attackDefender(targetDefender, adjustedDeltaTime);
                 } else if (this.level.castle) {
-                    // No defenders available, attack castle directly
                     enemy.isAttackingCastle = true;
                     enemy.isAttackingDefender = false;
                     enemy.attackCastle(this.level.castle, adjustedDeltaTime);
                 }
             }
         }
-        
-        // Check if castle is destroyed
-        if (this.level.castle && this.level.castle.isDestroyed()) {
-            // Check if Frog King's Bane boon is active
-            if (this.stateManager.marketplaceSystem && this.stateManager.marketplaceSystem.hasFrogKingBane()) {
-                // Activate the boon - revive castle
-                this.stateManager.marketplaceSystem.useFrogKingBaneBoon();
-                this.level.castle.revive();
-                // Continue the game
-            } else {
-                // No boon - game over
-                this.gameOver();
-                return;
-            }
-        }
-        
-        // Remove dead enemies and handle loot drops
-        const deathResult = this.enemyManager.removeDeadEnemies();
-        const goldFromEnemies = deathResult.totalGold;
-        const lootDrops = deathResult.lootDrops || [];
-        
-        // Track gold earned (enemies defeated count is tracked via totalEnemiesSpawned)
-        this.goldEarnedThisLevel += goldFromEnemies;
-        
-        // Apply loot multipliers from consumables
-        const processedLootDrops = this.applyLootMultipliers(lootDrops);
-        
-        // Spawn loot bags on the ground
-        for (const lootDrop of processedLootDrops) {
-            if (lootDrop.isRealmShard) {
-                this.lootManager.spawnRealmShard(lootDrop.x, lootDrop.y, lootDrop.lootId);
-            } else {
-                this.lootManager.spawnLoot(lootDrop.x, lootDrop.y, lootDrop.lootId, lootDrop.isRare || false);
-            }
-        }
-        
-        if (goldFromEnemies > 0) {
-            this.gameState.gold += goldFromEnemies;
-            // Only update UI when gold changes, not every time
-            this.uiManager.updateUI();
-            this.uiManager.updateButtonStates();
-        }
-        
-        // Check if wave is completed
+    }
+
+    // Returns true if the level was completed (caller should return from update).
+    _checkWaveCompletion() {
         if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
             this.waveInProgress = false;
             this.waveCompleted = true;
-            
-            // Check if this was the last wave
+
             if (this.gameState.wave >= this.maxWavesForLevel) {
-                // Final wave completed - level is finished
-                // Show results immediately - game will continue to render
                 this.completeLevel();
-                return; // Stop game updates but rendering continues
+                return true;
             } else {
-                // Enter cooldown between waves (15 seconds)
                 this.isInWaveCooldown = true;
-                this.waveCooldownTimer = 15;
-                this.waveCooldownDuration = 15;
+                this.waveCooldownTimer = BETWEEN_WAVE_COOLDOWN;
+                this.waveCooldownDuration = BETWEEN_WAVE_COOLDOWN;
                 this.gameState.wave++;
             }
         }
-        
-        // Update spell UI - only updates displays, doesn't recreate every frame
-        this.uiManager.updateSpellUI();
-        
-        // Update wave countdown display
-        this.uiManager.updateWaveCooldownDisplay();
-        
-        // Update active menu if one is open (for real-time resource availability)
-        this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
-        
-        // Update spell effects - compact-in-place to avoid allocating new array
+        return false;
+    }
+
+    _updateSpellEffects(adjustedDeltaTime) {
         let aliveEffects = 0;
         for (let i = 0; i < this.spellEffects.length; i++) {
             const effect = this.spellEffects[i];
@@ -2022,7 +1989,7 @@ export class GameplayState {
             if (effect.x !== undefined && effect.vx !== undefined) {
                 effect.x += effect.vx * adjustedDeltaTime;
                 effect.y += effect.vy * adjustedDeltaTime;
-                effect.vy += 100 * adjustedDeltaTime; // gravity
+                effect.vy += 100 * adjustedDeltaTime;
             }
             if (effect.life > 0) {
                 this.spellEffects[aliveEffects] = effect;
@@ -2031,7 +1998,7 @@ export class GameplayState {
         }
         this.spellEffects.length = aliveEffects;
     }
-    
+
     gameOver() {
         this.waveInProgress = false;
         
@@ -2072,7 +2039,15 @@ export class GameplayState {
             
             // Save statistics
             this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
-            
+
+            // Check achievements and persist them
+            if (this.stateManager.achievementSystem) {
+                this.stateManager.achievementSystem.checkAchievements(
+                    this.stateManager.gameStatistics, this.stateManager.currentSaveData
+                );
+                this.stateManager.currentSaveData.achievements = this.stateManager.achievementSystem.serialize();
+            }
+
             // Use the new helper method to save while preserving commander name and campaign progress
             SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
         }
@@ -2238,11 +2213,16 @@ export class GameplayState {
         }
         
         this.renderSpellEffects(ctx);
-        
+
         // Render active boons
         this.renderActiveBoons(ctx);
+
+        // Achievement banner (always on top of everything)
+        if (this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem.render(ctx, ctx.canvas);
+        }
     }
-    
+
     renderActiveBoons(ctx) {
         if (!this.stateManager.marketplaceSystem) return;
         
