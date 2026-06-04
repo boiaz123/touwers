@@ -1750,7 +1750,7 @@ export class GameplayState {
                     }
                 }
                 // Wire towers array reference to mage enemies for blockade spell
-                if (enemy.type === 'mage' && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
+                if ((enemy.type === 'mage' || enemy.type === 'frogking') && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
                     enemy._towersRef = this.towerManager.towers;
                 }
             }

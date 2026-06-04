@@ -5,7 +5,7 @@ export class FrogKingEnemy extends BaseEnemy {
     static colorCache = new Map();
 
     static BASE_STATS = {
-        health: 500,
+        health: 45000,
         speed: 20,
         armour: 22,
         magicResistance: 1.0
@@ -80,6 +80,12 @@ export class FrogKingEnemy extends BaseEnemy {
         // Crown and scepter animation
         this.crownRotation = 0;
         this.scepterOscillation = 0;
+
+        // Blockade spell - fires a projectile that disables a nearby tower for 5 seconds
+        this.blockadeSpellTimer = 8 + Math.random() * 10;
+        this.blockadeRange = 280;
+        this.blockadeProjectile = null;
+        this._towersRef = null;
     }
 
     selectRandomVulnerability() {
@@ -144,7 +150,79 @@ export class FrogKingEnemy extends BaseEnemy {
                 this.magicParticles.splice(i, 1);
             }
         }
-        
+
+        // === BLOCKADE SPELL: fire a dark orb to disable a nearby tower for 5 seconds ===
+        if (this._towersRef && !this.reachedEnd) {
+            this.blockadeSpellTimer -= deltaTime;
+            if (this.blockadeSpellTimer <= 0 && this.blockadeProjectile === null) {
+                let nearest = null;
+                let nearestDist = this.blockadeRange;
+                for (let j = 0; j < this._towersRef.length; j++) {
+                    const tower = this._towersRef[j];
+                    if (tower.isDisabled || tower.type === 'guard-post') continue;
+                    const dx = tower.x - this.x;
+                    const dy = tower.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < nearestDist) {
+                        nearest = tower;
+                        nearestDist = dist;
+                    }
+                }
+                if (nearest) {
+                    const dx = nearest.x - this.x;
+                    const dy = nearest.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const speed = 250;
+                    this.blockadeProjectile = {
+                        x: this.x,
+                        y: this.y - 20,
+                        vx: (dx / dist) * speed,
+                        vy: (dy / dist) * speed,
+                        targetTower: nearest,
+                        trail: [],
+                        age: 0
+                    };
+                }
+                this.blockadeSpellTimer = 12 + Math.random() * 8;
+            }
+        }
+
+        // Update blockade projectile
+        if (this.blockadeProjectile) {
+            const proj = this.blockadeProjectile;
+            proj.age += deltaTime;
+            const lastT = proj.trail[proj.trail.length - 1];
+            if (!lastT || Math.hypot(proj.x - lastT.x, proj.y - lastT.y) > 5) {
+                proj.trail.push({ x: proj.x, y: proj.y, age: 0 });
+            }
+            for (let j = proj.trail.length - 1; j >= 0; j--) {
+                proj.trail[j].age += deltaTime;
+                if (proj.trail[j].age > 0.25) proj.trail.splice(j, 1);
+            }
+            if (proj.targetTower && !proj.targetTower.isDisabled) {
+                const dx = proj.targetTower.x - proj.x;
+                const dy = proj.targetTower.y - proj.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const speed = 250;
+                proj.vx = (dx / dist) * speed;
+                proj.vy = (dy / dist) * speed;
+                if (dist <= 18) {
+                    proj.targetTower.isDisabled = true;
+                    proj.targetTower.disabledTimer = 5;
+                    this.blockadeProjectile = null;
+                }
+            } else {
+                this.blockadeProjectile = null;
+            }
+            if (this.blockadeProjectile) {
+                proj.x += proj.vx * deltaTime;
+                proj.y += proj.vy * deltaTime;
+                if (proj.age > 4) {
+                    this.blockadeProjectile = null;
+                }
+            }
+        }
+
         // Update jump cycle timer for animation and movement synchronization
         this.jumpCycleTimer += deltaTime;
         if (this.jumpCycleTimer >= this.jumpCycleDuration) {
@@ -303,49 +381,47 @@ export class FrogKingEnemy extends BaseEnemy {
         this.drawBattleLeg(ctx, baseSize * 0.32, baseSize * 0.2, baseSize, true, true);
         
         // --- LOWER BODY/ROBE ---
-        // Bottom belly extension
-        ctx.fillStyle = this.skinColor;
+        // Royal tabard skirt flowing down from the torso
+        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.45);
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.48, baseSize * 0.25, 0, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.44, baseSize * 0.12);
+        ctx.quadraticCurveTo(-baseSize * 0.52, baseSize * 0.36, -baseSize * 0.34, baseSize * 0.56);
+        ctx.lineTo(baseSize * 0.34, baseSize * 0.56);
+        ctx.quadraticCurveTo(baseSize * 0.52, baseSize * 0.36, baseSize * 0.44, baseSize * 0.12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold hem trim at skirt bottom
+        ctx.strokeStyle = '#DAA520';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.34, baseSize * 0.56);
+        ctx.quadraticCurveTo(0, baseSize * 0.63, baseSize * 0.34, baseSize * 0.56);
+        ctx.stroke();
+
+        // Tabard center heraldic stripe
+        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.62);
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.1, baseSize * 0.12);
+        ctx.quadraticCurveTo(-baseSize * 0.12, baseSize * 0.36, -baseSize * 0.09, baseSize * 0.56);
+        ctx.lineTo(baseSize * 0.09, baseSize * 0.56);
+        ctx.quadraticCurveTo(baseSize * 0.12, baseSize * 0.36, baseSize * 0.1, baseSize * 0.12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Lighter belly skin visible above tabard (frogs have pale bellies)
+        ctx.fillStyle = FrogKingEnemy.lightenColor(this.skinColor, 0.16);
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.22, baseSize * 0.28, baseSize * 0.17, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.3);
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.35, baseSize * 0.48, baseSize * 0.25, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Robe skirt over belly
-        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.4);
-        ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.32, baseSize * 0.44, baseSize * 0.24, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Robe outline
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.6);
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.32, baseSize * 0.44, baseSize * 0.24, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Robe detail lines (vertical folds)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
-        for (let i = -2; i <= 2; i++) {
-            const x = i * baseSize * 0.14;
-            ctx.beginPath();
-            ctx.moveTo(x, baseSize * 0.05);
-            ctx.quadraticCurveTo(x + baseSize * 0.08, baseSize * 0.18, x + baseSize * 0.04, baseSize * 0.5);
-            ctx.stroke();
-        }
-        
-        // --- MAIN BODY/CHEST --- (cached gradient)
+        // --- MAIN BODY/CHEST --- (cached gradient, top-down lighting)
         if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
             this._gradBaseSize = baseSize;
-            this._bodyGrad = ctx.createLinearGradient(-baseSize * 0.45, -baseSize * 0.1, baseSize * 0.45, baseSize * 0.2);
-            this._bodyGrad.addColorStop(0, FrogKingEnemy.darkenColor(this.skinColor, 0.1));
-            this._bodyGrad.addColorStop(0.5, FrogKingEnemy.darkenColor(this.skinColor, 0.2));
-            this._bodyGrad.addColorStop(1, FrogKingEnemy.darkenColor(this.skinColor, 0.3));
+            this._bodyGrad = ctx.createLinearGradient(0, -baseSize * 0.42, 0, baseSize * 0.55);
+            this._bodyGrad.addColorStop(0, FrogKingEnemy.lightenColor(this.skinColor, 0.06));
+            this._bodyGrad.addColorStop(0.45, this.skinColor);
+            this._bodyGrad.addColorStop(1, FrogKingEnemy.darkenColor(this.skinColor, 0.28));
         }
         
         ctx.fillStyle = this._bodyGrad;
@@ -359,29 +435,66 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52, baseSize * 0.48, 0, 0, Math.PI * 2);
         ctx.stroke();
         
-        // Royal chest plate (gold with vulnerability color accent)
-        ctx.fillStyle = '#DAA520';
+        // Royal armor breastplate (angular shield shape)
+        ctx.fillStyle = '#C9940A';
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.38, baseSize * 0.32, 0, 0, Math.PI * 2);
+        ctx.moveTo(0, -baseSize * 0.3);
+        ctx.bezierCurveTo(baseSize * 0.42, -baseSize * 0.28, baseSize * 0.44, baseSize * 0.08, baseSize * 0.32, baseSize * 0.26);
+        ctx.lineTo(0, baseSize * 0.31);
+        ctx.lineTo(-baseSize * 0.32, baseSize * 0.26);
+        ctx.bezierCurveTo(-baseSize * 0.44, baseSize * 0.08, -baseSize * 0.42, -baseSize * 0.28, 0, -baseSize * 0.3);
+        ctx.closePath();
         ctx.fill();
-        
-        ctx.strokeStyle = '#B8860B';
-        ctx.lineWidth = 1.2;
+
+        // Breastplate inner highlight panel
+        ctx.fillStyle = '#FFE066';
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.38, baseSize * 0.32, 0, 0, Math.PI * 2);
+        ctx.moveTo(0, -baseSize * 0.28);
+        ctx.bezierCurveTo(baseSize * 0.24, -baseSize * 0.26, baseSize * 0.26, -baseSize * 0.02, baseSize * 0.18, baseSize * 0.12);
+        ctx.lineTo(0, baseSize * 0.16);
+        ctx.lineTo(-baseSize * 0.18, baseSize * 0.12);
+        ctx.bezierCurveTo(-baseSize * 0.26, -baseSize * 0.02, -baseSize * 0.24, -baseSize * 0.26, 0, -baseSize * 0.28);
+        ctx.closePath();
+        ctx.fill();
+
+        // Breastplate rim
+        ctx.strokeStyle = '#8B6800';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(0, -baseSize * 0.3);
+        ctx.bezierCurveTo(baseSize * 0.42, -baseSize * 0.28, baseSize * 0.44, baseSize * 0.08, baseSize * 0.32, baseSize * 0.26);
+        ctx.lineTo(0, baseSize * 0.31);
+        ctx.lineTo(-baseSize * 0.32, baseSize * 0.26);
+        ctx.bezierCurveTo(-baseSize * 0.44, baseSize * 0.08, -baseSize * 0.42, -baseSize * 0.28, 0, -baseSize * 0.3);
+        ctx.closePath();
         ctx.stroke();
-        
-        // Chest accent in vulnerability color
+
+        // Heraldic center gem (vulnerability element color)
         ctx.fillStyle = this.skinColor;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.1, baseSize * 0.26, baseSize * 0.2, 0, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 0.02, baseSize * 0.1, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Armor shine/highlight
-        ctx.fillStyle = 'rgba(255, 255, 200, 0.3)';
+        ctx.strokeStyle = '#8B6800';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Gem specular highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.12, -baseSize * 0.05, baseSize * 0.18, baseSize * 0.14, 0, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.03, -baseSize * 0.06, baseSize * 0.038, 0, Math.PI * 2);
         ctx.fill();
+
+        // Vertical center ridge on breastplate
+        ctx.strokeStyle = '#8B6800';
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(0, -baseSize * 0.26);
+        ctx.lineTo(0, -baseSize * 0.12);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, baseSize * 0.08);
+        ctx.lineTo(0, baseSize * 0.28);
+        ctx.stroke();
         
         // --- FRONT ARMS/HANDS ---
         this.drawBattleArm(ctx, -baseSize * 0.35, baseSize * 0.05, baseSize, false);
@@ -403,24 +516,36 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Snout bulge (frog-like)
-        ctx.fillStyle = FrogKingEnemy.lightenColor(this.skinColor, 0.08);
+        ctx.fillStyle = FrogKingEnemy.lightenColor(this.skinColor, 0.1);
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.28, baseSize * 0.35, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.25);
+
+        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.3);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.28, baseSize * 0.35, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.stroke();
-        
-        // Head texture spots
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+
+        // Nostril slits
+        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.45);
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 0.68, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.ellipse(-baseSize * 0.1, -baseSize * 0.19, baseSize * 0.04, baseSize * 0.025, 0.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(baseSize * 0.2, -baseSize * 0.68, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.ellipse(baseSize * 0.1, -baseSize * 0.19, baseSize * 0.04, baseSize * 0.025, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Head shading - darker crown of skull for 3D depth
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.13)';
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.66, baseSize * 0.4, baseSize * 0.26, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head highlight - lit front face
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.06, -baseSize * 0.45, baseSize * 0.28, baseSize * 0.2, -0.2, 0, Math.PI * 2);
         ctx.fill();
         
         // --- MENACING EYES (narrower, angry) ---
@@ -548,7 +673,48 @@ export class FrogKingEnemy extends BaseEnemy {
         }
         
         ctx.restore();
-        
+
+        // Draw blockade projectile (world space)
+        if (this.blockadeProjectile) {
+            const proj = this.blockadeProjectile;
+            const pulse = 0.5 + 0.5 * Math.sin(this.animationTime * 10);
+
+            // Trail
+            for (let i = 0; i < proj.trail.length; i++) {
+                const t = proj.trail[i];
+                const lifeRatio = 1 - t.age / 0.25;
+                ctx.fillStyle = `rgba(155, 0, 215, ${lifeRatio * 0.55})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 5 * lifeRatio, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Outer glow
+            ctx.fillStyle = `rgba(175, 0, 255, ${0.22 + pulse * 0.13})`;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main orb body
+            ctx.fillStyle = 'rgba(85, 0, 185, 0.92)';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Orb rim
+            ctx.strokeStyle = `rgba(215, 125, 255, ${0.65 + pulse * 0.35})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Specular highlight
+            ctx.fillStyle = `rgba(230, 155, 255, ${0.55 + pulse * 0.45})`;
+            ctx.beginPath();
+            ctx.arc(proj.x - 2.5, proj.y - 2.5, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // Health bar
         const barWidth = baseSize * 3.2;
         const barHeight = Math.max(2, baseSize * 0.42);
