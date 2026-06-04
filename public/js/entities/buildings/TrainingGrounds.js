@@ -445,17 +445,20 @@ export class TrainingGrounds extends Building {
     }
     
     renderFenceDecorations(ctx, size) {
-        // Render trees around fence using level-based rendering
-        this.fenceDecorations.trees.forEach(tree => {
+        // Render trees around fence
+        this.fenceDecorations.trees.forEach((tree, index) => {
             const treeX = this.x + tree.x;
             const treeY = this.y + tree.y;
-            const treeSize = tree.size * 15; // Scale up the tree size (increased from 8)
-            
-            // Render tree using level-based method
-            this.renderTree(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY);
+            const treeSize = tree.size * 15;
+
+            if (ctx.level) {
+                ctx.level.renderVegetation(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY, 0);
+            } else {
+                this.renderTree(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY);
+            }
         });
         
-        // Render rocks around fence
+        // Render rocks around fence (unchanged)
         this.fenceDecorations.rocks.forEach(rock => {
             ctx.fillStyle = '#696969';
             ctx.strokeStyle = '#2F2F2F';
@@ -467,27 +470,29 @@ export class TrainingGrounds extends Building {
         });
         
         // Render bushes around fence
-        this.fenceDecorations.bushes.forEach(bush => {
+        this.fenceDecorations.bushes.forEach((bush, index) => {
             const bushX = this.x + bush.x;
             const bushY = this.y + bush.y;
             const scale = bush.size;
-            
-            ctx.fillStyle = '#1f6f1f';
-            ctx.beginPath();
-            ctx.arc(bushX, bushY, 2.5 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#28a028';
-            ctx.beginPath();
-            ctx.arc(bushX - 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(bushX + 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
-            ctx.fill();
+
+            if (ctx.level) {
+                ctx.level.renderVegetation(ctx, bushX, bushY, scale * 15, 0, 0, index + 10);
+            } else {
+                ctx.fillStyle = '#1f6f1f';
+                ctx.beginPath();
+                ctx.arc(bushX, bushY, 2.5 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#28a028';
+                ctx.beginPath();
+                ctx.arc(bushX - 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(bushX + 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
         });
         
-        // Render barrels around fence
+        // Render barrels around fence (unchanged)
         this.fenceDecorations.barrels.forEach(barrel => {
             const barrelX = this.x + barrel.x;
             const barrelY = this.y + barrel.y;

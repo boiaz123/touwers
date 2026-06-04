@@ -554,23 +554,29 @@ export class GoldMine extends Building {
         this.renderDebris(ctx);
         
         // Bushes - always render (lightweight)
-        this.bushes.forEach(bush => {
-            ctx.save();
-            ctx.translate(this.x + bush.x, this.y + bush.y);
-            
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.beginPath();
-            ctx.ellipse(1, 1, bush.radius * 0.8, bush.radius * 0.2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = bush.color;
-            bush.segmentPositions.forEach(segment => {
+        this.bushes.forEach((bush, index) => {
+            if (ctx.level) {
+                // Campaign-aware small vegetation
+                ctx.level.renderVegetation(ctx, this.x + bush.x, this.y + bush.y, bush.radius * 2, 0, 0, index + 10);
+            } else {
+                // Fallback: forest bushes
+                ctx.save();
+                ctx.translate(this.x + bush.x, this.y + bush.y);
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.beginPath();
-                ctx.arc(segment.x, segment.y, segment.radius, 0, Math.PI * 2);
+                ctx.ellipse(1, 1, bush.radius * 0.8, bush.radius * 0.2, 0, 0, Math.PI * 2);
                 ctx.fill();
-            });
-            
-            ctx.restore();
+
+                ctx.fillStyle = bush.color;
+                bush.segmentPositions.forEach(segment => {
+                    ctx.beginPath();
+                    ctx.arc(segment.x, segment.y, segment.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+            }
         });
         
         // Cave entrance
@@ -581,25 +587,22 @@ export class GoldMine extends Building {
     
     renderTrees(ctx) {
         this.trees.forEach((tree, index) => {
-            ctx.save();
-            ctx.translate(this.x + tree.x, this.y + tree.y);
-            
-            // Use different tree types like LevelBase does
-            const treeType = (index + Math.floor(tree.x + tree.y)) % 4;
-            switch(treeType) {
-                case 0:
-                    this.renderTreeType1(ctx, tree);
-                    break;
-                case 1:
-                    this.renderTreeType2(ctx, tree);
-                    break;
-                case 2:
-                    this.renderTreeType3(ctx, tree);
-                    break;
-                default:
-                    this.renderTreeType4(ctx, tree);
+            if (ctx.level) {
+                // Campaign-aware vegetation using absolute coordinates
+                ctx.level.renderVegetation(ctx, this.x + tree.x, this.y + tree.y, tree.crownRadius * 2, 0, 0, index);
+            } else {
+                // Fallback: forest trees (uses translate-based rendering)
+                ctx.save();
+                ctx.translate(this.x + tree.x, this.y + tree.y);
+                const treeType = (index + Math.floor(tree.x + tree.y)) % 4;
+                switch(treeType) {
+                    case 0: this.renderTreeType1(ctx, tree); break;
+                    case 1: this.renderTreeType2(ctx, tree); break;
+                    case 2: this.renderTreeType3(ctx, tree); break;
+                    default: this.renderTreeType4(ctx, tree);
+                }
+                ctx.restore();
             }
-            ctx.restore();
         });
     }
     

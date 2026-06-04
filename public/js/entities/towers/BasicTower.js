@@ -487,109 +487,125 @@ export class BasicTower extends Tower {
     
     drawEnvironment(ctx, gridSize) {
         // Trees at the 4 corners of the 2x2 grid, scaled proportionally to gridSize
-        const trees = [
-            { x: -gridSize * 0.36, y: gridSize * 0.28,  size: gridSize * 0.042, type: 'pine' },
-            { x:  gridSize * 0.32, y: gridSize * 0.30,  size: gridSize * 0.040, type: 'round' },
-            { x: -gridSize * 0.37, y: -gridSize * 0.22, size: gridSize * 0.044, type: 'pine' },
-            { x:  gridSize * 0.33, y: -gridSize * 0.28, size: gridSize * 0.038, type: 'round' }
+        const treeOffsets = [
+            { x: -gridSize * 0.26, y: gridSize * 0.22,  seed: 0 },
+            { x:  gridSize * 0.24, y: gridSize * 0.24,  seed: 1 },
+            { x: -gridSize * 0.27, y: -gridSize * 0.16, seed: 1 },
+            { x:  gridSize * 0.25, y: -gridSize * 0.20, seed: 3 }
         ];
+        const vegSize = gridSize * 0.65;
         
-        trees.forEach(tree => {
-            const treeX = this.x + tree.x;
-            const treeY = this.y + tree.y;
-            const scale = tree.size;
-            
-            // Drop shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-            ctx.save();
-            ctx.translate(treeX + 2, treeY + 2);
-            ctx.scale(1, 0.45);
-            ctx.beginPath();
-            ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            
-            if (tree.type === 'pine') {
-                // Conifer – same colour palette as LevelBase renderTreeType1/4
-                ctx.fillStyle = '#5D4037';
-                ctx.fillRect(treeX - 1.1 * scale, treeY, 2.2 * scale, -7 * scale);
-                ctx.fillStyle = '#3E2723'; // trunk shadow side
-                ctx.fillRect(treeX, treeY, 1.1 * scale, -7 * scale);
-                
-                const piLayers = [
-                    { dy: -14 * scale, hw: 7.0 * scale, color: '#0D3817' },
-                    { dy: -10 * scale, hw: 5.5 * scale, color: '#1B5E20' },
-                    { dy: -6 * scale,  hw: 4.0 * scale, color: '#2E7D32' }
-                ];
-                piLayers.forEach(l => {
-                    ctx.fillStyle = l.color;
+        if (ctx.level) {
+            // Campaign-aware vegetation: delegate to level's renderVegetation
+            treeOffsets.forEach((tree, i) => {
+                ctx.level.renderVegetation(ctx, this.x + tree.x, this.y + tree.y, vegSize, 0, 0, tree.seed);
+            });
+
+            // Small secondary vegetation in place of bushes
+            const bushOffsets = [
+                { x: -gridSize * 0.14, y: gridSize * 0.16 },
+                { x:  gridSize * 0.12, y: -gridSize * 0.10 },
+                { x: -gridSize * 0.18, y: -gridSize * 0.18 }
+            ];
+            const bushVegSize = gridSize * 0.28;
+            bushOffsets.forEach((bush, i) => {
+                ctx.level.renderVegetation(ctx, this.x + bush.x, this.y + bush.y, bushVegSize, 0, 0, i + 4);
+            });
+        } else {
+            // Fallback: forest-only rendering
+            const trees = [
+                { x: -gridSize * 0.36, y: gridSize * 0.28,  size: gridSize * 0.042, type: 'pine' },
+                { x:  gridSize * 0.32, y: gridSize * 0.30,  size: gridSize * 0.040, type: 'round' },
+                { x: -gridSize * 0.37, y: -gridSize * 0.22, size: gridSize * 0.044, type: 'pine' },
+                { x:  gridSize * 0.33, y: -gridSize * 0.28, size: gridSize * 0.038, type: 'round' }
+            ];
+
+            trees.forEach(tree => {
+                const treeX = this.x + tree.x;
+                const treeY = this.y + tree.y;
+                const scale = tree.size;
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+                ctx.save();
+                ctx.translate(treeX + 2, treeY + 2);
+                ctx.scale(1, 0.45);
+                ctx.beginPath();
+                ctx.arc(0, 0, 6 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (tree.type === 'pine') {
+                    ctx.fillStyle = '#5D4037';
+                    ctx.fillRect(treeX - 1.1 * scale, treeY, 2.2 * scale, -7 * scale);
+                    ctx.fillStyle = '#3E2723';
+                    ctx.fillRect(treeX, treeY, 1.1 * scale, -7 * scale);
+                    const piLayers = [
+                        { dy: -14 * scale, hw: 7.0 * scale, color: '#0D3817' },
+                        { dy: -10 * scale, hw: 5.5 * scale, color: '#1B5E20' },
+                        { dy: -6 * scale,  hw: 4.0 * scale, color: '#2E7D32' }
+                    ];
+                    piLayers.forEach(l => {
+                        ctx.fillStyle = l.color;
+                        ctx.beginPath();
+                        ctx.moveTo(treeX,        treeY + l.dy);
+                        ctx.lineTo(treeX - l.hw, treeY + l.dy + l.hw * 1.3);
+                        ctx.lineTo(treeX + l.hw, treeY + l.dy + l.hw * 1.3);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.strokeStyle = '#0b2b0b';
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    });
+                } else {
+                    ctx.fillStyle = '#6B4423';
+                    const tw = scale * 1.8, th = scale * 4;
+                    ctx.fillRect(treeX - tw * 0.5, treeY, tw, -th);
+                    ctx.fillStyle = '#8B5A3C';
+                    ctx.fillRect(treeX, treeY, tw * 0.5, -th);
+                    ctx.fillStyle = '#1B5E20';
                     ctx.beginPath();
-                    ctx.moveTo(treeX,        treeY + l.dy);
-                    ctx.lineTo(treeX - l.hw, treeY + l.dy + l.hw * 1.3);
-                    ctx.lineTo(treeX + l.hw, treeY + l.dy + l.hw * 1.3);
-                    ctx.closePath();
+                    ctx.arc(treeX, treeY - th - scale * 0.5, scale * 3.5, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = '#0b2b0b';
-                    ctx.lineWidth = 0.8;
-                    ctx.stroke();
-                });
-            } else {
-                // Round canopy – same colour palette as LevelBase renderTreeType2
-                ctx.fillStyle = '#6B4423';
-                const tw = scale * 1.8, th = scale * 4;
-                ctx.fillRect(treeX - tw * 0.5, treeY, tw, -th);
-                ctx.fillStyle = '#8B5A3C';
-                ctx.fillRect(treeX, treeY, tw * 0.5, -th);
-                
-                ctx.fillStyle = '#1B5E20';
+                    ctx.fillStyle = '#2E7D32';
+                    ctx.beginPath();
+                    ctx.arc(treeX, treeY - th - scale * 2.2, scale * 3.0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#43A047';
+                    ctx.beginPath();
+                    ctx.arc(treeX, treeY - th - scale * 3.6, scale * 1.8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            const bushes = [
+                { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
+                { x:  gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
+                { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
+            ];
+            bushes.forEach(bush => {
+                const bushX = this.x + bush.x;
+                const bushY = this.y + bush.y;
+                const scale = bush.size;
+                ctx.fillStyle = '#1f6f1f';
                 ctx.beginPath();
-                ctx.arc(treeX, treeY - th - scale * 0.5, scale * 3.5, 0, Math.PI * 2);
+                ctx.arc(bushX, bushY, 3 * scale, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#2E7D32';
+                ctx.fillStyle = '#28a028';
                 ctx.beginPath();
-                ctx.arc(treeX, treeY - th - scale * 2.2, scale * 3.0, 0, Math.PI * 2);
+                ctx.arc(bushX - scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#43A047';
                 ctx.beginPath();
-                ctx.arc(treeX, treeY - th - scale * 3.6, scale * 1.8, 0, Math.PI * 2);
+                ctx.arc(bushX + scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
                 ctx.fill();
-            }
-        });
-	    
-        // Bushes (adjusted positions)
-        const bushes = [
-            { x: -gridSize * 0.22, y: gridSize * 0.22, size: 0.32 },
-            { x:  gridSize * 0.18, y: -gridSize * 0.18, size: 0.24 },
-            { x: -gridSize * 0.28, y: -gridSize * 0.32, size: 0.38 }
-        ];
+            });
+        }
         
-        bushes.forEach(bush => {
-            const bushX = this.x + bush.x;
-            const bushY = this.y + bush.y;
-            const scale = bush.size;
-
-            ctx.fillStyle = '#1f6f1f';
-            ctx.beginPath();
-            ctx.arc(bushX, bushY, 3 * scale, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#28a028';
-            ctx.beginPath();
-            ctx.arc(bushX - scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(bushX + scale, bushY - scale, 2 * scale, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Small rocks (unchanged but ensure they fit)
+        // Small rocks (consistent across all campaigns)
         const rocks = [
             { x: -gridSize * 0.3, y: gridSize * 0.28, size: 0.22 },
             { x: gridSize * 0.25, y: gridSize * 0.18, size: 0.15 },
             { x: gridSize * 0.28, y: -gridSize * 0.24, size: 0.25 }
         ];
-        
         rocks.forEach(rock => {
             const rockX = this.x + rock.x;
             const rockY = this.y + rock.y;
@@ -603,24 +619,26 @@ export class BasicTower extends Tower {
             ctx.stroke();
         });
         
-        // Small grass patches for variety (keeps within grid)
-        const grasses = [
-            { x: -gridSize * 0.12, y: gridSize * 0.18 },
-            { x: gridSize * 0.08, y: -gridSize * 0.12 }
-        ];
-        ctx.strokeStyle = '#2e8b2e';
-        ctx.lineWidth = 1;
-        grasses.forEach(g => {
-            const gx = this.x + g.x;
-            const gy = this.y + g.y;
-            for (let i = 0; i < 4; i++) {
-                const angle = -Math.PI/2 + (i-1.5)*0.2;
-                ctx.beginPath();
-                ctx.moveTo(gx, gy);
-                ctx.lineTo(gx + Math.cos(angle)*6, gy + Math.sin(angle)*6);
-                ctx.stroke();
-            }
-        });
+        // Small grass patches for variety (forest only — skip in other campaigns)
+        if (!ctx.level || ctx.level.getCampaign() === 'forest') {
+            const grasses = [
+                { x: -gridSize * 0.12, y: gridSize * 0.18 },
+                { x: gridSize * 0.08, y: -gridSize * 0.12 }
+            ];
+            ctx.strokeStyle = '#2e8b2e';
+            ctx.lineWidth = 1;
+            grasses.forEach(g => {
+                const gx = this.x + g.x;
+                const gy = this.y + g.y;
+                for (let i = 0; i < 4; i++) {
+                    const angle = -Math.PI/2 + (i-1.5)*0.2;
+                    ctx.beginPath();
+                    ctx.moveTo(gx, gy);
+                    ctx.lineTo(gx + Math.cos(angle)*6, gy + Math.sin(angle)*6);
+                    ctx.stroke();
+                }
+            });
+        }
     }
     
     static getInfo() {

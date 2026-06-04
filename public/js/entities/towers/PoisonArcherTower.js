@@ -288,85 +288,78 @@ export class PoisonArcherTower extends Tower {
             
             const rustleAmount = Math.sin(this.animationTime * 1.5 + element.rustleOffset) * 0.02;
             ctx.rotate(rustleAmount);
-            
-            // Bush shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.arc(2, 2, element.size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Trunk
-            ctx.strokeStyle = '#8B4513';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, element.size * 0.7);
-            ctx.lineTo(0, -element.size * 0.3);
-            ctx.stroke();
-            
-            // Branches with cached data
-            for (let bIdx = 0; bIdx < element.branches.length; bIdx++) {
-                const branch = element.branches[bIdx];
-                const branchX = Math.cos(branch.angle) * branch.length;
-                const branchY = Math.sin(branch.angle) * branch.length;
-                
+
+            if (ctx.level) {
+                // Campaign-aware vegetation at local origin (already translated)
+                ctx.level.renderVegetation(ctx, 0, 0, element.size * 2, 0, 0, eIdx);
+            } else {
+                // Fallback: forest organic bush rendering
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
                 ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(branchX, branchY);
-                ctx.stroke();
-                
-                // Sub-branches
-                ctx.lineWidth = 1;
-                for (let sIdx = 0; sIdx < branch.subBranches.length; sIdx++) {
-                    const subBranch = branch.subBranches[sIdx];
-                    const subX = branchX + Math.cos(subBranch.angle) * subBranch.length;
-                    const subY = branchY + Math.sin(subBranch.angle) * subBranch.length;
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(branchX, branchY);
-                    ctx.lineTo(subX, subY);
-                    ctx.stroke();
-                }
-                ctx.lineWidth = 2;
-            }
-            
-            // Leaf clusters
-            for (let cIdx = 0; cIdx < element.leafClusters.length; cIdx++) {
-                const cluster = element.leafClusters[cIdx];
-                const leafX = Math.cos(cluster.angle) * cluster.distance;
-                const leafY = Math.sin(cluster.angle) * cluster.distance;
-                
-                ctx.fillStyle = cluster.color;
-                ctx.beginPath();
-                ctx.arc(leafX, leafY, element.size * 0.2, 0, Math.PI * 2);
+                ctx.arc(2, 2, element.size, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // Individual leaves
-                for (let k = 0; k < 5; k++) {
-                    const leafAngle = (k / 5) * Math.PI * 2;
-                    const leafDist = element.size * 0.15;
-                    const lx = leafX + Math.cos(leafAngle) * leafDist;
-                    const ly = leafY + Math.sin(leafAngle) * leafDist;
-                    
-                    ctx.fillStyle = '#2F5F2F';
+
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, element.size * 0.7);
+                ctx.lineTo(0, -element.size * 0.3);
+                ctx.stroke();
+
+                for (let bIdx = 0; bIdx < element.branches.length; bIdx++) {
+                    const branch = element.branches[bIdx];
+                    const branchX = Math.cos(branch.angle) * branch.length;
+                    const branchY = Math.sin(branch.angle) * branch.length;
                     ctx.beginPath();
-                    ctx.ellipse(lx, ly, 3, 6, leafAngle, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(branchX, branchY);
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                    for (let sIdx = 0; sIdx < branch.subBranches.length; sIdx++) {
+                        const subBranch = branch.subBranches[sIdx];
+                        const subX = branchX + Math.cos(subBranch.angle) * subBranch.length;
+                        const subY = branchY + Math.sin(subBranch.angle) * subBranch.length;
+                        ctx.beginPath();
+                        ctx.moveTo(branchX, branchY);
+                        ctx.lineTo(subX, subY);
+                        ctx.stroke();
+                    }
+                    ctx.lineWidth = 2;
                 }
+
+                for (let cIdx = 0; cIdx < element.leafClusters.length; cIdx++) {
+                    const cluster = element.leafClusters[cIdx];
+                    const leafX = Math.cos(cluster.angle) * cluster.distance;
+                    const leafY = Math.sin(cluster.angle) * cluster.distance;
+                    ctx.fillStyle = cluster.color;
+                    ctx.beginPath();
+                    ctx.arc(leafX, leafY, element.size * 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                    for (let k = 0; k < 5; k++) {
+                        const leafAngle = (k / 5) * Math.PI * 2;
+                        const leafDist = element.size * 0.15;
+                        const lx = leafX + Math.cos(leafAngle) * leafDist;
+                        const ly = leafY + Math.sin(leafAngle) * leafDist;
+                        ctx.fillStyle = '#2F5F2F';
+                        ctx.beginPath();
+                        ctx.ellipse(lx, ly, 3, 6, leafAngle, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.fillStyle = '#1F4F1F';
+                ctx.beginPath();
+                for (let i = 0; i < 16; i++) {
+                    const angle = (i / 16) * Math.PI * 2;
+                    const radius = element.size * (0.6 + Math.sin(angle * 4) * 0.2);
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
             }
-            
-            // Dense foliage base
-            ctx.fillStyle = '#1F4F1F';
-            ctx.beginPath();
-            for (let i = 0; i < 16; i++) {
-                const angle = (i / 16) * Math.PI * 2;
-                const radius = element.size * (0.6 + Math.sin(angle * 4) * 0.2);
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.fill();
             
             ctx.restore();
         }

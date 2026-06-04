@@ -310,36 +310,31 @@ export class MagicAcademy extends Building {
     renderTrees(ctx, size) {
         // Scale tree positions and sizes relative to the nominal design size of 128
         const sf = size / 128;
-        // Render trees naturally - fortress will cover lower portions
         this.trees.forEach((tree, index) => {
             const treeX = this.x + tree.x * sf;
             const treeY = this.y + tree.y * sf;
             const scale = tree.size * 40 * sf;
-            
-            // Tree shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            ctx.save();
-            ctx.translate(treeX + 3, treeY + 4);
-            ctx.scale(1, 0.4);
-            ctx.beginPath();
-            ctx.arc(0, 0, scale * 0.35, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-            
-            // Use different tree types based on index for variety
-            const treeType = index % 4;
-            switch(treeType) {
-                case 0:
-                    this.renderTreeType1(ctx, treeX, treeY, scale);
-                    break;
-                case 1:
-                    this.renderTreeType2(ctx, treeX, treeY, scale);
-                    break;
-                case 2:
-                    this.renderTreeType3(ctx, treeX, treeY, scale);
-                    break;
-                default:
-                    this.renderTreeType4(ctx, treeX, treeY, scale);
+
+            if (ctx.level) {
+                // Campaign-aware vegetation
+                ctx.level.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index);
+            } else {
+                // Fallback: forest trees
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.save();
+                ctx.translate(treeX + 3, treeY + 4);
+                ctx.scale(1, 0.4);
+                ctx.beginPath();
+                ctx.arc(0, 0, scale * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                const treeType = index % 4;
+                switch(treeType) {
+                    case 0: this.renderTreeType1(ctx, treeX, treeY, scale); break;
+                    case 1: this.renderTreeType2(ctx, treeX, treeY, scale); break;
+                    case 2: this.renderTreeType3(ctx, treeX, treeY, scale); break;
+                    default: this.renderTreeType4(ctx, treeX, treeY, scale);
+                }
             }
         });
     }
@@ -454,35 +449,38 @@ export class MagicAcademy extends Building {
     
     renderBushes(ctx, size) {
         const sf = size / 128;
-        this.bushes.forEach(bush => {
-            ctx.save();
-            ctx.translate(this.x + bush.x * sf, this.y + bush.y * sf);
+        this.bushes.forEach((bush, index) => {
+            const bushX = this.x + bush.x * sf;
+            const bushY = this.y + bush.y * sf;
             const bs = bush.size * sf;
 
-            // Bush shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.ellipse(2, 2, bs, bs * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
+            if (ctx.level) {
+                // Campaign-aware small vegetation
+                ctx.level.renderVegetation(ctx, bushX, bushY, bs * 3.5, 0, 0, index + 20);
+            } else {
+                // Fallback: forest bushes
+                ctx.save();
+                ctx.translate(bushX, bushY);
 
-            // Bush base
-            ctx.fillStyle = '#228B22';
-            ctx.beginPath();
-            ctx.arc(0, 0, bs, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Bush highlights
-            ctx.fillStyle = '#32CD32';
-            for (let i = 0; i < 3; i++) {
-                const angle = (i / 3) * Math.PI * 2;
-                const highlightX = Math.cos(angle) * bs * 0.4;
-                const highlightY = Math.sin(angle) * bs * 0.4;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
                 ctx.beginPath();
-                ctx.arc(highlightX, highlightY, bs * 0.3, 0, Math.PI * 2);
+                ctx.ellipse(2, 2, bs, bs * 0.3, 0, 0, Math.PI * 2);
                 ctx.fill();
-            }
 
-            ctx.restore();
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(0, 0, bs, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#32CD32';
+                for (let i = 0; i < 3; i++) {
+                    const angle = (i / 3) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.arc(Math.cos(angle) * bs * 0.4, Math.sin(angle) * bs * 0.4, bs * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
         });
     }
     

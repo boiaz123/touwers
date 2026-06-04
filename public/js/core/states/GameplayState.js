@@ -2093,6 +2093,9 @@ export class GameplayState {
             return; // Skip rendering if not fully initialized
         }
         
+        // Expose level on ctx so towers/buildings can use campaign-appropriate vegetation
+        ctx.level = this.level;
+        
         // Render background terrain/level first
         this.level.render(ctx);
         

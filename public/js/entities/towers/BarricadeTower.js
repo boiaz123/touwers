@@ -263,18 +263,21 @@ export class BarricadeTower extends Tower {
     }
     
     renderTrees(ctx) {
-        // Render trees overlapping the tower to make it look like it's in a forest
-        // Position trees so trunk bases stay within the 2x2 grid
+        // Render vegetation overlapping the tower — uses campaign-appropriate plants
         const treePositions = [
-            { x: this.x - 20, y: this.y - 15, size: 50, seed: 0 },
+            { x: this.x - 20, y: this.y - 15, size: 50, seed: 3 },
             { x: this.x + 22, y: this.y - 18, size: 48, seed: 1 },
-            { x: this.x - 22, y: this.y + 8, size: 52, seed: 2 },
-            { x: this.x + 20, y: this.y + 10, size: 49, seed: 3 }
+            { x: this.x - 22, y: this.y + 8,  size: 52, seed: 2 },
+            { x: this.x + 20, y: this.y + 10, size: 49, seed: 0 }
         ];
         
         for (let i = 0; i < treePositions.length; i++) {
             const tree = treePositions[i];
-            this.renderTreeType(ctx, tree.x, tree.y, tree.size, tree.seed % 4);
+            if (ctx.level) {
+                ctx.level.renderVegetation(ctx, tree.x, tree.y, tree.size, 0, 0, tree.seed);
+            } else {
+                this.renderTreeType(ctx, tree.x, tree.y, tree.size, tree.seed % 4);
+            }
         }
     }
     
