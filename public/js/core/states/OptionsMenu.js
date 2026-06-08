@@ -1,5 +1,7 @@
 import { ParticleSystem } from '../ParticleSystem.js';
 import { ControlsScreen } from '../../ui/ControlsScreen.js';
+import { ResolutionSelector } from '../../ui/ResolutionSelector.js';
+import { ResolutionSettings } from '../ResolutionSettings.js';
 
 export class OptionsMenu {
     constructor(stateManager) {
@@ -11,7 +13,8 @@ export class OptionsMenu {
         this.backButtonHovered = false;
         this.particleSystem = null;
         this.controlsScreen = null;
-        
+        this.resolutionSelector = null;
+
         // Options state
         this.musicVolume = 0.7; // Will be overridden in enter() from AudioManager
         this.sfxVolume = 1.0;   // Will be overridden in enter() from AudioManager
@@ -19,8 +22,9 @@ export class OptionsMenu {
         // Button states
         this.buttons = {
             back: { hovered: false },
+            controls: { hovered: false },
+            resolution: { hovered: false },
             visitProducer: { hovered: false },
-            controls: { hovered: false }
         };
         
         // Slider states
@@ -77,32 +81,37 @@ export class OptionsMenu {
 
     exit() {
         this.removeMouseListeners();
+        if (this.resolutionSelector) {
+            this.resolutionSelector.hide();
+        }
     }
 
     // ============ GAMEPAD BUTTON NAVIGATION ============
 
     getButtonCount() {
-        return 3; // Back, Controls, Visit Producer
+        return 4; // Back, Controls, Resolution, Visit Producer
     }
 
     getFocusedButtonIndex() {
         if (this.buttons.back.hovered) return 0;
         if (this.buttons.controls.hovered) return 1;
-        if (this.buttons.visitProducer.hovered) return 2;
+        if (this.buttons.resolution.hovered) return 2;
+        if (this.buttons.visitProducer.hovered) return 3;
         return -1;
     }
 
     focusButton(index) {
-        this.buttons.back.hovered = (index === 0);
-        this.buttons.controls.hovered = (index === 1);
-        this.buttons.visitProducer.hovered = (index === 2);
+        this.buttons.back.hovered       = (index === 0);
+        this.buttons.controls.hovered   = (index === 1);
+        this.buttons.resolution.hovered = (index === 2);
+        this.buttons.visitProducer.hovered = (index === 3);
     }
 
     activateFocusedButton() {
         const idx = this.getFocusedButtonIndex();
         if (idx < 0) return;
         if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
-        const actionMap = ['back', 'controls', 'visitProducer'];
+        const actionMap = ['back', 'controls', 'resolution', 'visitProducer'];
         this._activateButton(actionMap[idx]);
     }
 
@@ -115,6 +124,8 @@ export class OptionsMenu {
                 this.controlsScreen = new ControlsScreen(this.stateManager.inputManager, this.stateManager.audioManager);
             }
             this.controlsScreen.show();
+        } else if (buttonName === 'resolution') {
+            this.openResolutionSelector();
         } else if (buttonName === 'visitProducer') {
             if (typeof window !== 'undefined' && window.__TAURI__) {
                 window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
@@ -122,6 +133,13 @@ export class OptionsMenu {
                 window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
             }
         }
+    }
+
+    openResolutionSelector() {
+        if (!this.resolutionSelector) {
+            this.resolutionSelector = new ResolutionSelector(this.stateManager.game);
+        }
+        this.resolutionSelector.show();
     }
 
     setupMouseListeners() {
@@ -210,23 +228,27 @@ export class OptionsMenu {
 
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
-        
-        // Check controls button
-        const controlsY = canvas.height / 2 + 70;
-        const controlsWidth = 280;
-        const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
+        const btnW = 280;
+
+        // Controls button
+        const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
         this.buttons.controls.hovered = x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
                                         y >= controlsPos.y && y <= controlsPos.y + controlsPos.height;
 
-        // Check producer button
-        const producerY = canvas.height / 2 + 130;
-        const producerWidth = 280;
-        const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
+        // Resolution button
+        const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
+        this.buttons.resolution.hovered = x >= resolutionPos.x && x <= resolutionPos.x + resolutionPos.width &&
+                                          y >= resolutionPos.y && y <= resolutionPos.y + resolutionPos.height;
+
+        // Producer button
+        const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
         this.buttons.visitProducer.hovered = x >= producerPos.x && x <= producerPos.x + producerPos.width &&
                                              y >= producerPos.y && y <= producerPos.y + producerPos.height;
 
-        this.stateManager.canvas.style.cursor = 
-            this.buttons.back.hovered || this.buttons.visitProducer.hovered || this.buttons.controls.hovered ? 'pointer' : 'default';
+        this.stateManager.canvas.style.cursor =
+            this.buttons.back.hovered || this.buttons.controls.hovered ||
+            this.buttons.resolution.hovered || this.buttons.visitProducer.hovered
+                ? 'pointer' : 'default';
     }
 
     handleMouseDown(x, y) {
@@ -281,21 +303,26 @@ export class OptionsMenu {
 
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
-        
-        // Check controls button
-        const controlsY = canvas.height / 2 + 70;
-        const controlsWidth = 280;
-        const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
+        const btnW = 280;
+
+        // Controls button
+        const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
         if (x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
             y >= controlsPos.y && y <= controlsPos.y + controlsPos.height) {
             this.openControlsScreen();
             return;
         }
 
-        // Check producer button
-        const producerY = canvas.height / 2 + 130;
-        const producerWidth = 280;
-        const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 45 };
+        // Resolution button
+        const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
+        if (x >= resolutionPos.x && x <= resolutionPos.x + resolutionPos.width &&
+            y >= resolutionPos.y && y <= resolutionPos.y + resolutionPos.height) {
+            this.openResolutionSelector();
+            return;
+        }
+
+        // Producer button
+        const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
             if (typeof window !== 'undefined' && window.__TAURI__) {
@@ -468,7 +495,7 @@ export class OptionsMenu {
 
             // ===== PANEL =====
             const panelW = 520;
-            const panelH = 440;
+            const panelH = 500;
             const panelX = canvas.width / 2 - panelW / 2;
             const panelY = canvas.height / 2 - panelH / 2 + 30;
 
@@ -542,24 +569,28 @@ export class OptionsMenu {
                 this.renderSlider(ctx, this.musicVolumeSlider, this.musicVolume, 'Music Volume');
                 this.renderSlider(ctx, this.sfxVolumeSlider, this.sfxVolume, 'Sound Effects');
 
-                // Divider
+                const btnW = 280;
+
+                // Controls button
+                const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
+                this.renderButton(ctx, controlsPos, 'Controls', this.buttons.controls.hovered);
+
+                // Resolution button \u2014 label shows the currently active resolution
+                const savedRes = ResolutionSettings.getSavedResolution();
+                const resLabel = 'Resolution: ' + savedRes.replace('x', '\u00d7');
+                const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
+                this.renderButton(ctx, resolutionPos, resLabel, this.buttons.resolution.hovered);
+
+                // Divider \u2014 separates navigation from the support button
                 ctx.strokeStyle = 'rgba(120, 100, 55, 0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(panelX + 30, panelY + panelH - 112);
-                ctx.lineTo(panelX + panelW - 30, panelY + panelH - 112);
+                ctx.moveTo(panelX + 30, canvas.height / 2 + 174);
+                ctx.lineTo(panelX + panelW - 30, canvas.height / 2 + 174);
                 ctx.stroke();
 
-                // Controls button
-                const controlsY = canvas.height / 2 + 70;
-                const controlsWidth = 280;
-                const controlsPos = { x: centerX - controlsWidth / 2, y: controlsY, width: controlsWidth, height: 42 };
-                this.renderButton(ctx, controlsPos, 'Controls', this.buttons.controls.hovered);
-
                 // Producer button
-                const producerY = canvas.height / 2 + 130;
-                const producerWidth = 280;
-                const producerPos = { x: centerX - producerWidth / 2, y: producerY, width: producerWidth, height: 42 };
+                const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
                 this.renderButton(ctx, producerPos, '\u2764  Support the Developer', this.buttons.visitProducer.hovered);
             }
 

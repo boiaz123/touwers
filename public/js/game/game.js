@@ -214,6 +214,16 @@ export class Game {
         // For fixed resolution mode, canvas size is no longer dynamic
         // This method is kept for compatibility but does not resize on window resize
     }
+
+    /**
+     * Apply a new internal render resolution.
+     * The resolution key must already be saved via ResolutionSettings.saveResolution()
+     * before this is called (ResolutionSelector does this).  A page reload is the
+     * cleanest way to reinitialise all game state at the new canvas dimensions.
+     */
+    applyResolution(width, height) {
+        location.reload();
+    }
     
     setupEventListeners() {
         try {

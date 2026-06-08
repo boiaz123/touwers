@@ -1,26 +1,34 @@
 /**
- * ResolutionSettings - Fixed resolution options for the game
- * Manages fullscreen and resolution selection
+ * ResolutionSettings - Resolution options for the game
+ * Manages resolution selection and fullscreen
  */
 export class ResolutionSettings {
-    // Fixed resolution - game always runs at 1920x1080
+    // Available render resolutions - canvas internal pixel count
+    static RESOLUTIONS = {
+        '1280x720':  { label: '1280×720  (HD 720p)',       width: 1280, height: 720  },
+        '1600x900':  { label: '1600×900  (HD+ 900p)',      width: 1600, height: 900  },
+        '1920x1080': { label: '1920×1080 (Full HD 1080p)', width: 1920, height: 1080 },
+        '2560x1440': { label: '2560×1440 (QHD 1440p)',     width: 2560, height: 1440 },
+    };
+
+    // Fallback if a stored key is no longer valid
     static FIXED_RESOLUTION = { width: 1920, height: 1080 };
     static DEFAULT_RESOLUTION = '1920x1080';
 
     /**
-     * Get saved resolution preference
+     * Get saved resolution preference key
      */
     static getSavedResolution() {
         try {
             const saved = localStorage.getItem('touwers_resolution');
-            return saved || this.DEFAULT_RESOLUTION;
+            return (saved && this.RESOLUTIONS[saved]) ? saved : this.DEFAULT_RESOLUTION;
         } catch (e) {
             return this.DEFAULT_RESOLUTION;
         }
     }
 
     /**
-     * Save resolution preference
+     * Save resolution preference key
      */
     static saveResolution(resolution) {
         try {
@@ -31,10 +39,10 @@ export class ResolutionSettings {
     }
 
     /**
-     * Get resolution dimensions - always returns fixed 1920x1080
+     * Get resolution dimensions for a given key
      */
     static getResolution(key) {
-        return this.FIXED_RESOLUTION;
+        return this.RESOLUTIONS[key] || this.FIXED_RESOLUTION;
     }
 
     /**

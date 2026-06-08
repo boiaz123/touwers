@@ -144,7 +144,7 @@ export class ResolutionSelector {
 
         // Info text
         const info = document.createElement('p');
-        info.textContent = 'Game will restart with new resolution';
+        info.textContent = 'The game will restart to apply the new resolution.';
         info.style.cssText = `
             color: #c9a876;
             font-size: 14px;

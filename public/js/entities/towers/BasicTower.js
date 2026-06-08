@@ -180,17 +180,20 @@ export class BasicTower extends Tower {
         
         // Draw back environment (trees/bushes behind tower)
         this.drawEnvironmentBack(ctx, gridSize);
-        
+
+        // Shift tower body down so its base sits lower between the surrounding trees
+        const towerDrawY = this.y + gridSize * 0.12;
+
         // Compact shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.save();
-        ctx.translate(this.x + 3, this.y + 3);
+        ctx.translate(this.x + 3, towerDrawY + 3);
         ctx.scale(1, 0.4);
         ctx.fillRect(-baseSize/2, -baseSize/2, baseSize, baseSize);
         ctx.restore();
-        
+
         // Stone base - tight and aligned
-        const baseY = this.y;
+        const baseY = towerDrawY;
         
         // Stone base
         ctx.fillStyle = '#A9A9A9';
