@@ -86,19 +86,19 @@ export class ResolutionSelector {
                 text-shadow: ${key === currentResolution ? 'none' : '1px 1px 2px rgba(0,0,0,0.5)'};
             `;
 
-            button.onmouseover = (e) => {
+            button.addEventListener('mouseover', (e) => {
                 if (key !== currentResolution) {
                     e.target.style.background = '#5a4a3f';
                 }
-            };
+            });
 
-            button.onmouseout = (e) => {
+            button.addEventListener('mouseout', (e) => {
                 if (key !== currentResolution) {
                     e.target.style.background = '#3a2a1f';
                 }
-            };
+            });
 
-            button.onclick = () => this.selectResolution(key);
+            button.addEventListener('click', () => this.selectResolution(key));
             buttonContainer.appendChild(button);
         });
 
@@ -135,7 +135,7 @@ export class ResolutionSelector {
                 user-select: none;
             `;
 
-            checkbox.onchange = (e) => this.toggleFullscreen(e.target.checked);
+            checkbox.addEventListener('change', (e) => this.toggleFullscreen(e.target.checked));
 
             fullscreenContainer.appendChild(checkbox);
             fullscreenContainer.appendChild(label);
@@ -167,15 +167,15 @@ export class ResolutionSelector {
             transition: all 0.3s ease;
         `;
 
-        closeBtn.onmouseover = (e) => {
+        closeBtn.addEventListener('mouseover', (e) => {
             e.target.style.background = '#5a4a3f';
-        };
+        });
 
-        closeBtn.onmouseout = (e) => {
+        closeBtn.addEventListener('mouseout', (e) => {
             e.target.style.background = '#3a2a1f';
-        };
+        });
 
-        closeBtn.onclick = () => this.hide();
+        closeBtn.addEventListener('click', () => this.hide());
         dialog.appendChild(closeBtn);
 
         this.container.appendChild(dialog);
@@ -216,9 +216,7 @@ export class ResolutionSelector {
     async toggleFullscreen(enable) {
         // Use HTML5 fullscreen API (Tauri runs in fullscreen by default)
         if (enable) {
-            const success = await ResolutionSettings.requestFullscreen(document.documentElement);
-            if (success) {
-            }
+            await ResolutionSettings.requestFullscreen(document.documentElement);
         } else {
             await ResolutionSettings.exitFullscreen();
         }

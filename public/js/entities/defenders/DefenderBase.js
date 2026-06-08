@@ -1,4 +1,5 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
+import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
 
 /**
  * DefenderBase - Base class for all defenders
@@ -38,7 +39,7 @@ export class DefenderBase {
         
         // Colors and styling
         this.tunicColor = this.getTunicColor();
-        this.armorColor = this.getArmorColor();
+        this.armourColor = this.getArmorColor();
         
         // Hit effects
         this.hitSplatters = [];
@@ -51,17 +52,17 @@ export class DefenderBase {
             case 1:
                 this.maxHealth = 70;
                 this.health = 70;
-                this.armor = 3;
+                this.armour = 3;
                 break;
             case 2:
                 this.maxHealth = 100;
                 this.health = 100;
-                this.armor = 6;
+                this.armour = 6;
                 break;
             case 3:
                 this.maxHealth = 140;
                 this.health = 140;
-                this.armor = 9;
+                this.armour = 9;
                 break;
         }
     }
@@ -121,7 +122,7 @@ export class DefenderBase {
     }
 
     takeDamage(amount) {
-        const armorReduction = this.armor * 0.4;
+        const armorReduction = this.armour * 0.4;
         const actualDamage = Math.max(1, amount - armorReduction);
         
         this.health -= actualDamage;
@@ -137,21 +138,8 @@ export class DefenderBase {
         return this.health <= 0;
     }
 
-    // Shared utility color methods
-    _adjustColor(color, factor, lighten) {
-        if (!color.startsWith('#')) return color;
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        if (lighten) {
-            return `rgb(${Math.min(255, Math.floor(r + (255 - r) * factor))}, ${Math.min(255, Math.floor(g + (255 - g) * factor))}, ${Math.min(255, Math.floor(b + (255 - b) * factor))})`;
-        }
-        return `rgb(${Math.max(0, Math.floor(r * (1 - factor)))}, ${Math.max(0, Math.floor(g * (1 - factor)))}, ${Math.max(0, Math.floor(b * (1 - factor)))})`;
-    }
-
-    darkenColor(color, factor) { return this._adjustColor(color, factor, false); }
-    lightenColor(color, factor) { return this._adjustColor(color, factor, true); }
+    darkenColor(color, factor) { return darkenColor(color, factor); }
+    lightenColor(color, factor) { return lightenColor(color, factor); }
 
     getAccentColor() {
         switch (this.level) {
@@ -226,7 +214,7 @@ export class DefenderBase {
     }
 
     renderLegs(ctx, baseSize) {
-        const gc = this.armorColor;
+        const gc = this.armourColor;
         const kc = this.lightenColor(gc, 0.22);
 
         for (const side of [-1, 1]) {
@@ -292,9 +280,9 @@ export class DefenderBase {
         ctx.strokeRect( baseSize * 0.58, -baseSize * 0.88, baseSize * 0.14, baseSize * 1.27);
 
         const ng = ctx.createLinearGradient(-baseSize * 0.22, 0, baseSize * 0.22, 0);
-        ng.addColorStop(0,   this.darkenColor(this.armorColor, 0.2));
-        ng.addColorStop(0.5, this.lightenColor(this.armorColor, 0.15));
-        ng.addColorStop(1,   this.darkenColor(this.armorColor, 0.2));
+        ng.addColorStop(0,   this.darkenColor(this.armourColor, 0.2));
+        ng.addColorStop(0.5, this.lightenColor(this.armourColor, 0.15));
+        ng.addColorStop(1,   this.darkenColor(this.armourColor, 0.2));
         ctx.fillStyle = ng;
         ctx.fillRect(-baseSize * 0.2, -baseSize * 0.97, baseSize * 0.4, baseSize * 0.18);
         ctx.strokeStyle = '#090909';
@@ -305,7 +293,7 @@ export class DefenderBase {
         for (let b = 0; b < bands; b++) {
             const bandY = baseSize * 0.35 + b * baseSize * 0.1;
             const bandW = baseSize * (1.0 - b * 0.05);
-            ctx.fillStyle = this.darkenColor(this.armorColor, 0.06 * b);
+            ctx.fillStyle = this.darkenColor(this.armourColor, 0.06 * b);
             ctx.fillRect(-bandW / 2, bandY, bandW, baseSize * 0.09);
             ctx.strokeStyle = '#090909';
             ctx.lineWidth = 0.7;
@@ -320,18 +308,18 @@ export class DefenderBase {
         const accentCol = this.getAccentColor();
 
         const pg = ctx.createLinearGradient(px, py, px + pw, py + ph);
-        pg.addColorStop(0,    this.lightenColor(this.armorColor, 0.25));
-        pg.addColorStop(0.25, this.lightenColor(this.armorColor, 0.15));
-        pg.addColorStop(0.5,  this.armorColor);
-        pg.addColorStop(0.75, this.darkenColor(this.armorColor, 0.12));
-        pg.addColorStop(1,    this.darkenColor(this.armorColor, 0.28));
+        pg.addColorStop(0,    this.lightenColor(this.armourColor, 0.25));
+        pg.addColorStop(0.25, this.lightenColor(this.armourColor, 0.15));
+        pg.addColorStop(0.5,  this.armourColor);
+        pg.addColorStop(0.75, this.darkenColor(this.armourColor, 0.12));
+        pg.addColorStop(1,    this.darkenColor(this.armourColor, 0.28));
         ctx.fillStyle = pg;
         ctx.fillRect(px, py, pw, ph * 0.9);
         ctx.strokeStyle = '#0a0a0a';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(px, py, pw, ph * 0.9);
 
-        ctx.strokeStyle = this.darkenColor(this.armorColor, 0.35);
+        ctx.strokeStyle = this.darkenColor(this.armourColor, 0.35);
         ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(0, py + 2);
@@ -375,7 +363,7 @@ export class DefenderBase {
     }
 
     renderPauldrons(ctx, baseSize) {
-        const pc = this.lightenColor(this.armorColor, 0.18);
+        const pc = this.lightenColor(this.armourColor, 0.18);
         const ps = baseSize * (0.3 + (this.level - 1) * 0.08);
         const accentCol = this.getAccentColor();
 
@@ -418,7 +406,7 @@ export class DefenderBase {
     renderHead(ctx, baseSize) {
         const hx = 0, hy = -baseSize * 1.38;
         const hs = baseSize * 0.7;
-        const ac = this.armorColor;
+        const ac = this.armourColor;
         const accentCol = this.getAccentColor();
 
         ctx.fillStyle = this.darkenColor(ac, 0.1);
@@ -571,9 +559,9 @@ export class DefenderBase {
         const wy = ey + Math.sin(wa) * baseSize * 0.38;
 
         const ag = ctx.createLinearGradient(sx - baseSize * 0.18, 0, sx + baseSize * 0.18, 0);
-        ag.addColorStop(0,    this.darkenColor(this.armorColor, 0.3));
-        ag.addColorStop(0.38, this.lightenColor(this.armorColor, 0.16));
-        ag.addColorStop(1,    this.darkenColor(this.armorColor, 0.22));
+        ag.addColorStop(0,    this.darkenColor(this.armourColor, 0.3));
+        ag.addColorStop(0.38, this.lightenColor(this.armourColor, 0.16));
+        ag.addColorStop(1,    this.darkenColor(this.armourColor, 0.22));
         ctx.strokeStyle = ag;
         ctx.lineWidth = baseSize * 0.36;
         ctx.lineCap = 'round';
@@ -582,7 +570,7 @@ export class DefenderBase {
         ctx.lineTo(ex, ey);
         ctx.stroke();
 
-        ctx.fillStyle = this.lightenColor(this.armorColor, 0.2);
+        ctx.fillStyle = this.lightenColor(this.armourColor, 0.2);
         ctx.beginPath();
         ctx.arc(ex, ey, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
@@ -590,7 +578,7 @@ export class DefenderBase {
         ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        ctx.strokeStyle = this.armorColor;
+        ctx.strokeStyle = this.armourColor;
         ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -598,7 +586,7 @@ export class DefenderBase {
         ctx.lineTo(wx, wy);
         ctx.stroke();
 
-        ctx.fillStyle = this.darkenColor(this.armorColor, 0.08);
+        ctx.fillStyle = this.darkenColor(this.armourColor, 0.08);
         ctx.beginPath();
         ctx.arc(wx, wy, baseSize * 0.17, 0, Math.PI * 2);
         ctx.fill();
@@ -620,12 +608,12 @@ export class DefenderBase {
             ctx.beginPath();
             ctx.arc(sx, sy, r, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = this.armorColor;
+            ctx.strokeStyle = this.armourColor;
             ctx.lineWidth = baseSize * 0.1;
             ctx.beginPath();
             ctx.arc(sx, sy, r, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.fillStyle = this.lightenColor(this.armorColor, 0.15);
+            ctx.fillStyle = this.lightenColor(this.armourColor, 0.15);
             ctx.beginPath();
             ctx.arc(sx, sy, r * 0.32, 0, Math.PI * 2);
             ctx.fill();
@@ -727,9 +715,9 @@ export class DefenderBase {
         }
 
         const ag = ctx.createLinearGradient(sx - baseSize * 0.18, 0, sx + baseSize * 0.18, 0);
-        ag.addColorStop(0,    this.darkenColor(this.armorColor, 0.3));
-        ag.addColorStop(0.38, this.lightenColor(this.armorColor, 0.16));
-        ag.addColorStop(1,    this.darkenColor(this.armorColor, 0.22));
+        ag.addColorStop(0,    this.darkenColor(this.armourColor, 0.3));
+        ag.addColorStop(0.38, this.lightenColor(this.armourColor, 0.16));
+        ag.addColorStop(1,    this.darkenColor(this.armourColor, 0.22));
         ctx.strokeStyle = ag;
         ctx.lineWidth = baseSize * 0.36;
         ctx.lineCap = 'round';
@@ -738,7 +726,7 @@ export class DefenderBase {
         ctx.lineTo(ex, ey);
         ctx.stroke();
 
-        ctx.fillStyle = this.lightenColor(this.armorColor, 0.2);
+        ctx.fillStyle = this.lightenColor(this.armourColor, 0.2);
         ctx.beginPath();
         ctx.arc(ex, ey, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
@@ -746,7 +734,7 @@ export class DefenderBase {
         ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        ctx.strokeStyle = this.armorColor;
+        ctx.strokeStyle = this.armourColor;
         ctx.lineWidth = baseSize * 0.28;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -754,7 +742,7 @@ export class DefenderBase {
         ctx.lineTo(wx, wy);
         ctx.stroke();
 
-        ctx.fillStyle = this.darkenColor(this.armorColor, 0.08);
+        ctx.fillStyle = this.darkenColor(this.armourColor, 0.08);
         ctx.beginPath();
         ctx.arc(wx, wy, baseSize * 0.19, 0, Math.PI * 2);
         ctx.fill();

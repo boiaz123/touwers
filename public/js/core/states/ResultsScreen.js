@@ -215,7 +215,6 @@ export class ResultsScreen {
      */
     transferLootToInventory() {
         if (!this.acquiredLoot || this.acquiredLoot.length === 0) {
-            // console.log('No loot to transfer');
             return;
         }
 
@@ -237,7 +236,6 @@ export class ResultsScreen {
                 });
             }
         }
-        // console.log('Transferred loot to inventory:', this.stateManager.playerInventory);
         // NOTE: Level gold is NOT transferred to settlement. Level gold is ephemeral.
         // Only marketplace gold (from selling items) persists between levels.
     }

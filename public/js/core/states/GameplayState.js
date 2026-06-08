@@ -431,9 +431,8 @@ export class GameplayState {
             // Unlock the magic tower so the button appears (just like forge and training)
             this.towerManager.unlockSystem.unlockedTowers.add('magic');
             // NOTE: Do NOT consume here - all consumables are consumed at level end via commitUsedConsumables()
-        } else {
         }
-        
+
         // Apply loot multiplier effects to enemies
         // Rabbit's Foot: doubles normal loot drop chance for this level
         if (marketplace.getConsumableCount('rabbits-foot') > 0) {
@@ -583,37 +582,7 @@ export class GameplayState {
             
         } else {
             console.error('GameplayState: Academy NOT FOUND in building manager!');
-            //     buildingManager.buildings.map(b => b.constructor.name)
-            // );
         }
-    }
-
-    /**
-     * Get the audio track name for a specific level
-     * Maps level IDs to their corresponding music tracks
-     * Each campaign type has access only to its dedicated music folder
-     */
-    getAudioTrackForLevel(levelId) {
-        // Define available music tracks for each campaign
-        // Campaign IDs: campaign-1 (Forest), campaign-2 (Mountain), campaign-3 (Desert), campaign-4 (Space), campaign-5 (Level Testing)
-        const campaignMusicMap = {
-            'campaign-1': ['campaign-1-battle-1', 'campaign-1-battle-2', 'campaign-1-battle-3'],
-            'campaign-2': ['campaign-2-battle-1'],
-            'campaign-3': ['campaign-3-battle-1', 'campaign-3-battle-2'],
-            'campaign-4': ['campaign-4-battle-1', 'campaign-4-battle-2'],
-            'campaign-5': ['campaign-5-battle-1', 'campaign-5-battle-2'],
-        };
-        
-        // Extract campaign ID from level ID (e.g., 'campaign-1-level-1' -> 'campaign-1')
-        const campaignMatch = levelId.match(/^campaign-\d+/);
-        const campaignId = campaignMatch ? campaignMatch[0] : 'campaign-1';
-        
-        // Get available tracks for this campaign
-        const availableTracks = campaignMusicMap[campaignId] || campaignMusicMap['campaign-1'];
-        
-        // Select a random track from available options
-        const randomTrack = availableTracks[Math.floor(Math.random() * availableTracks.length)];
-        return randomTrack;
     }
 
     exit(levelCompleted = false) {
@@ -646,7 +615,6 @@ export class GameplayState {
                     
                     SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
                 }
-            } else {
             }
         } else {
             console.warn('  WARNING: No marketplace system available!');

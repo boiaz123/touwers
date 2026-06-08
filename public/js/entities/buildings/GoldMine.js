@@ -1,4 +1,5 @@
 import { Building } from './Building.js';
+import { darkenColor } from '../../utils/colorUtils.js';
 
 export class GoldMine extends Building {
     constructor(x, y, gridX, gridY) {
@@ -1120,18 +1121,7 @@ export class GoldMine extends Building {
         return 30; // This will be multiplied by forge bonus in BuildingManager
     }
     
-    darkenColor(color, factor) {
-        const hex = color.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        
-        const newR = Math.floor(r * (1 - factor));
-        const newG = Math.floor(g * (1 - factor));
-        const newB = Math.floor(b * (1 - factor));
-        
-        return `rgb(${newR}, ${newG}, ${newB})`;
-    }
+    darkenColor(color, factor) { return darkenColor(color, factor); }
     
     applyEffect(towerManager) {
         // No passive gold generation anymore

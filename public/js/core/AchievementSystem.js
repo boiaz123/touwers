@@ -323,9 +323,6 @@ export class AchievementSystem {
             this._bannerTimer = 0;
             this._bannerPhase = 'in';
 
-            // ── PLACEHOLDER: achievement unlock sound ─────────────────────────
-            // Set a valid SFX key in SFXRegistry and uncomment the line below:
-            // if (this.audioManager) this.audioManager.playSFX('achievement-unlock');
         }
     }
 

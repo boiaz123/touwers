@@ -1,5 +1,7 @@
 import { Tower } from './Tower.js';
 
+const BASE_SLOW_EFFECT = 0.7;
+
 export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -158,7 +160,7 @@ export class CombinationTower extends Tower {
                             this.target.burnDamage = 5;
                         }
                         // Slow effect
-                        const baseSlowEffect = 0.7;
+                        const baseSlowEffect = BASE_SLOW_EFFECT;
                         const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - spell.slowBonus);
                         if (this.target.speed > 20) {
                             this.target.speed *= enhancedSlowEffect;

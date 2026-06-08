@@ -1,4 +1,5 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
+import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
 
 export class BaseEnemy {
     constructor(path, health, speed, armour, magicResistance) {
@@ -345,37 +346,8 @@ export class BaseEnemy {
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
     
-    darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
-    }
-    
-    lightenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
-            const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
-            const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
-    }
+    darkenColor(color, factor) { return darkenColor(color, factor); }
+    lightenColor(color, factor) { return lightenColor(color, factor); }
 
     /**
      * Check if this enemy should drop loot

@@ -171,9 +171,6 @@ export class LevelBase {
             return;
         }
 
-        if (this.constructor.name !== 'ForestLevel1' && this.constructor.name !== 'LevelBase') {
-        }
-        
         // Prevent infinite loops by checking if already initializing
         if (this.isInitializing) {
             console.warn('Level: Already initializing, skipping duplicate call');

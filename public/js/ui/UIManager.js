@@ -1213,10 +1213,6 @@ export class UIManager {
             // Check if this building has a free placement available (without consuming it)
             const isFreeFromMarketplace = this.gameplayState && this.gameplayState.hasFreePlacement(type, false);
             
-            // Debug superweapon button
-            if (type === 'superweapon') {
-            }
-            
             // Hide if not unlocked, show if unlocked
             if (!isUnlocked) {
                 btn.style.display = 'none';

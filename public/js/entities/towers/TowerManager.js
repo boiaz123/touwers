@@ -45,7 +45,7 @@ export class TowerManager {
     
     placeTower(type, x, y, gridX, gridY) {
         // Special exception: Allow Magic Tower from consumable flatpack even without academy unlock
-        const isFreeFromMarketplace = this.stateManager?.gameplayState?.hasFreePlacement(type, true) || false;
+        const isFreeFromMarketplace = (this.stateManager.gameplayState && this.stateManager.gameplayState.hasFreePlacement(type, true)) || false;
         
         // Check if tower type is unlocked (or has free placement exception)
         if (!isFreeFromMarketplace && !this.unlockSystem.canBuildTower(type)) {
@@ -70,7 +70,7 @@ export class TowerManager {
             
             // Use path point position instead of grid-based position
             // Check if this is a free placement from marketplace
-            const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
+            const isFree = (this.stateManager.gameplayState && this.stateManager.gameplayState.checkFreePlacement(type, true)) || false;
             if (isFree || this.gameState.spend(towerType.cost)) {
                 const GuardPost = towerType.class;
                 const tower = new GuardPost(pathPoint.x, pathPoint.y, 1);
@@ -87,7 +87,7 @@ export class TowerManager {
                 this.towers.push(tower);
                 // Notify unlock system
                 this.unlockSystem.onGuardPostBuilt();
-                if (this.stateManager?.gameStatistics) {
+                if (this.stateManager.gameStatistics) {
                     this.stateManager.gameStatistics.addTowersBuilt();
                 }
                 return true;
@@ -119,7 +119,7 @@ export class TowerManager {
             // Play tower build sound
             this.playTowerBuildSound(type);
 
-            if (this.stateManager?.gameStatistics) {
+            if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.addTowersBuilt();
             }
             
@@ -254,10 +254,6 @@ export class TowerManager {
     }
     
     placeBuilding(type, x, y, gridX, gridY) {
-        // NEW: Debug log for superweapon specifically
-        if (type === 'superweapon') {
-        }
-        
         // Check if building type is unlocked
         if (!this.unlockSystem.canBuildBuilding(type)) {
             return false;

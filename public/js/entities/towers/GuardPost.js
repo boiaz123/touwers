@@ -26,7 +26,7 @@ export class GuardPost extends Tower {
         // Stats for this tower
         this.health = 200;
         this.maxHealth = 200;
-        this.armor = 5;
+        this.armour = 5;
         // Clickbox size - used for click detection
         this.width = 50;
         this.height = 50;

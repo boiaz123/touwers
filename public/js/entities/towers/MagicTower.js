@@ -1,5 +1,7 @@
 import { Tower } from './Tower.js';
 
+const BASE_SLOW_EFFECT = 0.7;
+
 export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -118,7 +120,7 @@ export class MagicTower extends Tower {
                 case 'water':
                     this.target.takeDamage(finalDamage, 0, 'water');
                     // Apply enhanced slow effect
-                    const baseSlowEffect = 0.7;
+                    const baseSlowEffect = BASE_SLOW_EFFECT;
                     const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.water.slowBonus);
                     if (this.target.speed > 20) {
                         this.target.originalSpeed = this.target.originalSpeed || this.target.speed;
