@@ -2,6 +2,8 @@ import { SaveSystem } from '../core/SaveSystem.js';
 import { EnemyIntelRegistry } from '../core/EnemyIntelRegistry.js';
 import { InputManager } from '../core/InputManager.js';
 import { ControlsScreen } from './ControlsScreen.js';
+import { ResolutionSelector } from './ResolutionSelector.js';
+import { ResolutionSettings } from '../core/ResolutionSettings.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -5278,6 +5280,7 @@ export class UIManager {
 
         content.innerHTML = `
             <div class="ingame-options-body">
+                <div class="ingame-options-section-title">Audio</div>
                 <div class="ingame-options-row">
                     <label class="ingame-options-label">Music Volume</label>
                     <div class="ingame-options-slider-row">
@@ -5295,7 +5298,7 @@ export class UIManager {
                 <div class="ingame-options-divider"></div>
                 <button id="ingame-controls-btn" class="ingame-options-support-btn">Controls</button>
                 <div class="ingame-options-divider"></div>
-                <button id="ingame-support-btn" class="ingame-options-support-btn">\u2764\ufe0f  Support the Developer</button>
+                <button id="ingame-support-btn" class="ingame-options-support-btn">Support the Developer</button>
             </div>
         `;
 
@@ -5347,6 +5350,14 @@ export class UIManager {
                 this.openControlsScreen();
             });
         }
+
+    }
+
+    _openResolutionSelector() {
+        if (!this._resolutionSelector) {
+            this._resolutionSelector = new ResolutionSelector(this.stateManager.game);
+        }
+        this._resolutionSelector.show();
     }
 
     openControlsScreen() {

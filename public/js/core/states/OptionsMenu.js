@@ -196,13 +196,15 @@ export class OptionsMenu {
 
     updateSliderPositions() {
         const canvas = this.stateManager.canvas;
+        const panelH = 385;
+        const panelY = canvas.height / 2 - Math.round(panelH / 2);
         const startX = canvas.width / 2 - 100;
-        
+
         this.musicVolumeSlider.x = startX;
-        this.musicVolumeSlider.y = canvas.height / 2 - 30;
-        
+        this.musicVolumeSlider.y = panelY + 110;
+
         this.sfxVolumeSlider.x = startX;
-        this.sfxVolumeSlider.y = canvas.height / 2 + 30;
+        this.sfxVolumeSlider.y = panelY + 155;
     }
 
     getBackButtonPosition() {
@@ -228,20 +230,22 @@ export class OptionsMenu {
 
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
-        const btnW = 280;
+        const panelH = 385;
+        const panelY = canvas.height / 2 - Math.round(panelH / 2);
+        const btnW = 300;
 
         // Controls button
-        const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
+        const controlsPos = { x: centerX - btnW / 2, y: panelY + 212, width: btnW, height: 42 };
         this.buttons.controls.hovered = x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
                                         y >= controlsPos.y && y <= controlsPos.y + controlsPos.height;
 
         // Resolution button
-        const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
+        const resolutionPos = { x: centerX - btnW / 2, y: panelY + 264, width: btnW, height: 42 };
         this.buttons.resolution.hovered = x >= resolutionPos.x && x <= resolutionPos.x + resolutionPos.width &&
                                           y >= resolutionPos.y && y <= resolutionPos.y + resolutionPos.height;
 
         // Producer button
-        const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
+        const producerPos = { x: centerX - btnW / 2, y: panelY + 328, width: btnW, height: 42 };
         this.buttons.visitProducer.hovered = x >= producerPos.x && x <= producerPos.x + producerPos.width &&
                                              y >= producerPos.y && y <= producerPos.y + producerPos.height;
 
@@ -303,10 +307,12 @@ export class OptionsMenu {
 
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;
-        const btnW = 280;
+        const panelH = 385;
+        const panelY = canvas.height / 2 - Math.round(panelH / 2);
+        const btnW = 300;
 
         // Controls button
-        const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
+        const controlsPos = { x: centerX - btnW / 2, y: panelY + 212, width: btnW, height: 42 };
         if (x >= controlsPos.x && x <= controlsPos.x + controlsPos.width &&
             y >= controlsPos.y && y <= controlsPos.y + controlsPos.height) {
             this.openControlsScreen();
@@ -314,7 +320,7 @@ export class OptionsMenu {
         }
 
         // Resolution button
-        const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
+        const resolutionPos = { x: centerX - btnW / 2, y: panelY + 264, width: btnW, height: 42 };
         if (x >= resolutionPos.x && x <= resolutionPos.x + resolutionPos.width &&
             y >= resolutionPos.y && y <= resolutionPos.y + resolutionPos.height) {
             this.openResolutionSelector();
@@ -322,7 +328,7 @@ export class OptionsMenu {
         }
 
         // Producer button
-        const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
+        const producerPos = { x: centerX - btnW / 2, y: panelY + 328, width: btnW, height: 42 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
             if (typeof window !== 'undefined' && window.__TAURI__) {
@@ -477,8 +483,8 @@ export class OptionsMenu {
 
             // ===== BACKGROUND =====
             const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            bgGrad.addColorStop(0, '#13111F');
-            bgGrad.addColorStop(1, '#0A0812');
+            bgGrad.addColorStop(0, '#1a0f0a');
+            bgGrad.addColorStop(1, '#0a0505');
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -494,22 +500,46 @@ export class OptionsMenu {
             ctx.globalAlpha = 1;
 
             // ===== PANEL =====
-            const panelW = 520;
-            const panelH = 500;
+            const panelW = 460;
+            const panelH = 385;
             const panelX = canvas.width / 2 - panelW / 2;
-            const panelY = canvas.height / 2 - panelH / 2 + 30;
+            const panelY = canvas.height / 2 - Math.round(panelH / 2);
+
+            // Panel drop shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = 'rgba(0,0,0,0.01)';
+            ctx.fillRect(panelX + 4, panelY + 4, panelW, panelH);
+            ctx.shadowColor = 'rgba(0,0,0,0)';
+            ctx.shadowBlur = 0;
 
             // Panel background
             const panelGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelH);
-            panelGrad.addColorStop(0, 'rgba(22, 20, 35, 0.97)');
-            panelGrad.addColorStop(1, 'rgba(12, 10, 22, 0.97)');
+            panelGrad.addColorStop(0, 'rgba(38, 22, 12, 0.97)');
+            panelGrad.addColorStop(1, 'rgba(18, 8, 4, 0.97)');
             ctx.fillStyle = panelGrad;
             ctx.fillRect(panelX, panelY, panelW, panelH);
+
+            // Header strip
+            const headerH = 52;
+            const headerGrad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + headerH);
+            headerGrad.addColorStop(0, 'rgba(60, 36, 18, 0.98)');
+            headerGrad.addColorStop(1, 'rgba(44, 26, 12, 0.98)');
+            ctx.fillStyle = headerGrad;
+            ctx.fillRect(panelX, panelY, panelW, headerH);
 
             // Panel border
             ctx.strokeStyle = 'rgba(150, 120, 60, 0.7)';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+            // Header divider
+            ctx.strokeStyle = 'rgba(150, 120, 60, 0.55)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(panelX + 1, panelY + headerH);
+            ctx.lineTo(panelX + panelW - 1, panelY + headerH);
+            ctx.stroke();
 
             // Corner marks
             const cSize = 10;
@@ -530,27 +560,16 @@ export class OptionsMenu {
             const backPos = this.getBackButtonPosition();
             this.renderButton(ctx, backPos, 'Back', this.buttons.back.hovered);
 
-            // ===== TITLE =====
+            // ===== TITLE inside header =====
             ctx.globalAlpha = Math.max(0.05, this.titleOpacity);
-            ctx.font = 'bold 52px Georgia, serif';
+            ctx.font = 'bold 24px Georgia, serif';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'alphabetic';
-            // shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.6)';
-            ctx.fillText('OPTIONS', canvas.width / 2 + 2, panelY - 18 + 2);
-            // main
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillText('O P T I O N S', canvas.width / 2 + 1, panelY + headerH / 2 + 1);
             ctx.fillStyle = '#C8A84B';
-            ctx.fillText('OPTIONS', canvas.width / 2, panelY - 18);
+            ctx.fillText('O P T I O N S', canvas.width / 2, panelY + headerH / 2);
             ctx.globalAlpha = 1;
-
-            // Divider under title
-            const divY = panelY + 28;
-            ctx.strokeStyle = 'rgba(150, 120, 60, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(panelX + 20, divY);
-            ctx.lineTo(panelX + panelW - 20, divY);
-            ctx.stroke();
 
             // ===== CONTENT =====
             if (this.showContent) {
@@ -559,39 +578,59 @@ export class OptionsMenu {
                 const centerX = canvas.width / 2;
                 this.updateSliderPositions();
 
-                // Section label
-                ctx.font = '13px Arial, sans-serif';
+                // AUDIO section label with decorative lines
+                const audioY = panelY + 80;
+                ctx.font = '11px Georgia, serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = 'rgba(180, 155, 100, 0.7)';
-                ctx.fillText('\u266a  AUDIO  \u266a', centerX, this.musicVolumeSlider.y - 52);
+                ctx.fillText('A U D I O', centerX, audioY);
+                const audioHalfW = ctx.measureText('A U D I O').width / 2;
+                ctx.strokeStyle = 'rgba(150, 120, 60, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(panelX + 30, audioY);
+                ctx.lineTo(centerX - audioHalfW - 10, audioY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(centerX + audioHalfW + 10, audioY);
+                ctx.lineTo(panelX + panelW - 30, audioY);
+                ctx.stroke();
 
                 this.renderSlider(ctx, this.musicVolumeSlider, this.musicVolume, 'Music Volume');
                 this.renderSlider(ctx, this.sfxVolumeSlider, this.sfxVolume, 'Sound Effects');
 
-                const btnW = 280;
+                const btnW = 300;
 
-                // Controls button
-                const controlsPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 70, width: btnW, height: 42 };
-                this.renderButton(ctx, controlsPos, 'Controls', this.buttons.controls.hovered);
-
-                // Resolution button \u2014 label shows the currently active resolution
-                const savedRes = ResolutionSettings.getSavedResolution();
-                const resLabel = 'Resolution: ' + savedRes.replace('x', '\u00d7');
-                const resolutionPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 122, width: btnW, height: 42 };
-                this.renderButton(ctx, resolutionPos, resLabel, this.buttons.resolution.hovered);
-
-                // Divider \u2014 separates navigation from the support button
+                // Section divider
                 ctx.strokeStyle = 'rgba(120, 100, 55, 0.4)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(panelX + 30, canvas.height / 2 + 174);
-                ctx.lineTo(panelX + panelW - 30, canvas.height / 2 + 174);
+                ctx.moveTo(panelX + 20, panelY + 198);
+                ctx.lineTo(panelX + panelW - 20, panelY + 198);
                 ctx.stroke();
 
-                // Producer button
-                const producerPos = { x: centerX - btnW / 2, y: canvas.height / 2 + 184, width: btnW, height: 42 };
-                this.renderButton(ctx, producerPos, '\u2764  Support the Developer', this.buttons.visitProducer.hovered);
+                // Controls button
+                const controlsPos = { x: centerX - btnW / 2, y: panelY + 212, width: btnW, height: 42 };
+                this.renderButton(ctx, controlsPos, 'Controls', this.buttons.controls.hovered);
+
+                // Resolution button \u2014 shows currently active resolution
+                const savedRes = ResolutionSettings.getSavedResolution();
+                const resLabel = 'Resolution: ' + savedRes.replace('x', '\u00d7');
+                const resolutionPos = { x: centerX - btnW / 2, y: panelY + 264, width: btnW, height: 42 };
+                this.renderButton(ctx, resolutionPos, resLabel, this.buttons.resolution.hovered);
+
+                // Bottom divider
+                ctx.strokeStyle = 'rgba(120, 100, 55, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(panelX + 20, panelY + 316);
+                ctx.lineTo(panelX + panelW - 20, panelY + 316);
+                ctx.stroke();
+
+                // Support button
+                const producerPos = { x: centerX - btnW / 2, y: panelY + 328, width: btnW, height: 42 };
+                this.renderButton(ctx, producerPos, 'Support the Developer', this.buttons.visitProducer.hovered);
             }
 
             ctx.globalAlpha = 1;
