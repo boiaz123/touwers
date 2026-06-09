@@ -18,6 +18,8 @@ export class GameStatistics {
         this.totalMoneyEarnedInMarketplace = 0;
         this.totalItemsSold = 0;
         this.totalTowersBuilt = 0;
+        this.totalWavesSurvived = 0;
+        this.totalLootCollected = 0;
     }
 
     /**
@@ -86,6 +88,14 @@ export class GameStatistics {
         this.totalTowersBuilt += count;
     }
 
+    addWavesSurvived(count = 1) {
+        this.totalWavesSurvived += count;
+    }
+
+    addLootCollected(count = 1) {
+        this.totalLootCollected += count;
+    }
+
     /**
      * Get formatted playtime string (e.g., "2h 30m 45s")
      */
@@ -124,7 +134,9 @@ export class GameStatistics {
             totalMoneySpentOnMarketplace: this.totalMoneySpentOnMarketplace,
             totalMoneyEarnedInMarketplace: this.totalMoneyEarnedInMarketplace,
             totalItemsSold: this.totalItemsSold,
-            totalTowersBuilt: this.totalTowersBuilt
+            totalTowersBuilt: this.totalTowersBuilt,
+            totalWavesSurvived: this.totalWavesSurvived,
+            totalLootCollected: this.totalLootCollected
         };
     }
 
@@ -142,6 +154,8 @@ export class GameStatistics {
         this.totalMoneyEarnedInMarketplace = data.totalMoneyEarnedInMarketplace || 0;
         this.totalItemsSold = data.totalItemsSold || 0;
         this.totalTowersBuilt = data.totalTowersBuilt || 0;
+        this.totalWavesSurvived = data.totalWavesSurvived || 0;
+        this.totalLootCollected = data.totalLootCollected || 0;
     }
 
     /**

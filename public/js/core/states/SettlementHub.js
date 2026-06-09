@@ -248,11 +248,9 @@ export class SettlementHub {
         const canvas = this.stateManager.canvas;
         const centerX = canvas.width / 2;  // Settlement center X
         const centerY = canvas.height * 0.76;  // Settlement center Y - lower on screen
-        
-        // Settlement boundary (ellipse on ground):
-        // Center: (centerX, centerY)
-        // Radius X: 360 pixels, Radius Y: 140 pixels
-        
+        const sf = canvas.width / 1920;  // Scale factor relative to 1920×1080 base resolution
+        this._sf = sf; // Store for use in hit-detection and render helpers
+
         // Main buildings positioned strategically
         // Training Grounds OUTSIDE the settlement to the left (as per user request)
         // Other buildings spread naturally INSIDE the boundary
@@ -260,7 +258,7 @@ export class SettlementHub {
             // === MAIN INTERACTIVE BUILDINGS ===
             // Training Grounds - EXTERIOR: outside the wall to the left
             {
-                building: new TrainingGrounds(centerX - 720, centerY - 0, 0, 0),
+                building: new TrainingGrounds(centerX - 720 * sf, centerY, 0, 0),
                 scale: 1,
                 clickable: true,
                 action: 'levelSelect',
@@ -268,24 +266,24 @@ export class SettlementHub {
             },
             // Tower Forge - INTERIOR: inside upper right area
             {
-                building: new TowerForge(centerX + 160, centerY - 50, 1, 0),
-                scale: 30,
+                building: new TowerForge(centerX + 160 * sf, centerY - 50 * sf, 1, 0),
+                scale: 30 * sf,
                 clickable: true,
                 action: 'upgrades',
                 exterior: false
             },
             // Arcane Library - INTERIOR: inside upper left area
             {
-                building: new MagicAcademy(centerX - 130, centerY - 55, 1, 0),
-                scale: 29,
+                building: new MagicAcademy(centerX - 130 * sf, centerY - 55 * sf, 1, 0),
+                scale: 29 * sf,
                 clickable: true,
                 action: 'arcaneLibrary',
                 exterior: false
             },
             // Castle - EXTERIOR: outside the wall to the right
             {
-                building: new Castle(centerX + 700, centerY - 80, 0, 0),
-                scale: 29,
+                building: new Castle(centerX + 700 * sf, centerY - 80 * sf, 0, 0),
+                scale: 29 * sf,
                 clickable: true,
                 action: 'options',
                 exterior: true
@@ -294,51 +292,51 @@ export class SettlementHub {
             // === GUARD POST QUARTERS (BARRACKS) ===
             // Left cluster
             {
-                building: new GuardPost(centerX - 260, centerY - 20, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX - 260 * sf, centerY - 20 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX - 240, centerY - 60, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX - 240 * sf, centerY - 60 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX - 220, centerY + 20, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX - 220 * sf, centerY + 20 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX - 200, centerY - 30, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX - 200 * sf, centerY - 30 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX - 180, centerY + 15, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX - 180 * sf, centerY + 15 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             // Right cluster
             {
-                building: new GuardPost(centerX + 165, centerY + 15, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX + 165 * sf, centerY + 15 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX + 180, centerY + 35, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX + 180 * sf, centerY + 35 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             },
             {
-                building: new GuardPost(centerX + 240, centerY + 20, 0, 0),
-                scale: 0.65,
+                building: new GuardPost(centerX + 240 * sf, centerY + 20 * sf, 0, 0),
+                scale: 0.65 * sf,
                 clickable: false,
                 action: null
             }
@@ -426,30 +424,29 @@ export class SettlementHub {
             this.musicalScoresPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
+            const sf = this._sf || 1;
             let isHoveringBuilding = false;
             this.settlementBuildings.forEach(item => {
                 if (item.clickable) {
-                    // Get building bounds from buildingPositions if available, else use scale-based sizing
                     let bounds;
                     if (item.building instanceof TrainingGrounds) {
-                        // TrainingGrounds has fence perimeter, use actual visual bounds
+                        const hitR = 150 * sf;
                         bounds = {
-                            x: item.building.x - 150,
-                            y: item.building.y - 150,
-                            width: 300,
-                            height: 300
+                            x: item.building.x - hitR,
+                            y: item.building.y - hitR,
+                            width: hitR * 2,
+                            height: hitR * 2
                         };
                     } else {
                         const size = item.scale * 4;
                         bounds = {
-                            x: item.building.x,
-                            y: item.building.y,
+                            x: item.building.x - size / 2,
+                            y: item.building.y - size / 2,
                             width: size,
                             height: size
                         };
                     }
-                    
-                    // Check if mouse is within building bounds
+
                     if (x >= bounds.x && x <= bounds.x + bounds.width &&
                         y >= bounds.y && y <= bounds.y + bounds.height) {
                         isHoveringBuilding = true;
@@ -467,9 +464,10 @@ export class SettlementHub {
             // Check bard hover (only if musical-equipment upgrade purchased)
             const upgradeSystem = this.stateManager?.upgradeSystem;
             const bardUnlocked = upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment');
-            const bardX = this.stateManager.canvas.width / 2 + 58;
-            const bardY = this.stateManager.canvas.height * 0.76 - 15;
-            const isHoveringBard = bardUnlocked && Math.hypot(x - bardX, y - bardY) < 22;
+            const _sfBard = this._sf || 1;
+            const bardX = this.stateManager.canvas.width / 2 + 58 * _sfBard;
+            const bardY = this.stateManager.canvas.height * 0.76 - 15 * _sfBard;
+            const isHoveringBard = bardUnlocked && Math.hypot(x - bardX, y - bardY) < 22 * _sfBard;
             this.bardHovered = isHoveringBard;
             this.stateManager.canvas.style.cursor = isHoveringBuilding || isHoveringBard || this.activePopup ? 'pointer' : 'default';
         }
@@ -508,9 +506,10 @@ export class SettlementHub {
         const canvas = this.stateManager.canvas;
         const bardUpgradeSystem = this.stateManager?.upgradeSystem;
         if (bardUpgradeSystem && bardUpgradeSystem.hasUpgrade('musical-equipment')) {
-            const bardX = canvas.width / 2 + 58;
-            const bardY = canvas.height * 0.76 - 15;
-            if (Math.hypot(x - bardX, y - bardY) < 22) {
+            const _sfClick = this._sf || 1;
+            const bardX = canvas.width / 2 + 58 * _sfClick;
+            const bardY = canvas.height * 0.76 - 15 * _sfClick;
+            if (Math.hypot(x - bardX, y - bardY) < 22 * _sfClick) {
                 this.onBardClick();
                 return;
             }
@@ -519,15 +518,15 @@ export class SettlementHub {
         // Check settlement building clicks
         this.settlementBuildings.forEach(item => {
             if (item.clickable) {
-                // Get building bounds from buildingPositions if available, else use scale-based sizing
+                const sf = this._sf || 1;
                 let bounds;
                 if (item.building instanceof TrainingGrounds) {
-                    // TrainingGrounds has fence perimeter, use actual visual bounds
+                    const hitR = 150 * sf;
                     bounds = {
-                        x: item.building.x - 150,
-                        y: item.building.y - 150,
-                        width: 300,
-                        height: 300
+                        x: item.building.x - hitR,
+                        y: item.building.y - hitR,
+                        width: hitR * 2,
+                        height: hitR * 2
                     };
                 } else {
                     const size = item.scale * 4;
@@ -538,8 +537,7 @@ export class SettlementHub {
                         height: size
                     };
                 }
-                
-                // Check if click is within building bounds
+
                 if (x >= bounds.x && x <= bounds.x + bounds.width &&
                     y >= bounds.y && y <= bounds.y + bounds.height) {
                     this.onBuildingClick(item);
@@ -1750,6 +1748,7 @@ export class SettlementHub {
     renderSettlementScene(ctx, canvas) {
         const centerX = canvas.width / 2;
         const centerY = canvas.height * 0.76;  // Ground level, lower
+        const sf = canvas.width / 1920;
 
         // Exterior trees behind the wall — sorted by Y so distant ones draw first
         this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
@@ -1767,18 +1766,18 @@ export class SettlementHub {
 
         // Render interior elements clipped tightly to the wall ellipse
         ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 358, 138);
+        this.createEllipseClipPath(ctx, centerX, centerY, 358 * sf, 138 * sf);
         this.renderSettlementPaths(ctx, canvas, centerX, centerY);   // floor surface + fountain
         // Details (crates, barrels, shrubs) drawn ON TOP of paths, still inside wall clip
         this.renderSettlementDetails(ctx, centerX, centerY);
         ctx.restore();
 
         // Render ALL interior buildings (forge, academy, guard posts) in one Y-sorted pass.
-        // Use a very tall clip (radiusY=300) so tower tops are never cut off, while the wide
-        // radiusX=356 still keeps buildings horizontally inside the wall.
+        // Use a very tall clip so tower tops are never cut off, while the wide
+        // radiusX still keeps buildings horizontally inside the wall.
         // Y-sorting (painter's algorithm) ensures correct depth between all buildings.
         ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 356, 300);
+        this.createEllipseClipPath(ctx, centerX, centerY, 356 * sf, 300 * sf);
         this.renderSettlementBuildings(ctx, canvas, 'interior-all');
         ctx.restore();
 
@@ -1795,16 +1794,16 @@ export class SettlementHub {
         // Render bard character near the fountain (only if musical-equipment upgrade purchased)
         const upgradeSystem = this.stateManager?.upgradeSystem;
         if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
-            this.renderBard(ctx, centerX + 58, centerY - 15);
+            this.renderBard(ctx, centerX + 58 * sf, centerY - 15 * sf);
         }
-        
+
         // Render active boons
         this.renderActiveBoons(ctx, canvas);
 
         // Ground shadow under settlement
         ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 50, 340, 120, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY + 50 * sf, 340 * sf, 120 * sf, 0, 0, Math.PI * 2);
         ctx.fill();
     }
     
@@ -1892,8 +1891,9 @@ export class SettlementHub {
      *                              false = upper/rear arc (rendered before wall)
      */
     renderWallExteriorDecoration(ctx, centerX, centerY, frontHalf) {
-        const rX = 360;
-        const rY = 140;
+        const sf = this.stateManager.canvas.width / 1920;
+        const rX = 360 * sf;
+        const rY = 140 * sf;
         const total = 64; // candidate positions around the full perimeter
 
         for (let i = 0; i < total; i++) {
@@ -1962,8 +1962,9 @@ export class SettlementHub {
 
     renderEllipticalPalisade(ctx, canvas, centerX, centerY) {
         // Simple vertical stick palisade with 3D trunk texture
-        const radiusX = 360;
-        const radiusY = 140;
+        const sf = canvas.width / 1920;
+        const radiusX = 360 * sf;
+        const radiusY = 140 * sf;
         
         // ─────────────────────────────────────────────────────────────────────────
         // FOUNDATION — prominent earth rampart with stone footing
@@ -2129,8 +2130,9 @@ export class SettlementHub {
     renderFrontWallOverlay(ctx, canvas, centerX, centerY) {
         // Renders the front-facing wall posts, horizontal rail, gate, and guard towers
         // Called AFTER all interior content so these elements always draw on top
-        const radiusX = 360;
-        const radiusY = 140;
+        const sf = canvas.width / 1920;
+        const radiusX = 360 * sf;
+        const radiusY = 140 * sf;
 
         const postSpacing = 18;
         const perimeter = Math.PI * (radiusX + radiusY) * 1.5;
@@ -2155,36 +2157,36 @@ export class SettlementHub {
 
         posts.forEach(post => {
             const { x, y, i } = post;
-            const postWidth = 12;
-            const postHeight = 60 + (i % 3 === 0 ? 6 : 0);
+            const postWidth = 12 * sf;
+            const postHeight = (60 + (i % 3 === 0 ? 6 : 0)) * sf;
 
             ctx.fillStyle = '#4a3a2a';
-            ctx.fillRect(x - postWidth/2 - 3, y - postHeight, 3, postHeight);
+            ctx.fillRect(x - postWidth/2 - 3 * sf, y - postHeight, 3 * sf, postHeight);
 
             ctx.fillStyle = '#6b5a47';
             ctx.fillRect(x - postWidth/2, y - postHeight, postWidth, postHeight);
 
             ctx.fillStyle = '#8b7a67';
-            ctx.fillRect(x + postWidth/2, y - postHeight, 2, postHeight);
+            ctx.fillRect(x + postWidth/2, y - postHeight, 2 * sf, postHeight);
 
             ctx.strokeStyle = '#4a3a2a';
             ctx.lineWidth = 1;
-            for (let g = 0; g < postHeight; g += 6) {
+            for (let g = 0; g < postHeight; g += 6 * sf) {
                 ctx.beginPath();
-                ctx.moveTo(x - postWidth/2 + 2, y - postHeight + g);
-                ctx.lineTo(x - postWidth/2 + 2, y - postHeight + g + 4);
+                ctx.moveTo(x - postWidth/2 + 2 * sf, y - postHeight + g);
+                ctx.lineTo(x - postWidth/2 + 2 * sf, y - postHeight + g + 4 * sf);
                 ctx.stroke();
 
                 ctx.beginPath();
-                ctx.moveTo(x + postWidth/2 - 2, y - postHeight + g);
-                ctx.lineTo(x + postWidth/2 - 2, y - postHeight + g + 4);
+                ctx.moveTo(x + postWidth/2 - 2 * sf, y - postHeight + g);
+                ctx.lineTo(x + postWidth/2 - 2 * sf, y - postHeight + g + 4 * sf);
                 ctx.stroke();
             }
 
             ctx.fillStyle = '#5a4a37';
             ctx.beginPath();
             ctx.moveTo(x - postWidth/2, y - postHeight);
-            ctx.lineTo(x, y - postHeight - 5);
+            ctx.lineTo(x, y - postHeight - 5 * sf);
             ctx.lineTo(x + postWidth/2, y - postHeight);
             ctx.fill();
         });
@@ -2193,22 +2195,26 @@ export class SettlementHub {
         ctx.strokeStyle = '#4a3a2a';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 46, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY - 46 * sf, radiusX - 6 * sf, radiusY - 6 * sf, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.strokeStyle = '#7a6040';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY - 48, radiusX - 6, radiusY - 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY - 48 * sf, radiusX - 6 * sf, radiusY - 6 * sf, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         // Gate and guard towers — always topmost front elements
-        this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5);
-        this.renderGuardTowerWithBase(ctx, centerX - 120, centerY + radiusY + 15);
-        this.renderGuardTowerWithBase(ctx, centerX + 120, centerY + radiusY + 15);
+        this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5 * sf, sf);
+        this.renderGuardTowerWithBase(ctx, centerX - 120 * sf, centerY + radiusY + 15 * sf, sf);
+        this.renderGuardTowerWithBase(ctx, centerX + 120 * sf, centerY + radiusY + 15 * sf, sf);
     }
 
-    renderIntegratedGate(ctx, x, y) {
+    renderIntegratedGate(ctx, x, y, sf = 1) {
         // Gate integrated into wall structure - part of the wall
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(sf, sf);
+        ctx.translate(-x, -y);
         const gateWidth = 55;
         const gateHeight = 60;
         
@@ -2289,11 +2295,11 @@ export class SettlementHub {
             const fillX = x + gateWidth/2 + 5 + (i * 8);
             ctx.fillStyle = '#6b5a47';
             ctx.fillRect(fillX, y - gateHeight, 6, wallGapHeight);
-            
+
             ctx.strokeStyle = '#4a3a2a';
             ctx.lineWidth = 1;
             ctx.strokeRect(fillX, y - gateHeight, 6, wallGapHeight);
-            
+
             // Wood grain
             for (let g = 0; g < wallGapHeight; g += 8) {
                 ctx.beginPath();
@@ -2302,8 +2308,9 @@ export class SettlementHub {
                 ctx.stroke();
             }
         }
+        ctx.restore();
     }
-    
+
     renderWatchtowerStructure(ctx, x, y) {
         // Tower structure based on BasicTower rendering style
         const baseSize = 50;
@@ -2480,8 +2487,12 @@ export class SettlementHub {
         ctx.stroke();
     }
 
-    renderGuardTowerWithBase(ctx, x, y) {
+    renderGuardTowerWithBase(ctx, x, y, sf = 1) {
         // Guard tower styled like BasicTower - wooden tower with stone base, connected to ground
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(sf, sf);
+        ctx.translate(-x, -y);
         const towerSize = 50;
         const towerHeight = 70;
         const baseSize = 60;
@@ -2646,6 +2657,7 @@ export class SettlementHub {
         ctx.strokeStyle = '#5b1028';
         ctx.lineWidth = 0.5;
         ctx.stroke();
+        ctx.restore();
     }
 
     renderWoodenPalisadeSide(ctx, x1, y1, x2, y2, side) {
@@ -2789,22 +2801,25 @@ export class SettlementHub {
         const headerText = headers[buildingType] || '';
         if (!headerText) return;
 
+        const sf = this._sf || 1;
         const headerX = item.building.x;
-        const headerY = item.building.y - 120;
+        const headerY = item.building.y - 120 * sf;
+        const fontSize = Math.round(22 * sf);
 
         if (buildingType === 'TowerForge') {
+            const lineSpacing = 15 * sf;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.font = 'bold 22px Arial';
+            ctx.font = `bold ${fontSize}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('Upgrades &', headerX + 1, headerY - 15 + 1);
-            ctx.fillText('Marketplace', headerX + 1, headerY + 15 + 1);
+            ctx.fillText('Upgrades &', headerX + 1, headerY - lineSpacing + 1);
+            ctx.fillText('Marketplace', headerX + 1, headerY + lineSpacing + 1);
             ctx.fillStyle = '#FFD700';
-            ctx.fillText('Upgrades &', headerX, headerY - 15);
-            ctx.fillText('Marketplace', headerX, headerY + 15);
+            ctx.fillText('Upgrades &', headerX, headerY - lineSpacing);
+            ctx.fillText('Marketplace', headerX, headerY + lineSpacing);
         } else {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.font = 'bold 24px Arial';
+            ctx.font = `bold ${Math.round(24 * sf)}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(headerText, headerX + 1, headerY + 1);
@@ -2815,10 +2830,10 @@ export class SettlementHub {
 
     renderTrainingGroundsSettlement(ctx, building) {
         // Render a scaled version of training grounds for the settlement display
-        // Base scale is 0.7, then adjusted to fit within the red square area (~0.4x)
+        const sf = this._sf || 1;
         const baseScale = 0.7;
-        const settlementScale = 2.2; // Scales it down to fit in the red square
-        const scale = baseScale * settlementScale;
+        const settlementScale = 2.2;
+        const scale = baseScale * settlementScale * sf;
         const x = building.x;
         const y = building.y;
         
@@ -8427,6 +8442,15 @@ class ArcaneLibraryMenu {
         }
     }
 
+    _menuDimensions() {
+        const canvas = this.stateManager.canvas;
+        const menuWidth  = Math.min(Math.round(canvas.width  * 0.70), 1100);
+        const menuHeight = Math.min(Math.round(canvas.height * 0.75), 700);
+        const menuX = Math.round(canvas.width  / 2 - menuWidth  / 2);
+        const menuY = Math.round(canvas.height / 2 - menuHeight / 2);
+        return { menuX, menuY, menuWidth, menuHeight };
+    }
+
     update(deltaTime) {
         if (this.isOpen && this.animationProgress < 1) {
             this.animationProgress += deltaTime * 2;
@@ -8434,11 +8458,8 @@ class ArcaneLibraryMenu {
     }
 
     updateHoverState(x, y) {
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 400;
-        const menuY = canvas.height / 2 - 250;
-        const menuWidth = 800;
-        const menuHeight = 500;
         
         // Close button
         const closeButtonX = menuX + menuWidth - 35;
@@ -8529,7 +8550,7 @@ class ArcaneLibraryMenu {
                 ? this.stateManager.achievementSystem.getAchievements(
                     this.stateManager.gameStatistics, this.stateManager.currentSaveData)
                 : [];
-            const totalPages = Math.ceil(achievementList.length / 6);
+            const totalPages = Math.ceil(achievementList.length / 8);
             if (totalPages > 1) {
                 const arrowY    = contentY + contentHeight - 30;
                 const leftArrX  = contentX + 10;
@@ -8554,12 +8575,8 @@ class ArcaneLibraryMenu {
         if (timeSinceOpen < 200) {
             return;
         }
-        
-        const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 400;
-        const menuY = canvas.height / 2 - 250;
-        const menuWidth = 800;
-        const menuHeight = 500;
+
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
         
         // Close button
         const closeButtonX = menuX + menuWidth - 35;
@@ -8601,7 +8618,7 @@ class ArcaneLibraryMenu {
                 ? this.stateManager.achievementSystem.getAchievements(
                     this.stateManager.gameStatistics, this.stateManager.currentSaveData)
                 : [];
-            const totalPages = Math.ceil(achievementList.length / 6);
+            const totalPages = Math.ceil(achievementList.length / 8);
             if (totalPages > 1) {
                 const arrowY    = contentY + contentHeight - 30;
                 const leftArrX  = contentX + 10;
@@ -8724,69 +8741,68 @@ class ArcaneLibraryMenu {
 
     render(ctx) {
         const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 400;
-        const menuY = canvas.height / 2 - 250;
-        const menuWidth = 800;
-        const menuHeight = 500;
-        
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
+
         // Semi-transparent overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
+        const uiSf = menuWidth / 800; // internal scale factor relative to base 800px popup
+
         // Menu background
         ctx.fillStyle = '#2a1a0f';
         ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-        
+
         // Menu border
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
-        
+
         // Draw corner trim on all four corners
-        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);  // Top-left
-        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);  // Top-right
-        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);  // Bottom-left
-        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);  // Bottom-right
-        
+        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);
+        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);
+
         // Menu title
-        ctx.font = 'bold 24px serif';
+        ctx.font = `bold ${Math.round(24 * uiSf)}px serif`;
         ctx.fillStyle = '#d4af37';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('ARCANE LIBRARY', menuX + menuWidth / 2, menuY + 8);
-        
+        ctx.fillText('ARCANE LIBRARY', menuX + menuWidth / 2, menuY + Math.round(8 * uiSf));
+
         // Render tabs
-        const tabHeight = 35;
-        const tabStartY = menuY + 50;
+        const tabHeight = Math.round(40 * uiSf);
+        const tabStartY = menuY + Math.round(52 * uiSf);
         const tabButtonWidth = menuWidth / 3;
-        
+
         this.tabs.forEach((tab, index) => {
             const tabX = menuX + index * tabButtonWidth;
             const tabY = tabStartY;
-            
-            // Tab background
+
             const isActive = this.activeTab === tab.id;
             ctx.fillStyle = isActive ? '#3d2817' : '#261200';
             ctx.fillRect(tabX, tabY, tabButtonWidth, tabHeight);
-            
-            // Tab border
+
             ctx.strokeStyle = isActive ? '#d4af37' : '#8b7355';
             ctx.lineWidth = isActive ? 2 : 1;
             ctx.strokeRect(tabX, tabY, tabButtonWidth, tabHeight);
-            
-            // Tab text
-            ctx.font = isActive ? 'bold 12px Trebuchet MS, sans-serif' : '12px Trebuchet MS, sans-serif';
+
+            ctx.font = isActive
+                ? `bold ${Math.round(13 * uiSf)}px Trebuchet MS, sans-serif`
+                : `${Math.round(13 * uiSf)}px Trebuchet MS, sans-serif`;
             ctx.fillStyle = isActive ? '#ffd700' : '#d4af37';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(tab.label, tabX + tabButtonWidth / 2, tabY + tabHeight / 2);
         });
-        
+
         // Content area
-        const contentX = menuX + 20;
-        const contentY = tabStartY + tabHeight + 20;
-        const contentWidth = menuWidth - 40;
-        const contentHeight = menuHeight - tabHeight - 80;
+        const pad = Math.round(20 * uiSf);
+        const contentX = menuX + pad;
+        const contentY = tabStartY + tabHeight + pad;
+        const contentWidth = menuWidth - pad * 2;
+        const contentHeight = menuHeight - tabHeight - Math.round(80 * uiSf);
         
         // Content background
         ctx.fillStyle = '#1a0f0a';
@@ -8799,16 +8815,16 @@ class ArcaneLibraryMenu {
         if (this.activeTab === 'statistics') {
             this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
         } else if (this.activeTab === 'achievements') {
-            this.renderAchievementsTab(ctx, contentX, contentY, contentWidth, contentHeight);
+            this.renderAchievementsTab(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
         } else if (this.activeTab === 'enemy-intel') {
             this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
         }
-        
-        // Red X close button at top right
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
-        
+
+        // Close button
+        const closeButtonSize = Math.round(28 * uiSf);
+        const closeButtonX = menuX + menuWidth - closeButtonSize - Math.round(8 * uiSf);
+        const closeButtonY = menuY + Math.round(8 * uiSf);
+
         ctx.save();
         ctx.globalAlpha = 1;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
@@ -8817,7 +8833,7 @@ class ArcaneLibraryMenu {
         ctx.lineWidth = 2;
         ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px Arial';
+        ctx.font = `bold ${Math.round(18 * uiSf)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('\u00d7', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
@@ -8893,7 +8909,7 @@ class ArcaneLibraryMenu {
         return lines;
     }
 
-    renderAchievementsTab(ctx, x, y, width, height) {
+    renderAchievementsTab(ctx, x, y, width, height, uiSf = 1) {
         const achievementSystem = this.stateManager.achievementSystem;
         const stats    = this.stateManager.gameStatistics;
         const saveData = this.stateManager.currentSaveData;
@@ -8902,113 +8918,100 @@ class ArcaneLibraryMenu {
             ? achievementSystem.getAchievements(stats, saveData)
             : [];
 
-        const COLS       = 3;
-        const PER_PAGE   = 6; // 3 cols × 2 rows
+        // ── Summary header ────────────────────────────────────────────────────
+        const unlockedCount = achievements.filter(a => a.unlocked).length;
+        const totalCount    = achievements.length;
+        const headerH       = Math.round(48 * uiSf);
+
+        const hdrGrad = ctx.createLinearGradient(x, y, x, y + headerH);
+        hdrGrad.addColorStop(0, 'rgba(70, 42, 8, 0.7)');
+        hdrGrad.addColorStop(1, 'rgba(30, 16, 4, 0.4)');
+        ctx.fillStyle = hdrGrad;
+        ctx.fillRect(x, y, width, headerH);
+
+        ctx.strokeStyle = 'rgba(180, 130, 40, 0.3)';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + headerH);
+        ctx.lineTo(x + width, y + headerH);
+        ctx.stroke();
+
+        // Count text
+        const hdrPad = Math.round(14 * uiSf);
+        ctx.font         = `bold ${Math.round(16 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = '#f5d070';
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${unlockedCount}`, x + hdrPad, y + headerH / 2);
+
+        ctx.font      = `${Math.round(13 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle = '#8b7355';
+        ctx.fillText(` / ${totalCount}  ACHIEVEMENTS UNLOCKED`, x + hdrPad + ctx.measureText(`${unlockedCount}`).width + 2, y + headerH / 2);
+
+        // Overall progress bar
+        const oBarOffX = Math.round(270 * uiSf);
+        const oBarX = x + oBarOffX;
+        const oBarH = Math.round(14 * uiSf);
+        const oBarY = y + headerH / 2 - oBarH / 2;
+        const oBarW = width - oBarOffX - Math.round(10 * uiSf);
+        const oRatio = totalCount > 0 ? unlockedCount / totalCount : 0;
+
+        ctx.fillStyle = '#0d0805';
+        ctx.fillRect(oBarX, oBarY, oBarW, oBarH);
+        if (oRatio > 0) {
+            const oGrad = ctx.createLinearGradient(oBarX, oBarY, oBarX + oBarW, oBarY);
+            oGrad.addColorStop(0, '#5a3a0a');
+            oGrad.addColorStop(oRatio, '#d4af37');
+            oGrad.addColorStop(1, '#2a1a05');
+            ctx.fillStyle = oGrad;
+            ctx.fillRect(oBarX, oBarY, Math.round(oBarW * oRatio), oBarH);
+        }
+        ctx.strokeStyle = '#4a3a1a';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(oBarX, oBarY, oBarW, oBarH);
+        ctx.font         = `bold ${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = oRatio >= 1 ? '#ffd700' : '#8b7355';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${unlockedCount}/${totalCount}`, oBarX + oBarW / 2, oBarY + oBarH / 2);
+
+        // ── Card grid ─────────────────────────────────────────────────────────
+        const PER_PAGE   = 8; // 2 cols × 4 rows
         const totalPages = Math.max(1, Math.ceil(achievements.length / PER_PAGE));
         const page       = Math.min(this.achievementCurrentPage, totalPages - 1);
         const startIdx   = page * PER_PAGE;
         const pageItems  = achievements.slice(startIdx, startIdx + PER_PAGE);
 
-        // Reserve bottom 30px for pagination arrows
-        const drawHeight = height - 34;
-        const itemW      = 110;
-        const itemH      = 160;
-        const gap        = 15;
-        const gridW      = COLS * itemW + (COLS - 1) * gap;
-        const startX     = x + (width - gridW) / 2;
-        const startY     = y + 10;
+        const paginationH = Math.round(40 * uiSf);
+        const cardAreaY   = y + headerH + Math.round(6 * uiSf);
+        const cardAreaH   = height - headerH - Math.round(6 * uiSf) - paginationH;
+        const COLS        = 2;
+        const ROWS        = 4;
+        const gapX        = Math.round(10 * uiSf);
+        const gapY        = Math.round(8 * uiSf);
+        const padX        = Math.round(8 * uiSf);
+        const cardW       = (width - 2 * padX - gapX) / COLS;
+        const cardH       = Math.floor((cardAreaH - (ROWS - 1) * gapY) / ROWS);
 
         pageItems.forEach((achievement, i) => {
             const col   = i % COLS;
             const row   = Math.floor(i / COLS);
-            const itemX = startX + col * (itemW + gap);
-            const itemY = startY + row * (itemH + gap);
-
-            // Guard: don't draw outside the content area
-            if (itemY + itemH > y + drawHeight) return;
-
-            // ── Background ────────────────────────────────────────────────────
-            ctx.fillStyle = achievement.unlocked ? '#3d2817' : '#2a1a0f';
-            ctx.fillRect(itemX, itemY, itemW, itemH);
-
-            // ── Border ────────────────────────────────────────────────────────
-            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#4a3a2a';
-            ctx.lineWidth   = achievement.unlocked ? 2 : 1;
-            ctx.strokeRect(itemX, itemY, itemW, itemH);
-
-            // ── Icon ──────────────────────────────────────────────────────────
-            ctx.font        = 'bold 42px Trebuchet MS, sans-serif';
-            ctx.textAlign   = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle   = achievement.unlocked ? '#ffd700' : '#4a3a2a';
-            ctx.fillText(achievement.icon || '●', itemX + itemW / 2, itemY + 34);
-
-            // ── Name ──────────────────────────────────────────────────────────
-            ctx.font        = 'bold 11px Trebuchet MS, sans-serif';
-            ctx.fillStyle   = achievement.unlocked ? '#c9a876' : '#5a4a3a';
-            ctx.textAlign   = 'center';
-            ctx.textBaseline = 'top';
-            const nameLines = this.wrapText(achievement.name, 12);
-            let nameY = itemY + 72;
-            for (const line of nameLines) {
-                ctx.fillText(line, itemX + itemW / 2, nameY);
-                nameY += 13;
-            }
-
-            // ── Description ───────────────────────────────────────────────────
-            ctx.font      = '9px Trebuchet MS, sans-serif';
-            ctx.fillStyle = achievement.unlocked ? '#8b7355' : '#3a2a1a';
-            const descLines = this.wrapText(achievement.description, 14);
-            let descY = itemY + 103;
-            for (const line of descLines.slice(0, 2)) {
-                ctx.fillText(line, itemX + itemW / 2, descY);
-                descY += 11;
-            }
-
-            // ── Progress bar ──────────────────────────────────────────────────
-            const barH  = 8;
-            const barW  = itemW - 12;
-            const barX  = itemX + 6;
-            const barY  = itemY + itemH - 16;
-            const prog  = achievement.progress || { current: 0, max: 1 };
-            const ratio = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
-
-            ctx.fillStyle = '#1a0f05';
-            ctx.fillRect(barX, barY, barW, barH);
-
-            if (ratio > 0) {
-                ctx.fillStyle = achievement.unlocked ? '#d4af37' : '#5a7a3a';
-                ctx.fillRect(barX, barY, Math.round(barW * ratio), barH);
-            }
-
-            ctx.strokeStyle = achievement.unlocked ? '#d4af37' : '#4a3a2a';
-            ctx.lineWidth   = 1;
-            ctx.strokeRect(barX, barY, barW, barH);
-
-            ctx.font        = 'bold 7px Trebuchet MS, sans-serif';
-            ctx.fillStyle   = achievement.unlocked ? '#ffd700' : '#7a6a5a';
-            ctx.textAlign   = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${prog.current}/${prog.max}`, itemX + itemW / 2, barY + barH / 2);
-
-            // ── Locked overlay ────────────────────────────────────────────────
-            if (!achievement.unlocked) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
-                ctx.fillRect(itemX, itemY, itemW, itemH);
-            }
+            const cardX = x + padX + col * (cardW + gapX);
+            const cardY = cardAreaY + row * (cardH + gapY);
+            this._drawAchievementCard(ctx, achievement, cardX, cardY, cardW, cardH, uiSf);
         });
 
         // ── Empty state ───────────────────────────────────────────────────────
         if (achievements.length === 0) {
-            ctx.font        = '13px Trebuchet MS, sans-serif';
-            ctx.fillStyle   = '#6a5a4a';
-            ctx.textAlign   = 'center';
+            ctx.font         = '13px Trebuchet MS, sans-serif';
+            ctx.fillStyle    = '#6a5a4a';
+            ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('No achievements found', x + width / 2, y + height / 2);
             return;
         }
 
-        // ── Pagination arrows ─────────────────────────────────────────────────
+        // ── Pagination ────────────────────────────────────────────────────────
         if (totalPages > 1) {
             const arrowY    = y + height - 28;
             const leftArrX  = x + 10;
@@ -9016,42 +9019,168 @@ class ArcaneLibraryMenu {
             const arrW      = 26;
             const arrH      = 22;
 
-            // Left arrow
             const leftEnabled = page > 0;
-            ctx.fillStyle = leftEnabled
-                ? (this.achievementLeftArrowHovered ? '#d4af37' : '#8b6914')
-                : '#3a2a1a';
+            ctx.fillStyle   = leftEnabled ? (this.achievementLeftArrowHovered ? '#c9922a' : '#5a3a10') : '#1e130a';
             ctx.fillRect(leftArrX, arrowY, arrW, arrH);
-            ctx.strokeStyle = leftEnabled ? '#d4af37' : '#4a3a2a';
+            ctx.strokeStyle = leftEnabled ? '#d4af37' : '#3a2a1a';
             ctx.lineWidth   = 1;
             ctx.strokeRect(leftArrX, arrowY, arrW, arrH);
-            ctx.font        = 'bold 14px Arial';
-            ctx.fillStyle   = leftEnabled ? '#ffd700' : '#5a4a3a';
-            ctx.textAlign   = 'center';
+            ctx.font         = 'bold 16px Arial';
+            ctx.fillStyle    = leftEnabled ? '#ffd700' : '#4a3a2a';
+            ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('‹', leftArrX + arrW / 2, arrowY + arrH / 2);
 
-            // Page indicator
-            ctx.font      = '11px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#8b7355';
+            ctx.font      = 'bold 11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#a08050';
             ctx.textAlign = 'center';
-            ctx.fillText(`${page + 1} / ${totalPages}`, x + width / 2, arrowY + arrH / 2);
+            ctx.fillText(`${page + 1}  /  ${totalPages}`, x + width / 2, arrowY + arrH / 2);
 
-            // Right arrow
             const rightEnabled = page < totalPages - 1;
-            ctx.fillStyle = rightEnabled
-                ? (this.achievementRightArrowHovered ? '#d4af37' : '#8b6914')
-                : '#3a2a1a';
+            ctx.fillStyle   = rightEnabled ? (this.achievementRightArrowHovered ? '#c9922a' : '#5a3a10') : '#1e130a';
             ctx.fillRect(rightArrX, arrowY, arrW, arrH);
-            ctx.strokeStyle = rightEnabled ? '#d4af37' : '#4a3a2a';
+            ctx.strokeStyle = rightEnabled ? '#d4af37' : '#3a2a1a';
             ctx.lineWidth   = 1;
             ctx.strokeRect(rightArrX, arrowY, arrW, arrH);
-            ctx.font        = 'bold 14px Arial';
-            ctx.fillStyle   = rightEnabled ? '#ffd700' : '#5a4a3a';
-            ctx.textAlign   = 'center';
+            ctx.font         = 'bold 16px Arial';
+            ctx.fillStyle    = rightEnabled ? '#ffd700' : '#4a3a2a';
+            ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('›', rightArrX + arrW / 2, arrowY + arrH / 2);
         }
+    }
+
+    _drawAchievementCard(ctx, achievement, cx, cy, cw, ch, uiSf = 1) {
+        const CAT_COLORS = {
+            combat:     '#8b1a1a',
+            victory:    '#8b6914',
+            resilience: '#5a2a8b',
+            builder:    '#1a6b3a',
+            spending:   '#1a3a8b',
+            trading:    '#1a6b5a',
+            alchemy:    '#8b4a1a',
+            loot:       '#5a1a8b',
+            campaign:   '#4a4a5a',
+            playtime:   '#2a3a6b',
+        };
+        const unlocked  = achievement.unlocked;
+        const catColor  = CAT_COLORS[achievement.category] || '#3a2a1a';
+        const prog      = achievement.progress || { current: 0, max: 1 };
+        const ratio     = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
+
+        const stripe = 3 * uiSf;
+        const pad    = 8 * uiSf;
+        const iconR  = 21 * uiSf;
+
+        // ── Background ────────────────────────────────────────────────────────
+        if (unlocked) {
+            const bg = ctx.createLinearGradient(cx, cy, cx + cw, cy + ch);
+            bg.addColorStop(0,   '#3d2210');
+            bg.addColorStop(0.5, '#4a2c14');
+            bg.addColorStop(1,   '#3a200e');
+            ctx.fillStyle = bg;
+        } else {
+            ctx.fillStyle = '#1a1008';
+        }
+        ctx.fillRect(cx, cy, cw, ch);
+
+        // ── Category colour stripe (left edge) ────────────────────────────────
+        ctx.fillStyle = unlocked ? catColor : catColor + '66';
+        ctx.fillRect(cx, cy, stripe, ch);
+
+        // ── Border ────────────────────────────────────────────────────────────
+        if (unlocked) {
+            ctx.fillStyle = 'rgba(255, 215, 80, 0.12)';
+            ctx.fillRect(cx, cy, cw, 2 * uiSf);
+            ctx.strokeStyle = '#c9922a';
+            ctx.lineWidth   = 1.5;
+        } else {
+            ctx.strokeStyle = '#2a1a0a';
+            ctx.lineWidth   = 1;
+        }
+        ctx.strokeRect(cx, cy, cw, ch);
+
+        // ── Icon badge ────────────────────────────────────────────────────────
+        const iconCX = cx + stripe + pad + iconR;
+        const iconCY = cy + ch / 2;
+
+        ctx.beginPath();
+        ctx.arc(iconCX, iconCY, iconR, 0, Math.PI * 2);
+        if (unlocked) {
+            const iconBg = ctx.createRadialGradient(iconCX - 5, iconCY - 5, 3, iconCX, iconCY, iconR);
+            iconBg.addColorStop(0, '#6b4018');
+            iconBg.addColorStop(1, '#2e1508');
+            ctx.fillStyle = iconBg;
+        } else {
+            ctx.fillStyle = '#150e06';
+        }
+        ctx.fill();
+
+        ctx.strokeStyle = unlocked ? '#c9922a' : '#1e1408';
+        ctx.lineWidth   = unlocked ? 1.5 : 1;
+        ctx.stroke();
+
+        ctx.font         = `${unlocked ? 'bold ' : ''}${Math.round(20 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle    = unlocked ? '#f5d070' : '#2e2018';
+        ctx.fillText(achievement.icon || '●', iconCX, iconCY + 1);
+
+        // ── Text area ─────────────────────────────────────────────────────────
+        const textX = cx + stripe + pad + iconR * 2 + pad;
+        const textW = cw - (textX - cx) - pad;
+
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'top';
+
+        // Name
+        ctx.font      = `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle = unlocked ? '#f5d070' : '#4a3a2a';
+        ctx.fillText(achievement.name, textX, cy + 8 * uiSf);
+
+        // Description
+        ctx.font      = `${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle = unlocked ? '#c8a070' : '#2e2018';
+        const maxChars = Math.round(42 / uiSf);
+        const desc    = achievement.description.length > maxChars
+            ? achievement.description.slice(0, maxChars - 2) + '…'
+            : achievement.description;
+        ctx.fillText(desc, textX, cy + 24 * uiSf);
+
+        // ── Progress bar ──────────────────────────────────────────────────────
+        const barH = 12 * uiSf;
+        const barX = textX;
+        const barY = cy + ch - barH - 4 * uiSf;
+        const barW = textW;
+
+        ctx.fillStyle = '#0a0704';
+        ctx.fillRect(barX, barY, barW, barH);
+
+        if (ratio > 0) {
+            const fillW = Math.round(barW * ratio);
+            if (unlocked) {
+                const barGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+                barGrad.addColorStop(0, '#7a5510');
+                barGrad.addColorStop(1, '#f5c040');
+                ctx.fillStyle = barGrad;
+            } else {
+                ctx.fillStyle = '#2a4a1a';
+            }
+            ctx.fillRect(barX, barY, fillW, barH);
+        }
+
+        ctx.strokeStyle = unlocked ? '#8b6914' : '#1e1408';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        ctx.font         = `bold ${Math.round(8 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = unlocked ? '#ffd700' : '#4a3a2a';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        const progLabel  = unlocked
+            ? '✓  COMPLETE'
+            : `${prog.current.toLocaleString()} / ${prog.max.toLocaleString()}`;
+        ctx.fillText(progLabel, barX + barW / 2, barY + barH / 2);
     }
 
     renderEnemyIntelTab(ctx, x, y, width, height) {

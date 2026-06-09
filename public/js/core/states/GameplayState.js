@@ -1200,6 +1200,9 @@ export class GameplayState {
         const clickedLoot = this.lootManager.getLootAtPosition(x, y);
         if (clickedLoot) {
             this.lootManager.collectLoot(clickedLoot);
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.addLootCollected(1);
+            }
             return; // Don't proceed to other interactions
         }
 
@@ -1935,6 +1938,9 @@ export class GameplayState {
         if (this.waveInProgress && this.enemyManager.enemies.length === 0 && !this.enemyManager.spawning) {
             this.waveInProgress = false;
             this.waveCompleted = true;
+            if (this.stateManager.gameStatistics) {
+                this.stateManager.gameStatistics.addWavesSurvived(1);
+            }
 
             if (this.gameState.wave >= this.maxWavesForLevel) {
                 this.completeLevel();
