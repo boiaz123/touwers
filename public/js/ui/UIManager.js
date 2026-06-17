@@ -5333,10 +5333,14 @@ export class UIManager {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                if (typeof window !== 'undefined' && window.__TAURI__) {
-                    window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
+                const supportUrl = 'https://www.patreon.com/c/LilysLittleGames';
+                const tauriInvoke = SaveSystem.getTauriInvoke();
+                if (tauriInvoke) {
+                    tauriInvoke('open_external_url', { url: supportUrl }).catch(err => {
+                        console.warn('Failed to open external URL via Tauri:', err);
+                    });
                 } else {
-                    window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
+                    window.open(supportUrl, '_blank');
                 }
             });
         }

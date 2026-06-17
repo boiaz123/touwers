@@ -2,6 +2,7 @@ import { ParticleSystem } from '../ParticleSystem.js';
 import { ControlsScreen } from '../../ui/ControlsScreen.js';
 import { ResolutionSelector } from '../../ui/ResolutionSelector.js';
 import { ResolutionSettings } from '../ResolutionSettings.js';
+import { SaveSystem } from '../SaveSystem.js';
 
 export class OptionsMenu {
     constructor(stateManager) {
@@ -127,11 +128,19 @@ export class OptionsMenu {
         } else if (buttonName === 'resolution') {
             this.openResolutionSelector();
         } else if (buttonName === 'visitProducer') {
-            if (typeof window !== 'undefined' && window.__TAURI__) {
-                window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
-            } else {
-                window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
-            }
+            this.openProducerLink();
+        }
+    }
+
+    openProducerLink() {
+        const url = 'https://www.patreon.com/c/LilysLittleGames';
+        const tauriInvoke = SaveSystem.getTauriInvoke();
+        if (tauriInvoke) {
+            tauriInvoke('open_external_url', { url }).catch(err => {
+                console.warn('Failed to open external URL via Tauri:', err);
+            });
+        } else {
+            window.open(url, '_blank');
         }
     }
 
@@ -331,11 +340,7 @@ export class OptionsMenu {
         const producerPos = { x: centerX - btnW / 2, y: panelY + 328, width: btnW, height: 42 };
         if (x >= producerPos.x && x <= producerPos.x + producerPos.width &&
             y >= producerPos.y && y <= producerPos.y + producerPos.height) {
-            if (typeof window !== 'undefined' && window.__TAURI__) {
-                window.__TAURI__.shell.open('https://www.patreon.com/c/LilysLittleGames');
-            } else {
-                window.open('https://www.patreon.com/c/LilysLittleGames', '_blank');
-            }
+            this.openProducerLink();
             return;
         }
     }

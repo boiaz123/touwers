@@ -370,18 +370,11 @@ export class SettlementHub {
 
     setupMouseListeners() {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling - same as handleMouseMove
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.handleClick(x, y);
-        };
+        // Note: clicks are NOT bound here. game.js's global canvas 'click' listener
+        // already routes through GameStateManager.handleClick() to this.handleClick() -
+        // binding our own listener too would fire handleClick() twice per click.
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
-        
+
         // Add wheel event listener for scrolling in upgrade tiles
         this.wheelHandler = (e) => {
             // Only handle wheel events when upgrades panel is open
@@ -401,9 +394,6 @@ export class SettlementHub {
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-        }
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
         if (this.wheelHandler) {
             this.stateManager.canvas.removeEventListener('wheel', this.wheelHandler);
@@ -5688,8 +5678,47 @@ class UpgradesMenu {
         if (currentLine) {
             lines.push(currentLine);
         }
-        
+
         return lines;
+    }
+
+    // Pixel-accurate word-wrap using the current ctx.font, instead of a fixed
+    // chars-per-line estimate that can overflow a tile's bounds at some font/width
+    // combinations. Caller must set ctx.font to the font it will draw with first.
+    wrapTextToWidth(ctx, text, maxWidthPx) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (const word of words) {
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+            if (!currentLine || ctx.measureText(testLine).width <= maxWidthPx) {
+                currentLine = testLine;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        return lines;
+    }
+
+    // Like wrapTextToWidth, but caps the result to maxLines, ellipsis-truncating
+    // the last line if there's more text than fits. Used for item/upgrade names.
+    wrapNameToLines(ctx, text, maxWidthPx, maxLines) {
+        const lines = this.wrapTextToWidth(ctx, text, maxWidthPx);
+        if (lines.length <= maxLines) return lines;
+
+        const kept = lines.slice(0, maxLines);
+        let last = kept[maxLines - 1];
+        while (last.length > 1 && ctx.measureText(last + '…').width > maxWidthPx) {
+            last = last.slice(0, -1).trimEnd();
+        }
+        kept[maxLines - 1] = last + '…';
+        return kept;
     }
 
     /**
@@ -6873,24 +6902,14 @@ class UpgradesMenu {
         ctx.textBaseline = 'top';
         
         const nameY = y + (isSellTab ? 57 : 48);
-        const maxCharsPerLine = 18;
-        if (item.name.length > maxCharsPerLine) {
-            const words = item.name.split(' ');
-            let line1 = '', line2 = '';
-            for (const word of words) {
-                if ((line1 + word).length <= maxCharsPerLine) {
-                    line1 += (line1 ? ' ' : '') + word;
-                } else {
-                    line2 += (line2 ? ' ' : '') + word;
-                }
-            }
-            ctx.fillText(line1, x + width / 2, nameY);
-            if (line2) {
-                ctx.fillText(line2, x + width / 2, nameY + 18);
-            }
-        } else {
-            ctx.fillText(item.name, x + width / 2, nameY);
-        }
+        const nameMaxWidth = width - 10;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, nameY, width, 38);
+        ctx.clip();
+        const nameLines = this.wrapNameToLines(ctx, item.name, nameMaxWidth, 2);
+        nameLines.forEach((line, i) => ctx.fillText(line, x + width / 2, nameY + i * 18));
+        ctx.restore();
         
         // ===== SCROLLABLE DESCRIPTION BOX AT TOP (SMALLER, FIXED HEIGHT) =====
         const descBoxStartY = nameY + 45;
@@ -6912,16 +6931,19 @@ class UpgradesMenu {
         }
         
         const scrollState = this.scrollableTiles.get(item.id);
-        
-        // Wrap description text
-        const charPerLine = Math.floor((width - 16) / 6);
-        const lines = this.wrapText(item.description, charPerLine);
+
+        // Wrap description text (measured against the actual draw font, with the
+        // scrollbar's width always reserved so wrapping never depends on whether
+        // the scrollbar ends up showing)
+        ctx.font = '9px Arial';
+        const descAvailWidth = width - 19;
+        const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
         const lineHeight = 11;
-        
+
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
         scrollState.maxScroll = Math.max(0, lines.length - maxVisibleLines);
-        
+
         // Render visible portion of description text with clip
         ctx.save();
         ctx.beginPath();
@@ -6929,20 +6951,20 @@ class UpgradesMenu {
         const scrollBarWidth = scrollState.maxScroll > 0 ? 6 : 0;
         ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
         ctx.clip();
-        
+
         ctx.font = '9px Arial';
         ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        
+
         const startLine = Math.min(scrollState.scrollOffset, scrollState.maxScroll);
         const textX = x + 8;
         const textStartY = descBoxStartY + textPadding - (startLine * lineHeight);
-        
+
         for (let i = 0; i < lines.length; i++) {
             ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
         }
-        
+
         ctx.restore();
         
         // Draw scroll bar if there's scrollable content
@@ -6986,10 +7008,11 @@ class UpgradesMenu {
             // Each newline-separated sentence gets ONE bullet; wrapped continuations are indented
             const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
             const effectLines = []; // Each entry: { text, isBullet }
-            const effectCharPerLine = Math.floor((width - 24) / 7);
-            
+            const effectPrefixWidth = ctx.measureText('• ').width;
+            const effectAvailWidth = (width - 12) - effectPrefixWidth;
+
             for (const rawLine of rawEffectLines) {
-                const wrappedLines = this.wrapText(rawLine, effectCharPerLine);
+                const wrappedLines = this.wrapTextToWidth(ctx, rawLine, effectAvailWidth);
                 for (let wi = 0; wi < wrappedLines.length; wi++) {
                     effectLines.push({ text: wrappedLines[wi], isBullet: wi === 0 });
                 }
@@ -7169,24 +7192,14 @@ class UpgradesMenu {
         ctx.textBaseline = 'top';
         
         const nameY = y + 57;
-        const maxCharsPerLine = 18;
-        if (item.name.length > maxCharsPerLine) {
-            const words = item.name.split(' ');
-            let line1 = '', line2 = '';
-            for (const word of words) {
-                if ((line1 + word).length <= maxCharsPerLine) {
-                    line1 += (line1 ? ' ' : '') + word;
-                } else {
-                    line2 += (line2 ? ' ' : '') + word;
-                }
-            }
-            ctx.fillText(line1, x + width / 2, nameY);
-            if (line2) {
-                ctx.fillText(line2, x + width / 2, nameY + 18);
-            }
-        } else {
-            ctx.fillText(item.name, x + width / 2, nameY);
-        }
+        const nameMaxWidth = width - 10;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, nameY, width, 38);
+        ctx.clip();
+        const nameLines = this.wrapNameToLines(ctx, item.name, nameMaxWidth, 2);
+        nameLines.forEach((line, i) => ctx.fillText(line, x + width / 2, nameY + i * 18));
+        ctx.restore();
         
         // ===== SCROLLABLE DESCRIPTION BOX =====
         const descBoxStartY = nameY + 45;
@@ -7208,16 +7221,19 @@ class UpgradesMenu {
         }
         
         const scrollState = this.scrollableTiles.get(item.id);
-        
-        // Wrap description text
-        const charPerLine = Math.floor((width - 16) / 6);
-        const lines = this.wrapText(item.description, charPerLine);
+
+        // Wrap description text (measured against the actual draw font, with the
+        // scrollbar's width always reserved so wrapping never depends on whether
+        // the scrollbar ends up showing)
+        ctx.font = '9px Arial';
+        const descAvailWidth = width - 19;
+        const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
         const lineHeight = 11;
-        
+
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
         scrollState.maxScroll = Math.max(0, lines.length - maxVisibleLines);
-        
+
         // Render visible portion of description text with clip
         ctx.save();
         ctx.beginPath();
@@ -7225,20 +7241,20 @@ class UpgradesMenu {
         const scrollBarWidth = scrollState.maxScroll > 0 ? 6 : 0;
         ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
         ctx.clip();
-        
+
         ctx.font = '9px Arial';
         ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        
+
         const startLine = Math.min(scrollState.scrollOffset, scrollState.maxScroll);
         const textX = x + 8;
         const textStartY = descBoxStartY + textPadding - (startLine * lineHeight);
-        
+
         for (let i = 0; i < lines.length; i++) {
             ctx.fillText(lines[i], textX, textStartY + (i * lineHeight));
         }
-        
+
         ctx.restore();
         
         // Draw scroll bar if there's scrollable content
@@ -7262,24 +7278,46 @@ class UpgradesMenu {
         
         // ===== EFFECTS SECTION AT BOTTOM =====
         const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
-        const effectBoxHeight = (height - 47) - (descBoxStartY + descBoxHeight + 2);
-        
+        const buttonTopY = y + height - 47;
+        const effectBoxHeight = buttonTopY - effectBoxStartY;
+
         // Effects header/content
-        if (item.effect) {
+        if (item.effect && effectBoxHeight > 0) {
+            // Effect text with bullet points - clipped to tile bounds
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x + 4, effectBoxStartY, width - 8, effectBoxHeight);
+            ctx.clip();
+
             ctx.font = 'bold 15px Arial';
             ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            
-            // Split effect text by newlines (multi-line bullet format)
-            const effectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            
-            const effectTextStartY = effectBoxStartY + 2;
-            const maxEffectLines = 2;
-            for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
-                const bulletText = '• ' + effectLines[i];
-                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * 18));
+
+            // Split effect by newlines first, then wrap each line if needed
+            // Each newline-separated sentence gets ONE bullet; wrapped continuations are indented
+            const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+            const effectLines = []; // Each entry: { text, isBullet }
+            const effectPrefixWidth = ctx.measureText('• ').width;
+            const effectAvailWidth = (width - 12) - effectPrefixWidth;
+
+            for (const rawLine of rawEffectLines) {
+                const wrappedLines = this.wrapTextToWidth(ctx, rawLine, effectAvailWidth);
+                for (let wi = 0; wi < wrappedLines.length; wi++) {
+                    effectLines.push({ text: wrappedLines[wi], isBullet: wi === 0 });
+                }
             }
+
+            const effectLineHeight = 18;
+            const maxEffectLines = Math.max(1, Math.floor(effectBoxHeight / effectLineHeight));
+            const effectTextStartY = effectBoxStartY + 2;
+            for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
+                const entry = effectLines[i];
+                const bulletText = entry.isBullet ? ('• ' + entry.text) : ('  ' + entry.text);
+                ctx.fillText(bulletText, x + 8, effectTextStartY + (i * effectLineHeight));
+            }
+
+            ctx.restore();
         }
         
         // Disabled overlay and message
@@ -7292,7 +7330,9 @@ class UpgradesMenu {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const displayMsg = item.requirementMsg || 'Not Available';
-            ctx.fillText(displayMsg, x + width / 2, y + height - 18);
+            const msgLines = this.wrapNameToLines(ctx, displayMsg, width - 10, 2);
+            const msgBaseY = y + height - 18 - (msgLines.length - 1) * 9;
+            msgLines.forEach((line, i) => ctx.fillText(line, x + width / 2, msgBaseY + i * 9));
         }
         
         // Action button
@@ -8456,6 +8496,28 @@ class ArcaneLibraryMenu {
         return { menuX, menuY, menuWidth, menuHeight };
     }
 
+    // Shared geometry for tabs/content/close button - used by render(), updateHoverState()
+    // and handleClick() so hitboxes always match what's drawn, regardless of uiSf scale.
+    _getTabLayout(menuX, menuY, menuWidth, menuHeight) {
+        const uiSf = menuWidth / 800; // internal scale factor relative to base 800px popup
+        const tabHeight = Math.round(40 * uiSf);
+        const tabStartY = menuY + Math.round(52 * uiSf);
+        const tabButtonWidth = menuWidth / 3;
+        const pad = Math.round(20 * uiSf);
+        const contentX = menuX + pad;
+        const contentY = tabStartY + tabHeight + pad;
+        const contentWidth = menuWidth - pad * 2;
+        const contentHeight = menuHeight - tabHeight - Math.round(80 * uiSf);
+        const closeButtonSize = Math.round(28 * uiSf);
+        const closeButtonX = menuX + menuWidth - closeButtonSize - Math.round(8 * uiSf);
+        const closeButtonY = menuY + Math.round(8 * uiSf);
+        return {
+            uiSf, tabHeight, tabStartY, tabButtonWidth,
+            contentX, contentY, contentWidth, contentHeight,
+            closeButtonSize, closeButtonX, closeButtonY
+        };
+    }
+
     update(deltaTime) {
         if (this.isOpen && this.animationProgress < 1) {
             this.animationProgress += deltaTime * 2;
@@ -8465,32 +8527,23 @@ class ArcaneLibraryMenu {
     updateHoverState(x, y) {
         const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
         const canvas = this.stateManager.canvas;
-        
+        const {
+            tabHeight, tabStartY, tabButtonWidth,
+            contentX, contentY, contentWidth, contentHeight,
+            closeButtonSize, closeButtonX, closeButtonY
+        } = this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
+
         // Close button
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
-        
         this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
-        
+
         // Tab buttons
-        const tabHeight = 35;
-        const tabStartY = menuY + 50;
-        const tabButtonWidth = menuWidth / 3;
-        
         this.tabs.forEach((tab, index) => {
             const tabX = menuX + index * tabButtonWidth;
             const tabY = tabStartY;
             tab.hovered = x >= tabX && x <= tabX + tabButtonWidth &&
                          y >= tabY && y <= tabY + tabHeight;
         });
-        
-        // Shared content area coordinates (used by multiple tabs)
-        const contentX      = menuX + 20;
-        const contentY      = tabStartY + tabHeight + 20;
-        const contentWidth  = menuWidth - 40;
-        const contentHeight = menuHeight - tabHeight - 80;
 
         // Content area hover detection for enemy-intel tab
         if (this.activeTab === 'enemy-intel') {
@@ -8582,23 +8635,19 @@ class ArcaneLibraryMenu {
         }
 
         const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
-        
+        const {
+            tabHeight, tabStartY, tabButtonWidth,
+            closeButtonSize, closeButtonX, closeButtonY
+        } = this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
+
         // Close button
-        const closeButtonX = menuX + menuWidth - 35;
-        const closeButtonY = menuY + 10;
-        const closeButtonSize = 25;
-        
         if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
             y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
             this.close();
             return;
         }
-        
+
         // Tab buttons
-        const tabHeight = 35;
-        const tabStartY = menuY + 50;
-        const tabButtonWidth = menuWidth / 3;
-        
         for (let i = 0; i < this.tabs.length; i++) {
             const tab = this.tabs[i];
             const tabX = menuX + i * tabButtonWidth;
@@ -8613,12 +8662,8 @@ class ArcaneLibraryMenu {
         
         // Handle achievement tab pagination clicks
         if (this.activeTab === 'achievements') {
-            const tabHeight    = 35;
-            const tabStartY    = menuY + 50;
-            const contentX     = menuX + 20;
-            const contentY     = tabStartY + tabHeight + 20;
-            const contentWidth = menuWidth - 40;
-            const contentHeight = menuHeight - tabHeight - 80;
+            const { contentX, contentY, contentWidth, contentHeight } =
+                this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
             const achievementList = this.stateManager.achievementSystem
                 ? this.stateManager.achievementSystem.getAchievements(
                     this.stateManager.gameStatistics, this.stateManager.currentSaveData)
@@ -8644,10 +8689,8 @@ class ArcaneLibraryMenu {
 
         // Handle enemy intel tab clicks
         if (this.activeTab === 'enemy-intel') {
-            const contentX = menuX + 20;
-            const contentY = tabStartY + tabHeight + 20;
-            const contentWidth = menuWidth - 40;
-            const contentHeight = menuHeight - tabHeight - 80;
+            const { contentX, contentY, contentWidth, contentHeight } =
+                this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
             const listW = 230;
             const btnH = 36;
             const btnGap = 4;
@@ -8752,7 +8795,11 @@ class ArcaneLibraryMenu {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        const uiSf = menuWidth / 800; // internal scale factor relative to base 800px popup
+        const {
+            uiSf, tabHeight, tabStartY, tabButtonWidth,
+            contentX, contentY, contentWidth, contentHeight,
+            closeButtonSize, closeButtonX, closeButtonY
+        } = this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
 
         // Menu background
         ctx.fillStyle = '#2a1a0f';
@@ -8777,10 +8824,6 @@ class ArcaneLibraryMenu {
         ctx.fillText('ARCANE LIBRARY', menuX + menuWidth / 2, menuY + Math.round(8 * uiSf));
 
         // Render tabs
-        const tabHeight = Math.round(40 * uiSf);
-        const tabStartY = menuY + Math.round(52 * uiSf);
-        const tabButtonWidth = menuWidth / 3;
-
         this.tabs.forEach((tab, index) => {
             const tabX = menuX + index * tabButtonWidth;
             const tabY = tabStartY;
@@ -8802,13 +8845,6 @@ class ArcaneLibraryMenu {
             ctx.fillText(tab.label, tabX + tabButtonWidth / 2, tabY + tabHeight / 2);
         });
 
-        // Content area
-        const pad = Math.round(20 * uiSf);
-        const contentX = menuX + pad;
-        const contentY = tabStartY + tabHeight + pad;
-        const contentWidth = menuWidth - pad * 2;
-        const contentHeight = menuHeight - tabHeight - Math.round(80 * uiSf);
-        
         // Content background
         ctx.fillStyle = '#1a0f0a';
         ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
@@ -8826,10 +8862,6 @@ class ArcaneLibraryMenu {
         }
 
         // Close button
-        const closeButtonSize = Math.round(28 * uiSf);
-        const closeButtonX = menuX + menuWidth - closeButtonSize - Math.round(8 * uiSf);
-        const closeButtonY = menuY + Math.round(8 * uiSf);
-
         ctx.save();
         ctx.globalAlpha = 1;
         ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
@@ -9493,6 +9525,12 @@ class MusicalScoresMenu {
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
         this.rightArrowHovered = false;
+        this.supportBardButtonHovered = false;
+
+        this.showSupportConfirm = false;
+        this.supportConfirmOpenTime = 0;
+        this.supportConfirmOpenHovered = false;
+        this.supportConfirmCancelHovered = false;
     }
 
     open() {
@@ -9526,6 +9564,27 @@ class MusicalScoresMenu {
         }
     }
 
+    openSupportConfirm() {
+        this.showSupportConfirm = true;
+        this.supportConfirmOpenTime = Date.now();
+    }
+
+    confirmOpenBardWebsite() {
+        const url = 'http://kardipaseyan.nl/';
+        this.showSupportConfirm = false;
+        // Opened directly from the click handler (not from inside a blocking
+        // native dialog) so the browser still treats this as a user-triggered
+        // action and won't pop-up-block it.
+        const tauriInvoke = SaveSystem.getTauriInvoke();
+        if (tauriInvoke) {
+            tauriInvoke('open_external_url', { url }).catch(err => {
+                console.warn('Failed to open external URL via Tauri:', err);
+            });
+        } else {
+            window.open(url, '_blank');
+        }
+    }
+
     playMusicTrack(music) {
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.musicPlaylistMode = false;
@@ -9540,8 +9599,42 @@ class MusicalScoresMenu {
         }
     }
 
+    getSupportConfirmBounds(canvas) {
+        const dialogWidth = 420;
+        const dialogHeight = 190;
+        const dialogX = canvas.width / 2 - dialogWidth / 2;
+        const dialogY = canvas.height / 2 - dialogHeight / 2;
+        const buttonWidth = 150;
+        const buttonHeight = 32;
+        const buttonY = dialogY + dialogHeight - 50;
+        const openBtn = {
+            x: dialogX + dialogWidth / 2 - buttonWidth - 10,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        const cancelBtn = {
+            x: dialogX + dialogWidth / 2 + 10,
+            y: buttonY,
+            width: buttonWidth,
+            height: buttonHeight
+        };
+        return { dialogX, dialogY, dialogWidth, dialogHeight, openBtn, cancelBtn };
+    }
+
     updateHoverState(x, y) {
         const canvas = this.stateManager.canvas;
+
+        if (this.showSupportConfirm) {
+            const { openBtn, cancelBtn } = this.getSupportConfirmBounds(canvas);
+            this.supportConfirmOpenHovered = x >= openBtn.x && x <= openBtn.x + openBtn.width &&
+                                             y >= openBtn.y && y <= openBtn.y + openBtn.height;
+            this.supportConfirmCancelHovered = x >= cancelBtn.x && x <= cancelBtn.x + cancelBtn.width &&
+                                               y >= cancelBtn.y && y <= cancelBtn.y + cancelBtn.height;
+            canvas.style.cursor = (this.supportConfirmOpenHovered || this.supportConfirmCancelHovered) ? 'pointer' : 'default';
+            return;
+        }
+
         const menuX = canvas.width / 2 - 400;
         const menuY = canvas.height / 2 - 250;
         const menuWidth = 800;
@@ -9553,6 +9646,13 @@ class MusicalScoresMenu {
         this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
                                   y >= closeButtonY && y <= closeButtonY + closeButtonSize;
 
+        const supportBtnX = menuX + 20;
+        const supportBtnY = menuY + 42;
+        const supportBtnWidth = 160;
+        const supportBtnHeight = 22;
+        this.supportBardButtonHovered = x >= supportBtnX && x <= supportBtnX + supportBtnWidth &&
+                                        y >= supportBtnY && y <= supportBtnY + supportBtnHeight;
+
         const contentX = menuX + 20;
         const contentY = menuY + 70;
         const contentWidth = menuWidth - 40;
@@ -9561,7 +9661,7 @@ class MusicalScoresMenu {
         const cols = 3;
         const itemSize = 100;
         const padding = 15;
-        const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+        const startX = contentX + (contentWidth - (cols * itemSize + (cols - 1) * padding)) / 2;
         const startY = contentY + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
@@ -9598,15 +9698,31 @@ class MusicalScoresMenu {
         }
 
         this.stateManager.canvas.style.cursor =
-            (this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || musicItemHovered)
+            (this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered ||
+             this.supportBardButtonHovered || musicItemHovered)
                 ? 'pointer' : 'default';
     }
 
     handleClick(x, y) {
+        const canvas = this.stateManager.canvas;
+
+        if (this.showSupportConfirm) {
+            const timeSinceConfirmOpen = Date.now() - this.supportConfirmOpenTime;
+            if (timeSinceConfirmOpen < 200) return;
+            const { openBtn, cancelBtn } = this.getSupportConfirmBounds(canvas);
+            if (x >= openBtn.x && x <= openBtn.x + openBtn.width &&
+                y >= openBtn.y && y <= openBtn.y + openBtn.height) {
+                this.confirmOpenBardWebsite();
+            } else if (x >= cancelBtn.x && x <= cancelBtn.x + cancelBtn.width &&
+                       y >= cancelBtn.y && y <= cancelBtn.y + cancelBtn.height) {
+                this.showSupportConfirm = false;
+            }
+            return;
+        }
+
         const timeSinceOpen = Date.now() - this.openTime;
         if (timeSinceOpen < 200) return;
 
-        const canvas = this.stateManager.canvas;
         const menuX = canvas.width / 2 - 400;
         const menuY = canvas.height / 2 - 250;
         const menuWidth = 800;
@@ -9621,6 +9737,16 @@ class MusicalScoresMenu {
             return;
         }
 
+        const supportBtnX = menuX + 20;
+        const supportBtnY = menuY + 42;
+        const supportBtnWidth = 160;
+        const supportBtnHeight = 22;
+        if (x >= supportBtnX && x <= supportBtnX + supportBtnWidth &&
+            y >= supportBtnY && y <= supportBtnY + supportBtnHeight) {
+            this.openSupportConfirm();
+            return;
+        }
+
         const contentX = menuX + 20;
         const contentY = menuY + 70;
         const contentWidth = menuWidth - 40;
@@ -9628,7 +9754,7 @@ class MusicalScoresMenu {
         const cols = 3;
         const itemSize = 100;
         const padding = 15;
-        const startX = contentX + (contentWidth - cols * (itemSize + padding)) / 2;
+        const startX = contentX + (contentWidth - (cols * itemSize + (cols - 1) * padding)) / 2;
         const startY = contentY + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
@@ -9708,6 +9834,22 @@ class MusicalScoresMenu {
         ctx.textBaseline = 'top';
         ctx.fillText('MUSICAL SCORES', menuX + menuWidth / 2, menuY + 8);
 
+        // "Support the Bard" button - links out to Joost the Bard's website
+        const supportBtnX = menuX + 20;
+        const supportBtnY = menuY + 42;
+        const supportBtnWidth = 160;
+        const supportBtnHeight = 22;
+        ctx.fillStyle = this.supportBardButtonHovered ? '#8b6f47' : '#3d2817';
+        ctx.fillRect(supportBtnX, supportBtnY, supportBtnWidth, supportBtnHeight);
+        ctx.strokeStyle = this.supportBardButtonHovered ? '#ffd700' : '#8b7355';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(supportBtnX, supportBtnY, supportBtnWidth, supportBtnHeight);
+        ctx.font = 'bold 11px Trebuchet MS, sans-serif';
+        ctx.fillStyle = this.supportBardButtonHovered ? '#ffd700' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Support the Bard', supportBtnX + supportBtnWidth / 2, supportBtnY + supportBtnHeight / 2 + 1);
+
         const contentX = menuX + 20;
         const contentY = menuY + 70;
         const contentWidth = menuWidth - 40;
@@ -9783,6 +9925,67 @@ class MusicalScoresMenu {
         ctx.restore();
 
         ctx.globalAlpha = 1;
+
+        if (this.showSupportConfirm) {
+            this.renderSupportConfirmDialog(ctx, canvas);
+        }
+    }
+
+    renderSupportConfirmDialog(ctx, canvas) {
+        const { dialogX, dialogY, dialogWidth, dialogHeight, openBtn, cancelBtn } = this.getSupportConfirmBounds(canvas);
+
+        // Dim everything behind the dialog, including the menu itself
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(dialogX, dialogY, dialogWidth, dialogHeight);
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(dialogX, dialogY, dialogWidth, dialogHeight);
+
+        this.drawCornerTrim(ctx, dialogX, dialogY, 12, true, false, false, false);
+        this.drawCornerTrim(ctx, dialogX + dialogWidth, dialogY, 12, false, true, false, false);
+        this.drawCornerTrim(ctx, dialogX, dialogY + dialogHeight, 12, false, false, true, false);
+        this.drawCornerTrim(ctx, dialogX + dialogWidth, dialogY + dialogHeight, 12, false, false, false, true);
+
+        ctx.font = 'bold 18px serif';
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Support the Bard', dialogX + dialogWidth / 2, dialogY + 16);
+
+        ctx.font = '13px Trebuchet MS, sans-serif';
+        ctx.fillStyle = '#e8d5b5';
+        const lines = [
+            'This will open a new window and take you to the',
+            "website of Joost the Bard:",
+            'kardipaseyan.nl'
+        ];
+        lines.forEach((line, idx) => {
+            ctx.fillText(line, dialogX + dialogWidth / 2, dialogY + 52 + idx * 18);
+        });
+
+        // Open Website button
+        ctx.fillStyle = this.supportConfirmOpenHovered ? '#8b6f47' : '#3d2817';
+        ctx.fillRect(openBtn.x, openBtn.y, openBtn.width, openBtn.height);
+        ctx.strokeStyle = this.supportConfirmOpenHovered ? '#ffd700' : '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(openBtn.x, openBtn.y, openBtn.width, openBtn.height);
+        ctx.font = 'bold 13px Trebuchet MS, sans-serif';
+        ctx.fillStyle = this.supportConfirmOpenHovered ? '#ffd700' : '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Open Website', openBtn.x + openBtn.width / 2, openBtn.y + openBtn.height / 2 + 1);
+
+        // Cancel button
+        ctx.fillStyle = this.supportConfirmCancelHovered ? '#5a3a3a' : '#3d2817';
+        ctx.fillRect(cancelBtn.x, cancelBtn.y, cancelBtn.width, cancelBtn.height);
+        ctx.strokeStyle = this.supportConfirmCancelHovered ? '#ff6666' : '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cancelBtn.x, cancelBtn.y, cancelBtn.width, cancelBtn.height);
+        ctx.fillStyle = this.supportConfirmCancelHovered ? '#ff6666' : '#d4af37';
+        ctx.fillText('Cancel', cancelBtn.x + cancelBtn.width / 2, cancelBtn.y + cancelBtn.height / 2 + 1);
     }
 
     renderContent(ctx, x, y, width, height) {
@@ -9799,7 +10002,7 @@ class MusicalScoresMenu {
         const cols = 3;
         const itemSize = 100;
         const padding = 15;
-        const startX = x + (width - cols * (itemSize + padding)) / 2;
+        const startX = x + (width - (cols * itemSize + (cols - 1) * padding)) / 2;
         const startY = y + 10;
 
         const musicArray = Array.from(this.unlockedMusicTracks.values());
@@ -9843,24 +10046,33 @@ class MusicalScoresMenu {
             ctx.stroke();
             ctx.restore();
 
-            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
+            ctx.font = 'bold 9px Trebuchet MS, sans-serif';
             ctx.fillStyle = '#ffd700';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
+            const maxLines = 3;
+            const lineHeight = 11;
+            const textTop = itemY + 42;
             const words = music.name.split(' ');
+            const lines = [];
             let line = '';
-            let lineY = itemY + itemSize / 2;
             words.forEach(word => {
                 const testLine = line + (line ? ' ' : '') + word;
                 if (ctx.measureText(testLine).width > itemSize - 10 && line) {
-                    ctx.fillText(line, itemX + itemSize / 2, lineY);
+                    lines.push(line);
                     line = word;
-                    lineY += 12;
                 } else {
                     line = testLine;
                 }
             });
-            ctx.fillText(line, itemX + itemSize / 2, lineY);
+            if (line) lines.push(line);
+            if (lines.length > maxLines) {
+                lines.length = maxLines;
+                lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*$/, '') + '…';
+            }
+            lines.forEach((l, idx) => {
+                ctx.fillText(l, itemX + itemSize / 2, textTop + idx * lineHeight);
+            });
 
             const playButtonSize = 20;
             const playButtonX = itemX + itemSize / 2 - playButtonSize / 2;

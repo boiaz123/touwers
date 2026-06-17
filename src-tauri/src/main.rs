@@ -3,6 +3,7 @@
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
+use tauri_plugin_shell::ShellExt;
 
 fn get_saves_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_data = app.path().app_data_dir()
@@ -69,6 +70,13 @@ fn get_saves_path(app: tauri::AppHandle) -> Result<String, String> {
     Ok(saves_dir.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    app.shell()
+        .open(url, None)
+        .map_err(|e| format!("Failed to open URL: {}", e))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -77,7 +85,8 @@ fn main() {
             write_save_file,
             read_save_file,
             delete_save_file,
-            get_saves_path
+            get_saves_path,
+            open_external_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

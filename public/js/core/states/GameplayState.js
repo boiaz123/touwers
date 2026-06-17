@@ -1433,7 +1433,13 @@ export class GameplayState {
             if (waveConfig && waveConfig.enemyCount > 0) {
                 // Track total enemies spawned across all waves
                 this.totalEnemiesSpawned += waveConfig.enemyCount;
-                
+
+                // Frog King boss fanfare - plays once when he spawns in the space campaign's final level
+                if (this.currentCampaignId === 'campaign-4' && this.currentLevel === 'level8' &&
+                    waveConfig.wavePattern && waveConfig.wavePattern.includes('frogking')) {
+                    this.stateManager.audioManager.playMusic('frog-king-theme');
+                }
+
                 if (waveConfig.wavePattern) {
                     // Use custom pattern from level
                     this.enemyManager.spawnWaveWithPattern(
