@@ -184,6 +184,11 @@ export class SettlementHub {
         // Remember which save slot is loaded
         this.lastLoadedSaveSlot = this.stateManager.currentSaveSlot;
 
+        // Ensure achievement banners can play their unlock sound
+        if (this.stateManager.achievementSystem && this.stateManager.audioManager) {
+            this.stateManager.achievementSystem.setAudioManager(this.stateManager.audioManager);
+        }
+
         // Refresh CampaignRegistry lock/unlock state from saved data
         CampaignRegistry.loadFromSaveData(currentSaveData);
 

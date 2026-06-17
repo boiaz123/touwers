@@ -227,6 +227,16 @@ export function initializeMusicRegistry() {
         }
     );
 
+        MusicRegistry.registerMusic(
+        'campaign-3-battle-5',
+        'assets/audio/music/CampaignSongs/DesertSongs/Desert_Battle5.mp3',
+        {
+            loop: true,
+            category: 'campaign-3',
+            volume: 0.7
+        }
+    );
+
     MusicRegistry.registerMusic(
         'campaign-4-battle-1',
         'assets/audio/music/CampaignSongs/SpaceSongs/Space_Battle.mp3',

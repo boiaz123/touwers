@@ -170,6 +170,42 @@ export function initializeSFXRegistry() {
         }
     );
     
+    SFXRegistry.registerSFX(
+        'shard-drop',
+        'assets/audio/sfx/LevelSounds/ShardDrop.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.7
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'spell-attack',
+        'assets/audio/sfx/LevelSounds/SpellAttack.mp3',
+        {
+            category: 'gameplay',
+            volume: 0.5
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'diamond-press',
+        'assets/audio/sfx/BuildingSounds/DiamondPress.mp3',
+        {
+            category: 'building',
+            volume: 0.6
+        }
+    );
+
+    SFXRegistry.registerSFX(
+        'achievement',
+        'assets/audio/sfx/MenuSounds/Achievement.mp3',
+        {
+            category: 'ui',
+            volume: 0.7
+        }
+    );
+
     // Tower attack sounds
     SFXRegistry.registerSFX(
         'arrow',

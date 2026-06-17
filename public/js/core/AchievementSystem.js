@@ -540,7 +540,9 @@ export class AchievementSystem {
             this._banner      = this.pendingBanners.shift();
             this._bannerTimer = 0;
             this._bannerPhase = 'in';
-
+            if (this.audioManager) {
+                this.audioManager.playSFX('achievement');
+            }
         }
     }
 

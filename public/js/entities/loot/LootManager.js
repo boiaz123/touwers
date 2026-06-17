@@ -39,7 +39,7 @@ export class LootManager {
         const shard = new RealmShardDrop(x, y, lootId);
         this.lootBags.push(shard);
         if (this.audioManager) {
-            this.audioManager.playSFX('rare-loot-drop');
+            this.audioManager.playSFX('shard-drop');
         }
         return shard;
     }

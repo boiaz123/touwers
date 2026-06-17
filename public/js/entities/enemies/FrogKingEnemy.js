@@ -173,6 +173,9 @@ export class FrogKingEnemy extends BaseEnemy {
                     const dy = nearest.y - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const speed = 250;
+                    if (this.audioManager) {
+                        this.audioManager.playSFX('spell-attack');
+                    }
                     this.blockadeProjectile = {
                         x: this.x,
                         y: this.y - 20,

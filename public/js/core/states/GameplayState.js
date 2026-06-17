@@ -1166,6 +1166,8 @@ export class GameplayState {
                             this.stateManager.audioManager.playSFX('superweaponlab');
                         } else if (this.selectedBuildingType === 'mine') {
                             this.stateManager.audioManager.playSFX('minegoldclick');
+                        } else if (this.selectedBuildingType === 'diamond-press') {
+                            this.stateManager.audioManager.playSFX('diamond-press');
                         }
                     }
                     
@@ -1257,6 +1259,9 @@ export class GameplayState {
                 this.uiManager.showSuperWeaponMenu(clickResult);
                 return;
             } else if (clickResult.type === 'diamond_press_menu') {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('diamond-press');
+                }
                 this.uiManager.showDiamondPressMenu(clickResult);
                 return;
             } else if (clickResult.type === 'training_menu') {
@@ -1700,10 +1705,6 @@ export class GameplayState {
         this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
 
         this._updateSpellEffects(adjustedDeltaTime);
-
-        if (this.stateManager.achievementSystem) {
-            this.stateManager.achievementSystem.update(deltaTime);
-        }
     }
 
     _updateWaveCooldown(adjustedDeltaTime) {
@@ -2200,11 +2201,6 @@ export class GameplayState {
 
         // Render active boons
         this.renderActiveBoons(ctx);
-
-        // Achievement banner (always on top of everything)
-        if (this.stateManager.achievementSystem) {
-            this.stateManager.achievementSystem.render(ctx, ctx.canvas);
-        }
     }
 
     renderActiveBoons(ctx) {

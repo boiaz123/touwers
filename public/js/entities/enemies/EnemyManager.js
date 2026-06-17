@@ -161,6 +161,11 @@ export class EnemyManager {
                 );
                 
                 if (enemy) {
+                    // Assign audio manager to enemy for sound effects (e.g. spell casts)
+                    if (this.audioManager) {
+                        enemy.audioManager = this.audioManager;
+                    }
+
                     // Apply campaign-specific base loot rates (set by GameplayState based on current campaign)
                     if (this.campaignLootConfig) {
                         enemy.lootDropChance = this.campaignLootConfig.normalChance;
