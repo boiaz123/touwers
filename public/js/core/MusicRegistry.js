@@ -351,4 +351,15 @@ export function initializeMusicRegistry() {
             volume: 0.8
         }
     );
+
+    // Frog King's Realm bonus level - its own dedicated track, looped
+    MusicRegistry.registerMusic(
+        'bonus-level-theme',
+        'assets/audio/music/CampaignSongs/Bonuslevel.mp3',
+        {
+            loop: true,
+            category: 'bonus-level',
+            volume: 0.7
+        }
+    );
 }

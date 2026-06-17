@@ -362,8 +362,18 @@ export class GameplayState {
         if (this.stateManager.audioManager) {
             // Clear manual music selection flag - we're starting a level, so use campaign music
             this.stateManager.audioManager.isManualMusicSelection = false;
-            // Use the stored campaign ID for music selection
-            this.stateManager.audioManager.playMusicCategory(this.currentCampaignId);
+            // Levels can pin a specific track (e.g. bonus levels) instead of using campaign-random music
+            const forcedTrack = this.level && this.level.levelFlags && this.level.levelFlags.musicTrack;
+            if (forcedTrack) {
+                // Exit category playlist mode so the forced track loops itself
+                // instead of the 'ended' handler picking a random track from the old category
+                this.stateManager.audioManager.musicPlaylistMode = false;
+                this.stateManager.audioManager.currentMusicCategory = null;
+                this.stateManager.audioManager.playMusic(forcedTrack);
+            } else {
+                // Use the stored campaign ID for music selection
+                this.stateManager.audioManager.playMusicCategory(this.currentCampaignId);
+            }
         }
         
         // Wave system starts in cooldown mode - don't call startWave() here
