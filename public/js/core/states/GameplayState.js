@@ -17,6 +17,12 @@ const INITIAL_WAVE_COOLDOWN = 30;
 const BETWEEN_WAVE_COOLDOWN = 15;
 const ENEMY_CLICK_RADIUS = 28;
 
+// OPTIMIZATION: Shared comparator reused every frame instead of allocating a new
+// closure on each render() call.
+function compareEntityByY(a, b) {
+    return a.y - b.y;
+}
+
 export class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -2045,6 +2051,22 @@ export class GameplayState {
         });
     }
     
+    // OPTIMIZATION: Plain instance method (allocated once) instead of a closure
+    // recreated inside render() every frame. Writes into the pooled entity
+    // wrapper objects, advancing this._entityIndex.
+    _pushRenderEntity(y, source, type) {
+        const objectPool = this._entityObjectPool;
+        if (this._entityIndex >= objectPool.length) {
+            objectPool.push({ y: 0, source: null, type: '' });
+        }
+        const obj = objectPool[this._entityIndex];
+        obj.y = y;
+        obj.source = source;
+        obj.type = type;
+        this._entityIndex++;
+        return obj;
+    }
+
     render(ctx) {
         if (!this.level || !this.towerManager || !this.enemyManager) {
             return; // Skip rendering if not fully initialized
@@ -2064,63 +2086,53 @@ export class GameplayState {
             return;
         }
         
-        // Collect all renderable entities (towers, buildings, enemies, loot, castle) 
+        // Collect all renderable entities (towers, buildings, enemies, loot, castle)
         // with their Y positions for unified depth sorting
         // OPTIMIZATION: Reuse persistent array and entity wrapper objects to avoid GC pressure
         if (!this._entityRenderPool) this._entityRenderPool = [];
         if (!this._entityObjectPool) this._entityObjectPool = [];
         const entities = this._entityRenderPool;
         const objectPool = this._entityObjectPool;
-        let entityIndex = 0;
-        
-        // Helper to get or create an entity wrapper from the pool
-        const getEntity = (y, source, type) => {
-            if (entityIndex >= objectPool.length) {
-                objectPool.push({ y: 0, source: null, type: '' });
-            }
-            const obj = objectPool[entityIndex];
-            obj.y = y;
-            obj.source = source;
-            obj.type = type;
-            entityIndex++;
-            return obj;
-        };
-        
+        // OPTIMIZATION: Track the write index on `this` instead of a closure
+        // capturing a local var, so _pushRenderEntity can be a plain instance
+        // method (defined once) instead of a new function allocated every frame.
+        this._entityIndex = 0;
+
         // Add towers
         if (this.towerManager && this.towerManager.towers) {
             const towers = this.towerManager.towers;
             for (let i = 0; i < towers.length; i++) {
-                getEntity(towers[i].y, towers[i], 'tower');
+                this._pushRenderEntity(towers[i].y, towers[i], 'tower');
             }
         }
-        
+
         // Add buildings
         if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
             const buildings = this.towerManager.buildingManager.buildings;
             for (let i = 0; i < buildings.length; i++) {
-                getEntity(buildings[i].y, buildings[i], 'building');
+                this._pushRenderEntity(buildings[i].y, buildings[i], 'building');
             }
         }
-        
+
         // Add enemies
         if (this.enemyManager && this.enemyManager.enemies) {
             const enemies = this.enemyManager.enemies;
             for (let i = 0; i < enemies.length; i++) {
-                getEntity(enemies[i].y, enemies[i], 'enemy');
+                this._pushRenderEntity(enemies[i].y, enemies[i], 'enemy');
             }
         }
-        
+
         // Add loot bags
         if (this.lootManager && this.lootManager.lootBags) {
             const bags = this.lootManager.lootBags;
             for (let i = 0; i < bags.length; i++) {
-                getEntity(bags[i].y, bags[i], 'loot');
+                this._pushRenderEntity(bags[i].y, bags[i], 'loot');
             }
         }
-        
+
         // Add castle
         if (this.level.castle) {
-            getEntity(this.level.castle.y, this.level.castle, 'castle');
+            this._pushRenderEntity(this.level.castle.y, this.level.castle, 'castle');
         }
 
         // Add terrain elements (vegetation and rocks) for correct depth sorting with towers and buildings
@@ -2129,19 +2141,21 @@ export class GameplayState {
             for (let i = 0; i < terrain.length; i++) {
                 const el = terrain[i];
                 if (el.type !== 'water') {
-                    getEntity(el.gridY * this.level.cellSize, el, 'terrain');
+                    this._pushRenderEntity(el.gridY * this.level.cellSize, el, 'terrain');
                 }
             }
         }
-        
+
         // Set the active length of the entities view into the object pool
-        entities.length = entityIndex;
-        for (let i = 0; i < entityIndex; i++) {
+        entities.length = this._entityIndex;
+        for (let i = 0; i < this._entityIndex; i++) {
             entities[i] = objectPool[i];
         }
-        
+
         // Sort all entities by Y position for proper depth ordering
-        entities.sort((a, b) => a.y - b.y);
+        // OPTIMIZATION: Reuse a shared module-level comparator instead of
+        // allocating a new closure every frame.
+        entities.sort(compareEntityByY);
         
         // Render all entities in sorted order
         for (let i = 0; i < entities.length; i++) {

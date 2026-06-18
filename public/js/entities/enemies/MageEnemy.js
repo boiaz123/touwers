@@ -811,13 +811,25 @@ export class MageEnemy extends BaseEnemy {
         const orbR = baseSize * 0.33;
 
         // Outer glow halo
-        const crystalGlow = ctx.createRadialGradient(0, orbY, orbR * 0.15, 0, orbY, orbR * 2.2);
-        crystalGlow.addColorStop(0, `rgba(100, 149, 237, ${this.staffPulse * 0.55})`);
-        crystalGlow.addColorStop(1, 'rgba(30, 144, 255, 0)');
-        ctx.fillStyle = crystalGlow;
+        // OPTIMIZATION: Cache the gradient by baseSize (its geometry and base
+        // colors never change) instead of recreating it every frame. The
+        // staffPulse-driven opacity is applied via globalAlpha at fill time
+        // instead of being baked into the gradient's color-stop alpha, so the
+        // animated pulsing looks identical while the gradient object itself
+        // is created once and reused.
+        if (!this._crystalGlow || this._crystalGlowBaseSize !== baseSize) {
+            this._crystalGlowBaseSize = baseSize;
+            this._crystalGlow = ctx.createRadialGradient(0, orbY, orbR * 0.15, 0, orbY, orbR * 2.2);
+            this._crystalGlow.addColorStop(0, 'rgba(100, 149, 237, 0.55)');
+            this._crystalGlow.addColorStop(1, 'rgba(30, 144, 255, 0)');
+        }
+        ctx.fillStyle = this._crystalGlow;
+        const prevGlobalAlpha = ctx.globalAlpha;
+        ctx.globalAlpha = prevGlobalAlpha * this.staffPulse;
         ctx.beginPath();
         ctx.arc(0, orbY, orbR * 2.2, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = prevGlobalAlpha;
 
         // Main orb body
         ctx.fillStyle = `rgba(65, 115, 205, ${0.78 + 0.15 * this.staffPulse})`;

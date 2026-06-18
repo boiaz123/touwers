@@ -469,12 +469,17 @@ export class KnightEnemy extends BaseEnemy {
         const bladeWidth = baseSize * 0.35;
         
         // Sword blade - simplified (solid gradient)
-        const bladeGradient = ctx.createLinearGradient(-bladeWidth/2, -swordLength * 0.5, bladeWidth/2, -swordLength * 0.5);
-        bladeGradient.addColorStop(0, '#E0E0E0');
-        bladeGradient.addColorStop(0.5, '#A0A0A0');
-        bladeGradient.addColorStop(1, '#808080');
-        
-        ctx.fillStyle = bladeGradient;
+        // OPTIMIZATION: Cache by baseSize instead of recreating every frame -
+        // gradient only depends on size, never on animated values.
+        if (!this._bladeGradient || this._bladeGradBaseSize !== baseSize) {
+            this._bladeGradBaseSize = baseSize;
+            this._bladeGradient = ctx.createLinearGradient(-bladeWidth/2, -swordLength * 0.5, bladeWidth/2, -swordLength * 0.5);
+            this._bladeGradient.addColorStop(0, '#E0E0E0');
+            this._bladeGradient.addColorStop(0.5, '#A0A0A0');
+            this._bladeGradient.addColorStop(1, '#808080');
+        }
+
+        ctx.fillStyle = this._bladeGradient;
         ctx.beginPath();
         ctx.moveTo(-bladeWidth/2, 0);
         ctx.lineTo(bladeWidth/2, 0);

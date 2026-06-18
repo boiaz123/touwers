@@ -299,34 +299,4 @@ export class EnemyManager {
         return { totalGold, lootDrops, killed: startCount - writeIdx };
     }
     
-    render(ctx) {
-        // Sort enemies by Y position for proper depth ordering
-        // OPTIMIZATION: Reuse buffer array instead of spreading into a new one each frame
-        if (!this._renderBuffer) this._renderBuffer = [];
-        const buf = this._renderBuffer;
-        buf.length = this.enemies.length;
-        for (let i = 0; i < this.enemies.length; i++) {
-            buf[i] = this.enemies[i];
-        }
-        buf.sort((a, b) => a.y - b.y);
-        
-        for (let i = 0; i < buf.length; i++) {
-            const enemy = buf[i];
-            enemy.render(ctx);
-            
-            // Render splatters from this enemy
-            if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                for (let j = 0; j < enemy.hitSplatters.length; j++) {
-                    enemy.hitSplatters[j].render(ctx);
-                }
-            }
-        }
-        
-        // Render orphaned splatters from dead enemies
-        // These will continue to display and fade until their life reaches 0
-        for (let i = 0; i < this.orphanedSplatters.length; i++) {
-            this.orphanedSplatters[i].render(ctx);
-        }
-    }
-
 }

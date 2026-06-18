@@ -1019,41 +1019,48 @@ export class UIManager {
 
     updateSpellUI() {
         const spellButtonsList = document.getElementById('spell-buttons-list');
-        
+
         if (!spellButtonsList) {
             return;
         }
-        
+
         // Find super weapon lab
         const superWeaponLab = this.towerManager.buildingManager.buildings.find(
             b => b.constructor.name === 'SuperWeaponLab'
         );
-        
+
         if (!superWeaponLab) {
-            spellButtonsList.innerHTML = '';
+            if (!this._spellButtonsById) this._spellButtonsById = new Map();
+            if (this._spellButtonsById.size > 0 || spellButtonsList.childElementCount > 0) {
+                spellButtonsList.innerHTML = '';
+                this._spellButtonsById.clear();
+            }
             return;
         }
-        
+
         const availableSpells = superWeaponLab.getAvailableSpells();
-        const currentButtonCount = spellButtonsList.querySelectorAll('.spell-btn').length;
-        
+        // OPTIMIZATION: Cache button elements in a Map keyed by spell id instead of
+        // re-querying the DOM (querySelectorAll/querySelector) every frame.
+        if (!this._spellButtonsById) this._spellButtonsById = new Map();
+
         // Only rebuild if the number of spells changed (new unlock) OR if we have a flag to force rebuild
         // The forceRebuild flag is set after loading to ensure event listeners reference current spell objects
-        if (currentButtonCount !== availableSpells.length || this.forceSpellUIRebuild) {
+        if (this._spellButtonsById.size !== availableSpells.length || this.forceSpellUIRebuild) {
             spellButtonsList.innerHTML = '';
-            
+            this._spellButtonsById.clear();
+
             // Create a button for each unlocked spell
             availableSpells.forEach(spell => {
                 const btn = document.createElement('button');
                 btn.className = 'spell-btn';
                 btn.dataset.spellId = spell.id;
                 btn.innerHTML = `<span>${spell.icon}</span>`;
-                
+
                 // Add hover info panel (same style as tower/building info)
                 btn.addEventListener('mouseenter', () => {
                     this.showSpellInfo(spell, btn);
                 });
-                
+
                 // Add click listener with proper closure
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -1066,48 +1073,58 @@ export class UIManager {
                         this.gameplayState.activateSpellTargeting(spell.id);
                     }
                 });
-                
+
                 spellButtonsList.appendChild(btn);
+                // Cache button + last-rendered state so future frames can skip redundant DOM writes
+                this._spellButtonsById.set(spell.id, { btn, lastReady: null, lastSeconds: null });
             });
-            
+
             // Clear the force rebuild flag after rebuilding
             this.forceSpellUIRebuild = false;
             // Refresh hotkey badges now that buttons exist in the DOM
             this.updateHotkeyBadges();
         }
-        
-        // Update button states (cooldown/ready) without recreating
+
+        // Update button states (cooldown/ready) without recreating, skipping
+        // DOM writes when nothing has visibly changed since the last frame.
         availableSpells.forEach(spell => {
-            const btn = spellButtonsList.querySelector(`[data-spell-id="${spell.id}"]`);
-            if (btn) {
-                const isReady = spell.currentCooldown === 0;
-                
-                // Update disabled state
-                btn.disabled = !isReady;
-                
-                // Update class
-                if (isReady && btn.classList.contains('cooling')) {
-                    btn.classList.remove('cooling');
-                } else if (!isReady && !btn.classList.contains('cooling')) {
-                    btn.classList.add('cooling');
+            const entry = this._spellButtonsById.get(spell.id);
+            if (!entry) return;
+            const btn = entry.btn;
+            const isReady = spell.currentCooldown === 0;
+            const seconds = isReady ? null : Math.ceil(spell.currentCooldown);
+
+            if (entry.lastReady === isReady && entry.lastSeconds === seconds) {
+                return; // No visible change since last update - skip DOM writes
+            }
+            entry.lastReady = isReady;
+            entry.lastSeconds = seconds;
+
+            // Update disabled state
+            btn.disabled = !isReady;
+
+            // Update class
+            if (isReady && btn.classList.contains('cooling')) {
+                btn.classList.remove('cooling');
+            } else if (!isReady && !btn.classList.contains('cooling')) {
+                btn.classList.add('cooling');
+            }
+
+            // Update cooldown display
+            let cooldownDisplay = btn.querySelector('.spell-cooldown');
+            if (!isReady) {
+                if (!cooldownDisplay) {
+                    cooldownDisplay = document.createElement('div');
+                    cooldownDisplay.className = 'spell-cooldown';
+                    btn.appendChild(cooldownDisplay);
                 }
-                
-                // Update cooldown display
-                let cooldownDisplay = btn.querySelector('.spell-cooldown');
-                if (!isReady) {
-                    if (!cooldownDisplay) {
-                        cooldownDisplay = document.createElement('div');
-                        cooldownDisplay.className = 'spell-cooldown';
-                        btn.appendChild(cooldownDisplay);
-                    }
-                    cooldownDisplay.textContent = Math.ceil(spell.currentCooldown) + 's';
-                    cooldownDisplay.style.position = 'absolute';
-                    cooldownDisplay.style.fontSize = '0.7em';
-                    cooldownDisplay.style.fontWeight = 'bold';
-                } else {
-                    if (cooldownDisplay) {
-                        cooldownDisplay.remove();
-                    }
+                cooldownDisplay.textContent = seconds + 's';
+                cooldownDisplay.style.position = 'absolute';
+                cooldownDisplay.style.fontSize = '0.7em';
+                cooldownDisplay.style.fontWeight = 'bold';
+            } else {
+                if (cooldownDisplay) {
+                    cooldownDisplay.remove();
                 }
             }
         });
