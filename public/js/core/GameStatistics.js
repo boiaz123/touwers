@@ -20,6 +20,9 @@ export class GameStatistics {
         this.totalTowersBuilt = 0;
         this.totalWavesSurvived = 0;
         this.totalLootCollected = 0;
+        this.superWeaponLabBuilt = false;
+        this.totalSuperWeaponSpellsCast = 0;
+        this.frostShatterTriggered = false;
     }
 
     /**
@@ -97,6 +100,30 @@ export class GameStatistics {
     }
 
     /**
+     * Mark that the Super Weapon Lab has been constructed
+     */
+    markSuperWeaponLabBuilt() {
+        this.superWeaponLabBuilt = true;
+    }
+
+    /**
+     * Add to the cumulative count of Super Weapon Lab spell casts
+     * (Arcane Blast, Frozen Nova, Meteor Strike, Chain Lightning combined)
+     * @param {number} count - Number of spells cast (default 1)
+     */
+    addSuperWeaponSpellCast(count = 1) {
+        this.totalSuperWeaponSpellsCast += count;
+    }
+
+    /**
+     * Mark that a Super Weapon Lab spell has struck an enemy while it was
+     * frozen by Frozen Nova (a "frost shatter" combo)
+     */
+    markFrostShatter() {
+        this.frostShatterTriggered = true;
+    }
+
+    /**
      * Get formatted playtime string (e.g., "2h 30m 45s")
      */
     getFormattedPlaytime() {
@@ -136,7 +163,10 @@ export class GameStatistics {
             totalItemsSold: this.totalItemsSold,
             totalTowersBuilt: this.totalTowersBuilt,
             totalWavesSurvived: this.totalWavesSurvived,
-            totalLootCollected: this.totalLootCollected
+            totalLootCollected: this.totalLootCollected,
+            superWeaponLabBuilt: this.superWeaponLabBuilt,
+            totalSuperWeaponSpellsCast: this.totalSuperWeaponSpellsCast,
+            frostShatterTriggered: this.frostShatterTriggered
         };
     }
 
@@ -156,6 +186,9 @@ export class GameStatistics {
         this.totalTowersBuilt = data.totalTowersBuilt || 0;
         this.totalWavesSurvived = data.totalWavesSurvived || 0;
         this.totalLootCollected = data.totalLootCollected || 0;
+        this.superWeaponLabBuilt = data.superWeaponLabBuilt || false;
+        this.totalSuperWeaponSpellsCast = data.totalSuperWeaponSpellsCast || 0;
+        this.frostShatterTriggered = data.frostShatterTriggered || false;
     }
 
     /**

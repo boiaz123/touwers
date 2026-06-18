@@ -22,8 +22,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'getting-started',
         name: 'Getting Started',
         description: 'Slay your first enemy',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 1,
+        tierMax: 6,
+        points: 8,
         check: (s) => s.totalEnemiesSlain >= 500,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 500), max: 500 })
     },
@@ -31,8 +34,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'deadly-force',
         name: 'Deadly Force',
         description: 'Slay 1,000 enemies',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 2,
+        tierMax: 6,
+        points: 14,
         check: (s) => s.totalEnemiesSlain >= 1000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 1000), max: 1000 })
     },
@@ -40,8 +46,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'executioner',
         name: 'Executioner',
         description: 'Slay 5,000 enemies',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 3,
+        tierMax: 6,
+        points: 22,
         check: (s) => s.totalEnemiesSlain >= 5000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 5000), max: 5000 })
     },
@@ -49,8 +58,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'warlord',
         name: 'Warlord',
         description: 'Slay 20,000 enemies',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 4,
+        tierMax: 6,
+        points: 32,
         check: (s) => s.totalEnemiesSlain >= 20000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 20000), max: 20000 })
     },
@@ -58,8 +70,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'annihilator',
         name: 'Annihilator',
         description: 'Slay 50,000 enemies',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 5,
+        tierMax: 6,
+        points: 45,
         check: (s) => s.totalEnemiesSlain >= 50000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 50000), max: 50000 })
     },
@@ -67,8 +82,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'extinction-event',
         name: 'Extinction Protocol',
         description: 'Slay 100,000 enemies',
-        icon: '⚔',
+        icon: '⚔︎',
         category: 'combat',
+        tier: 6,
+        tierMax: 6,
+        points: 50,
         check: (s) => s.totalEnemiesSlain >= 100000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 100000), max: 100000 })
     },
@@ -78,8 +96,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'first-victory',
         name: 'First Victory',
         description: 'Win your first battle',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 1,
+        tierMax: 6,
+        points: 8,
         check: (s) => s.victories >= 1,
         getProgress: (s) => ({ current: Math.min(s.victories, 1), max: 1 })
     },
@@ -87,8 +108,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'battle-hardened',
         name: 'Battle-Hardened',
         description: 'Win 10 battles',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 2,
+        tierMax: 6,
+        points: 14,
         check: (s) => s.victories >= 10,
         getProgress: (s) => ({ current: Math.min(s.victories, 10), max: 10 })
     },
@@ -96,8 +120,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'seasoned-veteran',
         name: 'Seasoned Veteran',
         description: 'Win 25 battles',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 3,
+        tierMax: 6,
+        points: 22,
         check: (s) => s.victories >= 25,
         getProgress: (s) => ({ current: Math.min(s.victories, 25), max: 25 })
     },
@@ -105,8 +132,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'campaign-champion',
         name: 'Campaign Champion',
         description: 'Win 75 battles',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 4,
+        tierMax: 6,
+        points: 32,
         check: (s) => s.victories >= 75,
         getProgress: (s) => ({ current: Math.min(s.victories, 75), max: 75 })
     },
@@ -114,8 +144,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'legendary-commander',
         name: 'Legendary Commander',
         description: 'Win 150 battles',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 5,
+        tierMax: 6,
+        points: 45,
         check: (s) => s.victories >= 150,
         getProgress: (s) => ({ current: Math.min(s.victories, 150), max: 150 })
     },
@@ -123,8 +156,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'eternal-guardian',
         name: 'Eternal Guardian',
         description: 'Win 300 battles',
-        icon: '♛',
+        icon: '♛︎',
         category: 'victory',
+        tier: 6,
+        tierMax: 6,
+        points: 60,
         check: (s) => s.victories >= 300,
         getProgress: (s) => ({ current: Math.min(s.victories, 300), max: 300 })
     },
@@ -134,8 +170,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'fallen-warrior',
         name: 'Fallen Warrior',
         description: 'Suffer your first defeat',
-        icon: '🛡',
+        icon: '⛨︎',
         category: 'resilience',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
         check: (s) => s.defeats >= 1,
         getProgress: (s) => ({ current: Math.min(s.defeats, 1), max: 1 })
     },
@@ -143,8 +182,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'undaunted',
         name: 'Undaunted',
         description: 'Suffer 10 defeats and keep fighting',
-        icon: '🛡',
+        icon: '⛨︎',
         category: 'resilience',
+        tier: 2,
+        tierMax: 3,
+        points: 14,
         check: (s) => s.defeats >= 10,
         getProgress: (s) => ({ current: Math.min(s.defeats, 10), max: 10 })
     },
@@ -152,8 +194,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'unbreakable',
         name: 'Unbreakable',
         description: 'Suffer 25 defeats without giving up',
-        icon: '🛡',
+        icon: '⛨︎',
         category: 'resilience',
+        tier: 3,
+        tierMax: 3,
+        points: 22,
         check: (s) => s.defeats >= 25,
         getProgress: (s) => ({ current: Math.min(s.defeats, 25), max: 25 })
     },
@@ -163,8 +208,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'apprentice-builder',
         name: 'Apprentice Builder',
         description: 'Build 100 towers',
-        icon: '⚙',
+        icon: '⚙︎',
         category: 'builder',
+        tier: 1,
+        tierMax: 5,
+        points: 8,
         check: (s) => s.totalTowersBuilt >= 100,
         getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 100), max: 100 })
     },
@@ -172,8 +220,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'master-engineer',
         name: 'Master Engineer',
         description: 'Build 500 towers',
-        icon: '⚙',
+        icon: '⚙︎',
         category: 'builder',
+        tier: 2,
+        tierMax: 5,
+        points: 14,
         check: (s) => s.totalTowersBuilt >= 500,
         getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 500), max: 500 })
     },
@@ -181,8 +232,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'tower-overlord',
         name: 'Tower Overlord',
         description: 'Build 1,750 towers',
-        icon: '⚙',
+        icon: '⚙︎',
         category: 'builder',
+        tier: 3,
+        tierMax: 5,
+        points: 22,
         check: (s) => s.totalTowersBuilt >= 1750,
         getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 1750), max: 1750 })
     },
@@ -190,8 +244,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'grand-architect',
         name: 'Grand Architect',
         description: 'Build 3,000 towers',
-        icon: '⚙',
+        icon: '⚙︎',
         category: 'builder',
+        tier: 4,
+        tierMax: 5,
+        points: 32,
         check: (s) => s.totalTowersBuilt >= 3000,
         getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 3000), max: 3000 })
     },
@@ -199,8 +256,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'eternal-fortress',
         name: 'The Eternal Fortress',
         description: 'Build 10,000 towers',
-        icon: '⚙',
+        icon: '⚙︎',
         category: 'builder',
+        tier: 5,
+        tierMax: 5,
+        points: 45,
         check: (s) => s.totalTowersBuilt >= 10000,
         getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 10000), max: 10000 })
     },
@@ -210,8 +270,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'merchant',
         name: 'Merchant',
         description: 'Spend 1,000 gold at the market',
-        icon: '✦',
+        icon: '✦︎',
         category: 'spending',
+        tier: 1,
+        tierMax: 4,
+        points: 8,
         check: (s) => s.totalMoneySpentOnMarketplace >= 1000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneySpentOnMarketplace, 1000), max: 1000 })
     },
@@ -219,8 +282,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'gold-hoarder',
         name: 'Gold Hoarder',
         description: 'Spend 10,000 gold at the market',
-        icon: '✦',
+        icon: '✦︎',
         category: 'spending',
+        tier: 2,
+        tierMax: 4,
+        points: 14,
         check: (s) => s.totalMoneySpentOnMarketplace >= 10000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneySpentOnMarketplace, 10000), max: 10000 })
     },
@@ -228,8 +294,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'treasure-baron',
         name: 'Treasure Baron',
         description: 'Spend 50,000 gold at the market',
-        icon: '✦',
+        icon: '✦︎',
         category: 'spending',
+        tier: 3,
+        tierMax: 4,
+        points: 22,
         check: (s) => s.totalMoneySpentOnMarketplace >= 50000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneySpentOnMarketplace, 50000), max: 50000 })
     },
@@ -237,8 +306,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'master-of-coin',
         name: 'Master of Coin',
         description: 'Spend 200,000 gold at the market',
-        icon: '✦',
+        icon: '✦︎',
         category: 'spending',
+        tier: 4,
+        tierMax: 4,
+        points: 32,
         check: (s) => s.totalMoneySpentOnMarketplace >= 200000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneySpentOnMarketplace, 200000), max: 200000 })
     },
@@ -248,8 +320,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'profiteer',
         name: 'Profiteer',
         description: 'Earn 1,000 gold from selling items',
-        icon: '⚖',
+        icon: '⚖︎',
         category: 'trading',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
         check: (s) => s.totalMoneyEarnedInMarketplace >= 1000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneyEarnedInMarketplace, 1000), max: 1000 })
     },
@@ -257,8 +332,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'market-baron',
         name: 'Market Baron',
         description: 'Sell 250 items',
-        icon: '⚖',
+        icon: '⚖︎',
         category: 'trading',
+        tier: 2,
+        tierMax: 3,
+        points: 14,
         check: (s) => s.totalItemsSold >= 250,
         getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 250), max: 250 })
     },
@@ -266,8 +344,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'trade-magnate',
         name: 'Trade Magnate',
         description: 'Sell 1,000 items',
-        icon: '⚖',
+        icon: '⚖︎',
         category: 'trading',
+        tier: 3,
+        tierMax: 3,
+        points: 22,
         check: (s) => s.totalItemsSold >= 1000,
         getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 1000), max: 1000 })
     },
@@ -277,8 +358,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'consumer',
         name: 'Consumer',
         description: 'Use 10 items in battle',
-        icon: '⚗',
+        icon: '⚗︎',
         category: 'alchemy',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
         check: (s) => s.totalItemsConsumed >= 10,
         getProgress: (s) => ({ current: Math.min(s.totalItemsConsumed, 10), max: 10 })
     },
@@ -286,8 +370,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'talisman-master',
         name: 'Talisman Master',
         description: 'Use 50 items in battle',
-        icon: '⚗',
+        icon: '⚗︎',
         category: 'alchemy',
+        tier: 2,
+        tierMax: 3,
+        points: 14,
         check: (s) => s.totalItemsConsumed >= 50,
         getProgress: (s) => ({ current: Math.min(s.totalItemsConsumed, 50), max: 50 })
     },
@@ -295,8 +382,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'boonlord',
         name: 'Boonlord',
         description: 'Use 200 items in battle',
-        icon: '⚗',
+        icon: '⚗︎',
         category: 'alchemy',
+        tier: 3,
+        tierMax: 3,
+        points: 22,
         check: (s) => s.totalItemsConsumed >= 200,
         getProgress: (s) => ({ current: Math.min(s.totalItemsConsumed, 200), max: 200 })
     },
@@ -306,8 +396,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'wave-runner',
         name: 'Wave Runner',
         description: 'Survive 100 waves',
-        icon: '⚡',
+        icon: '⚡︎',
         category: 'resilience',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
         check: (s) => (s.totalWavesSurvived || 0) >= 100,
         getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 100), max: 100 })
     },
@@ -315,8 +408,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'storm-survivor',
         name: 'Storm Survivor',
         description: 'Survive 1000 waves',
-        icon: '⚡',
+        icon: '⚡︎',
         category: 'resilience',
+        tier: 2,
+        tierMax: 3,
+        points: 14,
         check: (s) => (s.totalWavesSurvived || 0) >= 1000,
         getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 1000), max: 1000 })
     },
@@ -324,8 +420,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'original-wavejumper',
         name: 'The Original Wavejumper',
         description: 'Survive 5000 waves',
-        icon: '⚡',
+        icon: '⚡︎',
         category: 'resilience',
+        tier: 3,
+        tierMax: 3,
+        points: 22,
         check: (s) => (s.totalWavesSurvived || 0) >= 5000,
         getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 5000), max: 5000 })
     },
@@ -335,8 +434,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'opportunist',
         name: 'Opportunist',
         description: 'Collect 100 loot drops',
-        icon: '◈',
+        icon: '◈︎',
         category: 'loot',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
         check: (s) => (s.totalLootCollected || 0) >= 100,
         getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 100), max: 100 })
     },
@@ -344,8 +446,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'fortune-hunter',
         name: 'Fortune Hunter',
         description: 'Collect 500 loot drops',
-        icon: '◈',
+        icon: '◈︎',
         category: 'loot',
+        tier: 2,
+        tierMax: 3,
+        points: 14,
         check: (s) => (s.totalLootCollected || 0) >= 500,
         getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 500), max: 500 })
     },
@@ -353,8 +458,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'loot-goblin',
         name: 'Loot Goblin',
         description: 'Collect 1250 loot drops',
-        icon: '◈',
+        icon: '◈︎',
         category: 'loot',
+        tier: 3,
+        tierMax: 3,
+        points: 22,
         check: (s) => (s.totalLootCollected || 0) >= 1250,
         getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 1250), max: 1250 })
     },
@@ -364,8 +472,9 @@ const ACHIEVEMENT_DEFS = [
         id: 'forest-conqueror',
         name: 'Forest Conqueror',
         description: 'Complete the Forest campaign',
-        icon: '⚑',
+        icon: '⚑︎',
         category: 'campaign',
+        points: 20,
         check: (_s, d) => Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-1'),
         getProgress: (_s, d) => ({
             current: (Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-1')) ? 1 : 0,
@@ -376,8 +485,9 @@ const ACHIEVEMENT_DEFS = [
         id: 'mountain-conqueror',
         name: 'Mountain Conqueror',
         description: 'Complete the Mountain campaign',
-        icon: '⚑',
+        icon: '⚑︎',
         category: 'campaign',
+        points: 20,
         check: (_s, d) => Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-2'),
         getProgress: (_s, d) => ({
             current: (Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-2')) ? 1 : 0,
@@ -388,8 +498,9 @@ const ACHIEVEMENT_DEFS = [
         id: 'desert-conqueror',
         name: 'Desert Conqueror',
         description: 'Complete the Desert campaign',
-        icon: '⚑',
+        icon: '⚑︎',
         category: 'campaign',
+        points: 20,
         check: (_s, d) => Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-3'),
         getProgress: (_s, d) => ({
             current: (Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-3')) ? 1 : 0,
@@ -400,8 +511,9 @@ const ACHIEVEMENT_DEFS = [
         id: 'frog-slayer',
         name: 'Frog Slayer',
         description: "Survive the Frog King's Realm",
-        icon: '⚑',
+        icon: '⚑︎',
         category: 'campaign',
+        points: 20,
         check: (_s, d) => Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-4'),
         getProgress: (_s, d) => ({
             current: (Array.isArray(d?.completedCampaigns) && d.completedCampaigns.includes('campaign-4')) ? 1 : 0,
@@ -414,8 +526,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'dedicated-defender',
         name: 'Dedicated Defender',
         description: 'Play for 1 hour',
-        icon: '⌛',
+        icon: '⌛︎',
         category: 'playtime',
+        tier: 1,
+        tierMax: 4,
+        points: 8,
         check: (s) => s.totalPlaytime >= 3600,
         getProgress: (s) => ({ current: Math.min(Math.floor(s.totalPlaytime / 60), 60), max: 60 })
     },
@@ -423,8 +538,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'arcane-scholar',
         name: 'Arcane Scholar',
         description: 'Play for 5 hours',
-        icon: '⌛',
+        icon: '⌛︎',
         category: 'playtime',
+        tier: 2,
+        tierMax: 4,
+        points: 14,
         check: (s) => s.totalPlaytime >= 18000,
         getProgress: (s) => ({ current: Math.min(Math.floor(s.totalPlaytime / 60), 300), max: 300 })
     },
@@ -432,8 +550,11 @@ const ACHIEVEMENT_DEFS = [
         id: 'touwers-fanatic',
         name: 'Touwers Fanatic',
         description: 'Play for 20 hours',
-        icon: '⌛',
+        icon: '⌛︎',
         category: 'playtime',
+        tier: 3,
+        tierMax: 4,
+        points: 22,
         check: (s) => s.totalPlaytime >= 72000,
         getProgress: (s) => ({ current: Math.min(Math.floor(s.totalPlaytime / 60), 1200), max: 1200 })
     },
@@ -441,11 +562,68 @@ const ACHIEVEMENT_DEFS = [
         id: 'eternal-watcher',
         name: 'Eternal Watcher',
         description: 'Play for 50 hours',
-        icon: '⌛',
+        icon: '⌛︎',
         category: 'playtime',
+        tier: 4,
+        tierMax: 4,
+        points: 32,
         check: (s) => s.totalPlaytime >= 180000,
         getProgress: (s) => ({ current: Math.min(Math.floor(s.totalPlaytime / 60), 3000), max: 3000 })
+    },
+
+    // ── Super Weapon Lab ──────────────────────────────────────────────────────
+    {
+        id: 'arcane-spire',
+        name: 'Arcane Spire',
+        description: 'Construct the Super Weapon Lab',
+        icon: '☄︎',
+        category: 'superweapon',
+        tier: 1,
+        tierMax: 3,
+        points: 8,
+        check: (s) => !!s.superWeaponLabBuilt,
+        getProgress: (s) => ({ current: s.superWeaponLabBuilt ? 1 : 0, max: 1 })
+    },
+    {
+        id: 'frost-shatter',
+        name: 'Frost Shatter',
+        description: 'Strike a frozen enemy with another Super Weapon Lab spell while it is under Frozen Nova',
+        icon: '❄︎',
+        category: 'superweapon',
+        tier: 2,
+        tierMax: 3,
+        points: 22,
+        check: (s) => !!s.frostShatterTriggered,
+        getProgress: (s) => ({ current: s.frostShatterTriggered ? 1 : 0, max: 1 })
+    },
+    {
+        id: 'arcane-arsenal',
+        name: 'Arcane Arsenal',
+        description: 'Cast Super Weapon Lab spells 100 times in total',
+        icon: '✺︎',
+        category: 'superweapon',
+        tier: 3,
+        tierMax: 3,
+        points: 45,
+        check: (s) => (s.totalSuperWeaponSpellsCast || 0) >= 100,
+        getProgress: (s) => ({ current: Math.min(s.totalSuperWeaponSpellsCast || 0, 100), max: 100 })
     }
+];
+
+// Sum of every achievement's `points` value — kept at exactly 1000 so the
+// Arcane Library's score bar always reads as "progress toward 1000".
+const TOTAL_ACHIEVEMENT_POINTS = ACHIEVEMENT_DEFS.reduce((sum, def) => sum + (def.points || 0), 0);
+
+// ─── Arcane Score titles ──────────────────────────────────────────────────────
+// Earning enough Arcane Score grants the commander a new honorary title.
+// Thresholds are checked against the cumulative score from unlocked achievements.
+const TITLE_LADDER = [
+    { threshold: 0,    title: 'Tower Apprentice' },
+    { threshold: 100,  title: 'Arcane Initiate' },
+    { threshold: 200,  title: 'Spellbound Adept' },
+    { threshold: 500,  title: 'Master of the Arcane' },
+    { threshold: 700,  title: 'Sovereign of the Spire' },
+    { threshold: 1000, title: 'Archmagus Eternal' }
 ];
 
 // ─── Banner animation constants ───────────────────────────────────────────────
@@ -510,10 +688,66 @@ export class AchievementSystem {
                 name:        def.name,
                 description: def.description,
                 icon:        def.icon,
+                category:    def.category,
+                points:      def.points || 0,
+                tier:        def.tier || 0,
+                tierMax:     def.tierMax || 0,
                 unlocked,
                 progress
             };
         });
+    }
+
+    /**
+     * Resolves the title earned at a given Arcane Score, plus the next title
+     * on the ladder and how many points remain to reach it.
+     * @param {number} score
+     */
+    getTitleInfo(score) {
+        let current = TITLE_LADDER[0];
+        let next = TITLE_LADDER[1] || null;
+        for (let i = 0; i < TITLE_LADDER.length; i++) {
+            if (score >= TITLE_LADDER[i].threshold) {
+                current = TITLE_LADDER[i];
+                next = TITLE_LADDER[i + 1] || null;
+            }
+        }
+        return {
+            title:           current.title,
+            currentThreshold: current.threshold,
+            nextTitle:       next ? next.title : null,
+            nextThreshold:   next ? next.threshold : null,
+            isMaxTitle:      next === null
+        };
+    }
+
+    /**
+     * Returns the player's current score summary for the Arcane Library tab:
+     * how many points have been earned out of the fixed 1000-point pool, how
+     * many of the total achievements are unlocked, and the commander's title
+     * progress (current title + progress toward the next threshold).
+     */
+    getScoreSummary() {
+        let earnedPoints = 0;
+        let unlockedCount = 0;
+        for (const def of ACHIEVEMENT_DEFS) {
+            if (this.unlockedIds.has(def.id)) {
+                earnedPoints += def.points || 0;
+                unlockedCount++;
+            }
+        }
+        const titleInfo = this.getTitleInfo(earnedPoints);
+        return {
+            earnedPoints,
+            totalPoints: TOTAL_ACHIEVEMENT_POINTS,
+            unlockedCount,
+            totalCount: ACHIEVEMENT_DEFS.length,
+            title:            titleInfo.title,
+            nextTitle:        titleInfo.nextTitle,
+            currentThreshold: titleInfo.currentThreshold,
+            nextThreshold:    titleInfo.nextThreshold,
+            isMaxTitle:       titleInfo.isMaxTitle
+        };
     }
 
     // ── Frame update ──────────────────────────────────────────────────────────

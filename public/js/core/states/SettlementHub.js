@@ -8891,11 +8891,50 @@ class ArcaneLibraryMenu {
         const padding = 20;
         const lineHeight = 28;
         let currentY = y + padding;
-        
+
+        // ── Commander title plaque ───────────────────────────────────────────
+        const achievementSystem = this.stateManager.achievementSystem;
+        if (achievementSystem) {
+            const scoreSummary = achievementSystem.getScoreSummary();
+            const plaqueH = 40;
+
+            const plaqueGrad = ctx.createLinearGradient(x + padding, currentY, x + width - padding, currentY);
+            plaqueGrad.addColorStop(0, 'rgba(15, 42, 74, 0.55)');
+            plaqueGrad.addColorStop(1, 'rgba(95, 176, 232, 0.18)');
+            ctx.fillStyle = plaqueGrad;
+            ctx.fillRect(x + padding, currentY, width - padding * 2, plaqueH);
+            ctx.strokeStyle = '#1d3a52';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x + padding, currentY, width - padding * 2, plaqueH);
+
+            ctx.font = 'bold 11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#6f8aa3';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('COMMANDER TITLE', x + padding + 10, currentY + 6);
+
+            ctx.font = 'bold 16px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#a8d4f5';
+            ctx.fillText(scoreSummary.title, x + padding + 10, currentY + 19);
+
+            ctx.font = '11px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#6f8aa3';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const rightLabel = scoreSummary.isMaxTitle
+                ? `${scoreSummary.earnedPoints} / ${scoreSummary.totalPoints} pts — MAX`
+                : `${scoreSummary.earnedPoints} / ${scoreSummary.nextThreshold} pts to ${scoreSummary.nextTitle}`;
+            ctx.fillText(rightLabel, x + width - padding - 10, currentY + plaqueH / 2);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            currentY += plaqueH + 14;
+        }
+
         ctx.font = '14px Trebuchet MS, sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        
+
         const stats_data = [
             { label: 'Victories:', value: stats.victories },
             { label: 'Defeats:', value: stats.defeats },
@@ -8954,11 +8993,16 @@ class ArcaneLibraryMenu {
         const achievements = achievementSystem
             ? achievementSystem.getAchievements(stats, saveData)
             : [];
+        const scoreSummary = achievementSystem
+            ? achievementSystem.getScoreSummary()
+            : { earnedPoints: 0, totalPoints: 1000, unlockedCount: 0, totalCount: achievements.length };
 
-        // ── Summary header ────────────────────────────────────────────────────
-        const unlockedCount = achievements.filter(a => a.unlocked).length;
-        const totalCount    = achievements.length;
-        const headerH       = Math.round(48 * uiSf);
+        // ── Summary header (two rows: achievements unlocked, arcane score) ─────
+        const unlockedCount = scoreSummary.unlockedCount;
+        const totalCount    = scoreSummary.totalCount;
+        const rowH          = Math.round(34 * uiSf);
+        const rowGap        = Math.round(4 * uiSf);
+        const headerH       = rowH * 2 + rowGap;
 
         const hdrGrad = ctx.createLinearGradient(x, y, x, y + headerH);
         hdrGrad.addColorStop(0, 'rgba(70, 42, 8, 0.7)');
@@ -8973,44 +9017,102 @@ class ArcaneLibraryMenu {
         ctx.lineTo(x + width, y + headerH);
         ctx.stroke();
 
-        // Count text
+        // Faint divider between the two header rows
         const hdrPad = Math.round(14 * uiSf);
+        ctx.strokeStyle = 'rgba(180, 130, 40, 0.15)';
+        ctx.lineWidth   = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + hdrPad, y + rowH);
+        ctx.lineTo(x + width - hdrPad, y + rowH);
+        ctx.stroke();
+
+        // Shared bar geometry — both rows align on the same offset so the
+        // two progress bars read as a coherent pair.
+        const barOffX = Math.round(270 * uiSf);
+        const barX    = x + barOffX;
+        const barW    = width - barOffX - Math.round(10 * uiSf);
+        const barH    = Math.round(14 * uiSf);
+
+        // ── Row 1: achievements unlocked ────────────────────────────────────
+        const row1CY = y + rowH / 2;
         ctx.font         = `bold ${Math.round(16 * uiSf)}px Trebuchet MS, sans-serif`;
         ctx.fillStyle    = '#f5d070';
         ctx.textAlign    = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${unlockedCount}`, x + hdrPad, y + headerH / 2);
+        ctx.fillText(`${unlockedCount}`, x + hdrPad, row1CY);
 
         ctx.font      = `${Math.round(13 * uiSf)}px Trebuchet MS, sans-serif`;
         ctx.fillStyle = '#8b7355';
-        ctx.fillText(` / ${totalCount}  ACHIEVEMENTS UNLOCKED`, x + hdrPad + ctx.measureText(`${unlockedCount}`).width + 2, y + headerH / 2);
+        ctx.fillText(` / ${totalCount}  ACHIEVEMENTS UNLOCKED`, x + hdrPad + ctx.measureText(`${unlockedCount}`).width + 2, row1CY);
 
-        // Overall progress bar
-        const oBarOffX = Math.round(270 * uiSf);
-        const oBarX = x + oBarOffX;
-        const oBarH = Math.round(14 * uiSf);
-        const oBarY = y + headerH / 2 - oBarH / 2;
-        const oBarW = width - oBarOffX - Math.round(10 * uiSf);
+        const oBarY = row1CY - barH / 2;
         const oRatio = totalCount > 0 ? unlockedCount / totalCount : 0;
 
         ctx.fillStyle = '#0d0805';
-        ctx.fillRect(oBarX, oBarY, oBarW, oBarH);
+        ctx.fillRect(barX, oBarY, barW, barH);
         if (oRatio > 0) {
-            const oGrad = ctx.createLinearGradient(oBarX, oBarY, oBarX + oBarW, oBarY);
+            const oGrad = ctx.createLinearGradient(barX, oBarY, barX + barW, oBarY);
             oGrad.addColorStop(0, '#5a3a0a');
             oGrad.addColorStop(oRatio, '#d4af37');
             oGrad.addColorStop(1, '#2a1a05');
             ctx.fillStyle = oGrad;
-            ctx.fillRect(oBarX, oBarY, Math.round(oBarW * oRatio), oBarH);
+            ctx.fillRect(barX, oBarY, Math.round(barW * oRatio), barH);
         }
         ctx.strokeStyle = '#4a3a1a';
         ctx.lineWidth   = 1;
-        ctx.strokeRect(oBarX, oBarY, oBarW, oBarH);
+        ctx.strokeRect(barX, oBarY, barW, barH);
         ctx.font         = `bold ${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
         ctx.fillStyle    = oRatio >= 1 ? '#ffd700' : '#8b7355';
         ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${unlockedCount}/${totalCount}`, oBarX + oBarW / 2, oBarY + oBarH / 2);
+        ctx.fillText(`${unlockedCount}/${totalCount}`, barX + barW / 2, oBarY + barH / 2);
+
+        // ── Row 2: title progress — counts up toward the next title threshold
+        // rather than the flat 1000-point total, so the bar always reflects
+        // how close the commander is to their next honorary rank.
+        const row2CY = y + rowH + rowGap + rowH / 2;
+        const bracketStart = scoreSummary.currentThreshold || 0;
+        const bracketEnd   = scoreSummary.isMaxTitle ? bracketStart : scoreSummary.nextThreshold;
+        const bracketSize  = Math.max(1, bracketEnd - bracketStart);
+        const intoBracket  = Math.max(0, scoreSummary.earnedPoints - bracketStart);
+        const tRatio        = scoreSummary.isMaxTitle ? 1 : Math.min(intoBracket / bracketSize, 1);
+
+        // Title name only on the left (kept short so it never collides with
+        // the bar); the "→ next title" detail lives inside the bar label
+        // below, where there's room for the full text either way.
+        ctx.font         = `bold ${Math.round(15 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = '#a8d4f5';
+        ctx.textAlign    = 'left';
+        ctx.textBaseline = 'middle';
+        const maxTitleChars = Math.max(8, Math.round(barOffX / (7 * uiSf)));
+        const titleDisplay  = scoreSummary.title.length > maxTitleChars
+            ? scoreSummary.title.slice(0, maxTitleChars - 1) + '…'
+            : scoreSummary.title;
+        ctx.fillText(titleDisplay, x + hdrPad, row2CY);
+
+        const sBarY = row2CY - barH / 2;
+
+        ctx.fillStyle = '#070b10';
+        ctx.fillRect(barX, sBarY, barW, barH);
+        if (tRatio > 0) {
+            const sGrad = ctx.createLinearGradient(barX, sBarY, barX + barW, sBarY);
+            sGrad.addColorStop(0, '#0f2a4a');
+            sGrad.addColorStop(tRatio, '#5fb0e8');
+            sGrad.addColorStop(1, '#0a1a2e');
+            ctx.fillStyle = sGrad;
+            ctx.fillRect(barX, sBarY, Math.round(barW * tRatio), barH);
+        }
+        ctx.strokeStyle = '#1d3a52';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(barX, sBarY, barW, barH);
+        ctx.font         = `bold ${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = tRatio >= 1 ? '#d8f0ff' : '#6f8aa3';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        const barLabel = scoreSummary.isMaxTitle
+            ? `${scoreSummary.earnedPoints} / ${scoreSummary.totalPoints} pts  •  Highest title attained`
+            : `${scoreSummary.earnedPoints} / ${scoreSummary.nextThreshold} pts  →  ${scoreSummary.nextTitle}`;
+        ctx.fillText(barLabel, barX + barW / 2, sBarY + barH / 2);
 
         // ── Card grid ─────────────────────────────────────────────────────────
         const PER_PAGE   = 8; // 2 cols × 4 rows
@@ -9099,11 +9201,28 @@ class ArcaneLibraryMenu {
             loot:       '#5a1a8b',
             campaign:   '#4a4a5a',
             playtime:   '#2a3a6b',
+            superweapon:'#7a1a8b',
         };
+        // Tier ladder — the badge ring/glow upgrades through these ranks as an
+        // achievement's position within its category climbs, so e.g. "slay
+        // 100,000 enemies" reads as a visibly grander emblem than "slay your
+        // first enemy" even though both share the combat icon.
+        const TIER_STYLES = [
+            { ring: '#a9694a', glow: 'rgba(169, 105, 74, 0.55)',  inner: '#7a4a30' }, // Bronze
+            { ring: '#b9c0c6', glow: 'rgba(185, 192, 198, 0.55)', inner: '#7c8389' }, // Silver
+            { ring: '#d4af37', glow: 'rgba(212, 175, 55, 0.6)',   inner: '#6b4018' }, // Gold
+            { ring: '#7fd8c4', glow: 'rgba(127, 216, 196, 0.6)',  inner: '#1f5a4d' }, // Platinum
+            { ring: '#7fdfff', glow: 'rgba(127, 223, 255, 0.65)', inner: '#155a6b' }, // Diamond
+            { ring: '#c77dff', glow: 'rgba(199, 125, 255, 0.7)',  inner: '#4a1f6b' }  // Mythic
+        ];
+
         const unlocked  = achievement.unlocked;
         const catColor  = CAT_COLORS[achievement.category] || '#3a2a1a';
         const prog      = achievement.progress || { current: 0, max: 1 };
         const ratio     = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
+        const tier      = achievement.tier || 0;
+        const tierMax   = achievement.tierMax || 0;
+        const tierStyle = tier > 0 ? TIER_STYLES[Math.min(tier - 1, TIER_STYLES.length - 1)] : null;
 
         const stripe = 3 * uiSf;
         const pad    = 8 * uiSf;
@@ -9137,15 +9256,44 @@ class ArcaneLibraryMenu {
         }
         ctx.strokeRect(cx, cy, cw, ch);
 
+        // ── Points badge (top-right corner) ─────────────────────────────────
+        const ptsText = `+${achievement.points || 0}`;
+        ctx.font = `bold ${Math.round(9 * uiSf)}px Trebuchet MS, sans-serif`;
+        const ptsPadX = 5 * uiSf;
+        const ptsW    = ctx.measureText(ptsText).width + ptsPadX * 2;
+        const ptsH    = 13 * uiSf;
+        const ptsX    = cx + cw - ptsW - 5 * uiSf;
+        const ptsY    = cy + 5 * uiSf;
+        ctx.fillStyle = unlocked ? 'rgba(212, 175, 55, 0.22)' : 'rgba(60, 50, 40, 0.2)';
+        ctx.fillRect(ptsX, ptsY, ptsW, ptsH);
+        ctx.strokeStyle = unlocked ? '#c9922a' : '#2a1a0a';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(ptsX, ptsY, ptsW, ptsH);
+        ctx.font         = `bold ${Math.round(9 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle    = unlocked ? '#ffd700' : '#4a3a2a';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ptsText, ptsX + ptsW / 2, ptsY + ptsH / 2);
+
         // ── Icon badge ────────────────────────────────────────────────────────
         const iconCX = cx + stripe + pad + iconR;
         const iconCY = cy + ch / 2;
+
+        // Rank glow behind the badge — only for unlocked, tiered achievements,
+        // and grows brighter/thicker at higher tiers.
+        if (unlocked && tierStyle) {
+            ctx.beginPath();
+            ctx.arc(iconCX, iconCY, iconR + 3 * uiSf, 0, Math.PI * 2);
+            ctx.strokeStyle = tierStyle.glow;
+            ctx.lineWidth   = (1.5 + tier * 0.4) * uiSf;
+            ctx.stroke();
+        }
 
         ctx.beginPath();
         ctx.arc(iconCX, iconCY, iconR, 0, Math.PI * 2);
         if (unlocked) {
             const iconBg = ctx.createRadialGradient(iconCX - 5, iconCY - 5, 3, iconCX, iconCY, iconR);
-            iconBg.addColorStop(0, '#6b4018');
+            iconBg.addColorStop(0, tierStyle ? tierStyle.inner : '#6b4018');
             iconBg.addColorStop(1, '#2e1508');
             ctx.fillStyle = iconBg;
         } else {
@@ -9153,7 +9301,7 @@ class ArcaneLibraryMenu {
         }
         ctx.fill();
 
-        ctx.strokeStyle = unlocked ? '#c9922a' : '#1e1408';
+        ctx.strokeStyle = unlocked ? (tierStyle ? tierStyle.ring : '#c9922a') : '#1e1408';
         ctx.lineWidth   = unlocked ? 1.5 : 1;
         ctx.stroke();
 
@@ -9162,6 +9310,28 @@ class ArcaneLibraryMenu {
         ctx.textBaseline = 'middle';
         ctx.fillStyle    = unlocked ? '#f5d070' : '#2e2018';
         ctx.fillText(achievement.icon || '●', iconCX, iconCY + 1);
+
+        // Rank pips beneath the badge — filled count shows this achievement's
+        // tier out of its category's ladder (e.g. ●●●○○○ = rank 3 of 6).
+        if (tierMax > 0) {
+            const pipR    = 1.6 * uiSf;
+            const pipGap  = 5 * uiSf;
+            const pipsW   = (tierMax - 1) * pipGap;
+            const pipY    = iconCY + iconR + 6 * uiSf;
+            let pipX0     = iconCX - pipsW / 2;
+            for (let p = 0; p < tierMax; p++) {
+                ctx.beginPath();
+                ctx.arc(pipX0 + p * pipGap, pipY, pipR, 0, Math.PI * 2);
+                if (p < tier) {
+                    ctx.fillStyle = unlocked ? (tierStyle ? tierStyle.ring : catColor) : (catColor + '88');
+                    ctx.fill();
+                } else {
+                    ctx.strokeStyle = unlocked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
 
         // ── Text area ─────────────────────────────────────────────────────────
         const textX = cx + stripe + pad + iconR * 2 + pad;

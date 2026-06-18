@@ -842,7 +842,11 @@ export class GameplayState {
         }
         
         const { spell } = result;
-        
+
+        if (this.stateManager.gameStatistics) {
+            this.stateManager.gameStatistics.addSuperWeaponSpellCast(1);
+        }
+
         // Apply spell effects to enemies
         switch(spellId) {
             case 'arcaneBlast':
@@ -850,6 +854,9 @@ export class GameplayState {
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
+                        if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                            this.stateManager.gameStatistics.markFrostShatter();
+                        }
                         const damage = spell.damage * (1 - dist / spell.radius * 0.5);
                         enemy.takeDamage(damage, 0, 'magic');
                     }
@@ -885,6 +892,9 @@ export class GameplayState {
                             if (!enemy.isDead()) {
                                 const dist = Math.hypot(enemy.x - x, enemy.y - y);
                                 if (dist <= 80) {
+                                    if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                                        this.stateManager.gameStatistics.markFrostShatter();
+                                    }
                                     // Fire elemental damage - immune frogs (except AirFrog) take no damage but burn still applies via 'fire' ticks
                                     enemy.takeDamage(spell.damage, 0, 'fire');
                                     enemy.burnTimer = spell.burnDuration;
@@ -905,6 +915,9 @@ export class GameplayState {
                 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
+                        if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                            this.stateManager.gameStatistics.markFrostShatter();
+                        }
                         // Electricity damage - elemental frogs are immune (only magic + their element passes through)
                         enemy.takeDamage(spell.damage * Math.pow(0.8, index), 0, 'electricity');
                     }, index * 100);
@@ -948,6 +961,9 @@ export class GameplayState {
         if (bm._upgradesDirty !== undefined) bm._upgradesDirty = true;
         if (building.applyEffect) building.applyEffect(bm);
         this.superWeaponLab = building;
+        if (this.stateManager.gameStatistics) {
+            this.stateManager.gameStatistics.markSuperWeaponLabBuilt();
+        }
         if (this.uiManager) this.uiManager.updateSpellUI();
     }
     
@@ -1170,6 +1186,9 @@ export class GameplayState {
                         );
                         if (newBuilding) {
                             this.superWeaponLab = newBuilding;
+                        }
+                        if (this.stateManager.gameStatistics) {
+                            this.stateManager.gameStatistics.markSuperWeaponLabBuilt();
                         }
                     }
                     
