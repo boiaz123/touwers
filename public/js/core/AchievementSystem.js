@@ -19,58 +19,58 @@ const ACHIEVEMENT_DEFS = [
 
     // ── Combat ───────────────────────────────────────────────────────────────
     {
-        id: 'first-blood',
-        name: 'First Blood',
+        id: 'getting-started',
+        name: 'Getting Started',
         description: 'Slay your first enemy',
-        icon: '⚔',
-        category: 'combat',
-        check: (s) => s.totalEnemiesSlain >= 1,
-        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 1), max: 1 })
-    },
-    {
-        id: 'deadly-force',
-        name: 'Deadly Force',
-        description: 'Slay 100 enemies',
-        icon: '⚔',
-        category: 'combat',
-        check: (s) => s.totalEnemiesSlain >= 100,
-        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 100), max: 100 })
-    },
-    {
-        id: 'executioner',
-        name: 'Executioner',
-        description: 'Slay 500 enemies',
         icon: '⚔',
         category: 'combat',
         check: (s) => s.totalEnemiesSlain >= 500,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 500), max: 500 })
     },
     {
-        id: 'warlord',
-        name: 'Warlord',
-        description: 'Slay 2,000 enemies',
+        id: 'deadly-force',
+        name: 'Deadly Force',
+        description: 'Slay 1,000 enemies',
         icon: '⚔',
         category: 'combat',
-        check: (s) => s.totalEnemiesSlain >= 2000,
-        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 2000), max: 2000 })
+        check: (s) => s.totalEnemiesSlain >= 1000,
+        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 1000), max: 1000 })
+    },
+    {
+        id: 'executioner',
+        name: 'Executioner',
+        description: 'Slay 5,000 enemies',
+        icon: '⚔',
+        category: 'combat',
+        check: (s) => s.totalEnemiesSlain >= 5000,
+        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 5000), max: 5000 })
+    },
+    {
+        id: 'warlord',
+        name: 'Warlord',
+        description: 'Slay 20,000 enemies',
+        icon: '⚔',
+        category: 'combat',
+        check: (s) => s.totalEnemiesSlain >= 20000,
+        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 20000), max: 20000 })
     },
     {
         id: 'annihilator',
         name: 'Annihilator',
-        description: 'Slay 10,000 enemies',
-        icon: '⚔',
-        category: 'combat',
-        check: (s) => s.totalEnemiesSlain >= 10000,
-        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 10000), max: 10000 })
-    },
-    {
-        id: 'extinction-event',
-        name: 'Extinction Protocol',
         description: 'Slay 50,000 enemies',
         icon: '⚔',
         category: 'combat',
         check: (s) => s.totalEnemiesSlain >= 50000,
         getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 50000), max: 50000 })
+    },
+    {
+        id: 'extinction-event',
+        name: 'Extinction Protocol',
+        description: 'Slay 100,000 enemies',
+        icon: '⚔',
+        category: 'combat',
+        check: (s) => s.totalEnemiesSlain >= 100000,
+        getProgress: (s) => ({ current: Math.min(s.totalEnemiesSlain, 100000), max: 100000 })
     },
 
     // ── Victory ───────────────────────────────────────────────────────────────
@@ -86,11 +86,11 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'battle-hardened',
         name: 'Battle-Hardened',
-        description: 'Win 5 battles',
+        description: 'Win 10 battles',
         icon: '♛',
         category: 'victory',
-        check: (s) => s.victories >= 5,
-        getProgress: (s) => ({ current: Math.min(s.victories, 5), max: 5 })
+        check: (s) => s.victories >= 10,
+        getProgress: (s) => ({ current: Math.min(s.victories, 10), max: 10 })
     },
     {
         id: 'seasoned-veteran',
@@ -162,29 +162,29 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'apprentice-builder',
         name: 'Apprentice Builder',
-        description: 'Build 25 towers',
+        description: 'Build 100 towers',
         icon: '⚙',
         category: 'builder',
-        check: (s) => s.totalTowersBuilt >= 25,
-        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 25), max: 25 })
+        check: (s) => s.totalTowersBuilt >= 100,
+        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 100), max: 100 })
     },
     {
         id: 'master-engineer',
         name: 'Master Engineer',
-        description: 'Build 150 towers',
+        description: 'Build 500 towers',
         icon: '⚙',
         category: 'builder',
-        check: (s) => s.totalTowersBuilt >= 150,
-        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 150), max: 150 })
+        check: (s) => s.totalTowersBuilt >= 500,
+        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 500), max: 500 })
     },
     {
         id: 'tower-overlord',
         name: 'Tower Overlord',
-        description: 'Build 750 towers',
+        description: 'Build 1,750 towers',
         icon: '⚙',
         category: 'builder',
-        check: (s) => s.totalTowersBuilt >= 750,
-        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 750), max: 750 })
+        check: (s) => s.totalTowersBuilt >= 1750,
+        getProgress: (s) => ({ current: Math.min(s.totalTowersBuilt, 1750), max: 1750 })
     },
     {
         id: 'grand-architect',
@@ -256,26 +256,26 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'market-baron',
         name: 'Market Baron',
-        description: 'Sell 50 items',
+        description: 'Sell 250 items',
         icon: '⚖',
         category: 'trading',
-        check: (s) => s.totalItemsSold >= 50,
-        getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 50), max: 50 })
+        check: (s) => s.totalItemsSold >= 250,
+        getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 250), max: 250 })
     },
     {
         id: 'trade-magnate',
         name: 'Trade Magnate',
-        description: 'Sell 200 items',
+        description: 'Sell 1,000 items',
         icon: '⚖',
         category: 'trading',
-        check: (s) => s.totalItemsSold >= 200,
-        getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 200), max: 200 })
+        check: (s) => s.totalItemsSold >= 1000,
+        getProgress: (s) => ({ current: Math.min(s.totalItemsSold, 1000), max: 1000 })
     },
 
     // ── Items / Consumables ────────────────────────────────────────────────────
     {
-        id: 'alchemist',
-        name: 'Alchemist',
+        id: 'consumer',
+        name: 'Consumer',
         description: 'Use 10 items in battle',
         icon: '⚗',
         category: 'alchemy',
@@ -283,8 +283,8 @@ const ACHIEVEMENT_DEFS = [
         getProgress: (s) => ({ current: Math.min(s.totalItemsConsumed, 10), max: 10 })
     },
     {
-        id: 'potion-master',
-        name: 'Potion Master',
+        id: 'talisman-master',
+        name: 'Talisman Master',
         description: 'Use 50 items in battle',
         icon: '⚗',
         category: 'alchemy',
@@ -292,8 +292,8 @@ const ACHIEVEMENT_DEFS = [
         getProgress: (s) => ({ current: Math.min(s.totalItemsConsumed, 50), max: 50 })
     },
     {
-        id: 'potion-fanatic',
-        name: 'Potion Fanatic',
+        id: 'boonlord',
+        name: 'Boonlord',
         description: 'Use 200 items in battle',
         icon: '⚗',
         category: 'alchemy',
@@ -305,15 +305,6 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'wave-runner',
         name: 'Wave Runner',
-        description: 'Survive 10 waves',
-        icon: '⚡',
-        category: 'resilience',
-        check: (s) => (s.totalWavesSurvived || 0) >= 10,
-        getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 10), max: 10 })
-    },
-    {
-        id: 'storm-survivor',
-        name: 'Storm Survivor',
         description: 'Survive 100 waves',
         icon: '⚡',
         category: 'resilience',
@@ -321,28 +312,28 @@ const ACHIEVEMENT_DEFS = [
         getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 100), max: 100 })
     },
     {
-        id: 'endless-guard',
-        name: 'The Endless Guard',
-        description: 'Survive 500 waves',
+        id: 'storm-survivor',
+        name: 'Storm Survivor',
+        description: 'Survive 1000 waves',
         icon: '⚡',
         category: 'resilience',
-        check: (s) => (s.totalWavesSurvived || 0) >= 500,
-        getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 500), max: 500 })
+        check: (s) => (s.totalWavesSurvived || 0) >= 1000,
+        getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 1000), max: 1000 })
+    },
+    {
+        id: 'original-wavejumper',
+        name: 'The Original Wavejumper',
+        description: 'Survive 5000 waves',
+        icon: '⚡',
+        category: 'resilience',
+        check: (s) => (s.totalWavesSurvived || 0) >= 5000,
+        getProgress: (s) => ({ current: Math.min(s.totalWavesSurvived || 0, 5000), max: 5000 })
     },
 
     // ── Loot ──────────────────────────────────────────────────────────────────
     {
         id: 'opportunist',
         name: 'Opportunist',
-        description: 'Collect 10 loot drops',
-        icon: '◈',
-        category: 'loot',
-        check: (s) => (s.totalLootCollected || 0) >= 10,
-        getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 10), max: 10 })
-    },
-    {
-        id: 'fortune-hunter',
-        name: 'Fortune Hunter',
         description: 'Collect 100 loot drops',
         icon: '◈',
         category: 'loot',
@@ -350,13 +341,22 @@ const ACHIEVEMENT_DEFS = [
         getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 100), max: 100 })
     },
     {
-        id: 'loot-goblin',
-        name: 'Loot Goblin',
+        id: 'fortune-hunter',
+        name: 'Fortune Hunter',
         description: 'Collect 500 loot drops',
         icon: '◈',
         category: 'loot',
         check: (s) => (s.totalLootCollected || 0) >= 500,
         getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 500), max: 500 })
+    },
+    {
+        id: 'loot-goblin',
+        name: 'Loot Goblin',
+        description: 'Collect 1250 loot drops',
+        icon: '◈',
+        category: 'loot',
+        check: (s) => (s.totalLootCollected || 0) >= 1250,
+        getProgress: (s) => ({ current: Math.min(s.totalLootCollected || 0, 1250), max: 1250 })
     },
 
     // ── Campaigns ─────────────────────────────────────────────────────────────
@@ -429,8 +429,8 @@ const ACHIEVEMENT_DEFS = [
         getProgress: (s) => ({ current: Math.min(Math.floor(s.totalPlaytime / 60), 300), max: 300 })
     },
     {
-        id: 'grand-magister',
-        name: 'Grand Magister',
+        id: 'touwers-fanatic',
+        name: 'Touwers Fanatic',
         description: 'Play for 20 hours',
         icon: '⌛',
         category: 'playtime',
