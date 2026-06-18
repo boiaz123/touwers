@@ -571,9 +571,9 @@ export class UIManager {
         // Get the tower button
         const towerBtn = document.querySelector(`.tower-btn[data-type="${towerType}"]`);
         if (!towerBtn) return;
-        
-        // Clear existing menu
-        this.clearTowerInfoMenu();
+
+        // Clear any existing hover tooltips (own + other types)
+        this.clearAllHoverTooltips();
         
         // Build rich tooltip content based on tower type using computed upgraded stats
         let statsHTML = '';
@@ -742,9 +742,9 @@ export class UIManager {
         // Get the building button
         const buildingBtn = document.querySelector(`.building-btn[data-type="${buildingType}"]`);
         if (!buildingBtn) return;
-        
-        // Clear existing menu
-        this.clearBuildingInfoMenu();
+
+        // Clear any existing hover tooltips (own + other types)
+        this.clearAllHoverTooltips();
         
         // Get unlock system for requirement info
         const unlockSystem = this.towerManager.getUnlockSystem();
@@ -910,7 +910,7 @@ export class UIManager {
     }
 
     showSpellInfo(spell, btn) {
-        this.clearSpellInfoMenu();
+        this.clearAllHoverTooltips();
 
         // Build stats HTML per spell type
         let statsHTML = '';
@@ -2204,7 +2204,14 @@ export class UIManager {
         }, 250);
     }
 
+    clearAllHoverTooltips() {
+        this.clearTowerInfoMenu();
+        this.clearBuildingInfoMenu();
+        this.clearSpellInfoMenu();
+    }
+
     closeAllPanels() {
+        this.clearAllHoverTooltips();
         const panelIds = [
             'forge-panel',
             'academy-panel',
@@ -2228,6 +2235,7 @@ export class UIManager {
     }
 
     closeOtherPanelsImmediate(panelIdToKeep) {
+        this.clearAllHoverTooltips();
         const panelIds = [
             'forge-panel',
             'academy-panel',
@@ -4534,6 +4542,7 @@ export class UIManager {
                     this.gameState.gold += collected;
                 }
                 this.updateUI();
+                this.updateButtonStates();
                 this.closePanelWithAnimation('goldmine-panel');
             };
         }

@@ -801,20 +801,9 @@ export class GameplayState {
             });
         }
         
-        // Add temporary click handler for spell targeting
-        this.spellTargetHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
-            this.castSpellAtPosition(this.selectedSpell, x, y);
-            // Note: cancelSpellTargeting() is called at the end of castSpellAtPosition()
-        };
-        
-        this.stateManager.canvas.addEventListener('click', this.spellTargetHandler, { once: true });
-        
+        // Spell targeting is handled inside handleClick() (gated on this.selectedSpell) so it
+        // always runs before any other click logic, regardless of listener registration order.
+
         // Allow right-click to cancel
         this.spellCancelHandler = (e) => {
             e.preventDefault();
@@ -826,11 +815,7 @@ export class GameplayState {
     cancelSpellTargeting() {
         this.selectedSpell = null;
         this.stateManager.canvas.style.cursor = 'default';
-        
-        if (this.spellTargetHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.spellTargetHandler);
-            this.spellTargetHandler = null;
-        }
+
         if (this.spellCancelHandler) {
             this.stateManager.canvas.removeEventListener('contextmenu', this.spellCancelHandler);
             this.spellCancelHandler = null;
@@ -1089,9 +1074,10 @@ export class GameplayState {
             return;
         }
         
-        // Skip all normal click handling if spell targeting is active
-        // The spell target handler will take over
+        // If spell targeting is active, this click casts the spell and nothing else
+        // (checked first so it can never also open the enemy intel panel on the same click)
         if (this.selectedSpell) {
+            this.castSpellAtPosition(this.selectedSpell, x, y);
             return;
         }
         
@@ -1219,10 +1205,14 @@ export class GameplayState {
         }
 
         // Check if player clicked on an enemy to show intel panel
-        const clickedEnemy = this.getEnemyAtPosition(x, y);
-        if (clickedEnemy) {
-            this.uiManager.showEnemyIntelMenu(clickedEnemy);
-            return;
+        // (some levels, e.g. the Frog King's Realm bonus level, disable this)
+        const enemyInfoDisabled = this.level && this.level.levelFlags && this.level.levelFlags.disableEnemyInfo;
+        if (!enemyInfoDisabled) {
+            const clickedEnemy = this.getEnemyAtPosition(x, y);
+            if (clickedEnemy) {
+                this.uiManager.showEnemyIntelMenu(clickedEnemy);
+                return;
+            }
         }
 
         // Only show menus if not in placement mode
@@ -1282,6 +1272,7 @@ export class GameplayState {
                 this.uiManager.closeAllPanels();
                 this.gameState.gold += clickResult;
                 this.uiManager.updateUI();
+                this.uiManager.updateButtonStates();
                 return;
             } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
                 // Gem collection from gold mine - close any open goldmine menu

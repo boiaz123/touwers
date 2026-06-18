@@ -23,7 +23,8 @@ export class FrogKingsRealmLevel extends LevelBase {
             noLoss: true,
             autoPlaceSuperWeaponLab: { gridX: 33, gridY: 12 },
             realmLootConfig: { normalChance: 0.12, rareChance: 0.05, realmShardChance: 0 },
-            musicTrack: 'bonus-level-theme'
+            musicTrack: 'bonus-level-theme',
+            disableEnemyInfo: true
         };
 
         // Realm ambient particles (magical atmosphere)
