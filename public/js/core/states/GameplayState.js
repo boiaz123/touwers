@@ -1480,6 +1480,10 @@ export class GameplayState {
             return;
         }
 
+        // Close any open building/tower panels and clear placement selection so the
+        // victory screen shows a clean battlefield instead of a stuck-open menu
+        this.cancelSelection();
+
         // Update save data with level completion (only level progress, not mid-game state)
         if (this.stateManager.currentSaveData) {
             const saveData = this.stateManager.currentSaveData;
@@ -2077,15 +2081,7 @@ export class GameplayState {
         
         // Render background terrain/level first
         this.level.render(ctx);
-        
-        // OPTIMIZATION: When results screen is showing, skip rendering all game entities
-        // The update() already stops game logic; this stops the expensive render pass too
-        if (this.resultsScreen && this.resultsScreen.isShowing) {
-            // Render results screen on top
-            this.resultsScreen.render(ctx);
-            return;
-        }
-        
+
         // Collect all renderable entities (towers, buildings, enemies, loot, castle)
         // with their Y positions for unified depth sorting
         // OPTIMIZATION: Reuse persistent array and entity wrapper objects to avoid GC pressure
@@ -2212,6 +2208,11 @@ export class GameplayState {
 
         // Render active boons
         this.renderActiveBoons(ctx);
+
+        // Render results screen overlay on top of the still-visible battlefield
+        if (this.resultsScreen && this.resultsScreen.isShowing) {
+            this.resultsScreen.render(ctx);
+        }
     }
 
     renderActiveBoons(ctx) {
