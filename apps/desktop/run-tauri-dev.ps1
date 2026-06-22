@@ -1,4 +1,5 @@
 # Setup environment for Tauri development
+Set-Location $PSScriptRoot
 Write-Host "Setting up environment for Tauri development..." -ForegroundColor Green
 
 # Add Rust/Cargo to PATH first

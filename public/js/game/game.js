@@ -39,6 +39,7 @@ export class Game {
             
             // Detect and apply UI scaling based on screen resolution
             this.applyUIScaling();
+            this.updateOrientationClass();
             
             // Apply fixed resolution from saved settings
             const savedResolution = ResolutionSettings.getSavedResolution();
@@ -80,7 +81,7 @@ export class Game {
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             this.stateManager.inputManager = this.inputManager; // Set input manager reference
-            
+
             // Initialize all save slot files (create empty files if they don't exist)
             SaveSystem.initializeSaveSlots();
             
@@ -216,6 +217,19 @@ export class Game {
     }
 
     /**
+     * Toggle the body.orientation-portrait class used by the portrait layout
+     * CSS, since some sidebar DOM is also driven by UIManager's inline
+     * styles and a plain @media (orientation: portrait) query can't reliably
+     * win specificity battles against that.
+     */
+    updateOrientationClass() {
+        const isPortrait = window.screen && window.screen.orientation && window.screen.orientation.type
+            ? window.screen.orientation.type.startsWith('portrait')
+            : window.innerHeight >= window.innerWidth;
+        document.body.classList.toggle('orientation-portrait', isPortrait);
+    }
+
+    /**
      * Apply a new internal render resolution.
      * The resolution key must already be saved via ResolutionSettings.saveResolution()
      * before this is called (ResolutionSelector does this).  A page reload is the
@@ -229,15 +243,20 @@ export class Game {
         try {
             let resizeTimeout;
             
-            window.addEventListener('resize', () => {
+            const handleResizeOrOrientation = () => {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     if (!this.isResizing) {
                         this.applyUIScaling();
+                        this.updateOrientationClass();
                         this.resizeCanvas();
                     }
                 }, 100);
-            });
+            };
+            window.addEventListener('resize', handleResizeOrOrientation);
+            // Orientation events can lag the resize event on some Android WebViews,
+            // so listen for both and funnel into the same debounced handler.
+            window.addEventListener('orientationchange', handleResizeOrOrientation);
             
             this.canvas.addEventListener('click', (e) => {
                 try {
@@ -322,9 +341,13 @@ export class Game {
                 }
             });
 
-            // Cancel / Close (ESC / B button)
-            this.inputManager.on('cancel', () => {
-                if (!this.stateManager || !this.stateManager.currentState) return;
+            // Cancel / Close (ESC / B button / Android back button)
+            // Returns true if something was closed/navigated, false if there was
+            // nothing to do (e.g. already at the main menu) - used by
+            // window.__ANDROID_BACK__ to decide whether the back press should
+            // exit the app instead.
+            const handleCancelAction = () => {
+                if (!this.stateManager || !this.stateManager.currentState) return false;
 
                 const refs = getGameplayRefs();
                 if (refs && refs.uiManager) {
@@ -341,7 +364,7 @@ export class Game {
                     if (this.stateManager.currentState.cancelSelection) {
                         this.stateManager.currentState.cancelSelection();
                     }
-                    return;
+                    return true;
                 }
 
                 // In non-gameplay states: go back to previous state
@@ -349,12 +372,22 @@ export class Game {
                 if (stateName === 'options') {
                     const prev = this.stateManager.previousState || 'mainMenu';
                     this.stateManager.changeState(prev);
+                    return true;
                 } else if (stateName === 'loadGame' || stateName === 'saveSlotSelection') {
                     this.stateManager.changeState('mainMenu');
+                    return true;
                 } else if (stateName === 'levelSelect' || stateName === 'campaigns') {
                     this.stateManager.changeState('settlementHub');
+                    return true;
                 }
-            });
+                return false;
+            };
+            this.inputManager.on('cancel', handleCancelAction);
+
+            // Android hardware/gesture back button: MainActivity.kt evaluates this
+            // before deciding whether to finish() the Activity (see gen/android
+            // app/src/main/java/.../MainActivity.kt onKeyDown).
+            window.__ANDROID_BACK__ = handleCancelAction;
 
             // Menu (M)
             this.inputManager.on('menu', () => {

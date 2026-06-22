@@ -17,13 +17,13 @@ if (-not (Test-Path $vcvarsPath)) {
 
 # Run vcvars64.bat and then our build command in the same process
 Write-Host "Setting up Visual Studio environment..." -ForegroundColor Cyan
-$output = cmd /c "`"$vcvarsPath`" && cd /d `"c:\Users\boiaz\AppDev\touwers`" && npm run build"
+$output = cmd /c "`"$vcvarsPath`" && cd /d `"c:\Users\boiaz\AppDev\touwers\apps\desktop`" && npm run build"
 
 Write-Host $output
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`nBuild successful!" -ForegroundColor Green
-    Write-Host "The executable is in: src-tauri\target\release\bundle\msi\" -ForegroundColor Green
+    Write-Host "The executable is in: src-tauri\target\release\bundle\msi\ (relative to apps\desktop)" -ForegroundColor Green
 } else {
     Write-Host "`nBuild failed with exit code: $LASTEXITCODE" -ForegroundColor Red
     exit 1

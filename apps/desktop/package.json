@@ -1,0 +1,12 @@
+{
+  "name": "touwers-desktop",
+  "version": "1.0.0",
+  "description": "Touwers - desktop release",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build-msi": "tauri build --target msi"
+  }
+}

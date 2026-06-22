@@ -19,7 +19,9 @@ Just read the file and check for syntax errors by eye.
 
 ## Project Overview
 
-**Touwers** is a browser-based tower defense game built with vanilla JavaScript and Pixi.js, packaged as a desktop Tauri app. The game features a grid-based tower placement system, wave-based enemy progression, and a resolution-agnostic architecture that scales seamlessly across screen sizes.
+**Touwers** is a browser-based tower defense game built with vanilla JavaScript and Pixi.js, packaged as both a desktop and mobile Tauri app. The game features a grid-based tower placement system, wave-based enemy progression, and a resolution-agnostic architecture that scales seamlessly across screen sizes.
+
+The repo is an npm workspaces monorepo: the frontend (`public/`) is shared, while `apps/desktop` and `apps/mobile` each have their own independent `src-tauri/` (Cargo.toml, tauri.conf.json, icons) so the two release paths can evolve separately.
 
 ## Architecture Overview
 
@@ -54,14 +56,16 @@ Game (game.js)
 ## Critical Developer Workflows
 
 ### Development Server
-- **Command**: `npm start` or `node server-dev.js`
+- **Command**: `npm start` or `node server-dev.js` (run from repo root)
 - **Purpose**: Simple HTTP server serving `/public` on http://localhost:3000
-- **For Tauri Dev**: Use `run-tauri-dev.ps1` (starts server + Tauri dev environment)
+- **For Tauri Dev (desktop)**: From `apps/desktop`, use `run-tauri-dev.ps1` (starts server + Tauri dev environment) or `npm run dev`
+- **For Tauri Dev (mobile)**: From `apps/mobile`, use `npm run android:dev` / `npm run ios:dev`
 
 ### Building Release
-- **Command**: `npm run build` or use `build-release.ps1`
-- **Output**: `src-tauri/target/release/bundle/msi/` contains the installer
-- **Note**: Requires Visual Studio Build Tools; PowerShell script configures environment
+- **Desktop**: From `apps/desktop`, run `npm run build` or use `build-release.ps1`
+  - **Output**: `apps/desktop/src-tauri/target/release/bundle/msi/` contains the installer
+  - **Note**: Requires Visual Studio Build Tools; PowerShell script configures environment
+- **Mobile**: From `apps/mobile`, run `npm run android:build` / `npm run ios:build`
 
 ### Debugging Tips
 - Uncomment `console.log` calls throughout code (they're commented by default)
@@ -183,11 +187,10 @@ getCellSize(ctx) {
 
 ## Tauri Configuration
 
-The app is packaged as a Tauri desktop application. Key config in [src-tauri/tauri.conf.json](src-tauri/tauri.conf.json):
-- **Dev URL**: http://localhost:3000 (served by Node)
-- **Frontend dist**: ../public (the web app files)
-- **Bundle target**: MSI (Windows installer)
-- **App window**: 1920x1080, fullscreen-enabled
+The app is packaged as both a Tauri desktop and mobile application, each with its own config:
+- **Desktop**: [apps/desktop/src-tauri/tauri.conf.json](apps/desktop/src-tauri/tauri.conf.json) — MSI (Windows installer) bundle target, 1920x1080 fullscreen-enabled window
+- **Mobile**: [apps/mobile/src-tauri/tauri.conf.json](apps/mobile/src-tauri/tauri.conf.json) — Android/iOS bundle, generated scaffolding lives in `apps/mobile/src-tauri/gen/`
+- Both point `frontendDist` at the shared `public/` folder and use the shared `server-dev.js` for `beforeDevCommand` (http://localhost:3000)
 
 ## Common Troubleshooting
 

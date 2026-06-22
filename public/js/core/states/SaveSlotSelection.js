@@ -227,16 +227,23 @@ export class SaveSlotSelection {
         }
     }
 
-    // Hidden input element for triggering mobile onscreen keyboard
+    // Hidden input element for triggering mobile onscreen keyboard.
+    // Must be created and focused synchronously inside the originating click/tap
+    // handler (no setTimeout) and kept within the visible viewport (not pushed
+    // off-screen with a negative offset) - Android WebView's IME only engages
+    // for a focus that's still attributable to the user gesture and for an
+    // element it considers on-screen, even if visually it's just 1px and
+    // fully transparent.
     createMobileInput() {
         this.removeMobileInput();
         const input = document.createElement('input');
         input.id = 'commander-name-mobile-input';
         input.type = 'text';
+        input.inputMode = 'text';
         input.maxLength = 30;
         input.autocomplete = 'off';
         input.autocapitalize = 'words';
-        input.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;';
+        input.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;border:none;outline:none;';
         input.value = this.commanderNameInput;
         input.addEventListener('input', () => {
             // Filter to allowed characters
@@ -262,8 +269,7 @@ export class SaveSlotSelection {
         });
         document.body.appendChild(input);
         this._mobileInput = input;
-        // Delay focus slightly to ensure it triggers the keyboard on mobile
-        setTimeout(() => { if (this._mobileInput) this._mobileInput.focus(); }, 50);
+        input.focus();
     }
 
     removeMobileInput() {
@@ -275,25 +281,18 @@ export class SaveSlotSelection {
 
     setupMouseListeners() {
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.handleClick(x, y);
-        };
+        // Note: clicks are NOT bound here. game.js's global canvas 'click' listener
+        // already routes through GameStateManager.handleClick() to this.handleClick() -
+        // binding our own listener too fired handleClick() twice per click, which could
+        // make a tap on a slot also register as a hit on the commander dialog's Cancel
+        // button (since the dialog is centered over the same area), instantly closing it
+        // and ripping focus from the mobile keyboard input right after it opened.
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
 
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-        }
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
     }
 
@@ -455,6 +454,17 @@ export class SaveSlotSelection {
                 this.showWarning = false;
                 this.removeMobileInput();
                 return;
+            }
+
+            // Name input field - (re)focus the hidden mobile input so tapping the
+            // bar reopens the on-screen keyboard if it was dismissed or never came up.
+            const inputFieldX = panelX + 40;
+            const inputFieldY = panelY + 100;
+            const inputFieldWidth = panelWidth - 80;
+            const inputFieldHeight = 40;
+            if (x >= inputFieldX && x <= inputFieldX + inputFieldWidth &&
+                y >= inputFieldY && y <= inputFieldY + inputFieldHeight) {
+                this.createMobileInput();
             }
             return;
         }

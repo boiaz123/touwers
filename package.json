@@ -2,13 +2,14 @@
   "name": "touwers",
   "version": "1.0.0",
   "description": "Tower Defense Game",
+  "private": true,
+  "workspaces": [
+    "apps/desktop",
+    "apps/mobile"
+  ],
   "scripts": {
     "server": "node server-dev.js",
-    "start": "node server-dev.js",
-    "build": "tauri build",
-    "build-msi": "tauri build --target msi",
-    "tauri": "tauri",
-    "tauri dev": "tauri dev"
+    "start": "node server-dev.js"
   },
   "engines": {
     "node": ">=18.0.0"

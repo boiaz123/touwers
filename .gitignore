@@ -7,5 +7,5 @@ build/
 *.exe
 *.msi
 .cache/
-src-tauri/target/
+apps/*/src-tauri/target/
 

@@ -298,8 +298,8 @@ body {
 
 /* Gold Coin - Medieval currency disc */
 .gold-coin {
-    width: 22px;
-    height: 22px;
+    width: clamp(0.95rem, 4vw, 1.4rem);
+    height: clamp(0.95rem, 4vw, 1.4rem);
     background: radial-gradient(circle at 35% 35%, #FFE878, #FFC107 40%, #E6A800 70%, #CC8800 100%);
     border: 2px solid #B8860B;
     border-radius: 50%;
@@ -365,8 +365,8 @@ body {
 
 /* Gem stones - set in iron bezels */
 .gem {
-    width: 16px;
-    height: 16px;
+    width: clamp(0.7rem, 3vw, 1rem);
+    height: clamp(0.7rem, 3vw, 1rem);
     position: relative;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
     /* Iron bezel ring around each gem */
@@ -1345,25 +1345,84 @@ body {
 /* ============ RESPONSIVE MEDIA QUERIES ============ */
 /* All sizing now uses relative units (rem, %, vh, vw, clamp) for true responsiveness */
 
-/* Mobile devices (portrait warning) */
-@media (max-width: 768px) and (orientation: portrait) {
-    body::before {
-        content: "Please rotate your device to landscape mode for the best experience";
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.95);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        font-size: clamp(1rem, 4vw, 1.5rem);
-        z-index: 9999;
-        padding: clamp(1rem, 5vh, 2rem);
-    }
+/* ============ PORTRAIT LAYOUT ============ */
+/* body.orientation-portrait is toggled by Game.updateOrientationClass() (game.js)
+   rather than relying solely on @media (orientation: portrait), since some
+   sidebar DOM is driven by UIManager's inline styles and needs a class-based
+   hook to win specificity reliably alongside that JS. */
+body.orientation-portrait #game-area {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The game world grid is fixed at a 16:9 aspect (ResolutionManager.js) and
+   does not fit a 9:16 canvas without clipping the playfield, so rather than
+   feeding the renderer a portrait-aspect buffer, the canvas keeps its normal
+   16:9 internal resolution and is letterboxed via CSS instead - same
+   approach as a TV switching aspect ratios.
+   width/height must both stay "auto" (not 100%) so aspect-ratio resolves
+   both dimensions together from the max-width/max-height box - pairing a
+   100% dimension with aspect-ratio and a max- constraint on the other axis
+   is over-constrained and produces a squashed/stretched canvas instead of a
+   correctly-proportioned letterboxed one. align-items: center on #game-area
+   (above) is required too, since flex's default stretch would otherwise
+   override this width: auto. */
+body.orientation-portrait #gameCanvas {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+}
+
+/* Turn the right-hand sidebar into a horizontally-scrollable bottom tray */
+body.orientation-portrait #tower-sidebar {
+    width: 100%;
+    height: clamp(120px, 22%, 200px);
+    flex-shrink: 0;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+/* Stone pillar trim assumes a vertical left edge; simplest first pass is to
+   hide it in the bottom-tray layout rather than redraw it for a horizontal edge. */
+body.orientation-portrait #tower-sidebar::before,
+body.orientation-portrait #tower-sidebar::after {
+    display: none;
+}
+
+body.orientation-portrait #tower-section,
+body.orientation-portrait #building-section {
+    flex-shrink: 0;
+    padding-top: 0.4rem;
+}
+
+body.orientation-portrait #tower-info-box {
+    flex-shrink: 0;
+    flex-direction: row;
+    min-width: 160px;
+    border-top: none;
+    border-left: 2px solid rgba(139, 115, 85, 0.6);
+    margin-top: 0;
+    padding-top: 0;
+}
+
+body.orientation-portrait #control-buttons-section {
+    flex-shrink: 0;
+    flex-direction: row;
+    margin-top: 0;
+    border-top: none;
+    border-left: 2px solid rgba(139, 115, 85, 0.6);
+}
+
+/* Right-side overlay panels (forge/academy/etc.) are usable but cramped at
+   the 40vw-capped desktop width on narrow phones; widen them in portrait. */
+body.orientation-portrait .side-panel {
+    width: min(92vw, 420px);
 }
 
 /* Small screens */
@@ -1371,10 +1430,29 @@ body {
     html {
         font-size: clamp(14px, 2vw, 16px);
     }
-    
+
     #stats-bar {
         flex-wrap: wrap;
         gap: 0.75rem;
+    }
+
+    /* #stats/.stat below used rem/vw floors tuned for desktop widths (1.5rem
+       gap, 1.2rem horizontal padding) that don't shrink enough on phone-sized
+       viewports and push stat shields into overflow/wrap. Tighten the floors
+       here rather than changing the desktop-facing base values. */
+    #stats {
+        gap: clamp(0.6rem, 3vw, 3rem);
+    }
+
+    .stat {
+        padding: clamp(0.3rem, 1vh, 0.5rem) clamp(0.5rem, 2vw, 1.2rem) clamp(0.35rem, 1vh, 0.55rem);
+    }
+
+    /* Coin engraving details are too fine to read at this size and can
+       overflow the now-smaller coin; the plain disc still reads fine. */
+    .gold-coin::before,
+    .gold-coin::after {
+        display: none;
     }
 }
 

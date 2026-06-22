@@ -1,10 +1,14 @@
 [package]
-name = "touwers"
+name = "touwers-desktop"
 version = "1.0.0"
 description = "Tower Defense Game"
 authors = ["boiaz"]
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.77"
+
+[lib]
+name = "touwers_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }

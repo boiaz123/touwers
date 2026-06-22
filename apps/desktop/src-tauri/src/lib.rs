@@ -1,4 +1,4 @@
-// Tauri main file - save file I/O and app control
+// Tauri mobile/desktop entry point - save file I/O and app control
 
 use std::fs;
 use std::path::PathBuf;
@@ -17,12 +17,12 @@ fn get_saves_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn close_app(_app: tauri::AppHandle) {
-    // Spawn a thread to exit after a small delay to allow window cleanup
-    std::thread::spawn(|| {
-        std::thread::sleep(std::time::Duration::from_millis(150));
-        std::process::exit(0);
-    });
+fn close_app(app: tauri::AppHandle) {
+    // app.exit() requests a graceful runtime exit (fires RunEvent::ExitRequested/Exit)
+    // instead of hard-killing the process, which matters on Android where the
+    // process also hosts the Activity - a raw std::process::exit there looks like
+    // a crash rather than the app closing normally.
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -77,7 +77,8 @@ fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
-fn main() {
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
@@ -91,5 +92,3 @@ fn main() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-

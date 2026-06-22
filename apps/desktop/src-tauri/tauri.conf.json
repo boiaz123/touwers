@@ -4,9 +4,9 @@
   "identifier": "com.touwers.game",
   "build": {
     "beforeBuildCommand": "",
-    "beforeDevCommand": "node server-dev.js",
+    "beforeDevCommand": "node ../../server-dev.js",
     "devUrl": "http://localhost:3000",
-    "frontendDist": "../public"
+    "frontendDist": "../../../public"
   },
   "app": {
     "windows": [

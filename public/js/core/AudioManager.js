@@ -38,7 +38,11 @@ export class AudioManager {
         
         // Fade interval tracking
         this._fadeIntervalId = null;
-        
+
+        // Mobile autoplay-policy: set when a play() call is rejected with
+        // NotAllowedError, consumed by the first user gesture to resume playback.
+        this._pendingPlayRequest = false;
+
         // Initialize audio
         this.initialize();
     }
@@ -59,6 +63,27 @@ export class AudioManager {
         
         // Load registries from MusicRegistry and SFXRegistry
         this.loadRegistries();
+
+        // Mobile WebViews reject play() before a user gesture; resume on the first one.
+        this._setupGestureUnlock();
+    }
+
+    /**
+     * Retry any autoplay-policy-blocked play() call on the first user gesture.
+     * Needed for Android/mobile WebViews, which are stricter than desktop about
+     * audio playback before the user has interacted with the page.
+     */
+    _setupGestureUnlock() {
+        const tryResume = () => {
+            if (!this._pendingPlayRequest || !this.musicElement) return;
+            this._pendingPlayRequest = false;
+            this.musicElement.play().catch(err => {
+                console.warn('AudioManager: gesture-triggered resume failed:', err);
+            });
+        };
+        document.addEventListener('touchstart', tryResume, { passive: true });
+        document.addEventListener('pointerdown', tryResume, { passive: true });
+        document.addEventListener('keydown', tryResume);
     }
     
     /**
@@ -146,11 +171,13 @@ export class AudioManager {
                 this.musicElement.volume = 0;
                 this.musicElement.play().catch(err => {
                     console.warn('AudioManager: Could not play music:', err);
+                    if (err && err.name === 'NotAllowedError') this._pendingPlayRequest = true;
                 });
                 this.fadeInMusic(this.musicVolume, 1000);
             } else {
                 this.musicElement.play().catch(err => {
                     console.warn('AudioManager: Could not play music:', err);
+                    if (err && err.name === 'NotAllowedError') this._pendingPlayRequest = true;
                 });
             }
         };
@@ -278,6 +305,7 @@ export class AudioManager {
         if (this.musicElement && !this.isMusicPlaying && this.currentMusicTrack) {
             this.musicElement.play().catch(err => {
                 console.warn('AudioManager: Could not resume music:', err);
+                if (err && err.name === 'NotAllowedError') this._pendingPlayRequest = true;
             });
             this.isMusicPlaying = true;
         }
