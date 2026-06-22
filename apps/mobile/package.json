@@ -1,0 +1,16 @@
+{
+  "name": "touwers-mobile",
+  "version": "1.0.0",
+  "description": "Touwers - mobile release",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --apk true --split-per-abi",
+    "android:build:aab": "tauri android build --aab true",
+    "ios:init": "tauri ios init",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build"
+  }
+}
