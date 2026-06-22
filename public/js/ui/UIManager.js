@@ -2125,9 +2125,11 @@ export class UIManager {
     closeForgePanelWithAnimation() {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
-        
+
         if (panel.style.display === 'none') return; // Already closed
-        
+
+        this.clearAllFloatingTooltips();
+
         panel.classList.add('closing');
         setTimeout(() => {
             panel.style.display = 'none';
@@ -2207,9 +2209,8 @@ export class UIManager {
         if (panel.style.display === 'none') return; // Already closed
         
         // Clean up any active tooltips
-        const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
-        existingTooltips.forEach(tooltip => tooltip.remove());
-        
+        this.clearAllFloatingTooltips();
+
         // Clear active menu tracking
         this.activeMenuType = null;
         this.activeMenuData = null;
@@ -2221,10 +2222,18 @@ export class UIManager {
         }, 250);
     }
 
+    clearAllFloatingTooltips() {
+        const existingTooltips = document.querySelectorAll(
+            '[data-panel-tooltip], [data-forge-tooltip], [data-academy-tooltip], [data-superweapon-tooltip]'
+        );
+        existingTooltips.forEach(tooltip => tooltip.remove());
+    }
+
     clearAllHoverTooltips() {
         this.clearTowerInfoMenu();
         this.clearBuildingInfoMenu();
         this.clearSpellInfoMenu();
+        this.clearAllFloatingTooltips();
     }
 
     closeAllPanels() {
