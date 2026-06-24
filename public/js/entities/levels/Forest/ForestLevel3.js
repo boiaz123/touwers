@@ -312,7 +312,7 @@ export class ForestLevel3 extends LevelBase {
         // Wave 5
         , { 
             enemyHealth_multiplier: 1.2, 
-            speedMultiplier: 3.33, 
+            speedMultiplier: 1.4, 
             spawnInterval: 3, 
             pattern: [{ type: 'archer', count: 18 }] 
         }
@@ -326,7 +326,7 @@ export class ForestLevel3 extends LevelBase {
         // Wave 7
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 3.33, 
+            speedMultiplier: 1.8, 
             spawnInterval: 1.5, 
             pattern: [{ type: 'archer', count: 15 }] 
         }
@@ -354,7 +354,7 @@ export class ForestLevel3 extends LevelBase {
         // Wave 11
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 1.42, 
+            speedMultiplier: 1.87, 
             spawnInterval: 3, 
             pattern: [{ type: 'archer', count: 35 }] 
         }

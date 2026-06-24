@@ -295,28 +295,28 @@ export class ForestLevel1 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.8, 
             speedMultiplier: 0.70, 
             spawnInterval: 2.2, 
-            pattern: [{ type: 'basic', count: 15 }] 
+            pattern: [{ type: 'basic', count: 12 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.8, 
             speedMultiplier: 0.70, 
             spawnInterval: 1.7, 
-            pattern: [{ type: 'villager', count: 18 }] 
+            pattern: [{ type: 'villager', count: 14 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.8, 
             speedMultiplier: 0.70, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'villager', count: 10 }, { type: 'basic', count: 10 }] 
+            pattern: [{ type: 'villager', count: 7 }, { type: 'basic', count: 8 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 0.80, 
             spawnInterval: 1.3, 
             pattern: [{ type: 'basic', count: 13 }, { type: 'villager', count: 12 }] 
@@ -325,22 +325,22 @@ export class ForestLevel1 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.67, 
-            spawnInterval: 2, 
-            pattern: [{ type: 'beefyenemy', count: 5 }] 
+            spawnInterval: 2.5, 
+            pattern: [{ type: 'beefyenemy', count: 8 }] 
         }
         // Wave 6
         , { 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 0.50, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'beefyenemy', count: 10 }] 
+            pattern: [{ type: 'beefyenemy', count: 12 }] 
         }
         // Wave 7
         , { 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 0.60, 
             spawnInterval: 1.2, 
-            pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
+            pattern: [{ type: 'basic', count: 12 }, { type: 'villager', count: 12 }] 
         }
         // Wave 8
         , { 

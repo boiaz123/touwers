@@ -4,8 +4,8 @@ export class MageEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 750,
         speed: 45,
-        armour: 75,
-        magicResistance: 0.2
+        armour: 45,
+        magicResistance: 0.3
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
