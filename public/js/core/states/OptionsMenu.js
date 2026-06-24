@@ -152,15 +152,10 @@ export class OptionsMenu {
     }
 
     setupMouseListeners() {
+        // Note: clicks are NOT bound here. game.js's global canvas 'click' listener
+        // already routes through GameStateManager.handleClick() to this.handleClick() -
+        // binding our own listener too would fire handleClick() twice per click.
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.handleClick(x, y);
-        };
         this.mouseDownHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             const scaleX = this.stateManager.canvas.width / rect.width;
@@ -179,7 +174,6 @@ export class OptionsMenu {
         };
         
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
         this.stateManager.canvas.addEventListener('mousedown', this.mouseDownHandler);
         document.addEventListener('mouseup', this.mouseUpHandler);
         document.addEventListener('mousemove', this.mouseMoveSliderHandler);
@@ -188,9 +182,6 @@ export class OptionsMenu {
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-        }
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
         if (this.mouseDownHandler) {
             this.stateManager.canvas.removeEventListener('mousedown', this.mouseDownHandler);
@@ -358,15 +349,13 @@ export class OptionsMenu {
     update(deltaTime) {
         this.animationTime += deltaTime;
 
-        // Title fade in
-        if (this.animationTime > 0.3) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.7);
-        }
+        // Title fade in - quick, no delay
+        this.titleOpacity = Math.min(1, this.animationTime / 0.15);
 
-        // Content fade in
-        if (this.animationTime > 1) {
+        // Content fade in - starts almost immediately, slightly after the title
+        if (this.animationTime > 0.05) {
             this.showContent = true;
-            this.contentOpacity = Math.min(1, (this.animationTime - 1) / 0.7);
+            this.contentOpacity = Math.min(1, (this.animationTime - 0.05) / 0.15);
         }
     }
 

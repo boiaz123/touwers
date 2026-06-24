@@ -3,6 +3,7 @@ import { LoadGame } from '../core/states/LoadGame.js';
 import { SaveSlotSelection } from '../core/states/SaveSlotSelection.js';
 import { OptionsMenu } from '../core/states/OptionsMenu.js';
 import { MainMenu } from '../core/states/MainMenu.js';
+import { SplashScreen } from '../core/states/SplashScreen.js';
 import { CampaignMenu } from '../core/states/CampaignMenu.js';
 import { Campaign1 } from '../entities/campaigns/Campaign1.js';
 import { Campaign2 } from '../entities/campaigns/Campaign2.js';
@@ -131,7 +132,19 @@ export class Game {
             
             const mainMenu = new MainMenu(this.stateManager);
             this.stateManager.addState('mainMenu', mainMenu);
-            
+
+            const splashLily = new SplashScreen(this.stateManager, {
+                lines: ["A Lily's Little Adventures Game"],
+                nextState: 'splashMusic'
+            });
+            this.stateManager.addState('splashLily', splashLily);
+
+            const splashMusic = new SplashScreen(this.stateManager, {
+                lines: ['Music and Sound by Joost'],
+                nextState: 'mainMenu'
+            });
+            this.stateManager.addState('splashMusic', splashMusic);
+
             const settlementHub = new SettlementHub(this.stateManager);
             this.stateManager.addState('settlementHub', settlementHub);
             
@@ -170,7 +183,7 @@ export class Game {
             // This makes save files the source of truth on each startup
             await SaveSystem.syncAllSlotsFromFiles();
             
-            const stateChanged = this.stateManager.changeState('mainMenu');
+            const stateChanged = this.stateManager.changeState('splashLily');
             
             if (!stateChanged) {
                 throw new Error('Failed to change to start state');

@@ -1,4 +1,5 @@
 import { ParticleSystem } from '../ParticleSystem.js';
+import { drawMedievalSword } from '../SwordRenderer.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -50,13 +51,13 @@ export class MainMenu {
             sidebar.style.display = 'none';
         }
 
-        // Check if we're returning from options or loadGame menus
-        // If so, skip to the post-transition button menu state
-        const returningFromMenu = this.stateManager.previousState === 'options' || 
-                                  this.stateManager.previousState === 'loadGame' ||
-                                  this.stateManager.previousState === 'saveSlotSelection';
-        
-        this._resetState(returningFromMenu);
+        // Only the splash screens lead into the full title intro (fade-in, "Press to
+        // Continue", sword/smoke transition). Every other path back to the main menu
+        // (options, load game, save slot selection, settlement, etc.) shows the
+        // static button menu immediately, with no animation.
+        const playIntro = this.stateManager.previousState === 'splashMusic';
+
+        this._resetState(!playIntro);
         
         // Reset all button hover states when entering
         this.buttons.forEach(button => {
@@ -80,24 +81,31 @@ export class MainMenu {
         this.removeMouseListeners();
     }
 
-    _resetState(returningFromMenu) {
+    _resetState(skipIntro) {
         this.animationTime = 0;
         this.showContinue = false;
         this.continueOpacity = 0;
         this.transitionActive = false;
         this.buttonsOpacity = 1;
         this.swordSoundPlayed = false;
+        // Gates the title/subtitle/continue fade-in phases in update() - when skipping
+        // the intro, animationTime still restarts at 0 above, so without this flag the
+        // fade-in math would immediately start overwriting the static opacities below
+        // and the title/subtitle would visibly flash back in.
+        this.introActive = !skipIntro;
 
-        if (returningFromMenu) {
+        if (skipIntro) {
             this.titleOpacity = 1;
             this.subtitleOpacity = 1;
             this.transitionTime = 3;
             this.showButtons = true;
+            this.cursorVisible = true;
         } else {
             this.titleOpacity = 0;
             this.subtitleOpacity = 0;
             this.transitionTime = 0;
             this.showButtons = false;
+            this.cursorVisible = false;
         }
     }
 
@@ -132,15 +140,9 @@ export class MainMenu {
     }
 
     setupMouseListeners() {
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.handleClick(x, y);
-        };
+        // Note: clicks are NOT bound here. game.js's global canvas 'click' listener
+        // already routes through GameStateManager.handleClick() to this.handleClick() -
+        // binding our own listener too would fire handleClick() twice per click.
         this.mouseMoveHandler = (e) => {
             const rect = this.stateManager.canvas.getBoundingClientRect();
             // Account for CSS scaling
@@ -150,14 +152,10 @@ export class MainMenu {
             const y = (e.clientY - rect.top) * scaleY;
             this.handleMouseMove(x, y);
         };
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
     }
 
     removeMouseListeners() {
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
-        }
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
         }
@@ -299,21 +297,26 @@ export class MainMenu {
 
     update(deltaTime) {
         this.animationTime += deltaTime;
-        
-        // PHASE 1: Title fade in
-        if (this.animationTime > 0.3) {
-            this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.8);
-        }
-        
-        // PHASE 2: Subtitle fade in - after title is visible
-        if (this.animationTime > 1.3) {
-            this.subtitleOpacity = Math.min(1, (this.animationTime - 1.3) / 0.8);
-        }
-        
-        // PHASE 3: Show continue message - after subtitle
-        if (this.animationTime > 2.3) {
-            this.showContinue = true;
-            this.continueOpacity = Math.min(1, (this.animationTime - 2.3) / 0.8);
+
+        if (this.introActive) {
+            // PHASE 1: Title fade in
+            if (this.animationTime > 0.3) {
+                this.titleOpacity = Math.min(1, (this.animationTime - 0.3) / 0.8);
+            }
+
+            // PHASE 2: Subtitle fade in - after title is visible
+            if (this.animationTime > 1.3) {
+                this.subtitleOpacity = Math.min(1, (this.animationTime - 1.3) / 0.8);
+            }
+
+            // PHASE 3: Show continue message - after subtitle
+            if (this.animationTime > 2.3) {
+                this.showContinue = true;
+                this.continueOpacity = Math.min(1, (this.animationTime - 2.3) / 0.8);
+            }
+
+            // Cursor stays hidden until the player has clicked past "Press to Continue"
+            this.cursorVisible = this.transitionTime > 0 || this.transitionActive;
         }
 
         // Update transition
@@ -457,7 +460,7 @@ export class MainMenu {
             ctx.save();
             ctx.translate(leftSwordX, centerY);
             ctx.rotate(leftSwingAngle);
-            this.drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.4);
+            drawMedievalSword(ctx, 0, 0, '#c0c0c0', '#8b7355', 1.4);
             ctx.restore();
 
             // Right sword
@@ -465,7 +468,7 @@ export class MainMenu {
             ctx.save();
             ctx.translate(rightSwordX, centerY);
             ctx.rotate(rightSwingAngle);
-            this.drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.4);
+            drawMedievalSword(ctx, 0, 0, '#d4af37', '#8b7355', 1.4);
             ctx.restore();
 
             // Subtle clash flash at sword meeting point
@@ -644,87 +647,6 @@ export class MainMenu {
             ctx.arc(outerX, outerY, outerSize, 0, Math.PI * 2);
             ctx.fill();
         }
-    }
-
-    drawMedievalSword(ctx, x, y, primaryColor, accentColor, scale = 1) {
-        const bladeLength = 180 * scale;
-        const bladeWidth = 25 * scale;
-        const guardWidth = 90 * scale;
-        const guardHeight = 15 * scale;
-        const handleLength = 80 * scale;
-        const pommelRadius = 10 * scale;
-
-        // Blade pointing UPWARD (negative Y)
-        ctx.fillStyle = primaryColor;
-        // Main blade body
-        ctx.beginPath();
-        ctx.moveTo(x - bladeWidth / 2, y); // Bottom left
-        ctx.lineTo(x + bladeWidth / 2, y); // Bottom right
-        ctx.lineTo(x + bladeWidth / 3, y - bladeLength * 0.7); // Right edge towards tip
-        ctx.lineTo(x, y - bladeLength); // Tip (pointy)
-        ctx.lineTo(x - bladeWidth / 3, y - bladeLength * 0.7); // Left edge towards tip
-        ctx.closePath();
-        ctx.fill();
-        
-        // Blade shine (down the middle)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.beginPath();
-        ctx.moveTo(x - bladeWidth / 5, y);
-        ctx.lineTo(x + bladeWidth / 5, y);
-        ctx.lineTo(x + bladeWidth / 8, y - bladeLength * 0.6);
-        ctx.lineTo(x, y - bladeLength + 5);
-        ctx.lineTo(x - bladeWidth / 8, y - bladeLength * 0.6);
-        ctx.closePath();
-        ctx.fill();
-
-        // Cross guard (perpendicular to blade)
-        ctx.fillStyle = accentColor;
-        ctx.fillRect(x - guardWidth / 2, y + 2, guardWidth, guardHeight);
-
-        // Guard decorative circles
-        ctx.strokeStyle = primaryColor;
-        ctx.lineWidth = 2.5 * scale;
-        ctx.beginPath();
-        ctx.arc(x - guardWidth / 3, y + guardHeight / 2, 5 * scale, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(x + guardWidth / 3, y + guardHeight / 2, 5 * scale, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Handle below guard
-        ctx.fillStyle = '#8b4513';
-        ctx.fillRect(x - bladeWidth / 2.5, y + guardHeight + 2, bladeWidth * 0.8, handleLength);
-
-        // Handle grip lines
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-            ctx.beginPath();
-            ctx.moveTo(x - bladeWidth / 2.5, y + guardHeight + 2 + (i * 7));
-            ctx.lineTo(x + bladeWidth / 2.5, y + guardHeight + 2 + (i * 7));
-            ctx.stroke();
-        }
-
-        // Pommel at bottom
-        ctx.fillStyle = accentColor;
-        ctx.beginPath();
-        ctx.arc(x, y + guardHeight + handleLength + 5, pommelRadius, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Pommel highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.beginPath();
-        ctx.arc(x - 3, y + guardHeight + handleLength + 5 - 3, pommelRadius * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Blade edge definition
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x + bladeWidth / 2, y);
-        ctx.lineTo(x + bladeWidth / 3, y - bladeLength * 0.7);
-        ctx.lineTo(x, y - bladeLength);
-        ctx.stroke();
     }
 
     renderMenuButtons(ctx) {

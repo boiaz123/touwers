@@ -1,3 +1,5 @@
+import { drawSwordCursor } from '../SwordRenderer.js';
+
 export class GameStateManager {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -5,7 +7,14 @@ export class GameStateManager {
         this.states = {};
         this.currentState = null;
         this.currentStateName = null;
-        
+
+        // Tracks the real mouse position so the canvas can render its own sword
+        // cursor instead of relying on the system cursor (hidden via CSS).
+        this.mouseX = 0;
+        this.mouseY = 0;
+        this.mouseOverCanvas = false;
+        this._setupCursorTracking();
+
         // Save system properties
         this.currentSaveSlot = null;
         this.currentSaveData = null;
@@ -36,7 +45,21 @@ export class GameStateManager {
     addState(name, state) {
         this.states[name] = state;
     }
-    
+
+    _setupCursorTracking() {
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
+            this.mouseOverCanvas = true;
+        });
+        this.canvas.addEventListener('mouseleave', () => {
+            this.mouseOverCanvas = false;
+        });
+    }
+
     changeState(stateName) {
         
         if (!this.states[stateName]) {
@@ -120,6 +143,15 @@ export class GameStateManager {
             // Render gamepad cursor on top of all states
             if (this.inputManager) {
                 this.inputManager.renderGamepadCursor(this.ctx);
+            }
+
+            // Render the sword mouse cursor in place of the native system cursor
+            // (hidden via CSS). States may set `cursorVisible = false` (e.g. splash
+            // screens, the main menu intro before "Press to Continue") to hide it.
+            const gamepadCursorActive = this.inputManager && this.inputManager.gamepadCursorVisible;
+            const stateAllowsCursor = !this.currentState || this.currentState.cursorVisible !== false;
+            if (this.mouseOverCanvas && stateAllowsCursor && !gamepadCursorActive) {
+                drawSwordCursor(this.ctx, this.mouseX, this.mouseY);
             }
             
             // Call performance monitor end render
