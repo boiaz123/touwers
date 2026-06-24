@@ -16,8 +16,3 @@ panic = "abort"
 split-debuginfo = "packed"
 incremental = false
 
-[target.x86_64-pc-windows-msvc]
-# Windows-specific optimizations for main binary
-rustflags = [
-    "-C", "target-cpu=native",        # Optimize for host CPU
-]

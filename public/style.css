@@ -428,9 +428,21 @@ body {
     width: 100%;
 }
 
-#gameCanvas {
+/* Wraps the canvas so HUD widgets (wave countdown, spell buttons) can anchor
+   to the canvas's actual rendered bounds via position: absolute, instead of
+   guessing at viewport-fixed offsets that assume a particular sidebar
+   layout (see #wave-countdown-container / #spell-buttons-container). */
+#canvas-viewport {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    position: relative;
+    display: flex;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
     background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
     cursor: crosshair;
     touch-action: none;
@@ -1352,8 +1364,8 @@ body {
    hook to win specificity reliably alongside that JS. */
 body.orientation-portrait #game-area {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-start;
+    align-items: stretch;
 }
 
 /* The game world grid is fixed at a 16:9 aspect (ResolutionManager.js) and
@@ -1361,62 +1373,52 @@ body.orientation-portrait #game-area {
    feeding the renderer a portrait-aspect buffer, the canvas keeps its normal
    16:9 internal resolution and is letterboxed via CSS instead - same
    approach as a TV switching aspect ratios.
-   width/height must both stay "auto" (not 100%) so aspect-ratio resolves
-   both dimensions together from the max-width/max-height box - pairing a
-   100% dimension with aspect-ratio and a max- constraint on the other axis
-   is over-constrained and produces a squashed/stretched canvas instead of a
-   correctly-proportioned letterboxed one. align-items: center on #game-area
-   (above) is required too, since flex's default stretch would otherwise
-   override this width: auto. */
-body.orientation-portrait #gameCanvas {
+   On a narrow phone the canvas is always width-bound (its height is capped
+   by screen-width * 9/16 long before max-height is reached), so centering
+   it inside a tall flex container - the previous approach - just pushes the
+   leftover height into blank space above/below it instead of handing that
+   space to the UI. Pinning the canvas to the top and letting the sidebar
+   below claim flex: 1 (further down) means there is no leftover gap: every
+   pixel not covered by the canvas goes to the tower/building UI instead. */
+body.orientation-portrait #canvas-viewport {
     flex: 0 0 auto;
-    width: auto;
+    width: 100%;
     height: auto;
     max-width: 100%;
-    max-height: 100%;
     aspect-ratio: 16 / 9;
     min-height: 0;
+    margin: 0 auto;
 }
 
-/* Turn the right-hand sidebar into a horizontally-scrollable bottom tray */
+/* Sidebar drops below the canvas and claims all remaining height (instead of
+   a fixed clamp() strip), so it gets the space the centered-canvas layout
+   used to waste, and its contents can lay out like the desktop column
+   layout (just narrower) rather than being squeezed into one scrolling row. */
 body.orientation-portrait #tower-sidebar {
     width: 100%;
-    height: clamp(120px, 22%, 200px);
-    flex-shrink: 0;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
-/* Stone pillar trim assumes a vertical left edge; simplest first pass is to
-   hide it in the bottom-tray layout rather than redraw it for a horizontal edge. */
+/* Stone pillar trim was designed for the narrow vertical sidebar in
+   landscape; it looks out of place stretched across a full-width panel. */
 body.orientation-portrait #tower-sidebar::before,
 body.orientation-portrait #tower-sidebar::after {
     display: none;
 }
 
-body.orientation-portrait #tower-section,
-body.orientation-portrait #building-section {
-    flex-shrink: 0;
-    padding-top: 0.4rem;
+body.orientation-portrait #tower-grid,
+body.orientation-portrait #building-grid {
+    grid-template-columns: repeat(4, 1fr);
 }
 
 body.orientation-portrait #tower-info-box {
     flex-shrink: 0;
-    flex-direction: row;
-    min-width: 160px;
-    border-top: none;
-    border-left: 2px solid rgba(139, 115, 85, 0.6);
-    margin-top: 0;
-    padding-top: 0;
-}
-
-body.orientation-portrait #control-buttons-section {
-    flex-shrink: 0;
-    flex-direction: row;
-    margin-top: 0;
-    border-top: none;
-    border-left: 2px solid rgba(139, 115, 85, 0.6);
+    min-height: 3.5rem;
 }
 
 /* Right-side overlay panels (forge/academy/etc.) are usable but cramped at
@@ -1715,9 +1717,9 @@ body.orientation-portrait .side-panel {
 
 /* ============ SPELL BUTTONS - BOTTOM RIGHT CORNER ============ */
 #spell-buttons-container {
-    position: fixed;
+    position: absolute;
     bottom: clamp(0.75rem, 2vh, 1.5rem);
-    right: clamp(160px, 24%, 290px);
+    right: clamp(0.75rem, 2vw, 1.5rem);
     z-index: 200;
     display: flex;
     flex-direction: column;
@@ -3642,7 +3644,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 
 /* ============ WAVE COUNTDOWN BUTTON ============ */
 #wave-countdown-container {
-    position: fixed;
+    position: absolute;
     bottom: clamp(0.75rem, 2vh, 1.5rem);
     left: 50%;
     transform: translateX(-50%);

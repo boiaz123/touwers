@@ -71,8 +71,23 @@
 
         <!-- Game area with canvas and sidebar -->
         <div id="game-area">
-            <canvas id="gameCanvas"></canvas>
-            
+            <div id="canvas-viewport">
+                <canvas id="gameCanvas"></canvas>
+
+                <!-- Wave Countdown Button - anchored to the bottom of the canvas -->
+                <div id="wave-countdown-container">
+                    <button id="wave-countdown-btn" class="wave-countdown-btn">
+                        <div id="wave-countdown-text">Next Wave</div>
+                        <div id="wave-countdown-timer">30s</div>
+                    </button>
+                </div>
+
+                <!-- Spell Buttons - anchored to the bottom-right of the canvas -->
+                <div id="spell-buttons-container">
+                    <div id="spell-buttons-list"></div>
+                </div>
+            </div>
+
             <!-- C&C Style Tower Sidebar -->
             <div id="tower-sidebar">
 
@@ -239,18 +254,6 @@
 
 
 
-    <!-- Wave Countdown Button - Bottom Middle -->
-    <div id="wave-countdown-container">
-        <button id="wave-countdown-btn" class="wave-countdown-btn">
-            <div id="wave-countdown-text">Next Wave</div>
-            <div id="wave-countdown-timer">30s</div>
-        </button>
-    </div>
-
-    <!-- Spell Buttons - Bottom Right Corner -->
-    <div id="spell-buttons-container">
-        <div id="spell-buttons-list"></div>
-    </div>
 
     <!-- Tower Forge Upgrade Panel Screen (Right Side) -->
     <div id="forge-panel" class="side-panel" style="display: none;">
