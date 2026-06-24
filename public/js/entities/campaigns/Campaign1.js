@@ -91,7 +91,8 @@ export class Campaign1 extends CampaignBase {
             id: level.id,
             name: level.name,
             difficulty: level.difficulty,
-            unlocked: !saveData || !saveData.unlockedLevels || saveData.unlockedLevels.includes(level.id) || level.id === 'level1',
+            // Legacy saves stored unscoped level IDs (e.g. 'level3') for campaign-1; keep honoring those
+            unlocked: level.id === 'level1' || (saveData && saveData.unlockedLevels && (saveData.unlockedLevels.includes(`${this.campaignId}:${level.id}`) || saveData.unlockedLevels.includes(level.id))),
             type: 'campaign'
         }));
 

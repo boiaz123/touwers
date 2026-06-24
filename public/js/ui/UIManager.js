@@ -2116,6 +2116,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellBuilding(forgeData.forge);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closeForgePanelWithAnimation();
             }, { once: true });
@@ -2667,6 +2668,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellBuilding(academyData.academy);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('academy-panel');
             }, { once: true });
@@ -2813,6 +2815,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(towerData.tower);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('magic-tower-panel');
             }, { once: true });
@@ -2943,6 +2946,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(towerData.tower);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('combination-tower-panel');
             }, { once: true });
@@ -3119,6 +3123,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(tower);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('basic-tower-panel');
             }, { once: true });
@@ -3271,6 +3276,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellTower(tower);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('basic-tower-panel');
             });
@@ -3770,6 +3776,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellBuilding(menuData.building);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('superweapon-panel');
             }, { once: true });
@@ -4417,6 +4424,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellBuilding(trainingData.trainingGrounds);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('training-panel');
             }, { once: true });
@@ -4579,6 +4587,7 @@ export class UIManager {
             sellBtn.onclick = () => {
                 this.towerManager.sellBuilding(goldMine);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('goldmine-panel');
             };
@@ -4723,6 +4732,7 @@ export class UIManager {
             sellBtn.addEventListener('click', () => {
                 this.towerManager.sellBuilding(menuData.diamondPress);
                 this.updateUI();
+                this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('diamond-press-panel');
             });

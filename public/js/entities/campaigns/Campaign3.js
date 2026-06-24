@@ -83,7 +83,7 @@ export class Campaign3 extends CampaignBase {
             id: level.id,
             name: level.name,
             difficulty: level.difficulty,
-            unlocked: !saveData || !saveData.unlockedLevels || saveData.unlockedLevels.includes(level.id) || level.id === 'level1',
+            unlocked: level.id === 'level1' || (saveData && saveData.unlockedLevels && saveData.unlockedLevels.includes(`${this.campaignId}:${level.id}`)),
             type: 'campaign'
         }));
 

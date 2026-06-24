@@ -341,30 +341,48 @@ export class SaveSystem {
     }
 
     /**
+     * Ordered level IDs for each campaign. Level IDs are reused across campaigns
+     * (e.g. 'level1'..'level12'), so unlocked/completed level entries must be
+     * scoped by campaign ID to avoid collisions between campaigns.
+     * @param {string} campaignId
+     * @returns {Array<string>}
+     */
+    static getCampaignLevelSequence(campaignId) {
+        const sequences = {
+            'campaign-1': ['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9', 'level10', 'level11', 'level12'],
+            'campaign-2': ['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9', 'level10', 'level11', 'level12'],
+            'campaign-3': ['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'level9', 'level10'],
+            'campaign-4': ['level1', 'level2', 'level3', 'level4', 'level5', 'level6', 'level7', 'level8', 'frog-kings-realm']
+        };
+        return sequences[campaignId] || sequences['campaign-1'];
+    }
+
+    /**
+     * Build the campaign-scoped key used to store unlocked/completed level entries
+     * @param {string} campaignId
+     * @param {string} levelId
+     * @returns {string}
+     */
+    static scopedLevelId(campaignId, levelId) {
+        return `${campaignId}:${levelId}`;
+    }
+
+    /**
      * Unlock the next level after completing the current one
      * @param {string} levelId - The level just completed
      * @param {Array} unlockedLevels - Current array of unlocked levels
+     * @param {string} campaignId - Campaign the level belongs to
      * @returns {Array} - Updated unlocked levels array
      */
-    static unlockNextLevel(levelId, unlockedLevels) {
-        const levelMap = {
-            'level1':  'level2',
-            'level2':  'level3',
-            'level3':  'level4',
-            'level4':  'level5',
-            'level5':  'level6',
-            'level6':  'level7',
-            'level7':  'level8',
-            'level8':  'level9',
-            'level9':  'level10',
-            'level10': 'level11',
-            'level11': 'level12',
-            'level12': null,
-            'sandbox': null
-        };
+    static unlockNextLevel(levelId, unlockedLevels, campaignId) {
+        if (levelId === 'sandbox' || !campaignId) return unlockedLevels;
 
-        const nextLevel = levelMap[levelId];
-        if (nextLevel && !unlockedLevels.includes(nextLevel)) {
+        const sequence = this.getCampaignLevelSequence(campaignId);
+        const index = sequence.indexOf(levelId);
+        if (index === -1 || index === sequence.length - 1) return unlockedLevels;
+
+        const nextLevel = this.scopedLevelId(campaignId, sequence[index + 1]);
+        if (!unlockedLevels.includes(nextLevel)) {
             unlockedLevels.push(nextLevel);
         }
 
@@ -375,11 +393,13 @@ export class SaveSystem {
      * Mark a level as completed
      * @param {string} levelId - Level ID to mark as completed
      * @param {Array} completedLevels - Current array of completed levels
+     * @param {string} campaignId - Campaign the level belongs to
      * @returns {Array} - Updated completed levels array
      */
-    static markLevelCompleted(levelId, completedLevels) {
-        if (!completedLevels.includes(levelId)) {
-            completedLevels.push(levelId);
+    static markLevelCompleted(levelId, completedLevels, campaignId) {
+        const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
+        if (!completedLevels.includes(scopedId)) {
+            completedLevels.push(scopedId);
         }
         return completedLevels;
     }

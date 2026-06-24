@@ -443,7 +443,9 @@ export class CampaignRegistry {
             } else if (campaign.levelCount) {
                 let count = 0;
                 for (let i = 1; i <= campaign.levelCount; i++) {
-                    if (completedLevels.includes(`level${i}`)) count++;
+                    // Legacy saves stored unscoped level IDs for campaign-1
+                    const isLegacyCampaign1 = id === 'campaign-1' && completedLevels.includes(`level${i}`);
+                    if (completedLevels.includes(`${id}:level${i}`) || isLegacyCampaign1) count++;
                 }
                 campaign.progress = Math.round((count / campaign.levelCount) * 100);
             } else {

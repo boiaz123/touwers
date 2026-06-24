@@ -1550,10 +1550,10 @@ export class GameplayState {
             }
             
             // Mark level as completed
-            saveData.completedLevels = SaveSystem.markLevelCompleted(this.currentLevel, saveData.completedLevels);
-            
+            saveData.completedLevels = SaveSystem.markLevelCompleted(this.currentLevel, saveData.completedLevels, this.currentCampaignId);
+
             // Unlock next level
-            saveData.unlockedLevels = SaveSystem.unlockNextLevel(this.currentLevel, saveData.unlockedLevels);
+            saveData.unlockedLevels = SaveSystem.unlockNextLevel(this.currentLevel, saveData.unlockedLevels, this.currentCampaignId);
             
             // Update last played level
             saveData.lastPlayedLevel = this.currentLevel;
