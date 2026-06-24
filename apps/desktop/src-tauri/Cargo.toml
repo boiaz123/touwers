@@ -1,6 +1,6 @@
 [package]
 name = "touwers-desktop"
-version = "1.0.0"
+version = "1.0.1"
 description = "Tower Defense Game"
 authors = ["boiaz"]
 edition = "2021"
