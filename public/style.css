@@ -48,9 +48,11 @@
     box-sizing: border-box;
 }
 
-/* Hide real cursor when gamepad is active (crosshair overlay takes over) */
-.gamepad-active,
-.gamepad-active * {
+/* The game draws its own sword cursor (see CursorOverlay.js) for every screen,
+   button, and menu - including disabled/"not-allowed" states - so the native
+   cursor is hidden everywhere. The !important overrides the many per-element
+   cursor rules below as well as inline canvas.style.cursor assignments in JS. */
+*, *::before, *::after {
     cursor: none !important;
 }
 
@@ -444,11 +446,6 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
-    /* The canvas renders its own sword cursor (see GameStateManager.render()); the
-       !important overrides the many per-state canvas.style.cursor = 'pointer'/
-       'crosshair'/'default' assignments scattered across the state files so only
-       one cursor is ever shown. */
-    cursor: none !important;
     touch-action: none;
     image-rendering: auto;
     /* Performance optimizations */

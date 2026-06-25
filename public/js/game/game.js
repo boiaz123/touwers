@@ -23,6 +23,7 @@ import { AudioManager } from '../core/AudioManager.js';
 import { MusicRegistry, initializeMusicRegistry } from '../core/MusicRegistry.js';
 import { SFXRegistry, initializeSFXRegistry } from '../core/SFXRegistry.js';
 import { InputManager } from '../core/InputManager.js';
+import { CursorOverlay } from '../core/CursorOverlay.js';
 
 export class Game {
     constructor() {
@@ -82,6 +83,9 @@ export class Game {
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             this.stateManager.inputManager = this.inputManager; // Set input manager reference
+
+            // Page-wide custom cursor (replaces the native cursor everywhere, not just over the canvas)
+            this.cursorOverlay = new CursorOverlay(this.stateManager);
 
             // Initialize all save slot files (create empty files if they don't exist)
             SaveSystem.initializeSaveSlots();
@@ -696,6 +700,9 @@ export class Game {
             if (this.stateManager && this.stateManager.currentState) {
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
+                if (this.cursorOverlay) {
+                    this.cursorOverlay.render();
+                }
             } else {
                 this.ctx.fillStyle = '#1a0f0a';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);

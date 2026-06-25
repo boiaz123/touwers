@@ -87,19 +87,26 @@ const CURSOR_SCALE = 0.22;
 const CURSOR_PRIMARY_COLOR = '#d4af37';
 const CURSOR_ACCENT_COLOR = '#8b7355';
 
-// Draws the same sword artwork as a mouse cursor, pointing left with its blade
-// tip exactly at (tipX, tipY) so the tip is the actual click point.
+// Diagonal tilt: blade tip points to the top-left, hilt trails to the bottom-right.
+const CURSOR_ANGLE = -Math.PI / 4;
+
+// Draws the same sword artwork as a mouse cursor, tilted diagonally (tip at
+// top-left, hilt at bottom-right) with its blade tip exactly at (tipX, tipY)
+// so the tip - not the hilt or any other part of the artwork - is the click point.
 export function drawSwordCursor(ctx, tipX, tipY, scale = CURSOR_SCALE) {
     const bladeLength = SWORD_BLADE_LENGTH * scale;
 
     ctx.save();
     ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
     ctx.shadowBlur = 3;
-    // The artwork's anchor is the hilt end with the blade pointing up (-Y) from
-    // it. Rotating -90deg points the blade left (-X); translating the anchor
-    // bladeLength to the right of the desired tip puts the tip exactly there.
-    ctx.translate(tipX + bladeLength, tipY);
-    ctx.rotate(-Math.PI / 2);
+    // The artwork's anchor is the hilt end, with its blade tip at local (0, -bladeLength).
+    // Rotating by CURSOR_ANGLE and placing the anchor at
+    // (tipX - bladeLength*sin(angle), tipY + bladeLength*cos(angle)) makes the
+    // rotated tip land exactly on (tipX, tipY), for any angle.
+    const anchorX = tipX - bladeLength * Math.sin(CURSOR_ANGLE);
+    const anchorY = tipY + bladeLength * Math.cos(CURSOR_ANGLE);
+    ctx.translate(anchorX, anchorY);
+    ctx.rotate(CURSOR_ANGLE);
     drawMedievalSword(ctx, 0, 0, CURSOR_PRIMARY_COLOR, CURSOR_ACCENT_COLOR, scale);
     ctx.restore();
 }
