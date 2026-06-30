@@ -8,4 +8,5 @@ build/
 *.msi
 .cache/
 apps/*/src-tauri/target/
+/src-tauri/
 
