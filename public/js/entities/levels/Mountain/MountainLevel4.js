@@ -159,7 +159,7 @@ export class MountainLevel4 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 10, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.8, 
             pattern: [{ type: 'shieldknight', count: 1 }] 
@@ -218,7 +218,7 @@ export class MountainLevel4 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'shieldknight', count: 5 }, { type: 'beefyenemy', count: 5 }, { type: 'archer', count: 5 }, { type: 'villager', count: 6 }, { type: 'basic', count: 2 }] 
+            pattern: [{ type: 'shieldknight', count: 4 }, { type: 'beefyenemy', count: 5 }, { type: 'archer', count: 5 }, { type: 'villager', count: 6 }, { type: 'basic', count: 2 }] 
         }
         // Wave 14
         , { 

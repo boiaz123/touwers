@@ -330,7 +330,7 @@ export class MountainLevel11 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1.5, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'frog', count: 43 }] 
         }
         // Wave 8

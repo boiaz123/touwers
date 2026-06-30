@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class MountainLevel2 extends LevelBase {
     static levelMetadata = {
-        name: 'Verdant Vally',
+        name: 'Faergolan',
         difficulty: 'Easy',
         order: 2,
         campaign: 'mountain'
@@ -252,14 +252,14 @@ export class MountainLevel2 extends LevelBase {
         , { 
             enemyHealth_multiplier: 0.90, 
             speedMultiplier: 1.2, 
-            spawnInterval: 0.1, 
+            spawnInterval: 0.3, 
             pattern: [{ type: 'archer', count: 12 }] 
         }
         // Wave 6
         , { 
             enemyHealth_multiplier: 0.5 ,
             speedMultiplier: 0.58, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 7 }] 
         }
         // Wave 7
@@ -285,8 +285,8 @@ export class MountainLevel2 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 3, 
-            speedMultiplier: 1.4, 
+            enemyHealth_multiplier: 2.5, 
+            speedMultiplier: 1, 
             spawnInterval: 7, 
             pattern: [{ type: 'knight', count: 1 }] 
         }
@@ -329,14 +329,14 @@ export class MountainLevel2 extends LevelBase {
         , { 
             enemyHealth_multiplier: 7, 
             speedMultiplier: 1.57, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
         }
         // Wave 17
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 2.83, 
-            spawnInterval: 0.1, 
+            spawnInterval: 0.3, 
             pattern: [{ type: 'archer', count: 45 }] 
         }
         // Wave 18

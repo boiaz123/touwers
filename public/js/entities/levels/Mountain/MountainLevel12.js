@@ -328,20 +328,20 @@ export class MountainLevel12 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 1.3, 
-            spawnInterval: 0.4, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 20 }] 
         }
         // Wave 6
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 1, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 10 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 0.8, 
-            speedMultiplier: 1, 
+            enemyHealth_multiplier: 0.6, 
+            speedMultiplier: 0.8, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 2 }] 
         }
@@ -354,16 +354,16 @@ export class MountainLevel12 extends LevelBase {
         }
         // Wave 9
         , { 
-            enemyHealth_multiplier: 1.3, 
+            enemyHealth_multiplier: 1.1, 
             speedMultiplier: 0.67, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 12 }, { type: 'villager', count: 12 }, { type: 'basic', count: 12 }] 
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 1.3, 
-            speedMultiplier: 1.3, 
-            spawnInterval: 0.3, 
+            enemyHealth_multiplier: 1.2, 
+            speedMultiplier: 1.1, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 15 }, { type: 'villager', count: 15 }, { type: 'basic', count: 15 }] 
         }
         // Wave 11
@@ -375,16 +375,16 @@ export class MountainLevel12 extends LevelBase {
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 1.3, 
+            enemyHealth_multiplier: 1.1, 
             speedMultiplier: 1, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 20 }] 
         }
         // Wave 13
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1.4, 
             speedMultiplier: 1.3, 
-            spawnInterval: 0.05, 
+            spawnInterval: 0.3, 
             pattern: [{ type: 'frog', count: 45 }] 
         }
         // Wave 14
@@ -419,7 +419,7 @@ export class MountainLevel12 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.6, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 17 }, { type: 'villager', count: 16 }, { type: 'basic', count: 16 }] 
         }
         // Wave 19
@@ -433,7 +433,7 @@ export class MountainLevel12 extends LevelBase {
         , { 
             enemyHealth_multiplier: 2.2, 
             speedMultiplier: 1.13, 
-            spawnInterval: 0.1, 
+            spawnInterval: 0.3, 
             pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 21
@@ -454,28 +454,28 @@ export class MountainLevel12 extends LevelBase {
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1.2, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 32 }] 
         }
         // Wave 24
         , { 
             enemyHealth_multiplier: 1.8, 
             speedMultiplier: 1, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'shieldknight', count: 3 }, { type: 'beefyenemy', count: 7 }, { type: 'frog', count: 16 }, { type: 'basic', count: 12 }, { type: 'villager', count: 8 }, { type: 'archer', count: 9 }, { type: 'knight', count: 1 }] 
         }
         // Wave 25
         , { 
             enemyHealth_multiplier: 4.5, 
             speedMultiplier: 1.3, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 32 }] 
         }
         // Wave 26
         , { 
             enemyHealth_multiplier: 7.5, 
             speedMultiplier: 1.3, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 2 }, { type: 'shieldknight', count: 6 }] 
         }
         // Wave 27

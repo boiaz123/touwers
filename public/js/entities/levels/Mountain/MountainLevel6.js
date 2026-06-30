@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class MountainLevel6 extends LevelBase {
     static levelMetadata = {
-        name: 'Lush Fields',
+        name: 'Frozen Wastes',
         difficulty: 'Medium',
         order: 6,
         campaign: 'mountain'
@@ -311,7 +311,7 @@ export class MountainLevel6 extends LevelBase {
         , { 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1.57, 
-            spawnInterval: 0.6, 
+            spawnInterval: 1.2, 
             pattern: [{ type: 'shieldknight', count: 12 }] 
         }
         // Wave 6

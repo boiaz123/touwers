@@ -272,14 +272,14 @@ export class MountainLevel9 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.67, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 12 }, { type: 'villager', count: 12 }, { type: 'basic', count: 12 }] 
         }
         // Wave 10
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.3, 
+            spawnInterval: 0.5, 
             pattern: [{ type: 'archer', count: 15 }, { type: 'villager', count: 15 }, { type: 'basic', count: 15 }] 
         }
         // Wave 11
@@ -335,7 +335,7 @@ export class MountainLevel9 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.6, 
             speedMultiplier: 0.75, 
-            spawnInterval: 0.2, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 17 }, { type: 'villager', count: 16 }, { type: 'basic', count: 16 }] 
         }
         // Wave 19
