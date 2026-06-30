@@ -1131,45 +1131,70 @@ export class SettlementHub {
     }
 
     renderBackground(ctx, canvas) {
-        const H = canvas.height;
+        // PRE-RENDER OPTIMIZATION: the sky/haze/hills/ground/treeline backdrop never
+        // changes frame-to-frame (no animationTime dependence, deterministic tree
+        // shapes), but was previously rebuilt — gradients, ~90 tree objects, bezier
+        // mountain paths — from scratch every single frame. Cache it to offscreen
+        // canvases once and just blit it, keeping only the sun/clouds/birds/wind
+        // (which do animate) drawn live, in the exact same z-order as before.
+        this._ensureBackdropLayers(canvas);
+
+        ctx.drawImage(this._bgSkyCanvas, 0, 0);
+        this.renderSun(ctx, canvas);
+        ctx.drawImage(this._bgHillsCanvas, 0, 0);
+        this.renderClouds(ctx, canvas);
+        ctx.drawImage(this._bgGroundCanvas, 0, 0);
+    }
+
+    _ensureBackdropLayers(canvas) {
         const W = canvas.width;
-        // Deep sky
-        const skyGradient = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+        const H = canvas.height;
+        if (this._bgSkyCanvas && this._bgLayerW === W && this._bgLayerH === H) {
+            return;
+        }
+        this._bgLayerW = W;
+        this._bgLayerH = H;
+
+        // Layer 1: deep sky gradient
+        this._bgSkyCanvas = document.createElement('canvas');
+        this._bgSkyCanvas.width = W;
+        this._bgSkyCanvas.height = H;
+        const skyCtx = this._bgSkyCanvas.getContext('2d');
+        const skyGradient = skyCtx.createLinearGradient(0, 0, 0, H * 0.7);
         skyGradient.addColorStop(0, '#1a4d7a');
         skyGradient.addColorStop(0.4, '#4d9dcc');
         skyGradient.addColorStop(0.7, '#99ccff');
-        ctx.fillStyle = skyGradient;
-        ctx.fillRect(0, 0, W, H * 0.7);
+        skyCtx.fillStyle = skyGradient;
+        skyCtx.fillRect(0, 0, W, H * 0.7);
 
-        this.renderSun(ctx, canvas);
-
-        // Atmospheric haze near horizon
-        const hazeGradient = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.62);
+        // Layer 2: atmospheric haze + mountain backdrop (drawn on transparent
+        // canvas so it overlays the live sun render underneath, unchanged)
+        this._bgHillsCanvas = document.createElement('canvas');
+        this._bgHillsCanvas.width = W;
+        this._bgHillsCanvas.height = H;
+        const hillsCtx = this._bgHillsCanvas.getContext('2d');
+        const hazeGradient = hillsCtx.createLinearGradient(0, H * 0.45, 0, H * 0.62);
         hazeGradient.addColorStop(0, 'rgba(200, 220, 255, 0)');
         hazeGradient.addColorStop(1, 'rgba(200, 220, 255, 0.22)');
-        ctx.fillStyle = hazeGradient;
-        ctx.fillRect(0, H * 0.45, W, H * 0.17);
+        hillsCtx.fillStyle = hazeGradient;
+        hillsCtx.fillRect(0, H * 0.45, W, H * 0.17);
+        this.renderDistantHills(hillsCtx, canvas);
 
-        // Mountain backdrop
-        this.renderDistantHills(ctx, canvas);
-
-        // Clouds in front of mountains
-        this.renderClouds(ctx, canvas);
-
-        // Green ground — starts at 57% to give the treeline room at the horizon
-        const groundGradient = ctx.createLinearGradient(0, H * 0.57, 0, H);
+        // Layer 3: ground gradient + forest floor texture + horizon treeline
+        // (also transparent so it overlays the live clouds layer underneath)
+        this._bgGroundCanvas = document.createElement('canvas');
+        this._bgGroundCanvas.width = W;
+        this._bgGroundCanvas.height = H;
+        const groundCtx = this._bgGroundCanvas.getContext('2d');
+        const groundGradient = groundCtx.createLinearGradient(0, H * 0.57, 0, H);
         groundGradient.addColorStop(0, '#5a9960');
         groundGradient.addColorStop(0.25, '#438a4e');
         groundGradient.addColorStop(0.65, '#317840');
         groundGradient.addColorStop(1, '#246232');
-        ctx.fillStyle = groundGradient;
-        ctx.fillRect(0, H * 0.57, W, H - H * 0.57);
-
-        // Forest floor texture overlay
-        this.renderGroundDetail(ctx, canvas);
-
-        // Horizon treeline — rendered on top of green ground
-        this.renderMidGroundForest(ctx, canvas);
+        groundCtx.fillStyle = groundGradient;
+        groundCtx.fillRect(0, H * 0.57, W, H - H * 0.57);
+        this.renderGroundDetail(groundCtx, canvas);
+        this.renderMidGroundForest(groundCtx, canvas);
     }
 
     renderSun(ctx, canvas) {

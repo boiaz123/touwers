@@ -4,6 +4,10 @@
  * to give the player advice at key moments in the game.
  */
 export class SirFrogerty {
+    // Padding around the cached scroll sprite, generous enough to contain the
+    // shadowBlur(22) + shadowOffset(5,8) bleed from _drawScroll without clipping.
+    static _SCROLL_SPRITE_PAD = 50;
+
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.visible = false;
@@ -400,7 +404,7 @@ export class SirFrogerty {
 
         ctx.save();
 
-        this._drawScroll(ctx, scrollX, y, scrollW, totalH);
+        this._drawScrollCached(ctx, scrollX, y, scrollW, totalH);
         this._drawTextContent(ctx, scrollX, y, scrollW, totalH);
         this._drawButtons(ctx, layout);
 
@@ -412,6 +416,25 @@ export class SirFrogerty {
     }
 
     // ─── Parchment scroll ────────────────────────────────────────────────────
+
+    // PRE-RENDER OPTIMIZATION: the scroll panel's gradient/shadowBlur(22)/corner
+    // ornaments never change shape - only its on-screen Y position animates during
+    // the slide-in - so rasterize it once into a small sprite at a fixed local
+    // origin and just blit it at the current (animated) position every frame,
+    // instead of repeating an expensive shadowBlur pass on every shape each frame.
+    _drawScrollCached(ctx, x, y, w, h) {
+        const pad = SirFrogerty._SCROLL_SPRITE_PAD;
+        if (!this._scrollSprite || this._scrollSpriteW !== w || this._scrollSpriteH !== h) {
+            this._scrollSpriteW = w;
+            this._scrollSpriteH = h;
+            const sprite = document.createElement('canvas');
+            sprite.width = w + pad * 2;
+            sprite.height = h + pad * 2;
+            this._drawScroll(sprite.getContext('2d'), pad, pad, w, h);
+            this._scrollSprite = sprite;
+        }
+        ctx.drawImage(this._scrollSprite, x - pad, y - pad);
+    }
 
     _drawScroll(ctx, x, y, w, h) {
         ctx.save();
