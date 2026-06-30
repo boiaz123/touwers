@@ -682,12 +682,13 @@ export class Game {
                 return;
             }
             
-            let deltaTime = Math.min(0.016, (currentTime - this.lastTime) / 1000);
+            let deltaTime = (currentTime - this.lastTime) / 1000;
             this.lastTime = currentTime;
-            
-            // Cap delta time to prevent physics issues (max 16ms per frame = 60 FPS minimum)
+
+            // Cap delta time to prevent physics issues (floor at 30 FPS so a slow frame
+            // doesn't cause a huge simulation jump, without throttling normal frame times)
             if (deltaTime > 0.033) {
-                deltaTime = 0.033; // Cap at 30 FPS if frame takes too long
+                deltaTime = 0.033;
             }
             
             // NEW: Apply game speed multiplier if in gameplay state

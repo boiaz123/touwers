@@ -1326,15 +1326,25 @@ export class UIManager {
         
         if (this.gameplayState && this.gameplayState.isInWaveCooldown) {
             // Show countdown timer - add visible class and clear inline styles
-            container.classList.add('visible');
-            container.style.display = ''; // Clear inline style to use CSS
+            if (!container.classList.contains('visible')) {
+                container.classList.add('visible');
+                container.style.display = '';
+                textEl.textContent = 'Next Wave';
+            }
+            // Only touch the DOM when the displayed second actually changes,
+            // instead of writing textContent every frame (~60x/sec).
             const seconds = Math.ceil(this.gameplayState.waveCooldownTimer);
-            textEl.textContent = 'Next Wave';
-            timerEl.textContent = `${seconds}s`;
+            if (this._lastWaveCooldownSeconds !== seconds) {
+                this._lastWaveCooldownSeconds = seconds;
+                timerEl.textContent = `${seconds}s`;
+            }
         } else {
             // Hide the container during active waves or when not in cooldown
-            container.classList.remove('visible');
-            container.style.display = ''; // Clear inline style to use CSS default (none)
+            if (container.classList.contains('visible')) {
+                container.classList.remove('visible');
+                container.style.display = ''; // Clear inline style to use CSS default (none)
+            }
+            this._lastWaveCooldownSeconds = null;
         }
     }
 
