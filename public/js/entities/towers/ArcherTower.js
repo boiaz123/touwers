@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class ArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -15,12 +16,23 @@ export class ArcherTower extends Tower {
         this.archerAngle = 0;
         this.drawTime = 0;
         this.arrows = [];
+        // Phase 5: reuse arrow objects across shots instead of allocating a fresh literal
+        // every time - acquire() in shoot(), release() once an arrow is dropped from the
+        // compaction loop below.
+        this._arrowPool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, rotation: 0, life: 0, maxLife: 0,
+            target: null, fallbackX: 0, fallbackY: 0
+        }));
         this.archers = [
             { angle: 0, drawback: 0, shootTimer: 0 },
             { angle: Math.PI / 2, drawback: 0, shootTimer: 0.2 },
             { angle: Math.PI, drawback: 0, shootTimer: 0.4 },
             { angle: 3 * Math.PI / 2, drawback: 0, shootTimer: 0.6 }
         ];
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower's static body via
+        // Pixi (arrows/attack-radius still draw here regardless - not migrated yet).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime, enemies) {
@@ -80,6 +92,8 @@ export class ArcherTower extends Tower {
             
             if (!hit && arrow.life > 0) {
                 this.arrows[arrowWrite++] = arrow;
+            } else {
+                this._arrowPool.release(arrow);
             }
         }
         this.arrows.length = arrowWrite;
@@ -130,26 +144,47 @@ export class ArcherTower extends Tower {
             const distance = Math.hypot(dx, dy);
             const arcHeight = distance * 0.1; // Slight arc for realism
             
-            this.arrows.push({
-                x: archerPos.x,
-                y: archerPos.y,
-                vx: distance > 0 ? (dx / distance) * arrowSpeed : 0,
-                vy: distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0,
-                rotation: shooter.angle,
-                life: Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0),
-                maxLife: Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0),
-                target: this.target,
-                fallbackX: this.target.x,
-                fallbackY: this.target.y
-            });
+            const arrow = this._arrowPool.acquire();
+            arrow.x = archerPos.x;
+            arrow.y = archerPos.y;
+            arrow.vx = distance > 0 ? (dx / distance) * arrowSpeed : 0;
+            arrow.vy = distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0;
+            arrow.rotation = shooter.angle;
+            arrow.life = Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0);
+            arrow.maxLife = arrow.life;
+            arrow.target = this.target;
+            arrow.fallbackX = this.target.x;
+            arrow.fallbackY = this.target.y;
+            this.arrows.push(arrow);
         }
     }
     
     render(ctx) {
-        // Get tower size - use ResolutionManager if available
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
-        
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, towerSize);
+            this.renderDynamicParts(ctx, towerSize);
+            this.renderProjectiles(ctx);
+        }
+
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top.
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: arrows - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then arrows on top). */
+    renderProjectiles(ctx) {
+        this.renderArrows(ctx);
+    }
+
+    /** No front-of-tower environment decoration for this type - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): watchtower structure + roof. */
+    renderStaticBack(ctx, towerSize) {
         // 3D shadow for entire structure
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(this.x - towerSize * 0.3 + 4, this.y - towerSize * 0.1 + 4, towerSize * 0.6, towerSize * 0.8);
@@ -383,7 +418,19 @@ export class ArcherTower extends Tower {
         ctx.strokeStyle = '#5b1028';
         ctx.lineWidth = 0.5;
         ctx.stroke();
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): all 4 archers - aim rotation and draw-back are continuous per-instance state, not bakeable. */
+    renderDynamicParts(ctx, towerSize) {
+        // Same derivation as renderStaticBack() above.
+        const baseWidth = towerSize * 0.6;
+        const towerWidth = baseWidth * 0.8;
+        const towerHeight = towerSize * 0.7;
+        const platformWidth = towerWidth * 1.2;
+        const platformThickness = towerSize * 0.08;
+        const platformY = this.y - towerHeight;
+        const railingHeight = towerSize * 0.19;
+
         // Render archers on platform — each visually distinct
         // Per-archer configs: tunic, skin tone, headgear style, height offset
         const archerStyles = [
@@ -547,8 +594,10 @@ export class ArcherTower extends Tower {
             
             ctx.restore();
         });
-        
-        // Render flying arrows
+    }
+
+    /** Not yet migrated (Phase 5: projectile pooling) - always drawn on Canvas2D regardless of renderer. */
+    renderArrows(ctx) {
         for (let a = 0; a < this.arrows.length; a++) {
             const arrow = this.arrows[a];
             ctx.save();
@@ -586,12 +635,8 @@ export class ArcherTower extends Tower {
             
             ctx.restore();
         }
-        
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
-    
+
     static getInfo() {
         return {
             name: 'Archer Tower',

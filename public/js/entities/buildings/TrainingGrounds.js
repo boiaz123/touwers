@@ -133,6 +133,10 @@ export class TrainingGrounds extends Building {
                 { startX: -50, startY: 48, endX: -50, endY: -48, posts: 12 }
             ]
         };
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // grounds via Pixi (particles still draw here regardless - not yet migrated).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime) {
@@ -274,17 +278,37 @@ export class TrainingGrounds extends Building {
     }
     
     render(ctx, size) {
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, size);
+            this.renderDynamicParts(ctx, size);
+        }
+
+        // Not yet migrated (Phase 6-shaped ephemeral effects)
+        this.renderParticles(ctx);
+    }
+
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): grounds, fence, decorations, hut, lane markings, archery targets, training dummies - everything without continuous per-instance animation. */
+    renderStaticBack(ctx, size) {
         this.renderDetailedGround(ctx, size);
         this.renderFencePerimeter(ctx, size);
         this.renderFenceDecorations(ctx, size);
         this.renderHut(ctx, size);
         this.renderLaneMarkings(ctx, size);
-        this.renderArcherLane(ctx, this.leftArcherLane, true);
-        this.renderArcherLane(ctx, this.rightArcherLane, false);
-        this.renderSwordFightArea(ctx, size);
+        this.renderArcherLaneTargets(ctx, this.leftArcherLane);
+        this.renderArcherLaneTargets(ctx, this.rightArcherLane);
         this.renderDummies(ctx, size);
-        this.renderParticles(ctx);
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): archers (bow draw-back animation) + sword fighters (swing/stance animation) - all continuous per-instance state. */
+    renderDynamicParts(ctx, size) {
+        this.renderArcherLaneArchers(ctx, this.leftArcherLane, true);
+        this.renderArcherLaneArchers(ctx, this.rightArcherLane, false);
+        this.renderSwordFightArea(ctx, size);
     }
     
     renderDetailedGround(ctx, size) {
@@ -721,7 +745,8 @@ export class TrainingGrounds extends Building {
         ctx.strokeRect(hutX - 1.5, hutY + 2, 1.5, 1.5);
     }
     
-    renderArcherLane(ctx, lane, isLeftLane) {
+    /** Strategy A piece: archery targets - fully static, no animation. */
+    renderArcherLaneTargets(ctx, lane) {
         // Render targets in a row - EVENLY SPACED
         lane.targets.forEach((target, idx) => {
             const targetX = this.x + target.x;
@@ -763,8 +788,10 @@ export class TrainingGrounds extends Building {
             
             ctx.restore();
         });
-        
-        // Render archers
+    }
+
+    /** Strategy B piece: archers - bow draw-back animation, not bakeable. */
+    renderArcherLaneArchers(ctx, lane, isLeftLane) {
         lane.archers.forEach(archer => {
             ctx.save();
             ctx.translate(this.x + archer.x, this.y + archer.y);

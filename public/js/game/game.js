@@ -24,6 +24,7 @@ import { MusicRegistry, initializeMusicRegistry } from '../core/MusicRegistry.js
 import { SFXRegistry, initializeSFXRegistry } from '../core/SFXRegistry.js';
 import { InputManager } from '../core/InputManager.js';
 import { CursorOverlay } from '../core/CursorOverlay.js';
+import { PixiApp } from '../core/render/PixiApp.js';
 
 export class Game {
     constructor() {
@@ -61,10 +62,32 @@ export class Game {
             
             // Initialize resolution manager with current canvas size
             this.resolutionManager = new ResolutionManager(this.canvas.width, this.canvas.height);
-            
+
             // Attach resolution manager to canvas for easy access from rendering code
             this.canvas.resolutionManager = this.resolutionManager;
             this.ctx.resolutionManager = this.resolutionManager;
+
+            // Pixi (WebGL) renderer bootstrap - mounted alongside the Canvas2D canvas,
+            // which still carries the few elements never migrated (attack-radius
+            // circles, hit splatters, results screen, boons overlay - see each
+            // adapter's doc comment for why those stay Canvas2D permanently).
+            this.pixiApp = new PixiApp();
+            const canvasViewport = document.getElementById('canvas-viewport');
+            if (canvasViewport) {
+                this.pixiApp.init(this.canvas.width, this.canvas.height, canvasViewport)
+                    .then(() => {
+                        // #gameCanvas's CSS background (style.css) is a ~95%-opaque
+                        // gradient meant to show through transparent canvas pixels in
+                        // Canvas2D-only mode. With Pixi rendering behind it (see
+                        // PixiApp.js's negative z-index), that near-opaque CSS background
+                        // would almost completely hide whatever Pixi draws - override it
+                        // so the Pixi layer is actually visible.
+                        this.canvas.style.background = 'transparent';
+                    })
+                    .catch(error => {
+                        console.error('Game: Pixi renderer failed to initialize:', error);
+                    });
+            }
             
             // Initialize audio system
             this.audioManager = new AudioManager();
@@ -83,6 +106,7 @@ export class Game {
             this.stateManager.game = this; // Set game reference for resolution selector access
             this.stateManager.audioManager = this.audioManager; // Set audio manager reference
             this.stateManager.inputManager = this.inputManager; // Set input manager reference
+            this.stateManager.pixiApp = this.pixiApp; // Pixi (WebGL) renderer, see PixiApp.js
 
             // Page-wide custom cursor (replaces the native cursor everywhere, not just over the canvas)
             this.cursorOverlay = new CursorOverlay(this.stateManager);
@@ -605,6 +629,11 @@ export class Game {
             this.inputManager.removeTouchHandlers(this.canvas);
             this.inputManager.destroy();
         }
+
+        // Cleanup Pixi renderer (releases the WebGL context)
+        if (this.pixiApp) {
+            this.pixiApp.destroy();
+        }
         
         // Exit current state if any
         if (this.stateManager && this.stateManager.currentState && this.stateManager.currentState.exit) {
@@ -697,7 +726,17 @@ export class Game {
             }
             
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            
+
+            // Pixi visibility gate - only the 'game' (GameplayState) state ever populates
+            // app.stage; every other state (settlement hub, menus, campaign map, etc.)
+            // is still pure Canvas2D. Without this gate, a full WebGL clear+composite
+            // pass ran every frame regardless of which state was active - wasted work,
+            // and the likely cause of "runs poorly" complaints outside of gameplay.
+            const pixiShouldRender = this.stateManager.currentStateName === 'game';
+            if (this.pixiApp && this.pixiApp.ready) {
+                this.pixiApp.setVisible(pixiShouldRender);
+            }
+
             if (this.stateManager && this.stateManager.currentState) {
                 this.stateManager.update(deltaTime);
                 this.stateManager.render();
@@ -712,7 +751,15 @@ export class Game {
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('Loading...', this.canvas.width / 2, this.canvas.height / 2);
             }
-            
+
+            // Pixi render pass - must run AFTER stateManager.render() above, since that's
+            // what actually populates/updates app.stage for this frame (GameplayState's
+            // _syncXPixi calls). Rendering before would always composite last frame's
+            // stage contents, one frame stale.
+            if (pixiShouldRender && this.pixiApp && this.pixiApp.ready) {
+                this.pixiApp.renderFrame();
+            }
+
         } catch (error) {
             console.error('Game: Error in game loop:', error);
             this.showError('Game loop error: ' + error.message);

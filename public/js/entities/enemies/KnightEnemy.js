@@ -21,9 +21,13 @@ export class KnightEnemy extends BaseEnemy {
         
         this.attackDamage = 10;
         this.attackSpeed = 0.7;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
     update(deltaTime) {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
@@ -90,8 +94,31 @@ export class KnightEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Pre-calculate animation values once
         const animTime = (this.animationTime * 7 + this.animationPhaseOffset);
         const sinAnimTime = Math.sin(animTime);
@@ -433,14 +460,11 @@ export class KnightEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.2;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
-    
+
     attackCastle(castle, deltaTime) {
         if (!this.isAttackingCastle || !castle) return 0;
-        
+
         this.attackCooldown -= deltaTime;
         
         if (this.attackCooldown <= 0) {
@@ -471,7 +495,8 @@ export class KnightEnemy extends BaseEnemy {
         // Sword blade - simplified (solid gradient)
         // OPTIMIZATION: Cache by baseSize instead of recreating every frame -
         // gradient only depends on size, never on animated values.
-        if (!this._bladeGradient || this._bladeGradBaseSize !== baseSize) {
+        if (!this._bladeGradient || this._bladeGradBaseSize !== baseSize || this._bladeGradCtx !== ctx) {
+            this._bladeGradCtx = ctx;
             this._bladeGradBaseSize = baseSize;
             this._bladeGradient = ctx.createLinearGradient(-bladeWidth/2, -swordLength * 0.5, bladeWidth/2, -swordLength * 0.5);
             this._bladeGradient.addColorStop(0, '#E0E0E0');

@@ -4,6 +4,19 @@ export class FrogEnemy extends BaseEnemy {
     // Static color cache to avoid recalculation
     static colorCache = new Map();
 
+    // Pre-built particle color strings: 3 colors × 101 alpha levels (0.00–1.00)
+    // Eliminates per-particle per-frame string concatenation (up to 8 particles/frog × N frogs).
+    static _colorTable = null;
+    static _getColorTable() {
+        if (!FrogEnemy._colorTable) {
+            const bases = ['rgba(100, 200, 255, ', 'rgba(150, 255, 100, ', 'rgba(255, 200, 100, '];
+            FrogEnemy._colorTable = bases.map(b =>
+                Array.from({ length: 101 }, (_, i) => b + (i / 100).toFixed(2) + ')')
+            );
+        }
+        return FrogEnemy._colorTable;
+    }
+
     static BASE_STATS = {
         health: 85,
         speed: 55,
@@ -34,9 +47,18 @@ export class FrogEnemy extends BaseEnemy {
         this.cachedLightenColor = null;
         this.cachedDarkenColor = null;
         this.cachedDarken2Color = null;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure jumps/bobs continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
+    /** Per-instance skin color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.skinColor;
+    }
+
     getRandomSkinColor() {
         const skinColors = [
             '#2D5016', '#3D6B1F', '#4A7C3E', '#5A8C4E', '#1F3E1F', '#6B9D54'
@@ -263,14 +285,40 @@ export class FrogEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            this.hitSplatters[i].render(ctx);
+        }
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole frog - jump arc/magic particles are continuous and health bar is health-dependent, so nothing here is bakeable. */
+    renderDynamicParts(ctx, baseSize) {
         // Enemy shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.beginPath();
         ctx.ellipse(this.x, this.y + baseSize * 1.5, baseSize * 0.85, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.save();
         
         // Calculate jump arc for visual effect only
@@ -293,7 +341,8 @@ export class FrogEnemy extends BaseEnemy {
         this.drawFrogBackLeg(ctx, baseSize * 0.4, baseSize * 0.4, baseSize, true);
         
         // Main body (rounded, more compact) - cache gradient per instance (baseSize is fixed during gameplay)
-        if (!this._bodyGradient || this._gradBaseSize !== baseSize) {
+        if (!this._bodyGradient || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
+            this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
             this._bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
             this._bodyGradient.addColorStop(0, FrogEnemy.getCachedColor(this.skinColor, 'lighten'));
@@ -428,15 +477,11 @@ export class FrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES ---
         
-        if (!this._particleColors) {
-            this._particleColors = ['rgba(100, 200, 255, ', 'rgba(150, 255, 100, ', 'rgba(255, 200, 100, '];
-        }
-        const particleColors = this._particleColors;
-        
+        const colorTable = FrogEnemy._getColorTable();
+
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
-            const alpha = particle.life / particle.maxLife;
-            ctx.fillStyle = particleColors[particle.colorIndex] + alpha + ')';
+            ctx.fillStyle = colorTable[particle.colorIndex][Math.round(particle.life / particle.maxLife * 100)];
             ctx.beginPath();
             ctx.arc(particle.x - this.x, particle.y - this.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
@@ -459,13 +504,8 @@ export class FrogEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        for (let i = 0; i < this.hitSplatters.length; i++) {
-            this.hitSplatters[i].render(ctx);
-        }
     }
-    
+
     drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight) {
         // Back leg - powerful folded jumping position
         const thighLength = baseSize * 0.42;
@@ -569,7 +609,8 @@ export class FrogEnemy extends BaseEnemy {
     
     drawWizardHat(ctx, baseSize) {
         // Hat body - large pointy cone (cache gradients per instance)
-        if (!this._hatGradient || this._hatGradBaseSize !== baseSize) {
+        if (!this._hatGradient || this._hatGradBaseSize !== baseSize || this._hatGradCtx !== ctx) {
+            this._hatGradCtx = ctx;
             this._hatGradBaseSize = baseSize;
             this._hatGradient = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.5);
             this._hatGradient.addColorStop(0, '#2A5FD8');

@@ -66,6 +66,10 @@ export class MagicAcademy extends Building {
             { x: -48, y:  10, size: 6 },
             { x:  48, y:  10, size: 6 }
         ];
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // structure via Pixi (magic particles still draw here regardless - not yet migrated).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime) {
@@ -144,23 +148,50 @@ export class MagicAcademy extends Building {
     }
     
     render(ctx, size) {
-        // In-game only: soft ground patch marks the occupied 4×4 footprint.
-        // ctx.buildingManager is only set by BuildingManager.renderBuilding (in-game),
-        // so settlement rendering is unaffected.
-        if (ctx && ctx.buildingManager) {
-            this.renderGroundFootprint(ctx, size);
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, size);
+            this.renderDynamicParts(ctx, size);
         }
+
+        // Not yet migrated (Phase 6-shaped particle effects)
+        this.renderMagicEffects(ctx, size);
+    }
+
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /**
+     * Strategy A (baked once per campaign, shared across instances): ground footprint,
+     * moat banks/water fill, plaza, trees/bushes, cobblestone base, spires, and central
+     * tower - everything except shimmer/ripples/pulsing crystals/orb glow (see
+     * renderDynamicParts).
+     *
+     * Originally renderGroundFootprint() only rendered when ctx.buildingManager was set
+     * (the original code's way of detecting "in-game" vs "settlement hub" rendering
+     * context) - simplified to unconditional here since baking only ever happens via the
+     * in-game Pixi adapter (GameplayState), so that distinction is moot for this path.
+     */
+    renderStaticBack(ctx, size) {
+        this.renderGroundFootprint(ctx, size);
 
         // All layers render naturally — tower tops and trees extend beyond the
         // placement square just like towers do, no clip applied.
-        this.renderWaterMoat(ctx, size);
+        this.renderWaterMoatStatic(ctx, size);
         this.renderPavementPlaza(ctx, size);
         this.renderTrees(ctx, size);
         this.renderBushes(ctx, size);
         this.renderCobblestoneBase(ctx, size);
-        this.renderSideSpires(ctx, size);
-        this.renderCentralTower(ctx, size);
-        this.renderMagicEffects(ctx, size);
+        this.renderSideSpiresStatic(ctx, size);
+        this.renderCentralTowerStatic(ctx, size);
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): water shimmer/ripples, pulsing spire crystals, pulsing tower-top orb - all continuous per-instance state. */
+    renderDynamicParts(ctx, size) {
+        this.renderWaterMoatDynamic(ctx, size);
+        this.renderSideSpiresDynamic(ctx, size);
+        this.renderCentralTowerDynamic(ctx, size);
     }
 
     renderGroundFootprint(ctx, size) {
@@ -239,7 +270,8 @@ export class MagicAcademy extends Building {
         ctx.fillRect(bridgeX, bridgeY + bridgeH, bridgeW, 5);
     }
 
-    renderWaterMoat(ctx, size) {
+    /** Strategy A piece: moat shadow/bank/water fill - fully static. */
+    renderWaterMoatStatic(ctx, size) {
         // Perspective-flattened moat ring surrounding the fortress base.
         // An elliptical donut drawn using the even-odd winding rule.
         const cx = this.x;
@@ -276,6 +308,16 @@ export class MagicAcademy extends Building {
         ctx.ellipse(cx, cy, outerRX, outerRY, 0, 0, Math.PI * 2);
         ctx.ellipse(cx, cy, innerRX, innerRY, 0, 0, Math.PI * 2, true);
         ctx.fill('evenodd');
+    }
+
+    /** Strategy B piece: water shimmer + ripples - animationTime/per-instance state, not bakeable. Recomputes the same moat geometry as renderWaterMoatStatic() above. */
+    renderWaterMoatDynamic(ctx, size) {
+        const cx = this.x;
+        const cy = this.y - size * 0.10;
+        const outerRX = size * 0.50;
+        const outerRY = size * 0.21;
+        const innerRX = size * 0.26;
+        const innerRY = size * 0.11;
 
         // Surface shimmer
         for (let i = 0; i < 10; i++) {
@@ -612,7 +654,8 @@ export class MagicAcademy extends Building {
         ctx.strokeRect(this.x - gateW * 0.9, baseBottom, gateW * 1.8, 4);
     }
     
-    renderCentralTower(ctx, size) {
+    /** Strategy A piece: tower body, windows, roof - fully static (window glow is a fixed color, not animationTime-driven). */
+    renderCentralTowerStatic(ctx, size) {
         const towerRadius = size * 0.15;
         const towerHeight = size * 0.5;
         const towerY = this.y - towerHeight;
@@ -728,15 +771,20 @@ export class MagicAcademy extends Building {
             ctx.lineTo(this.x + tileWidth, tileY);
             ctx.stroke();
         }
-        
-        // Magical orb at top
+    }
+
+    /** Strategy B piece: the pulsing magical orb at the tower's peak - animationTime-driven, not bakeable. Recomputes the same tower geometry as renderCentralTowerStatic() above. */
+    renderCentralTowerDynamic(ctx, size) {
+        const towerHeight = size * 0.5;
+        const towerY = this.y - towerHeight;
+        const roofHeight = size * 0.2;
+
         const orbPulse = Math.sin(this.animationTime * 3) * 0.3 + 0.7;
         ctx.fillStyle = `rgba(138, 43, 226, ${orbPulse})`;
         ctx.beginPath();
         ctx.arc(this.x, towerY - roofHeight, 6, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Orb glow
+
         const orbGlow = ctx.createRadialGradient(this.x, towerY - roofHeight, 0, this.x, towerY - roofHeight, 15);
         orbGlow.addColorStop(0, `rgba(138, 43, 226, ${orbPulse * 0.5})`);
         orbGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
@@ -745,8 +793,9 @@ export class MagicAcademy extends Building {
         ctx.arc(this.x, towerY - roofHeight, 15, 0, Math.PI * 2);
         ctx.fill();
     }
-    
-    renderSideSpires(ctx, size) {
+
+    /** Strategy A piece: spire body, windows, cap - fully static (window glow is a fixed color, not animationTime-driven). */
+    renderSideSpiresStatic(ctx, size) {
         const spirePositions = [
             { x: this.x - 30, y: this.y, height: size * 0.35 },
             { x: this.x + 30, y: this.y, height: size * 0.35 }
@@ -834,11 +883,20 @@ export class MagicAcademy extends Building {
             ctx.moveTo(spire.x, spire.y - spire.height - capHeight);
             ctx.lineTo(spire.x, spire.y - spire.height);
             ctx.stroke();
-            
-            // Spire crystal with pulsing glow
+        });
+    }
+
+    /** Strategy B piece: spire crystals with pulsing glow - animationTime-driven, not bakeable. Recomputes the same spire geometry as renderSideSpiresStatic() above. */
+    renderSideSpiresDynamic(ctx, size) {
+        const spirePositions = [
+            { x: this.x - 30, y: this.y, height: size * 0.35 },
+            { x: this.x + 30, y: this.y, height: size * 0.35 }
+        ];
+
+        spirePositions.forEach(spire => {
+            const capHeight = size * 0.12;
             const crystalPulse = Math.sin(this.animationTime * 4 + spire.x) * 0.3 + 0.7;
-            
-            // Crystal glow (larger)
+
             const crystalGlow = ctx.createRadialGradient(spire.x, spire.y - spire.height - capHeight, 0, spire.x, spire.y - spire.height - capHeight, 10);
             crystalGlow.addColorStop(0, `rgba(138, 43, 226, ${crystalPulse * 0.4})`);
             crystalGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
@@ -846,21 +904,19 @@ export class MagicAcademy extends Building {
             ctx.beginPath();
             ctx.arc(spire.x, spire.y - spire.height - capHeight, 10, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Crystal itself
+
             ctx.fillStyle = `rgba(200, 100, 255, ${crystalPulse})`;
             ctx.beginPath();
             ctx.arc(spire.x, spire.y - spire.height - capHeight, 4, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Crystal highlight
+
             ctx.fillStyle = `rgba(255, 150, 255, ${crystalPulse * 0.7})`;
             ctx.beginPath();
             ctx.arc(spire.x - 1, spire.y - spire.height - capHeight - 1, 1.5, 0, Math.PI * 2);
             ctx.fill();
         });
     }
-    
+
     renderFortressDetails(ctx, size) {
         // Flags/banners removed
     }

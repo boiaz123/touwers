@@ -38,9 +38,18 @@ export class BeefyEnemy extends BaseEnemy {
         
         // Performance tracking for health bar rendering
         this.lastDamageTime = null;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
+    /** Per-instance tunic color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.tunicColor;
+    }
+
     getRandomTunicColor() {
         const tunicColors = [
             '#5C2E0F', '#1A3A52', '#8B0000', '#1C1C1C', '#2D3E1F', '#4B0082'
@@ -75,8 +84,35 @@ export class BeefyEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters only if any exist - not yet migrated
+        if (this.hitSplatters && this.hitSplatters.length > 0) {
+            for (const splatter of this.hitSplatters) {
+                splatter.render(ctx);
+            }
+        }
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Apply phase offset for animation diversity - slower for beefier enemies
         const animTime = (this.animationTime * 6.5 + this.animationPhaseOffset); // Slightly slower animation for beefier feel
         const walkCycle = Math.sin(animTime) * 0.5;
@@ -341,15 +377,8 @@ export class BeefyEnemy extends BaseEnemy {
             ctx.lineWidth = 0.8;
             ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
         }
-        
-        // Render hit splatters only if any exist
-        if (this.hitSplatters && this.hitSplatters.length > 0) {
-            for (const splatter of this.hitSplatters) {
-                splatter.render(ctx);
-            }
-        }
     }
-    
+
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         // Track last damage time for health bar rendering optimization
         this.lastDamageTime = performance.now();

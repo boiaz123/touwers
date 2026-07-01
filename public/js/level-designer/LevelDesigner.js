@@ -3,12 +3,17 @@
  * Orchestrates the level design UI, canvas interactions, and code generation
  */
 import { CampaignThemeConfig } from '../core/CampaignThemeConfig.js';
+import { DesignerRenderAdapter } from '../core/render/adapters/DesignerRenderAdapter.js';
 
 export class LevelDesigner {
     constructor(canvasId, config = {}) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
-        
+
+        // See DesignerRenderAdapter.js. Init is async, so the very first setupCanvas()/
+        // render() below still happen against Canvas2D until it resolves.
+        this.designerRenderAdapter = new DesignerRenderAdapter();
+
         // Configuration
         this.gridWidth = config.gridWidth || 60;
         this.gridHeight = config.gridHeight || 33.75;
@@ -94,7 +99,14 @@ export class LevelDesigner {
     setupCanvas() {
         this.canvas.width = this.canvas.offsetWidth;
         this.canvas.height = this.canvas.offsetHeight;
-        
+
+        if (this.designerRenderAdapter) {
+            this.designerRenderAdapter.init(this.canvas).then(() => {
+                this.designerRenderAdapter.resize(this.canvas.width, this.canvas.height);
+                this.render();
+            });
+        }
+
         // Set default castle position
         if (!this.castlePosition) {
             this.castlePosition = {
@@ -1144,6 +1156,22 @@ export class LevelDesigner {
     }
 
     render() {
+        if (this.designerRenderAdapter && this.designerRenderAdapter.shim) {
+            // Every draw* method below reads this.ctx (not a parameter), so the
+            // shim swap-in has to happen here, around the whole pass - same
+            // unmodified draw* bodies run against either target.
+            const realCtx = this.ctx;
+            this.designerRenderAdapter.sync(() => {
+                this.ctx = this.designerRenderAdapter.shim;
+                this._renderToCtx();
+                this.ctx = realCtx;
+            });
+            return;
+        }
+        this._renderToCtx();
+    }
+
+    _renderToCtx() {
         // Draw background based on campaign theme
         this.drawBackground();
 
@@ -1152,7 +1180,7 @@ export class LevelDesigner {
 
         // Draw terrain elements (before path/castle so they appear behind)
         this.drawTerrainElements();
-        
+
         // Draw smooth river overlays for blended corners
         this.drawRiversSmooth();
 

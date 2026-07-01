@@ -70,6 +70,10 @@ export class TowerForge extends Building {
             }
             return { cx: clump.cx, cy: clump.cy, blades };
         });
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // structure via Pixi (sparks/smoke still draw here regardless - not yet migrated).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime) {
@@ -184,42 +188,57 @@ export class TowerForge extends Building {
     }
     
     render(ctx, size) {
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, size);
+            this.renderDynamicParts(ctx, size);
+        }
+
+        // Render particles - not yet migrated (Phase 6-shaped ephemeral effects)
+        this.renderParticles(ctx);
+    }
+
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): building shell - shadow, front-area props, walls, forge opening frame, chimney structure, roof, forge interior props. Excludes fire-glow effects and workers (see renderDynamicParts). */
+    renderStaticBack(ctx, size) {
         // CRITICAL: Receive size parameter which is already cellSize * 4 for 4x4 building
         // size = cellSize * 4
-        const cellSize = size / 4; // Extract cellSize from size parameter
-        
-        // Calculate building dimensions
         const buildingWidth = size * 0.9;
         const buildingHeight = size * 0.6;
         const wallHeight = size * 0.5;
-        
+
         // Building shadow - FIXED: Only for the actual building, not full 4x4 grid
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - wallHeight + 4, buildingWidth, wallHeight);
-        
+
         // Render detailed front area items FIRST (behind workers)
         this.renderFrontAreaItems(ctx, size);
-        
+
         // Cobblestone wall structure
         this.renderCobblestoneWalls(ctx, buildingWidth, buildingHeight, wallHeight);
-        
-        // Forge opening with fire
+
+        // Forge opening frame (static part - fire glow is dynamic, see renderDynamicParts)
         this.renderForgeOpening(ctx, size);
-        
-        // Chimney - NOW POSITIONED AT BOTTOM RIGHT
+
+        // Chimney structure (static part - interior fire glow is dynamic)
         this.renderChimney(ctx, size);
-        
+
         // Roof
         this.renderRoof(ctx, buildingWidth, buildingHeight, wallHeight);
-        
-        // Forge interior details
+
+        // Forge interior props (coal/anvil/hammer - static part, fire flicker is dynamic)
         this.renderForgeInterior(ctx, size);
-        
-        // Render workers
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): fire-glow effects (fireIntensity flicker) + workers (hammer-swing animation) - all continuous per-instance state. */
+    renderDynamicParts(ctx, size) {
+        this.renderForgeOpeningGlow(ctx, size);
+        this.renderChimneyGlow(ctx, size);
+        this.renderForgeFire(ctx, size);
         this.renderWorkers(ctx, size);
-        
-        // Render particles
-        this.renderParticles(ctx);
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -845,16 +864,6 @@ export class TowerForge extends Building {
             openingHeight
         );
         
-        // Interior fire glow
-        const glowIntensity = this.fireIntensity * 0.3;
-        ctx.fillStyle = `rgba(255, 100, 0, ${glowIntensity})`;
-        ctx.fillRect(
-            chimneyX + (chimneyWidth - openingWidth)/2 + 1, 
-            capY - capHeight + 1, 
-            openingWidth - 2, 
-            openingHeight - 1
-        );
-        
         // Chimney side face (3D effect)
         ctx.fillStyle = '#5D5D5D';
         ctx.beginPath();
@@ -965,8 +974,15 @@ export class TowerForge extends Building {
         ctx.strokeStyle = '#555555';
         ctx.lineWidth = 1;
         ctx.stroke();
-        
-        // Fire glow from opening
+    }
+
+    /** Strategy B piece: fire glow from the forge opening - fireIntensity-driven, not bakeable. Recomputes the same opening geometry as renderForgeOpening() above. */
+    renderForgeOpeningGlow(ctx, size) {
+        const openingWidth = size * 0.25;
+        const openingHeight = size * 0.2;
+        const openingX = this.x - openingWidth / 2 - 15;
+        const openingY = this.y - openingHeight / 2 - 5;
+
         const fireGlow = ctx.createRadialGradient(
             openingX + openingWidth/2, openingY + openingHeight/2, 0,
             openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
@@ -974,11 +990,36 @@ export class TowerForge extends Building {
         fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
         fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
         fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
-        
+
         ctx.fillStyle = fireGlow;
         ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
     }
-    
+
+    /** Strategy B piece: chimney interior fire glow - fireIntensity-driven, not bakeable. Recomputes the same chimney geometry as renderChimney() above. */
+    renderChimneyGlow(ctx, size) {
+        const buildingWidth = size * 0.9;
+        const wallHeight = size * 0.5;
+        const chimneyWidth = size * 0.16;
+        const chimneyHeight = size * 0.7;
+        const chimneyX = this.x + buildingWidth/2;
+        const chimneyY = this.y;
+        const shaftHeight = chimneyHeight - wallHeight;
+        const shaftY = chimneyY - wallHeight;
+        const capHeight = 6;
+        const capY = shaftY - shaftHeight;
+        const openingWidth = chimneyWidth * 0.7;
+        const openingHeight = 4;
+
+        const glowIntensity = this.fireIntensity * 0.3;
+        ctx.fillStyle = `rgba(255, 100, 0, ${glowIntensity})`;
+        ctx.fillRect(
+            chimneyX + (chimneyWidth - openingWidth)/2 + 1,
+            capY - capHeight + 1,
+            openingWidth - 2,
+            openingHeight - 1
+        );
+    }
+
     renderForgeInterior(ctx, size) {
         // Coal pile visible in opening
         const openingX = this.x - 15;
@@ -1000,14 +1041,29 @@ export class TowerForge extends Building {
             ctx.arc(openingX + coal.x, openingY + coal.y, coal.size, 0, Math.PI * 2);
             ctx.fill();
         });
-        
-        // Fire above coal
+
+        // Anvil inside (partially visible)
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 10, openingY - 2, 8, 4);
+
+        // Hammer on anvil
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 6);
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(openingX + 12, openingY - 6, 2, 3);
+    }
+
+    /** Strategy B piece: the fire above the coal pile - fireIntensity-driven, not bakeable. Recomputes the same opening position as renderForgeInterior() above. */
+    renderForgeFire(ctx, size) {
+        const openingX = this.x - 15;
+        const openingY = this.y + 5;
+
         const fireColors = [
             `rgba(255, 0, 0, ${this.fireIntensity * 0.7})`,
             `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`,
             `rgba(255, 200, 0, ${this.fireIntensity * 0.6})`
         ];
-        
+
         fireColors.forEach((color, index) => {
             ctx.fillStyle = color;
             ctx.beginPath();
@@ -1020,16 +1076,6 @@ export class TowerForge extends Building {
             );
             ctx.fill();
         });
-        
-        // Anvil inside (partially visible)
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(openingX + 10, openingY - 2, 8, 4);
-        
-        // Hammer on anvil
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(openingX + 12, openingY - 6, 2, 6);
-        ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(openingX + 12, openingY - 6, 2, 3);
     }
 
     renderParticles(ctx) {

@@ -35,6 +35,16 @@ export class LootBag {
         // Lifetime
         this.lifetime = 120; // Seconds the bag stays on ground (0 = infinite)
         this.age = 0;
+
+        // Set by EnemyRenderAdapter (shared with enemies - see its doc comment) once it
+        // has synced this bag via Pixi. No static structure - the whole bag bobs/rotates/
+        // sparkles continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
+    }
+
+    /** Rare vs normal loot bags look different (color/glow) - keeps any future baked layers from colliding, though this entity has none currently. */
+    getRenderVariantKey() {
+        return this.isRare ? 'rare' : 'normal';
     }
 
     update(deltaTime, canvasHeight = 800, canvasWidth = 1200) {
@@ -131,6 +141,23 @@ export class LootBag {
             return;
         }
 
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx);
+        }
+    }
+
+    /** No static structure for this loot bag - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this loot bag - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole bag - bob/rotation/sparkle/glow are all continuous, so nothing here is bakeable. */
+    renderDynamicParts(ctx) {
         const x = this.x;
         const yOffset = this.onGround ? this.bobAmount : 0;
         const y = this.y + yOffset;

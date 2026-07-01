@@ -138,6 +138,13 @@ export class SuperWeaponLab extends Building {
         
         // Synchronize spell states based on current lab level
         this.syncSpellUnlocks();
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // base via Pixi (particles/spell-cast-effect/meteors/lightning/frost still draw
+        // here regardless - not yet migrated; the main spire's window/rune glow pulses
+        // continuously and tightly overlaps the static geometry, so it's kept fully
+        // dynamic rather than split, unlike e.g. CannonTower's spatially-separate parts).
+        this.skipCanvas2DBodyRender = false;
     }
     
     // Synchronize spell unlock states based on current lab level
@@ -242,19 +249,35 @@ export class SuperWeaponLab extends Building {
     }
     
     render(ctx, size) {
-        // Render the magical stone spire
-        this.renderStoneBase(ctx, size);
-        this.renderWoodenSupports(ctx, size);
-        this.renderMainSpire(ctx, size);
-        this.renderFloatingRunes(ctx, size);
-        this.renderCrystalTop(ctx, size);
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, size);
+            this.renderDynamicParts(ctx, size);
+        }
+
+        // Not yet migrated (Phase 6-shaped spell-effect work)
         this.renderMagicParticles(ctx, size);
         this.renderSpellCastEffect(ctx, size);
-        
-        // Render active spell effects
         this.renderChainLightningBolts(ctx);
         this.renderFallingMeteors(ctx);
         this.renderFrozenNovaEffects(ctx);
+    }
+
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): stone base + wooden supports - fully static. */
+    renderStaticBack(ctx, size) {
+        this.renderStoneBase(ctx, size);
+        this.renderWoodenSupports(ctx, size);
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): main spire (continuous window/rune glow pulse), floating runes (orbit + text), crystal top (pulse/rotation/energy beams) - all continuous per-instance state. */
+    renderDynamicParts(ctx, size) {
+        this.renderMainSpire(ctx, size);
+        this.renderFloatingRunes(ctx, size);
+        this.renderCrystalTop(ctx, size);
     }
     
     renderStoneBase(ctx, size) {

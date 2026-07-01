@@ -41,6 +41,14 @@ export class PlayerLevelDesigner extends LevelDesigner {
         this.canvas.height = h;
         this.canvas.style.width = w + 'px';
         this.canvas.style.height = h + 'px';
+
+        if (this.designerRenderAdapter) {
+            this.designerRenderAdapter.init(this.canvas).then(() => {
+                this.designerRenderAdapter.resize(this.canvas.width, this.canvas.height);
+                this.render();
+            });
+        }
+
         if (!this.castlePosition) {
             this.castlePosition = {
                 gridX: this.gridWidth - 2,

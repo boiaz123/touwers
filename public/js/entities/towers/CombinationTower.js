@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 const BASE_SLOW_EFFECT = 0.7;
 
@@ -25,7 +26,22 @@ export class CombinationTower extends Tower {
         this.crystalPulse = 0;
         this.runeRotation = 0;
         this.lightningBolts = [];
+        // Phase 5: reuse bolt/particle objects across casts instead of allocating a fresh
+        // literal every time - acquire() at each push() site, release() once an entry is
+        // dropped from update()'s compaction loops below. The bolt factory's fields are the
+        // union of every field set by any of the 5 effect generators (createBasicArcaneEffect/
+        // createSteamEffect/createMagmaEffect/createTempestEffect/createMeteorEffect) below -
+        // each generator explicitly resets the isMagma/isTempest/isMeteor/size fields it
+        // doesn't use back to their default so a reused bolt never leaks a stale variant flag.
+        this._lightningBoltPool = new ObjectPool(() => ({
+            startX: 0, startY: 0, endX: 0, endY: 0, life: 0, maxLife: 0,
+            segments: null, color: '', size: 0,
+            isMagma: false, isTempest: false, isMeteor: false
+        }));
         this.magicParticles = [];
+        this._magicParticlePool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0, maxSize: 0, color: ''
+        }));
         this.runePositions = [];
         
         // Initialize floating runes
@@ -37,6 +53,13 @@ export class CombinationTower extends Tower {
                 symbol: ['◊', '☆', '◇', '※', '❋', '⚡'][i]
             });
         }
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (particles/
+        // bolts/attack-radius still draw here regardless - not migrated yet). Unlike
+        // MagicTower, the base/cylinder/coil colors depend on selectedSpell (changeable at
+        // runtime via setSpell()), so they can't be safely shared-baked per campaign the
+        // same way - they're Strategy B (dynamic) here instead, only the shadow is static.
+        this.skipCanvas2DBodyRender = false;
     }
     
     setAvailableSpells(spells) {
@@ -82,6 +105,8 @@ export class CombinationTower extends Tower {
             bolt.life -= deltaTime;
             if (bolt.life > 0) {
                 this.lightningBolts[boltWrite++] = bolt;
+            } else {
+                this._lightningBoltPool.release(bolt);
             }
         }
         this.lightningBolts.length = boltWrite;
@@ -96,25 +121,27 @@ export class CombinationTower extends Tower {
             if (particle.life > 0) {
                 particle.size = particle.maxSize * (particle.life / particle.maxLife);
                 this.magicParticles[pWrite++] = particle;
+            } else {
+                this._magicParticlePool.release(particle);
             }
         }
         this.magicParticles.length = pWrite;
-        
+
         // Generate ambient magic particles (skip if already at cap)
         if (this.magicParticles.length < 200 && Math.random() < deltaTime * 3) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 50 + 20;
-            this.magicParticles.push({
-                x: this.x + Math.cos(angle) * radius,
-                y: this.y + Math.sin(angle) * radius,
-                vx: (Math.random() - 0.5) * 50,
-                vy: (Math.random() - 0.5) * 50 - 30,
-                life: 2,
-                maxLife: 2,
-                size: 0,
-                maxSize: Math.random() * 4 + 2,
-                color: Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, '
-            });
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.x + Math.cos(angle) * radius;
+            particle.y = this.y + Math.sin(angle) * radius;
+            particle.vx = (Math.random() - 0.5) * 50;
+            particle.vy = (Math.random() - 0.5) * 50 - 30;
+            particle.life = 2;
+            particle.maxLife = 2;
+            particle.size = 0;
+            particle.maxSize = Math.random() * 4 + 2;
+            particle.color = Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -238,39 +265,42 @@ export class CombinationTower extends Tower {
             const progress = i / segments;
             const delay = progress * 0.3;
             
-            this.lightningBolts.push({
-                startX: this.x,
-                startY: this.y,
-                endX: this.target.x,
-                endY: this.target.y,
-                life: 0.3 - delay,
-                maxLife: 0.3,
-                segments: [{
-                    fromX: this.x + (this.target.x - this.x) * progress,
-                    fromY: this.y + (this.target.y - this.y) * progress,
-                    toX: this.x + (this.target.x - this.x) * (progress + 0.25),
-                    toY: this.y + (this.target.y - this.y) * (progress + 0.25)
-                }],
-                color: 'rgba(100, 150, 255, ',
-                size: 6
-            });
+            const bolt = this._lightningBoltPool.acquire();
+            bolt.startX = this.x;
+            bolt.startY = this.y;
+            bolt.endX = this.target.x;
+            bolt.endY = this.target.y;
+            bolt.life = 0.3 - delay;
+            bolt.maxLife = 0.3;
+            bolt.segments = [{
+                fromX: this.x + (this.target.x - this.x) * progress,
+                fromY: this.y + (this.target.y - this.y) * progress,
+                toX: this.x + (this.target.x - this.x) * (progress + 0.25),
+                toY: this.y + (this.target.y - this.y) * (progress + 0.25)
+            }];
+            bolt.color = 'rgba(100, 150, 255, ';
+            bolt.size = 6;
+            bolt.isMagma = false;
+            bolt.isTempest = false;
+            bolt.isMeteor = false;
+            this.lightningBolts.push(bolt);
         }
-        
+
         // Arcane burst at target
         for (let i = 0; i < 12; i++) {
             const angle = (i / 12) * Math.PI * 2;
             const speed = 50 + Math.random() * 40;
-            this.magicParticles.push({
-                x: this.target.x,
-                y: this.target.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 20,
-                life: 1,
-                maxLife: 1,
-                size: 0,
-                maxSize: 5 + Math.random() * 4,
-                color: 'rgba(100, 150, 255, '
-            });
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed - 20;
+            particle.life = 1;
+            particle.maxLife = 1;
+            particle.size = 0;
+            particle.maxSize = 5 + Math.random() * 4;
+            particle.color = 'rgba(100, 150, 255, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -282,35 +312,35 @@ export class CombinationTower extends Tower {
             const x = this.x + (this.target.x - this.x) * progress;
             const y = this.y + (this.target.y - this.y) * progress;
             const swirl = Math.sin(progress * Math.PI * 3) * 20;
-            
-            this.magicParticles.push({
-                x: x + swirl,
-                y: y,
-                vx: (Math.random() - 0.5) * 30,
-                vy: -Math.random() * 20,
-                life: 1.5,
-                maxLife: 1.5,
-                size: 0,
-                maxSize: 12 + Math.random() * 8,
-                color: i % 2 === 0 ? 'rgba(100, 200, 255, ' : 'rgba(255, 100, 50, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = x + swirl;
+            particle.y = y;
+            particle.vx = (Math.random() - 0.5) * 30;
+            particle.vy = -Math.random() * 20;
+            particle.life = 1.5;
+            particle.maxLife = 1.5;
+            particle.size = 0;
+            particle.maxSize = 12 + Math.random() * 8;
+            particle.color = i % 2 === 0 ? 'rgba(100, 200, 255, ' : 'rgba(255, 100, 50, ';
+            this.magicParticles.push(particle);
         }
-        
+
         // Impact steam burst
         for (let i = 0; i < 15; i++) {
             const angle = (i / 15) * Math.PI * 2;
             const speed = 80 + Math.random() * 40;
-            this.magicParticles.push({
-                x: this.target.x,
-                y: this.target.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 30,
-                life: 2,
-                maxLife: 2,
-                size: 0,
-                maxSize: 10 + Math.random() * 6,
-                color: 'rgba(200, 220, 255, '
-            });
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed - 30;
+            particle.life = 2;
+            particle.maxLife = 2;
+            particle.size = 0;
+            particle.maxSize = 10 + Math.random() * 6;
+            particle.color = 'rgba(200, 220, 255, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -322,61 +352,63 @@ export class CombinationTower extends Tower {
         for (let i = 0; i < segments; i++) {
             const progress = i / segments;
             const delay = progress * projectileLife;
-            
-            this.lightningBolts.push({
-                startX: this.x,
-                startY: this.y,
-                endX: this.target.x,
-                endY: this.target.y,
-                life: projectileLife - delay,
-                maxLife: projectileLife,
-                segments: [{
-                    fromX: this.x + (this.target.x - this.x) * progress,
-                    fromY: this.y + (this.target.y - this.y) * progress,
-                    toX: this.x + (this.target.x - this.x) * (progress + 0.2),
-                    toY: this.y + (this.target.y - this.y) * (progress + 0.2)
-                }],
-                color: 'rgba(255, 100, 0, ',
-                isMagma: true,
-                size: 8
-            });
+
+            const bolt = this._lightningBoltPool.acquire();
+            bolt.startX = this.x;
+            bolt.startY = this.y;
+            bolt.endX = this.target.x;
+            bolt.endY = this.target.y;
+            bolt.life = projectileLife - delay;
+            bolt.maxLife = projectileLife;
+            bolt.segments = [{
+                fromX: this.x + (this.target.x - this.x) * progress,
+                fromY: this.y + (this.target.y - this.y) * progress,
+                toX: this.x + (this.target.x - this.x) * (progress + 0.2),
+                toY: this.y + (this.target.y - this.y) * (progress + 0.2)
+            }];
+            bolt.color = 'rgba(255, 100, 0, ';
+            bolt.isMagma = true;
+            bolt.isTempest = false;
+            bolt.isMeteor = false;
+            bolt.size = 8;
+            this.lightningBolts.push(bolt);
         }
-        
+
         // Lava splatter on impact
         for (let i = 0; i < 20; i++) {
             const angle = (i / 20) * Math.PI * 2;
             const speed = 60 + Math.random() * 80;
             const size = 6 + Math.random() * 6;
-            
-            this.magicParticles.push({
-                x: this.target.x,
-                y: this.target.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 40,
-                life: 1.5,
-                maxLife: 1.5,
-                size: 0,
-                maxSize: size,
-                color: i % 3 === 0 ? 'rgba(255, 69, 0, ' : (i % 3 === 1 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, ')
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed - 40;
+            particle.life = 1.5;
+            particle.maxLife = 1.5;
+            particle.size = 0;
+            particle.maxSize = size;
+            particle.color = i % 3 === 0 ? 'rgba(255, 69, 0, ' : (i % 3 === 1 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, ');
+            this.magicParticles.push(particle);
         }
-        
+
         // Ground burn effect
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
             const distance = 15 + Math.random() * 10;
-            
-            this.magicParticles.push({
-                x: this.target.x + Math.cos(angle) * distance,
-                y: this.target.y + Math.sin(angle) * distance,
-                vx: 0,
-                vy: -10,
-                life: 2,
-                maxLife: 2,
-                size: 0,
-                maxSize: 8,
-                color: 'rgba(255, 50, 0, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x + Math.cos(angle) * distance;
+            particle.y = this.target.y + Math.sin(angle) * distance;
+            particle.vx = 0;
+            particle.vy = -10;
+            particle.life = 2;
+            particle.maxLife = 2;
+            particle.size = 0;
+            particle.maxSize = 8;
+            particle.color = 'rgba(255, 50, 0, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -385,55 +417,57 @@ export class CombinationTower extends Tower {
         const boltCount = 3;
         for (let b = 0; b < boltCount; b++) {
             const offset = (b - 1) * 15;
-            this.lightningBolts.push({
-                startX: this.x,
-                startY: this.y,
-                endX: this.target.x + offset,
-                endY: this.target.y,
-                life: 0.4,
-                maxLife: 0.4,
-                segments: this.generateLightningSegments(this.x, this.y, this.target.x + offset, this.target.y),
-                color: 'rgba(255, 255, 100, ',
-                isTempest: true
-            });
+            const bolt = this._lightningBoltPool.acquire();
+            bolt.startX = this.x;
+            bolt.startY = this.y;
+            bolt.endX = this.target.x + offset;
+            bolt.endY = this.target.y;
+            bolt.life = 0.4;
+            bolt.maxLife = 0.4;
+            bolt.segments = this.generateLightningSegments(this.x, this.y, this.target.x + offset, this.target.y);
+            bolt.color = 'rgba(255, 255, 100, ';
+            bolt.isMagma = false;
+            bolt.isTempest = true;
+            bolt.isMeteor = false;
+            this.lightningBolts.push(bolt);
         }
-        
+
         // Wind swirl particles
         for (let i = 0; i < 25; i++) {
             const angle = (i / 25) * Math.PI * 4; // Multiple spirals
             const radius = (i / 25) * 80;
             const x = this.target.x + Math.cos(angle) * radius;
             const y = this.target.y + Math.sin(angle) * radius;
-            
-            this.magicParticles.push({
-                x: x,
-                y: y,
-                vx: Math.cos(angle + Math.PI / 2) * 120,
-                vy: Math.sin(angle + Math.PI / 2) * 120 - 20,
-                life: 1,
-                maxLife: 1,
-                size: 0,
-                maxSize: 4,
-                color: 'rgba(200, 220, 255, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = x;
+            particle.y = y;
+            particle.vx = Math.cos(angle + Math.PI / 2) * 120;
+            particle.vy = Math.sin(angle + Math.PI / 2) * 120 - 20;
+            particle.life = 1;
+            particle.maxLife = 1;
+            particle.size = 0;
+            particle.maxSize = 4;
+            particle.color = 'rgba(200, 220, 255, ';
+            this.magicParticles.push(particle);
         }
-        
+
         // Water droplets
         for (let i = 0; i < 15; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 50 + Math.random() * 60;
-            
-            this.magicParticles.push({
-                x: this.target.x,
-                y: this.target.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 30,
-                life: 1.5,
-                maxLife: 1.5,
-                size: 0,
-                maxSize: 6,
-                color: 'rgba(100, 150, 255, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed - 30;
+            particle.life = 1.5;
+            particle.maxLife = 1.5;
+            particle.size = 0;
+            particle.maxSize = 6;
+            particle.color = 'rgba(100, 150, 255, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -446,78 +480,80 @@ export class CombinationTower extends Tower {
             const progress = i / 10;
             const trailX = this.target.x + (Math.random() - 0.5) * 20;
             const trailY = meteorStartY + (this.target.y - meteorStartY) * progress;
-            
-            this.magicParticles.push({
-                x: trailX,
-                y: trailY,
-                vx: (Math.random() - 0.5) * 20,
-                vy: 100 + Math.random() * 50,
-                life: 0.8,
-                maxLife: 0.8,
-                size: 0,
-                maxSize: 8 + Math.random() * 6,
-                color: i % 2 === 0 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = trailX;
+            particle.y = trailY;
+            particle.vx = (Math.random() - 0.5) * 20;
+            particle.vy = 100 + Math.random() * 50;
+            particle.life = 0.8;
+            particle.maxLife = 0.8;
+            particle.size = 0;
+            particle.maxSize = 8 + Math.random() * 6;
+            particle.color = i % 2 === 0 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, ';
+            this.magicParticles.push(particle);
         }
-        
+
         // Meteor body (large projectile)
-        this.lightningBolts.push({
-            startX: this.target.x,
-            startY: meteorStartY,
-            endX: this.target.x,
-            endY: this.target.y,
-            life: 0.5,
-            maxLife: 0.5,
-            segments: [{
-                fromX: this.target.x,
-                fromY: meteorStartY,
-                toX: this.target.x,
-                toY: this.target.y
-            }],
-            color: 'rgba(200, 100, 50, ',
-            isMeteor: true,
-            size: 15
-        });
-        
+        const meteorBolt = this._lightningBoltPool.acquire();
+        meteorBolt.startX = this.target.x;
+        meteorBolt.startY = meteorStartY;
+        meteorBolt.endX = this.target.x;
+        meteorBolt.endY = this.target.y;
+        meteorBolt.life = 0.5;
+        meteorBolt.maxLife = 0.5;
+        meteorBolt.segments = [{
+            fromX: this.target.x,
+            fromY: meteorStartY,
+            toX: this.target.x,
+            toY: this.target.y
+        }];
+        meteorBolt.color = 'rgba(200, 100, 50, ';
+        meteorBolt.isMagma = false;
+        meteorBolt.isTempest = false;
+        meteorBolt.isMeteor = true;
+        meteorBolt.size = 15;
+        this.lightningBolts.push(meteorBolt);
+
         // Impact crater effect
         for (let ring = 0; ring < 3; ring++) {
             const particleCount = 12 + ring * 6;
             const ringRadius = 30 + ring * 20;
-            
+
             for (let i = 0; i < particleCount; i++) {
                 const angle = (i / particleCount) * Math.PI * 2;
                 const speed = 60 + ring * 30;
-                
-                this.magicParticles.push({
-                    x: this.target.x,
-                    y: this.target.y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 20,
-                    life: 1.5 + ring * 0.3,
-                    maxLife: 1.5 + ring * 0.3,
-                    size: 0,
-                    maxSize: 8 - ring * 2,
-                    color: ring % 2 === 0 ? 'rgba(139, 90, 43, ' : 'rgba(160, 82, 45, '
-                });
+
+                const particle = this._magicParticlePool.acquire();
+                particle.x = this.target.x;
+                particle.y = this.target.y;
+                particle.vx = Math.cos(angle) * speed;
+                particle.vy = Math.sin(angle) * speed - 20;
+                particle.life = 1.5 + ring * 0.3;
+                particle.maxLife = 1.5 + ring * 0.3;
+                particle.size = 0;
+                particle.maxSize = 8 - ring * 2;
+                particle.color = ring % 2 === 0 ? 'rgba(139, 90, 43, ' : 'rgba(160, 82, 45, ';
+                this.magicParticles.push(particle);
             }
         }
-        
+
         // Dust cloud
         for (let i = 0; i < 20; i++) {
             const angle = Math.random() * Math.PI * 2;
             const distance = 20 + Math.random() * 30;
-            
-            this.magicParticles.push({
-                x: this.target.x + Math.cos(angle) * distance,
-                y: this.target.y + Math.sin(angle) * distance,
-                vx: Math.cos(angle) * 30,
-                vy: -40 - Math.random() * 20,
-                life: 2,
-                maxLife: 2,
-                size: 0,
-                maxSize: 12,
-                color: 'rgba(139, 115, 85, '
-            });
+
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x + Math.cos(angle) * distance;
+            particle.y = this.target.y + Math.sin(angle) * distance;
+            particle.vx = Math.cos(angle) * 30;
+            particle.vy = -40 - Math.random() * 20;
+            particle.life = 2;
+            particle.maxLife = 2;
+            particle.size = 0;
+            particle.maxSize = 12;
+            particle.color = 'rgba(139, 115, 85, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -581,19 +617,40 @@ export class CombinationTower extends Tower {
     }
     
     render(ctx) {
-        // Get tower size - use ResolutionManager if available
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
-        
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, towerSize);
+            this.renderDynamicParts(ctx, towerSize);
+            this.renderProjectiles(ctx);
+        }
+
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top.
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: particles/bolts - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then effects on top). */
+    renderProjectiles(ctx) {
+        this.renderParticlesAndBolts(ctx);
+    }
+
+    /** No front-of-tower environment decoration for this type - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): drop shadow only - see constructor comment for why the rest is dynamic here. */
+    renderStaticBack(ctx, towerSize) {
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
         ctx.beginPath();
         ctx.arc(this.x + 3, this.y + 3, towerSize * 0.35, 0, Math.PI * 2);
         ctx.fill();
-        
-        // ...existing code from MagicTower render method...
-        // (Tower base, walls, windows, etc. - similar to MagicTower)
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): base/cylinder/coil/windows - colored by selectedSpell (runtime-changeable) and pulse-animated. */
+    renderDynamicParts(ctx, towerSize) {
         const baseRadius = towerSize * 0.35;
         const towerHeight = towerSize * 0.5;
         
@@ -662,7 +719,10 @@ export class CombinationTower extends Tower {
         ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        
+    }
+
+    /** Phase 5: particles/bolts - drawn via renderProjectiles() above, inside the Pixi shim when active, or directly on Canvas2D otherwise. */
+    renderParticlesAndBolts(ctx) {
         // Render magic particles with combination colors
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
@@ -747,11 +807,8 @@ export class CombinationTower extends Tower {
                 }
             }
         }
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
-    
+
     static getInfo() {
         return {
             name: 'Combination Tower',

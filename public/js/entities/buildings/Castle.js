@@ -63,7 +63,12 @@ export class Castle {
         this.defender = null; // Currently active defender
         this.defenderDeadCooldown = 0; // Cooldown before hiring new defender after death
         this.maxDefenderCooldown = 10; // 10 seconds cooldown after defender dies
-        
+
+        // Set by BuildingRenderAdapter once it has baked/synced this castle via Pixi
+        // (damage flash/health bar still draw here regardless - not yet migrated; window
+        // glow flicker is baked at a single frozen intensity as a known limitation, since
+        // it's a minor cosmetic detail of an otherwise-static structure).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime) {
@@ -101,39 +106,73 @@ export class Castle {
     }
     
     render(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        if (this.gateAngle) ctx.rotate(this.gateAngle);
-        
-        // Damage flash effect
+        // Damage flash effect - not yet migrated, always drawn on Canvas2D regardless of
+        // renderer. Own translate+rotate (kept separate from renderStaticBack's internal
+        // translate, since renderStaticBack must stay rotation-free for safe texture caching).
         if (this.damageFlashTimer > 0) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            if (this.gateAngle) ctx.rotate(this.gateAngle);
             const flashIntensity = this.damageFlashTimer / this.damageFlashDuration;
             ctx.fillStyle = `rgba(255, 100, 100, ${flashIntensity * 0.5})`;
             ctx.fillRect(-this.wallWidth/2 - 50, -this.wallHeight/2 - 50, this.wallWidth + 100, this.wallHeight + 100);
+            ctx.restore();
         }
-        
-        // Draw main wall first (background)
-        this.drawMainWall(ctx);
-        
-        // Draw left tower with front perspective
-        this.drawTower(ctx, -this.wallWidth/2 - this.towerWidth/2, 'left');
-        
-        // Draw right tower with front perspective
-        this.drawTower(ctx, this.wallWidth/2 + this.towerWidth/2, 'right');
-        
-        // Draw castle base to cover floating bricks
-        this.drawCastleBase(ctx);
-        
-        // Draw gate
-        this.drawGate(ctx);
-        
-        // Draw crenellations on top of wall
-        this.drawCrenellations(ctx);
-        
-        ctx.restore();
-        
-        // Draw health bar above castle (world space, not translated)
+
+        if (!this.skipCanvas2DBodyRender) {
+            // Apply gateAngle as a rotation *around* (this.x, this.y) here, rather than
+            // inside renderStaticBack, so that method can stay rotation-free for the Pixi
+            // bake path (see its doc comment) while this Canvas2D-only path still gets the
+            // correct rotated result - the math works out identically to the original
+            // translate-then-rotate-then-draw-relative order.
+            if (this.gateAngle) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.gateAngle);
+                ctx.translate(-this.x, -this.y);
+                this.renderStaticBack(ctx);
+                ctx.restore();
+            } else {
+                this.renderStaticBack(ctx);
+            }
+        }
+
+        // Draw health bar above castle (world space, not translated) - not yet migrated
         this.drawHealthBar(ctx);
+    }
+
+    /**
+     * Strategy A (baked once per campaign, shared across instances): the entire wall/
+     * tower/gate/base/crenellation structure. Deliberately rotation-free - this method's
+     * output is cached and shared via PixiTextureCache, and gateAngle is a per-instance,
+     * fixed-at-creation orientation, not something safe to bake into a shared texture.
+     * The Pixi adapter applies it as a live sprite rotation instead (see
+     * BuildingRenderAdapter's gateAngle handling); render() above applies it separately
+     * for the Canvas2D-only path.
+     */
+    renderStaticBack(ctx) {
+        // drawMainWall/drawTower/etc use coordinates relative to an already-translated
+        // origin (this.x, this.y) - the original render() provided that via its own
+        // ctx.translate() before calling these; replicate just the translate here.
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        this.drawMainWall(ctx);
+        this.drawTower(ctx, -this.wallWidth/2 - this.towerWidth/2, 'left');
+        this.drawTower(ctx, this.wallWidth/2 + this.towerWidth/2, 'right');
+        this.drawCastleBase(ctx);
+        this.drawGate(ctx);
+        this.drawCrenellations(ctx);
+        ctx.restore();
+    }
+
+    /** No front-of-structure overlay for the castle - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx) {
+        // intentionally empty
+    }
+
+    /** No live per-frame animation extracted for the castle (window glow flicker is accepted as frozen-at-bake-time, see constructor comment) - present for BuildingRenderAdapter's uniform convention. */
+    renderDynamicParts(ctx) {
+        // intentionally empty
     }
     
     drawHealthBar(ctx) {

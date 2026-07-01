@@ -4,6 +4,17 @@ export class AirFrogEnemy extends BaseEnemy {
     // Static color cache to avoid recalculation
     static colorCache = new Map();
 
+    static _colorTable = null;
+    static _getColorTable() {
+        if (!AirFrogEnemy._colorTable) {
+            const bases = ['rgba(100, 200, 255, ', 'rgba(150, 220, 255, ', 'rgba(200, 240, 255, '];
+            AirFrogEnemy._colorTable = bases.map(b =>
+                Array.from({ length: 101 }, (_, i) => b + (i / 100).toFixed(2) + ')')
+            );
+        }
+        return AirFrogEnemy._colorTable;
+    }
+
     static BASE_STATS = {
         health: 340,
         speed: 25,
@@ -41,7 +52,11 @@ export class AirFrogEnemy extends BaseEnemy {
         this.cachedLightenColor = null;
         this.cachedDarkenColor = null;
         this.cachedDarken2Color = null;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure jumps/bobs continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime) {
@@ -289,8 +304,34 @@ export class AirFrogEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            this.hitSplatters[i].render(ctx);
+        }
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole battle-mage frog - jump arc/magic particles are continuous and health bar is health-dependent, so nothing here is bakeable. */
+    renderDynamicParts(ctx, baseSize) {
         // Enemy shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.beginPath();
@@ -342,7 +383,8 @@ export class AirFrogEnemy extends BaseEnemy {
         }
         
         // --- MAIN BODY/CHEST --- (cached gradient)
-        if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
+        if (!this._bodyGrad || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
+            this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
             this._bodyGrad = ctx.createLinearGradient(-baseSize * 0.4, -baseSize * 0.15, baseSize * 0.4, baseSize * 0.15);
             this._bodyGrad.addColorStop(0, '#f0f0f8');
@@ -476,15 +518,11 @@ export class AirFrogEnemy extends BaseEnemy {
         
         // --- RENDER MAGIC PARTICLES (AIR) ---
         
-        if (!this._particleColors) {
-            this._particleColors = ['rgba(100, 200, 255, ', 'rgba(150, 220, 255, ', 'rgba(200, 240, 255, '];
-        }
-        const particleColors = this._particleColors;
-        
+        const colorTable = AirFrogEnemy._getColorTable();
+
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
-            const alpha = particle.life / particle.maxLife;
-            ctx.fillStyle = particleColors[particle.colorIndex] + alpha + ')';
+            ctx.fillStyle = colorTable[particle.colorIndex][Math.round(particle.life / particle.maxLife * 100)];
             ctx.beginPath();
             ctx.arc(particle.x - this.x, particle.y - this.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
@@ -507,13 +545,8 @@ export class AirFrogEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        for (let i = 0; i < this.hitSplatters.length; i++) {
-            this.hitSplatters[i].render(ctx);
-        }
     }
-    
+
     drawBattleLeg(ctx, hipX, hipY, baseSize, isRight, isBackLeg) {
         const side = isRight ? 1 : -1;
         const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
@@ -664,7 +697,8 @@ const upperLength = baseSize * 0.035;
     
     drawBattleMageHat(ctx, baseSize) {
         // Hat cone body (cached gradients)
-        if (!this._hatGrad || this._hatGradBaseSize !== baseSize) {
+        if (!this._hatGrad || this._hatGradBaseSize !== baseSize || this._hatGradCtx !== ctx) {
+            this._hatGradCtx = ctx;
             this._hatGradBaseSize = baseSize;
             this._hatGrad = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.6);
             this._hatGrad.addColorStop(0, '#e0e0f8');

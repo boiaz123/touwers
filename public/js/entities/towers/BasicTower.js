@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class BasicTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -11,6 +12,13 @@ export class BasicTower extends Tower {
         // Animation properties
         this.throwingDefender = -1;
         this.rocks = [];
+        // Phase 5: reuse rock objects across shots instead of allocating a fresh literal
+        // every time - acquire() in shoot(), release() once a rock is dropped from the
+        // compaction loop below.
+        this._rockPool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, rotation: 0, rotationSpeed: 0, life: 0, size: 0,
+            target: null, fallbackX: 0, fallbackY: 0
+        }));
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },
             { angle: Math.PI / 2, armRaised: 0, throwCooldown: 0.3 },
@@ -22,6 +30,11 @@ export class BasicTower extends Tower {
         this._suppressSelectionUntilClick = true;
         this._clickHandlerAttached = false;
         this._onCanvasClick = null;
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower's body+defender
+        // via Pixi, so the redundant Canvas2D draw can be skipped (rocks still draw here
+        // regardless - not migrated until Phase 5).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime, enemies) {
@@ -80,6 +93,8 @@ export class BasicTower extends Tower {
             
             if (!hit && rock.life > 0) {
                 this.rocks[rockWrite++] = rock;
+            } else {
+                this._rockPool.release(rock);
             }
         }
         this.rocks.length = rockWrite;
@@ -143,19 +158,19 @@ export class BasicTower extends Tower {
                 const distance = Math.hypot(dx, dy);
                 const arcHeight = distance * 0.15;
                 
-                this.rocks.push({
-                    x: defenderX,
-                    y: defenderY,
-                    vx: distance > 0 ? (dx / distance) * throwSpeed : 0,
-                    vy: distance > 0 ? (dy / distance) * throwSpeed - arcHeight : 0,
-                    rotation: 0,
-                    rotationSpeed: Math.random() * 10 + 5,
-                    life: distance / Math.max(throwSpeed, 1) + 1,
-                    size: Math.random() * 2 + 3,
-                    target: this.target,
-                    fallbackX: this.target.x,
-                    fallbackY: this.target.y
-                });
+                const rock = this._rockPool.acquire();
+                rock.x = defenderX;
+                rock.y = defenderY;
+                rock.vx = distance > 0 ? (dx / distance) * throwSpeed : 0;
+                rock.vy = distance > 0 ? (dy / distance) * throwSpeed - arcHeight : 0;
+                rock.rotation = 0;
+                rock.rotationSpeed = Math.random() * 10 + 5;
+                rock.life = distance / Math.max(throwSpeed, 1) + 1;
+                rock.size = Math.random() * 2 + 3;
+                rock.target = this.target;
+                rock.fallbackX = this.target.x;
+                rock.fallbackY = this.target.y;
+                this.rocks.push(rock);
             }
         }
     }
@@ -166,8 +181,31 @@ export class BasicTower extends Tower {
         const gridSize = cellSize * 2; // 2x2 grid = 2 cells wide
         this.gridSize = gridSize; // Store for rock calculations
 
+        // When the Pixi renderer owns this tower's body+defender+environment
+        // (TowerRenderAdapter has baked/synced it), skip straight to rocks - those
+        // aren't migrated until Phase 5 (projectile pooling) and still draw on Canvas2D.
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, gridSize);
+            this.renderDefenderFigure(ctx, gridSize);
+            this.renderProjectiles(ctx);
+        }
 
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticFront(ctx, gridSize);
+        }
 
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top
+        // regardless of renderer (same reasoning as renderRocks() above).
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: rocks - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then rocks on top). */
+    renderProjectiles(ctx) {
+        this.renderRocks(ctx);
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): back environment + tower structure. */
+    renderStaticBack(ctx, gridSize) {
         // Compact, aligned tower dimensions
         const baseSize = gridSize * 0.35;
         const baseHeight = gridSize * 0.1;
@@ -383,7 +421,19 @@ export class BasicTower extends Tower {
         ctx.strokeStyle = '#5b1028';
         ctx.lineWidth = 0.5;
         ctx.stroke();
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the defender figure - target-facing rotation and throw-arm angle are continuous, not bakeable. */
+    renderDefenderFigure(ctx, gridSize) {
+        // Same platformY derivation as renderStaticBack() above.
+        const baseHeight = gridSize * 0.1;
+        const towerHeight = gridSize * 0.4;
+        const platformHeight = gridSize * 0.06;
+        const towerDrawY = this.y + gridSize * 0.12;
+        const baseY = towerDrawY;
+        const towerY = baseY - baseHeight - towerHeight;
+        const platformY = towerY - platformHeight;
+
         // Render defender - centered on platform with simple shoulder plates
         const defenderX = this.x;
         const defenderY = platformY - 10;
@@ -455,8 +505,10 @@ export class BasicTower extends Tower {
         }
 
         ctx.restore();
-        
-        // Render flying rocks
+    }
+
+    /** Not yet migrated (Phase 5: projectile pooling) - always drawn on Canvas2D regardless of renderer. */
+    renderRocks(ctx) {
         for (let r = 0; r < this.rocks.length; r++) {
             const rock = this.rocks[r];
             ctx.save();
@@ -483,12 +535,16 @@ export class BasicTower extends Tower {
             
             ctx.restore();
         }
-        
-        // Draw front environment (trees/bushes in front of tower)
-        this.drawEnvironmentFront(ctx, gridSize);
+    }
 
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
+    /** Strategy A (baked once per campaign, shared across instances): front environment, drawn over the live defender for correct z-order. */
+    renderStaticFront(ctx, gridSize) {
+        this.drawEnvironmentFront(ctx, gridSize);
+    }
+
+    /** TowerRenderAdapter convention: the per-instance, continuously-animated parts every tower type exposes. */
+    renderDynamicParts(ctx, gridSize) {
+        this.renderDefenderFigure(ctx, gridSize);
     }
 
     drawEnvironmentBack(ctx, gridSize) {

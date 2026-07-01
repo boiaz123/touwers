@@ -44,6 +44,12 @@ export class DefenderBase {
         // Hit effects
         this.hitSplatters = [];
         this.damageFlashTimer = 0;
+
+        // Set by DefenderRenderAdapter once it has synced this defender via Pixi (hit
+        // splatters still draw here regardless - not yet migrated). No static structure -
+        // the whole figure animates continuously (breathing/sway/attack), so everything
+        // lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
     
     initializeStats() {
@@ -151,7 +157,33 @@ export class DefenderBase {
     }
 
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so DefenderRenderAdapter's
+        // sync() can reuse the exact same value for the Pixi path (CanvasGraphicsShim has
+        // no .canvas, and the bake pass's own offscreen canvas would be the wrong size).
         const baseSize = Math.max(7.2, Math.min(16.8, ctx.canvas.width / 150)) * this.sizeMultiplier;
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        this.hitSplatters.forEach(s => s.render(ctx));
+    }
+
+    /** No static structure for this defender - present for DefenderRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this defender - present for DefenderRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole figure - breathing/sway/attack animation and health bar are continuous, so nothing here is bakeable. */
+    renderDynamicParts(ctx, baseSize) {
         const breathe = Math.sin(this.animationTime * 1.5) * 0.15;
         const idleLeftArmSway  = Math.sin(this.animationTime * 1.2) * 0.25;
         const idleRightArmSway = Math.sin(this.animationTime * 1.2 + Math.PI) * 0.25;

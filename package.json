@@ -8,14 +8,19 @@
     "apps/mobile"
   ],
   "scripts": {
-    "server": "node server-dev.js",
-    "start": "node server-dev.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/cli": "^2.0.0",
-    "@tauri-apps/api": "^2.0.0"
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "pixi.js": "^8.19.0"
   }
 }

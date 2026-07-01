@@ -21,9 +21,18 @@ export class ShieldKnightEnemy extends BaseEnemy {
         
         this.attackDamage = 5;
         this.attackSpeed = 0.6;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
+    /** Per-instance armor color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.armorColor;
+    }
+
     getRandomArmorColor() {
         const armorColors = [
             '#4A5568', '#2C3E50', '#34495E', '#1A252F', '#3E4C59', '#556B82'
@@ -32,8 +41,31 @@ export class ShieldKnightEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6.3, Math.min(14.7, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Pre-calculate animation values once
         const animTime = (this.animationTime * 7.5 + this.animationPhaseOffset);
         const sinAnimTime = Math.sin(animTime);
@@ -349,11 +381,9 @@ export class ShieldKnightEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
-    
+
+
     attackCastle(castle, deltaTime) {
         if (!this.isAttackingCastle || !castle) return 0;
         

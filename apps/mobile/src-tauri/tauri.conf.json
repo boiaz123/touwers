@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "identifier": "com.touwers.game",
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "node ../../server-dev.js",
+    "beforeBuildCommand": { "script": "npm run build", "cwd": "../../.." },
+    "beforeDevCommand": { "script": "npm run dev", "cwd": "../../.." },
     "devUrl": "http://localhost:3000",
-    "frontendDist": "../../../public"
+    "frontendDist": "../../../dist"
   },
   "app": {
     "windows": [

@@ -448,12 +448,14 @@ body {
     background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
     touch-action: none;
     image-rendering: auto;
-    /* Performance optimizations */
-    will-change: contents;
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
+    /* position:relative + z-index:2 so this element is explicitly compared against
+       #pixiCanvas (position:absolute; z-index:1) using DIRECT positive z-index ordering
+       - both are now "positioned elements with explicit z-index", eliminating the
+       fragile negative-z-index-against-non-positioned-content stacking that caused
+       Pixi content to silently fail to composite on screen in Chromium/Tauri.
+       Stays in the flex layout since position:relative is in-flow (unlike absolute). */
+    position: relative;
+    z-index: 2;
 }
 
 /* ============ TOWER SIDEBAR - MEDIEVAL FORTRESS AESTHETIC ============ */

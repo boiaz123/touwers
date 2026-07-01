@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class PoisonArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -13,6 +14,13 @@ export class PoisonArcherTower extends Tower {
         this.animationTime = 0;
         this.drawback = 0;
         this.poisonArrows = [];
+        // Phase 5: reuse arrow objects across shots instead of allocating a fresh literal
+        // every time - acquire() in shoot(), release() once an arrow is dropped from the
+        // compaction loop below.
+        this._poisonArrowPool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, rotation: 0, life: 0,
+            targetX: 0, targetY: 0, target: null, fallbackX: 0, fallbackY: 0
+        }));
         
         // Poison state tracking - track which enemies are poisoned to avoid creating duplicate splatters
         this.poisonedEnemies = new Map(); // Map of enemy -> { duration, baseDamage, tickTimer }
@@ -32,6 +40,12 @@ export class PoisonArcherTower extends Tower {
             y: this.rangerSpot.y,
             hidden: true
         };
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (arrows/
+        // indicators still draw here regardless - not migrated yet). No static structure
+        // exists for this tower (camouflage bushes + hidden archer only), so
+        // renderStaticBack/Front are no-ops and everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
     
     /**
@@ -181,6 +195,7 @@ export class PoisonArcherTower extends Tower {
                 if (hitTarget) {
                     this.applyPoisonToEnemy(hitTarget, towerForgeBonus);
                 }
+                this._poisonArrowPool.release(arrow);
             } else {
                 this.poisonArrows[paWrite++] = arrow;
             }
@@ -246,38 +261,56 @@ export class PoisonArcherTower extends Tower {
         
         // Only create arrow if distance is reasonable (avoid zero-distance or invalid arrows)
         if (distance > 10) {
-            this.poisonArrows.push({
-                x: startX,
-                y: startY,
-                vx: (dx / distance) * arrowSpeed,
-                vy: (dy / distance) * arrowSpeed - arcHeight,
-                rotation: Math.atan2(dy, dx),
-                life: distance / Math.max(arrowSpeed, 1) + 0.5,
-                targetX: predicted.x,
-                targetY: predicted.y,
-                target: this.target,
-                fallbackX: this.target.x,
-                fallbackY: this.target.y
-            });
+            const arrow = this._poisonArrowPool.acquire();
+            arrow.x = startX;
+            arrow.y = startY;
+            arrow.vx = (dx / distance) * arrowSpeed;
+            arrow.vy = (dy / distance) * arrowSpeed - arcHeight;
+            arrow.rotation = Math.atan2(dy, dx);
+            arrow.life = distance / Math.max(arrowSpeed, 1) + 0.5;
+            arrow.targetX = predicted.x;
+            arrow.targetY = predicted.y;
+            arrow.target = this.target;
+            arrow.fallbackX = this.target.x;
+            arrow.fallbackY = this.target.y;
+            this.poisonArrows.push(arrow);
         }
     }
     
     render(ctx) {
-        // Render cover elements (bushes)
-        this.renderCoverElements(ctx);
-        
-        // Render ranger archer - skip if no target
-        if (this.target) {
-            this.renderArcher(ctx);
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx);
+            this.renderProjectiles(ctx);
         }
-        
-        // Render flying poison arrows - only if arrows exist
+
+        // Render range indicator and markers - not yet migrated, cheap, always on Canvas2D
+        this.renderIndicators(ctx);
+    }
+
+    /** Phase 5: poison arrows - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then arrows on top). */
+    renderProjectiles(ctx) {
         if (this.poisonArrows.length > 0) {
             this.renderArrows(ctx);
         }
-        
-        // Render range indicator and markers
-        this.renderIndicators(ctx);
+    }
+
+    /** No static structure for this tower (camouflage bushes + hidden archer only) - present for TowerRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** No static structure for this tower - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): cover bushes (rustle animation) + archer (hide/reveal, aim rotation, draw-back) - all continuous per-instance state. */
+    renderDynamicParts(ctx) {
+        this.renderCoverElements(ctx);
+
+        if (this.target) {
+            this.renderArcher(ctx);
+        }
     }
     
     renderCoverElements(ctx) {

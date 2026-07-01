@@ -224,6 +224,11 @@ export class GoldMine extends Building {
         // Add flash opacity for one-time flash effect
         this.flashOpacity = 0;
         this.floatingTexts = []; // For collection text
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // environment via Pixi (dust/flash/floating-text still draw here regardless -
+        // not yet migrated).
+        this.skipCanvas2DBodyRender = false;
     }
     
     generateFixedBushSegments(radius, segments, randomFunc) {
@@ -510,41 +515,57 @@ export class GoldMine extends Building {
     }
     
     render(ctx, size) {
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, size);
+            this.renderDynamicParts(ctx, size);
+        }
+
+        // Render dust clouds - not yet migrated
+        this.renderDustClouds(ctx);
+
+        // Add subtle magical flash effect when gold becomes ready - not yet migrated
+        if (this.flashOpacity > 0) {
+            this.renderFlashEffect(ctx, size);
+        }
+
+        // Render floating collection text - not yet migrated
+        this.renderFloatingTexts(ctx);
+    }
+
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): excavated ground, trees/rocks/bushes/cave entrance with lantern - none of it depends on animationTime/production state. */
+    renderStaticBack(ctx, size) {
         // Render excavated ground base first
         this.renderExcavatedGround(ctx, size);
-        
+
         // Render static elements (trees, rocks, bushes, cave) - batch operations
         this.renderStaticEnvironment(ctx, size);
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): mine cart, workers, gold piles, production status, toggle icon - all continuous per-instance state. */
+    renderDynamicParts(ctx, size) {
         // Render mine cart track and cart
         this.renderMineTrack(ctx, size);
-        
+
         // Render workers (animated)
         this.renderWorkers(ctx, size);
-        
+
         // Render gold piles when ready
         if (this.goldReady) {
             this.renderGoldPiles(ctx, size);
         }
-        
-        // Render dust clouds
-        this.renderDustClouds(ctx);
 
         // Production timer shown above mine
         this.renderProductionStatus(ctx, size);
-        
+
         // Toggle icon with medieval border
         this.renderToggleIcon(ctx, size);
-        
-        // Add subtle magical flash effect when gold becomes ready
-        if (this.flashOpacity > 0) {
-            this.renderFlashEffect(ctx, size);
-        }
-        
-        // Render floating collection text
-        this.renderFloatingTexts(ctx);
     }
-    
+
     // ============ OPTIMIZED RENDERING METHODS ============
     
     renderStaticEnvironment(ctx, size) {

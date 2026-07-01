@@ -31,6 +31,17 @@ export class BasicEnemy extends BaseEnemy {
         // Animation cache to reduce computation (reuse same object, never reallocate)
         this.cachedAnimFrame = -1;
         this.cachedAnimValues = { walkCycle: 0, bobAnimation: 0, leftArmBase: 0, rightArmBase: 0, animTime: 0 };
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure for this
+        // enemy - the whole figure bobs/swings continuously while walking, so there's no
+        // baking benefit; everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
+    }
+
+    /** Per-instance tunic color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.tunicColor;
     }
     
     getRandomTunicColor() {
@@ -78,7 +89,38 @@ export class BasicEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and threaded through explicitly from here on, since
+        // CanvasGraphicsShim (used in Pixi mode) has no .canvas and the bake pass's own
+        // offscreen canvas is the wrong (much smaller) size to derive this from. Cached on
+        // the instance so _syncEnemyPixi (GameplayState) can reuse the exact same value -
+        // every enemy type's clamp range/multiplier differs, so recomputing it generically
+        // in GameplayState would risk a Canvas2D/Pixi size mismatch.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Hit splatters - not yet migrated
+        if (this.hitSplatters.length > 0) {
+            this.hitSplatters.forEach(splatter => splatter.render(ctx));
+        }
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole figure - bob/arm-swing/leg-swing are continuous, and health bar is health-dependent, so nothing here is bakeable. */
+    renderDynamicParts(ctx, baseSize) {
         const anim = this.getAnimationFrame(this.animationTime);
         const bobAnimation = anim.bobAnimation;
         const walkCycle = anim.walkCycle;
@@ -232,12 +274,7 @@ export class BasicEnemy extends BaseEnemy {
         ctx.fill();
         
         ctx.restore();
-        
-        // Render hit splatters
-        if (this.hitSplatters.length > 0) {
-            this.hitSplatters.forEach(splatter => splatter.render(ctx));
-        }
-        
+
         // --- HEALTH BAR (OPTIMIZED) ---
         
         const barWidth = baseSize * 3;

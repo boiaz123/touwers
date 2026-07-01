@@ -35,9 +35,18 @@ export class VillagerEnemy extends BaseEnemy {
         
         // Torch particle system (lightweight)
         this.torchParticles = [];
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
+    /** Per-instance tunic color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.tunicColor;
+    }
+
     getRandomTunicColor() {
         const tunicColors = [
             '#8B4513', // Brown
@@ -178,8 +187,31 @@ export class VillagerEnemy extends BaseEnemy {
     }
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Use pre-calculated animation values
         const walkCycle = this.cachedWalkCycle;
         const bobAnimation = this.cachedBobAnimation;
@@ -398,11 +430,8 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
-    
+
     drawTorch(ctx, handX, handY, baseSize, armAngle) {
         ctx.save();
         ctx.translate(handX, handY);

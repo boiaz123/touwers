@@ -4,8 +4,8 @@
     {
       "label": "Start Dev Server",
       "type": "shell",
-      "command": "node",
-      "args": ["server-dev.js"],
+      "command": "npm",
+      "args": ["run", "dev"],
       "isBackground": true,
       "problemMatcher": {
         "pattern": {
@@ -16,8 +16,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "Server running",
-          "endsPattern": "Server running"
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in"
         }
       },
       "presentation": {

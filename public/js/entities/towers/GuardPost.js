@@ -40,6 +40,11 @@ export class GuardPost extends Tower {
         // Defender spawning position - will be set based on path
         this.defenderSpawnX = x - 35;
         this.defenderSpawnY = y;
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (the
+        // defender draws separately regardless - guard post / castle defenders are Phase 7
+        // of the migration, not yet done).
+        this.skipCanvas2DBodyRender = false;
     }
     
     /**
@@ -268,6 +273,28 @@ export class GuardPost extends Tower {
      * Render the guard post tower and defender
      */
     render(ctx) {
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx);
+        }
+
+        // Render defender if alive - not yet migrated (Phase 7)
+        if (this.defender && !this.defender.isDead()) {
+            this.defender.render(ctx);
+        }
+    }
+
+    /** No front-of-tower environment decoration for this type - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** No per-instance animation in this tower's own structure - present for TowerRenderAdapter's uniform convention. */
+    renderDynamicParts(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): the entire fortified outpost structure - fully static, no animation. */
+    renderStaticBack(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
 
@@ -448,13 +475,8 @@ export class GuardPost extends Tower {
         ctx.fillRect(0, roofPeak - h * 0.23, 11, 2.5);
 
         ctx.restore();
-
-        // Render defender if alive
-        if (this.defender && !this.defender.isDead()) {
-            this.defender.render(ctx);
-        }
     }
-    
+
     /**
      * Render building icon for GUI
      */

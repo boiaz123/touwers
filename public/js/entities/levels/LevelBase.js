@@ -34,6 +34,9 @@ export class LevelBase {
         this.backgroundCanvas = null; // Cache for pre-rendered background
         this.terrainCanvas = null;   // Cache for pre-rendered terrain (rocks, water, rivers, path, bg vegetation)
         this.terrainFgCanvas = null; // Cache for foreground vegetation (rendered after entities for Z-order)
+        // Set by BackgroundRenderAdapter once it has baked backgroundCanvas/terrainCanvas
+        // into Pixi sprites, so the Canvas2D blit of the same pixels can be skipped.
+        this.skipCanvas2DBackgroundBlit = false;
         
         this.castle = null;
     }
@@ -686,11 +689,15 @@ export class LevelBase {
             const bgCtx = this.backgroundCanvas.getContext('2d');
             this._renderBackgroundToCanvas(bgCtx);
         }
-        
+
+        // When the Pixi renderer is active, BackgroundRenderAdapter blits this same
+        // cached canvas as a GPU-composited sprite instead - skip the redundant CPU blit.
+        if (this.skipCanvas2DBackgroundBlit) return;
+
         // Just blit the pre-rendered background
         ctx.drawImage(this.backgroundCanvas, 0, 0);
     }
-    
+
     renderTerrainLayer(ctx) {
         // PRE-RENDER OPTIMIZATION: Cache static terrain (water, rivers, path) to offscreen canvas.
         // Vegetation and rocks are rendered per-frame by GameplayState in entity-sorted order
@@ -707,6 +714,9 @@ export class LevelBase {
             this.renderRiverSmooth(tCtx);
             this.renderPath(tCtx);
         }
+
+        // See renderGrassBackground() above - same Pixi hand-off reasoning.
+        if (this.skipCanvas2DBackgroundBlit) return;
 
         // Single drawImage call for all static background terrain
         ctx.drawImage(this.terrainCanvas, 0, 0);

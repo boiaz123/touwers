@@ -9,6 +9,11 @@ export class DiamondPress extends Building {
         this.pressIntensity = 0;
         this.gemPulseTimer = 0;
         this.floatingTexts = [];
+
+        // Set by BuildingRenderAdapter once it has baked/synced this building's static
+        // frame via Pixi (piston/plate/cylinders/particles/floating text still draw here
+        // regardless - the piston assembly is continuously animated, see renderDynamicParts).
+        this.skipCanvas2DBodyRender = false;
     }
 
     update(deltaTime) {
@@ -72,25 +77,43 @@ export class DiamondPress extends Building {
     }
 
     render(ctx, size) {
-        const cellSize = this.getCellSize(ctx);
-        // For 2x2 building, use proper scale
-        const buildingSize = cellSize * 2 * 1.2; // Slightly oversized for visibility
-        const centerX = this.x;
-        const centerY = this.y;
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx);
+            this.renderDynamicParts(ctx);
+        }
 
-        // Draw the press machine
-        this.renderPressMachine(ctx, centerX, centerY, buildingSize, cellSize);
-
-        // Render magic particles (gem conversion effects)
+        // Render magic particles (gem conversion effects) - not yet migrated
         this.renderMagicParticles(ctx);
 
-        // Render floating text
+        // Render floating text - not yet migrated
         this.renderFloatingText(ctx);
     }
 
-    renderPressMachine(ctx, centerX, centerY, size, cellSize) {
+    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    renderStaticFront(ctx) {
+        // intentionally empty
+    }
+
+    /**
+     * Strategy A (baked once per campaign, shared across instances): the press frame -
+     * base, columns, beams, chamber box, element hoppers, output slot. Excludes the
+     * piston assembly, which moves continuously (see renderDynamicParts).
+     *
+     * Deliberately recomputes its own size via getCellSize(ctx) rather than accepting it
+     * as a parameter (unlike every other migrated tower/building) - this matches the
+     * original, unmodified render()'s behavior of always using a locally-computed
+     * "slightly oversized for visibility" value (cellSize * 2 * 1.2) regardless of
+     * whatever size the caller (GameplayState, or this adapter's bake pass) computed
+     * externally, so the baked and live-Canvas2D versions can never drift apart in scale.
+     */
+    renderStaticBack(ctx) {
+        const cellSize = this.getCellSize(ctx);
+        const size = cellSize * 2 * 1.2; // Slightly oversized for visibility
+        const centerX = this.x;
+        const centerY = this.y;
+
         // Draw rigid industrial hydraulic press machine with enhanced details and structure
-        
+
         // Base/Foundation platform
         ctx.fillStyle = '#0a0a0a';
         ctx.fillRect(centerX - size / 2, centerY + size * 0.38, size, size * 0.18);
@@ -203,78 +226,7 @@ export class DiamondPress extends Building {
             ctx.lineTo(centerX - chamberWidth / 2 + step * i, chamberTop + chamberHeight - size * 0.06);
             ctx.stroke();
         }
-        
-        // Top hydraulic piston/pressing plate - animated with motion that hits the bottom
-        const strokeIntensity = Math.sin(this.animationTime * 2.2) * 0.5 + 0.5; // Slower animation (2.2 instead of 3.5)
-        const plateThickness = size * 0.08;
-        const pressStroke = (strokeIntensity * 0.30 - 0.15) * size; // Larger stroke for proper compression
-        const plateY = chamberTop + size * 0.18 + pressStroke; // Start lower, finish much lower
-        
-        // Piston rod guide (surrounds the rod)
-        ctx.fillStyle = '#2a3a4a';
-        ctx.fillRect(centerX - size * 0.1, plateY - plateThickness - size * 0.17, size * 0.2, size * 0.17);
-        
-        // Piston rod (dark metal cylinder)
-        const rodX = centerX;
-        const rodY = plateY - plateThickness - size * 0.15;
-        ctx.fillStyle = '#2a3a4a';
-        ctx.fillRect(rodX - size * 0.07, rodY, size * 0.14, size * 0.15);
-        
-        // Rod highlight
-        ctx.fillStyle = '#6a7a8a';
-        ctx.fillRect(rodX - size * 0.07 + size * 0.02, rodY + size * 0.02, size * 0.10, size * 0.11);
-        
-        // Rod shadow
-        ctx.fillStyle = '#1a2a3a';
-        ctx.fillRect(rodX + size * 0.05, rodY + size * 0.02, size * 0.02, size * 0.11);
-        
-        // Top pressing plate - polished steel with gradient
-        const plateGrad = ctx.createLinearGradient(0, plateY - plateThickness, 0, plateY);
-        plateGrad.addColorStop(0, '#9aadbd');
-        plateGrad.addColorStop(0.5, '#7a9aad');
-        plateGrad.addColorStop(1, '#5a7a8a');
-        ctx.fillStyle = plateGrad;
-        ctx.fillRect(centerX - chamberWidth * 0.46, plateY - plateThickness, chamberWidth * 0.92, plateThickness);
-        
-        // Plate top shine (stronger when idle)
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.35 - strokeIntensity * 0.1})`;
-        ctx.fillRect(centerX - chamberWidth * 0.46 + size * 0.03, plateY - plateThickness, chamberWidth * 0.86, size * 0.025);
-        
-        // Plate ridges for grip
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-        ctx.lineWidth = 1.5;
-        for (let i = 0; i < 5; i++) {
-            const ridgeX = centerX - chamberWidth * 0.4 + (chamberWidth * 0.8 / 5) * i;
-            ctx.beginPath();
-            ctx.moveTo(ridgeX, plateY - plateThickness);
-            ctx.lineTo(ridgeX, plateY);
-            ctx.stroke();
-        }
-        
-        // Hydraulic cylinders visualization (sides) - more detailed
-        const cylY = chamberTop + size * 0.15;
-        
-        // Left cylinder
-        ctx.fillStyle = '#2a3a4a';
-        ctx.fillRect(centerX - size * 0.32, cylY - size * 0.04, size * 0.09, size * 0.08);
-        ctx.fillStyle = '#5a6a7a';
-        ctx.fillRect(centerX - size * 0.32 + size * 0.01, cylY - size * 0.035, size * 0.07, size * 0.07);
-        
-        // Left cylinder rod indicator (shows compression)
-        const rodCompression = (1 - strokeIntensity) * size * 0.04;
-        ctx.fillStyle = '#1a2a3a';
-        ctx.fillRect(centerX - size * 0.32 + size * 0.01, cylY - size * 0.035 + rodCompression, size * 0.07, size * 0.02);
-        
-        // Right cylinder
-        ctx.fillStyle = '#2a3a4a';
-        ctx.fillRect(centerX + size * 0.23, cylY - size * 0.04, size * 0.09, size * 0.08);
-        ctx.fillStyle = '#5a6a7a';
-        ctx.fillRect(centerX + size * 0.23 + size * 0.01, cylY - size * 0.035, size * 0.07, size * 0.07);
-        
-        // Right cylinder rod indicator (shows compression)
-        ctx.fillStyle = '#1a2a3a';
-        ctx.fillRect(centerX + size * 0.23 + size * 0.01, cylY - size * 0.035 + rodCompression, size * 0.07, size * 0.02);
-        
+
         // Input hopper/funnel on top left (Fire element)
         ctx.fillStyle = 'rgba(255, 100, 0, 0.2)';
         ctx.beginPath();
@@ -349,7 +301,90 @@ export class DiamondPress extends Building {
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#64dfff';
         ctx.fillText('◆', centerX + size * 0.14, outSlotY + size * 0.05);
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the piston/plate/cylinder assembly - continuously animated (strokeIntensity), not bakeable. Recomputes its own size - see renderStaticBack's doc comment. */
+    renderDynamicParts(ctx) {
+        const cellSize = this.getCellSize(ctx);
+        const size = cellSize * 2 * 1.2;
+        const centerX = this.x;
+        const centerY = this.y;
+        // Same derivation as renderStaticBack() above.
+        const chamberHeight = size * 0.48;
+        const chamberTop = centerY - chamberHeight / 2;
+
+        // Top hydraulic piston/pressing plate - animated with motion that hits the bottom
+        const strokeIntensity = Math.sin(this.animationTime * 2.2) * 0.5 + 0.5; // Slower animation (2.2 instead of 3.5)
+        const chamberWidth = size * 0.54;
+        const plateThickness = size * 0.08;
+        const pressStroke = (strokeIntensity * 0.30 - 0.15) * size; // Larger stroke for proper compression
+        const plateY = chamberTop + size * 0.18 + pressStroke; // Start lower, finish much lower
+
+        // Piston rod guide (surrounds the rod)
+        ctx.fillStyle = '#2a3a4a';
+        ctx.fillRect(centerX - size * 0.1, plateY - plateThickness - size * 0.17, size * 0.2, size * 0.17);
+
+        // Piston rod (dark metal cylinder)
+        const rodX = centerX;
+        const rodY = plateY - plateThickness - size * 0.15;
+        ctx.fillStyle = '#2a3a4a';
+        ctx.fillRect(rodX - size * 0.07, rodY, size * 0.14, size * 0.15);
+
+        // Rod highlight
+        ctx.fillStyle = '#6a7a8a';
+        ctx.fillRect(rodX - size * 0.07 + size * 0.02, rodY + size * 0.02, size * 0.10, size * 0.11);
+
+        // Rod shadow
+        ctx.fillStyle = '#1a2a3a';
+        ctx.fillRect(rodX + size * 0.05, rodY + size * 0.02, size * 0.02, size * 0.11);
+
+        // Top pressing plate - polished steel with gradient
+        const plateGrad = ctx.createLinearGradient(0, plateY - plateThickness, 0, plateY);
+        plateGrad.addColorStop(0, '#9aadbd');
+        plateGrad.addColorStop(0.5, '#7a9aad');
+        plateGrad.addColorStop(1, '#5a7a8a');
+        ctx.fillStyle = plateGrad;
+        ctx.fillRect(centerX - chamberWidth * 0.46, plateY - plateThickness, chamberWidth * 0.92, plateThickness);
+
+        // Plate top shine (stronger when idle)
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.35 - strokeIntensity * 0.1})`;
+        ctx.fillRect(centerX - chamberWidth * 0.46 + size * 0.03, plateY - plateThickness, chamberWidth * 0.86, size * 0.025);
+
+        // Plate ridges for grip
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 5; i++) {
+            const ridgeX = centerX - chamberWidth * 0.4 + (chamberWidth * 0.8 / 5) * i;
+            ctx.beginPath();
+            ctx.moveTo(ridgeX, plateY - plateThickness);
+            ctx.lineTo(ridgeX, plateY);
+            ctx.stroke();
+        }
+
+        // Hydraulic cylinders visualization (sides) - more detailed
+        const cylY = chamberTop + size * 0.15;
+
+        // Left cylinder
+        ctx.fillStyle = '#2a3a4a';
+        ctx.fillRect(centerX - size * 0.32, cylY - size * 0.04, size * 0.09, size * 0.08);
+        ctx.fillStyle = '#5a6a7a';
+        ctx.fillRect(centerX - size * 0.32 + size * 0.01, cylY - size * 0.035, size * 0.07, size * 0.07);
+
+        // Left cylinder rod indicator (shows compression)
+        const rodCompression = (1 - strokeIntensity) * size * 0.04;
+        ctx.fillStyle = '#1a2a3a';
+        ctx.fillRect(centerX - size * 0.32 + size * 0.01, cylY - size * 0.035 + rodCompression, size * 0.07, size * 0.02);
+
+        // Right cylinder
+        ctx.fillStyle = '#2a3a4a';
+        ctx.fillRect(centerX + size * 0.23, cylY - size * 0.04, size * 0.09, size * 0.08);
+        ctx.fillStyle = '#5a6a7a';
+        ctx.fillRect(centerX + size * 0.23 + size * 0.01, cylY - size * 0.035, size * 0.07, size * 0.07);
+
+        // Right cylinder rod indicator (shows compression)
+        ctx.fillStyle = '#1a2a3a';
+        ctx.fillRect(centerX + size * 0.23 + size * 0.01, cylY - size * 0.035 + rodCompression, size * 0.07, size * 0.02);
+
         // Spark effects on pressing action - less frequent
         if (strokeIntensity > 0.75) {
             this.renderPressSparkles(ctx, centerX, plateY, size * 0.45, Math.max(0, strokeIntensity - 0.75) * 4.0);

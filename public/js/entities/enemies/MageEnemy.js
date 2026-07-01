@@ -1,6 +1,16 @@
 import { BaseEnemy } from './BaseEnemy.js';
 
 export class MageEnemy extends BaseEnemy {
+    static _colorTable = null;
+    static _getColorTable() {
+        if (!MageEnemy._colorTable) {
+            const bases = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
+            MageEnemy._colorTable = bases.map(b =>
+                Array.from({ length: 101 }, (_, i) => b + (i / 100).toFixed(2) + ')')
+            );
+        }
+        return MageEnemy._colorTable;
+    }
     static BASE_STATS = {
         health: 750,
         speed: 45,
@@ -34,8 +44,13 @@ export class MageEnemy extends BaseEnemy {
         this.blockadeRange = 220;
         this.blockadeProjectile = null;
         this._towersRef = null;
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
     update(deltaTime) {
         super.update(deltaTime);
         
@@ -198,8 +213,31 @@ export class MageEnemy extends BaseEnemy {
     
     
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
+        this._lastRenderSize = baseSize;
 
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Hit splatters
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         const animTime = this.animationTime * 8 + this.animationPhaseOffset;
         const walkCycle = Math.sin(animTime) * 0.5;
         const bobAnimation = Math.sin(animTime) * 0.3;
@@ -608,14 +646,10 @@ export class MageEnemy extends BaseEnemy {
         ctx.fill();
 
         // Magic particles (local space)
-        if (!this._particleColors) {
-            this._particleColors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
-        }
-        const particleColors = this._particleColors;
+        const colorTable = MageEnemy._getColorTable();
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
-            const alpha = (particle.life / particle.maxLife) * 0.8;
-            ctx.fillStyle = particleColors[particle.colorIdx] + alpha + ')';
+            ctx.fillStyle = colorTable[particle.colorIdx][Math.round(particle.life / particle.maxLife * 80)];
             ctx.beginPath();
             ctx.arc(particle.localX, particle.localY, particle.size, 0, Math.PI * 2);
             ctx.fill();
@@ -679,11 +713,8 @@ export class MageEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
-
-        // Hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
-    
+
     attackCastle(castle, deltaTime) {
         if (!this.isAttackingCastle || !castle) return 0;
         
@@ -817,7 +848,8 @@ export class MageEnemy extends BaseEnemy {
         // instead of being baked into the gradient's color-stop alpha, so the
         // animated pulsing looks identical while the gradient object itself
         // is created once and reused.
-        if (!this._crystalGlow || this._crystalGlowBaseSize !== baseSize) {
+        if (!this._crystalGlow || this._crystalGlowBaseSize !== baseSize || this._crystalGlowCtx !== ctx) {
+            this._crystalGlowCtx = ctx;
             this._crystalGlowBaseSize = baseSize;
             this._crystalGlow = ctx.createRadialGradient(0, orbY, orbR * 0.15, 0, orbY, orbR * 2.2);
             this._crystalGlow.addColorStop(0, 'rgba(100, 149, 237, 0.55)');

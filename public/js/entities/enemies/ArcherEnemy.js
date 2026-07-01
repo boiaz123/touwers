@@ -16,15 +16,42 @@ export class ArcherEnemy extends BaseEnemy {
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.tunicColor = '#2D5016'; // Dark green ranger tunic
-        
+
         this.attackDamage = 3;
         this.attackSpeed = 0.5;
-        
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
     }
-    
+
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150));
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters - not yet migrated
+        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Apply phase offset for animation diversity
         const animTime = this.animationTime * 8 + this.animationPhaseOffset;
         const walkCycle = Math.sin(animTime) * 0.5;
@@ -306,11 +333,8 @@ export class ArcherEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
     }
-    
+
     attackCastle(castle, deltaTime) {
         if (!this.isAttackingCastle || !castle) return 0;
         

@@ -86,6 +86,18 @@ export class FrogKingEnemy extends BaseEnemy {
         this.blockadeRange = 280;
         this.blockadeProjectile = null;
         this._towersRef = null;
+
+        // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
+        // still draw here regardless - not yet migrated). No static structure - the whole
+        // figure animates continuously, so everything lives in renderDynamicParts.
+        this.skipCanvas2DBodyRender = false;
+    }
+
+    /** Per-instance skin color variant (driven by the current elemental vulnerability, which
+     * can differ between instances and rotates over time), so baked layers (if any subclass
+     * adds them) don't collide across different-colored instances. */
+    getRenderVariantKey() {
+        return this.skinColor;
     }
 
     selectRandomVulnerability() {
@@ -103,10 +115,11 @@ export class FrogKingEnemy extends BaseEnemy {
         this.vulnerableTo = vulnData.damageType;
         this.particleColor = vulnData.particleColor;
 
-        // Clear color cache when vulnerability changes
+        // Clear color caches when vulnerability changes
         this.cachedLightenColor = null;
         this.cachedDarkenColor = null;
         this.cachedDarken2Color = null;
+        this._particleColorTable = null;
     }
 
     update(deltaTime) {
@@ -356,8 +369,33 @@ export class FrogKingEnemy extends BaseEnemy {
     }
 
     render(ctx) {
+        // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
+        // here, with a real ctx, and cached on the instance so _syncEnemyPixi
+        // (GameplayState) can reuse the exact same value for the Pixi path.
         const baseSize = Math.max(6, Math.min(14, ctx.canvas.width / 150)) * this.sizeMultiplier;
-        
+        this._lastRenderSize = baseSize;
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderDynamicParts(ctx, baseSize);
+        }
+
+        // Render hit splatters
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            this.hitSplatters[i].render(ctx);
+        }
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticBack(ctx, size) {
+        // intentionally empty
+    }
+
+    /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, size) {
+        // intentionally empty
+    }
+
+    renderDynamicParts(ctx, baseSize) {
         // Enemy shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.beginPath();
@@ -419,7 +457,8 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.fill();
         
         // --- MAIN BODY/CHEST --- (cached gradient, top-down lighting)
-        if (!this._bodyGrad || this._gradBaseSize !== baseSize) {
+        if (!this._bodyGrad || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
+            this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
             this._bodyGrad = ctx.createLinearGradient(0, -baseSize * 0.42, 0, baseSize * 0.55);
             this._bodyGrad.addColorStop(0, FrogKingEnemy.lightenColor(this.skinColor, 0.06));
@@ -661,15 +700,15 @@ export class FrogKingEnemy extends BaseEnemy {
         this.drawRoyalCrown(ctx, baseSize);
         
         // --- RENDER MAGIC PARTICLES ---
-        if (!this._particleColors) {
-            this._particleColors = [this.particleColor, this.particleColor, this.particleColor];
+        if (!this._particleColorTable) {
+            const base = this.particleColor;
+            this._particleColorTable = Array.from({ length: 101 }, (_, i) => base + (i / 100).toFixed(2) + ')');
         }
-        const particleColors = this._particleColors;
-        
+        const colorTable = this._particleColorTable;
+
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
-            const alpha = particle.life / particle.maxLife;
-            ctx.fillStyle = particleColors[particle.colorIndex] + alpha + ')';
+            ctx.fillStyle = colorTable[Math.round(particle.life / particle.maxLife * 100)];
             ctx.beginPath();
             ctx.arc(particle.x - this.x, particle.y - this.y, particle.size, 0, Math.PI * 2);
             ctx.fill();
@@ -733,11 +772,6 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        // Render hit splatters
-        for (let i = 0; i < this.hitSplatters.length; i++) {
-            this.hitSplatters[i].render(ctx);
-        }
     }
 
     drawRoyalCrown(ctx, baseSize) {
@@ -820,7 +854,8 @@ export class FrogKingEnemy extends BaseEnemy {
         
         // --- SCEPTER STAFF ---
         // Gold gradient staff (cached)
-        if (!this._staffGrad || this._staffGradBaseSize !== baseSize) {
+        if (!this._staffGrad || this._staffGradBaseSize !== baseSize || this._staffGradCtx !== ctx) {
+            this._staffGradCtx = ctx;
             this._staffGradBaseSize = baseSize;
             this._staffGrad = ctx.createLinearGradient(-baseSize * 0.05, 0, baseSize * 0.05, scepterHeight);
             this._staffGrad.addColorStop(0, '#FFE55C');

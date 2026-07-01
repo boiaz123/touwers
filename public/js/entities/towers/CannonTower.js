@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class CannonTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -14,8 +15,22 @@ export class CannonTower extends Tower {
         this.armSpeed = 0;
         this.explosions = [];
         this.fireballs = [];
+        // Phase 5: reuse fireball/explosion objects across shots instead of allocating a
+        // fresh literal every time - acquire() in shoot()/explode(), release() once an
+        // entry is dropped from the respective compaction loop below.
+        this._fireballPool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, gravity: 0, flameAnimation: 0, life: 0, maxLife: 0,
+            targetX: 0, targetY: 0, target: null, fallbackX: 0, fallbackY: 0
+        }));
+        this._explosionPool = new ObjectPool(() => ({
+            x: 0, y: 0, radius: 0, maxRadius: 0, life: 0, maxLife: 0
+        }));
         this.loadingTime = 0;
         this.randomSeed = Math.random() * 1000;
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower's static body via
+        // Pixi (fireballs/explosions/attack-radius still draw here regardless - not migrated yet).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime, enemies) {
@@ -70,10 +85,11 @@ export class CannonTower extends Tower {
                 targetY = fireball.fallbackY;
             }
             
-            if (fireball.life <= 0 || 
-                (fireball.life < fireball.maxLife * 0.5 && 
+            if (fireball.life <= 0 ||
+                (fireball.life < fireball.maxLife * 0.5 &&
                  Math.hypot(fireball.x - targetX, fireball.y - targetY) < 20)) {
                 this.explode(targetX, targetY, enemies);
+                this._fireballPool.release(fireball);
             } else {
                 this.fireballs[fbWrite++] = fireball;
             }
@@ -88,6 +104,8 @@ export class CannonTower extends Tower {
             explosion.radius = (1 - explosion.life / explosion.maxLife) * explosion.maxRadius;
             if (explosion.life > 0) {
                 this.explosions[expWrite++] = explosion;
+            } else {
+                this._explosionPool.release(explosion);
             }
         }
         this.explosions.length = expWrite;
@@ -120,21 +138,21 @@ export class CannonTower extends Tower {
                 this.audioManager.playSFX('trebuchet-launch');
             }
             
-            this.fireballs.push({
-                x: this.x,
-                y: this.y - 25,
-                vx: distance > 0 ? (dx / distance) * initialSpeed * Math.cos(launchAngle) : 0,
-                vy: -initialSpeed * Math.sin(launchAngle),
-                gravity: gravity,
-                flameAnimation: 0,
-                life: flightTime,
-                maxLife: flightTime,
-                targetX: predicted.x,
-                targetY: predicted.y,
-                target: this.target,
-                fallbackX: this.target.x,
-                fallbackY: this.target.y
-            });
+            const fireball = this._fireballPool.acquire();
+            fireball.x = this.x;
+            fireball.y = this.y - 25;
+            fireball.vx = distance > 0 ? (dx / distance) * initialSpeed * Math.cos(launchAngle) : 0;
+            fireball.vy = -initialSpeed * Math.sin(launchAngle);
+            fireball.gravity = gravity;
+            fireball.flameAnimation = 0;
+            fireball.life = flightTime;
+            fireball.maxLife = flightTime;
+            fireball.targetX = predicted.x;
+            fireball.targetY = predicted.y;
+            fireball.target = this.target;
+            fireball.fallbackX = this.target.x;
+            fireball.fallbackY = this.target.y;
+            this.fireballs.push(fireball);
         }
     }
     
@@ -144,14 +162,14 @@ export class CannonTower extends Tower {
             this.audioManager.playSFX('trebuchet-impact');
         }
         
-        this.explosions.push({
-            x: x,
-            y: y,
-            radius: 0,
-            maxRadius: this.splashRadius * 1.5,
-            life: 1.0,
-            maxLife: 1.0
-        });
+        const explosion = this._explosionPool.acquire();
+        explosion.x = x;
+        explosion.y = y;
+        explosion.radius = 0;
+        explosion.maxRadius = this.splashRadius * 1.5;
+        explosion.life = 1.0;
+        explosion.maxLife = 1.0;
+        this.explosions.push(explosion);
         
         // OPTIMIZATION: Use spatial grid for AoE damage when available
         const splashRadiusSq = this.splashRadius * this.splashRadius;
@@ -188,10 +206,26 @@ export class CannonTower extends Tower {
     }
     
     render(ctx) {
-        // Get tower size - use ResolutionManager if available
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
-        
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, towerSize);
+            this.renderDynamicParts(ctx, towerSize);
+            this.renderProjectiles(ctx);
+        }
+
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top.
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: fireballs/explosions - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then projectiles on top). */
+    renderProjectiles(ctx) {
+        this.renderProjectilesAndExplosions(ctx);
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): tower body/platform. */
+    renderStaticBack(ctx, towerSize) {
         // 3D square tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - towerSize * 0.4 + 5, this.y - towerSize * 0.35 + 5, towerSize * 0.8, towerSize * 0.7);
@@ -284,6 +318,14 @@ export class CannonTower extends Tower {
             ctx.stroke();
         }
         
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): the whole rotating trebuchet mechanism - arm angle and load position are continuous, not bakeable. Includes the small static A-frame/pivot too rather than splitting it out, since it's cheap geometry sharing the same transform block. */
+    renderDynamicParts(ctx, towerSize) {
+        const towerHeight = towerSize * 0.7;
+        const platformWidth = towerSize * 0.8 * 0.9;
+        const platformY = this.y - towerHeight - 5;
+
         // Trebuchet mechanism - translate to base, rotate around pivot
         ctx.save();
         ctx.translate(this.x, platformY);
@@ -438,7 +480,10 @@ export class CannonTower extends Tower {
         }
         
         ctx.restore();
-        
+    }
+
+    /** Not yet migrated (Phase 5/6) - always drawn on Canvas2D regardless of renderer. */
+    renderProjectilesAndExplosions(ctx) {
         // Render flying fireballs
         for (let f = 0; f < this.fireballs.length; f++) {
             const fireball = this.fireballs[f];
@@ -507,11 +552,13 @@ export class CannonTower extends Tower {
             ctx.arc(explosion.x, explosion.y, explosion.radius * 0.2, 0, Math.PI * 2);
             ctx.fill();
         }
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
-    
+
+    /** No front-of-tower environment decoration for this type - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
     static getInfo() {
         return {
             name: 'Trebuchet Tower',

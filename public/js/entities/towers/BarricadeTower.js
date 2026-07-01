@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -12,6 +13,16 @@ export class BarricadeTower extends Tower {
         ];
         this.rollingBarrels = [];
         this.slowZones = [];
+        // Phase 5: reuse barrel/smoke-zone objects across spawns instead of allocating a
+        // fresh literal every time - acquire() at the push() site, release() once an entry
+        // is dropped from its compaction loop below.
+        this._barrelPool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, rotation: 0, rotationSpeed: 0, life: 0,
+            targetX: 0, targetY: 0, size: 0, target: null, fallbackX: 0, fallbackY: 0
+        }));
+        this._smokeZonePool = new ObjectPool(() => ({
+            x: 0, y: 0, radius: 0, life: 0, maxLife: 0, smokeIntensity: 0, maxEnemiesSlowed: 0
+        }));
         
         // Rubble cloud mechanics
         this.maxEnemiesSlowed = 4; // Base capacity: max 4 enemies per slow zone
@@ -22,6 +33,10 @@ export class BarricadeTower extends Tower {
         this.originalFireRate = this.fireRate;
         this.originalSlowDuration = this.slowDuration;
         this.originalMaxEnemiesSlowed = this.maxEnemiesSlowed;
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower's static body via
+        // Pixi (barrels/smoke/attack-radius still draw here regardless - not migrated yet).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime, enemies) {
@@ -75,6 +90,7 @@ export class BarricadeTower extends Tower {
             const distanceToTarget = Math.hypot(barrel.x - targetX, barrel.y - targetY);
             if (barrel.life <= 0 || distanceToTarget < 20) {
                 this.createSmokeZone(targetX, targetY);
+                this._barrelPool.release(barrel);
             } else {
                 this.rollingBarrels[barrelWrite++] = barrel;
             }
@@ -143,6 +159,8 @@ export class BarricadeTower extends Tower {
             
             if (zone.life > 0) {
                 this.slowZones[zoneWrite++] = zone;
+            } else {
+                this._smokeZonePool.release(zone);
             }
         }
         this.slowZones.length = zoneWrite;
@@ -179,21 +197,21 @@ export class BarricadeTower extends Tower {
                 // Barrel life is time to reach predicted target + small buffer
                 const barrelLife = distance / rollSpeed + 0.3;
                 
-                this.rollingBarrels.push({
-                    x: this.x + Math.cos(defender.angle) * 25,
-                    y: this.y + Math.sin(defender.angle) * 25,
-                    vx: distance > 0 ? (dx / distance) * rollSpeed : 0,
-                    vy: distance > 0 ? (dy / distance) * rollSpeed : 0,
-                    rotation: 0,
-                    rotationSpeed: 6,
-                    life: barrelLife,
-                    targetX: targetX,
-                    targetY: targetY,
-                    size: 8,
-                    target: this.target,
-                    fallbackX: this.target.x,
-                    fallbackY: this.target.y
-                });
+                const barrel = this._barrelPool.acquire();
+                barrel.x = this.x + Math.cos(defender.angle) * 25;
+                barrel.y = this.y + Math.sin(defender.angle) * 25;
+                barrel.vx = distance > 0 ? (dx / distance) * rollSpeed : 0;
+                barrel.vy = distance > 0 ? (dy / distance) * rollSpeed : 0;
+                barrel.rotation = 0;
+                barrel.rotationSpeed = 6;
+                barrel.life = barrelLife;
+                barrel.targetX = targetX;
+                barrel.targetY = targetY;
+                barrel.size = 8;
+                barrel.target = this.target;
+                barrel.fallbackX = this.target.x;
+                barrel.fallbackY = this.target.y;
+                this.rollingBarrels.push(barrel);
                 
                 defender.barrelReloadTimer = 1.5 + Math.random();
             }
@@ -206,22 +224,43 @@ export class BarricadeTower extends Tower {
             this.audioManager.playSFX('barricade-tower');
         }
         
-        this.slowZones.push({
-            x: x,
-            y: y,
-            radius: 40,
-            life: this.slowDuration,
-            maxLife: this.slowDuration,
-            smokeIntensity: 0,
-            maxEnemiesSlowed: this.maxEnemiesSlowed
-        });
+        const zone = this._smokeZonePool.acquire();
+        zone.x = x;
+        zone.y = y;
+        zone.radius = 40;
+        zone.life = this.slowDuration;
+        zone.maxLife = this.slowDuration;
+        zone.smokeIntensity = 0;
+        zone.maxEnemiesSlowed = this.maxEnemiesSlowed;
+        this.slowZones.push(zone);
     }
 
     render(ctx) {
-        // Get tower size
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
-        
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, towerSize);
+            this.renderDynamicParts(ctx, towerSize);
+            this.renderProjectiles(ctx);
+        }
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticFront(ctx, towerSize);
+        }
+
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top.
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: rolling barrels + smoke zones - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then projectiles on top). */
+    renderProjectiles(ctx) {
+        this.renderRollingBarrels(ctx);
+        this.renderSmokeZones(ctx);
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): platform structure + barrel storage. */
+    renderStaticBack(ctx, towerSize) {
         // Subtle tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.fillRect(this.x - towerSize * 0.3 + 2, this.y - towerSize * 0.2 + 2, towerSize * 0.6, towerSize * 0.4);
@@ -251,17 +290,19 @@ export class BarricadeTower extends Tower {
         
         this.renderTowerSupports(ctx, baseWidth, baseHeight, towerSize);
         this.renderUpperPlatform(ctx, baseWidth, baseHeight, towerSize);
-        this.renderDefenders(ctx, baseWidth, baseHeight, towerSize);
-        this.renderRollingBarrels(ctx);
-        this.renderSmokeZones(ctx);
-        
-        // Render trees in front so tower stands behind them
-        this.renderTrees(ctx);
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
-    
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): defenders - aim/push-animation/barrel-carrying are continuous per-instance state, not bakeable. */
+    renderDynamicParts(ctx, towerSize) {
+        const baseHeight = towerSize * 0.18;
+        this.renderDefenders(ctx, towerSize * 0.5, baseHeight, towerSize);
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): trees rendered in front so the tower stands behind them. */
+    renderStaticFront(ctx, towerSize) {
+        this.renderTrees(ctx);
+    }
+
     renderTrees(ctx) {
         // Render vegetation overlapping the tower — uses campaign-appropriate plants
         const treePositions = [

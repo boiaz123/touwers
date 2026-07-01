@@ -12,16 +12,20 @@ import { AchievementSystem } from '../AchievementSystem.js';
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+import { BackgroundRenderAdapter } from '../render/adapters/BackgroundRenderAdapter.js';
+import { TowerRenderAdapter } from '../render/adapters/TowerRenderAdapter.js';
+import { BuildingRenderAdapter } from '../render/adapters/BuildingRenderAdapter.js';
+import { EnemyRenderAdapter } from '../render/adapters/EnemyRenderAdapter.js';
+import { SpellEffectRenderAdapter } from '../render/adapters/SpellEffectRenderAdapter.js';
+import { DefenderRenderAdapter } from '../render/adapters/DefenderRenderAdapter.js';
+import { TerrainRenderAdapter } from '../render/adapters/TerrainRenderAdapter.js';
+import { PixiTextureCache } from '../render/PixiTextureCache.js';
+import { ObjectPool } from '../ObjectPool.js';
+import { Container } from 'pixi.js';
 
 const INITIAL_WAVE_COOLDOWN = 30;
 const BETWEEN_WAVE_COOLDOWN = 15;
 const ENEMY_CLICK_RADIUS = 28;
-
-// OPTIMIZATION: Shared comparator reused every frame instead of allocating a new
-// closure on each render() call.
-function compareEntityByY(a, b) {
-    return a.y - b.y;
-}
 
 export class GameplayState {
     constructor(stateManager) {
@@ -64,6 +68,16 @@ export class GameplayState {
         
         // Spell effects for visual rendering
         this.spellEffects = [];
+        // Phase 6: reuse spell-effect objects across casts instead of allocating a fresh
+        // literal every time - acquire() at each push() site in createSpellEffect(),
+        // release() once an entry is dropped from _updateSpellEffects()'s compaction loop.
+        // One shared pool/factory across every effect `type`, since they're all drawn by
+        // the same renderSpellEffects(ctx) switch and only ever live in this one array -
+        // the factory's fields are the union of every field any effect type sets.
+        this._spellEffectPool = new ObjectPool(() => ({
+            type: '', x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0, color: '',
+            maxRadius: 0, x1: 0, y1: 0, x2: 0, y2: 0
+        }));
         
         // Loot multiplier flags for this level
         this.applyRabbitsFoot = false; // Rabbit's Foot: doubles normal loot chance
@@ -602,7 +616,17 @@ export class GameplayState {
     }
 
     exit(levelCompleted = false) {
-        
+
+        // render(ctx) sets ctx.level = this.level on the single shared canvas context
+        // (stateManager.ctx, reused by every state) so towers/buildings can read
+        // campaign-appropriate vegetation - never cleared, so it silently leaked into
+        // every other state's render(ctx) afterward (e.g. the Settlement Hub's Magic
+        // Academy picking up whatever campaign was last actually played instead of its
+        // own hardcoded forest fallback). Pre-existing bug, unrelated to rendering engine.
+        if (this.stateManager.ctx) {
+            this.stateManager.ctx.level = null;
+        }
+
         // Clear reference to GameplayState
         this.stateManager.gameplayState = null;
         
@@ -681,6 +705,60 @@ export class GameplayState {
         if (statsBar) statsBar.style.display = 'none';
         if (sidebar) sidebar.style.display = 'none';
         
+        // Tear down the Pixi background adapter (if the Pixi renderer was active) so the
+        // next level starts with a fresh bake instead of holding stale GPU textures.
+        if (this.backgroundRenderAdapter) {
+            this.backgroundRenderAdapter.destroy();
+            this.backgroundRenderAdapter = null;
+        }
+
+        // Same for the tower adapter - per-instance containers are destroyed; baked
+        // back/front textures live in pixiTextureCache and are intentionally kept (shared
+        // by type+campaign, cheap to keep across levels of the same campaign).
+        if (this.towerRenderAdapter) {
+            for (const tower of Array.from(this.towerRenderAdapter._entries.keys())) {
+                this.towerRenderAdapter.unregister(tower);
+            }
+            this.towerRenderAdapter = null;
+        }
+        if (this.buildingRenderAdapter) {
+            for (const building of Array.from(this.buildingRenderAdapter._entries.keys())) {
+                this.buildingRenderAdapter.unregister(building);
+            }
+            this.buildingRenderAdapter = null;
+        }
+        if (this.enemyRenderAdapter) {
+            for (const entity of Array.from(this.enemyRenderAdapter._entries.keys())) {
+                this.enemyRenderAdapter.unregister(entity);
+            }
+            this.enemyRenderAdapter = null;
+        }
+        // Shared sortable layer the three adapters above add their per-entity containers
+        // into (see _getPixiEntityLayer) - all entries are already unregistered by this
+        // point, so this is just removing the now-empty wrapper, matching
+        // BackgroundRenderAdapter's per-level destroy/recreate pattern.
+        if (this._pixiEntityLayer) {
+            this._pixiEntityLayer.destroy({ children: true });
+            this._pixiEntityLayer = null;
+        }
+        if (this.spellEffectRenderAdapter) {
+            this.spellEffectRenderAdapter.destroy();
+            this.spellEffectRenderAdapter = null;
+        }
+        if (this.defenderRenderAdapter) {
+            for (const defender of Array.from(this.defenderRenderAdapter._entries.keys())) {
+                this.defenderRenderAdapter.unregister(defender);
+            }
+            this.defenderRenderAdapter.destroy();
+            this.defenderRenderAdapter = null;
+        }
+        if (this.terrainRenderAdapter) {
+            for (const element of Array.from(this.terrainRenderAdapter._entries.keys())) {
+                this.terrainRenderAdapter.unregister(element);
+            }
+            this.terrainRenderAdapter = null;
+        }
+
         // CRITICAL: Clear all gameplay state variables to prevent carryover to next session
         // This ensures a completely fresh state when entering a new level
         this.gameState = null;
@@ -974,112 +1052,124 @@ export class GameplayState {
             // Purple/blue expanding blast with particles
             for (let i = 0; i < 16; i++) {
                 const angle = (i / 16) * Math.PI * 2;
-                this.spellEffects.push({
-                    type: 'arcaneBlast',
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * 150,
-                    vy: Math.sin(angle) * 150,
-                    life: 0.6,
-                    maxLife: 0.6,
-                    size: 4,
-                    color: '#8B5CF6'
-                });
+                const effect = this._spellEffectPool.acquire();
+                effect.type = 'arcaneBlast';
+                effect.x = x;
+                effect.y = y;
+                effect.vx = Math.cos(angle) * 150;
+                effect.vy = Math.sin(angle) * 150;
+                effect.life = 0.6;
+                effect.maxLife = 0.6;
+                effect.size = 4;
+                effect.color = '#8B5CF6';
+                this.spellEffects.push(effect);
             }
-            // Add expanding ring
-            this.spellEffects.push({
-                type: 'arcaneBlastRing',
-                x: x,
-                y: y,
-                maxRadius: spell.radius,
-                life: 0.4,
-                maxLife: 0.4,
-                color: '#A78BFA'
-            });
+            // Add expanding ring. vx/vy explicitly undefined - _updateSpellEffects() uses
+            // that to distinguish stationary effects (rings/impacts/bolts) from moving
+            // particles; without resetting it here, a reused pooled object could carry a
+            // stale non-zero velocity from whatever particle type last occupied it.
+            const ring = this._spellEffectPool.acquire();
+            ring.type = 'arcaneBlastRing';
+            ring.x = x;
+            ring.y = y;
+            ring.vx = undefined;
+            ring.vy = undefined;
+            ring.maxRadius = spell.radius;
+            ring.life = 0.4;
+            ring.maxLife = 0.4;
+            ring.color = '#A78BFA';
+            this.spellEffects.push(ring);
         } else if (type === 'frostNova') {
             // Blue/cyan expanding particles with ice effect
             for (let i = 0; i < 20; i++) {
                 const angle = (i / 20) * Math.PI * 2;
-                this.spellEffects.push({
-                    type: 'frostNova',
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * 120,
-                    vy: Math.sin(angle) * 120,
-                    life: 0.8,
-                    maxLife: 0.8,
-                    size: 3,
-                    color: '#06B6D4'
-                });
+                const effect = this._spellEffectPool.acquire();
+                effect.type = 'frostNova';
+                effect.x = x;
+                effect.y = y;
+                effect.vx = Math.cos(angle) * 120;
+                effect.vy = Math.sin(angle) * 120;
+                effect.life = 0.8;
+                effect.maxLife = 0.8;
+                effect.size = 3;
+                effect.color = '#06B6D4';
+                this.spellEffects.push(effect);
             }
-            // Add frost ring
-            this.spellEffects.push({
-                type: 'frostNovaRing',
-                x: x,
-                y: y,
-                maxRadius: spell.radius,
-                life: 0.6,
-                maxLife: 0.6,
-                color: '#22D3EE'
-            });
+            // Add frost ring. vx/vy explicitly undefined - see arcaneBlastRing comment above.
+            const ring = this._spellEffectPool.acquire();
+            ring.type = 'frostNovaRing';
+            ring.x = x;
+            ring.y = y;
+            ring.vx = undefined;
+            ring.vy = undefined;
+            ring.maxRadius = spell.radius;
+            ring.life = 0.6;
+            ring.maxLife = 0.6;
+            ring.color = '#22D3EE';
+            this.spellEffects.push(ring);
         } else if (type === 'meteorStrike') {
             // Orange/red explosion with falling particles
             for (let i = 0; i < 25; i++) {
                 const angle = (i / 25) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
                 const speed = 80 + Math.random() * 60;
-                this.spellEffects.push({
-                    type: 'meteorStrike',
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 50,
-                    life: 1.0,
-                    maxLife: 1.0,
-                    size: 5 + Math.random() * 3,
-                    color: ['#DC2626', '#EA580C', '#FB923C'][Math.floor(Math.random() * 3)]
-                });
+                const effect = this._spellEffectPool.acquire();
+                effect.type = 'meteorStrike';
+                effect.x = x;
+                effect.y = y;
+                effect.vx = Math.cos(angle) * speed;
+                effect.vy = Math.sin(angle) * speed - 50;
+                effect.life = 1.0;
+                effect.maxLife = 1.0;
+                effect.size = 5 + Math.random() * 3;
+                effect.color = ['#DC2626', '#EA580C', '#FB923C'][Math.floor(Math.random() * 3)];
+                this.spellEffects.push(effect);
             }
-            // Add impact circle
-            this.spellEffects.push({
-                type: 'meteorStrikeImpact',
-                x: x,
-                y: y,
-                maxRadius: 80,
-                life: 0.3,
-                maxLife: 0.3,
-                color: '#F97316'
-            });
+            // Add impact circle. vx/vy explicitly undefined - see arcaneBlastRing comment above.
+            const impact = this._spellEffectPool.acquire();
+            impact.type = 'meteorStrikeImpact';
+            impact.x = x;
+            impact.y = y;
+            impact.vx = undefined;
+            impact.vy = undefined;
+            impact.maxRadius = 80;
+            impact.life = 0.3;
+            impact.maxLife = 0.3;
+            impact.color = '#F97316';
+            this.spellEffects.push(impact);
         } else if (type === 'chainLightning') {
             // Lightning effects between targets
             if (targets && targets.length > 0) {
                 for (let i = 0; i < targets.length - 1; i++) {
                     const target1 = targets[i];
                     const target2 = targets[i + 1];
-                    this.spellEffects.push({
-                        type: 'chainLightningBolt',
-                        x1: target1.x,
-                        y1: target1.y,
-                        x2: target2.x,
-                        y2: target2.y,
-                        life: 0.15,
-                        maxLife: 0.15
-                    });
+                    // vx/vy explicitly undefined - see arcaneBlastRing comment above.
+                    const bolt = this._spellEffectPool.acquire();
+                    bolt.type = 'chainLightningBolt';
+                    bolt.x1 = target1.x;
+                    bolt.y1 = target1.y;
+                    bolt.x2 = target2.x;
+                    bolt.y2 = target2.y;
+                    bolt.vx = undefined;
+                    bolt.vy = undefined;
+                    bolt.life = 0.15;
+                    bolt.maxLife = 0.15;
+                    this.spellEffects.push(bolt);
                 }
             }
             // Lightning particles at cast location
             for (let i = 0; i < 12; i++) {
                 const angle = (i / 12) * Math.PI * 2;
-                this.spellEffects.push({
-                    type: 'chainLightning',
-                    x: x,
-                    y: y,
-                    vx: Math.cos(angle) * 100,
-                    vy: Math.sin(angle) * 100,
-                    life: 0.5,
-                    maxLife: 0.5,
-                    size: 2,
-                    color: '#FBBF24'
-                });
+                const effect = this._spellEffectPool.acquire();
+                effect.type = 'chainLightning';
+                effect.x = x;
+                effect.y = y;
+                effect.vx = Math.cos(angle) * 100;
+                effect.vy = Math.sin(angle) * 100;
+                effect.life = 0.5;
+                effect.maxLife = 0.5;
+                effect.size = 2;
+                effect.color = '#FBBF24';
+                this.spellEffects.push(effect);
             }
         }
     }
@@ -2005,6 +2095,8 @@ export class GameplayState {
             if (effect.life > 0) {
                 this.spellEffects[aliveEffects] = effect;
                 aliveEffects++;
+            } else {
+                this._spellEffectPool.release(effect);
             }
         }
         this.spellEffects.length = aliveEffects;
@@ -2074,132 +2166,131 @@ export class GameplayState {
         });
     }
     
-    // OPTIMIZATION: Plain instance method (allocated once) instead of a closure
-    // recreated inside render() every frame. Writes into the pooled entity
-    // wrapper objects, advancing this._entityIndex.
-    _pushRenderEntity(y, source, type) {
-        const objectPool = this._entityObjectPool;
-        if (this._entityIndex >= objectPool.length) {
-            objectPool.push({ y: 0, source: null, type: '' });
-        }
-        const obj = objectPool[this._entityIndex];
-        obj.y = y;
-        obj.source = source;
-        obj.type = type;
-        this._entityIndex++;
-        return obj;
-    }
-
     render(ctx) {
         if (!this.level || !this.towerManager || !this.enemyManager) {
             return; // Skip rendering if not fully initialized
         }
-        
+
         // Expose level on ctx so towers/buildings can use campaign-appropriate vegetation
         ctx.level = this.level;
-        
-        // Render background terrain/level first
+
+        // Render background terrain/level first. level.skipCanvas2DBackgroundBlit reflects
+        // last frame's Pixi bake state (see sync below) - false until the Pixi renderer
+        // has finished its async init and baked this level's background+terrain sprites.
         this.level.render(ctx);
 
-        // Collect all renderable entities (towers, buildings, enemies, loot, castle)
-        // with their Y positions for unified depth sorting
-        // OPTIMIZATION: Reuse persistent array and entity wrapper objects to avoid GC pressure
-        if (!this._entityRenderPool) this._entityRenderPool = [];
-        if (!this._entityObjectPool) this._entityObjectPool = [];
-        const entities = this._entityRenderPool;
-        const objectPool = this._entityObjectPool;
-        // OPTIMIZATION: Track the write index on `this` instead of a closure
-        // capturing a local var, so _pushRenderEntity can be a plain instance
-        // method (defined once) instead of a new function allocated every frame.
-        this._entityIndex = 0;
+        // Hand the static background/terrain layer off to a GPU-composited Pixi sprite.
+        if (this.stateManager.pixiApp && this.stateManager.pixiApp.ready) {
+            if (!this.backgroundRenderAdapter) {
+                this.backgroundRenderAdapter = new BackgroundRenderAdapter(this.stateManager.pixiApp.app.stage);
+            }
+            this.level.skipCanvas2DBackgroundBlit = this.backgroundRenderAdapter.syncLevel(this.level);
+        }
 
-        // Add towers
+        // Pixi's sortableChildren + per-entity zIndex (set to each entity's y in every
+        // _syncXPixi call below) now fully own visual depth ordering across every entity
+        // type sharing the entity layer - towers/buildings/enemies/loot/castle/terrain all
+        // interleave correctly by Y position regardless of which loop below registers them
+        // in which order. The Canvas2D draws that remain per type (attack-radius circles,
+        // hit splatters, disabled-overlays - the bits never migrated, see each adapter's
+        // doc comment) don't depend on cross-type ordering, so there's no longer any need
+        // to merge every entity into one array and sort it by Y before rendering, the way
+        // this loop used to when Canvas2D itself still drew entity bodies in that order.
+        const pixiActive = this.stateManager.pixiApp && this.stateManager.pixiApp.ready;
+
         if (this.towerManager && this.towerManager.towers) {
             const towers = this.towerManager.towers;
             for (let i = 0; i < towers.length; i++) {
-                this._pushRenderEntity(towers[i].y, towers[i], 'tower');
-            }
-        }
-
-        // Add buildings
-        if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
-            const buildings = this.towerManager.buildingManager.buildings;
-            for (let i = 0; i < buildings.length; i++) {
-                this._pushRenderEntity(buildings[i].y, buildings[i], 'building');
-            }
-        }
-
-        // Add enemies
-        if (this.enemyManager && this.enemyManager.enemies) {
-            const enemies = this.enemyManager.enemies;
-            for (let i = 0; i < enemies.length; i++) {
-                this._pushRenderEntity(enemies[i].y, enemies[i], 'enemy');
-            }
-        }
-
-        // Add loot bags
-        if (this.lootManager && this.lootManager.lootBags) {
-            const bags = this.lootManager.lootBags;
-            for (let i = 0; i < bags.length; i++) {
-                this._pushRenderEntity(bags[i].y, bags[i], 'loot');
-            }
-        }
-
-        // Add castle
-        if (this.level.castle) {
-            this._pushRenderEntity(this.level.castle.y, this.level.castle, 'castle');
-        }
-
-        // Add terrain elements (vegetation and rocks) for correct depth sorting with towers and buildings
-        if (this.level && this.level.terrainElements) {
-            const terrain = this.level.terrainElements;
-            for (let i = 0; i < terrain.length; i++) {
-                const el = terrain[i];
-                if (el.type !== 'water') {
-                    this._pushRenderEntity(el.gridY * this.level.cellSize, el, 'terrain');
+                const tower = towers[i];
+                tower.render(ctx);
+                if (tower.isDisabled) {
+                    tower.renderDisabledOverlay(ctx);
+                }
+                if (pixiActive) {
+                    this._syncTowerPixi(tower, ctx);
                 }
             }
         }
 
-        // Set the active length of the entities view into the object pool
-        entities.length = this._entityIndex;
-        for (let i = 0; i < this._entityIndex; i++) {
-            entities[i] = objectPool[i];
-        }
-
-        // Sort all entities by Y position for proper depth ordering
-        // OPTIMIZATION: Reuse a shared module-level comparator instead of
-        // allocating a new closure every frame.
-        entities.sort(compareEntityByY);
-        
-        // Render all entities in sorted order
-        for (let i = 0; i < entities.length; i++) {
-            const ent = entities[i];
-            if (ent.type === 'building') {
-                const building = ent.source;
+        if (this.towerManager && this.towerManager.buildingManager && this.towerManager.buildingManager.buildings) {
+            const buildings = this.towerManager.buildingManager.buildings;
+            for (let i = 0; i < buildings.length; i++) {
+                const building = buildings[i];
                 const cellSize = building.getCellSize(ctx);
                 const buildingSize = cellSize * building.size;
                 ctx.buildingManager = this.towerManager.buildingManager;
                 building.render(ctx, buildingSize);
                 ctx.buildingManager = null;
-            } else if (ent.type === 'enemy') {
-                const enemy = ent.source;
+                if (pixiActive) {
+                    this._syncBuildingPixi(building, buildingSize);
+                }
+            }
+        }
+
+        if (this.enemyManager && this.enemyManager.enemies) {
+            const enemies = this.enemyManager.enemies;
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
                 enemy.render(ctx);
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     for (let j = 0; j < enemy.hitSplatters.length; j++) {
                         enemy.hitSplatters[j].render(ctx);
                     }
                 }
-            } else if (ent.type === 'terrain') {
-                this.level.renderSingleTerrainElement(ctx, ent.source);
-            } else {
-                ent.source.render(ctx);
-                if (ent.type === 'tower' && ent.source.isDisabled) {
-                    ent.source.renderDisabledOverlay(ctx);
+                if (pixiActive) {
+                    this._syncEnemyPixi(enemy, ctx);
                 }
             }
         }
-        
+
+        if (this.lootManager && this.lootManager.lootBags) {
+            const bags = this.lootManager.lootBags;
+            for (let i = 0; i < bags.length; i++) {
+                const bag = bags[i];
+                bag.render(ctx);
+                if (pixiActive) {
+                    this._syncEnemyPixi(bag, ctx);
+                }
+            }
+        }
+
+        if (this.level.castle) {
+            this.level.castle.render(ctx);
+            if (pixiActive) {
+                this._syncBuildingPixi(this.level.castle, Math.max(this.level.castle.wallWidth, this.level.castle.towerHeight + 50) * 1.5);
+            }
+        }
+
+        if (this.level && this.level.terrainElements) {
+            const terrain = this.level.terrainElements;
+            for (let i = 0; i < terrain.length; i++) {
+                const el = terrain[i];
+                if (el.type === 'water') continue;
+                // Terrain has no per-instance flag to gate its own Canvas2D draw (it's a
+                // plain data object, not a class instance) - branch here instead. Falls
+                // back to Canvas2D only during Pixi's brief async-init window (pixiActive
+                // false), matching every other entity type's bootstrap-frame behavior.
+                if (pixiActive) {
+                    this._syncTerrainPixi(el);
+                } else {
+                    this.level.renderSingleTerrainElement(ctx, el);
+                }
+            }
+        }
+
+        // Drop Pixi adapter entries for towers/buildings/enemies+loot that were sold,
+        // removed, or died since last frame (their managers own removal and don't know
+        // about rendering, so this is a cheap per-frame reconciliation instead).
+        if (this.towerRenderAdapter && this.towerManager && this.towerManager.towers) {
+            this._pruneTowerPixiAdapter();
+        }
+        if (this.buildingRenderAdapter && this.towerManager && this.towerManager.buildingManager) {
+            this._pruneBuildingPixiAdapter();
+        }
+        if (this.enemyRenderAdapter) {
+            this._pruneEnemyPixiAdapter();
+        }
+
         // Render orphaned splatters from dead enemies
         if (this.enemyManager && this.enemyManager.orphanedSplatters) {
             for (let i = 0; i < this.enemyManager.orphanedSplatters.length; i++) {
@@ -2210,8 +2301,9 @@ export class GameplayState {
         // Render defender if active (after all main entities)
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             this.level.castle.defender.render(ctx);
+            if (pixiActive) this._syncDefenderPixi(this.level.castle.defender, ctx);
         }
-        
+
         // Render guard post defenders
         if (this.towerManager && this.towerManager.towers) {
             const towers = this.towerManager.towers;
@@ -2219,11 +2311,25 @@ export class GameplayState {
                 const tower = towers[i];
                 if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     tower.defender.render(ctx);
+                    if (pixiActive) this._syncDefenderPixi(tower.defender, ctx);
                 }
             }
         }
+        if (this.defenderRenderAdapter) {
+            this._pruneDefenderPixiAdapter();
+        }
         
-        this.renderSpellEffects(ctx);
+        // Spell/particle effects draw into a Pixi shim via the exact same
+        // renderSpellEffects(ctx) method, unmodified - see SpellEffectRenderAdapter.js.
+        // Falls back to direct Canvas2D only during Pixi's brief async-init window.
+        if (pixiActive) {
+            if (!this.spellEffectRenderAdapter) {
+                this.spellEffectRenderAdapter = new SpellEffectRenderAdapter(this.stateManager.pixiApp.app.stage);
+            }
+            this.spellEffectRenderAdapter.sync(this.renderSpellEffects.bind(this));
+        } else {
+            this.renderSpellEffects(ctx);
+        }
 
         // Render active boons
         this.renderActiveBoons(ctx);
@@ -2231,6 +2337,223 @@ export class GameplayState {
         // Render results screen overlay on top of the still-visible battlefield
         if (this.resultsScreen && this.resultsScreen.isShowing) {
             this.resultsScreen.render(ctx);
+        }
+    }
+
+    /**
+     * Hand a tower's body+defender+environment off to Pixi (Phase 3 of the migration), if
+     * its class follows the renderStaticBack/renderDynamicParts/renderStaticFront
+     * convention (see TowerRenderAdapter.js). Tower types that haven't been migrated yet
+     * simply don't have these methods - they keep rendering entirely via the Canvas2D
+     * tower.render(ctx) call already made above, unaffected.
+     */
+    /**
+     * Lazily create the single Container (sortableChildren=true) that TowerRenderAdapter,
+     * BuildingRenderAdapter, and EnemyRenderAdapter all add their per-entity containers
+     * into directly. This is the Y-sort cutover: without one shared sortable layer, each
+     * adapter would stack as a whole private container on app.stage in lazy-construction
+     * order, so e.g. every enemy would draw in front of (or behind) every tower regardless
+     * of actual Y position - per-entity zIndex=y only sorts correctly against siblings
+     * within the SAME container. BackgroundRenderAdapter stays on its own container
+     * directly on app.stage (very negative zIndex), since it's a single full-screen sprite
+     * pair that never needs to interleave with individual entities.
+     */
+    _getPixiEntityLayer() {
+        if (!this._pixiEntityLayer) {
+            this._pixiEntityLayer = new Container();
+            this._pixiEntityLayer.sortableChildren = true;
+            this.stateManager.pixiApp.app.stage.addChild(this._pixiEntityLayer);
+        }
+        return this._pixiEntityLayer;
+    }
+
+    _syncTowerPixi(tower, ctx) {
+        if (typeof tower.renderStaticBack !== 'function') return;
+
+        if (!this.towerRenderAdapter) {
+            this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
+            this.towerRenderAdapter = new TowerRenderAdapter(this._getPixiEntityLayer(), this.pixiTextureCache);
+        }
+
+        const gridSize = tower.getTowerSize(ctx);
+
+        if (!this.towerRenderAdapter.has(tower)) {
+            this.towerRenderAdapter.register(tower, this.level.getCampaign(), this.level, gridSize);
+        }
+
+        this.towerRenderAdapter.sync(tower, gridSize, this.level);
+    }
+
+    _pruneTowerPixiAdapter() {
+        if (!this._towerPixiLiveSet) this._towerPixiLiveSet = new Set();
+        const liveSet = this._towerPixiLiveSet;
+        liveSet.clear();
+        const towers = this.towerManager.towers;
+        for (let i = 0; i < towers.length; i++) liveSet.add(towers[i]);
+
+        for (const tower of this.towerRenderAdapter._entries.keys()) {
+            if (!liveSet.has(tower)) {
+                this.towerRenderAdapter.unregister(tower);
+            }
+        }
+    }
+
+    /** Hand a building's body off to Pixi (Phase 3), if its class follows the render convention (see BuildingRenderAdapter.js). Building types not yet migrated simply don't have these methods. */
+    _syncBuildingPixi(building, buildingSize) {
+        if (typeof building.renderStaticBack !== 'function') return;
+
+        if (!this.buildingRenderAdapter) {
+            this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
+            this.buildingRenderAdapter = new BuildingRenderAdapter(this._getPixiEntityLayer(), this.pixiTextureCache);
+        }
+
+        if (!this.buildingRenderAdapter.has(building)) {
+            this.buildingRenderAdapter.register(building, this.level.getCampaign(), this.level, buildingSize);
+        }
+
+        this.buildingRenderAdapter.sync(building, buildingSize, this.level);
+    }
+
+    _pruneBuildingPixiAdapter() {
+        if (!this._buildingPixiLiveSet) this._buildingPixiLiveSet = new Set();
+        const liveSet = this._buildingPixiLiveSet;
+        liveSet.clear();
+        const buildings = this.towerManager.buildingManager.buildings;
+        for (let i = 0; i < buildings.length; i++) liveSet.add(buildings[i]);
+        // Castle isn't part of buildingManager.buildings but shares this same adapter
+        // (see the 'castle' branch in render() above) - keep it out of the prune sweep.
+        if (this.level && this.level.castle) liveSet.add(this.level.castle);
+
+        for (const building of this.buildingRenderAdapter._entries.keys()) {
+            if (!liveSet.has(building)) {
+                this.buildingRenderAdapter.unregister(building);
+            }
+        }
+    }
+
+    /**
+     * Hand an enemy or loot bag's body off to Pixi (Phase 4 of the migration), if its
+     * class follows the renderStaticBack/renderDynamicParts/renderStaticFront convention
+     * (see EnemyRenderAdapter.js - shared across both kinds of entity). Types not yet
+     * migrated simply don't have these methods and keep rendering entirely via the
+     * Canvas2D entity.render(ctx) call already made above, unaffected.
+     */
+    _syncEnemyPixi(entity, ctx) {
+        if (typeof entity.renderStaticBack !== 'function') return;
+
+        if (!this.enemyRenderAdapter) {
+            this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
+            this.enemyRenderAdapter = new EnemyRenderAdapter(this._getPixiEntityLayer(), this.pixiTextureCache);
+        }
+
+        // Each subclass's render(ctx) computes its own baseSize from the real ctx (clamp
+        // ranges/multipliers differ per type, see BasicEnemy.js) and caches it on the
+        // instance so Pixi uses the exact same value. Loot bags have no such cache (their
+        // renderDynamicParts takes no sizeHint), so a radius-based fallback covers them;
+        // a flat default covers anything else not yet following either convention.
+        const sizeHint = typeof entity._lastRenderSize === 'number'
+            ? entity._lastRenderSize
+            : (entity.radius ? entity.radius * 2 : 40);
+
+        if (!this.enemyRenderAdapter.has(entity)) {
+            this.enemyRenderAdapter.register(entity, sizeHint);
+        }
+
+        this.enemyRenderAdapter.sync(entity, sizeHint);
+    }
+
+    /**
+     * Drop Pixi adapter entries for enemies that died and loot bags that were collected
+     * or expired since last frame (EnemyManager/LootManager own removal/lifecycle and
+     * don't know about rendering). Collected/expired bags are deliberately excluded from
+     * the live set even while still technically present in lootManager.lootBags during
+     * their brief removal window, mirroring LootBag.render()'s own early-return guard.
+     */
+    _pruneEnemyPixiAdapter() {
+        if (!this._enemyPixiLiveSet) this._enemyPixiLiveSet = new Set();
+        const liveSet = this._enemyPixiLiveSet;
+        liveSet.clear();
+
+        if (this.enemyManager && this.enemyManager.enemies) {
+            const enemies = this.enemyManager.enemies;
+            for (let i = 0; i < enemies.length; i++) liveSet.add(enemies[i]);
+        }
+        if (this.lootManager && this.lootManager.lootBags) {
+            const bags = this.lootManager.lootBags;
+            for (let i = 0; i < bags.length; i++) {
+                const bag = bags[i];
+                if (!bag.isCollected() && !(bag.lifetime > 0 && bag.age >= bag.lifetime)) {
+                    liveSet.add(bag);
+                }
+            }
+        }
+
+        for (const entity of this.enemyRenderAdapter._entries.keys()) {
+            if (!liveSet.has(entity)) {
+                this.enemyRenderAdapter.unregister(entity);
+            }
+        }
+    }
+
+    /** Hand a defender's body off to Pixi (Phase 7), via the same renderStaticBack/renderDynamicParts/renderStaticFront convention as towers/enemies (see DefenderRenderAdapter.js). */
+    _syncDefenderPixi(defender, ctx) {
+        if (typeof defender.renderStaticBack !== 'function') return;
+
+        if (!this.defenderRenderAdapter) {
+            this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
+            this.defenderRenderAdapter = new DefenderRenderAdapter(this.stateManager.pixiApp.app.stage, this.pixiTextureCache);
+        }
+
+        const sizeHint = typeof defender._lastRenderSize === 'number' ? defender._lastRenderSize : 40;
+
+        if (!this.defenderRenderAdapter.has(defender)) {
+            this.defenderRenderAdapter.register(defender, sizeHint);
+        }
+
+        this.defenderRenderAdapter.sync(defender, sizeHint);
+    }
+
+    /** Drop Pixi adapter entries for defenders that died or were removed since last frame (at most ~1 castle defender + one per guard-post tower, so a simple linear liveSet rebuild is plenty cheap). */
+    _pruneDefenderPixiAdapter() {
+        if (!this._defenderPixiLiveSet) this._defenderPixiLiveSet = new Set();
+        const liveSet = this._defenderPixiLiveSet;
+        liveSet.clear();
+
+        if (this.level && this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
+            liveSet.add(this.level.castle.defender);
+        }
+        if (this.towerManager && this.towerManager.towers) {
+            const towers = this.towerManager.towers;
+            for (let i = 0; i < towers.length; i++) {
+                const tower = towers[i];
+                if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
+                    liveSet.add(tower.defender);
+                }
+            }
+        }
+
+        for (const defender of this.defenderRenderAdapter._entries.keys()) {
+            if (!liveSet.has(defender)) {
+                this.defenderRenderAdapter.unregister(defender);
+            }
+        }
+    }
+
+    /**
+     * Hand a terrain element off to Pixi (closes the cross-renderer Y-sort gap - see
+     * TerrainRenderAdapter.js). Terrain elements never move or get removed mid-level
+     * (level.terrainElements is populated once at level load), so this only ever
+     * registers once per element and never needs a per-frame sync or a prune sweep -
+     * unlike every other _syncXPixi helper above.
+     */
+    _syncTerrainPixi(element) {
+        if (!this.terrainRenderAdapter) {
+            this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
+            this.terrainRenderAdapter = new TerrainRenderAdapter(this._getPixiEntityLayer(), this.pixiTextureCache);
+        }
+
+        if (!this.terrainRenderAdapter.has(element)) {
+            this.terrainRenderAdapter.register(element, this.level);
         }
     }
 

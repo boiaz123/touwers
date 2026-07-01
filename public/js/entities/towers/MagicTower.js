@@ -1,4 +1,5 @@
 import { Tower } from './Tower.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 const BASE_SLOW_EFFECT = 0.7;
 
@@ -25,7 +26,17 @@ export class MagicTower extends Tower {
         this.crystalPulse = 0;
         this.runeRotation = 0;
         this.lightningBolts = [];
+        // Phase 5: reuse bolt/particle objects across casts instead of allocating a fresh
+        // literal every time - acquire() at each push() site, release() once an entry is
+        // dropped from update()'s compaction loops below.
+        this._lightningBoltPool = new ObjectPool(() => ({
+            startX: 0, startY: 0, endX: 0, endY: 0, life: 0, maxLife: 0,
+            segments: null, color: ''
+        }));
         this.magicParticles = [];
+        this._magicParticlePool = new ObjectPool(() => ({
+            x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0, maxSize: 0, color: ''
+        }));
         this.runePositions = [];
         
         // Initialize floating runes
@@ -37,6 +48,10 @@ export class MagicTower extends Tower {
                 symbol: ['◊', '☆', '◇', '※', '❋', '⚡'][i]
             });
         }
+
+        // Set by TowerRenderAdapter once it has baked/synced this tower's static body via
+        // Pixi (attack-radius still draws here regardless - not migrated yet).
+        this.skipCanvas2DBodyRender = false;
     }
     
     update(deltaTime, enemies) {
@@ -58,6 +73,8 @@ export class MagicTower extends Tower {
             bolt.life -= deltaTime;
             if (bolt.life > 0) {
                 this.lightningBolts[boltW++] = bolt;
+            } else {
+                this._lightningBoltPool.release(bolt);
             }
         }
         this.lightningBolts.length = boltW;
@@ -72,25 +89,27 @@ export class MagicTower extends Tower {
             if (particle.life > 0) {
                 particle.size = particle.maxSize * (particle.life / particle.maxLife);
                 this.magicParticles[pW++] = particle;
+            } else {
+                this._magicParticlePool.release(particle);
             }
         }
         this.magicParticles.length = pW;
-        
+
         // Generate ambient magic particles - reduced frequency for performance
         if (Math.random() < deltaTime * 1.2) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 50 + 20;
-            this.magicParticles.push({
-                x: this.x + Math.cos(angle) * radius,
-                y: this.y + Math.sin(angle) * radius,
-                vx: (Math.random() - 0.5) * 50,
-                vy: (Math.random() - 0.5) * 50 - 30,
-                life: 2,
-                maxLife: 2,
-                size: 0,
-                maxSize: Math.random() * 4 + 2,
-                color: Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, '
-            });
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.x + Math.cos(angle) * radius;
+            particle.y = this.y + Math.sin(angle) * radius;
+            particle.vx = (Math.random() - 0.5) * 50;
+            particle.vy = (Math.random() - 0.5) * 50 - 30;
+            particle.life = 2;
+            particle.maxLife = 2;
+            particle.size = 0;
+            particle.maxSize = Math.random() * 4 + 2;
+            particle.color = Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, ';
+            this.magicParticles.push(particle);
         }
     }
     
@@ -150,34 +169,62 @@ export class MagicTower extends Tower {
     chainLightning(originalTarget) {
         const chainRange = 50 + this.elementalBonuses.air.chainRange;
         const chainTargets = [originalTarget];
-        
+
         // Find nearby enemies for chain lightning
         if (this.enemies) {
             const visited = new Set();
             visited.add(originalTarget);
             let currentTargets = [originalTarget];
-            
+
             // Chain up to 3 times
             for (let chain = 0; chain < 3; chain++) {
                 const nextTargets = [];
-                
-                currentTargets.forEach(target => {
-                    this.enemies.forEach(enemy => {
-                        if (!visited.has(enemy) && !enemy.isDead()) {
-                            const dist = Math.hypot(enemy.x - target.x, enemy.y - target.y);
-                            if (dist <= chainRange) {
-                                nextTargets.push(enemy);
-                                visited.add(enemy);
-                                chainTargets.push(enemy);
-                                
-                                // Deal damage to chained enemy
-                                let chainDamage = Math.floor(this.damage * 0.6); // 60% damage
-                                enemy.takeDamage(chainDamage, 0, 'air');
+
+                for (let t = 0; t < currentTargets.length; t++) {
+                    const target = currentTargets[t];
+
+                    // OPTIMIZATION: use the spatial grid (injected by TowerManager every
+                    // frame, same as CannonTower's splash-damage query) instead of scanning
+                    // every enemy per chain hop - turns O(hops * hopWidth * allEnemies) into
+                    // O(hops * hopWidth * nearbyEnemies). _queryBuf is a single shared buffer
+                    // reused across calls, so its contents must be fully consumed (copied into
+                    // nextTargets/chainTargets below) before the next query() call in this loop.
+                    if (this._spatialGrid) {
+                        const grid = this._spatialGrid;
+                        const count = grid.query(target.x, target.y, chainRange);
+                        const buf = grid._queryBuf;
+                        for (let i = 0; i < count; i++) {
+                            const enemy = buf[i];
+                            if (!visited.has(enemy) && !enemy.isDead()) {
+                                const dist = Math.hypot(enemy.x - target.x, enemy.y - target.y);
+                                if (dist <= chainRange) {
+                                    nextTargets.push(enemy);
+                                    visited.add(enemy);
+                                    chainTargets.push(enemy);
+
+                                    const chainDamage = Math.floor(this.damage * 0.6); // 60% damage
+                                    enemy.takeDamage(chainDamage, 0, 'air');
+                                }
                             }
                         }
-                    });
-                });
-                
+                    } else {
+                        for (let e = 0; e < this.enemies.length; e++) {
+                            const enemy = this.enemies[e];
+                            if (!visited.has(enemy) && !enemy.isDead()) {
+                                const dist = Math.hypot(enemy.x - target.x, enemy.y - target.y);
+                                if (dist <= chainRange) {
+                                    nextTargets.push(enemy);
+                                    visited.add(enemy);
+                                    chainTargets.push(enemy);
+
+                                    const chainDamage = Math.floor(this.damage * 0.6); // 60% damage
+                                    enemy.takeDamage(chainDamage, 0, 'air');
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (nextTargets.length === 0) break;
                 currentTargets = nextTargets;
             }
@@ -209,32 +256,32 @@ export class MagicTower extends Tower {
                 break;
         }
         
-        this.lightningBolts.push({
-            startX: this.x,
-            startY: this.y,
-            endX: this.target.x,
-            endY: this.target.y,
-            life: 0.3,
-            maxLife: 0.3,
-            segments: this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y),
-            color: boltColor
-        });
-        
+        const bolt = this._lightningBoltPool.acquire();
+        bolt.startX = this.x;
+        bolt.startY = this.y;
+        bolt.endX = this.target.x;
+        bolt.endY = this.target.y;
+        bolt.life = 0.3;
+        bolt.maxLife = 0.3;
+        bolt.segments = this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y);
+        bolt.color = boltColor;
+        this.lightningBolts.push(bolt);
+
         // Create impact particles with elemental colors - reduced from 8 to 6
         for (let i = 0; i < 6; i++) {
             const angle = (i / 6) * Math.PI * 2;
             const speed = Math.random() * 100 + 50;
-            this.magicParticles.push({
-                x: this.target.x,
-                y: this.target.y,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                life: 1,
-                maxLife: 1,
-                size: 0,
-                maxSize: 5,
-                color: impactColor
-            });
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed;
+            particle.life = 1;
+            particle.maxLife = 1;
+            particle.size = 0;
+            particle.maxSize = 5;
+            particle.color = impactColor;
+            this.magicParticles.push(particle);
         }
     }
     
@@ -262,7 +309,10 @@ export class MagicTower extends Tower {
     
     updateElementalParticles() {
         // Clear existing particles and regenerate with new element color
-        this.magicParticles = [];
+        for (let i = 0; i < this.magicParticles.length; i++) {
+            this._magicParticlePool.release(this.magicParticles[i]);
+        }
+        this.magicParticles.length = 0;
     }
     
     isClickable(x, y, towerSize) {
@@ -317,10 +367,33 @@ export class MagicTower extends Tower {
     }
     
     render(ctx) {
-        // Get tower size - use ResolutionManager if available
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
-        
+
+        if (!this.skipCanvas2DBodyRender) {
+            this.renderStaticBack(ctx, towerSize);
+            this.renderDynamicParts(ctx, towerSize);
+            this.renderProjectiles(ctx);
+        }
+
+        // Not yet migrated - selection-dependent, cheap, always drawn on Canvas2D on top.
+        this.renderAttackRadiusCircle(ctx);
+    }
+
+    /** Phase 5: runes/particles/bolts - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then effects on top). towerSize isn't passed by the adapter (it only forwards ctx), so it's recomputed here the same way render() does - getCellSize() reads ctx.resolutionManager first, which works identically whether ctx is a real CanvasRenderingContext2D or the Pixi shim. */
+    renderProjectiles(ctx) {
+        const cellSize = this.getCellSize(ctx);
+        const towerSize = cellSize * 2;
+        this.renderRunesParticlesAndBolts(ctx, towerSize);
+    }
+
+    /** No front-of-tower environment decoration for this type - present for TowerRenderAdapter's uniform convention. */
+    renderStaticFront(ctx, towerSize) {
+        // intentionally empty
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): tower base + coil structure. */
+    renderStaticBack(ctx, towerSize) {
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
         ctx.beginPath();
@@ -370,30 +443,16 @@ export class MagicTower extends Tower {
             ctx.arc(this.x, ringY, baseRadius * 0.85, 0, Math.PI * 2);
             ctx.stroke();
         }
-        
-        // Mystical windows
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const windowY = this.y - towerHeight/2;
-            
-            // Window glow - simplified without gradient
-            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`;
-            ctx.beginPath();
-            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Window frame
-            ctx.fillStyle = '#2E0A4F';
-            ctx.beginPath();
-            ctx.arc(windowX, windowY, 4, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Tesla coil base platform
+
+        // Tesla coil base platform + column + rings. Drawn here (static) rather than where
+        // it appeared in the original code (between the windows and the gem, both dynamic)
+        // - the coil's footprint doesn't overlap either, so moving it doesn't change the
+        // final composited image, and it keeps the static/dynamic split contiguous.
         const coilBaseRadius = baseRadius * 0.6;
         const coilBaseY = this.y - towerHeight;
-        
+        const coilHeight = towerSize * 0.4;
+        const coilWidth = baseRadius * 0.15;
+
         ctx.fillStyle = '#2F2F2F';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
@@ -401,38 +460,60 @@ export class MagicTower extends Tower {
         ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        
-        // Tesla coil central column
-        const coilHeight = towerSize * 0.4;
-        const coilWidth = baseRadius * 0.15;
-        
-        // Main coil column - solid color
+
         ctx.fillStyle = '#808080';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
         ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
-        
-        // Tesla coil rings
+
         const ringCount = 5;
         for (let i = 0; i < ringCount; i++) {
             const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
             const ringRadius = coilWidth * (2 + Math.sin(i * 0.5));
-            
+
             ctx.strokeStyle = '#A0A0A0';
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
             ctx.stroke();
-            
-            // Ring highlights
+
             ctx.strokeStyle = '#E0E0E0';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(this.x, ringY, ringRadius, -Math.PI/4, Math.PI/4);
             ctx.stroke();
         }
-        
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): window glow + gem - pulse animation and element-dependent color are continuous per-instance state, not bakeable. */
+    renderDynamicParts(ctx, towerSize) {
+        // Same derivation as renderStaticBack() above.
+        const baseRadius = towerSize * 0.35;
+        const towerHeight = towerSize * 0.5;
+        const coilBaseY = this.y - towerHeight;
+        const coilHeight = towerSize * 0.4;
+        const coilWidth = baseRadius * 0.15;
+
+        // Mystical windows
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
+            const windowY = this.y - towerHeight/2;
+
+            // Window glow - simplified without gradient
+            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Window frame
+            ctx.fillStyle = '#2E0A4F';
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // Tesla coil top elemental gem crystal (prism shape)
         const sphereRadius = coilWidth * 1.5;
         const sphereY = coilBaseY - coilHeight;
@@ -497,7 +578,16 @@ export class MagicTower extends Tower {
         ctx.lineTo(cx - gw * 0.45, sphereY + gb);
         ctx.stroke();
         ctx.restore();
-        
+    }
+
+    /** Phase 5: runes/particles/bolts - drawn via renderProjectiles() above, inside the Pixi shim when active, or directly on Canvas2D otherwise. Runes use ctx.fillText(), which CanvasGraphicsShim now backs with a pooled PIXI.Text per shim. */
+    renderRunesParticlesAndBolts(ctx, towerSize) {
+        const baseRadius = towerSize * 0.35;
+        const towerHeight = towerSize * 0.5;
+        const coilHeight = towerSize * 0.4;
+        const coilWidth = baseRadius * 0.15;
+        const sphereY = this.y - towerHeight - coilHeight;
+
         // Floating runes around tower base (not coil)
         for (let i = 0; i < this.runePositions.length; i++) {
             const rune = this.runePositions[i];
@@ -562,11 +652,8 @@ export class MagicTower extends Tower {
                 ctx.stroke();
             }
         }
-        
-        // Render attack radius circle if selected
-        this.renderAttackRadiusCircle(ctx);
     }
-    
+
     static getInfo() {
         return {
             name: 'Magic Tower',
